@@ -1,6 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels;
+using Microsoft.Extensions.Logging;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -14,7 +18,7 @@ public sealed class AiStartupUiTests
         var fileMenu = ExtractSection(xaml, "<MenuItem Header=\"_Datei\"", "<MenuItem Header=\"_Werkzeuge\"");
         var toolsMenu = ExtractSection(xaml, "<MenuItem Header=\"_Werkzeuge\"", "<MenuItem Header=\"_Ansicht\"");
 
-        Assert.DoesNotContain("Header=\"KI starten\"", fileMenu);
+        AssertNoForbiddenTokens(fileMenu, "Header=\"KI starten\"");
         Assert.Contains("Header=\"KI starten\"", toolsMenu);
         Assert.Contains("Click=\"StartAi_Click\"", toolsMenu);
     }
@@ -34,19 +38,23 @@ public sealed class AiStartupUiTests
     public void Shell_tracks_ai_runtime_status_without_sidebar_neural_sphere()
     {
         var xaml = ReadUiFile("MainWindow.xaml");
-        var shell = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "ShellViewModel.cs"));
+        AiRuntimeStatusTracker.ResetForTests();
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings(),
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var monitor = new SystemMonitorService(enableHardwareSensorInit: false);
+        using var shell = new ShellViewModel(services, monitor);
 
-        Assert.Contains("AiRuntimeStatusTracker.Changed += ApplyAiRuntimeStatus", shell);
-        Assert.Contains("AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus", shell);
-        Assert.Contains("public bool IsAiIndicatorVisible => IsAiWorking || IsAiRuntimeVisible;", shell);
-        Assert.Contains("public string AiDisplayLoadedModels => IsAiWorking ? AiLoadedModels : AiRuntimeLoadedModels;", shell);
-        Assert.DoesNotContain("<!-- KI Neural Sphere -->", xaml);
-        Assert.DoesNotContain("<ctrl:NeuralSphereControl", xaml);
+        AiRuntimeStatusTracker.MarkReady("qwen3-vl:8b-q8", hasWarnings: false, statusText: "Modelle geladen");
+
+        Assert.True(shell.IsAiIndicatorVisible);
+        Assert.Equal("KI BEREIT", shell.AiIndicatorTitle);
+        Assert.Equal("Modelle geladen", shell.AiDisplayStatusLabel);
+        Assert.Equal("qwen3-vl:8b-q8", shell.AiDisplayLoadedModels);
+        AssertNoForbiddenTokens(xaml, "<!-- KI Neural Sphere -->", "<ctrl:NeuralSphereControl");
     }
 
     private static string ReadUiFile(params string[] relativeParts)
@@ -67,4 +75,12 @@ public sealed class AiStartupUiTests
         return source.Substring(start, end - start);
     }
 
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene alte KI-UI-Markierung gefunden: " + string.Join(", ", hits));
+    }
 }

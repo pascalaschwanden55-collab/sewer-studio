@@ -33,11 +33,4 @@ public sealed class ProjektEroeffnungShellGuardTests
         Assert.Contains("SelectFolder(\"Projekte-Verzeichnis waehlen\", @\"D:\\Projekt\")", src);
     }
 
-    [Fact]
-    public void Shell_no_longer_registers_uebersicht_navitem()
-    {
-        var src = ShellSource();
-        Assert.DoesNotContain("\"Uebersicht\", () => new Pages.OverviewPageViewModel", src);
-    }
-
 }

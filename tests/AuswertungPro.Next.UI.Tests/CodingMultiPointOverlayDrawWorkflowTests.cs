@@ -70,9 +70,16 @@ public sealed class CodingMultiPointOverlayDrawWorkflowTests
             MouseDownActions(calls.Add, addPoint: () => false));
 
         Assert.Equal(CodingMultiPointOverlayDrawWorkflowOutcome.PointAdded, result.Outcome);
-        Assert.DoesNotContain("clear-overlay", calls);
-        Assert.DoesNotContain("create:false", calls);
-        Assert.DoesNotContain("info:null", calls);
+        Assert.Equal(
+            [
+                "clear-canvas",
+                "render-ai",
+                "render-ref",
+                "badge",
+                "has-overlay:true",
+                "render:preview"
+            ],
+            calls);
     }
 
     [Fact]

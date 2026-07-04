@@ -16,8 +16,15 @@ public sealed class VideoLabelToolVisualStyleTests
         Assert.Contains("--ok:#4ade80", html);
         Assert.Contains("--warn:#fbbf24", html);
         Assert.Contains("--danger:#ef4444", html);
-        Assert.DoesNotContain("--bg:#181818", html);
-        Assert.DoesNotContain("background:#101010", html);
+        AssertNoForbiddenTokens(html, "--bg:#181818", "background:#101010");
     }
 
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene alte VideoLabelTool-Farben gefunden: " + string.Join(", ", hits));
+    }
 }

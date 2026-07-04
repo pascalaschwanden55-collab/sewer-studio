@@ -46,7 +46,7 @@ public sealed class CodingOverlayQuantificationWriterTests
         });
 
         Assert.Equal("42.4", pipeBend.CodeMeta!.Parameters["vsa.winkel"]);
-        Assert.DoesNotContain("vsa.winkel", arc.CodeMeta!.Parameters.Keys);
+        Assert.Empty(arc.CodeMeta!.Parameters);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class CodingOverlayQuantificationWriterTests
         CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
 
         Assert.Equal("33.3", entry.CodeMeta!.Parameters["vsa.querschnitt.prozent"]);
-        Assert.DoesNotContain("vsa.fuellgrad.prozent", entry.CodeMeta.Parameters.Keys);
+        Assert.Equal(["vsa.querschnitt.prozent"], entry.CodeMeta.Parameters.Keys);
     }
 
     [Fact]
@@ -84,6 +84,6 @@ public sealed class CodingOverlayQuantificationWriterTests
         CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
 
         Assert.Equal("66.7", entry.CodeMeta!.Parameters["vsa.fuellgrad.prozent"]);
-        Assert.DoesNotContain("vsa.querschnitt.prozent", entry.CodeMeta.Parameters.Keys);
+        Assert.Equal(["vsa.fuellgrad.prozent"], entry.CodeMeta.Parameters.Keys);
     }
 }

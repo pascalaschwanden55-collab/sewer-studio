@@ -17,6 +17,18 @@ public static class TrainingProtocolStartdataReviewItemSelector
         return items.Where(IsProtocolStartdata).ToList();
     }
 
+    public static List<InfraSelfImproving.ReviewQueueItem> SelectOnUi(
+        IEnumerable<InfraSelfImproving.ReviewQueueItem> items,
+        Action<Action> onUi)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(onUi);
+
+        List<InfraSelfImproving.ReviewQueueItem>? selected = null;
+        onUi(() => selected = Select(items));
+        return selected ?? new List<InfraSelfImproving.ReviewQueueItem>();
+    }
+
     private static bool IsProtocolStartdata(InfraSelfImproving.ReviewQueueItem item)
         => string.Equals(
             item.SelfTrainingMatchLevel,

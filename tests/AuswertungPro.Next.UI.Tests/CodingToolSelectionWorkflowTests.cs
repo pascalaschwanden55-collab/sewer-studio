@@ -80,11 +80,21 @@ public sealed class CodingToolSelectionWorkflowTests
             Actions(calls.Add));
 
         Assert.Equal(CodingToolSelectionWorkflowOutcome.Applied, result.Outcome);
-        Assert.DoesNotContain("level:Water", calls);
-        Assert.Contains("active-name:", calls);
-        Assert.Contains("tool:None", calls);
-        Assert.Contains("schema:", calls);
-        Assert.Contains("apply-label:", calls);
+        Assert.Equal(
+            [
+                "reset-calibration",
+                "close-dropdown",
+                "active-name:",
+                "tool:None",
+                "schema:",
+                "cancel-schema",
+                "apply-label:",
+                "clear-current",
+                "info:null",
+                "cursor",
+                "redraw:false"
+            ],
+            calls);
     }
 
     private static CodingToolSelectionWorkflowActions Actions(Action<string> calls)

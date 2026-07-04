@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -26,6 +25,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Collections;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -67,11 +67,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Setzt LiveFramePath mit Throttling (~5 fps max), um UI-Thread nicht zu ueberlasten.</summary>
     private void SetLiveFrameThrottled(string? path)
     {
-        var decision = TrainingLiveFrameThrottleController.Decide(path, _lastLiveFrameUpdate, DateTime.UtcNow);
-        if (!decision.ShouldUpdateFramePath) return;
-
-        LiveFramePath = decision.FramePath ?? "";
-        _lastLiveFrameUpdate = decision.LastUpdatedUtc;
+        TrainingLiveFrameThrottleController.Apply(
+            path,
+            () => _lastLiveFrameUpdate,
+            value => _lastLiveFrameUpdate = value,
+            value => LiveFramePath = value);
     }
 
     // KB-Trainingsstand
@@ -143,112 +143,77 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private double _mismatchPercent;
     [ObservableProperty] private double _noFindingsPercent;
     private readonly SelfTrainingMatchRateTracker _matchRateTracker = new();
+    private readonly SelfTrainingCancellationController _selfTrainingCancellation = new();
 
     private void RefreshMatchRatePercents()
     {
         var p = _matchRateTracker.ComputePercents();
-        ExactPercent = p.Exact;
-        PartialPercent = p.Partial;
-        MismatchPercent = p.Mismatch;
-        NoFindingsPercent = p.NoFindings;
+        SelfTrainingMatchRatePresentationController.Apply(
+            p,
+            CreateMatchRatePresentationUi());
     }
 
     private void AddSelfTrainingLog(string message)
     {
-        var entryText = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        void Apply()
-        {
-            AppendSelfTrainingLogEntry(entryText);
-        }
-        OnUi(Apply);
-    }
-
-    private void AppendSelfTrainingLogEntry(string entryText)
-    {
-        SelfTrainingLogEntries.Add(entryText);
-        while (SelfTrainingLogEntries.Count > 100)
-            SelfTrainingLogEntries.RemoveAt(0);
+        TrainingCenterLogController.AppendSelfTrainingLog(
+            message,
+            OnUi,
+            SelfTrainingLogEntries);
     }
 
     private void UpdateCodeDistribution(string code, MatchLevel level)
     {
-        void Apply()
-        {
-            var entry = CodeDistribution.FirstOrDefault(e => e.Code == code);
-            if (entry is null)
-            {
-                entry = new CodeDistributionEntry { Code = code };
-                CodeDistribution.Add(entry);
-            }
-
-            SelfTrainingStatusCalculator.ApplyMatch(entry, level);
-        }
-        OnUi(Apply);
+        SelfTrainingCodeDistributionController.ApplyMatchOnUi(
+            CodeDistribution,
+            code,
+            level,
+            OnUi);
     }
 
     /// <summary>Wird vom SelfTrainingOrchestrator bei jedem Schritt aufgerufen.</summary>
     public void OnSelfTrainingStep(SelfTrainingStep step)
     {
-        var presentation = SelfTrainingStepPresentationBuilder.Build(step, _activeVisionModel);
-
-        void Apply()
-        {
-            PipelineActiveStep = presentation.PipelineActiveStep;
-            CurrentEntryCode = presentation.CurrentEntryCode;
-            CurrentEntryMeter = presentation.CurrentEntryMeter;
-            ProgressValue = presentation.ProgressValue;
-            ProgressMax = presentation.ProgressMax;
-            ActiveModelName = presentation.ActiveModelName;
-            IsModelActive = presentation.IsModelActive;
-
-            if (presentation.CurrentTechniqueGrade is not null)
-            {
-                CurrentTechniqueGrade = presentation.CurrentTechniqueGrade;
-                CurrentTechniqueDetails = presentation.CurrentTechniqueDetails ?? "";
-            }
-
-            if (presentation.CurrentComparisonText is not null)
-                CurrentComparisonText = presentation.CurrentComparisonText;
-
-            foreach (var logLine in presentation.LogLines)
-                AddSelfTrainingLog(logLine);
-
-            if (presentation.LiveFramePath is not null)
-                SetLiveFrameThrottled(presentation.LiveFramePath);
-
-            if (presentation.Result is not null && presentation.CompletedMatchLevel is { } level)
-            {
-                _matchRateTracker.Record(level);
-                RefreshMatchRatePercents();
-
-                SelfTrainingResults.Add(presentation.Result);
-                UpdateCodeDistribution(presentation.Result.VsaCode, level);
-            }
-        }
-
-        OnUi(Apply);
+        SelfTrainingStepWorkflow.Apply(
+            SelfTrainingStepWorkflowRequestFactory.Create(new SelfTrainingStepWorkflowRequestFactoryRequest(
+                Step: step,
+                ActiveVisionModel: _activeVisionModel,
+                OnUi: OnUi,
+                SetPipelineActiveStep: value => PipelineActiveStep = value,
+                SetCurrentEntryCode: value => CurrentEntryCode = value,
+                SetCurrentEntryMeter: value => CurrentEntryMeter = value,
+                SetProgressValue: value => ProgressValue = value,
+                SetProgressMax: value => ProgressMax = value,
+                SetActiveModelName: value => ActiveModelName = value,
+                SetIsModelActive: value => IsModelActive = value,
+                SetCurrentTechniqueGrade: value => CurrentTechniqueGrade = value,
+                SetCurrentTechniqueDetails: value => CurrentTechniqueDetails = value,
+                SetCurrentComparisonText: value => CurrentComparisonText = value,
+                Log: AddSelfTrainingLog,
+                SetLiveFrame: SetLiveFrameThrottled,
+                MatchRateTracker: _matchRateTracker,
+                RefreshMatchRatePercents: RefreshMatchRatePercents,
+                Results: SelfTrainingResults,
+                UpdateCodeDistribution: UpdateCodeDistribution)));
     }
 
     /// <summary>Setzt alle Selbsttraining-Visualisierungen zurueck.</summary>
     /// <param name="resetMatchRate">Match-Rate auf 0 setzen (nur bei echtem Selbsttraining, nicht bei Batch-Import).</param>
     private void ResetSelfTrainingVisuals(bool resetMatchRate = false)
     {
-        SelfTrainingResults.Clear();
-        CodeDistribution.Clear();
-        SelfTrainingLogEntries.Clear();
-
-        PipelineActiveStep = 0;
-        CurrentEntryCode = "";
-        CurrentEntryMeter = 0;
-        CurrentComparisonText = "";
-        CurrentTechniqueGrade = "";
-        CurrentTechniqueDetails = "";
-
-        if (resetMatchRate)
-        {
-            _matchRateTracker.Reset();
-            RefreshMatchRatePercents();
-        }
+        SelfTrainingVisualResetController.Reset(
+            new SelfTrainingVisualResetRequest(
+                SelfTrainingResults,
+                CodeDistribution,
+                SelfTrainingLogEntries,
+                value => PipelineActiveStep = value,
+                value => CurrentEntryCode = value,
+                value => CurrentEntryMeter = value,
+                value => CurrentComparisonText = value,
+                value => CurrentTechniqueGrade = value,
+                value => CurrentTechniqueDetails = value,
+                _matchRateTracker.Reset,
+                RefreshMatchRatePercents),
+            resetMatchRate);
     }
 
     private readonly List<string> _rootFolders = new();
@@ -257,75 +222,55 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Fügt eine Zeile zum Log hinzu (Thread-safe via Dispatcher).</summary>
     private void Log(string message)
     {
-        var entryText = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        void Apply()
-        {
-            LogText += entryText + "\n";
-            AppendSelfTrainingLogEntry(entryText);
-        }
-        OnUi(Apply);
+        TrainingCenterLogController.AppendLog(
+            message,
+            OnUi,
+            () => LogText,
+            value => LogText = value,
+            SelfTrainingLogEntries);
     }
 
     /// <summary>Aktualisiert die Live-Vorschau (Thread-safe).</summary>
     private void UpdateLivePreview(string caseInfo, string code, string meter, string? framePath)
     {
-        void Apply()
-        {
-            var preview = TrainingLivePreviewPresenter.Build(caseInfo, code, meter, framePath);
-            LiveCaseInfo = preview.LiveCaseInfo;
-            LiveCodeInfo = preview.LiveCodeInfo;
-            LiveMeterInfo = preview.LiveMeterInfo;
-            CurrentComparisonText = preview.CurrentComparisonText;
-            CurrentEntryCode = preview.CurrentEntryCode;
-            if (preview.FramePath is not null)
-                SetLiveFrameThrottled(preview.FramePath);
-            else if (string.IsNullOrEmpty(LiveFramePath))
-                LiveFramePath = ""; // Explizit leer setzen damit UI reagiert
-        }
-
-        OnUi(Apply);
+        TrainingLivePreviewApplyController.ApplyOnUi(
+            caseInfo,
+            code,
+            meter,
+            framePath,
+            new TrainingLivePreviewApplyUi(
+                value => LiveCaseInfo = value,
+                value => LiveCodeInfo = value,
+                value => LiveMeterInfo = value,
+                value => CurrentComparisonText = value,
+                value => CurrentEntryCode = value,
+                SetLiveFrameThrottled,
+                () => LiveFramePath,
+                value => LiveFramePath = value),
+            OnUi);
     }
 
     private void ClearLivePreview()
     {
-        var preview = TrainingLivePreviewPresenter.Clear();
-        SetLiveFrameThrottled(preview.FramePath);
-        LiveCaseInfo = preview.LiveCaseInfo;
-        LiveCodeInfo = preview.LiveCodeInfo;
-        LiveMeterInfo = preview.LiveMeterInfo;
-        CurrentComparisonText = preview.CurrentComparisonText;
-        CurrentEntryCode = preview.CurrentEntryCode;
+        TrainingLivePreviewClearController.ApplyOnUi(
+            value => LiveCaseInfo = value,
+            value => LiveCodeInfo = value,
+            value => LiveMeterInfo = value,
+            value => CurrentComparisonText = value,
+            value => CurrentEntryCode = value,
+            SetLiveFrameThrottled,
+            OnUi);
     }
 
     private async Task RefreshKbStatusAsync()
     {
-        try
-        {
-            var status = await _kbDiagnostics.ReadStatusAsync(20).ConfigureAwait(false);
-            var presentation = TrainingKnowledgeBaseStatusPresentationBuilder.Build(status);
-
-            void Apply()
-            {
-                KbSampleCount = presentation.SampleCount;
-                KbErrorCount = presentation.ErrorCount;
-                KbNewCount = presentation.NewCount;
-                KbEmbeddingCount = presentation.EmbeddingCount;
-                KbCodesCovered = presentation.CodesCovered;
-                KbLastUpdate = presentation.LastUpdateText;
-                KbReadinessLabel = presentation.ReadinessLabel;
-                KbReadinessBrush = presentation.ReadinessBrush;
-                KbTopCodesText = presentation.TopCodesText;
-            }
-
-            OnUi(Apply);
-
-            // KB-Qualitaet ebenfalls aktualisieren
-            await RefreshKbQualityAsync();
-        }
-        catch
-        {
-            // KB might not exist yet — silently ignore
-        }
+        await TrainingKnowledgeBaseStatusRefreshWorkflow.RunAsync(
+            TrainingKnowledgeBaseStatusRefreshRequestFactory.Create(
+                new TrainingKnowledgeBaseStatusRefreshRequestFactoryRequest(
+                    topCodes => _kbDiagnostics.ReadStatusAsync(topCodes),
+                    ApplyKbStatusPresentation,
+                    RefreshKbQualityAsync,
+                    OnUi)));
     }
 
     /// <summary>
@@ -333,29 +278,42 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task RefreshKbQualityAsync()
     {
-        try
-        {
-            var quality = await _kbDiagnostics.ReadQualityAsync().ConfigureAwait(false);
+        await TrainingKnowledgeBaseQualityRefreshWorkflow.RunAsync(
+            TrainingKnowledgeBaseQualityRefreshRequestFactory.CreateWithDefaults(
+                new TrainingKnowledgeBaseQualityRefreshDefaultRequestFactoryRequest(
+                    () => _kbDiagnostics.ReadQualityAsync(),
+                    ApplyKbQualityPresentation,
+                    Log,
+                    OnUi)));
+    }
 
-            var runs = await SelfTrainingHistoryStore.LoadAsync();
-            var presentation = TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs);
+    private void ApplyKbStatusPresentation(TrainingKnowledgeBaseStatusPresentation presentation)
+    {
+        TrainingKnowledgeBasePresentationController.ApplyStatus(
+            presentation,
+            new TrainingKnowledgeBaseStatusPresentationUi(
+                value => KbSampleCount = value,
+                value => KbErrorCount = value,
+                value => KbNewCount = value,
+                value => KbEmbeddingCount = value,
+                value => KbCodesCovered = value,
+                value => KbLastUpdate = value,
+                value => KbReadinessLabel = value,
+                value => KbReadinessBrush = value,
+                value => KbTopCodesText = value));
+    }
 
-            void Apply()
-            {
-                KbCoverageGapsText = presentation.CoverageGapsText;
-                KbCoverageGapsCount = presentation.CoverageGapsCount;
-                KbAccuracyText = presentation.AccuracyText;
-                KbStaleSampleCount = presentation.StaleSampleCount;
-                KbTrendText = presentation.TrendText;
-                KbTrendDirection = presentation.TrendDirection;
-
-                // Stale-Sample Warnung im Log (E1)
-                foreach (var logLine in presentation.LogLines)
-                    Log(logLine);
-            }
-            OnUi(Apply);
-        }
-        catch { /* KB evtl. noch nicht vorhanden */ }
+    private void ApplyKbQualityPresentation(TrainingKnowledgeBaseQualityPresentation presentation)
+    {
+        TrainingKnowledgeBasePresentationController.ApplyQuality(
+            presentation,
+            new TrainingKnowledgeBaseQualityPresentationUi(
+                value => KbCoverageGapsText = value,
+                value => KbCoverageGapsCount = value,
+                value => KbAccuracyText = value,
+                value => KbStaleSampleCount = value,
+                value => KbTrendText = value,
+                value => KbTrendDirection = value));
     }
 
     public TrainingCenterViewModel(
@@ -378,21 +336,16 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     public async Task LoadAsync()
     {
-        var state = await _store.LoadAsync();
-        ObservableCollectionContentController.ReplaceWith(Cases, state.Cases);
-
-        var restoredRootFolders = TrainingCenterStateController.RestoreExistingRootFolders(state, Directory.Exists);
-        if (restoredRootFolders.Count > 0)
-        {
-            TrainingCenterStateController.ReplaceRootFolders(_rootFolders, restoredRootFolders);
-            UpdateRootFolderDisplay();
-        }
-
-        StatusText = $"Geladen: {Cases.Count} Fälle";
-
-        await LoadSamplesInternalAsync();
-        await RefreshKbStatusAsync();
-        await LoadLastMatchRateAsync();
+        await TrainingCenterLoadWorkflow.RunAsync(
+            TrainingCenterLoadRequestFactory.CreateWithDefaults(new TrainingCenterLoadDefaultRequestFactoryRequest(
+                LoadStateAsync: _store.LoadAsync,
+                RootFolders: _rootFolders,
+                ReplaceCases: items => ObservableCollectionContentController.ReplaceWith(Cases, items),
+                UpdateRootFolderDisplay: UpdateRootFolderDisplay,
+                SetStatusText: value => StatusText = value,
+                LoadSamplesAsync: LoadSamplesInternalAsync,
+                RefreshKbStatusAsync: RefreshKbStatusAsync,
+                LoadLastMatchRateAsync: LoadLastMatchRateAsync)));
     }
 
     /// <summary>
@@ -401,40 +354,34 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task LoadLastMatchRateAsync()
     {
-        try
-        {
-            var runs = await SelfTrainingHistoryStore.LoadAsync();
-            var presentation = SelfTrainingLastMatchRatePresentationBuilder.Build(runs);
-            if (presentation is null) return;
-
-            ExactPercent = presentation.ExactPercent;
-            PartialPercent = presentation.PartialPercent;
-            MismatchPercent = presentation.MismatchPercent;
-            NoFindingsPercent = presentation.NoFindingsPercent;
-        }
-        catch { /* Historie nicht vorhanden */ }
+        await SelfTrainingLastMatchRateRefreshWorkflow.RunAsync(
+            SelfTrainingLastMatchRateRefreshRequestFactory.CreateWithDefaults(
+                new SelfTrainingLastMatchRateRefreshDefaultRequestFactoryRequest(
+                    CreateMatchRatePresentationUi()))).ConfigureAwait(false);
     }
+
+    private SelfTrainingMatchRatePresentationUi CreateMatchRatePresentationUi()
+        => new(
+            value => ExactPercent = value,
+            value => PartialPercent = value,
+            value => MismatchPercent = value,
+            value => NoFindingsPercent = value);
 
     [RelayCommand]
     private void BrowseRootFolder()
     {
-        var dlg = new OpenFolderDialog
-        {
-            Title = "Trainings-Ordner wählen (Mehrfachauswahl möglich)",
-            Multiselect = true
-        };
-        if (dlg.ShowDialog() != true)
-            return;
-
-        TrainingCenterStateController.AddSelectedRootFolders(_rootFolders, dlg.FolderNames);
-        UpdateRootFolderDisplay();
+        TrainingCenterRootFolderWorkflow.ApplySelected(
+            _rootFolders,
+            TrainingCenterRootFolderDialogSelector.SelectFolders(),
+            UpdateRootFolderDisplay);
     }
 
     [RelayCommand]
     private void ClearRootFolders()
     {
-        TrainingCenterStateController.ReplaceRootFolders(_rootFolders, Array.Empty<string>());
-        UpdateRootFolderDisplay();
+        TrainingCenterRootFolderWorkflow.Clear(
+            _rootFolders,
+            UpdateRootFolderDisplay);
     }
 
     private void UpdateRootFolderDisplay()
@@ -445,169 +392,108 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task DistributeHaltungAsync()
     {
-        if (IsBusy) return;
-
-        // 1. PDF auswählen
-        var pdfDlg = new OpenFileDialog
-        {
-            Title = "Haltungs-PDF wählen",
-            Filter = "PDF (*.pdf)|*.pdf"
-        };
-        if (pdfDlg.ShowDialog() != true) return;
-        var pdfPath = pdfDlg.FileName;
-
-        // 2. Video-Ordner auswählen
-        var videoDlg = new OpenFolderDialog
-        {
-            Title = "Video-Ordner wählen (Film-Ordner mit Haltungs-Videos)"
-        };
-        if (videoDlg.ShowDialog() != true) return;
-        var videoFolder = videoDlg.FolderName;
-
-        // 3. Output-Ordner: neben dem PDF, Unterordner "TrainingCases"
-        var pdfDir = Path.GetDirectoryName(pdfPath) ?? videoFolder;
-        var projectName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outputFolder = Path.Combine(Path.GetDirectoryName(pdfDir) ?? pdfDir, $"{projectName}_Training");
-
-        try
-        {
-            IsBusy = true;
-            LogText = "";
-            StatusText = "PDF nach Haltungen aufteilen...";
-            Log($"PDF: {pdfPath}");
-            Log($"Videos: {videoFolder}");
-            Log($"Output: {outputFolder}");
-
-            var result = await _import.DistributeByHaltungAsync(pdfPath, videoFolder, outputFolder);
-
-            foreach (var msg in result.Messages)
-                Log($"  {msg}");
-
-            Log($"--- Fertig: {result.Distributed} Haltungen verteilt, {result.VideosMatched} Videos zugeordnet ---");
-
-            if (result.Uncertain > 0)
-                Log($"  {result.Uncertain} Chunks ohne Haltungs-ID uebersprungen.");
-
-            StatusText = $"Verteilt: {result.Distributed} Haltungen, {result.VideosMatched} Videos → {outputFolder}";
-
-            // Output-Ordner automatisch als Root-Ordner setzen
-            if (result.Distributed > 0)
-            {
-                TrainingCenterStateController.AddRootFolder(_rootFolders, outputFolder);
-                UpdateRootFolderDisplay();
-                Log($"Output-Ordner als Trainings-Ordner hinzugefuegt. Klicke 'Scannen' zum Laden.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"Fehler: {ex.Message}");
-            StatusText = $"Fehler bei Verteilung: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await TrainingCenterDistributionWorkflow.RunAsync(
+            TrainingCenterDistributionRequestFactory.CreateWithDefaultSelectors(
+                new TrainingCenterDistributionDefaultRequestFactoryRequest(
+                    GetIsBusy: () => IsBusy,
+                    SetIsBusy: value => IsBusy = value,
+                    DistributeAsync: (pdfPath, videoFolder, outputFolder) =>
+                        _import.DistributeByHaltungAsync(pdfPath, videoFolder, outputFolder),
+                    RootFolders: _rootFolders,
+                    UpdateRootFolderDisplay: UpdateRootFolderDisplay,
+                    SetLogText: value => LogText = value,
+                    SetStatusText: value => StatusText = value,
+                    Log: Log)));
     }
 
     [RelayCommand]
     private async Task ScanAsync()
     {
-        if (IsBusy) return;
-        if (_rootFolders.Count == 0)
-        {
-            StatusText = "Bitte zuerst einen oder mehrere Ordner wählen.";
-            return;
-        }
-
-        try
-        {
-            IsBusy = true;
-            StatusText = "Scanne Ordner...";
-            ObservableCollectionContentController.ReplaceWith(Cases, Array.Empty<TrainingCase>());
-
-            foreach (var folder in _rootFolders)
-            {
-                if (!Directory.Exists(folder)) continue;
-                var found = await _import.ScanAsync(folder);
-                ObservableCollectionContentController.Append(
-                    Cases,
-                    found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase));
-            }
-
-            var withProto = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
-            var pdfOnly = Cases.Count(c => string.IsNullOrEmpty(c.VideoPath) && !string.IsNullOrEmpty(c.ProtocolPath));
-            StatusText = TrainingCenterDisplayFormatter.FormatScanSummary(Cases.Count, withProto, pdfOnly);
-
-            // Auto-Save: Faelle + Ordner persistieren
-            await AutoSaveStateAsync();
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await TrainingCenterScanWorkflow.RunAsync(
+            TrainingCenterScanRequestFactory.CreateWithDefaults(new TrainingCenterScanDefaultRequestFactoryRequest(
+                GetIsBusy: () => IsBusy,
+                SetIsBusy: value => IsBusy = value,
+                RootFolders: _rootFolders,
+                ScanInputsAsync: _import.ScanAsync,
+                ReplaceCases: ReplaceScannedCases,
+                AppendCases: AppendScannedCases,
+                SetStatusText: value => StatusText = value,
+                SaveStateAsync: AutoSaveStateAsync)));
     }
+
+    private void ReplaceScannedCases(IReadOnlyList<TrainingCase> items)
+        => ObservableCollectionContentController.ReplaceWith(Cases, items);
+
+    private void AppendScannedCases(IReadOnlyList<TrainingCase> items)
+        => ObservableCollectionContentController.Append(Cases, items);
 
     /// <summary>Speichert Faelle + Root-Ordner automatisch (ohne UI-Feedback).</summary>
     private async Task AutoSaveStateAsync()
     {
         try
         {
-            await _store.SaveAsync(BuildState());
+            await _store.SaveAsync(TrainingCenterSaveRequestFactory.BuildStateWithDefaults(Cases, _rootFolders));
         }
         catch { /* stilles Speichern */ }
     }
 
-    private TrainingCenterState BuildState()
-        => TrainingCenterStateController.BuildState(Cases, _rootFolders, DateTime.UtcNow);
-
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (IsBusy) return;
-        try
-        {
-            IsBusy = true;
-            await _store.SaveAsync(BuildState());
-            StatusText = $"Gespeichert: {Cases.Count} Fälle, {_rootFolders.Count} Ordner";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await TrainingCenterSaveWorkflow.RunAsync(
+            TrainingCenterSaveRequestFactory.CreateWithDefaults(new TrainingCenterSaveDefaultRequestFactoryRequest(
+                GetIsBusy: () => IsBusy,
+                SetIsBusy: value => IsBusy = value,
+                Cases: Cases,
+                RootFolders: _rootFolders,
+                SaveStateAsync: _store.SaveAsync,
+                SetStatusText: SetSaveStatusText)));
     }
+
+    private void SetSaveStatusText(string value) => StatusText = value;
 
     private bool HasSelection() => SelectedCase is not null;
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void Approve()
     {
-        if (SelectedCase is null) return;
-        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Approve);
-        StatusText = decision.StatusText;
+        TrainingCaseCommandWorkflow.Run(
+            TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
+                SelectedCase,
+                TrainingCaseDecision.Approve,
+                SetCaseCommandStatusText)));
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void Reject()
     {
-        if (SelectedCase is null) return;
-        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Reject);
-        StatusText = decision.StatusText;
+        TrainingCaseCommandWorkflow.Run(
+            TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
+                SelectedCase,
+                TrainingCaseDecision.Reject,
+                SetCaseCommandStatusText)));
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void SetNew()
     {
-        if (SelectedCase is null) return;
-        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.SetNew);
-        StatusText = decision.StatusText;
+        TrainingCaseCommandWorkflow.Run(
+            TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
+                SelectedCase,
+                TrainingCaseDecision.SetNew,
+                SetCaseCommandStatusText)));
     }
+
+    private void SetCaseCommandStatusText(string value) => StatusText = value;
 
     partial void OnSelectedCaseChanged(TrainingCase? value)
     {
-        ApproveCommand.NotifyCanExecuteChanged();
-        RejectCommand.NotifyCanExecuteChanged();
-        SetNewCommand.NotifyCanExecuteChanged();
-        GenerateSamplesCommand.NotifyCanExecuteChanged();
+        TrainingSelectionCommandRefreshController.RefreshCaseSelection(
+            new TrainingCaseSelectionCommandRefresh(
+                ApproveCommand.NotifyCanExecuteChanged,
+                RejectCommand.NotifyCanExecuteChanged,
+                SetNewCommand.NotifyCanExecuteChanged,
+                GenerateSamplesCommand.NotifyCanExecuteChanged));
     }
 
     // ── Samples ──────────────────────────────────────────────────────────────
@@ -620,70 +506,36 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private async Task LoadSamplesInternalAsync()
     {
-        var list = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-        OnUi(() =>
-        {
-            ObservableCollectionContentController.ReplaceWith(Samples, list);
-        });
+        await TrainingSampleLoadWorkflow.RunAsync(
+            TrainingSampleLoadRequestFactory.CreateWithDefaults(
+                Samples,
+                OnUi)).ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private async Task GenerateSamplesAsync()
     {
-        if (SelectedCase is null || IsBusy) return;
+        await TrainingCenterSampleGenerationWorkflow.RunAsync(
+            TrainingCenterSampleGenerationRequestFactory.CreateWithDefaults(
+                new TrainingCenterSampleGenerationDefaultRequestFactoryRequest(
+                    SelectedCase,
+                    GetIsBusy: () => IsBusy,
+                    SetIsBusy: value => IsBusy = value,
+                    ResetCancellation: ResetGenerationCancellation,
+                    CodeCatalog: _codeCatalog,
+                    AppendSamples: samples => TrainingSampleCollectionController.Append(Samples, samples),
+                    SetStatusText: value => StatusText = value)));
+    }
 
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
+    private CancellationTokenSource ResetGenerationCancellationSource()
+    {
+        _genCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_genCts);
+        return _genCts;
+    }
 
-        using var _aiToken = AiTrack.Begin("Training Center");
-        try
-        {
-            IsBusy = true;
-            StatusText = $"Generiere Samples für {SelectedCase.CaseId}...";
-
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            var settings = await TrainingCenterSettingsStore.LoadAsync();
-            var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
-
-            var existing = await TrainingSamplesStore.LoadAsync();
-            var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
-
-            var generation = await generator.GenerateWithDiagnosticsAsync(
-                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(SelectedCase), existingSigs, framesDir: null, ct);
-            var newSamples = generation.Samples;
-
-            if (newSamples.Count == 0)
-            {
-                StatusText = TrainingCenterSampleGenerationStatusFormatter.FormatEmptyCaseStatus(
-                    SelectedCase.CaseId,
-                    SelectedCase.ProtocolPath,
-                    generation);
-                return;
-            }
-
-            await TrainingSamplesStore.MergeAndSaveAsync(newSamples);
-
-            ObservableCollectionContentController.Append(Samples, newSamples);
-
-            StatusText = $"{newSamples.Count} neue Samples generiert für {SelectedCase.CaseId}.";
-        }
-        catch (OperationCanceledException)
-        {
-            StatusText = "Sample-Generierung abgebrochen.";
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Fehler bei Sample-Generierung: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+    private CancellationToken ResetGenerationCancellation()
+    {
+        return ResetGenerationCancellationSource().Token;
     }
 
     private bool HasSampleSelection() => SelectedSample is not null;
@@ -691,39 +543,35 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task ApproveSampleAsync()
     {
-        var sample = SelectedSample;
-        if (sample is null) return;
-
-        var decision = TrainingSampleDecisionController.Approve(sample);
-        StatusText = decision.StatusText;
-        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
+        await RunSampleCommandAsync(TrainingSampleDecisionController.Approve);
     }
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task RejectSampleAsync()
     {
-        var sample = SelectedSample;
-        if (sample is null) return;
-
-        var decision = TrainingSampleDecisionController.Reject(sample);
-        if (decision.ShouldDeindex)
-            TryDeindexSample(sample.SampleId);
-        StatusText = decision.StatusText;
-        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
+        await RunSampleCommandAsync(TrainingSampleDecisionController.Reject);
     }
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task RemoveSampleAsync()
     {
-        var sample = SelectedSample;
-        if (sample is null) return;
-
-        var decision = TrainingSampleDecisionController.Remove(sample);
-        if (decision.ShouldDeindex)
-            TryDeindexSample(sample.SampleId);
-        StatusText = decision.StatusText;
-        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
+        await RunSampleCommandAsync(TrainingSampleDecisionController.Remove);
     }
+
+    private async Task RunSampleCommandAsync(Func<TrainingSample, TrainingSampleDecisionResult> decide)
+    {
+        await TrainingSampleCommandWorkflow.RunAsync(
+            TrainingSampleCommandRequestFactory.CreateWithDefaults(
+                new TrainingSampleCommandRequestFactoryRequest(
+                    SelectedSample,
+                    decide,
+                    () => _kbHttpClient,
+                    value => _kbHttpClient = value,
+                    SetSampleCommandStatusText,
+                    PersistSamplesAsync)));
+    }
+
+    private void SetSampleCommandStatusText(string value) => StatusText = value;
 
     /// <summary>
     /// Entfernt ein Sample aus der Wissensdatenbank (Deindex), ohne Ollama zu benoetigen.
@@ -731,44 +579,28 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private void TryDeindexSample(string sampleId)
     {
-        try
-        {
-            var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
-            _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-            using var kbCtx = new KnowledgeBaseContext();
-            var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            var kbManager = new KnowledgeBaseManager(kbCtx, embedder);
-            kbManager.DeindexSample(sampleId);
-        }
-        catch { /* KB evtl. nicht erreichbar — Status-Aenderung bleibt persistiert */ }
+        TrainingKnowledgeBaseSampleDeindexer.TryDeindexWithDefaults(
+            sampleId,
+            () => _kbHttpClient,
+            value => _kbHttpClient = value);
     }
 
     [RelayCommand]
     private async Task ExportApprovedAsync()
     {
-        if (IsBusy) return;
-        try
-        {
-            IsBusy = true;
-            var targetPath = Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json");
-            var result = await TrainingApprovedProtocolExportController.RunAsync(
-                Samples.ToList(),
-                IsTrainingExportEligible,
-                ProtocolTrainingStore.AddSample,
-                () => PersistSamplesAsync(),
-                () => DateTime.UtcNow,
-                targetPath).ConfigureAwait(false);
-
-            foreach (var line in result.LogLines)
-                Log(line);
-
-            StatusText = result.StatusText;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await TrainingApprovedProtocolExportWorkflow.RunAsync(
+            TrainingApprovedProtocolExportRequestFactory.CreateWithDefaults(
+                new TrainingApprovedProtocolExportDefaultRequestFactoryRequest(
+                    GetIsBusy: () => IsBusy,
+                    SetIsBusy: value => IsBusy = value,
+                    Samples: Samples,
+                    IsExportEligible: sample => TrainingSampleExportEligibility.EvaluateAndUpdate(sample, _codeCatalog),
+                    PersistSamplesAsync: () => PersistSamplesAsync(),
+                    Log: Log,
+                    SetStatusText: SetApprovedProtocolExportStatusText)));
     }
+
+    private void SetApprovedProtocolExportStatusText(string value) => StatusText = value;
 
     /// <summary>
     /// Batch-Import: Scannt alle Ordner, generiert Samples, approved automatisch,
@@ -777,208 +609,69 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task BatchImportAndIndexAsync()
     {
-        if (IsBusy) return;
-
-        if (_rootFolders.Count == 0)
-        {
-            StatusText = "Bitte zuerst einen oder mehrere Ordner wählen.";
-            return;
-        }
-
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        var runCts = new CancellationTokenSource();
-
-        // S8: Dieser Pfad setzt erkannte Samples automatisch auf Approved und indexiert sie
-        // OHNE manuelle Pruefung direkt in die Knowledge Base (umgeht die Review-Politik des
-        // Selbsttrainings). Falsche Labels verschlechtern damit dauerhaft alle kuenftigen
-        // KI-Vorschlaege. Darum einmalige, bewusste Bestaetigung pro Lauf verlangen.
-        var confirmation = TrainingBatchImportAutoApproveConfirmationController.Confirm(
-            DialogHost.Current);
-        if (!confirmation.ShouldContinue)
-        {
-            runCts.Dispose();
-            StatusText = confirmation.StatusText ?? "";
-            return;
-        }
-
-        _genCts = runCts;
-        var ct = runCts.Token;
-
-        var batchUi = new TrainingBatchUiSink(
-            value => IsBusy = value,
-            value => LogText = value,
-            value => ProgressValue = value,
-            value => ProgressMax = value,
-            value => StatusText = value,
-            Log);
-
-        using var _aiToken = AiTrack.Begin("Training Center");
-        try
-        {
-            batchUi.SetBusy(true);
-            batchUi.SetLogText("");
-            batchUi.SetProgressValue(0);
-            batchUi.SetProgressMax(1);
-            ClearLivePreview();
-            ResetSelfTrainingVisuals();
-
-            var scanWorkflow = await TrainingBatchImportScanWorkflowController.RunAsync(
-                _rootFolders.Count,
-                () => TrainingBatchImportScanController.ScanAsync(
-                    _rootFolders,
-                    Directory.Exists,
-                    async folder => (await _import.ScanAsync(folder).ConfigureAwait(false))
-                        .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
-                        .ToList(),
-                    Log),
-                Cases,
-                Log,
-                value => StatusText = value);
-            if (scanWorkflow.ShouldStop)
-                return;
-            var casesWithProtocol = scanWorkflow.CasesWithProtocol;
-
-            var runtimeSetup = await TrainingBatchImportRuntimeSetupController.PrepareAsync(
-                casesWithProtocol,
-                () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
-                TrainingCenterSettingsStore.LoadAsync,
-                (cfg, settings) =>
-                {
-                    var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-                    return new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
-                },
-                TrainingSamplesStore.LoadAsync,
-                value => ProgressMax = value,
-                Log);
-            var cfg = runtimeSetup.Config;
-            var generator = runtimeSetup.Generator;
-            var allSamples = runtimeSetup.AllSamples;
-            var existingSigs = runtimeSetup.ExistingSignatures;
-            var casesToProcess = runtimeSetup.CasesToProcess;
-            var runSummary = runtimeSetup.RunSummary;
-            var caseUi = new TrainingBatchImportCaseUiSink(
-                preview => UpdateLivePreview(
+        await TrainingBatchImportCommandWorkflow.RunAsync(
+            TrainingBatchImportCommandRequestFactory.CreateWithDefaults(new TrainingBatchImportCommandRunDefaultRequestFactoryRequest(
+                GetIsBusy: () => IsBusy,
+                RootFolders: _rootFolders,
+                CreateCancellationSource: ResetGenerationCancellationSource,
+                StoreCancellationSource: cts => _genCts = cts,
+                ScanInputsAsync: _import.ScanAsync,
+                Cases: Cases,
+                CodeCatalog: _codeCatalog,
+                SaveStateAsync: () => _store.SaveAsync(TrainingCenterSaveRequestFactory.BuildStateWithDefaults(Cases, _rootFolders)),
+                GetSelfTrainingResultCount: () => SelfTrainingResults.Count,
+                SetBusy: value => IsBusy = value,
+                SetLogText: value => LogText = value,
+                SetProgressValue: value => ProgressValue = value,
+                SetProgressMax: value => ProgressMax = value,
+                SetStatusText: value => StatusText = value,
+                Log: Log,
+                UpdateLivePreview: preview => UpdateLivePreview(
                     preview.CaseInfo,
                     preview.CodeInfo,
                     preview.MeterInfo,
                     preview.FramePath),
-                OnUi,
-                SelfTrainingResults.Add,
-                UpdateCodeDistribution,
-                value => KbSampleCount = value,
-                value => KbCodesCovered = value,
-                Log);
-
-            await TrainingBatchImportCaseLoopController.RunAsync(
-                casesToProcess,
-                (caseIndex, totalCount, trainingCase) =>
-                {
-                    batchUi.SetProgressValue(caseIndex + 1);
-                    var progressPresentation = TrainingBatchImportCaseProgressPresentationBuilder.Build(
-                        caseIndex,
-                        totalCount,
-                        trainingCase);
-                    batchUi.SetStatusText(progressPresentation.StatusText);
-                    foreach (var line in progressPresentation.LogLines)
-                        batchUi.Log(line);
-                },
-                async (caseIndex, trainingCase, token) =>
-                {
-                    await TrainingBatchImportCaseWorkflowController.ProcessAsync(
-                        trainingCase,
-                        existingSigs,
-                        allSamples,
-                        SelfTrainingResults.Count + 1,
-                        caseIndex + 1,
-                        runSummary,
-                        (currentCase, currentToken) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(currentCase, cfg, currentToken),
-                        (input, signatures, currentToken) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, currentToken),
-                        caseUi,
-                        TrainingSamplesStore.MergeAndSaveAsync,
-                        () => _store.SaveAsync(BuildState()),
-                        token).ConfigureAwait(false);
-                },
-                ex =>
-                {
-                    runSummary.RecordError(ex.Message);
-                    batchUi.Log($"  FEHLER: {ex.Message}");
-                },
-                ct).ConfigureAwait(false);
-
-            var completion = await TrainingBatchImportRunCompletionController.CompleteAsync(
-                runSummary,
-                casesToProcess.Count,
-                async () => await TrainingSamplesStore.LoadAsync(),
-                items => ObservableCollectionContentController.ReplaceWith(Samples, items),
-                RefreshKbStatusAsync,
-                () => _store.SaveAsync(BuildState()),
-                Log,
-                value => StatusText = value);
-            if (completion.ShouldStop)
-                return;
-        }
-        catch (OperationCanceledException)
-        {
-            batchUi.Log("Batch-Import abgebrochen durch Benutzer.");
-            batchUi.SetStatusText("Batch-Import abgebrochen.");
-        }
-        catch (Exception ex)
-        {
-            batchUi.Log($"FATALER FEHLER: {ex.Message}");
-            batchUi.SetStatusText($"Fehler beim Batch-Import: {ex.Message}");
-        }
-        finally
-        {
-            batchUi.SetBusy(false);
-        }
+                OnUi: OnUi,
+                AddResult: SelfTrainingResults.Add,
+                UpdateCodeDistribution: UpdateCodeDistribution,
+                SetKbSampleCount: value => KbSampleCount = value,
+                SetKbCodesCovered: value => KbCodesCovered = value,
+                Samples: Samples,
+                RefreshKbStatusAsync: RefreshKbStatusAsync,
+                ClearLivePreview: ClearLivePreview,
+                ResetSelfTrainingVisuals: () => ResetSelfTrainingVisuals()))).ConfigureAwait(false);
     }
 
     [RelayCommand]
     private void CancelBatch()
     {
-        _genCts?.Cancel();
-        StatusText = "Abbruch angefordert...";
+        TrainingBatchImportRunControlController.Cancel(
+            () => CancellationTokenSourceLifecycle.CancelIfPresent(_genCts),
+            value => StatusText = value);
     }
 
     [RelayCommand]
     private async Task CheckKnowledgeBaseAsync()
     {
-        var start = TrainingKnowledgeBaseCheckRunController.TryStart(IsBusy);
-        if (start.ShouldStop) return;
-
-        try
-        {
-            IsBusy = start.IsBusy;
-            StatusText = start.StatusText ?? "";
-
-            var summary = await _kbDiagnostics.ReadSummaryAsync(12).ConfigureAwait(false);
-
-            var presentation = TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary);
-            TrainingKnowledgeBaseCheckRunController.ApplySuccess(
-                presentation,
-                Log,
-                value => StatusText = value);
-
-            await RefreshKbStatusAsync();
-        }
-        catch (Exception ex)
-        {
-            TrainingKnowledgeBaseCheckRunController.ApplyFailure(
-                ex,
-                Log,
-                value => StatusText = value);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await TrainingKnowledgeBaseCheckWorkflow.RunAsync(
+            TrainingKnowledgeBaseCheckRequestFactory.Create(
+                new TrainingKnowledgeBaseCheckRequestFactoryRequest(
+                    IsBusy,
+                    value => IsBusy = value,
+                    value => StatusText = value,
+                    topCodes => _kbDiagnostics.ReadSummaryAsync(topCodes),
+                    RefreshKbStatusAsync,
+                    Log,
+                    CancellationToken.None)));
     }
 
     partial void OnSelectedSampleChanged(TrainingSample? value)
     {
-        ApproveSampleCommand.NotifyCanExecuteChanged();
-        RejectSampleCommand.NotifyCanExecuteChanged();
+        TrainingSelectionCommandRefreshController.RefreshSampleSelection(
+            new TrainingSampleSelectionCommandRefresh(
+                ApproveSampleCommand.NotifyCanExecuteChanged,
+                RejectSampleCommand.NotifyCanExecuteChanged,
+                RemoveSampleCommand.NotifyCanExecuteChanged));
     }
 
     /// <summary>
@@ -987,8 +680,9 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     partial void OnSelectedReviewItemChanged(InfraSelfImproving.ReviewQueueItem? value)
     {
-        PendingBox = null;
-        PendingSamMask = null;
+        TrainingReviewPendingGeometryController.Clear(
+            value => PendingBox = value,
+            value => PendingSamMask = value);
     }
 
 
@@ -998,11 +692,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     private async Task PersistSamplesAsync(TrainingSample? changedSample = null)
     {
         await TrainingSamplePersistenceWorkflowController.PersistAsync(
-            Samples.ToList(),
-            changedSample,
-            TrainingSamplesStore.MergeOrUpdateAsync,
-            (samples, ct) => IncrementalKbUpdateWithReasonAsync(samples.ToList(), ct),
-            CancellationToken.None).ConfigureAwait(false);
+            TrainingSamplePersistenceRequestFactory.CreateWithDefaults(
+                Samples,
+                changedSample,
+                IncrementalKbUpdateWithReasonAsync,
+                CancellationToken.None)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1020,56 +714,16 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         // Nebenlaeufigkeits-Guard: nie parallel zu Batch/Self-Training oder mehrfach gleichzeitig —
         // sonst koennten Backup, JSON-Status und KB-Index gegeneinander arbeiten.
-        if (IsBusy || IsSelfTrainingRunning) return;
-
-        // An die vorhandene Abbruch-Infrastruktur anschliessen (CancelBatch cancelt _genCts,
-        // der "Abbrechen"-Button ist bei IsBusy sichtbar).
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
-
-        try
-        {
-            IsBusy = true;
-
-            await TrainingGoldKbReconcileWorkflowController.RunAsync(
-                TrainingSamplesStore.LoadAsync,
-                TrainingSamplesStore.MergeOrUpdateAsync,
-                IncrementalKbUpdateWithReasonAsync,
-                async (path, progress, token) =>
-                {
-                    var backup = await KnowledgeBackupService.ExportAsync(path, progress, token).ConfigureAwait(false);
-                    return new TrainingGoldKbReconcileBackupResult(
-                        backup.Success,
-                        backup.Error,
-                        backup.FileCount);
-                },
-                () => KnowledgeBasePaths.GetRoot(),
-                () => DateTime.Now,
-                directory => System.IO.Directory.CreateDirectory(directory),
-                Log,
-                SetStatus,
-                ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            // Abbruch ist sauber: bereits verarbeitete Bloecke sind persistiert, der Rest behaelt
-            // seinen Zustand und wird beim naechsten Lauf erneut aufgegriffen.
-            Log("KB-Nachholen abgebrochen.");
-            SetStatus("KB-Nachholen abgebrochen");
-        }
-        catch (Exception ex)
-        {
-            Log($"KB-Nachholen Fehler: {ex.Message}");
-            SetStatus("KB-Nachholen fehlgeschlagen");
-        }
-        finally
-        {
-            // IsBusy ist ein UI-Property; finally laeuft nach ConfigureAwait(false) ggf. auf
-            // dem Worker-Thread -> dispatcher-sicher zuruecksetzen.
-            OnUi(() => IsBusy = false);
-        }
+        await TrainingGoldKbReconcileCommandWorkflow.RunAsync(
+            TrainingGoldKbReconcileCommandRequestFactory.CreateWithDefaults(new TrainingGoldKbReconcileCommandDefaultRequestFactoryRequest(
+                GetIsBusy: () => IsBusy,
+                GetIsSelfTrainingRunning: () => IsSelfTrainingRunning,
+                ResetCancellation: ResetGenerationCancellation,
+                SetBusy: value => IsBusy = value,
+                IndexAsync: IncrementalKbUpdateWithReasonAsync,
+                Log: Log,
+                SetStatus: SetStatus,
+                OnUi: OnUi))).ConfigureAwait(false);
     }
 
 
@@ -1089,19 +743,15 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Loads pending review items into the queue.</summary>
     public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
     {
-        ArgumentNullException.ThrowIfNull(queueService);
-
-        OnUi(() =>
-        {
-            var items = queueService.GetAll();
-            ReviewQueue.Clear();
-            foreach (var item in items)
-                ReviewQueue.Add(item);
-
-            ReviewQueueCount = items.Count;
-            ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
-        });
+        TrainingReviewQueueLoadWorkflow.Run(
+            TrainingReviewQueueLoadRequestFactory.Create(new TrainingReviewQueueLoadRequestFactoryRequest(
+                queueService,
+                ReviewQueue,
+                value => ReviewQueueCount = value,
+                value => ReviewStatusText = value,
+                OnUi)));
     }
+
 
     /// <summary>
     /// Loest die SampleId eines Self-Training-Review-Items auf: bevorzugt die direkte SampleId,
@@ -1109,18 +759,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)
     {
-        return await SelfTrainingReviewSampleIdResolver.ResolveAsync(
-            item,
-            TrainingSamplesStore.LoadAsync).ConfigureAwait(false);
-    }
-
-    /// <summary>Baut den Review-Approval-Service mit Delegate auf die bestehende VM-KB-Indexierung.</summary>
-    private IReviewApprovalService BuildReviewApprovalService()
-    {
-        var indexer = new DelegatingKnowledgeBaseIndexer(
-            (s, c) => IncrementalKbUpdateWithReasonAsync(s.ToList(), c),
-            TryDeindexSample);
-        return new ReviewApprovalService(new TrainingSamplesStoreAdapter(), indexer);
+        return await TrainingReviewSampleIdResolutionWorkflow.ResolveWithDefaultsAsync(item).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1135,38 +774,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         BoundingBox? box = null,
         TrainingSegmentationMask? mask = null)
     {
-        if (item.Entry is not null)
-        {
-            await feedback.ProcessFeedbackAsync(
-                item.Entry, item.Entry.SuggestedCode ?? "", accepted: true, ct).ConfigureAwait(false);
-        }
-        else if (item.IsFromSelfTraining)
-        {
-            var sampleId = await ResolveSelfTrainingSampleIdAsync(item).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(sampleId))
-            {
-                Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
-            }
-            else
-            {
-                var svc = BuildReviewApprovalService();
-                // box uebergeben: wenn Reviewer eine Box gezeichnet hat, wird HasBbox=true gesetzt (B5)
-                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct, System.Environment.UserName, mask).ConfigureAwait(false);
-                if (result.Found)
-                {
-                    var bboxInfo = box.HasValue ? " (Box gesetzt)" : "";
-                    Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Approved{bboxInfo}, KB: {(result.Indexed ? "Indexed" : "Error")}");
-                }
-                await LoadSamplesInternalAsync().ConfigureAwait(false);
-            }
-        }
-        OnUi(() =>
-        {
-            var completion = TrainingReviewQueueCompletionController.ApplyApproved(item, queueService, ReviewQueue);
-            ReviewQueueCount = completion.ReviewQueueCount;
-            ReviewStatusText = completion.StatusText;
-            Log(completion.LogText);
-        });
+        await RunReviewItemDecisionAsync(
+            item,
+            feedback,
+            queueService,
+            TrainingReviewItemDecision.Approve,
+            correctedCode: "",
+            correctedDescription: null,
+            ct,
+            box,
+            mask).ConfigureAwait(false);
     }
 
     /// <summary>Reject a review item with a corrected code.</summary>
@@ -1178,118 +795,86 @@ public partial class TrainingCenterViewModel : ObservableObject
         CancellationToken ct = default,
         string? correctedDescription = null)
     {
-        if (item.Entry is not null)
-        {
-            await feedback.ProcessFeedbackAsync(
-                item.Entry, correctedCode, accepted: false, ct).ConfigureAwait(false);
-        }
-        else if (item.IsFromSelfTraining)
-        {
-            var sampleId = await ResolveSelfTrainingSampleIdAsync(item).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(sampleId))
-            {
-                Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
-            }
-            else
-            {
-                var svc = BuildReviewApprovalService();
-                var result = await svc.RejectSelfTrainingAsync(
-                    sampleId,
-                    correctedCode,
-                    ct,
-                    System.Environment.UserName,
-                    correctedDescription).ConfigureAwait(false);
-                if (result.Found)
-                {
-                    if (!string.IsNullOrEmpty(result.CorrectedSampleId))
-                        Log($"Korrigiertes Sample {result.CorrectedSampleId} erzeugt");
-                    else
-                        Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Rejected");
-                }
-                await LoadSamplesInternalAsync().ConfigureAwait(false);
-            }
-        }
-        OnUi(() =>
-        {
-            var completion = TrainingReviewQueueCompletionController.ApplyRejected(item, correctedCode, queueService, ReviewQueue);
-            ReviewQueueCount = completion.ReviewQueueCount;
-            ReviewStatusText = completion.StatusText;
-            Log(completion.LogText);
-        });
+        await RunReviewItemDecisionAsync(
+            item,
+            feedback,
+            queueService,
+            TrainingReviewItemDecision.Reject,
+            correctedCode,
+            correctedDescription,
+            ct,
+            box: null,
+            mask: null).ConfigureAwait(false);
     }
+
+    private Task RunReviewItemDecisionAsync(
+        InfraSelfImproving.ReviewQueueItem item,
+        InfraSelfImproving.FeedbackIngestionService feedback,
+        InfraSelfImproving.ReviewQueueService queueService,
+        TrainingReviewItemDecision decision,
+        string correctedCode,
+        string? correctedDescription,
+        CancellationToken ct,
+        BoundingBox? box,
+        TrainingSegmentationMask? mask)
+        => TrainingReviewItemDecisionCommandWorkflow.RunAsync(
+            TrainingReviewItemDecisionCommandRequestFactory.Create(new TrainingReviewItemDecisionCommandRequestFactoryRequest(
+                Item: item,
+                Feedback: feedback,
+                QueueService: queueService,
+                Decision: decision,
+                CorrectedCode: correctedCode,
+                CorrectedDescription: correctedDescription,
+                CancellationToken: ct,
+                Box: box,
+                Mask: mask,
+                ReviewQueue: ReviewQueue,
+                ResolveSampleIdAsync: ResolveSelfTrainingSampleIdAsync,
+                IndexSamplesAsync: (samples, token) => IncrementalKbUpdateWithReasonAsync(samples.ToList(), token),
+                DeindexSample: TryDeindexSample,
+                ReloadSamplesAsync: LoadSamplesInternalAsync,
+                OnUi: OnUi,
+                SetReviewQueueCount: value => ReviewQueueCount = value,
+                SetReviewStatusText: value => ReviewStatusText = value,
+                Log: Log)));
 
     // ── Review Queue Commands ────────────────────────────────────────────
 
     private bool HasSelectedReviewItem => SelectedReviewItem is not null;
 
-    /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
-    private InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
-        KnowledgeBaseContext db)
-    {
-        var logger  = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
-        var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
-
-        // KbManager optional — wenn Ollama offline, wird nur geloggt
-        KnowledgeBaseManager? kbManager = null;
-        try
-        {
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToOllamaConfig();
-            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new EmbeddingService(http, cfg);
-            var evalSets = EvalContaminationSetProvider.Load(_settings);
-            kbManager = new KnowledgeBaseManager(db, embedder, evalSets.ImageHashes, evalSets.HaltungKeys);
-        }
-        catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
-
-        return new InfraSelfImproving.FeedbackIngestionService(logger, weights, kbManager);
-    }
-
     [RelayCommand(CanExecute = nameof(HasSelectedReviewItem))]
     private async Task ApproveSelectedReviewAsync(CancellationToken ct)
     {
-        var item = SelectedReviewItem;
-        if (item is null || ReviewQueueServiceRef is null) return;
-
-        // Box/Maske vor dem await captureren (UI-State kann sich aendern) (B5)
-        var box = PendingBox;
-        var mask = PendingSamMask;
-
-        try
-        {
-            using var db = new KnowledgeBaseContext();
-            var feedback = CreateFeedbackService(db);
-            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct, box, mask).ConfigureAwait(false);
-
-            // Box-/Masken-Model zuruecksetzen (visuelle Box wird via PropertyChanged/Selection-Change geloescht)
-            PendingBox = null;
-            PendingSamMask = null;
-        }
-        catch (Exception ex)
-        {
-            Log($"Review-Freigabe Fehler: {ex.Message}");
-            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
-        }
+        await TrainingSelectedReviewCommandWorkflow.ApproveAsync(
+            TrainingSelectedReviewCommandRequestFactory.CreateApproveWithDefaults(
+                new TrainingSelectedReviewApproveFactoryRequest(
+                    Item: SelectedReviewItem,
+                    QueueService: ReviewQueueServiceRef,
+                    GetPendingBox: () => PendingBox,
+                    GetPendingMask: () => PendingSamMask,
+                    ClearPendingReviewGeometry: ClearPendingReviewGeometry,
+                    Settings: _settings,
+                    ApproveReviewItemAsync: ApproveReviewItemAsync,
+                    CancellationToken: ct,
+                    Log: Log,
+                    OnUi: OnUi,
+                    SetReviewStatusText: value => ReviewStatusText = value))).ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(HasSelectedReviewItem))]
     private async Task RejectSelectedReviewAsync(CancellationToken ct)
     {
-        var item = SelectedReviewItem;
-        if (item is null || ReviewQueueServiceRef is null) return;
-        try
-        {
-            using var db = new KnowledgeBaseContext();
-            var feedback = CreateFeedbackService(db);
-            // Reine Ablehnung ohne Korrektur (correctedCode leer) -> Status Rejected + KB-Eintrag entfernt, kein _corr-Sample.
-            await RejectReviewItemAsync(item, string.Empty, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Log($"Review-Ablehnung Fehler: {ex.Message}");
-            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
-        }
+        await TrainingSelectedReviewCommandWorkflow.RejectAsync(
+            TrainingSelectedReviewCommandRequestFactory.CreateRejectWithDefaults(
+                new TrainingSelectedReviewRejectFactoryRequest(
+                    Item: SelectedReviewItem,
+                    QueueService: ReviewQueueServiceRef,
+                    Settings: _settings,
+                    RejectReviewItemAsync: RejectReviewItemAsync,
+                    CancellationToken: ct,
+                    Log: Log,
+                    OnUi: OnUi,
+                    SetReviewStatusText: value => ReviewStatusText = value))).ConfigureAwait(false);
     }
 
     /// <summary>Wendet eine Review-Korrektur an: Original ablehnen+deindexieren, korrigiertes Sample anlegen+indexieren.</summary>
@@ -1299,171 +884,66 @@ public partial class TrainingCenterViewModel : ObservableObject
         CancellationToken ct = default,
         string? correctedDescription = null)
     {
-        if (item is null || ReviewQueueServiceRef is null || string.IsNullOrWhiteSpace(correctedCode)) return;
-        try
-        {
-            using var db = new KnowledgeBaseContext();
-            var feedback = CreateFeedbackService(db);
-            await RejectReviewItemAsync(
-                item,
-                correctedCode,
-                feedback,
-                ReviewQueueServiceRef,
-                ct,
-                correctedDescription).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Log($"Review-Korrektur Fehler: {ex.Message}");
-            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
-        }
+        await TrainingSelectedReviewCommandWorkflow.CorrectAsync(
+            TrainingSelectedReviewCommandRequestFactory.CreateCorrectionWithDefaults(
+                new TrainingSelectedReviewCorrectionFactoryRequest(
+                    Item: item,
+                    QueueService: ReviewQueueServiceRef,
+                    CorrectedCode: correctedCode,
+                    CorrectedDescription: correctedDescription,
+                    Settings: _settings,
+                    RejectReviewItemAsync: RejectReviewItemAsync,
+                    CancellationToken: ct,
+                    Log: Log,
+                    OnUi: OnUi,
+                    SetReviewStatusText: value => ReviewStatusText = value))).ConfigureAwait(false);
+    }
+
+    private void ClearPendingReviewGeometry()
+    {
+        TrainingReviewPendingGeometryController.Clear(
+            value => PendingBox = value,
+            value => PendingSamMask = value);
     }
 
     // ── Selbsttraining (Orchestrator) ──────────────────────────────────
 
     [ObservableProperty] private bool _isSelfTrainingRunning;
-    private CancellationTokenSource? _selfTrainingCts;
     private ISelfTrainingOrchestrator? _selfTrainingOrchestrator;
     private string _activeVisionModel = OllamaConfig.DefaultVisionModel;
 
     [RelayCommand]
     private async Task RunSelfTrainingAsync()
     {
-        if (IsBusy || IsSelfTrainingRunning) return;
-
-        await SelfTrainingAutoScanController.RunAsync(
-            Cases.Count,
-            _rootFolders.Count,
-            _rootFolders,
-            Directory.Exists,
-            async folder => (await _import.ScanAsync(folder))
-                .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
-                .ToList(),
-            value => StatusText = value,
-            Cases.Add);
-
-        IEnumerable<TrainingSample> existingSamplesForSelection = Enumerable.Empty<TrainingSample>();
-        if (SelectedCase is null)
-            existingSamplesForSelection = await TrainingSamplesStore.LoadAsync();
-
-        var selection = SelfTrainingCaseSelectionController.Select(
-            SelectedCase,
-            Cases,
-            existingSamplesForSelection);
-        if (selection.ShouldStop)
-        {
-            StatusText = selection.StatusText ?? "";
-            return;
-        }
-
-        var selectedCase = selection.Case;
-        if (selectedCase is null)
-        {
-            StatusText = "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
-            return;
-        }
-
-        SelectedCase = selectedCase;
-
-        _selfTrainingCts?.Cancel();
-        _selfTrainingCts?.Dispose();
-        _selfTrainingCts = new CancellationTokenSource();
-        var ct = _selfTrainingCts.Token;
-
-        var selfTrainingUi = new SelfTrainingUiSink(
-            value => IsBusy = value,
-            value => IsSelfTrainingRunning = value,
-            value => LogText = value,
-            value => StatusText = value,
-            Log);
-
-        using var _aiToken = AiTrack.Begin("Selbsttraining");
-        try
-        {
-            selfTrainingUi.SetBusy(true);
-            selfTrainingUi.SetSelfTrainingRunning(true);
-            ResetSelfTrainingVisuals(resetMatchRate: true);
-            selfTrainingUi.SetLogText("");
-
-            var startPresentation = SelfTrainingRunPresentationBuilder.BuildStart(selectedCase);
-            selfTrainingUi.SetStatusText(startPresentation.StatusText);
-            foreach (var line in startPresentation.LogLines)
-                selfTrainingUi.Log(line);
-
-            using var selfTrainingSetup = await SelfTrainingRuntimeSetupController.PrepareAsync(
-                () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
-                TrainingCenterSettingsStore.LoadAsync,
-                () => PlayerAiSettingsLoader.LoadPlatformSettings().ToOllamaConfig(),
-                config => _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = config.RequestTimeout },
-                _settings,
-                _codeCatalog,
-                Log);
-            _activeVisionModel = selfTrainingSetup.Session.ActiveVisionModel;
-            _selfTrainingOrchestrator = selfTrainingSetup.Session.Orchestrator;
-
-            // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
-            var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
-
-            Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
-            var result = await selfTrainingSetup.Session.Orchestrator.RunAsync(
-                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
-                progress,
-                ct);
-            if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow) is { } snapshot)
-                await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
-
-            var completionPresentation = SelfTrainingRunPresentationBuilder.BuildCompletion(result);
-            foreach (var line in completionPresentation.LogLines)
-                Log(line);
-
-            selfTrainingUi.SetStatusText(completionPresentation.StatusText);
-
-            if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
-                Log(fewShotHint);
-
-            // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
-            await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
-                result,
-                TrainingSamplesStore.LoadAsync,
-                TrainingSamplesStore.MergeOrUpdateAsync,
-                IncrementalKbUpdateWithReasonAsync,
-                Log,
-                ct);
-
-            if (ReviewQueueServiceRef is not null && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
-            {
-                var reviewSamples = await TrainingSamplesStore.LoadAsync();
-                var reviewQueueUpdate = SelfTrainingReviewQueueController.EnqueueCandidates(
-                    ReviewQueueServiceRef,
-                    reviewSamples,
-                    result);
-
-                if (reviewQueueUpdate.ShouldReloadQueue)
-                {
-                    LoadReviewQueue(ReviewQueueServiceRef);
-                    Log(reviewQueueUpdate.LogMessage ?? "");
-                }
-            }
-
-            await LoadSamplesInternalAsync();
-            await RefreshKbStatusAsync();
-        }
-        catch (OperationCanceledException)
-        {
-            Log("Selbsttraining abgebrochen.");
-            StatusText = "Selbsttraining abgebrochen.";
-        }
-        catch (Exception ex)
-        {
-            Log($"FEHLER: {ex.GetType().Name}: {ex.Message}");
-            StatusText = $"Fehler: {ex.Message}";
-        }
-        finally
-        {
-            selfTrainingUi.SetBusy(false);
-            selfTrainingUi.SetSelfTrainingRunning(false);
-            _selfTrainingOrchestrator = null;
-        }
+        await SelfTrainingRunCommandWorkflow.RunAsync(
+            SelfTrainingRunCommandRequestFactory.CreateWithDefaults(
+                new SelfTrainingRunCommandDefaultRequestFactoryRequest(
+                    IsBusy: IsBusy,
+                    IsSelfTrainingRunning: IsSelfTrainingRunning,
+                    Cases: Cases,
+                    RootFolders: _rootFolders,
+                    ScanInputsAsync: _import.ScanAsync,
+                    SelectedCase: SelectedCase,
+                    SetSelectedCase: value => SelectedCase = value,
+                    ResetCancellation: _selfTrainingCancellation.Reset,
+                    SetStatusText: value => StatusText = value,
+                    SetBusy: value => IsBusy = value,
+                    SetSelfTrainingRunning: value => IsSelfTrainingRunning = value,
+                    SetLogText: value => LogText = value,
+                    Log: Log,
+                    GetKbHttpClient: () => _kbHttpClient,
+                    SetKbHttpClient: value => _kbHttpClient = value,
+                    AppSettings: _settings,
+                    CodeCatalog: _codeCatalog,
+                    SetActiveVisionModel: value => _activeVisionModel = value,
+                    SetOrchestrator: value => _selfTrainingOrchestrator = value,
+                    OnProgress: OnSelfTrainingStep,
+                    IndexSamplesAsync: IncrementalKbUpdateWithReasonAsync,
+                    ReviewQueueService: ReviewQueueServiceRef,
+                    ReloadReviewQueue: LoadReviewQueue,
+                    LoadSamplesInternalAsync: LoadSamplesInternalAsync,
+                    RefreshKbStatusAsync: RefreshKbStatusAsync,
+                    ResetVisuals: () => ResetSelfTrainingVisuals(resetMatchRate: true)))).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1475,39 +955,30 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task<KbIndexOutcome> IncrementalKbUpdateWithReasonAsync(List<TrainingSample> samples, CancellationToken ct)
     {
-        var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
-        _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-        var runner = TrainingKbIndexRunner.CreateDefault(
-            ollamaConfig,
-            _kbHttpClient,
+        return await TrainingKnowledgeBaseIndexWorkflow.RunWithDefaultsAsync(
+            samples,
+            ct,
+            () => _kbHttpClient,
+            value => _kbHttpClient = value,
             _settings,
             Log);
-        return await runner.RunAsync(samples, ct);
     }
 
     [RelayCommand]
     private void StopSelfTraining()
     {
-        _selfTrainingCts?.Cancel();
-        StatusText = "Selbsttraining wird abgebrochen...";
+        SelfTrainingRunControlController.Stop(
+            _selfTrainingCancellation.Cancel,
+            value => StatusText = value);
     }
 
     [RelayCommand]
     private void PauseSelfTraining()
     {
-        if (_selfTrainingOrchestrator is null) return;
-
-        if (_selfTrainingOrchestrator.IsPaused)
-        {
-            _selfTrainingOrchestrator.Resume();
-            StatusText = "Selbsttraining fortgesetzt.";
-            Log("Pipeline fortgesetzt.");
-            return;
-        }
-
-        _selfTrainingOrchestrator.Pause();
-        StatusText = "Selbsttraining pausiert.";
-        Log("Pipeline pausiert.");
+        SelfTrainingRunControlController.TogglePause(
+            _selfTrainingOrchestrator,
+            value => StatusText = value,
+            Log);
     }
 
     // ── Protokoll-Startdaten (B6) ────────────────────────────────────────
@@ -1520,53 +991,42 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task SuggestProtocolStartdataAsync()
     {
-        if (ReviewQueueServiceRef is null) return;
-
-        // Katalog: bevorzugt injizierter Catalog, Fallback auf globalen VsaCodeResolver
-        var catalog = _codeCatalog ?? AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver.CurrentCatalog;
-        if (catalog is null) { OnUi(() => ReviewStatusText = "Kein Code-Katalog verfuegbar."); return; }
-
-        var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-        var result = TrainingProtocolStartdataQueueController.Run(all, catalog, ReviewQueueServiceRef);
-        LoadReviewQueue(ReviewQueueServiceRef);
-        OnUi(() => ReviewStatusText = result.StatusText);
-        Log(result.LogText);
+        await TrainingProtocolStartdataSuggestionWorkflow.RunAsync(
+            TrainingProtocolStartdataSuggestionRequestFactory.CreateWithDefaults(
+                new TrainingProtocolStartdataSuggestionRequestFactoryRequest(
+                    ReviewQueueServiceRef,
+                    _codeCatalog,
+                    ReloadCurrentReviewQueue,
+                    OnUi,
+                    value => ReviewStatusText = value,
+                    Log))).ConfigureAwait(false);
     }
+
+    private void ReloadCurrentReviewQueue()
+        => TrainingReviewQueueReloadController.Reload(
+            ReviewQueueServiceRef,
+            LoadReviewQueue);
 
     /// <summary>Anzahl der aktuell als Protokoll-Startdaten eingereihten Kandidaten.</summary>
     public int StartdataCandidateCount =>
         TrainingProtocolStartdataReviewItemSelector.Count(ReviewQueue);
 
     private List<InfraSelfImproving.ReviewQueueItem> GetProtocolStartdataReviewItems()
-    {
-        List<InfraSelfImproving.ReviewQueueItem>? items = null;
-        OnUi(() =>
-        {
-            items = TrainingProtocolStartdataReviewItemSelector.Select(ReviewQueue);
-        });
-        return items ?? new List<InfraSelfImproving.ReviewQueueItem>();
-    }
+        => TrainingProtocolStartdataReviewItemSelector.SelectOnUi(ReviewQueue, OnUi);
 
     /// <summary>Gibt ALLE Protokoll-Startdaten-Kandidaten frei (nach expliziter Bestaetigung im View).</summary>
     public async Task ApproveAllStartdataAsync(CancellationToken ct = default)
     {
-        var queueService = ReviewQueueServiceRef;
-        if (queueService is null) return;
-
-        var items = GetProtocolStartdataReviewItems();
-        var result = await TrainingProtocolStartdataApprovalController.ApproveAllAsync(
-            items,
-            async (item, token) =>
-            {
-                using var db = new KnowledgeBaseContext();
-                var feedback = CreateFeedbackService(db);
-                await ApproveReviewItemAsync(item, feedback, queueService, token).ConfigureAwait(false);
-            },
-            ct).ConfigureAwait(false);
-
-        foreach (var errorLog in result.ErrorLogTexts)
-            Log(errorLog);
-
-        OnUi(() => ReviewStatusText = result.StatusText);
+        await TrainingProtocolStartdataApprovalWorkflow.RunAsync(
+            TrainingProtocolStartdataApprovalRequestFactory.CreateWithDefaults(
+                new TrainingProtocolStartdataApprovalRequestFactoryRequest(
+                    ReviewQueueServiceRef,
+                    GetProtocolStartdataReviewItems,
+                    _settings,
+                    ApproveReviewItemAsync,
+                    ct,
+                    Log,
+                    OnUi,
+                    value => ReviewStatusText = value))).ConfigureAwait(false);
     }
 }

@@ -145,14 +145,15 @@ public sealed class ToastQueueLogicTests
     {
         var logic = new ToastQueueLogic();
         var a = logic.Show("a", ToastSeverity.Error, nowMs: 0);
-        logic.Show("b", ToastSeverity.Error, nowMs: 0);
-        logic.Show("c", ToastSeverity.Error, nowMs: 0);
+        var b = logic.Show("b", ToastSeverity.Error, nowMs: 0);
+        var c = logic.Show("c", ToastSeverity.Error, nowMs: 0);
         var d = logic.Show("d", ToastSeverity.Error, nowMs: 0); // wartet
 
         logic.Dismiss(a!.Value, nowMs: 100);
 
         Assert.Equal(3, logic.Visible.Count);
-        Assert.Contains(logic.Visible, t => t.Id == d);
-        Assert.DoesNotContain(logic.Visible, t => t.Id == a);
+        Assert.Equal(
+            new[] { b!.Value, c!.Value, d!.Value },
+            logic.Visible.Select(t => t.Id));
     }
 }

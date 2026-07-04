@@ -64,21 +64,27 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
     [Fact]
     public async Task PersistAsync_speichert_state_nicht_wenn_intervall_nicht_faellig_ist()
     {
-        var calls = new List<string>();
+        var sampleSaveCalls = 0;
+        var stateSaveCalls = 0;
 
         await TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(
             new List<TrainingSample> { Sample("new", "BBB") },
             new List<TrainingSample>(),
             processedCount: 4,
-            saveSamplesAsync: _ => Task.CompletedTask,
+            saveSamplesAsync: _ =>
+            {
+                sampleSaveCalls++;
+                return Task.CompletedTask;
+            },
             saveStateAsync: () =>
             {
-                calls.Add("save-state");
+                stateSaveCalls++;
                 return Task.CompletedTask;
             },
             caseUi: NoOpCaseUi());
 
-        Assert.DoesNotContain("save-state", calls);
+        Assert.Equal(1, sampleSaveCalls);
+        Assert.Equal(0, stateSaveCalls);
     }
 
     [Fact]

@@ -33,6 +33,26 @@ public sealed class TrainingProtocolStartdataReviewItemSelectorTests
         Assert.Equal([first, second], selected);
     }
 
+    [Fact]
+    public void SelectOnUi_dispatches_selection_and_returns_snapshot()
+    {
+        var first = Item("one", "ProtocolStartdata");
+        var skipped = Item("two", "PartialMatch");
+        var second = Item("three", "protocolstartdata");
+        var dispatchCount = 0;
+
+        var selected = TrainingProtocolStartdataReviewItemSelector.SelectOnUi(
+            [first, skipped, second],
+            action =>
+            {
+                dispatchCount++;
+                action();
+            });
+
+        Assert.Equal(1, dispatchCount);
+        Assert.Equal([first, second], selected);
+    }
+
     private static InfraSelfImproving.ReviewQueueItem Item(string id, string? matchLevel)
         => new(id, Entry: null, Priority: 0.5, EnqueuedUtc: DateTime.UtcNow)
         {

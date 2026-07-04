@@ -86,11 +86,7 @@ public sealed class ImportRunWorkflowControllerTests
             Actions(project, state, calls),
             CancellationToken.None);
 
-        Assert.DoesNotContain("post", calls);
-        Assert.DoesNotContain("dedup", calls);
-        Assert.DoesNotContain("after:XTF", calls);
-        Assert.DoesNotContain("save", calls);
-        Assert.Contains("report:XTF:False", calls);
+        Assert.Equal(["report:XTF:False"], calls);
         Assert.Equal("XTF Import fehlgeschlagen: kaputt", state.Summary);
         Assert.Equal("XTF Import fehlgeschlagen", state.Statuses[^1]);
         Assert.False(state.IsImportInProgress);
@@ -141,13 +137,19 @@ public sealed class ImportRunWorkflowControllerTests
                 }),
             CancellationToken.None);
 
-        Assert.Contains("import:Preview:True", calls);
-        Assert.Contains("preview:WinCan", calls);
-        Assert.Contains("import:Live:False", calls);
-        Assert.Single(calls.Where(call => call == "post:False"));
-        Assert.DoesNotContain("post:True", calls);
-        Assert.Single(calls.Where(call => call == "save"));
-        Assert.Equal(2, calls.Count(call => call.StartsWith("report:WinCan:", StringComparison.Ordinal)));
+        Assert.Equal(
+            [
+                "import:Preview:True",
+                "preview:WinCan",
+                "import:Live:False",
+                "post:False",
+                "dedup",
+                "after:WinCan",
+                "save",
+                "report:WinCan:False",
+                "report:WinCan:True"
+            ],
+            calls);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
     }

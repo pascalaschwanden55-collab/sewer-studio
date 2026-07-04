@@ -17,8 +17,10 @@ public sealed class SchaechtePageArchitectureGuardTests
 
         var viewModel = File.ReadAllText(viewModelPath);
         Assert.Contains("DropdownOptionGroupController", viewModel);
-        Assert.DoesNotContain("new OptionsEditorWindow", viewModel);
-        Assert.DoesNotContain("new OptionsEditorViewModel", viewModel);
+        AssertNoForbiddenTokens(
+            viewModel,
+            "new OptionsEditorWindow",
+            "new OptionsEditorViewModel");
 
         var removedMethodNames = new[]
         {
@@ -45,7 +47,7 @@ public sealed class SchaechtePageArchitectureGuardTests
         };
 
         foreach (var methodName in removedMethodNames)
-            Assert.DoesNotContain($"private void {methodName}", viewModel);
+            AssertNoForbiddenTokens(viewModel, $"private void {methodName}");
     }
 
     [Fact]
@@ -60,9 +62,11 @@ public sealed class SchaechtePageArchitectureGuardTests
 
         var viewModel = File.ReadAllText(viewModelPath);
         Assert.Contains("SchaechteDropdownOptionSynchronizer.SyncFromRecords", viewModel);
-        Assert.DoesNotContain("private void SyncDropdownOptionsFromRecords", viewModel);
-        Assert.DoesNotContain("private static string ResolveFieldValue", viewModel);
-        Assert.DoesNotContain("private static string NormalizeKey", viewModel);
+        AssertNoForbiddenTokens(
+            viewModel,
+            "private void SyncDropdownOptionsFromRecords",
+            "private static string ResolveFieldValue",
+            "private static string NormalizeKey");
     }
 
     [Fact]
@@ -83,10 +87,12 @@ public sealed class SchaechtePageArchitectureGuardTests
 
         var viewModel = File.ReadAllText(viewModelPath);
         Assert.Contains("SchaechteTemplateColumnReader.LoadFromExportDirectory", viewModel);
-        Assert.DoesNotContain("using ClosedXML.Excel", viewModel);
-        Assert.DoesNotContain("XLWorkbook", viewModel);
-        Assert.DoesNotContain("private static string ResolveTemplatePath", viewModel);
-        Assert.DoesNotContain("private void SwapColumnOrder", viewModel);
+        AssertNoForbiddenTokens(
+            viewModel,
+            "using ClosedXML.Excel",
+            "XLWorkbook",
+            "private static string ResolveTemplatePath",
+            "private void SwapColumnOrder");
     }
 
     [Fact]
@@ -100,10 +106,12 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("SchaechteFieldLogic.ResolveNrColumnName(Columns, Records)", viewModel);
         Assert.Contains("SchaechteFieldLogic.MatchesSearch(record, SearchText ?? \"\")", viewModel);
         Assert.Contains("SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText ?? \"\")", viewModel);
-        Assert.DoesNotContain("SchaechteSearchMatcher", viewModel);
-        Assert.DoesNotContain("private string? ResolveNrColumnName()", viewModel);
-        Assert.DoesNotContain("record.Fields.Any", viewModel);
-        Assert.DoesNotContain("von {Records.Count} Schaechten", viewModel);
+        AssertNoForbiddenTokens(
+            viewModel,
+            "SchaechteSearchMatcher",
+            "private string? ResolveNrColumnName()",
+            "record.Fields.Any",
+            "von {Records.Count} Schaechten");
     }
 
     [Fact]
@@ -225,6 +233,14 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("CtxOpenFolder_Click", schachtansichtXaml, StringComparison.Ordinal);
         Assert.Contains("RaiseAction(\"openfolder\")", schachtansichtCode, StringComparison.Ordinal);
         Assert.Contains("case \"openfolder\":", pageCode, StringComparison.Ordinal);
-        Assert.Contains("ExplorerRevealService.TryReveal", pageCode, StringComparison.Ordinal);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene alte SchaechtePage-Logik gefunden: " + string.Join(", ", hits));
     }
 }

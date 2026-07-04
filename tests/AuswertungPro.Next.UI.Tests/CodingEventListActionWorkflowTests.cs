@@ -63,8 +63,7 @@ public sealed class CodingEventListActionWorkflowTests
 
         AssertDeleteResult(deleted, expectedDeleted: true, expectedClear: true);
         Assert.Equal(ev.EventId, Assert.Single(service.RemovedEventIds));
-        Assert.DoesNotContain(ev, events);
-        Assert.Contains(other, events);
+        Assert.Same(other, Assert.Single(events));
     }
 
     [Fact]

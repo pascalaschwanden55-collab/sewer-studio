@@ -66,7 +66,13 @@ public sealed class CodingCreateSelectedCodeEventCommandWorkflowTests
                 }));
 
         Assert.Equal(CodingCreateSelectedCodeEventCommandOutcome.NoEventCreated, result.Outcome);
-        Assert.DoesNotContain(calls, call => call.StartsWith("post:", StringComparison.Ordinal));
+        Assert.Equal(
+            [
+                "get-time",
+                "set-time:00:00:03",
+                "create:null"
+            ],
+            calls);
     }
 
     private static CodingCreateSelectedCodeEventCommandActions Actions(

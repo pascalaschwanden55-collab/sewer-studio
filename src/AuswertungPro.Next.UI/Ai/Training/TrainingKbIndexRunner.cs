@@ -3,7 +3,6 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -51,7 +50,7 @@ public sealed class TrainingKbIndexRunner
         ArgumentNullException.ThrowIfNull(log);
 
         return new TrainingKbIndexRunner(
-            ct => TrainingCenterRuntimeHelpers.CheckOllamaReachableAsync(ollamaConfig, ct),
+            ct => TrainingOllamaReachabilityChecker.CheckAsync(ollamaConfig, ct),
             () => TrainingKbIndexSession.Create(httpClient, ollamaConfig, EvalContaminationSetProvider.Load(settings)),
             log,
             $"KB-Update uebersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");

@@ -1,31 +1,120 @@
 using System.IO;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels.Windows;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class TrainingCenterReviewThreadingTests
 {
     [Fact]
-    public void ReviewFreigabe_LaedtSamplesNurUeberUiDispatcher()
+    public async Task LoadSamplesCommand_replaces_samples_over_injected_ui_thread()
     {
-        var source = File.ReadAllText(RepoFile(
-            "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs"));
-        var normalized = source.Replace("\r\n", "\n");
+        using var temp = new TempKnowledgeRoot();
+        var uiThread = new RecordingUiThread();
+        var vm = CreateViewModel(temp, uiThread);
+        await TrainingSamplesStore.SaveAsync(
+        [
+            new TrainingSample { SampleId = "sample-1", CaseId = "case-1", Code = "BAA" }
+        ]);
 
-        Assert.Contains(
-            "OnUi(() =>\n        {\n            ObservableCollectionContentController.ReplaceWith(Samples, list);",
-            normalized);
+        await vm.LoadSamplesCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, uiThread.RunCount);
+        var sample = Assert.Single(vm.Samples);
+        Assert.Equal("sample-1", sample.SampleId);
+        Assert.Equal("BAA", sample.Code);
     }
 
     [Fact]
-    public void StartdatenSammelfreigabe_NutztDispatcherSnapshotDerReviewQueue()
+    public void StartdataCandidateCount_counts_protocol_startdata_items()
     {
-        var source = File.ReadAllText(RepoFile(
-            "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs"));
-        var normalized = source.Replace("\r\n", "\n");
+        using var temp = new TempKnowledgeRoot();
+        var vm = CreateViewModel(temp, new RecordingUiThread());
+        vm.ReviewQueue.Add(Item("one", "ProtocolStartdata"));
+        vm.ReviewQueue.Add(Item("two", "PartialMatch"));
+        vm.ReviewQueue.Add(Item("three", "protocolstartdata"));
 
-        Assert.Contains("GetProtocolStartdataReviewItems()", source);
-        Assert.DoesNotContain("ReviewQueue\n            .Where", normalized);
+        Assert.Equal(2, vm.StartdataCandidateCount);
     }
 
+    private static TrainingCenterViewModel CreateViewModel(TempKnowledgeRoot temp, IUiThread uiThread)
+        => new(
+            new TrainingCenterStore(Path.Combine(temp.Path, "training_center.json")),
+            new TrainingCenterImportService(),
+            codeCatalog: null,
+            kbDiagnostics: new NoopKnowledgeBaseDiagnosticsRunner(),
+            settings: null,
+            uiThread: uiThread);
+
+    private static InfraSelfImproving.ReviewQueueItem Item(string id, string? matchLevel)
+        => new(id, Entry: null, Priority: 0.5, EnqueuedUtc: DateTime.UtcNow)
+        {
+            SelfTrainingCaseId = $"case-{id}",
+            SelfTrainingVsaCode = "BAB",
+            SelfTrainingSuggestedCode = "BAB",
+            SelfTrainingMeter = 1.5,
+            SelfTrainingMatchLevel = matchLevel
+        };
+
+    private sealed class RecordingUiThread : IUiThread
+    {
+        public int RunCount { get; private set; }
+
+        public void Run(Action action)
+        {
+            RunCount++;
+            action();
+        }
+    }
+
+    private sealed class NoopKnowledgeBaseDiagnosticsRunner : IKnowledgeBaseDiagnosticsRunner
+    {
+        public Task<KnowledgeBaseStatusReport> ReadStatusAsync(int topCodes = 20, CancellationToken ct = default)
+            => Task.FromResult(new KnowledgeBaseStatusReport(0, 0, 0, 0, 0, null, []));
+
+        public Task<KnowledgeBaseQualityReport> ReadQualityAsync(CancellationToken ct = default)
+            => Task.FromResult(new KnowledgeBaseQualityReport("", 0, "", 0));
+
+        public Task<KnowledgeBaseDiagnosticsSummary> ReadSummaryAsync(int topCodes = 12, CancellationToken ct = default)
+            => Task.FromResult(new KnowledgeBaseDiagnosticsSummary(0, 0, 0, null, 0, "", []));
+    }
+
+    private sealed class TempKnowledgeRoot : IDisposable
+    {
+        private readonly string? _oldKnowledgeRoot;
+
+        public string Path { get; } = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            "training-center-review-threading-" + Guid.NewGuid().ToString("N"));
+
+        public TempKnowledgeRoot()
+        {
+            Directory.CreateDirectory(Path);
+            _oldKnowledgeRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", Path);
+            KnowledgeBasePaths.InvalidateCache();
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", _oldKnowledgeRoot);
+            KnowledgeBasePaths.InvalidateCache();
+
+            try
+            {
+                if (Directory.Exists(Path))
+                    Directory.Delete(Path, recursive: true);
+            }
+            catch
+            {
+                // best effort cleanup
+            }
+        }
+    }
 }

@@ -24,8 +24,11 @@ public sealed class ProtocolCodePickerViewModelTests
     {
         var vm = CreateViewModel();
 
-        Assert.DoesNotContain(Flatten(vm.CodeTree), n => n.Code?.Code == "BCCYY");
-        Assert.DoesNotContain(Flatten(vm.CodeTree), n => n.Code?.Code == "BAG");
+        var selectableCodes = Flatten(vm.CodeTree)
+            .Where(n => n.Code is not null)
+            .Select(n => n.Code!.Code)
+            .OrderBy(c => c)
+            .ToList();
 
         var lockedCodes = Flatten(vm.LockedCodeTree)
             .Where(n => n.Code is not null)
@@ -33,6 +36,7 @@ public sealed class ProtocolCodePickerViewModelTests
             .OrderBy(c => c)
             .ToList();
 
+        Assert.Equal(new[] { "BAB", "BAGA", "BDBA", "WZZ" }, selectableCodes);
         Assert.Equal(new[] { "BAG", "BCCYY" }, lockedCodes);
         Assert.All(Flatten(vm.LockedCodeTree).Where(n => n.Code is not null), n => Assert.False(n.IsSelectable));
     }

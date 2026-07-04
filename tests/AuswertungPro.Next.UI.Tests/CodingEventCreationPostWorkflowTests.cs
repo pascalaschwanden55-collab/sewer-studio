@@ -56,8 +56,19 @@ public sealed class CodingEventCreationPostWorkflowTests
         var applied = apply.Invoke(null, [ev, actions, options]);
 
         Assert.Equal(true, applied);
-        Assert.DoesNotContain("select", calls);
-        Assert.Contains("clearSelectedCode", calls);
+        Assert.Equal(
+            new[]
+            {
+                "refresh",
+                "cancelSchema",
+                "clearOverlay",
+                "clearSelectedCode",
+                "redraw",
+                "clearSelectedCodeText",
+                "disableCreate",
+                "clearOverlayInfo"
+            },
+            calls);
     }
 
     [Fact]

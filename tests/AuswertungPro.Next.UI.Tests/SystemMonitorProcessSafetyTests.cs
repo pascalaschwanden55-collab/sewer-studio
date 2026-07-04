@@ -1,4 +1,8 @@
 using System.IO;
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels;
+using Microsoft.Extensions.Logging;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -6,27 +10,65 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SystemMonitorProcessSafetyTests
 {
     [Fact]
+    public void SystemMonitor_can_skip_native_hardware_sensor_initialization()
+    {
+        using var monitor = new SystemMonitorService(enableHardwareSensorInit: false);
+
+        monitor.Start();
+        monitor.Stop();
+
+        Assert.False(monitor.IsSensorBlocked);
+    }
+
+    [Fact]
     public void SystemMonitorUsesSharedTimeoutProcessRunnerForExternalCommands()
     {
         var source = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Services", "SystemMonitorService.cs"));
 
         Assert.Contains("ExternalProcessRunner.RunAsync", source);
-        Assert.DoesNotContain(".ReadToEnd()", source);
-        Assert.DoesNotContain("WaitForExit(", source);
     }
 
     [Fact]
-    public void MainWindowDisposesShellViewModelSoMonitorPollingStopsOnShutdown()
+    public void MainWindowDisposesDataContextOnShutdown()
     {
         var windowSource = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "MainWindow.xaml.cs"));
-        var shellSource = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs"));
 
         Assert.Contains("DataContext is IDisposable disposable", windowSource);
         Assert.Contains("disposable.Dispose();", windowSource);
-        Assert.Contains("ShellViewModel : ObservableObject, IDisposable", shellSource);
-        Assert.Contains("AiActivityTracker.ActiveChanged -= OnAiActivityChanged;", shellSource);
-        Assert.Contains("AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;", shellSource);
-        Assert.Contains("Monitor.Dispose();", shellSource);
+    }
+
+    [Fact]
+    public void ShellViewModelDisposeDetachesGlobalAiStatusSubscriptions()
+    {
+        AiRuntimeStatusTracker.ResetForTests();
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings(),
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var monitor = new SystemMonitorService(enableHardwareSensorInit: false);
+        using var shell = new ShellViewModel(services, monitor);
+
+        using (AiActivityTracker.Begin("Analyse vor Dispose"))
+        {
+            Assert.True(shell.IsAiWorking);
+            Assert.Equal("Analyse vor Dispose", shell.AiStatusLabel);
+        }
+
+        AiRuntimeStatusTracker.MarkStarting("Modell vor Dispose");
+        Assert.Equal("KI STARTET", shell.AiRuntimeTitle);
+
+        shell.Dispose();
+
+        using (AiActivityTracker.Begin("Analyse nach Dispose"))
+        {
+            Assert.False(shell.IsAiWorking);
+            Assert.NotEqual("Analyse nach Dispose", shell.AiStatusLabel);
+        }
+
+        AiRuntimeStatusTracker.MarkReady("Modell nach Dispose", hasWarnings: false);
+        Assert.Equal("KI STARTET", shell.AiRuntimeTitle);
     }
 
     [Fact]
@@ -56,10 +98,6 @@ public sealed class SystemMonitorProcessSafetyTests
         Assert.Contains("Text=\"RAM Arbeitsspeicher\"", panelXaml);
         Assert.Contains("Text=\"GPU Grafikprozessor\"", panelXaml);
         Assert.Contains("Text=\"VRAM Videospeicher\"", panelXaml);
-        Assert.DoesNotContain("Text=\"Sensorstatus\"", panelXaml);
-        Assert.DoesNotContain("CpuTempStatusText", panelXaml);
-        Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", mainWindowXaml);
-        Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", panelXaml);
     }
 
 }

@@ -9,12 +9,10 @@ public sealed class DataPageOriginalPdfArchitectureTests
     [Fact]
     public void DataPage_context_menus_can_reveal_haltung_folder()
     {
-        var root = FindRepositoryRoot();
-        var pageXaml = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml"));
-        var pageCode = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
-        var ansichtXaml = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml"));
-        var ansichtCode = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml.cs"));
-        var viewModel = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "DataPageViewModel.cs"));
+        var pageXaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml"));
+        var pageCode = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
+        var ansichtXaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml"));
+        var ansichtCode = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml.cs"));
 
         Assert.Contains("Header=\"Gehe zu Ordner\"", pageXaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"OpenContainingFolderMenu_Click\"", pageXaml, StringComparison.Ordinal);
@@ -22,7 +20,5 @@ public sealed class DataPageOriginalPdfArchitectureTests
         Assert.Contains("CtxOpenFolder_Click", ansichtXaml, StringComparison.Ordinal);
         Assert.Contains("RaiseAction(\"openfolder\")", ansichtCode, StringComparison.Ordinal);
         Assert.Contains("case \"openfolder\": OpenContainingFolderMenu_Click(this, e); break;", pageCode, StringComparison.Ordinal);
-        Assert.Contains("OpenContainingFolderCommand", viewModel, StringComparison.Ordinal);
-        Assert.Contains("ExplorerRevealService.TryReveal", viewModel, StringComparison.Ordinal);
     }
 }

@@ -1,48 +1,77 @@
-using System.IO;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.LiveControl;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.ViewModels.Pages;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class PageViewModelLifecycleTests
 {
     [Theory]
-    [InlineData("DataPageViewModel.cs", "DataPageViewModel")]
-    [InlineData("OverviewPageViewModel.cs", "OverviewPageViewModel")]
-    [InlineData("ProjectPageViewModel.cs", "ProjectPageViewModel")]
-    public void Shell_subscriptions_are_disposed_by_page_viewmodels(string fileName, string typeName)
+    [InlineData("DataPage")]
+    [InlineData("OverviewPage")]
+    [InlineData("ProjectPage")]
+    public void Shell_subscriptions_are_disposed_by_page_viewmodels(string page)
     {
-        var source = ReadPageViewModel(fileName);
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings(),
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = CreatePageViewModel(page, shell, services);
+        using var disposable = Assert.IsAssignableFrom<IDisposable>(viewModel);
 
-        Assert.Contains($"class {typeName} : ObservableObject, IDisposable", source);
-        Assert.Contains("_shell.PropertyChanged += ShellPropertyChanged;", source);
-        Assert.Contains("_shell.PropertyChanged -= ShellPropertyChanged;", source);
-        Assert.Contains("public void Dispose()", source);
-        Assert.DoesNotContain("_shell.PropertyChanged += (_, e) =>", source);
+        var projectNotifications = 0;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Project))
+                projectNotifications++;
+        };
+
+        shell.ReplaceProject(new Project { Name = "Vor Dispose" });
+        Assert.True(projectNotifications > 0, $"{page} reagiert nicht auf Shell-Projektwechsel.");
+
+        disposable.Dispose();
+        var notificationsBeforeDispose = projectNotifications;
+        shell.ReplaceProject(new Project { Name = "Nach Dispose" });
+
+        Assert.Equal(notificationsBeforeDispose, projectNotifications);
     }
 
     [Fact]
-    public void DataPage_dispose_releases_self_subscriptions_timers_and_live_control_retry()
+    public void DataPage_dispose_removes_live_control_retry_handler()
     {
-        var source = ReadPageViewModel("DataPageViewModel.cs");
+        LiveControlRetryBridge.Reset();
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings(),
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+        using var viewModel = new DataPageViewModel(shell, services);
 
-        Assert.Contains("PropertyChanged -= DataPageViewModel_PropertyChanged;", source);
-        Assert.Contains("_timers.Stop();", source);
-        Assert.DoesNotContain("_saveBannerTimer.Stop();", source);
-        Assert.DoesNotContain("_autoSaveTimer.Stop();", source);
-        Assert.Contains("LiveControlRetryBridge.Reset();", source);
+        var beforeDispose = LiveControlRetryBridge.Invoke("06-001");
+        viewModel.Dispose();
+        var afterDispose = LiveControlRetryBridge.Invoke("06-001");
+
+        Assert.Contains("nicht im geladenen Projekt gefunden", beforeDispose.Message);
+        Assert.Contains("Datenseite nicht geoeffnet", afterDispose.Message);
     }
 
-    [Fact]
-    public void DataPage_print_commands_do_not_use_async_void_handlers()
-    {
-        var source = ReadPageViewModel("DataPageViewModel.cs");
-
-        Assert.DoesNotContain("async void PrintHydraulikPdf", source);
-        Assert.DoesNotContain("async void PrintDossierPdf", source);
-        Assert.Contains("PrintHydraulikPdfAsync(record).SafeFireAndForget(\"PrintHydraulikPdf\")", source);
-        Assert.Contains("PrintDossierPdfAsync(record).SafeFireAndForget(\"PrintDossierPdf\")", source);
-    }
-
-    private static string ReadPageViewModel(string fileName)
-        => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", fileName));
+    private static ObservableObject CreatePageViewModel(string page, ShellViewModel shell, ServiceProvider services)
+        => page switch
+        {
+            "DataPage" => new DataPageViewModel(shell, services),
+            "OverviewPage" => new OverviewPageViewModel(shell, services),
+            "ProjectPage" => new ProjectPageViewModel(shell),
+            _ => throw new ArgumentOutOfRangeException(nameof(page), page, null)
+        };
 }

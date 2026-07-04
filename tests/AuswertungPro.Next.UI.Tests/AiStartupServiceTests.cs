@@ -262,9 +262,9 @@ public sealed class AiStartupServiceTests
                 sidecarScriptPath: temp.ScriptPath,
                 ct: CancellationToken.None);
 
-            // Nachgefasst -> mind. 2 Aufrufe; am Ende sind ALLE Sidecar-Modelle geladen, keine "fehlt"-Warnung.
+            // Nachgefasst -> mind. 2 Aufrufe; am Ende sind ALLE Sidecar-Modelle geladen.
             Assert.True(launcher.WarmupCallCount >= 2, $"Warmup sollte nachfassen, war {launcher.WarmupCallCount}x");
-            Assert.DoesNotContain(result.Warnings, w => w.Contains("NICHT geladen", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(result.Warnings);
             Assert.Contains(result.Messages, m =>
                 m.Contains("yolo", StringComparison.OrdinalIgnoreCase)
                 && m.Contains("classifier", StringComparison.OrdinalIgnoreCase)

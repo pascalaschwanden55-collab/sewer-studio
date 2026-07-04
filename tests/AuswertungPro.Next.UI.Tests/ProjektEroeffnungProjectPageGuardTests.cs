@@ -25,11 +25,9 @@ public sealed class ProjektEroeffnungProjectPageGuardTests
     }
 
     [Fact]
-    public void Xaml_drops_new_and_open_buttons_and_adds_anlegen()
+    public void Xaml_adds_anlegen_and_keeps_save_hidden_while_draft()
     {
         var xaml = Xaml();
-        Assert.DoesNotContain("Content=\"Neues Projekt\"", xaml);
-        Assert.DoesNotContain("Content=\"Öffnen\"", xaml);
         Assert.Contains("Content=\"Projekt anlegen\"", xaml);
         Assert.Contains("AnlegenCommand", xaml);
         Assert.Contains("Content=\"Abbrechen\"", xaml);

@@ -6,14 +6,14 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingAnalyzedFramePhotoAttachmentWorkflowTests
 {
     [Fact]
-    public void Execute_attaches_preferred_analyzed_frame_and_skips_snapshot_fallback()
+    public async Task ExecuteAsync_attaches_preferred_analyzed_frame_and_skips_snapshot_fallback()
     {
         var calls = new List<string>();
         var preferred = new byte[] { 1, 2, 3 };
         var buffered = new byte[] { 4, 5, 6 };
         var entry = new ProtocolEntry();
 
-        var result = CodingAnalyzedFramePhotoAttachmentWorkflow.Execute(
+        var result = await CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync(
             entry,
             Actions(
                 calls,
@@ -41,13 +41,13 @@ public sealed class CodingAnalyzedFramePhotoAttachmentWorkflowTests
     }
 
     [Fact]
-    public void Execute_uses_buffered_frame_when_preferred_frame_is_missing()
+    public async Task ExecuteAsync_uses_buffered_frame_when_preferred_frame_is_missing()
     {
         var calls = new List<string>();
         var buffered = new byte[] { 4, 5, 6 };
         var entry = new ProtocolEntry();
 
-        var result = CodingAnalyzedFramePhotoAttachmentWorkflow.Execute(
+        var result = await CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync(
             entry,
             Actions(
                 calls,
@@ -122,12 +122,12 @@ public sealed class CodingAnalyzedFramePhotoAttachmentWorkflowTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Execute_captures_snapshot_and_appends_fallback_when_ai_photo_is_missing(string? attachedPath)
+    public async Task ExecuteAsync_captures_snapshot_and_appends_fallback_when_ai_photo_is_missing(string? attachedPath)
     {
         var calls = new List<string>();
         var entry = new ProtocolEntry();
 
-        var result = CodingAnalyzedFramePhotoAttachmentWorkflow.Execute(
+        var result = await CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync(
             entry,
             Actions(
                 calls,
@@ -148,18 +148,18 @@ public sealed class CodingAnalyzedFramePhotoAttachmentWorkflowTests
         Assert.Equal(["preferred", "buffered", "attach", "snapshot"], calls);
     }
 
-    private static CodingAnalyzedFramePhotoAttachmentActions Actions(
+    private static CodingAnalyzedFramePhotoAttachmentAsyncActions Actions(
         List<string> calls,
         Func<byte[]?>? getPreferredFrameBytes = null,
         Func<byte[]?>? getBufferedFrameBytes = null,
         Func<byte[]?, string?>? attachAnalyzedFramePhoto = null,
         Func<string?>? captureSnapshot = null)
         => new(
-            GetPreferredFrameBytes: getPreferredFrameBytes ?? (() =>
+            GetPreferredFrameBytesAsync: () => Task.FromResult((getPreferredFrameBytes ?? (() =>
             {
                 calls.Add("preferred");
                 return null;
-            }),
+            }))()),
             GetBufferedFrameBytes: getBufferedFrameBytes ?? (() =>
             {
                 calls.Add("buffered");

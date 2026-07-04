@@ -543,8 +543,8 @@ public sealed class AiSuggestionContractTests
             .Select(type => type.Namespace ?? "")
             .ToArray();
 
-        Assert.Contains(matches, ns => ns.StartsWith(expectedNamespacePrefix, StringComparison.Ordinal));
-        Assert.DoesNotContain(matches, ns => ns.StartsWith("AuswertungPro.Next.UI", StringComparison.Ordinal));
+        Assert.NotEmpty(matches);
+        Assert.All(matches, ns => Assert.StartsWith(expectedNamespacePrefix, ns, StringComparison.Ordinal));
     }
 
     private static void AssertNoUiType(string typeName)
@@ -563,6 +563,8 @@ public sealed class AiSuggestionContractTests
             .Select(type => type.Namespace ?? "")
             .ToArray();
 
-        Assert.DoesNotContain(matches, ns => ns.StartsWith("AuswertungPro.Next.UI", StringComparison.Ordinal));
+        Assert.All(matches, ns => Assert.False(
+            ns.StartsWith("AuswertungPro.Next.UI", StringComparison.Ordinal),
+            $"Typ {typeName} darf nicht im UI-Layer liegen, gefunden in {ns}."));
     }
 }

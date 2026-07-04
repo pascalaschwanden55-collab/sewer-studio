@@ -61,10 +61,35 @@ public sealed class CodingModeExitTeardownWorkflowTests
                 IsLiveDetectionRunning: false),
             Actions(calls));
 
-        Assert.DoesNotContain("stop-live-ai:True", calls);
-        Assert.DoesNotContain("detach-vm", calls);
-        Assert.Contains("clear-overlay:True", calls);
-        Assert.Contains("show-live:False", calls);
+        Assert.Equal(
+            [
+                "stop-osd",
+                "dispose-osd",
+                "stop-pulse",
+                "stop-health",
+                "dispose-analysis",
+                "clear-import-events",
+                "reset-match",
+                "update-match",
+                "clear-import-list",
+                "hide-confirmation",
+                "clear-pending",
+                "clear-buffer",
+                "clear-overlay:True",
+                "hide-surface",
+                "hide-detail",
+                "hide-osd-badge",
+                "show-live:False",
+                "clear-active-tool",
+                "reset-indicators",
+                "cancel-schema",
+                "clear-schema-type",
+                "clear-session",
+                "clear-calibration",
+                "reset-frame",
+                "reset-overlay-suspend"
+            ],
+            calls);
     }
 
     private static CodingModeExitTeardownWorkflowActions Actions(List<string> calls)

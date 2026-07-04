@@ -27,7 +27,7 @@ public sealed class VideoLabelToolSelectionTests
         Assert.Contains("haltung_keys.sort(key=lambda k: (", server);
         Assert.Contains("0 if findings[k][\"video_available\"] else 1", server);
         Assert.Contains("order = prio + interleave_by_class", server);
-        Assert.DoesNotContain("rest.sort(key=lambda k: (findings[k][\"klass\"]", server);
+        AssertNoForbiddenTokens(server, "rest.sort(key=lambda k: (findings[k][\"klass\"]");
     }
 
     [Fact]
@@ -40,4 +40,12 @@ public sealed class VideoLabelToolSelectionTests
         Assert.Contains("function matchesClassFilter", html);
     }
 
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene alte VideoLabelTool-Sortierung gefunden: " + string.Join(", ", hits));
+    }
 }

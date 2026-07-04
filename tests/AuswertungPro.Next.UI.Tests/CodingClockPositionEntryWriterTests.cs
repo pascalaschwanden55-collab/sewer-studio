@@ -80,7 +80,7 @@ public sealed class CodingClockPositionEntryWriterTests
             manifestRule: ClockAllowed);
 
         Assert.Equal("3:00", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
-        Assert.DoesNotContain("vsa.uhr.bis", entry.CodeMeta.Parameters.Keys);
+        Assert.Equal(["vsa.uhr.von"], entry.CodeMeta.Parameters.Keys);
     }
 
     [Fact]
@@ -108,8 +108,7 @@ public sealed class CodingClockPositionEntryWriterTests
             calibration: CalibratedPipe(),
             manifestRule: ClockAllowed);
 
-        Assert.DoesNotContain("vsa.uhr.von", entry.CodeMeta!.Parameters.Keys);
-        Assert.DoesNotContain("vsa.uhr.bis", entry.CodeMeta.Parameters.Keys);
+        Assert.Empty(entry.CodeMeta!.Parameters);
     }
 
     private static PipeCalibration CalibratedPipe()

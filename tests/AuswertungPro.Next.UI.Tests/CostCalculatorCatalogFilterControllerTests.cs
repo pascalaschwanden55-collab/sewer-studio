@@ -28,7 +28,6 @@ public sealed class CostCalculatorCatalogFilterControllerTests
             new[] { "INSTALL_SETUP", "CUSTOM", "SCHLAUCHLINER_STD" },
             controller.AllCatalogItems.Select(item => item.Key));
         Assert.Equal("Vorarbeiten", controller.AllCatalogItems.Single(item => item.Key == "CUSTOM").Group);
-        Assert.DoesNotContain(controller.AllCatalogItems, item => item.Key == "INACTIVE");
         Assert.Equal(controller.AllCatalogItems, controller.FilteredCatalogItems);
     }
 

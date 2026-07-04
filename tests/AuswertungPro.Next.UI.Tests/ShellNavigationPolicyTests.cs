@@ -48,7 +48,7 @@ public sealed class ShellNavigationPolicyTests
 
         Assert.Contains("SetCurrentPage(SelectedNavItem.CreatePage())", source);
         Assert.Contains("SetCurrentPage(new Pages.SanierungsMatrixPageViewModel", source);
-        Assert.DoesNotContain("CurrentPage = SelectedNavItem.CreatePage()", source);
+        AssertNoForbiddenTokens(source, "CurrentPage = SelectedNavItem.CreatePage()");
     }
 
     [Theory]
@@ -123,4 +123,12 @@ public sealed class ShellNavigationPolicyTests
         public void Dispose() => Disposed = true;
     }
 
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene direkte Shell-Navigation gefunden: " + string.Join(", ", hits));
+    }
 }

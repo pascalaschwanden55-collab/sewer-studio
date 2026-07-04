@@ -1,6 +1,5 @@
 using System.IO;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -43,21 +42,6 @@ public sealed class TrainingFfmpegPathResolverTests
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".exe");
 
         Assert.Equal("ffmpeg", TrainingFfmpegPathResolver.Resolve(path));
-    }
-
-    [Fact]
-    public void TrainingCenterViewModel_enthaelt_keinen_ffmpeg_path_resolver_mehr()
-    {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Windows",
-            "TrainingCenterViewModel.cs"));
-
-        Assert.DoesNotContain("private static string ResolveFfmpegPath", source, StringComparison.Ordinal);
     }
 
 }

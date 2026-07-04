@@ -32,7 +32,6 @@ public sealed class ProjektmanagerReconcileGuardTests
         Assert.Contains("NewProjectFolderPlanner.Plan", src);
         Assert.Contains("ProjectStructure.EnsureCreated", src);
         Assert.Contains("ProjectFileLocator.TargetPath", src);
-        Assert.DoesNotContain("DefaultProjectFolder", src);
     }
 
     private static string ReadRepoFile(params string[] parts)

@@ -9,6 +9,38 @@ public static class TrainingLiveFrameThrottleController
 {
     private const double MinFrameUpdateIntervalMilliseconds = 180;
 
+    public static void Apply(
+        string? framePath,
+        Func<DateTime> getLastUpdatedUtc,
+        Action<DateTime> setLastUpdatedUtc,
+        Action<string> setFramePath)
+        => Apply(
+            framePath,
+            getLastUpdatedUtc,
+            setLastUpdatedUtc,
+            setFramePath,
+            () => DateTime.UtcNow);
+
+    public static void Apply(
+        string? framePath,
+        Func<DateTime> getLastUpdatedUtc,
+        Action<DateTime> setLastUpdatedUtc,
+        Action<string> setFramePath,
+        Func<DateTime> getNowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(getLastUpdatedUtc);
+        ArgumentNullException.ThrowIfNull(setLastUpdatedUtc);
+        ArgumentNullException.ThrowIfNull(setFramePath);
+        ArgumentNullException.ThrowIfNull(getNowUtc);
+
+        var decision = Decide(framePath, getLastUpdatedUtc(), getNowUtc());
+        if (!decision.ShouldUpdateFramePath)
+            return;
+
+        setFramePath(decision.FramePath ?? "");
+        setLastUpdatedUtc(decision.LastUpdatedUtc);
+    }
+
     public static TrainingLiveFrameThrottleDecision Decide(
         string? framePath,
         DateTime lastUpdatedUtc,

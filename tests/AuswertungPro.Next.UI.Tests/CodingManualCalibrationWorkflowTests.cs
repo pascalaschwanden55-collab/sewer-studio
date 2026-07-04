@@ -82,8 +82,16 @@ public sealed class CodingManualCalibrationWorkflowTests
             Actions(calls));
 
         Assert.Equal(CodingManualCalibrationWorkflowOutcome.Applied, outcome);
-        Assert.DoesNotContain("clear-active-tool", calls);
-        Assert.DoesNotContain("schema-overlay", calls);
+        Assert.Equal(
+            [
+                "overlay:300:0.600",
+                "schema:300:0.600",
+                "manual-result:Kalibriert: 500.0 mm/norm|Kalibriert! DN 300mm = 600px",
+                "end-mode",
+                "hide-hint",
+                "cursor"
+            ],
+            calls);
     }
 
     private static CodingManualCalibrationWorkflowActions Actions(List<string> calls)

@@ -15,7 +15,7 @@ public sealed class ProjectRootPathArchitectureTests
         {
             "src/AuswertungPro.Next.UI/Ai/CodingProtocolPdfExportPlanner.cs",
             "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml.cs",
-            "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml.cs"
+            "src/AuswertungPro.Next.UI/DataPage/SchachtFileTargetResolver.cs"
         };
 
         var offenders = checkedFiles
@@ -25,8 +25,8 @@ public sealed class ProjectRootPathArchitectureTests
                 var lines = source.Split(["\r\n", "\n"], StringSplitOptions.None);
                 var problems = new List<string>();
 
-                if (!source.Contains("ProjectFileLocator.ProjectRootFromFile(lastProjectPath)", StringComparison.Ordinal))
-                    problems.Add($"{file}: nutzt ProjectFileLocator.ProjectRootFromFile(lastProjectPath) nicht");
+                if (!source.Contains("ProjectFileLocator.ProjectRootFromFile(", StringComparison.Ordinal))
+                    problems.Add($"{file}: nutzt ProjectFileLocator.ProjectRootFromFile(...) nicht");
 
                 problems.AddRange(lines
                     .Where(line => line.Contains("Path.GetDirectoryName(lastProjectPath)", StringComparison.Ordinal)

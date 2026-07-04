@@ -71,9 +71,15 @@ public sealed class CodingCanvasRedrawWorkflowTests
             Actions(calls.Add));
 
         Assert.Equal(CodingCanvasRedrawWorkflowOutcome.NoOverlayRendered, result.Outcome);
-        Assert.DoesNotContain("render-active-schema", calls);
-        Assert.DoesNotContain("render-manual-overlay", calls);
-        Assert.Equal("update-tool-badge", calls[^1]);
+        Assert.Equal(
+            [
+                "update-viewport",
+                "clear-transient:true",
+                "render-ai",
+                "render-reference-dn",
+                "update-tool-badge"
+            ],
+            calls);
     }
 
     private static CodingCanvasRedrawWorkflowActions Actions(Action<string> calls)

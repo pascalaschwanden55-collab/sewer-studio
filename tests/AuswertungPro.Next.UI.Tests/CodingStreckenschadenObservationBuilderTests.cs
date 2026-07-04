@@ -34,10 +34,7 @@ public sealed class CodingStreckenschadenObservationBuilderTests
         Assert.Equal("BBA", observation.MainCode);
         Assert.Equal(10, observation.ClockHour);
         Assert.Equal(12.5, observation.Meter);
-        Assert.Contains(stretch, result.ConsumedSegments);
-        Assert.DoesNotContain(ahead, result.ConsumedSegments);
-        Assert.DoesNotContain(nonStretch, result.ConsumedSegments);
-        Assert.DoesNotContain(unresolved, result.ConsumedSegments);
+        Assert.Equal([stretch], result.ConsumedSegments);
         Assert.Equal(3, resolvedFindings.Count);
         Assert.Equal(4, resolvedFindings[0].Severity);
         Assert.Equal("10:00", resolvedFindings[0].PositionClock);

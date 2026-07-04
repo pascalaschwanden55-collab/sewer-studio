@@ -81,7 +81,6 @@ public sealed class CodingSelectCodeCommandWorkflowTests
                 "suspend:end"
             ],
             calls);
-        Assert.DoesNotContain(calls, call => call.StartsWith("post:", StringComparison.Ordinal));
     }
 
     private static CodingSelectCodeCommandActions Actions(

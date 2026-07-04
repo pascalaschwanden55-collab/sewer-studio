@@ -24,6 +24,12 @@ public sealed class ProjectScanRootsTests
     public void Resolve_ignores_blank_configured_root()
     {
         var roots = ProjectScanRoots.Resolve(@"C:\App", "   ");
-        Assert.DoesNotContain("   ", roots);
+        Assert.Equal(
+            new[]
+            {
+                Path.Combine(@"C:\App", "Rohdaten"),
+                Path.Combine(@"C:\App", "Rohdaten", "Section_PDF")
+            },
+            roots);
     }
 }

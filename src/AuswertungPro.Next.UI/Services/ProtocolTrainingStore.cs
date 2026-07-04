@@ -16,6 +16,8 @@ public static class ProtocolTrainingStore
     private static string StorePath
         => Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json");
 
+    public static string DefaultPath => StorePath;
+
     public static void AddSample(ProtocolEntry entry, string? haltungId)
     {
         var data = Load();

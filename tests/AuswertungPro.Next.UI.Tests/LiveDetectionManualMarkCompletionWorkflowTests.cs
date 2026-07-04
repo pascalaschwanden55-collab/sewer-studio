@@ -66,8 +66,16 @@ public sealed class LiveDetectionManualMarkCompletionWorkflowTests
                 MarkToolType: OverlayToolType.Ellipse),
             Actions(calls));
 
-        Assert.Contains("active:Ellipse", calls);
-        Assert.DoesNotContain("deactivate", calls);
+        Assert.Equal(
+            [
+                "clear-sam",
+                "clear-bend",
+                "clear-overlay",
+                "redraw",
+                "active:Ellipse",
+                "cursor"
+            ],
+            calls);
         Assert.Equal(LiveDetectionManualMarkCompletionWorkflowOutcome.KeptActive, result.Outcome);
     }
 

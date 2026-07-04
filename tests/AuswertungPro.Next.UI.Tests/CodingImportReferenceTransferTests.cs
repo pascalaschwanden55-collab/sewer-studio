@@ -21,7 +21,6 @@ public sealed class CodingImportReferenceTransferTests
         Assert.Equal(2, moved);
         Assert.Empty(source);
         Assert.Equal(new[] { early, late }, target.ToArray());
-        Assert.DoesNotContain(oldTargetEvent, target);
     }
 
     [Fact]

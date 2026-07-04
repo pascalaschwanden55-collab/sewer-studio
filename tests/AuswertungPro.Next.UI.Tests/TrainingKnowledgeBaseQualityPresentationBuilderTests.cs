@@ -21,9 +21,13 @@ public sealed class TrainingKnowledgeBaseQualityPresentationBuilderTests
 
         var result = TrainingKnowledgeBaseQualityPresentationBuilder.Build(Quality(), runs);
 
-        Assert.DoesNotContain("01.01.", result.TrendText);
-        Assert.Contains($"{runs[1].TimestampUtc.ToLocalTime():dd.MM. HH:mm} \u2014 Exact: {0.20:P0}", result.TrendText);
-        Assert.Contains($"{runs[^1].TimestampUtc.ToLocalTime():dd.MM. HH:mm} \u2014 Exact: {0.54:P0}", result.TrendText);
+        var expectedTrendText = string.Join(
+            "\n",
+            runs.Skip(1).Select(r =>
+                $"{r.TimestampUtc.ToLocalTime():dd.MM. HH:mm} \u2014 " +
+                $"Exact: {r.ExactPercent:P0} | Partial: {r.PartialPercent:P0} | " +
+                $"Miss: {r.MismatchPercent:P0} | Leer: {r.NoFindingsPercent:P0}"));
+        Assert.Equal(expectedTrendText, result.TrendText);
         Assert.Equal("\u2191", result.TrendDirection);
     }
 

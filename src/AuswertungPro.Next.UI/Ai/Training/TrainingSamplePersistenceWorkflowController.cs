@@ -4,6 +4,18 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 
 public static class TrainingSamplePersistenceWorkflowController
 {
+    public static Task PersistAsync(TrainingSamplePersistenceWorkflowRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return PersistAsync(
+            request.Samples,
+            request.ChangedSample,
+            request.MergeOrUpdateAsync,
+            request.IndexAsync,
+            request.CancellationToken);
+    }
+
     public static async Task PersistAsync(
         IReadOnlyList<TrainingSample> samples,
         TrainingSample? changedSample,

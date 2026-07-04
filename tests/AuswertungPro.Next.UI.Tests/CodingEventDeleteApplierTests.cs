@@ -20,8 +20,7 @@ public sealed class CodingEventDeleteApplierTests
         Assert.True(result.RemovedFromList);
         Assert.False(result.ShouldClearSelectedDefect);
         Assert.Equal(ev.EventId, Assert.Single(service.RemovedEventIds));
-        Assert.DoesNotContain(ev, events);
-        Assert.Contains(other, events);
+        Assert.Same(other, Assert.Single(events));
     }
 
     [Fact]

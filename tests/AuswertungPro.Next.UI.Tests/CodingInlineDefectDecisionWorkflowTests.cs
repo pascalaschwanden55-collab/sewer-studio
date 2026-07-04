@@ -116,8 +116,7 @@ public sealed class CodingInlineDefectDecisionWorkflowTests
         var rejected = method.Invoke(null, [selected, listSelected, service, events]);
 
         AssertRejectResult(rejected, expectedRejected: true, selected, expectedClear: true);
-        Assert.DoesNotContain(selected, events);
-        Assert.Contains(listSelected, events);
+        Assert.Same(listSelected, Assert.Single(events));
         Assert.Equal(selected.EventId, Assert.Single(service.RemovedEventIds));
     }
 
