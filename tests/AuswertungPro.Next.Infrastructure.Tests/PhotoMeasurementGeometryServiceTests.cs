@@ -754,6 +754,88 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildAngleOverlayPlan_Lateral_BautPipeUndLateralPlan()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildAngleOverlayPlan(
+            OverlayToolType.LateralCircle,
+            calibration,
+            positionDeg: 90,
+            angleDeg: 60,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100);
+
+        Assert.NotNull(plan);
+        Assert.Equal(110, plan.Center.X, precision: 6);
+        Assert.Equal(70, plan.Center.Y, precision: 6);
+        Assert.Equal(30, plan.PipeRadius, precision: 6);
+        Assert.Equal(3, plan.ClockHour, precision: 6);
+        Assert.Equal(OverlayToolType.LateralCircle, plan.Geometry.ToolType);
+        Assert.NotNull(plan.Lateral);
+        Assert.Null(plan.Bend);
+        Assert.Equal(140, plan.Lateral.OpeningCenter.X, precision: 6);
+        Assert.Equal(70, plan.Lateral.OpeningCenter.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildAngleOverlayPlan_Bend_BautPipeUndBogenPlan()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildAngleOverlayPlan(
+            OverlayToolType.PipeBend,
+            calibration,
+            positionDeg: 0,
+            angleDeg: 45,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100);
+
+        Assert.NotNull(plan);
+        Assert.Equal(110, plan.Center.X, precision: 6);
+        Assert.Equal(70, plan.Center.Y, precision: 6);
+        Assert.Equal(30, plan.PipeRadius, precision: 6);
+        Assert.Equal(0, plan.ClockHour, precision: 6);
+        Assert.Equal(OverlayToolType.PipeBend, plan.Geometry.ToolType);
+        Assert.Null(plan.Lateral);
+        Assert.NotNull(plan.Bend);
+        Assert.Equal(8, plan.Bend.Rings.Count);
+        Assert.Equal(21, plan.Bend.AxisPoints.Count);
+    }
+
+    [Fact]
+    public void BuildAngleOverlayPlan_UngueltigeRendergroesse_GibtNull()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildAngleOverlayPlan(
+            OverlayToolType.LateralCircle,
+            calibration,
+            positionDeg: 90,
+            angleDeg: 60,
+            renderedX: 0,
+            renderedY: 0,
+            renderedWidth: 0,
+            renderedHeight: 100));
+    }
+
+    [Fact]
     public void BuildLateralOverlayPlan_RechnetOeffnungSchenkelUndLabel()
     {
         var plan = PhotoMeasurementGeometryService.BuildLateralOverlayPlan(

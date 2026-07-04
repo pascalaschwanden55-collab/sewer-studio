@@ -555,6 +555,68 @@ public static class PhotoMeasurementGeometryService
     }
 
     /// <summary>
+    /// Baut den vollstaendigen, UI-freien Zeichenplan fuer Abzweig- und Bogen-Overlays.
+    /// </summary>
+    public static PhotoMeasurementAngleOverlayPlan? BuildAngleOverlayPlan(
+        OverlayToolType toolType,
+        PipeCalibration calibration,
+        double positionDeg,
+        double angleDeg,
+        double renderedX,
+        double renderedY,
+        double renderedWidth,
+        double renderedHeight)
+    {
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        var pipePlan = BuildPipeCirclePlan(
+            calibration,
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight);
+        if (pipePlan is null)
+            return null;
+
+        var angleGeometry = BuildAngleGeometry(
+            toolType,
+            calibration.PipeCenter,
+            calibration.NormalizedDiameter,
+            positionDeg,
+            angleDeg);
+
+        PhotoMeasurementLateralOverlayPlan? lateralPlan = null;
+        PhotoMeasurementBendOverlayPlan? bendPlan = null;
+        if (toolType == OverlayToolType.LateralCircle)
+        {
+            lateralPlan = BuildLateralOverlayPlan(
+                pipePlan.Center.X,
+                pipePlan.Center.Y,
+                pipePlan.Radius,
+                angleGeometry.PositionRad,
+                angleDeg);
+        }
+        else if (toolType == OverlayToolType.PipeBend)
+        {
+            bendPlan = BuildBendOverlayPlan(
+                pipePlan.Center.X,
+                pipePlan.Center.Y,
+                pipePlan.Radius,
+                angleGeometry.PositionRad,
+                angleDeg);
+        }
+
+        return new PhotoMeasurementAngleOverlayPlan(
+            Geometry: angleGeometry.Geometry,
+            ClockHour: angleGeometry.ClockHour,
+            PositionRad: angleGeometry.PositionRad,
+            Center: pipePlan.Center,
+            PipeRadius: pipePlan.Radius,
+            Lateral: lateralPlan,
+            Bend: bendPlan);
+    }
+
+    /// <summary>
     /// Reine Zeichengeometrie fuer die Abzweig-Vorschau.
     /// Enthaelt keine WPF-Typen, damit die Berechnung testbar bleibt.
     /// </summary>
@@ -651,6 +713,15 @@ public sealed record PhotoMeasurementAngleGeometry(
     double PositionRad,
     double ClockHour,
     NormalizedPoint EdgePoint);
+
+public sealed record PhotoMeasurementAngleOverlayPlan(
+    OverlayGeometry Geometry,
+    double ClockHour,
+    double PositionRad,
+    PhotoMeasurementCanvasPoint Center,
+    double PipeRadius,
+    PhotoMeasurementLateralOverlayPlan? Lateral,
+    PhotoMeasurementBendOverlayPlan? Bend);
 
 public sealed record PhotoMeasurementDeformationGeometry(
     OverlayGeometry Geometry,

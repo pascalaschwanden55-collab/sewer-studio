@@ -904,52 +904,42 @@ public partial class PhotoMeasurementWindow : Window
         ClearByTag(TagFill);
 
         var r = GetImageRenderedRect(PhotoImage);
-        if (r.Width <= 0 || r.Height <= 0) return;
-
-        double refSize = Math.Min(r.Width, r.Height);
-        double normDiam = _calibration.NormalizedDiameter;
-        double pipeR = (normDiam / 2.0) * refSize;
-        var center = NormToCanvas(_calibration.PipeCenter.X, _calibration.PipeCenter.Y);
-
         double positionDeg = SliderPosition.Value;
         double angleDeg = SliderAngle.Value;
 
         var toolType = _activeTool == PhotoTool.Lateral
             ? OverlayToolType.LateralCircle
             : OverlayToolType.PipeBend;
-        var angleGeometry = PhotoMeasurementGeometryService.BuildAngleGeometry(
+        var anglePlan = PhotoMeasurementGeometryService.BuildAngleOverlayPlan(
             toolType,
-            _calibration.PipeCenter,
-            normDiam,
+            _calibration,
             positionDeg,
-            angleDeg);
+            angleDeg,
+            r.X,
+            r.Y,
+            r.Width,
+            r.Height);
+        if (anglePlan is null) return;
 
-        if (_activeTool == PhotoTool.Lateral)
+        if (anglePlan.Lateral is not null)
         {
-            DrawLateralOverlay(center, pipeR, angleGeometry.PositionRad, angleDeg);
+            DrawLateralOverlay(anglePlan.Lateral, angleDeg);
         }
-        else if (_activeTool == PhotoTool.Bend)
+        else if (anglePlan.Bend is not null)
         {
-            DrawBendOverlay(center, pipeR, angleGeometry.PositionRad, angleDeg);
+            DrawBendOverlay(anglePlan.Center, anglePlan.PipeRadius, anglePlan.Bend);
         }
 
-        _currentGeometry = angleGeometry.Geometry;
+        _currentGeometry = anglePlan.Geometry;
 
-        TxtMeasureInfo.Text = $"{angleDeg:F0}° @ {angleGeometry.ClockHour:F1}h";
+        TxtMeasureInfo.Text = $"{angleDeg:F0}° @ {anglePlan.ClockHour:F1}h";
         TxtStatus.Text = _activeTool == PhotoTool.Lateral
-            ? $"Abzweig: {angleDeg:F0}° bei {angleGeometry.ClockHour:F1} Uhr"
-            : $"Bogen: {angleDeg:F0}° bei {angleGeometry.ClockHour:F1} Uhr";
+            ? $"Abzweig: {angleDeg:F0}° bei {anglePlan.ClockHour:F1} Uhr"
+            : $"Bogen: {angleDeg:F0}° bei {anglePlan.ClockHour:F1} Uhr";
     }
 
-    private void DrawLateralOverlay(Point center, double pipeR, double posRad, double angleDeg)
+    private void DrawLateralOverlay(PhotoMeasurementLateralOverlayPlan plan, double angleDeg)
     {
-        var plan = PhotoMeasurementGeometryService.BuildLateralOverlayPlan(
-            center.X,
-            center.Y,
-            pipeR,
-            posRad,
-            angleDeg);
-
         var circle = new Ellipse
         {
             Width = plan.OpeningRadius * 2, Height = plan.OpeningRadius * 2,
@@ -982,17 +972,14 @@ public partial class PhotoMeasurementWindow : Window
         AddCanvasLabel($"{angleDeg:F0}°", plan.LabelPosition.X, plan.LabelPosition.Y, TagOverlay);
     }
 
-    private void DrawBendOverlay(Point center, double pipeR, double posRad, double angleDeg)
+    private void DrawBendOverlay(
+        PhotoMeasurementCanvasPoint center,
+        double pipeR,
+        PhotoMeasurementBendOverlayPlan plan)
     {
-        var plan = PhotoMeasurementGeometryService.BuildBendOverlayPlan(
-            center.X,
-            center.Y,
-            pipeR,
-            posRad,
-            angleDeg);
-
         // Clip am Rohrkreis
-        var clipGeo = new EllipseGeometry(center, pipeR, pipeR);
+        var clipCenter = new Point(center.X, center.Y);
+        var clipGeo = new EllipseGeometry(clipCenter, pipeR, pipeR);
         var bendContainer = new Canvas
         {
             Clip = clipGeo,
