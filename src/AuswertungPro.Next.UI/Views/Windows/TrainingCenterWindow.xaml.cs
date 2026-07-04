@@ -754,6 +754,7 @@ public sealed class FileToImageConverter : IValueConverter
             bmp.BeginInit();
             bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
             bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+            bmp.DecodePixelWidth = ResolveDecodePixelWidth(parameter);
             bmp.UriSource = new Uri(path, UriKind.Absolute);
             bmp.EndInit();
             bmp.Freeze();
@@ -768,4 +769,19 @@ public sealed class FileToImageConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
+
+    private static int ResolveDecodePixelWidth(object? parameter)
+    {
+        if (parameter is int width && width > 0)
+            return width;
+
+        if (parameter is string text
+            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return 480;
+    }
 }

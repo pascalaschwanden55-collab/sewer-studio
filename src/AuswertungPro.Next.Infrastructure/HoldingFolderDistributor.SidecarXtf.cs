@@ -149,10 +149,23 @@ public static partial class HoldingFolderDistributor
 
         // Rekursiv suchen: M150/XML liegen in der Praxis oft in Unterordnern.
         // XML nicht mehr über Dateinamen filtern, da viele Exporte generische Namen haben.
-        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xtf", recursive: true)); } catch { }
-        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.m150", recursive: true)); } catch { }
-        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.mdb", recursive: true)); } catch { }
-        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xml", recursive: true)); } catch { }
+        void AddSidecarFiles(string pattern)
+        {
+            try
+            {
+                sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, pattern, recursive: true));
+            }
+            catch (Exception ex)
+            {
+                // Best effort: defekte/gesperrte Unterordner duerfen den Import nicht abbrechen.
+                System.Diagnostics.Debug.WriteLine($"[HoldingDistributor] Sidecar-Suche uebersprungen ({pattern}) in {folder}: {ex.Message}");
+            }
+        }
+
+        AddSidecarFiles("*.xtf");
+        AddSidecarFiles("*.m150");
+        AddSidecarFiles("*.mdb");
+        AddSidecarFiles("*.xml");
 
         return sidecarFiles
             .Distinct(StringComparer.OrdinalIgnoreCase)

@@ -67,8 +67,16 @@ public static class DichtheitImportDistributor
         foreach (var kandidat in kandidaten)
         {
             long groesse;
-            try { groesse = new FileInfo(kandidat).Length; }
-            catch { continue; }
+            try
+            {
+                groesse = new FileInfo(kandidat).Length;
+            }
+            catch (Exception ex)
+            {
+                // Best effort: eine unlesbare Datei darf die restlichen DP-Kandidaten nicht blockieren.
+                System.Diagnostics.Debug.WriteLine($"[DichtheitImport] Kandidat uebersprungen, Groesse nicht lesbar: {kandidat}: {ex.Message}");
+                continue;
+            }
 
             if (vorhandeneGroessen.Contains(groesse))
                 uebersprungen++;
@@ -232,10 +240,22 @@ public static class DichtheitImportDistributor
         {
             foreach (var pfad in SafeFileEnumeration.EnumerateFilesSafe(zielRoot, "*_DP*.pdf", recursive: true))
             {
-                try { groessen.Add(new FileInfo(pfad).Length); } catch { }
+                try
+                {
+                    groessen.Add(new FileInfo(pfad).Length);
+                }
+                catch (Exception ex)
+                {
+                    // Best effort: defekte Ziel-Dateien verhindern nur die Duplikat-Erkennung fuer diese Datei.
+                    System.Diagnostics.Debug.WriteLine($"[DichtheitImport] Vorhandenes DP-Protokoll ohne Groesse ignoriert: {pfad}: {ex.Message}");
+                }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Best effort: wenn der Zielbaum nicht lesbar ist, laeuft der Import ohne Idempotenz-Guard weiter.
+            System.Diagnostics.Debug.WriteLine($"[DichtheitImport] Vorhandene DP-Groessen konnten nicht gelesen werden: {zielRoot}: {ex.Message}");
+        }
 
         return groessen;
     }
