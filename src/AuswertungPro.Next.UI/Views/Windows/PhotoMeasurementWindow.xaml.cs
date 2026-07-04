@@ -961,101 +961,82 @@ public partial class PhotoMeasurementWindow : Window
         double positionDeg = SliderPosition.Value;
         double angleDeg = SliderAngle.Value;
 
-        // Uhr-Position → Radiant (0° = 12 Uhr = oben); delegiert an PhotoMeasurementGeometryService
-        double posRad = PhotoMeasurementGeometryService.PositionDegToRadians(positionDeg);
+        var toolType = _activeTool == PhotoTool.Lateral
+            ? OverlayToolType.LateralCircle
+            : OverlayToolType.PipeBend;
+        var angleGeometry = PhotoMeasurementGeometryService.BuildAngleGeometry(
+            toolType,
+            _calibration.PipeCenter,
+            normDiam,
+            positionDeg,
+            angleDeg);
 
         if (_activeTool == PhotoTool.Lateral)
         {
-            DrawLateralOverlay(center, pipeR, posRad, angleDeg);
+            DrawLateralOverlay(center, pipeR, angleGeometry.PositionRad, angleDeg);
         }
         else if (_activeTool == PhotoTool.Bend)
         {
-            DrawBendOverlay(center, pipeR, posRad, angleDeg);
+            DrawBendOverlay(center, pipeR, angleGeometry.PositionRad, angleDeg);
         }
 
-        // Geometry; delegiert an PhotoMeasurementGeometryService
-        double clockFrom = PhotoMeasurementGeometryService.PositionDegToClockHour(positionDeg);
-        _currentGeometry = new OverlayGeometry
-        {
-            ToolType = _activeTool == PhotoTool.Lateral
-                ? OverlayToolType.LateralCircle : OverlayToolType.PipeBend,
-            ArcDegrees = Math.Round(angleDeg, 1),
-            ClockFrom = Math.Round(clockFrom, 1),
-            Points = new List<NormalizedPoint>
-            {
-                _calibration.PipeCenter,
-                new(_calibration.PipeCenter.X + Math.Cos(posRad) * normDiam / 2,
-                    _calibration.PipeCenter.Y + Math.Sin(posRad) * normDiam / 2)
-            }
-        };
+        _currentGeometry = angleGeometry.Geometry;
 
-        TxtMeasureInfo.Text = $"{angleDeg:F0}° @ {clockFrom:F1}h";
+        TxtMeasureInfo.Text = $"{angleDeg:F0}° @ {angleGeometry.ClockHour:F1}h";
         TxtStatus.Text = _activeTool == PhotoTool.Lateral
-            ? $"Abzweig: {angleDeg:F0}° bei {clockFrom:F1} Uhr"
-            : $"Bogen: {angleDeg:F0}° bei {clockFrom:F1} Uhr";
+            ? $"Abzweig: {angleDeg:F0}° bei {angleGeometry.ClockHour:F1} Uhr"
+            : $"Bogen: {angleDeg:F0}° bei {angleGeometry.ClockHour:F1} Uhr";
     }
 
     private void DrawLateralOverlay(Point center, double pipeR, double posRad, double angleDeg)
     {
-        // Roter Kreis an Position auf Rohrwand
-        double openingR = pipeR * 0.15;
-        double openX = center.X + Math.Cos(posRad) * pipeR;
-        double openY = center.Y + Math.Sin(posRad) * pipeR;
+        var plan = PhotoMeasurementGeometryService.BuildLateralOverlayPlan(
+            center.X,
+            center.Y,
+            pipeR,
+            posRad,
+            angleDeg);
 
         var circle = new Ellipse
         {
-            Width = openingR * 2, Height = openingR * 2,
+            Width = plan.OpeningRadius * 2, Height = plan.OpeningRadius * 2,
             Stroke = Brushes.Red, StrokeThickness = 2,
             Fill = LateralFillBrush,
             Tag = TagOverlay
         };
-        Canvas.SetLeft(circle, openX - openingR);
-        Canvas.SetTop(circle, openY - openingR);
+        Canvas.SetLeft(circle, plan.OpeningCenter.X - plan.OpeningRadius);
+        Canvas.SetTop(circle, plan.OpeningCenter.Y - plan.OpeningRadius);
         OverlayCanvas.Children.Add(circle);
-
-        // Winkelschenkel (gelb)
-        double halfAngle = (angleDeg / 2.0) * Math.PI / 180.0;
-        double armLen = pipeR * 0.6;
-
-        var arm1End = new Point(
-            openX + Math.Cos(posRad - halfAngle) * armLen,
-            openY + Math.Sin(posRad - halfAngle) * armLen);
-        var arm2End = new Point(
-            openX + Math.Cos(posRad + halfAngle) * armLen,
-            openY + Math.Sin(posRad + halfAngle) * armLen);
 
         OverlayCanvas.Children.Add(new Line
         {
-            X1 = openX, Y1 = openY, X2 = arm1End.X, Y2 = arm1End.Y,
+            X1 = plan.OpeningCenter.X, Y1 = plan.OpeningCenter.Y, X2 = plan.Arm1End.X, Y2 = plan.Arm1End.Y,
             Stroke = Brushes.Yellow, StrokeThickness = 2,
             Tag = TagOverlay
         });
         OverlayCanvas.Children.Add(new Line
         {
-            X1 = openX, Y1 = openY, X2 = arm2End.X, Y2 = arm2End.Y,
+            X1 = plan.OpeningCenter.X, Y1 = plan.OpeningCenter.Y, X2 = plan.Arm2End.X, Y2 = plan.Arm2End.Y,
             Stroke = Brushes.Yellow, StrokeThickness = 2,
             Tag = TagOverlay
         });
 
         // Winkelbogen
-        DrawArc(openX, openY, armLen * 0.4, posRad - halfAngle, posRad + halfAngle,
+        DrawArc(plan.OpeningCenter.X, plan.OpeningCenter.Y, plan.ArcRadius, plan.ArcStartRad, plan.ArcEndRad,
             Brushes.Yellow, 1.5, TagOverlay);
 
         // Label
-        AddCanvasLabel($"{angleDeg:F0}°",
-            openX + Math.Cos(posRad) * (armLen * 0.5),
-            openY + Math.Sin(posRad) * (armLen * 0.5) - 14, TagOverlay);
+        AddCanvasLabel($"{angleDeg:F0}°", plan.LabelPosition.X, plan.LabelPosition.Y, TagOverlay);
     }
 
     private void DrawBendOverlay(Point center, double pipeR, double posRad, double angleDeg)
     {
-        // Muffenringe auf Bogenbahn
-        double halfAngle = (angleDeg / 2.0) * Math.PI / 180.0;
-        double bogenR = 3.5 * pipeR;
-
-        // Bogenzentrum
-        double arcCenterX = center.X + Math.Cos(posRad + Math.PI / 2) * bogenR;
-        double arcCenterY = center.Y + Math.Sin(posRad + Math.PI / 2) * bogenR;
+        var plan = PhotoMeasurementGeometryService.BuildBendOverlayPlan(
+            center.X,
+            center.Y,
+            pipeR,
+            posRad,
+            angleDeg);
 
         // Clip am Rohrkreis
         var clipGeo = new EllipseGeometry(center, pipeR, pipeR);
@@ -1067,29 +1048,18 @@ public partial class PhotoMeasurementWindow : Window
             Tag = TagOverlay
         };
 
-        int ringCount = 8;
-        for (int i = 0; i < ringCount; i++)
+        foreach (var ringPlan in plan.Rings)
         {
-            double t = (double)i / (ringCount - 1); // 0..1
-            double ringAngle = posRad + Math.PI / 2 - halfAngle + t * 2 * halfAngle;
-            double ringX = arcCenterX - Math.Cos(ringAngle) * bogenR;
-            double ringY = arcCenterY - Math.Sin(ringAngle) * bogenR;
-
-            // Perspektive: hintere Ringe kleiner + Ellipsen (gekippt)
-            double perspScale = 1.0 - 0.3 * Math.Abs(t - 0.5) * 2;
-            double rw = pipeR * 0.9 * perspScale;
-            double rh = pipeR * 0.3 * perspScale;
-
             var ring = new Ellipse
             {
-                Width = rw * 2, Height = rh * 2,
+                Width = ringPlan.RadiusX * 2, Height = ringPlan.RadiusY * 2,
                 Stroke = new SolidColorBrush(Color.FromArgb(
-                    (byte)(180 + 75 * perspScale), 255, 165, 0)),
+                    (byte)(180 + 75 * ringPlan.PerspectiveScale), 255, 165, 0)),
                 StrokeThickness = 1.5,
                 Fill = Brushes.Transparent
             };
-            Canvas.SetLeft(ring, ringX - rw);
-            Canvas.SetTop(ring, ringY - rh);
+            Canvas.SetLeft(ring, ringPlan.Center.X - ringPlan.RadiusX);
+            Canvas.SetTop(ring, ringPlan.Center.Y - ringPlan.RadiusY);
             bendContainer.Children.Add(ring);
         }
 
@@ -1097,14 +1067,11 @@ public partial class PhotoMeasurementWindow : Window
 
         // Bogenbahn-Achslinie (gestrichelt)
         var pathFig = new PathFigure();
-        for (int i = 0; i <= 20; i++)
+        for (int i = 0; i < plan.AxisPoints.Count; i++)
         {
-            double t = (double)i / 20.0;
-            double a = posRad + Math.PI / 2 - halfAngle + t * 2 * halfAngle;
-            double px = arcCenterX - Math.Cos(a) * bogenR;
-            double py = arcCenterY - Math.Sin(a) * bogenR;
-            if (i == 0) pathFig.StartPoint = new Point(px, py);
-            else pathFig.Segments.Add(new LineSegment(new Point(px, py), true));
+            var point = plan.AxisPoints[i];
+            if (i == 0) pathFig.StartPoint = new Point(point.X, point.Y);
+            else pathFig.Segments.Add(new LineSegment(new Point(point.X, point.Y), true));
         }
 
         var pathGeo = new PathGeometry(new[] { pathFig });

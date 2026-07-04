@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
@@ -283,5 +284,101 @@ public sealed class PhotoMeasurementGeometryServiceTests
     {
         double result = PhotoMeasurementGeometryService.PositionDegToRadians(deg);
         Assert.Equal(expected, result, precision: 6);
+    }
+
+    [Fact]
+    public void BuildAngleGeometry_Lateral_RechnetEndpunktUndUhrlage()
+    {
+        var center = new NormalizedPoint(0.5, 0.5);
+
+        var result = PhotoMeasurementGeometryService.BuildAngleGeometry(
+            OverlayToolType.LateralCircle,
+            center,
+            normalizedDiameter: 0.7,
+            positionDeg: 90,
+            angleDeg: 45);
+
+        Assert.Equal(0, result.PositionRad, precision: 6);
+        Assert.Equal(3, result.ClockHour, precision: 6);
+        Assert.Equal(OverlayToolType.LateralCircle, result.Geometry.ToolType);
+        Assert.Equal(45, result.Geometry.ArcDegrees);
+        Assert.Equal(3, result.Geometry.ClockFrom);
+        Assert.Equal(2, result.Geometry.Points.Count);
+        Assert.Equal(0.5, result.Geometry.Points[0].X, precision: 6);
+        Assert.Equal(0.5, result.Geometry.Points[0].Y, precision: 6);
+        Assert.Equal(0.85, result.EdgePoint.X, precision: 6);
+        Assert.Equal(0.5, result.EdgePoint.Y, precision: 6);
+        Assert.Equal(result.EdgePoint.X, result.Geometry.Points[1].X, precision: 6);
+        Assert.Equal(result.EdgePoint.Y, result.Geometry.Points[1].Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildAngleGeometry_InvalidesWerkzeug_Wirft()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PhotoMeasurementGeometryService.BuildAngleGeometry(
+                OverlayToolType.Rectangle,
+                new NormalizedPoint(0.5, 0.5),
+                normalizedDiameter: 0.7,
+                positionDeg: 0,
+                angleDeg: 30));
+    }
+
+    [Fact]
+    public void BuildLateralOverlayPlan_RechnetOeffnungSchenkelUndLabel()
+    {
+        var plan = PhotoMeasurementGeometryService.BuildLateralOverlayPlan(
+            centerX: 100,
+            centerY: 100,
+            pipeRadiusPx: 50,
+            positionRad: 0,
+            angleDeg: 60);
+
+        Assert.Equal(150, plan.OpeningCenter.X, precision: 6);
+        Assert.Equal(100, plan.OpeningCenter.Y, precision: 6);
+        Assert.Equal(7.5, plan.OpeningRadius, precision: 6);
+        Assert.Equal(175.980762, plan.Arm1End.X, precision: 6);
+        Assert.Equal(85, plan.Arm1End.Y, precision: 6);
+        Assert.Equal(175.980762, plan.Arm2End.X, precision: 6);
+        Assert.Equal(115, plan.Arm2End.Y, precision: 6);
+        Assert.Equal(12, plan.ArcRadius, precision: 6);
+        Assert.Equal(-0.523599, plan.ArcStartRad, precision: 6);
+        Assert.Equal(0.523599, plan.ArcEndRad, precision: 6);
+        Assert.Equal(165, plan.LabelPosition.X, precision: 6);
+        Assert.Equal(86, plan.LabelPosition.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildBendOverlayPlan_RechnetRingeUndAchse()
+    {
+        var plan = PhotoMeasurementGeometryService.BuildBendOverlayPlan(
+            centerX: 100,
+            centerY: 100,
+            pipeRadiusPx: 50,
+            positionRad: 0,
+            angleDeg: 60);
+
+        Assert.Equal(100, plan.ArcCenter.X, precision: 6);
+        Assert.Equal(275, plan.ArcCenter.Y, precision: 6);
+        Assert.Equal(175, plan.BendRadius, precision: 6);
+        Assert.Equal(0.523599, plan.HalfAngleRad, precision: 6);
+        Assert.Equal(8, plan.Rings.Count);
+        Assert.Equal(21, plan.AxisPoints.Count);
+
+        var firstRing = plan.Rings[0];
+        Assert.Equal(12.5, firstRing.Center.X, precision: 6);
+        Assert.Equal(123.445554, firstRing.Center.Y, precision: 6);
+        Assert.Equal(31.5, firstRing.RadiusX, precision: 6);
+        Assert.Equal(10.5, firstRing.RadiusY, precision: 6);
+        Assert.Equal(0.7, firstRing.PerspectiveScale, precision: 6);
+
+        var lastRing = plan.Rings[^1];
+        Assert.Equal(187.5, lastRing.Center.X, precision: 6);
+        Assert.Equal(123.445554, lastRing.Center.Y, precision: 6);
+
+        Assert.Equal(firstRing.Center.X, plan.AxisPoints[0].X, precision: 6);
+        Assert.Equal(firstRing.Center.Y, plan.AxisPoints[0].Y, precision: 6);
+        Assert.Equal(lastRing.Center.X, plan.AxisPoints[^1].X, precision: 6);
+        Assert.Equal(lastRing.Center.Y, plan.AxisPoints[^1].Y, precision: 6);
     }
 }

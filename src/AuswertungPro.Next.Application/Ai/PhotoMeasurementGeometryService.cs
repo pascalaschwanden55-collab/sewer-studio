@@ -173,4 +173,158 @@ public static class PhotoMeasurementGeometryService
     /// </summary>
     public static double PositionDegToRadians(double positionDeg)
         => (positionDeg - 90.0) * Math.PI / 180.0;
+
+    /// <summary>
+    /// Baut die fachliche Winkel-Geometrie fuer Abzweig/Bogen.
+    /// Die UI nutzt das Ergebnis nur noch zum Zeichnen.
+    /// </summary>
+    public static PhotoMeasurementAngleGeometry BuildAngleGeometry(
+        OverlayToolType toolType,
+        NormalizedPoint pipeCenter,
+        double normalizedDiameter,
+        double positionDeg,
+        double angleDeg)
+    {
+        if (toolType is not (OverlayToolType.LateralCircle or OverlayToolType.PipeBend))
+            throw new ArgumentOutOfRangeException(nameof(toolType), toolType, "Only LateralCircle and PipeBend are supported.");
+
+        double positionRad = PositionDegToRadians(positionDeg);
+        double clockHour = PositionDegToClockHour(positionDeg);
+        double radiusNorm = normalizedDiameter / 2.0;
+        var edgePoint = new NormalizedPoint(
+            pipeCenter.X + Math.Cos(positionRad) * radiusNorm,
+            pipeCenter.Y + Math.Sin(positionRad) * radiusNorm);
+
+        var geometry = new OverlayGeometry
+        {
+            ToolType = toolType,
+            ArcDegrees = Math.Round(angleDeg, 1),
+            ClockFrom = Math.Round(clockHour, 1),
+            Points = new List<NormalizedPoint> { pipeCenter, edgePoint }
+        };
+
+        return new PhotoMeasurementAngleGeometry(geometry, positionRad, clockHour, edgePoint);
+    }
+
+    /// <summary>
+    /// Reine Zeichengeometrie fuer die Abzweig-Vorschau.
+    /// Enthaelt keine WPF-Typen, damit die Berechnung testbar bleibt.
+    /// </summary>
+    public static PhotoMeasurementLateralOverlayPlan BuildLateralOverlayPlan(
+        double centerX,
+        double centerY,
+        double pipeRadiusPx,
+        double positionRad,
+        double angleDeg)
+    {
+        double openingRadius = pipeRadiusPx * 0.15;
+        double openingX = centerX + Math.Cos(positionRad) * pipeRadiusPx;
+        double openingY = centerY + Math.Sin(positionRad) * pipeRadiusPx;
+        double halfAngleRad = (angleDeg / 2.0) * Math.PI / 180.0;
+        double armLength = pipeRadiusPx * 0.6;
+
+        var arm1End = new PhotoMeasurementCanvasPoint(
+            openingX + Math.Cos(positionRad - halfAngleRad) * armLength,
+            openingY + Math.Sin(positionRad - halfAngleRad) * armLength);
+        var arm2End = new PhotoMeasurementCanvasPoint(
+            openingX + Math.Cos(positionRad + halfAngleRad) * armLength,
+            openingY + Math.Sin(positionRad + halfAngleRad) * armLength);
+        var label = new PhotoMeasurementCanvasPoint(
+            openingX + Math.Cos(positionRad) * (armLength * 0.5),
+            openingY + Math.Sin(positionRad) * (armLength * 0.5) - 14);
+
+        return new PhotoMeasurementLateralOverlayPlan(
+            OpeningCenter: new PhotoMeasurementCanvasPoint(openingX, openingY),
+            OpeningRadius: openingRadius,
+            Arm1End: arm1End,
+            Arm2End: arm2End,
+            ArcRadius: armLength * 0.4,
+            ArcStartRad: positionRad - halfAngleRad,
+            ArcEndRad: positionRad + halfAngleRad,
+            LabelPosition: label);
+    }
+
+    /// <summary>
+    /// Reine Zeichengeometrie fuer die Bogen-Vorschau.
+    /// </summary>
+    public static PhotoMeasurementBendOverlayPlan BuildBendOverlayPlan(
+        double centerX,
+        double centerY,
+        double pipeRadiusPx,
+        double positionRad,
+        double angleDeg,
+        int ringCount = 8,
+        int axisSegmentCount = 20)
+    {
+        ringCount = Math.Max(2, ringCount);
+        axisSegmentCount = Math.Max(1, axisSegmentCount);
+
+        double halfAngleRad = (angleDeg / 2.0) * Math.PI / 180.0;
+        double bendRadius = 3.5 * pipeRadiusPx;
+        double arcCenterX = centerX + Math.Cos(positionRad + Math.PI / 2) * bendRadius;
+        double arcCenterY = centerY + Math.Sin(positionRad + Math.PI / 2) * bendRadius;
+
+        var rings = new List<PhotoMeasurementBendRing>(ringCount);
+        for (int i = 0; i < ringCount; i++)
+        {
+            double t = (double)i / (ringCount - 1);
+            double ringAngle = positionRad + Math.PI / 2 - halfAngleRad + t * 2 * halfAngleRad;
+            double ringX = arcCenterX - Math.Cos(ringAngle) * bendRadius;
+            double ringY = arcCenterY - Math.Sin(ringAngle) * bendRadius;
+            double perspectiveScale = 1.0 - 0.3 * Math.Abs(t - 0.5) * 2;
+            rings.Add(new PhotoMeasurementBendRing(
+                Center: new PhotoMeasurementCanvasPoint(ringX, ringY),
+                RadiusX: pipeRadiusPx * 0.9 * perspectiveScale,
+                RadiusY: pipeRadiusPx * 0.3 * perspectiveScale,
+                PerspectiveScale: perspectiveScale));
+        }
+
+        var axisPoints = new List<PhotoMeasurementCanvasPoint>(axisSegmentCount + 1);
+        for (int i = 0; i <= axisSegmentCount; i++)
+        {
+            double t = (double)i / axisSegmentCount;
+            double angle = positionRad + Math.PI / 2 - halfAngleRad + t * 2 * halfAngleRad;
+            axisPoints.Add(new PhotoMeasurementCanvasPoint(
+                arcCenterX - Math.Cos(angle) * bendRadius,
+                arcCenterY - Math.Sin(angle) * bendRadius));
+        }
+
+        return new PhotoMeasurementBendOverlayPlan(
+            ArcCenter: new PhotoMeasurementCanvasPoint(arcCenterX, arcCenterY),
+            BendRadius: bendRadius,
+            HalfAngleRad: halfAngleRad,
+            Rings: rings,
+            AxisPoints: axisPoints);
+    }
 }
+
+public sealed record PhotoMeasurementAngleGeometry(
+    OverlayGeometry Geometry,
+    double PositionRad,
+    double ClockHour,
+    NormalizedPoint EdgePoint);
+
+public sealed record PhotoMeasurementCanvasPoint(double X, double Y);
+
+public sealed record PhotoMeasurementLateralOverlayPlan(
+    PhotoMeasurementCanvasPoint OpeningCenter,
+    double OpeningRadius,
+    PhotoMeasurementCanvasPoint Arm1End,
+    PhotoMeasurementCanvasPoint Arm2End,
+    double ArcRadius,
+    double ArcStartRad,
+    double ArcEndRad,
+    PhotoMeasurementCanvasPoint LabelPosition);
+
+public sealed record PhotoMeasurementBendRing(
+    PhotoMeasurementCanvasPoint Center,
+    double RadiusX,
+    double RadiusY,
+    double PerspectiveScale);
+
+public sealed record PhotoMeasurementBendOverlayPlan(
+    PhotoMeasurementCanvasPoint ArcCenter,
+    double BendRadius,
+    double HalfAngleRad,
+    IReadOnlyList<PhotoMeasurementBendRing> Rings,
+    IReadOnlyList<PhotoMeasurementCanvasPoint> AxisPoints);
