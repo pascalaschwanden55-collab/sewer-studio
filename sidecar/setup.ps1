@@ -73,7 +73,9 @@ $gpuName = ""
 try {
     $gpuName = (& nvidia-smi --query-gpu=name --format=csv,noheader 2>$null | Select-Object -First 1)
 } catch { $gpuName = "" }
-$lockHasCu121 = Select-String -Path "requirements-lock.txt" -Pattern '\+cu121' -Quiet -ErrorAction SilentlyContinue
+# Nur echte Pins pruefen, NICHT Kommentarzeilen: der Datei-Header erwaehnt "+cu121"
+# absichtlich als Warnung ("NIEMALS auf cu121 zurueck") -> sonst falscher Abbruch.
+$lockHasCu121 = @(Get-Content "requirements-lock.txt" | Where-Object { $_ -notmatch '^\s*#' -and $_ -match '\+cu121' }).Count -gt 0
 if ($lockHasCu121 -and $gpuName -match '50\d0') {
     Write-Host "  FEHLER: requirements-lock.txt pinnt torch +cu121, GPU ist '$gpuName' (sm_120)." -ForegroundColor Red
     Write-Host "  cu121-Torch laeuft NICHT auf dieser GPU und wuerde die Pipeline brechen." -ForegroundColor Yellow
@@ -85,9 +87,14 @@ if ($lockHasCu121 -and $gpuName -match '50\d0') {
 Write-Host ""
 Write-Host "  [3/3] Installiere Abhaengigkeiten aus requirements-lock.txt ..." -ForegroundColor White
 if ($useUv) {
-    Invoke-Native $uvCommand.Source "pip" "sync" "--extra-index-url" $torchCudaIndex "requirements-lock.txt"
+    # --index-strategy unsafe-best-match: normale Pakete (z.B. anyio) liegen auf dem
+    # PyTorch-cu128-Index in alten Versionen. Ohne diese Option betrachtet uv nur den
+    # ersten Index je Paket -> "No solution found". PyPI + offizieller PyTorch-Index
+    # sind beide vertrauenswuerdig, daher hier korrekt.
+    Invoke-Native $uvCommand.Source "pip" "sync" "--index-strategy" "unsafe-best-match" "--extra-index-url" $torchCudaIndex "requirements-lock.txt"
 } else {
-    $pipPath = if ($IsWindows) { ".venv\Scripts\pip.exe" } else { ".venv/bin/pip" }
+    # $IsWindows existiert in Windows PowerShell 5.1 NICHT (nur PS 7+). Undefiniert -> Windows.
+    $pipPath = if (($null -eq $IsWindows) -or $IsWindows) { ".venv\Scripts\pip.exe" } else { ".venv/bin/pip" }
     Invoke-Native $pipPath "install" "--extra-index-url" $torchCudaIndex "-r" "requirements-lock.txt"
 }
 
@@ -95,7 +102,8 @@ if ($useUv) {
 #    sonst wurde ein falscher Build installiert (z.B. cu121) -> laut abbrechen statt still bricken.
 Write-Host ""
 Write-Host "  Pruefe GPU / Torch ..." -ForegroundColor White
-$venvPython = if ($IsWindows) { ".venv\Scripts\python.exe" } else { ".venv/bin/python" }
+# $IsWindows existiert in Windows PowerShell 5.1 NICHT (nur PS 7+). Undefiniert -> Windows.
+$venvPython = if (($null -eq $IsWindows) -or $IsWindows) { ".venv\Scripts\python.exe" } else { ".venv/bin/python" }
 $gpuCheck = @"
 import sys
 try:
