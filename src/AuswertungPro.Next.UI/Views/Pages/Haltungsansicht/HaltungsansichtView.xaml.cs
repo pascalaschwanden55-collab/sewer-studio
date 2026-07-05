@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
-using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -22,13 +20,6 @@ public partial class HaltungsansichtView : UserControl
         InitializeComponent();
         RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshDetail();
-
-        // Schadensband: Marker-Klick selektiert den Eintrag in der Schaeden-Liste.
-        Schadensband.MarkerClicked += quelle =>
-        {
-            SchadenList.SelectedItem = quelle;
-            SchadenList.ScrollIntoView(quelle);
-        };
 
         // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths. _settings wird erst nach dem
         // Konstruktor via Settings-Property gesetzt -> Closure liest den aktuellen Wert bei jedem Hover.
@@ -76,37 +67,6 @@ public partial class HaltungsansichtView : UserControl
         settings.Save();
     }
 
-    private void SchadensbandDetach_Click(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-
-        if (HaltungList.SelectedItem is not HaltungRecord record)
-            return;
-
-        var band = new AuswertungPro.Next.UI.Controls.HaltungSchadensband
-        {
-            Margin = new Thickness(16)
-        };
-        band.Update(record);
-
-        var name = record.GetFieldValue("Haltungsname");
-        var window = new Window
-        {
-            Title = string.IsNullOrWhiteSpace(name) ? "Schadensband" : $"Schadensband - {name}",
-            Owner = Window.GetWindow(this),
-            Width = 920,
-            Height = 260,
-            MinWidth = 520,
-            MinHeight = 180,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = band,
-            Background = TryFindResource("BgBrush") as Brush
-        };
-
-        WindowStateManager.Track(window);
-        window.Show();
-    }
-
     private Func<HaltungRecord, IReadOnlyList<RecordDetailGroup>>? _detailBuilder;
 
     /// <summary>
@@ -152,6 +112,25 @@ public partial class HaltungsansichtView : UserControl
             ActionRequested?.Invoke("codieren", record);
     }
 
+    // Jeder Linksklick auf eine Haltung meldet die Auswahl an die QGIS-Bridge —
+    // auch wenn dieselbe (bereits markierte) Haltung erneut geklickt wird. Nur so
+    // zoomt QGIS nach manuellem Wegschwenken erneut auf die Haltung (Auswahl-Stempel).
+    // Der SelectionChanged-Pfad ueber das ViewModel feuert bei gleichbleibender
+    // Auswahl NICHT, deshalb hier zusaetzlich direkt am Mausklick.
+    private void HaltungList_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _ = sender;
+        var dep = e.OriginalSource as System.Windows.DependencyObject;
+        while (dep is not null and not System.Windows.Controls.ListBoxItem)
+            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+        if (dep is System.Windows.Controls.ListBoxItem { DataContext: HaltungRecord record })
+        {
+            var name = record.GetFieldValue("Haltungsname");
+            if (!string.IsNullOrWhiteSpace(name))
+                QgisBridge.QgisBridgeSelection.Set(name);
+        }
+    }
+
     // Rechtsklick wählt zuerst die Zeile unter dem Cursor, damit das Menü auf der
     // richtigen Haltung arbeitet (auch wenn sie nicht selektiert war).
     private void HaltungList_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -184,8 +163,6 @@ public partial class HaltungsansichtView : UserControl
     {
         if (!IsVisible)
             return;
-
-        Schadensband.Update(HaltungList.SelectedItem as HaltungRecord);
 
         // Foto-Galerie: alle Schadensfotos der gewaehlten Haltung (gleiche Quelle wie die Hover-Vorschau).
         var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator

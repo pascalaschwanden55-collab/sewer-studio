@@ -61,6 +61,7 @@
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
                  ItemContainerStyle="{StaticResource HaltungListItemStyle}"
                  SelectionChanged="HaltungList_SelectionChanged"
+                 PreviewMouseLeftButtonUp="HaltungList_PreviewMouseLeftButtonUp"
                  PreviewMouseRightButtonDown="HaltungList_PreviewMouseRightButtonDown"
                  Background="{DynamicResource CardBrush}"
                  BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -152,23 +153,7 @@
                         <Button DockPanel.Dock="Right" x:Name="SchadenAddButton" Content="+"
                                 Width="28" Height="24" FontSize="16" Padding="0"
                                 Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren"/>
-                        <Button DockPanel.Dock="Right"
-                                Width="28"
-                                Height="24"
-                                MinWidth="28"
-                                Padding="0"
-                                Margin="0,0,6,0"
-                                Style="{StaticResource SecondaryButton}"
-                                Click="SchadensbandDetach_Click"
-                                ToolTip="Schadensband in eigenem Fenster oeffnen">
-                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
-                        </Button>
                     </DockPanel>
-
-                    <!-- Schadens-Laengsband: WO auf der Haltung sitzen die Schaeden?
-                         Klick auf einen Marker selektiert den Eintrag in der Liste darunter. -->
-                    <uc:HaltungSchadensband x:Name="Schadensband" DockPanel.Dock="Top"
-                                            Margin="0,0,0,8" Visibility="Collapsed"/>
 
                     <!-- Foto-Galerie: alle Schadensfotos der Haltung, aufklappbar. -->
                     <Expander x:Name="FotoExpander" DockPanel.Dock="Top" Margin="0,0,0,8"

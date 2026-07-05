@@ -1,8 +1,0 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Controls.HaltungSchadensband"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Controls">
-    <!-- Schadens-Laengsband der Haltung: duenner Wrapper um die generische PipeGraphTimeline.
-         Marker kommen aus HaltungSchadensbandBuilder (Protokolleintraege). -->
-    <local:PipeGraphTimeline x:Name="Timeline"/>
-</UserControl>
