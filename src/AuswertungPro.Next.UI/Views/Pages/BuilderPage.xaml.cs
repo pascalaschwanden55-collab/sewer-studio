@@ -41,6 +41,18 @@ public partial class BuilderPage : UserControl
         _savedViews.RefreshNames();
     }
 
+    // Rechtsklick waehlt die Zeile unter dem Cursor, damit die Kontextmenue-Aktionen
+    // (Kostenblatt / Volles Dossier) auf der richtigen Haltung arbeiten.
+    private void RowsGrid_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _ = sender;
+        var dep = e.OriginalSource as DependencyObject;
+        while (dep is not null and not DataGridRow)
+            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+        if (dep is DataGridRow row)
+            row.IsSelected = true;
+    }
+
     private void SpaltenButton_Click(object sender, RoutedEventArgs e)
         => ColumnChooser.Show(RowsGrid);
 

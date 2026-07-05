@@ -15,9 +15,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -45,6 +47,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private ObservableCollection<HaltungRecord>? _attachedData;
     private bool _suspendFilterRefresh;
     private string _lastExportProjectPath = "";
+    private DataPagePrintController? _printController;
 
     public ObservableCollection<DruckcenterRowVm> Rows { get; } = new();
     public ObservableCollection<SpecialPositionStatVm> SpecialPositionStats { get; } = new();
@@ -65,6 +68,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _selectedStatusFilter = AllFilterLabel;
     [ObservableProperty] private string _selectedYearFilter = AllFilterLabel;
     [ObservableProperty] private string _searchText = "";
+
+    [ObservableProperty] private DruckcenterRowVm? _selectedRow;
 
     [ObservableProperty] private bool _onlyWithCost;
     [ObservableProperty] private bool _onlyWithMeasures;
@@ -192,22 +197,81 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrWhiteSpace(output))
             return;
 
+        var selection = BuilderPageExportScope.All(filteredRows);
+        var qualityHint = RowsWithDetailedCosts == FilteredRowsCount
+            ? "Alle gefilterten Haltungen haben Positionsdetails."
+            : $"{FilteredRowsCount - RowsWithDetailedCosts} Haltung(en) ohne Positionsdetails (Pauschalwerte aus Tabelle).";
+
+        await RenderCostSummaryPdfAsync(selection, BuildFilterSummaryText(), qualityHint, output);
+    }
+
+    /// <summary>Kostenblatt fuer genau die gewaehlte Haltung: gleicher Ausdruck, auf eine Haltung begrenzt.</summary>
+    [RelayCommand]
+    private async Task PrintSingleKostenblattAsync()
+    {
+        if (IsPdfExportInProgress)
+            return;
+
+        var row = SelectedRow;
+        if (row is null)
+        {
+            _sp.Dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Druckcenter");
+            return;
+        }
+
+        var safeHolding = SanitizeFilePart(row.Holding);
+        var defaultName = $"Kostenblatt_{safeHolding}_{DateTime.Now:yyyyMMdd}.pdf";
+        var output = _sp.Dialogs.SaveFile(
+            "Kostenblatt (Haltung) speichern",
+            "PDF (*.pdf)|*.pdf",
+            defaultExt: "pdf",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        var selection = BuilderPageExportScope.Single(row);
+        var qualityHint = row.HasDetailedCost
+            ? "Diese Haltung hat Positionsdetails."
+            : "Diese Haltung hat keine Positionsdetails (Pauschalwert aus Tabelle).";
+        var filterSummary = $"Einzelne Haltung: {row.Holding}";
+
+        await RenderCostSummaryPdfAsync(selection, filterSummary, qualityHint, output);
+    }
+
+    /// <summary>Volles Haltungsdossier fuer die gewaehlte Haltung — wiederverwendeter DataPage-Ablauf.</summary>
+    [RelayCommand]
+    private async Task PrintSingleDossierAsync()
+    {
+        var row = SelectedRow;
+        if (row is null)
+        {
+            _sp.Dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Dossier");
+            return;
+        }
+
+        await EnsurePrintController().PrintDossierPdfAsync(_shell.Project, row.Record);
+    }
+
+    /// <summary>Baut das Kosten-Summary-PDF fuer die uebergebene Auswahl (alle oder eine Haltung).</summary>
+    private async Task RenderCostSummaryPdfAsync(
+        BuilderPageExportSelection selection,
+        string filterSummary,
+        string qualityHint,
+        string output)
+    {
         IsPdfExportInProgress = true;
         PdfExportProgress = "PDF wird vorbereitet...";
 
         try
         {
             await Task.Yield();
-            var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
-            var dataLines = IncludeDataSection ? BuilderPageHoldingDataLineBuilder.Build(filteredRows) : null;
+            var rows = selection.Rows;
+            var entries = BuilderPageSummaryEntryBuilder.Build(rows, _vatRate);
+            var dataLines = IncludeDataSection ? BuilderPageHoldingDataLineBuilder.Build(rows) : null;
 
             var projectMeta = _shell.Project.Metadata;
             var projectCustomer = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta);
-            var objectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, filteredRows.Count);
-            var filterSummary = BuildFilterSummaryText();
-            var qualityHint = RowsWithDetailedCosts == FilteredRowsCount
-                ? "Alle gefilterten Haltungen haben Positionsdetails."
-                : $"{FilteredRowsCount - RowsWithDetailedCosts} Haltung(en) ohne Positionsdetails (Pauschalwerte aus Tabelle).";
+            var objectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, rows.Count);
             var textBlocks = new List<string>
             {
                 qualityHint,
@@ -221,7 +285,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             var ctx = new OfferPdfContext
             {
                 ProjectTitle = "Abwasser Uri - Druckcenter",
-                VariantTitle = $"Gefilterte Kostenzusammenstellung ({filteredRows.Count} Haltungen)",
+                VariantTitle = selection.VariantTitle,
                 CustomerBlock = projectCustomer,
                 ObjectBlock = objectBlock,
                 FilterSummaryText = filterSummary,
@@ -247,7 +311,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
             LastExportedPdfPath = output;
             LastExportedAt = DateTimeOffset.Now;
-            LastExportScopeSummary = BuildExportScopeSummary(filteredRows);
+            LastExportScopeSummary = BuildExportScopeSummary(rows);
             IsLastExportCurrent = true;
             _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
@@ -271,6 +335,33 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Dossier-Druckcontroller lazy aufbauen (gleiche Provider wie die Datenseite).</summary>
+    private DataPagePrintController EnsurePrintController()
+        => _printController ??= new DataPagePrintController(
+            _sp.Dialogs,
+            _sp.ProtocolPdfExporter,
+            () => _shell.GetProjectFolder(),
+            record => DataPageHydraulikReportCalculator.BuildReportCalculation(
+                record,
+                _sp.Settings.HydraulikPanel,
+                saveSettings: _sp.Settings.Save),
+            getLastProjectPath: () => _sp.Settings.LastProjectPath,
+            findSchachtByNummer: FindSchachtByNummer,
+            buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
+                record,
+                _sp.Settings.HydraulikPanel,
+                dn,
+                saveSettings: _sp.Settings.Save));
+
+    private SchachtRecord? FindSchachtByNummer(string? nummer)
+    {
+        if (string.IsNullOrWhiteSpace(nummer))
+            return null;
+
+        return _shell.Project.SchaechteData.FirstOrDefault(s =>
+            string.Equals(s.GetFieldValue("Schachtnummer"), nummer, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>
     /// Exportiert EIN NPK-Leistungsverzeichnis ueber alle gefilterten Haltungen:
     /// gleiche NPK-Position wird zusammengezaehlt (ByDN-Positionen je DN getrennt),
@@ -279,16 +370,101 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ExportNpkLeistungsverzeichnis()
     {
+        var prep = PrepareLvPositions();
+        if (prep is null)
+            return;
+
+        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
+        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
+        var output = _sp.Dialogs.SaveFile(
+            "NPK-Leistungsverzeichnis speichern",
+            "CSV (*.csv)|*.csv",
+            defaultExt: "csv",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(
+                prep.Positions,
+                "CHF",
+                prep.ExcludedTotal,
+                prep.ExcludedCount);
+            File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
+            _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
+            _sp.Dialogs.Info(
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{prep.Positions.Count} Positionen ueber {prep.HoldingCount} Haltung(en).{BuildLvStandHinweis()}",
+                "Druckcenter");
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"Fehler: {ex.Message}";
+            _sp.Dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+        }
+    }
+
+    /// <summary>
+    /// NPK-Leistungsverzeichnis als formatiertes Excel: zwei Reiter — "Zum Ausfüllen"
+    /// (leere Einheitspreise, Totale als Formeln) und "Kalkulation (intern)" mit den
+    /// eigenen Schätzpreisen. Nutzt dieselbe Positions-Aggregation wie der CSV-Export.
+    /// </summary>
+    [RelayCommand]
+    private void ExportNpkLeistungsverzeichnisExcel()
+    {
+        var prep = PrepareLvPositions();
+        if (prep is null)
+            return;
+
+        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
+        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.xlsx";
+        var output = _sp.Dialogs.SaveFile(
+            "NPK-Leistungsverzeichnis (Excel) speichern",
+            "Excel (*.xlsx)|*.xlsx",
+            defaultExt: "xlsx",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+                prep.Positions,
+                "CHF",
+                _vatRate,
+                _shell.Project.Name,
+                prep.ExcludedTotal,
+                prep.ExcludedCount);
+            File.WriteAllBytes(output, bytes);
+            LastResult = $"Leistungsverzeichnis (Excel) erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
+            _shell.SetStatus("NPK-Leistungsverzeichnis (Excel) erstellt");
+            _sp.Dialogs.Info(
+                $"Excel-Leistungsverzeichnis wurde erstellt:\n{output}\n\n" +
+                $"Reiter 'Zum Ausfüllen' (leere Preise für die Firma) + 'Kalkulation (intern)'.\n" +
+                $"{prep.Positions.Count} Positionen ueber {prep.HoldingCount} Haltung(en).{BuildLvStandHinweis()}",
+                "Druckcenter");
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"Fehler: {ex.Message}";
+            _sp.Dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+        }
+    }
+
+    /// <summary>Gemeinsame Positions-Aufbereitung fuer CSV- und Excel-LV. null = abgebrochen/leer (Hinweis wurde gezeigt).</summary>
+    private LvPrep? PrepareLvPositions()
+    {
         RefreshData();
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
             _sp.Dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "Druckcenter");
-            return;
+            return null;
         }
 
         if (!OfferRecomputeCostsForCurrentCatalog(filteredRows))
-            return;
+            return null;
 
         filteredRows = Rows.ToList();
         var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
@@ -321,44 +497,24 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             _sp.Dialogs.Info(
                 "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen.",
                 "Druckcenter");
-            return;
+            return null;
         }
 
-        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
-        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
-        var output = _sp.Dialogs.SaveFile(
-            "NPK-Leistungsverzeichnis speichern",
-            "CSV (*.csv)|*.csv",
-            defaultExt: "csv",
-            defaultFileName: defaultName);
-        if (string.IsNullOrWhiteSpace(output))
-            return;
-
-        try
-        {
-            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(
-                positions,
-                "CHF",
-                excludedPauschaleTotal,
-                excludedPauschaleCount);
-            File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-            LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
-            _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
-            // Audit W14: Der Export liest costs.json von Platte — den Daten-Stand ehrlich
-            // benennen, sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
-            var standHinweis = _shell.Project.Dirty
-                ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix."
-                : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json).";
-            _sp.Dialogs.Info(
-                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdingsForLv.Count} Haltung(en).{standHinweis}",
-                "Druckcenter");
-        }
-        catch (Exception ex)
-        {
-            LastResult = $"Fehler: {ex.Message}";
-            _sp.Dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
-        }
+        return new LvPrep(positions, excludedPauschaleTotal, excludedPauschaleCount, holdingsForLv.Count);
     }
+
+    // Audit W14: Der Export liest costs.json von Platte — den Daten-Stand ehrlich benennen,
+    // sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
+    private string BuildLvStandHinweis()
+        => _shell.Project.Dirty
+            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix."
+            : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json).";
+
+    private sealed record LvPrep(
+        IReadOnlyList<AggregatedPosition> Positions,
+        decimal ExcludedTotal,
+        int ExcludedCount,
+        int HoldingCount);
 
     [RelayCommand]
     private async Task ExportNpkOfferPdfAsync()
