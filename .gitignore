@@ -141,3 +141,6 @@ sidecar/requirements.before-*.txt
 
 # Modell-Governance (Laufzeit-Zustand, nur model-promotion-warden schreibt)
 sidecar/models/active.json
+
+# Offline-Basemap-Kacheln (8+ GB, lokal generiert vom Kachel-Downloader - nie ins Repo)
+basemap_tiles/
