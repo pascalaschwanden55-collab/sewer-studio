@@ -91,6 +91,24 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(_value);
 
+    private bool _isVisible = true;
+
+    /// <summary>
+    /// Steuert die Sichtbarkeit des Feldes im Detail. Wird z.B. genutzt, um die
+    /// Sanierungs-Folgefelder auszublenden, wenn "Sanieren = Nein" gewaehlt ist.
+    /// </summary>
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible == value)
+                return;
+            _isVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
