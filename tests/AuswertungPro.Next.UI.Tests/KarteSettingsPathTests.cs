@@ -22,7 +22,7 @@ public sealed class KarteSettingsPathTests
         var settings = new AppSettings
         {
             AbwasserkatasterXtfPath = explicitFile,
-            QgisTilesPath = tileDir
+            OfflineBasemapPath = tileDir
         };
         var services = new ServiceProvider(
             settings,
@@ -32,7 +32,7 @@ public sealed class KarteSettingsPathTests
         var viewModel = new KarteViewModel(shell: null!, services);
 
         Assert.Equal(settings.AbwasserkatasterXtfPath, ReadPrivateStringProperty(viewModel, "XtfPath"));
-        Assert.Equal(settings.QgisTilesPath, ReadPrivateStringProperty(viewModel, "QgisTilesPath"));
+        Assert.Equal(settings.OfflineBasemapPath, ReadPrivateStringProperty(viewModel, "OfflineBasemapPath"));
 
         Directory.Delete(dir, true);
     }

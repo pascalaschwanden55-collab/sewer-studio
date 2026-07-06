@@ -14,23 +14,26 @@ namespace AuswertungPro.Next.UI.Mapping;
 public sealed class LocalXyzTileSource : ILocalTileSource
 {
     private readonly string _root;
+    private readonly string _extension;
 
     public ITileSchema Schema { get; }
     public string Name { get; }
-    public Attribution Attribution { get; } = new Attribution("QGIS");
+    public Attribution Attribution { get; }
 
-    public LocalXyzTileSource(string root, string name = "QGIS")
+    public LocalXyzTileSource(string root, string name = "QGIS", string fileExtension = ".png", string attribution = "QGIS")
     {
         _root = root;
+        _extension = fileExtension.StartsWith('.') ? fileExtension : "." + fileExtension;
         Name = name;
-        // XYZ-Konvention (Google/OSM, Y von oben) – genau das erzeugt qgis_process.
+        Attribution = new Attribution(attribution);
+        // XYZ-Konvention (Google/OSM, Y von oben) – genau das erzeugt qgis_process bzw. swisstopo-WMTS/3857.
         Schema = new GlobalSphericalMercator(YAxis.OSM);
     }
 
     public Task<byte[]?> GetTileAsync(TileInfo tileInfo)
     {
         var index = tileInfo.Index;
-        var path = Path.Combine(_root, index.Level.ToString(), index.Col.ToString(), index.Row + ".png");
+        var path = Path.Combine(_root, index.Level.ToString(), index.Col.ToString(), index.Row + _extension);
         return Task.FromResult(File.Exists(path) ? File.ReadAllBytes(path) : null);
     }
 }

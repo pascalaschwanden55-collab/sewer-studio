@@ -15,6 +15,10 @@ public partial class KartePage : UserControl
         // ViewModel aus DataContext lesen sobald es gesetzt ist
         DataContextChanged += (_, _) => _vm = DataContext as KarteViewModel;
 
+        // Wird eine Haltung irgendwo in der App gewaehlt, zoomt die Karte darauf (wie QGIS).
+        QgisBridge.QgisBridgeSelection.SelectionChanged += OnBridgeSelectionChanged;
+        Unloaded += (_, _) => QgisBridge.QgisBridgeSelection.SelectionChanged -= OnBridgeSelectionChanged;
+
         Loaded += async (_, _) =>
         {
             _vm = DataContext as KarteViewModel;
@@ -84,4 +88,27 @@ public partial class KartePage : UserControl
         _vm?.ZoomToNetworkAndRefresh();
         MapControl.ForceUpdate();
     }
+
+    private void ToggleBasemap_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _vm?.ToggleBasemap();
+        MapControl.ForceUpdate();
+    }
+
+    private void ToggleSchaechte_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _vm?.ToggleSchaechte();
+        MapControl.ForceUpdate();
+    }
+
+    private void OnBridgeSelectionChanged()
+        => Dispatcher.InvokeAsync(() =>
+        {
+            _vm?.ZoomToSelectedHaltung();
+            MapControl.ForceUpdate();
+        });
 }

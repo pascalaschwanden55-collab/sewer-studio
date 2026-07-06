@@ -272,6 +272,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
         RefreshTitleAndDirty();
+
+        // Kartennetz im Hintergrund vorladen -> die Karte ist beim ersten Oeffnen sofort da.
+        Mapping.KarteNetzVorladen.ImHintergrund(_sp, p);
     }
 
     /// <summary>

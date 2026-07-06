@@ -65,13 +65,35 @@
                         ToolTip="Karte verkleinern">
                     <TextBlock Text="&#xE738;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
                 </Button>
-                <Button Width="34" Height="30" MinWidth="34" Padding="0"
+                <Button Width="34" Height="30" MinWidth="34" Padding="0" Margin="0,0,0,4"
                         Style="{StaticResource SecondaryButton}"
                         Click="ZoomToNetwork_Click"
                         ToolTip="Ganzes Netz anzeigen">
                     <TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
                 </Button>
+                <Button Width="34" Height="30" MinWidth="34" Padding="0" Margin="0,0,0,4"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="ToggleBasemap_Click"
+                        ToolTip="Hintergrundkarte umschalten: Satellit → AV-Karte → OpenStreetMap">
+                    <TextBlock Text="&#xE909;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                </Button>
+                <Button Width="34" Height="30" MinWidth="34" Padding="0"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="ToggleSchaechte_Click"
+                        ToolTip="Schächte (Kreise) ein-/ausblenden — sichtbar erst beim Reinzoomen">
+                    <TextBlock Text="&#x25CF;" FontSize="13"/>
+                </Button>
             </StackPanel>
+        </Border>
+
+        <!-- Aktive Hintergrundkarte (unten links) -->
+        <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                Margin="16,0,0,16" Padding="8,3"
+                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="6" Opacity="0.85" IsHitTestVisible="False">
+            <TextBlock FontSize="11" Foreground="{DynamicResource TextBrush}">
+                <Run Text="Hintergrund: " Foreground="{DynamicResource MutedBrush}"/><Run Text="{Binding BasemapAnzeige}"/>
+            </TextBlock>
         </Border>
 
         <!-- ═══ INFOPANEL: Stammdaten der angeklickten Haltung (oben rechts) ═══ -->

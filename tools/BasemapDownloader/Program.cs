@@ -10,6 +10,9 @@ using System.Globalization;
 using System.Net;
 
 string outDir = "tiles";
+// Kachel-URL mit Platzhaltern {z}/{x}/{y}; Default = swisstopo Landeskarte farbig.
+string urlTemplate = "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg";
+string ext = ".jpeg";
 // Bounding-Box Kanton Uri (WGS84), leicht gepolstert.
 double minLon = 8.40, minLat = 46.50, maxLon = 9.00, maxLat = 46.98;
 int minZ = 8, maxZ = 18, concurrency = 8;
@@ -19,6 +22,8 @@ for (int i = 0; i < args.Length; i++)
     switch (args[i])
     {
         case "--out": outDir = args[++i]; break;
+        case "--url": urlTemplate = args[++i]; break;
+        case "--ext": ext = args[++i]; break;
         case "--minlon": minLon = Parse(args[++i]); break;
         case "--minlat": minLat = Parse(args[++i]); break;
         case "--maxlon": maxLon = Parse(args[++i]); break;
@@ -66,14 +71,17 @@ foreach (var t in work)
         try
         {
             string dir = Path.Combine(outDir, t.z.ToString(), t.x.ToString());
-            string file = Path.Combine(dir, t.y + ".jpeg");
+            string file = Path.Combine(dir, t.y + ext);
             if (File.Exists(file) && new FileInfo(file).Length > 0)
             {
                 Interlocked.Increment(ref skipped);
                 return;
             }
 
-            string url = $"https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{t.z}/{t.x}/{t.y}.jpeg";
+            string url = urlTemplate
+                .Replace("{z}", t.z.ToString())
+                .Replace("{x}", t.x.ToString())
+                .Replace("{y}", t.y.ToString());
             for (int attempt = 1; attempt <= 4; attempt++)
             {
                 try
