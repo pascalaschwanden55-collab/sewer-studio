@@ -433,6 +433,61 @@ public sealed class SanierungCostFieldMapperTests
         Assert.Equal("", text);
     }
 
+    [Fact]
+    public void BuildMeasuresText_MarkiertePosition_HatVorrangVorMassnahmenName()
+    {
+        // Die Hauptarbeit-Massnahme wuerde "Schlauchliner Nadelfilz" liefern — aber der
+        // Nutzer hat eine Position in der Uebertrag-Spalte markiert -> Markierung gewinnt.
+        var haupt = new CostLine { ItemKey = "SCHLAUCHLINER_NADELFILZ", Group = "Hauptarbeit", Selected = true };
+        var markiert = new CostLine { Text = "Fräsen / Hindernisse entfernen", TransferMarked = true };
+        var measure = new MeasureCost
+        {
+            MeasureId = "SCHLAUCHLINER_NADELFILZ",
+            MeasureName = "Schlauchliner Nadelfilz",
+            Lines = new List<CostLine> { haupt, markiert }
+        };
+        var cost = new HoldingCost { Measures = new List<MeasureCost> { measure } };
+
+        var text = MeasuresTextBuilder.BuildMeasuresText(cost);
+
+        Assert.Equal("Fräsen / Hindernisse entfernen", text);
+    }
+
+    [Fact]
+    public void BuildMeasuresText_MehrereMarkierte_JedeAufEigenerZeile()
+    {
+        var l1 = new CostLine { Text = "Schlauchliner (GFK)", TransferMarked = true };
+        var l2 = new CostLine { Text = "Anschluss auffräsen", TransferMarked = true };
+        var measure = new MeasureCost { MeasureId = "M", MeasureName = "M", Lines = new List<CostLine> { l1, l2 } };
+        var cost = new HoldingCost { Measures = new List<MeasureCost> { measure } };
+
+        var text = MeasuresTextBuilder.BuildMeasuresText(cost);
+
+        Assert.Equal("Schlauchliner (GFK)" + Environment.NewLine + "Anschluss auffräsen", text);
+    }
+
+    [Fact]
+    public void ApplyCosts_MitMarkierterPosition_SchreibtMarkiertenTextInsFeld()
+    {
+        var markiert = new CostLine
+        {
+            Text = "Schlauchliner (GFK)", TransferMarked = true, Selected = true,
+            Unit = "m", Qty = 30m, UnitPrice = 165m
+        };
+        var measure = new MeasureCost
+        {
+            MeasureId = "SCHLAUCHLINER_GFK",
+            MeasureName = "Schlauchliner GFK",
+            Lines = new List<CostLine> { markiert }
+        };
+        var cost = new HoldingCost { Total = 5000m, Measures = new List<MeasureCost> { measure } };
+        var record = new HaltungRecord();
+
+        SanierungCostFieldMapper.ApplyCosts(record, cost);
+
+        Assert.Equal("Schlauchliner (GFK)", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+    }
+
     // =========================================================================
     // Hilfsmethoden
     // =========================================================================

@@ -315,11 +315,20 @@
                                                 <TextBlock Text="{Binding Total, StringFormat='{}{0:N2} CHF'}"
                                                            DockPanel.Dock="Right"
                                                            Style="{StaticResource Caption}"
+                                                           VerticalAlignment="Center"
                                                            Margin="10,0,0,0"/>
+                                                <Button Content="Als Vorlage speichern"
+                                                        DockPanel.Dock="Right"
+                                                        Padding="10,3" Margin="10,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="Die aktuellen Positionen dieser Maßnahme als Vorlage sichern (gilt für neue Projekte)."/>
                                                 <TextBlock Text="{Binding MeasureName}"
                                                            Style="{StaticResource Body}"
                                                            FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
                                             </DockPanel>
 
                                             <Border Background="{DynamicResource SurfaceSubtleBrush}"
@@ -331,16 +340,19 @@
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="34"/>
                                                         <ColumnDefinition Width="3*"/>
+                                                        <ColumnDefinition Width="56"/>
                                                         <ColumnDefinition Width="96"/>
                                                         <ColumnDefinition Width="70"/>
                                                         <ColumnDefinition Width="110"/>
                                                         <ColumnDefinition Width="112"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Grid.Column="1" Text="Position" Style="{StaticResource Caption}"/>
-                                                    <TextBlock Grid.Column="2" Text="Menge" Style="{StaticResource Caption}" TextAlignment="Right"/>
-                                                    <TextBlock Grid.Column="3" Text="EH" Style="{StaticResource Caption}" TextAlignment="Center"/>
-                                                    <TextBlock Grid.Column="4" Text="EP" Style="{StaticResource Caption}" TextAlignment="Right"/>
-                                                    <TextBlock Grid.Column="5" Text="Total" Style="{StaticResource Caption}" TextAlignment="Right" Margin="0,0,8,0"/>
+                                                    <TextBlock Grid.Column="2" Text="Empf." Style="{StaticResource Caption}" TextAlignment="Center"
+                                                               ToolTip="In das Feld 'Empfohlene Sanierungsmassnahme' übertragen"/>
+                                                    <TextBlock Grid.Column="3" Text="Menge" Style="{StaticResource Caption}" TextAlignment="Right"/>
+                                                    <TextBlock Grid.Column="4" Text="EH" Style="{StaticResource Caption}" TextAlignment="Center"/>
+                                                    <TextBlock Grid.Column="5" Text="EP" Style="{StaticResource Caption}" TextAlignment="Right"/>
+                                                    <TextBlock Grid.Column="6" Text="Total" Style="{StaticResource Caption}" TextAlignment="Right" Margin="0,0,8,0"/>
                                                 </Grid>
                                             </Border>
 
@@ -370,6 +382,7 @@
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="34"/>
                                                                     <ColumnDefinition Width="3*"/>
+                                                                    <ColumnDefinition Width="56"/>
                                                                     <ColumnDefinition Width="96"/>
                                                                     <ColumnDefinition Width="70"/>
                                                                     <ColumnDefinition Width="110"/>
@@ -383,22 +396,27 @@
                                                                            Style="{StaticResource Body}"
                                                                            TextWrapping="Wrap"
                                                                            VerticalAlignment="Center"/>
-                                                                <TextBox Grid.Column="2"
+                                                                <CheckBox Grid.Column="2"
+                                                                          IsChecked="{Binding TransferMarked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          ToolTip="In 'Empfohlene Sanierungsmassnahme' übertragen"/>
+                                                                <TextBox Grid.Column="3"
                                                                          Text="{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                                                          HorizontalContentAlignment="Right"
                                                                          MinWidth="70"
                                                                          Margin="8,0,0,0"/>
-                                                                <TextBlock Grid.Column="3"
+                                                                <TextBlock Grid.Column="4"
                                                                            Text="{Binding Unit}"
                                                                            Style="{StaticResource Caption}"
                                                                            TextAlignment="Center"
                                                                            VerticalAlignment="Center"/>
-                                                                <TextBox Grid.Column="4"
+                                                                <TextBox Grid.Column="5"
                                                                          Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                                                          HorizontalContentAlignment="Right"
                                                                          MinWidth="80"
                                                                          Margin="8,0,0,0"/>
-                                                                <TextBlock Grid.Column="5"
+                                                                <TextBlock Grid.Column="6"
                                                                            Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
                                                                            Style="{StaticResource Body}"
                                                                            VerticalAlignment="Center"

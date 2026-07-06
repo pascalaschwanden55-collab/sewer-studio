@@ -561,6 +561,45 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         return true;
     }
 
+    /// <summary>
+    /// Speichert die Positionen der gewaehlten Massnahme als (User-)Vorlage — z.B. "Schlauchliner GFK".
+    /// Kuenftige Projekte laden diese Positionen/Mengen als Standard fuer dieselbe Massnahme.
+    /// Spiegelt bewusst den Vorlage-Speichern-Pfad des Kosten-Fensters (gleicher MeasureTemplateStore).
+    /// </summary>
+    [RelayCommand]
+    private void SaveTemplate(SanierungsMatrixDetailEditMeasureVm? measure)
+    {
+        if (measure is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(measure.MeasureId))
+        {
+            _sp.Dialogs.Warn("Vorlagen-ID fehlt.", "Vorlage");
+            return;
+        }
+
+        var template = new MeasureTemplate
+        {
+            Id = measure.MeasureId,
+            Name = string.IsNullOrWhiteSpace(measure.MeasureName) ? measure.MeasureId : measure.MeasureName,
+            Lines = measure.Lines.Select(l => new MeasureLineTemplate
+            {
+                Group = l.Group ?? "",
+                ItemKey = l.ItemKey ?? "",
+                Enabled = l.Selected,
+                DefaultQty = l.Qty
+            }).ToList()
+        };
+
+        if (!_templateStore.UpsertUserTemplate(template, out var error))
+        {
+            _sp.Dialogs.Error($"Speichern fehlgeschlagen: {error}", "Vorlage");
+            return;
+        }
+
+        _sp.Dialogs.Info($"Vorlage \"{template.Name}\" gespeichert. Gilt fuer neue Projekte.", "Vorlage");
+    }
+
     [RelayCommand]
     private void Reload()
     {

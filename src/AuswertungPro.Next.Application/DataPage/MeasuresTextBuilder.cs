@@ -19,8 +19,22 @@ public static class MeasuresTextBuilder
     /// </summary>
     public static string BuildMeasuresText(HoldingCost cost)
     {
-        // Nur kanonische Massnahmen-Namen (Template-Level) schreiben,
-        // KEINE einzelnen Kostenzeilen wie Verkehrsdienst oder Nebenarbeiten.
+        // 1) Explizit markierte Positionen haben Vorrang: was der Nutzer in der
+        //    Uebertrag-Spalte angehakt hat, bildet 1:1 den Empfehlungstext (jede
+        //    Position auf eigener Zeile) — unabhaengig von Haupt-/Nebenarbeit.
+        var marked = cost.Measures
+            .SelectMany(m => m.Lines)
+            .Where(l => l.TransferMarked)
+            .Select(l => NormalizeRecommendationEntry(l.Text))
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (marked.Count > 0)
+            return string.Join(Environment.NewLine, marked);
+
+        // 2) Sonst automatisch: nur kanonische Massnahmen-Namen (Template-Level),
+        //    KEINE einzelnen Kostenzeilen wie Verkehrsdienst oder Nebenarbeiten.
         var measureNames = cost.Measures
             .Where(m => m.Lines.Any(l => l.Selected && MeasureClassification.IsHauptarbeitLine(l)))
             .Select(m => m.MeasureName ?? m.MeasureId ?? "")
@@ -30,19 +44,6 @@ public static class MeasuresTextBuilder
 
         if (measureNames.Count > 0)
             return string.Join(Environment.NewLine, measureNames);
-
-        // Fallback: Falls keine Hauptarbeit erkannt, Transfer-markierte Zeilen
-        // (legacy/manuelles Verhalten), aber nur Hauptarbeit-Zeilen, keine Nebenarbeiten.
-        var markedHauptarbeit = cost.Measures
-            .SelectMany(m => m.Lines)
-            .Where(l => l.Selected && l.TransferMarked && MeasureClassification.IsHauptarbeitLine(l))
-            .Select(l => FormatRecommendationBullet(l.Text))
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (markedHauptarbeit.Count > 0)
-            return string.Join(Environment.NewLine, markedHauptarbeit);
 
         return "";
     }
@@ -66,10 +67,4 @@ public static class MeasuresTextBuilder
     /// <summary>Formatiert eine Ganzzahl als String; leer wenn &lt;= 0.</summary>
     public static string FormatInt(int value)
         => value <= 0 ? "" : value.ToString(CultureInfo.InvariantCulture);
-
-    private static string FormatRecommendationBullet(string? value)
-    {
-        var normalized = NormalizeRecommendationEntry(value);
-        return normalized.Length == 0 ? string.Empty : "- " + normalized;
-    }
 }
