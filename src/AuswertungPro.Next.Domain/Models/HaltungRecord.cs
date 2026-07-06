@@ -71,4 +71,13 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
     }
+
+    /// <summary>
+    /// Erzwingt ein Neu-Lesen ALLER Feld-Bindungen (Tabelle und Haltungsansicht), ohne die
+    /// Auflistung zu veraendern. Wird nach Sammel-Aenderungen genutzt, die nicht einzeln ueber
+    /// <see cref="SetFieldValue"/> liefen. Bewusst KEIN Collection-Replace: der wuerde die
+    /// virtualisierte Haltungsliste neu aufbauen und Scroll-Position samt Auswahl verwerfen.
+    /// </summary>
+    public void RaiseAllFieldsChanged()
+        => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
 }

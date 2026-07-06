@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
@@ -36,7 +37,34 @@ public partial class HaltungsansichtView : UserControl
         {
             _settings = value;
             RestoreSchadenHeight();
+            HaltungLastProjectPath = value?.LastProjectPath;
         }
+    }
+
+    // Projektdatei-Pfad fuer die Gegeninspektions-Existenzpruefung in der Liste (⇄-Marker).
+    // DependencyProperty, damit die Zeilen-Bindings bei Projektwechsel aktualisieren.
+    public static readonly DependencyProperty HaltungLastProjectPathProperty =
+        DependencyProperty.Register(
+            nameof(HaltungLastProjectPath), typeof(string), typeof(HaltungsansichtView),
+            new PropertyMetadata(null));
+
+    public string? HaltungLastProjectPath
+    {
+        get => (string?)GetValue(HaltungLastProjectPathProperty);
+        set => SetValue(HaltungLastProjectPathProperty, value);
+    }
+
+    // Basis-Namen der Haltungen mit Doppel-/Mehrfachinspektion (zweiter ".01"-Record).
+    // DependencyProperty, damit der Marker in der Liste bei Datenwechsel aktualisiert.
+    public static readonly DependencyProperty MehrfachInspektionsBasenProperty =
+        DependencyProperty.Register(
+            nameof(MehrfachInspektionsBasen), typeof(IReadOnlySet<string>),
+            typeof(HaltungsansichtView), new PropertyMetadata(null));
+
+    public IReadOnlySet<string>? MehrfachInspektionsBasen
+    {
+        get => (IReadOnlySet<string>?)GetValue(MehrfachInspektionsBasenProperty);
+        set => SetValue(MehrfachInspektionsBasenProperty, value);
     }
 
     /// <summary>Gespeicherte Panel-Hoehe beim Start anwenden (geclampt).</summary>
@@ -153,6 +181,7 @@ public partial class HaltungsansichtView : UserControl
     private void CtxMoveDown_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("movedown"); }
     private void CtxBeobachtungen_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("beobachtungen"); }
     private void CtxPlay_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("play"); }
+    private void CtxPlayGegen_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("playgegen"); }
     private void CtxPrintAwu_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("printawu"); }
     private void CtxOpenPdf_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openpdf"); }
     private void CtxOpenFolder_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openfolder"); }
@@ -163,6 +192,26 @@ public partial class HaltungsansichtView : UserControl
     {
         if (!IsVisible)
             return;
+
+        // Aktive Haltung in der Liste in Sicht halten: beim (Wieder-)Anzeigen der Ansicht
+        // und bei Auswahl von aussen (Karte/QGIS) an die aktive Zeile scrollen. ScrollIntoView
+        // bewegt die Liste nur, wenn die Zeile nicht ohnehin sichtbar ist — kein Springen bei
+        // bereits sichtbarer Auswahl.
+        if (HaltungList.SelectedItem is { } activeItem)
+            Dispatcher.InvokeAsync(
+                () => HaltungList.ScrollIntoView(activeItem),
+                System.Windows.Threading.DispatcherPriority.Background);
+
+        // Projektpfad fuer die Gegeninspektions-Marker (⇄) in der Liste aktuell halten.
+        HaltungLastProjectPath = _settings?.LastProjectPath;
+
+        // Doppel-/Mehrfachinspektionen erkennen (Haltungen mit zweitem ".01"-Record) —
+        // fuer denselben Marker in der Liste.
+        MehrfachInspektionsBasen = AuswertungPro.Next.UI.DataPage.HaltungInspektionsGruppen
+            .MehrfachInspektionsBasen(
+                (HaltungList.ItemsSource as System.Collections.IEnumerable ?? System.Array.Empty<object>())
+                .OfType<HaltungRecord>()
+                .Select(r => r.GetFieldValue("Haltungsname")));
 
         // Foto-Galerie: alle Schadensfotos der gewaehlten Haltung (gleiche Quelle wie die Hover-Vorschau).
         var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator

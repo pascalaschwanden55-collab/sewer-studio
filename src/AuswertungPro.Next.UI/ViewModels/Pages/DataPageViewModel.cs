@@ -52,6 +52,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageProtocolDocumentController _protocolDocumentController = new();
     private readonly TrainingCaseIndex _trainingCaseIndex = new();
     private bool _disposed;
+    private bool _suppressBridgeEcho; // verhindert Rueckkopplung, wenn die Auswahl von der Karte kommt
 
     internal ServiceProvider Services => _sp;
 
@@ -365,9 +366,42 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         PropertyChanged += DataPageViewModel_PropertyChanged;
+        // Auswahl von der Karte uebernehmen: Klick auf eine Haltung waehlt sie auch in der Liste.
+        QgisBridge.QgisBridgeSelection.SelectionChanged += OnBridgeSelectionChanged;
+        // Beim Oeffnen der Liste die zuletzt (z.B. auf der Karte) gewaehlte Haltung uebernehmen.
+        OnBridgeSelectionChanged();
         UpdateLearningInfo();
         LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
     }
+
+    // Wird ausgeloest, wenn irgendwo (v.a. auf der Karte) eine Haltung gewaehlt wird -> gleiche
+    // Haltung in der Liste selektieren. Echo unterdruecken, damit keine Rueckkopplung entsteht.
+    private void OnBridgeSelectionChanged()
+    {
+        var name = QgisBridge.QgisBridgeSelection.CurrentFor(_shell.Project.Id);
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+
+        System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            if (_disposed)
+                return;
+            var record = FindRecordByName(name);
+            if (record is null || ReferenceEquals(record, Selected))
+                return;
+
+            _suppressBridgeEcho = true;
+            try { Selected = record; }
+            finally { _suppressBridgeEcho = false; }
+        });
+    }
+
+    // Exakt zuerst, dann tolerant (umgekehrte Schacht-Reihenfolge / Teilstrecken-Suffix) —
+    // gleiche Regel wie die Karte, damit ein Kartenklick dieselbe Zeile trifft.
+    private HaltungRecord? FindRecordByName(string name)
+        => Records.FirstOrDefault(r => string.Equals(
+               r.GetFieldValue("Haltungsname"), name, StringComparison.OrdinalIgnoreCase))
+           ?? Records.FirstOrDefault(r => KarteHaltungNameMatcher.Matches(name, r.GetFieldValue("Haltungsname")));
 
     public void Dispose()
     {
@@ -375,6 +409,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             return;
 
         _disposed = true;
+        QgisBridge.QgisBridgeSelection.SelectionChanged -= OnBridgeSelectionChanged;
         _shell.PropertyChanged -= ShellPropertyChanged;
         if (_numberedRecords is not null)
             _numberedRecords.CollectionChanged -= RecordsCollectionChangedForNumbers;
@@ -449,7 +484,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     partial void OnSelectedChanged(HaltungRecord? value)
-        => QgisBridge.QgisBridgeSelection.Set(value?.GetFieldValue("Haltungsname"));
+    {
+        if (_suppressBridgeEcho)
+            return; // Auswahl kam von der Karte -> nicht zurueckmelden (keine Schleife)
+        QgisBridge.QgisBridgeSelection.Set(value?.GetFieldValue("Haltungsname"));
+    }
 
     private void DataPageViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -1005,13 +1044,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void RefreshRecordInGrid(HaltungRecord record)
     {
-        var index = Records.IndexOf(record);
-        if (index < 0)
+        // Zeile in Tabelle UND Haltungsansicht neu einlesen lassen, OHNE die Auflistung zu
+        // veraendern. Ein Replace (Records[i] = record) wuerde die virtualisierte Liste komplett
+        // neu aufbauen und dabei Scroll-Position und Auswahl verwerfen (Nutzer musste staendig
+        // zurueckscrollen). Der Record meldet seine Feldaenderungen selbst via PropertyChanged.
+        if (!Records.Contains(record))
             return;
 
-        Records[index] = record;
-        if (Selected?.Id == record.Id)
-            Selected = record;
+        record.RaiseAllFieldsChanged();
     }
 
     /// <summary>

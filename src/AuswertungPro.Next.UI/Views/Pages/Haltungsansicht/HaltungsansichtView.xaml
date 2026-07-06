@@ -5,6 +5,7 @@
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              x:Name="Root">
     <UserControl.Resources>
         <local:HaltungSummaryConverter x:Key="SummaryConv"/>
@@ -12,6 +13,7 @@
         <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
         <local:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
         <local:SchadenKategorieConverter x:Key="SchadenKategorieConv"/>
+        <pages:GegenVideoVorhandenConverter x:Key="GegenVideoVis"/>
 
         <Style x:Key="HaltungListItemStyle" TargetType="{x:Type ListBoxItem}">
             <Setter Property="Padding" Value="0"/>
@@ -78,6 +80,7 @@
                     <MenuItem Header="Beobachtungen..." Click="CtxBeobachtungen_Click"/>
                     <Separator/>
                     <MenuItem Header="Play" Click="CtxPlay_Click"/>
+                    <MenuItem Header="Play (Gegeninspektion)" Click="CtxPlayGegen_Click"/>
                     <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="CtxPrintAwu_Click"/>
                     <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="CtxOpenPdf_Click"/>
                     <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click"/>
@@ -100,6 +103,19 @@
                                            FontSize="11" Margin="0,0,8,0" MinWidth="16" TextAlignment="Right"/>
                                 <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{DynamicResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <!-- Marker: Gegeninspektion (2. Video Link_G) vorhanden. -->
+                                <TextBlock Text="⇄" FontSize="13" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           ToolTip="Diese Haltung hat 2 Videos / Inspektionen">
+                                    <TextBlock.Visibility>
+                                        <MultiBinding Converter="{StaticResource GegenVideoVis}">
+                                            <Binding Path="Fields[Link_G]"/>
+                                            <Binding ElementName="Root" Path="HaltungLastProjectPath"/>
+                                            <Binding Path="Fields[Haltungsname]"/>
+                                            <Binding ElementName="Root" Path="MehrfachInspektionsBasen"/>
+                                        </MultiBinding>
+                                    </TextBlock.Visibility>
+                                </TextBlock>
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                        TextTrimming="CharacterEllipsis" Margin="0,2,0,0">

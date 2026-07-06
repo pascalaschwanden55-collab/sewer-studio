@@ -136,7 +136,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         _ = sender;
-        _ = e;
+        // Aussen gewaehlte Haltung (z.B. Klick auf der Karte) in der Liste sichtbar scrollen.
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.Selected)
+            && DataContext is ViewModels.Pages.DataPageViewModel vm
+            && vm.Selected is { } selected)
+        {
+            Dispatcher.InvokeAsync(
+                () => Grid.ScrollIntoView(selected),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
     }
 
     private void EnsureColumns()
@@ -425,6 +433,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             case "codieren": vm.OpenProtocolCommand.Execute(record); break;
             case "play": PlayMenu_Click(this, e); break;
+            case "playgegen": PlayGegenMenu_Click(this, e); break;
             case "beobachtungen": BeobachtungenMenu_Click(this, e); break;
             case "printawu": PrintAwuHaltungsprotokollMenu_Click(this, e); break;
             case "openpdf": OpenOriginalPdfMenu_Click(this, e); break;

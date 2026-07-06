@@ -126,6 +126,36 @@ public sealed class StringNotEmptyToVisibilityConverter : IValueConverter
         => Binding.DoNothing;
 }
 
+/// <summary>
+/// Marker "diese Haltung hat ein zweites Video / eine zweite Inspektion". Sichtbar, wenn
+/// (a) ein EXISTIERENDES Gegeninspektions-Video (Feld Link_G) aufloesbar ist (konsistent mit
+/// "Play (Gegeninspektion)"), ODER (b) die Haltung eine Mehrfachinspektion ist (zweiter Record
+/// mit Inspektions-Suffix ".01", je eigenes Video + Codierung).
+/// Werte: [0]=Link_G, [1]=Projektdatei-Pfad, [2]=Haltungsname, [3]=MehrfachInspektionsBasen (Set).
+/// </summary>
+public sealed class GegenVideoVorhandenConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        var linkG = values is { Length: > 0 } ? values[0] as string : null;
+        var projectPath = values is { Length: > 1 } ? values[1] as string : null;
+        var haltungsname = values is { Length: > 2 } ? values[2] as string : null;
+        var basen = values is { Length: > 3 }
+            ? values[3] as System.Collections.Generic.IReadOnlySet<string>
+            : null;
+
+        var gegenVideoDa = !string.IsNullOrWhiteSpace(
+            AuswertungPro.Next.UI.DataPage.DataPageProtocolPathResolver.ResolveExistingPath(linkG, projectPath));
+        var mehrfach = basen is not null &&
+            AuswertungPro.Next.UI.DataPage.HaltungInspektionsGruppen.IstMehrfachInspektion(haltungsname, basen);
+
+        return gegenVideoDa || mehrfach ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 public sealed class AnyValueToVisibilityConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)

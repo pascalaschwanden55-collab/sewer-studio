@@ -36,6 +36,20 @@ public sealed class HaltungFotoGalerieBuilderTests
     }
 
     [Fact]
+    public void Build_NimmtKeineFotosAusOriginalUndVeraendertCurrentNicht()
+    {
+        var current = Eintrag("BCCYB", 3.57);
+        var original = Eintrag("BCCYB", 3.57, @"Fotos\Haltungen\H1\f1.jpg");
+        var record = Haltung(current);
+        record.Protocol!.Original.Entries.Add(original);
+
+        var fotos = HaltungFotoGalerieBuilder.Build(record, @"C:\Projekt", _ => true);
+
+        Assert.Empty(fotos);
+        Assert.Empty(current.FotoPaths);
+    }
+
+    [Fact]
     public void Build_LoestRelativePfadeAuf_UndBeschriftetMitMeterUndCode()
     {
         var record = Haltung(Eintrag("BBBA", 20.5, @"Fotos\Haltungen\H1\f1.jpg"));
