@@ -8,6 +8,46 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageSelectedProtocolControllerTests
 {
     [Fact]
+    public void Refresh_does_not_merge_original_photos_into_current_entries()
+    {
+        var controller = new DataPageSelectedProtocolController();
+        var current = new ProtocolEntry
+        {
+            Code = "BCCYB",
+            MeterStart = 3.57,
+            Beschreibung = "Bogen nach unten"
+        };
+        var original = new ProtocolEntry
+        {
+            Code = "BCCYB",
+            MeterStart = 3.57,
+            Beschreibung = "Bogen nach unten"
+        };
+        original.FotoPaths.Add("Fotos/Haltungen/H1/foto.jpg");
+        var record = new HaltungRecord
+        {
+            Protocol = new ProtocolDocument
+            {
+                Original = new ProtocolRevision
+                {
+                    Entries = [original]
+                },
+                Current = new ProtocolRevision
+                {
+                    Entries = [current]
+                }
+            }
+        };
+
+        controller.Refresh(record, new InMemoryCatalog());
+
+        var entry = Assert.Single(controller.Entries);
+        Assert.Same(current, entry);
+        Assert.Empty(entry.FotoPaths);
+        Assert.Empty(current.FotoPaths);
+    }
+
+    [Fact]
     public void Refresh_shows_only_current_non_deleted_entries_and_enriches_short_descriptions()
     {
         var controller = new DataPageSelectedProtocolController();

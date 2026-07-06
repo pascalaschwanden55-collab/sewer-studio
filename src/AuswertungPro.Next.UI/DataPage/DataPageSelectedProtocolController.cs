@@ -62,6 +62,7 @@ public sealed class DataPageSelectedProtocolController
         ArgumentNullException.ThrowIfNull(codeCatalog);
 
         Entries.Clear();
+
         var list = selected?.Protocol?.Current?.Entries;
         if (list is null || list.Count == 0)
             return;

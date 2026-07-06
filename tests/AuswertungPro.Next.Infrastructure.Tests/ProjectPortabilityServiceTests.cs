@@ -70,6 +70,39 @@ public sealed class ProjectPortabilityServiceTests
     }
 
     [Fact]
+    public void MakePortable_ExternalFotoWithSameSizedDifferentExistingName_UsesCollisionPath()
+    {
+        var root = NewDir();
+        var ext = NewDir();
+        var holding = "22149-3.01";
+        var holdingFolder = Path.Combine(root, "Verteilung", holding);
+        var fotoFolder = Path.Combine(holdingFolder, "Fotos");
+        Directory.CreateDirectory(fotoFolder);
+        var existing = Path.Combine(fotoFolder, "H_22149-3.01_044.jpg");
+        File.WriteAllText(existing, "old");
+        var srcFoto = Path.Combine(ext, "H_22149-3.01_044.jpg");
+        File.WriteAllText(srcFoto, "new");
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            rec.VsaFindings.Add(new VsaFinding { FotoPath = srcFoto });
+            project.AddRecord(rec);
+
+            new ProjectPortabilityService().MakePortable(root, project);
+
+            var foto = rec.VsaFindings[0].FotoPath ?? "";
+            var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(foto, root);
+            Assert.NotNull(resolved);
+            Assert.EndsWith("_1.jpg", resolved, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("old", File.ReadAllText(existing));
+            Assert.Equal("new", File.ReadAllText(resolved!));
+        }
+        finally { TryDelete(root); TryDelete(ext); }
+    }
+
+    [Fact]
     public void MakePortable_AbsoluteInsideProject_MadeRelative()
     {
         var root = NewDir();
@@ -91,6 +124,36 @@ public sealed class ProjectPortabilityServiceTests
             var p = rec.GetFieldValue("PDF_Path") ?? "";
             Assert.False(Path.IsPathRooted(p), $"PDF_Path sollte relativ sein: {p}");
             Assert.NotNull(ProjectPathResolver.ResolveFilePathFromProjectFolder(p, root));
+        }
+        finally { TryDelete(root); }
+    }
+
+    [Fact]
+    public void MakePortable_PrefersDirectHoldingCopyOverRecursiveLegacyMatch()
+    {
+        var root = NewDir();
+        var holding = "X-3";
+        var dir = Path.Combine(root, "Verteilung", holding);
+        Directory.CreateDirectory(dir);
+        var direct = Path.Combine(dir, "20260616_X-3.mpg");
+        File.WriteAllText(direct, "direct");
+        var legacyDir = Path.Combine(dir, "Video");
+        Directory.CreateDirectory(legacyDir);
+        var recursive = Path.Combine(legacyDir, "H_X-3.mpg");
+        File.WriteAllText(recursive, "legacy");
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Link", @"D:\Quelle\H_X-3.mpg", FieldSource.Xtf, userEdited: false);
+            project.AddRecord(rec);
+
+            new ProjectPortabilityService().MakePortable(root, project);
+
+            var link = rec.GetFieldValue("Link") ?? "";
+            var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(link, root);
+            Assert.Equal(Path.GetFullPath(direct), Path.GetFullPath(resolved!), ignoreCase: true);
         }
         finally { TryDelete(root); }
     }

@@ -25,6 +25,14 @@
 - VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig
 - QualityGate Green/Yellow/Red muss immer durchlaufen
 
+### Checkliste bei jedem neuen Service / Tool (vor dem Commit pruefen)
+1. **Interface + eigener Service:** Neue Logik als eigener Service mit Interface, nicht in bestehende Klassen quetschen.
+2. **Schichten trennen:** Geschaeftslogik in C# (nicht in UI-Code, nicht im Sidecar). UI ruft ViewModel/Service, nie direkt Infrastruktur.
+3. **Registrierung:** Service im `ServiceProvider` (DI) eingetragen, kein `new` verstreut im Code.
+4. **Fokussierter Test:** Mindestens ein Test fuer die Kernlogik (Parser/Pipeline/ViewModel/QualityGate). Keine riskante Logik ohne Test.
+5. **Budget & Gate:** VRAM-Budget (max 29GB) nicht gebrochen, QualityGate laeuft weiter durch.
+6. **Klein bleiben:** Kein grosses Refactoring am Bestand ohne Rueckfrage — neues Feature additiv bauen.
+
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.
 2. C# ruft den Sidecar ueber `VisionPipelineClient` auf.

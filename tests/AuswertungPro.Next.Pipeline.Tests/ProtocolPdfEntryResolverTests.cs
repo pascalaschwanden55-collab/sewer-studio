@@ -7,6 +7,91 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 public sealed class ProtocolPdfEntryResolverTests
 {
     [Fact]
+    public void ResolveEntriesForExport_does_not_merge_original_photo_into_current_entry()
+    {
+        var record = new HaltungRecord();
+        var current = new ProtocolEntry
+        {
+            Code = "BCCYB",
+            MeterStart = 3.569,
+            Beschreibung = "Bogen nach unten"
+        };
+        var original = new ProtocolEntry
+        {
+            Code = "BCCYB",
+            MeterStart = 3.569,
+            Beschreibung = "Bogen nach unten"
+        };
+        original.FotoPaths.Add("Fotos/Haltungen/H1/foto.jpg");
+
+        var doc = new ProtocolDocument
+        {
+            Original = new ProtocolRevision
+            {
+                Entries = { original }
+            },
+            Current = new ProtocolRevision
+            {
+                Entries = { current }
+            }
+        };
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+
+        var entry = Assert.Single(entries);
+        Assert.Same(current, entry);
+        Assert.Empty(entry.FotoPaths);
+        Assert.Empty(current.FotoPaths);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_does_not_restore_photos_from_baselines()
+    {
+        var record = new HaltungRecord();
+        var current = new ProtocolEntry
+        {
+            Code = "BCD",
+            MeterStart = 0,
+            Beschreibung = "Rohranfang"
+        };
+        var original = new ProtocolEntry
+        {
+            Code = "BCD",
+            MeterStart = 0,
+            Beschreibung = "Rohranfang"
+        };
+        original.FotoPaths.Add("Fotos/Haltungen/H1/original.jpg");
+        var history = new ProtocolEntry
+        {
+            Code = "BCD",
+            MeterStart = 0,
+            Beschreibung = "Rohranfang"
+        };
+        history.FotoPaths.Add("Fotos/Haltungen/H1/history.jpg");
+
+        var doc = new ProtocolDocument
+        {
+            Original = new ProtocolRevision
+            {
+                Entries = { original }
+            },
+            Current = new ProtocolRevision
+            {
+                Entries = { current }
+            },
+            History =
+            {
+                new ProtocolRevision { Entries = { history } }
+            }
+        };
+
+        var entry = Assert.Single(ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc));
+
+        Assert.Empty(entry.FotoPaths);
+        Assert.Empty(current.FotoPaths);
+    }
+
+    [Fact]
     public void ResolveEntriesForExport_merges_finding_photo_into_existing_entry()
     {
         var record = new HaltungRecord();

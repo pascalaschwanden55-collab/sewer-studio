@@ -24,7 +24,7 @@ public sealed class ProjectPortabilityService
     private enum Act { Kept, Relinked, Copied, Unresolved }
 
     // Reihenfolge der bekannten Haltungs-Wurzelordner im Projekt.
-    private static readonly string[] HoldingRootFolders = { "Verteilung", "Haltungen" };
+    private static readonly string[] HoldingRootFolders = { ProjectStructure.HaltungenVerteilt, "Verteilung", "Haltungen" };
 
     public Result MakePortable(string projectFolder, Project project, bool dryRun = false)
     {
@@ -198,7 +198,18 @@ public sealed class ProjectPortabilityService
         {
             var match = PickHoldingMatch(holdingFolder!, fileName, typeMatch);
             if (match != null)
-                return (ProjectPathResolver.MakeRelative(match, projectFolder), Act.Relinked);
+            {
+                var externalPhotoDiffersFromProjectMatch =
+                    copyExternalInto != null
+                    && Path.IsPathRooted(raw)
+                    && File.Exists(raw)
+                    && !SameFileContent(raw, match);
+
+                // Gleichnamiges Projektfoto ist nicht dieselbe Datei: nicht falsch relinken,
+                // sondern unten kollisionssicher ins Projekt kopieren.
+                if (!externalPhotoDiffersFromProjectMatch)
+                    return (ProjectPathResolver.MakeRelative(match, projectFolder), Act.Relinked);
+            }
         }
 
         // 4) Foto-Sonderfall: absolut + extern existiert -> in den Haltungsordner kopieren.
@@ -226,20 +237,27 @@ public sealed class ProjectPortabilityService
     private static string? PickHoldingMatch(string holdingFolder, string originalFileName, Func<string, bool> typeMatch)
     {
         string[] files;
-        try { files = Directory.GetFiles(holdingFolder); }
+        try { files = Directory.GetFiles(holdingFolder, "*", SearchOption.AllDirectories); }
         catch { return null; }
 
         var typed = files.Where(typeMatch).ToList();
         if (typed.Count == 0)
             return null;
 
-        // Gegeninspektion (_G), Kandidaten und Ambiguous-Marker aussortieren -> Haupt-Kopie bevorzugen.
-        var main = typed.Where(f =>
-        {
-            var n = Path.GetFileNameWithoutExtension(f).ToLowerInvariant();
-            return !n.Contains("candidate") && !n.Contains("ambiguous") && !n.EndsWith("_g");
-        }).ToList();
-        var pool = main.Count > 0 ? main : typed;
+        var direct = typed.Where(f => IsDirectChild(holdingFolder, f)).ToList();
+        var main = typed.Where(IsMainMediaCopy).ToList();
+        var directMain = direct.Where(IsMainMediaCopy).ToList();
+
+        return PickPreferred(directMain, originalFileName)
+               ?? PickPreferred(main, originalFileName)
+               ?? PickPreferred(direct, originalFileName)
+               ?? PickPreferred(typed, originalFileName);
+    }
+
+    private static string? PickPreferred(IReadOnlyList<string> pool, string originalFileName)
+    {
+        if (pool.Count == 0)
+            return null;
 
         // Wenn der Originaldateiname (ohne Endung) exakt vorkommt, den bevorzugen.
         var stem = Path.GetFileNameWithoutExtension(originalFileName);
@@ -254,22 +272,84 @@ public sealed class ProjectPortabilityService
             .First();
     }
 
+    private static bool IsDirectChild(string parentFolder, string file)
+    {
+        var parent = Path.GetFullPath(parentFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var dir = Path.GetDirectoryName(Path.GetFullPath(file))?
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(parent, dir, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMainMediaCopy(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+        return !name.Contains("candidate")
+               && !name.Contains("ambiguous")
+               && !name.EndsWith("_g");
+    }
+
     private static string CopyUnique(string source, string destDir)
     {
         var fileName = Path.GetFileName(source);
-        var dest = Path.Combine(destDir, fileName);
-
-        if (File.Exists(dest))
-        {
-            var srcInfo = new FileInfo(source);
-            var destInfo = new FileInfo(dest);
-            if (srcInfo.Length == destInfo.Length)
-                return dest; // gleiche Datei -> wiederverwenden
-        }
+        var dest = ResolveCopyTarget(source, Path.Combine(destDir, fileName));
 
         if (!File.Exists(dest))
             File.Copy(source, dest, overwrite: false);
         return dest;
+    }
+
+    private static string ResolveCopyTarget(string source, string target)
+    {
+        if (!File.Exists(target) || SameFileContent(source, target))
+            return target;
+
+        var dir = Path.GetDirectoryName(target)!;
+        var stem = Path.GetFileNameWithoutExtension(target);
+        var ext = Path.GetExtension(target);
+        var i = 1;
+        while (true)
+        {
+            var candidate = Path.Combine(dir, $"{stem}_{i}{ext}");
+            if (!File.Exists(candidate) || SameFileContent(source, candidate))
+                return candidate;
+            i++;
+        }
+    }
+
+    private static bool SameFileContent(string left, string right)
+    {
+        try
+        {
+            var leftInfo = new FileInfo(left);
+            var rightInfo = new FileInfo(right);
+            if (!leftInfo.Exists || !rightInfo.Exists || leftInfo.Length != rightInfo.Length)
+                return false;
+
+            using var leftStream = File.OpenRead(left);
+            using var rightStream = File.OpenRead(right);
+            var leftBuffer = new byte[81920];
+            var rightBuffer = new byte[81920];
+
+            while (true)
+            {
+                var leftRead = leftStream.Read(leftBuffer, 0, leftBuffer.Length);
+                var rightRead = rightStream.Read(rightBuffer, 0, rightBuffer.Length);
+                if (leftRead != rightRead)
+                    return false;
+                if (leftRead == 0)
+                    return true;
+
+                for (var i = 0; i < leftRead; i++)
+                {
+                    if (leftBuffer[i] != rightBuffer[i])
+                        return false;
+                }
+            }
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool IsVideo(string path) => MediaFileTypes.HasVideoExtension(path);

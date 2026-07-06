@@ -84,12 +84,9 @@ public static class ObservationCollapser
         if (!IsSubstantive(target) && IsSubstantive(other))
             target.Beschreibung = other.Beschreibung;
 
-        // Fotos vereinen (pfadnormalisiert, keine Duplikate).
-        foreach (var path in other.FotoPaths)
-        {
-            if (!target.FotoPaths.Any(x => PathEquals(x, path)))
-                target.FotoPaths.Add(path);
-        }
+        // Beim Falten einer Beobachtung nur exakt gleiche Pfade deduplizieren.
+        // Gleichnamige Fotos in verschiedenen Ordnern koennen unterschiedliche Bilder sein.
+        MergeExactPhotoPaths(target, other);
 
         // Timecode/Zeit übernehmen, wenn Basis leer.
         if (string.IsNullOrWhiteSpace(target.Mpeg) && !string.IsNullOrWhiteSpace(other.Mpeg))
@@ -184,9 +181,27 @@ public static class ObservationCollapser
     private static bool IsSubstantive(ProtocolEntry e)
         => !string.IsNullOrWhiteSpace(NormDesc(e));
 
-    private static bool PathEquals(string a, string b)
-        => string.Equals(
-            (a ?? string.Empty).Replace('\\', '/'),
-            (b ?? string.Empty).Replace('\\', '/'),
-            System.StringComparison.OrdinalIgnoreCase);
+    private static void MergeExactPhotoPaths(ProtocolEntry target, ProtocolEntry other)
+    {
+        if (other.FotoPaths.Count == 0)
+            return;
+
+        var existing = new HashSet<string>(
+            target.FotoPaths.Select(NormalizePhotoPathKey),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in other.FotoPaths)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            var key = NormalizePhotoPathKey(path);
+            if (existing.Add(key))
+                target.FotoPaths.Add(path);
+        }
+    }
+
+    private static string NormalizePhotoPathKey(string path)
+        => path.Replace('\\', '/').Trim().ToUpperInvariant();
+
 }

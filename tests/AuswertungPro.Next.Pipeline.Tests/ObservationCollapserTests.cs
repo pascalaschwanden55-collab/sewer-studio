@@ -173,6 +173,22 @@ public sealed class ObservationCollapserTests
     }
 
     [Fact]
+    public void Collapse_keeps_same_file_name_from_different_photo_folders()
+    {
+        var a = new ProtocolEntry { Code = "BAF", MeterStart = 2, Beschreibung = "Korrosion" };
+        a.FotoPaths.Add("Fotos/Haltungen/H1/schaden.jpg");
+        var b = new ProtocolEntry { Code = "BAF", MeterStart = 2, Beschreibung = "" };
+        b.FotoPaths.Add("Fotos/Haltungen/H2/schaden.jpg");
+
+        var result = ObservationCollapser.Collapse(new[] { a, b });
+
+        var entry = Assert.Single(result);
+        Assert.Equal(
+            new[] { "Fotos/Haltungen/H1/schaden.jpg", "Fotos/Haltungen/H2/schaden.jpg" },
+            entry.FotoPaths);
+    }
+
+    [Fact]
     public void Collapse_does_not_mutate_input_entries()
     {
         var text = new ProtocolEntry { Code = "BAF", MeterStart = 2, Beschreibung = "Korrosion" };

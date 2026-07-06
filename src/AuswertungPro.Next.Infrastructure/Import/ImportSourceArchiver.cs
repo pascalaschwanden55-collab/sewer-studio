@@ -16,7 +16,7 @@ public sealed record ArchiveResult(int Copied, int Reused, IReadOnlyList<string>
 /// <summary>
 /// Kopiert Rohdaten aus einem Kanalfernsehen-Quellordner in die normierten
 /// Importdateien-Unterordner des Projekts.
-/// Mapping: .fdb/.db3 → Datenbanken | .xtf → XTF | .pdf → PDF | .txt → TXT.
+/// Mapping: .fdb/.db3/.mdb → Datenbanken | .xtf → XTF | .pdf → PDF | .txt → TXT.
 /// Videos und Bilddateien werden NICHT kopiert.
 /// Idempotent: gleicher Dateiname + gleiche Groesse → Reuse (kein erneutes Kopieren).
 /// Abweichende Groesse → kollisionssicherer Name + Hinweismeldung.
@@ -28,6 +28,7 @@ public static class ImportSourceArchiver
     {
         { ".fdb",  ProjectStructure.Datenbanken },
         { ".db3",  ProjectStructure.Datenbanken },
+        { ".mdb",  ProjectStructure.Datenbanken },
         { ".xtf",  ProjectStructure.XtfDir },
         { ".pdf",  ProjectStructure.PdfDir },
         { ".txt",  ProjectStructure.TxtDir },
