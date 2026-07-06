@@ -15,6 +15,10 @@ internal static class QgisBridgeSelection
     private static string _current = "";
     private static long _stamp;
 
+    /// <summary>Wird nach jeder (neuen) Auswahl ausgeloest — auch bei erneutem Klick auf dieselbe
+    /// Haltung. Die In-App-Karte haengt sich hier ein, um wie QGIS auf die Haltung zu zoomen.</summary>
+    public static event Action? SelectionChanged;
+
     /// <summary>Meldet eine (neue) Auswahl. Leere Werte werden ignoriert (sticky).</summary>
     public static void Set(string? haltungsname)
     {
@@ -29,6 +33,9 @@ internal static class QgisBridgeSelection
             // neuen Stempel wieder hin, nicht nur beim Haltungswechsel.
             _stamp++;
         }
+
+        // Ausserhalb des Locks benachrichtigen (kein Deadlock; Subscriber laeuft frei).
+        SelectionChanged?.Invoke();
     }
 
     /// <summary>Laufender Zaehler der Auswahl-Klicks (fuer den Auto-Zoom im Plugin).</summary>

@@ -269,6 +269,65 @@ public sealed class QgisBridgeSnapshotBuilderTests
         Assert.Equal("BAB", damage.Code);
     }
 
+    [Fact]
+    public void Teilstrecken_suffix_findet_die_durchgehende_katasterhaltung()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        // Kataster kennt nur "A-B"; SewerStudio nummeriert eine Zweit-/Teilaufnahme als "A-B.1".
+        // Erwartet: dieselbe Kataster-Geometrie, damit QGIS auf die Haltung zoomen kann.
+        var project = new Project { Name = "Teilstrecke" };
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "A-B.1", FieldSource.Manual, userEdited: true);
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAB", MeterStart = 5.0 });
+        project.Data.Add(record);
+        var snapshot = QgisProjectSnapshot.Capture(project, "A-B.1");
+
+        var status = sut.BuildStatus(snapshot);
+        var current = sut.BuildCurrentGeoJson(snapshot);
+
+        Assert.True(status.CurrentHoldingHasGeometry);
+        var feature = Assert.Single(current.Features);
+        Assert.Equal("A-B.1", feature.Properties["haltung"]);
+        // Geometrie stammt aus der durchgehenden Kataster-Haltung "A-B".
+        Assert.Equal("A-B", feature.Properties["haltung_kataster"]);
+        var line = Assert.IsType<GeoJsonLineString>(feature.Geometry);
+        Assert.Equal(2, line.Coordinates.Length);
+        Assert.Equal(2690000, line.Coordinates[0][0], precision: 3);
+    }
+
+    [Theory]
+    [InlineData("22836-21687.1", "22836-21687")] // Teilstrecke .1 -> durchgehende Basis-Haltung
+    [InlineData("A-B.99", "A-B")]                // zweistellige Laufnummer gilt noch als Suffix
+    [InlineData("22836-7.32154", null)]          // echter Kataster-Knoten (lange Nummer) bleibt unberuehrt
+    [InlineData("1089398-22542", null)]          // gar kein Punkt-Suffix
+    [InlineData("A-B", null)]                     // kein Suffix
+    [InlineData("A-B.100", null)]                // dreistellig -> keine Teilstrecken-Laufnummer
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void TryStripSubsectionSuffix_erkennt_nur_kurze_laufnummern(string? input, string? expected)
+    {
+        Assert.Equal(expected, QgisBridgeSnapshotBuilder.TryStripSubsectionSuffix(input));
+    }
+
+    [Fact]
+    public void BuildCurrentGeoJson_liefert_nutzungsart_fuer_regelbasierte_einfaerbung()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var project = CreateProjectWithImportedDamage();
+        project.Data[0].SetFieldValue("Nutzungsart", "Mischabwasser", FieldSource.Manual, userEdited: true);
+        var snapshot = QgisProjectSnapshot.Capture(project, "A-B");
+
+        var current = sut.BuildCurrentGeoJson(snapshot);
+
+        // Nutzungsart wird mitgeliefert, damit QGIS die aktuelle Haltung regelbasiert
+        // nach Nutzungsart einfaerben kann (analog Leitungen-Layer).
+        var feature = Assert.Single(current.Features);
+        Assert.Equal("Mischabwasser", feature.Properties["nutzungsart"]);
+    }
+
     private static Project CreateProjectWithImportedDamage()
     {
         var project = new Project { Name = "Bridge-Test" };

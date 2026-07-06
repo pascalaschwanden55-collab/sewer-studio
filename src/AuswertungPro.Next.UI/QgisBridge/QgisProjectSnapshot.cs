@@ -35,7 +35,8 @@ internal sealed record QgisProjectSnapshot(
                 name,
                 TryParseCondition(record.GetFieldValue("Zustandsklasse")),
                 IsGegenFliessrichtung(record.GetFieldValue("Inspektionsrichtung")),
-                CaptureDamages(record)));
+                CaptureDamages(record),
+                EmptyToNull(record.GetFieldValue("Nutzungsart"))));
         }
 
         return new QgisProjectSnapshot(project.Id, project.Name, holding, haltungen, selectionStamp);
@@ -171,6 +172,7 @@ internal sealed record QgisProjectSnapshot(
         hash.Add(CurrentHolding, StringComparer.OrdinalIgnoreCase);
         hash.Add(record?.Zustandsklasse);
         hash.Add(record?.GegenFliessrichtung ?? false);
+        hash.Add(record?.Nutzungsart, StringComparer.OrdinalIgnoreCase);
         hash.Add(record?.Schaeden.Count ?? -1);
 
         return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
@@ -184,7 +186,8 @@ internal sealed record QgisHaltungSnapshot(
     string Haltungsname,
     int? Zustandsklasse,
     bool GegenFliessrichtung,
-    IReadOnlyList<QgisDamageSnapshot> Schaeden);
+    IReadOnlyList<QgisDamageSnapshot> Schaeden,
+    string? Nutzungsart = null);
 
 internal sealed record QgisDamageSnapshot(
     string? Code,

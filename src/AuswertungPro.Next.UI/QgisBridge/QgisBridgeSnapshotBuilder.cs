@@ -118,6 +118,8 @@ internal sealed class QgisBridgeSnapshotBuilder
                 ["current"] = true,
                 ["zustandsklasse"] = record?.Zustandsklasse,
                 ["zustand_farbe"] = MapConditionColor(record?.Zustandsklasse),
+                // Nutzungsart fuer die regelbasierte Einfaerbung analog Leitungen-Layer.
+                ["nutzungsart"] = record?.Nutzungsart,
                 ["schaden_count"] = record?.Schaeden.Count ?? 0,
                 ["source"] = "sewerstudio_selection"
             });
@@ -284,13 +286,35 @@ internal sealed class QgisBridgeSnapshotBuilder
         bool ReversedName,
         bool IsFallback);
 
+    // Teilstrecken-/Mehrfachaufnahme-Suffix: SewerStudio haengt an denselben Haltungsnamen
+    // eine kurze Laufnummer (".1", ".2", …), wenn eine Haltung mehrfach bzw. abschnittsweise
+    // aufgenommen wurde. Das Kataster kennt nur die durchgehende Haltung. Nur eine kurze
+    // Nummer (1–2 Stellen) am Ende gilt als solcher Suffix — echte Kataster-Knoten mit Punkt
+    // (z.B. "7.32154", viele Nachkommastellen) bleiben dadurch unberuehrt.
+    private static readonly System.Text.RegularExpressions.Regex SubsectionSuffixPattern =
+        new(@"^(.+)\.\d{1,2}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Loest den Projekt-Haltungsnamen zur Geometrie auf:
     /// 1. Kataster-Kante (direkter Name), 2. Kataster-Kante (umgekehrter Name),
     /// 3. Fallback: gerade Linie zwischen den beiden Schacht-Punkten — fuer Haltungen,
     ///    die das Kataster nicht als Kante kennt (z.B. Anschluss ueber Sonderbauwerk).
+    /// Schlaegt alles fehl, wird ein Teilstrecken-Suffix (".1", …) abgeschnitten und die
+    /// durchgehende Basis-Haltung probiert — aber nur, wenn diese wirklich existiert.
     /// </summary>
     private static ResolvedGeometry? Resolve(NetworkLoadResult network, string holdingName)
+    {
+        var exact = ResolveExact(network, holdingName);
+        if (exact is not null)
+            return exact;
+
+        // Der exakte Name hat keinen Treffer -> Teilstrecken-Suffix abschneiden und die
+        // durchgehende Kataster-Haltung nehmen (kein Zufallstreffer, da ResolveExact zuerst lief).
+        var baseName = TryStripSubsectionSuffix(holdingName);
+        return baseName is null ? null : ResolveExact(network, baseName);
+    }
+
+    private static ResolvedGeometry? ResolveExact(NetworkLoadResult network, string holdingName)
     {
         if (network.GeometryByHolding.TryGetValue(holdingName, out var direct))
             return new ResolvedGeometry(direct, direct.Haltungsname, ReversedName: false, IsFallback: false);
@@ -315,6 +339,20 @@ internal sealed class QgisBridgeSnapshotBuilder
 
         var line = new HaltungGeometry(holdingName, new[] { (start.X, start.Y), (end.X, end.Y) });
         return new ResolvedGeometry(line, KatasterName: "", ReversedName: false, IsFallback: true);
+    }
+
+    /// <summary>
+    /// Schneidet einen abschliessenden Teilstrecken-Suffix (".1" … ".99") ab und liefert
+    /// die Basis-Haltung. Kataster-Knoten mit Punkt (lange Nummer) bleiben unangetastet.
+    /// Gibt null zurueck, wenn kein solcher Suffix vorliegt.
+    /// </summary>
+    internal static string? TryStripSubsectionSuffix(string? holdingName)
+    {
+        if (string.IsNullOrWhiteSpace(holdingName))
+            return null;
+
+        var match = SubsectionSuffixPattern.Match(holdingName.Trim());
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     private static IReadOnlyDictionary<string, int?> BuildConditionIndex(QgisProjectSnapshot snapshot)
