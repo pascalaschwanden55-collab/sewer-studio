@@ -37,15 +37,35 @@ public sealed class AppSettings : IAiStartupSettings
     // Alle jemals geoeffneten Projekte (max 20, neueste zuerst)
     public List<string> RecentProjectPaths { get; set; } = new();
 
+    // Aus der Projektuebersicht ausgeblendete Projekte. "Loeschen" in der Uebersicht
+    // entfernt ein Projekt nur aus der Liste — die Dateien im Ordner bleiben erhalten.
+    public List<string> HiddenProjectPaths { get; set; } = new();
+
     /// <summary>Projekt-Pfad in RecentProjectPaths einfuegen (Duplikate vermeiden, max 20).</summary>
     public void AddRecentProject(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
+        // Ein wieder geoeffnetes Projekt ist nicht mehr ausgeblendet.
+        HiddenProjectPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
         RecentProjectPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
         RecentProjectPaths.Insert(0, path);
         if (RecentProjectPaths.Count > 20)
             RecentProjectPaths.RemoveRange(20, RecentProjectPaths.Count - 20);
         LastProjectPath = path;
+    }
+
+    /// <summary>
+    /// Blendet ein Projekt aus der Uebersicht aus, OHNE Dateien zu loeschen:
+    /// aus der Merkliste nehmen und in die Ausblend-Liste aufnehmen.
+    /// </summary>
+    public void HideProject(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        RecentProjectPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        HiddenProjectPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        HiddenProjectPaths.Add(path);
+        if (string.Equals(LastProjectPath, path, StringComparison.OrdinalIgnoreCase))
+            LastProjectPath = null;
     }
 
     // Canonical source folder for video lookup/relink.
@@ -114,6 +134,12 @@ public sealed class AppSettings : IAiStartupSettings
 
     // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
     public string QgisTilesPath { get; set; } = DefaultQgisExportDirectory + @"\tiles_test";
+
+    // Offline-Hintergrundkarten: Basisordner im Programmordner mit den Unterordnern
+    // "satellit" (SWISSIMAGE, JPEG) und "av" (AV-Karte farbig/Grundbuch, PNG), Kanton Uri z18.
+    // Standard-Hintergrund der App-Karte; fehlt ein Ordner, wird stattdessen OSM online genutzt.
+    // In den Einstellungen aenderbar.
+    public string OfflineBasemapPath { get; set; } = @"c:\Sewer-Studio_KI_4.5\basemap_tiles";
 
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.

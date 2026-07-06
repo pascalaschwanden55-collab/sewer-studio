@@ -113,6 +113,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         void AddEntry(string file, bool isLast)
         {
             if (string.IsNullOrWhiteSpace(file) || !File.Exists(file)) return;
+            // Aus der Uebersicht ausgeblendete Projekte nicht anzeigen (Dateien bleiben erhalten).
+            if (_sp.Settings.HiddenProjectPaths.Any(p => string.Equals(p, file, StringComparison.OrdinalIgnoreCase))) return;
             if (!seen.Add(file)) return;
 
             try
@@ -222,27 +224,25 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         var entry = SelectedProjectEntry;
         if (entry is null || string.IsNullOrWhiteSpace(entry.Path))
             return;
-        if (!File.Exists(entry.Path))
-            return;
 
-        var fileName = Path.GetFileName(entry.Path);
         var confirmed = _sp.Dialogs.Confirm(
-            $"Projekt wirklich löschen?\n\n{fileName}\n{entry.Path}",
-            "Projekt löschen");
+            $"Projekt aus der Übersicht entfernen?\n\n{entry.Name}\n{entry.Path}\n\n" +
+            "Die Daten im Projektordner bleiben erhalten — beim erneuten Öffnen erscheint das Projekt wieder.",
+            "Aus Übersicht entfernen");
         if (!confirmed)
             return;
 
         try
         {
-            File.Delete(entry.Path);
+            // Nur ausblenden, NICHT loeschen: die Projektdatei und alle Daten bleiben auf der Platte.
+            var wasActive = string.Equals(_sp.Settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
+            _sp.Settings.HideProject(entry.Path);
+            _sp.Settings.Save();
 
-            if (string.Equals(_sp.Settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase))
+            if (wasActive)
             {
-                _sp.Settings.LastProjectPath = null;
-                _sp.Settings.Save();
-                // Das aktive Projekt wurde soeben geloescht: Dirty-Flag zuruecksetzen
-                // und zum Start-Bildschirm (Projektliste) navigieren. EnterLauncher()
-                // baut die OverviewPage neu auf; LoadAllProjects() danach waere toter Aufruf.
+                // Das aktive Projekt wurde ausgeblendet: Dirty-Flag zuruecksetzen und zum
+                // Start-Bildschirm navigieren. EnterLauncher() baut die OverviewPage neu auf.
                 _shell.Project.Dirty = false;
                 _shell.EnterLauncher();
                 return;
@@ -252,7 +252,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            _sp.Dialogs.Error($"Löschen fehlgeschlagen: {ex.Message}", "Fehler");
+            _sp.Dialogs.Error($"Entfernen fehlgeschlagen: {ex.Message}", "Fehler");
         }
     }
 
