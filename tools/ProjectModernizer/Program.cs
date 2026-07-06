@@ -1,0 +1,1 @@
+return ProjectModernizerRunner.Run(args);
