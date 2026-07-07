@@ -30,6 +30,20 @@ public static class SanierungCostFieldMapper
     };
 
     /// <summary>
+    /// Die 6 Mengen-Zaehlfelder (abgeleitete Felder OHNE Kosten/Empfohlene). Bei „Sanieren=Ja ohne
+    /// Massnahme" werden nur diese geleert, damit ein handgetippter Kosten-Pauschalbetrag bleibt.
+    /// </summary>
+    public static readonly string[] QuantityFieldNames =
+    {
+        "Renovierung_Inliner_m",
+        "Renovierung_Inliner_Stk",
+        "Anschluesse_verpressen",
+        "Reparatur_Manschette",
+        "Linerendmanschette_LEM",
+        "Reparatur_Kurzliner",
+    };
+
+    /// <summary>
     /// Uebertraegt eine Massnahmen-Empfehlung (Lernlogik/KI) auf den Record.
     /// Nur die Feldwerte; das Pflegen der Auswahl-Optionen bleibt im ViewModel.
     /// </summary>
@@ -111,6 +125,79 @@ public static class SanierungCostFieldMapper
 
         foreach (var field in CostFieldNames)
             record.SetFieldValue(field, "", FieldSource.Manual, userEdited: true);
+    }
+
+    /// <summary>
+    /// Zieht die abgeleiteten Kostenfelder eines Records nach der Sanieren-Regel nach:
+    /// <list type="bullet">
+    /// <item>Sanieren=Ja + Massnahmen → alle 8 Felder aus <paramref name="cost"/> berechnen.</item>
+    /// <item>Sanieren=Ja ohne Massnahme → die 6 Mengenfelder leeren, Kosten/Empfohlene behalten
+    /// (Schutz fuer handgetippten Pauschalbetrag).</item>
+    /// <item>Sanieren=Nein/leer → alle 8 Felder leeren (Haltung wird nicht saniert).</item>
+    /// </list>
+    /// Schreibt nur geaenderte Felder (userEdited:true, wie <see cref="ApplyCosts"/>) — kein UI/Lernen.
+    /// Rueckgabe: true, wenn sich mindestens ein Feld geaendert hat.
+    /// </summary>
+    public static bool SyncRecord(HaltungRecord record, HoldingCost? cost)
+    {
+        if (record is null)
+            return false;
+
+        var toRenovate = string.Equals(
+            (record.GetFieldValue("Sanieren_JaNein") ?? "").Trim(), "Ja",
+            StringComparison.OrdinalIgnoreCase);
+
+        var target = new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (!toRenovate)
+        {
+            foreach (var f in CostFieldNames)
+                target[f] = "";
+        }
+        else
+        {
+            var hasMeasures = cost is not null
+                && cost.Measures.Any(m => m.Lines.Any(l => l.Selected && l.Qty > 0m));
+            if (!hasMeasures)
+            {
+                foreach (var f in QuantityFieldNames)
+                    target[f] = "";
+                // Kosten + Empfohlene_Sanierungsmassnahmen bleiben unangetastet (Pauschal-Schutz).
+            }
+            else
+            {
+                var inlinerMeters = SumMeasureLengths(cost!,
+                    "NADELFILZ", "GFK", "SCHLAUCHLINER_NADELFILZ",
+                    "SCHLAUCHLINER_NADELFILZ_OPENEND", "SCHLAUCHLINER_GFK");
+                var inlinerStk = HasSelectedLiner(cost!) ? 1 : 0;
+                var anschluesse = Math.Max(
+                    MaxMeasureQty(cost!, "ANSCHLUSS_EINBINDEN", "ANSCHLUSS_DICHTEN", "ANSCHLUSS_VERSCHLIESSEN"),
+                    MaxMeasureQty(cost!, "ANSCHLUSS_AUFFRAESEN"));
+                var manschette = SumSelectedQty(cost!, "MANSCHETTE_PER_ST", "MANSCHETTE_EDELSTAHL");
+                var lem = SumSelectedQty(cost!, "LINERENDMANSCHETTE_LEM");
+                var kurzliner = SumSelectedQty(cost!, "KURZLINER_PER_ST", "QUICKLOCK_PER_ST", "KURZLINER_PARTLINER");
+
+                target["Renovierung_Inliner_m"] = MeasuresTextBuilder.FormatDecimal(inlinerMeters);
+                target["Renovierung_Inliner_Stk"] = MeasuresTextBuilder.FormatInt(inlinerStk);
+                target["Anschluesse_verpressen"] = MeasuresTextBuilder.FormatInt(anschluesse);
+                target["Reparatur_Manschette"] = MeasuresTextBuilder.FormatInt(manschette);
+                target["Linerendmanschette_LEM"] = MeasuresTextBuilder.FormatInt(lem);
+                target["Reparatur_Kurzliner"] = MeasuresTextBuilder.FormatInt(kurzliner);
+                target["Kosten"] = ResolveNetTotal(cost!).ToString("0.00", CultureInfo.InvariantCulture);
+                target["Empfohlene_Sanierungsmassnahmen"] = MeasuresTextBuilder.BuildMeasuresText(cost!);
+            }
+        }
+
+        var changed = false;
+        foreach (var kv in target)
+        {
+            if (!string.Equals(record.GetFieldValue(kv.Key), kv.Value, StringComparison.Ordinal))
+            {
+                record.SetFieldValue(kv.Key, kv.Value, FieldSource.Manual, userEdited: true);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /// <summary>
