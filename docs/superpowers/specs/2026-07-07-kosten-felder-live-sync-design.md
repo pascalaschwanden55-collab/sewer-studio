@@ -1,240 +1,174 @@
-# Abgeleitete Kostenfelder immer aktuell — Live-Sync (Design v3, final)
+# Kostenfelder & NPK folgen „Sanieren = Ja" (Design v4, final)
 
-**Datum:** 2026-07-07 · **Branch:** `feature/gis-karte` · **Status:** Design v3, wartet auf User-Freigabe
+**Datum:** 2026-07-07 · **Branch:** `feature/gis-karte` · **Status:** Design v4 final, wartet auf User-Freigabe
 
-> **Historie:** v1 naiv (überschrieb Handeingaben, konnte Daten leeren). v2 gehärtet, aber ein
-> Kritiker-Pass fand **zwei Blocker**: (B1) die `SetFieldValue`-Sperre (`HaltungRecord.cs:52`) blockiert
-> den Sync auf genau den einzufrierenden Feldern, weil `ApplyCosts` App-Werte historisch mit
-> `userEdited:true` stempelt — nicht unterscheidbar von echter Handeingabe; (B2) eine Handeingabe *nach*
-> einem Sync würde wieder überschrieben. **Beide Blocker haben eine Wurzel: die App kann Herkunft
-> (App-berechnet vs. handgetippt) nicht zuverlässig trennen.** v3 führt darum ein echtes Herkunfts-Signal
-> ein. **User-Entscheidung: „Gründlich — echtes Herkunfts-Gedächtnis."**
+> **Historie:** v1 naiv; v2/v3 bauten ein aufwändiges Herkunfts-Signal (DerivedFromStore + Guard-Änderung
+> + Reconciliation), um handgetippte vs. berechnete Werte zu trennen. Die vom User gelieferte **Fachregel
+> macht das überflüssig**: Maßgeblich ist das Feld `Sanieren_JaNein`. Damit wird der Umbau **schlank und
+> additiv, ohne Kern-Eingriff**. v4 verwirft die Herkunfts-Variante.
 
-## Auslöser (echter Fall, nachgezählt)
+## Fachregel (vom User bestätigt) — der Kern
 
-Projekt „Zone 1.15": Haltungen-Vorlage-Export **72** Anschlüsse, NPK **51/52**, aktueller Live-Stand
-**56**. Zusätzlich eine **echte Geister-Haltung** `ByHolding["80622-80874"]` ohne zugehörige Haltung —
-kompletter GFK-Liner (94 m), 4×Einbinden, 4×Auffräsen, LEM 2, **Total 29'132.15 CHF** → NPK ~29'000 CHF
-zu teuer + 4 Anschlüsse zu viel. Verifiziert: Store-Schlüssel == Feld `Haltungsname` (0 Abweichungen,
-keine Duplikate, genau 1 Geist).
+Das Record-Feld **`Sanieren_JaNein`** (Combo „Sanieren Ja/Nein", `FieldCatalog.cs:118`) ist der
+**Hauptschalter** für alles Kosten-Relevante:
 
-## User-Entscheidungen (verbindlich)
+- **`Sanieren = Ja`** → Haltung wird saniert → zählt. Abgeleitete Kostenfelder = aus den Massnahmen.
+- **`Sanieren = Nein` / leer** → wird nicht saniert → abgeleitete Kostenfelder **leer**, zählt nirgends
+  (weder Haltungen-Export noch NPK).
+- **Umstellen Ja→Nein** → die berechneten Kostenfelder der Haltung werden **sofort geleert**.
 
-1. **Handeingabe gewinnt immer** — in JEDEM abgeleiteten Feld, auch bei einer Haltung MIT Massnahmen.
-2. **Geister sicher aufräumen mit Bremse** — auch der 29k-Geist raus, aber mit Guards + Rückfrage bei
-   Massenlöschung.
-3. **Vorlage-Spalten ergänzen** — still weggelassene, befüllte Felder in den Export; `Renovierung Inliner m`
-   reparieren.
-4. **Gründlicher Ansatz** — echtes Herkunfts-Signal statt Heuristik.
+## Auslöser (echter Fall, nachgezählt: Zone 1.15)
 
-## Prinzip
+| Sanieren | Haltungen | Σ Anschlüsse | Kosten-Netto |
+|---|---|---|---|
+| **Ja** | 52 | **52** ✅ | **582'573 CHF** ✅ |
+| Nein | 38 | 19 | 0 (7 leere Store-Einträge) |
+| (leer) | 2 | 1 | 0 |
 
-Der **Kostenspeicher (`costs/costs.json`) ist die Wahrheit** für massnahmen-abgeleitete Werte; die
-Record-Kostenfelder sind ein **Abzug** davon. **Ausnahme: handgetippte Werte gewinnen immer.** Damit die
-App das sicher trennen kann, bekommt jedes Feld ein **Herkunfts-Signal**.
+Haltungen-Export zeigte **72** (= 52 + 20 auf Nein/leer, viele aus PDF-Import `FieldSource.Pdf=7`), NPK war
+um **29'132 CHF** zu hoch wegen einer Geister-Haltung (`80622-80874`: gelöschte Haltung, Store-Eintrag blieb
+liegen). Korrekt nach Regel: **52 Anschlüsse, 582'573 CHF.**
+
+## Ursachen (verifiziert)
+
+1. **Haltungen-Export ignoriert die Regel.** `ExcelTemplateExportService.ExportToTemplate` schreibt die
+   Record-Kostenfelder **1:1**, egal ob `Sanieren=Ja` — inkl. veralteter/importierter Werte auf
+   Nein-Haltungen → 72 statt 52.
+2. **NPK ignoriert die Regel.** `ProjectPositionAggregator` aggregiert **jeden** Kostenspeicher-Eintrag,
+   ohne `Sanieren`-Filter und ohne Prüfung, ob die Haltung noch existiert → Geister + Nein zählen mit.
+3. **Abgeleitete Record-Felder werden nicht nachgezogen**, wenn Massnahmen/Sanieren sich ändern (nur an 3
+   Stempel-Stellen; nicht bei „Kosten neu berechnen", nicht bei Ja→Nein, nicht bei Haltungslöschung).
 
 ## Nicht-Ziele
 
-Kein globaler Store-Singleton · keine Änderung an Preis-/Rundungs-Engines · keine Änderung am
-NPK-Aggregator (nur geisterfreier Input) · Schächte (`schacht_costs.json`) unverändert.
+Kein Herkunfts-Signal / kein `SetFieldValue`-Guard-Umbau / keine Reconciliation (durch die Sanieren-Regel
+unnötig) · kein globaler Store-Singleton · Preis-/Rundungs-Engines unverändert · Schächte unverändert.
 
 ---
 
 ## Architektur
 
-### 1. Schlüssel — genau eine Ableitung
+### 1. Schlüssel + Schalter
 
 ```csharp
 static string HoldingKey.FromRecord(HaltungRecord r) => (r.GetFieldValue("Haltungsname") ?? "").Trim();
+static bool   IsToRenovate(HaltungRecord r) =>
+    string.Equals((r.GetFieldValue("Sanieren_JaNein") ?? "").Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
 ```
 
-Vergleich immer `OrdinalIgnoreCase`. Nie ein Schacht-Paar bauen, nie `NormalizeHoldingKey`. Geister-Set
-aus der **vollständigen** `project.Data`.
+Schlüsselvergleich `OrdinalIgnoreCase`, nie Schacht-Paar bauen.
 
-### 2. Herkunfts-Signal (Kern-Änderung, additiv aber eng begrenzt)
+### 2. Reine Rechenlogik — additive Mapper-Methode
 
-Neues Feld `FieldMetadata.DerivedFromStore` (bool, Default `false`). Jeder Schreibweg klassifiziert einen
-Feldwert eindeutig:
-
-| Schreibweg | UserEdited | DerivedFromStore | Beispiel |
-|---|---|---|---|
-| Handeingabe (Grid/Dialog) | `true` | `false` | Nutzer tippt Kosten-Pauschale |
-| App-berechnet (Sync, ApplyCosts, Recompute) | `false` | `true` | Anschlusszahl aus Massnahmen |
-| KI/Import | `false` | `false` | PDF-Import, KI-Empfehlung |
-
-**Änderungen am Kern (`HaltungRecord.SetFieldValue`):**
-- Neuer optionaler Parameter `derivedFromStore = false`; jeder Write setzt `meta.DerivedFromStore`
-  entsprechend (eine Handeingabe setzt es damit automatisch auf `false` zurück — löst B2).
-- Bestehende Aufrufer bleiben quellcode-kompatibel (Default-Parameter). Alle **Handeingabe-Pfade**
-  (`DataPage.xaml.cs:761,769,790`, `DataPageComboBoxCommitController.cs:39`) rufen weiterhin
-  `userEdited:true` → `derivedFromStore` bleibt `false` (korrekt).
-- **App-berechnete Pfade** (`ApplyCosts` **und** der neue Sync) stempeln künftig
-  `userEdited:false, derivedFromStore:true`. Das ist die nötige, bewusste Änderung an `ApplyCosts`
-  (Zustimmung „gründlich"): App-Werte sind eben *nicht* Handeingaben.
-
-**Überschreib-Regel (im Sync, nicht in der Guard):** Ein abgeleitetes Feld wird nur überschrieben/geleert,
-wenn es **leer** ist ODER `DerivedFromStore == true`. Damit sind **beide** geschützt: echte Handeingaben
-(`UserEdited=true`) **und** Import/KI-Werte (`DerivedFromStore=false`) — löst B2 vollständig und schützt
-importierte Zählwerte.
-
-Die `SetFieldValue`-Guard (`:52`) bleibt semantisch gleich (schützt `UserEdited`-Felder vor
-niedrigprioren Writes); da App-Werte künftig `userEdited:false` tragen, blockiert sie den Sync **nicht**
-mehr (löst B1 für neue Daten).
-
-### 3. Einmalige Selbstheilung bestehender Projekte (Reconciliation)
-
-Bestandsdaten sind mehrdeutig: `ApplyCosts` hat App-Werte als `userEdited:true` gestempelt — ununterscheidbar
-von Handeingaben, und ein stale Wert (72) weicht vom Store (56) ab, eine „gleich→abgeleitet"-Heuristik
-würde ihn fälschlich als Handeingabe schützen. Darum:
-
-- **Einmalig beim ersten Öffnen** nach dem Update (idempotent, über ein `Metadata`-Flag
-  `costFieldsProvenanceReconciled` gesichert):
-  Für die 8 abgeleiteten Kostenfelder → `DerivedFromStore=true, UserEdited=false` setzen.
-- Fachliche Begründung: Diese spezifischen Felder wurden in der Praxis **nur** von `ApplyCosts`
-  (App-berechnet) geschrieben, nie über einen verlässlichen Hand-Pfad (der Kosten-Hand-Pfad war sogar
-  kaputt, siehe §7). Ab jetzt trägt jede echte Handeingabe korrekt `UserEdited=true`, ist also geschützt.
-- Effekt: Zone 1.15 korrigiert sich beim ersten Lauf (72 → aktueller Stand), ohne dass je eine *künftige*
-  Handeingabe gefährdet ist.
-
-### 4. Reine Rechenlogik — additive Mapper-Methoden
-
-`SanierungCostFieldMapper` bekommt (bestehende `ApplyCosts`/`ClearCosts` bleiben als Fassade, intern auf
-den neuen Stempel umgestellt):
+`SanierungCostFieldMapper` (bestehende `ApplyCosts`/`ClearCosts` bleiben; neu:)
 
 ```csharp
-// Alle 8 Felder aus cost; schreibt/leert ein Feld NUR wenn (leer ODER meta.DerivedFromStore),
-// mit userEdited:false, derivedFromStore:true. Kosten/Empfohlene nur bei Store-Eintrag MIT Massnahmen.
-int SyncDerivedFields(HaltungRecord record, HoldingCost? cost);
+// Zieht die 8 abgeleiteten Felder eines Records nach der Sanieren-Regel nach.
+// Rückgabe: true, wenn sich etwas geändert hat.
+bool SyncRecord(HaltungRecord record, HoldingCost? cost);
 ```
 
-Mengen über die vorhandenen Helfer (`MaxMeasureQty`, `SumSelectedQty`, `SumMeasureLengths`,
-`HasSelectedLiner`). „Store-Eintrag leer" == keine `MeasureCost`-Zeile mit `Selected && Qty>0` (identisch
-zu `ProjectPositionAggregator.cs:56`). Bei `cost==null` oder leer → die 6 Mengenfelder leeren (nur wenn
-`DerivedFromStore`), Kosten/Empfohlene unangetastet (Pauschal-Schutz).
+Logik:
+- **`Sanieren=Ja` und Store-Eintrag mit Massnahmen** → 8 Felder aus `cost` berechnen (bestehende Helfer
+  `MaxMeasureQty`/`SumSelectedQty`/`SumMeasureLengths`/`HasSelectedLiner`), schreiben mit
+  `userEdited:true` (wie `ApplyCosts` heute → die `SetFieldValue`-Guard `:52` blockiert nie, kein
+  Reconciliation nötig).
+- **`Sanieren=Ja` ohne Store-Eintrag (oder Eintrag ohne `Selected && Qty>0`)** → die 6 Mengenfelder leeren;
+  `Kosten` + `Empfohlene_Sanierungsmassnahmen` **behalten** (schützt einen von Hand getippten
+  Pauschalbetrag bei „Ja ohne Matrix-Massnahme").
+- **`Sanieren=Nein` / leer** → **alle 8** Kostenfelder leeren (Haltung wird nicht saniert).
+- Jedes Feld nur schreiben, wenn sich der Wert ändert (kein unnötiges Dirty).
 
-### 5. Dienst `IDerivedCostFieldSynchronizer` (rein, testbar)
+### 3. Dienst `IDerivedCostFieldSynchronizer` (rein, testbar)
 
 ```csharp
-CostSyncResult Sync(Project project, ProjectCostStore store, ISet<string> removedHoldingKeys);
-readonly record struct CostSyncResult(int RecordsUpdated, int GhostsRemoved, bool GhostSweepDeferred);
+int Sync(Project project, ProjectCostStore store);   // synct alle Records nach §2, gibt Anzahl geänderter zurück
 ```
 
-1. **Record-Sync** über alle `project.Data`: pro Record `SyncDerivedFields(record, store[key])`. Ein
-   Record, dessen Store-Eintrag komplett fehlt, wird über die `DerivedFromStore`-Regel geleert (nur die
-   app-abgeleiteten Mengenfelder) — **unabhängig** von `removedHoldingKeys` (löst K3).
-2. **Geister** (§6).
+### 4. NPK-Aggregation filtert auf `Sanieren=Ja`-Records
 
-### 6. Geister-Sweep mit Bremse
+Der NPK-Aufrufer (`BuilderPageViewModel.PrepareLvPositions`) übergibt dem
+`ProjectPositionAggregator` **nur** die `HoldingCost`-Einträge, deren Haltungsname zu einem Record mit
+`Sanieren=Ja` gehört. Das schließt **automatisch** aus: Nein-Haltungen **und Geister** (kein Record → nie
+„Ja"). `ProjectPositionAggregator` selbst bleibt unverändert (nur gefilterter Input).
 
-Kandidaten = `store.ByHolding`-Keys ohne passenden `HoldingKey` in `project.Data` (keine Roh-/Trim-/
-case-Variante vorhanden). Sweep wird **komplett übersprungen** (nichts gelöscht), wenn:
+### 5. Zentraler Choke-Point — `CostPersistenceCoordinator`
 
-- `project.Data` leer ODER `projectPath` ungültig,
-- `costs.json` **fehlte** oder Ladefehler (§8),
-- ein Import/Ladevorgang aktiv ist (bestehendes Flag),
-- Geister-Anteil über Schwelle (> 25 % oder > 20 Einträge) → `GhostSweepDeferred=true` + Rückfrage-Toast
-  „N verwaiste Kosteneinträge — entfernen?" (bewusste Bestätigung, keine stille Massenlöschung).
-
-### 7. Zentraler Choke-Point — `CostPersistenceCoordinator`
-
-Alle Store-Schreiber rufen ihn, damit Records + Store **im Ruhezustand konsistent** sind:
+Alle Store-Schreiber rufen ihn, damit Records + Store im Ruhezustand konsistent sind:
 
 ```csharp
-CostSyncResult PersistAndSync(Project project, string projectPath, ProjectCostStore mergedStore, ISet<string> removedHoldingKeys);
+int PersistAndSync(Project project, string projectPath, ProjectCostStore mergedStore);
 ```
 
-**Vertrag (explizit):** Der Aufrufer übergibt einen **frisch geladenen, selektiv gemergten** Store (das
-bestehende LWW-Muster bleibt Aufrufer-Pflicht; Matrix `:1195-1210`, CostCalc `:231-240`). Der Koordinator
-speichert genau diesen Store atomar und synchronisiert dann die Records. Der Koordinator lädt **nicht**
-selbst und bekommt nie den veralteten Seiten-Snapshot `_costStore` (`BuilderPageViewModel.cs:876`).
+**Vertrag:** Aufrufer übergibt den frisch geladenen, selektiv gemergten Store (bestehendes
+Load-fresh-merge-Muster bleibt Aufrufer-Pflicht). Der Koordinator speichert atomar und ruft dann
+`synchronizer.Sync`. Der bisherige CostCalc-`_applyTotal`→`ApplyCostsToRecord`-Pfad
+(`CostCalculatorViewModel.cs:249`) entfällt für die Feld-Stempelung (macht der Koordinator einheitlich);
+optionales **Lernen** bleibt als getrennter Aufruf erhalten.
 
-- **CostCalc-Save:** der bisherige `_applyTotal`-Callback (`CostCalculatorViewModel.cs:249` →
-  `ApplyCostsToRecord`, `userEdited:true` + Lernen/Dirty) wird für die **Feld-Stempelung** durch den
-  Koordinator-Sync ersetzt (einheitlich `userEdited:false/derived`). Das **Lernen** (falls gewünscht)
-  bleibt als getrennter, expliziter Aufruf erhalten — es wird nicht mehr an die Feld-Stempelung gekoppelt.
+### 6. Guards (kein stiller Datenverlust)
 
-### 8. Andockstellen (v3)
+`ProjectCostStoreRepository.Load` bekommt ein Overload `Load(path, out loadError, out bool storeFileExisted)`
+(bestehende 1-/2-Arg-Overloads bleiben als Wrapper). Der Sync/Koordinator **überspringt** jede Änderung
+(kein Leeren, kein Save), wenn `!storeFileExisted` ODER `loadError != null` ODER `project.Data` leer ist —
+sonst würde eine fehlende/gesperrte `costs.json` fälschlich alle Ja-Haltungen leeren.
+
+### 7. Andockstellen
 
 | # | Stelle | Aktion |
 |---|---|---|
 | 1 | Matrix-Save (`SanierungsMatrixPageViewModel.cs:1226`) | fresh-merge → `Coordinator.PersistAndSync` |
 | 2 | CostCalc-Save (`CostCalculatorViewModel.cs:242`) | dito; `_applyTotal`-Feldstempel entfällt |
-| 3 | „Kosten neu berechnen" (`BuilderPageViewModel.cs:921/937`) | über Koordinator → Records ziehen jetzt mit |
-| 4 | Haltungslöschung — **ein** Controller-Pfad | nach `RemoveRecord`: `removedHoldingKeys += Key`; Koordinator |
-| 5 | Umbenennung (`DataPage.xaml.cs:600`, nach `HoldingRenameService`) | VOR Sync `ByHolding[alt]→[neu]` umschlüsseln, dann Koordinator |
-| 6 | Vor Haltungen-Export + NPK-Export | **frischer** 2-Arg-`Load` + `loadError`+`storeFileExisted`-Check unmittelbar vor Aggregation; Sync; bei Fehler abbrechen (nicht auf `_costStore` `:876`) |
-| 7 | **Dirty-Gate vor Export** | offene Matrix/CostCalc mit ungespeicherten Änderungen (`_hasUnsavedChanges`, `:1235`) → „vor Export speichern?" erzwingen (löst W2: sonst zeigt der Export den alten Plattenstand) |
+| 3 | „Kosten neu berechnen" (`BuilderPageViewModel.cs:921`) | über Koordinator → Records ziehen mit |
+| 4 | **Grid-Edit von `Sanieren_JaNein`** (Commit `DataPage.xaml.cs`) | Ja→Nein: Kostenfelder der Zeile **sofort** leeren (Sync auf dieser Haltung) |
+| 5 | Haltungslöschung (**ein** Controller-Pfad) | nach `RemoveRecord`: Store-Eintrag der Haltung gezielt entfernen (`ByHolding.Remove`), dann Koordinator |
+| 6 | Umbenennung (`DataPage.xaml.cs:600`, nach `HoldingRenameService`) | `ByHolding[alt]→[neu]` umschlüsseln, dann Koordinator |
+| 7 | Vor Haltungen-Export + NPK-Export | frischer 2-Arg-`Load` (+ `storeFileExisted`), Sync, bei Fehler abbrechen; NPK filtert §4 |
+| 8 | **Dirty-Gate vor Export** | offene Matrix/CostCalc mit ungespeicherten Änderungen (`_hasUnsavedChanges` `:1235`) → „vor Export speichern?" |
 
-Löschung über **einen** Controller-Pfad kanalisieren (heute zwei: `DataPage.xaml.cs:414` +
-`DataPageRecordCollectionController.cs:63`).
+Geister-Store-Einträge werden gezielt bei Löschung/Rename entfernt (#5/#6); bereits verwaiste Einträge sind
+für die Ausgabe **harmlos** (NPK filtert sie über §4 aus), können aber optional beim Speichern entfernt
+werden, wenn `project.Data` vollständig geladen ist.
 
-### 9. Repository-Härtung (additiv, Overloads)
-
-Neues Overload — **bestehende 1-/2-Arg-`Load` bleiben** als dünne Wrapper (sonst brechen ~10 Aufrufer,
-u. a. `SanierungsMatrixPageViewModel:673,1195`, `CostCalculatorViewModel:110,231`, `SchachtLvCostLoader:23`):
-
-```csharp
-ProjectCostStore Load(string? path, out string? loadError, out bool storeFileExisted);
-```
-
-Bei `!storeFileExisted` ODER `loadError != null`: **kein** Clearing, **kein** Geister-Delete, **kein** Save
-(heute liefert `:43-44` leeren Store mit `loadError=null` → stiller Datenverlust bei fehlender/gesperrter
-Datei).
-
-### 10. Export-Fixes (`ExcelTemplateExportService` / Vorlage)
+### 8. Export-Fixes (`ExcelTemplateExportService` / Vorlage)
 
 - **`Renovierung Inliner m`** wird nie exportiert (`:88-89`, Header „m" matcht nichts): Header in
   `Export_Vorlage/Haltungen.xlsx` auf `Renovierung Inliner m` setzen.
 - **Vorlage-Spalten ergänzen** (verifizierte Keys): `Linerendmanschette_LEM` (`FieldCatalog.cs:38,129`),
-  `Ausgefuehrt_durch` (`:31,121`), `Referenzpruefung` (`:26,117`), VSA-Zustandsnoten
-  `VSA_Zustandsnote_D/S/B` (`:24,43,44`).
-- **NR-Autonummer** (`:86-108`): `NR` in der `ColumnOrder`-Schleife überspringen (Fallback-Laufnummer nicht
-  mit Leerwert überschreiben).
+  `Ausgefuehrt_durch` (`:31,121`), `Referenzpruefung` (`:26,117`), `VSA_Zustandsnote_D/S/B` (`:24,43,44`).
+- **NR-Autonummer** (`:86-108`): `NR` in der `ColumnOrder`-Schleife überspringen.
 - **Stiller Feld-Drop** befüllter, ungemappter Felder im `Result` ausweisen (Transparenz).
-- **Kosten-Hand-Pfad reparieren** (Voraussetzung für den Kosten-Schutz): der `UserEdited`-Resolver findet
-  beim `DataGridTemplateColumn` „Kosten" die getippte `TextBox` im Panel (heute `null` → Hand-Kosten wird
-  fälschlich `userEdited:false`). Ohne diesen Fix ist ein handgetippter Kosten-Wert nicht als Handeingabe
-  erkennbar.
 
 ---
 
 ## Testing (Pflicht, fokussiert)
 
-Reine Logik (`DerivedCostFieldSynchronizer`, `SanierungCostFieldMapper`, `HaltungRecord`-Provenance):
-1. Anschlüsse aktuell: Store N → Feld N; Store M, erneut → Feld M (nicht eingefroren).
-2. Massnahme entfernt (Store-Eintrag weg) → Mengenfeld geleert, **unabhängig** von `removedHoldingKeys`.
-3. **Handeingabe geschützt:** Feld `UserEdited=true, DerivedFromStore=false` → Sync lässt es unverändert,
-   auch bei abweichendem Store (auch für Kosten bei einer Haltung MIT Massnahmen).
-4. **Handeingabe nach Sync:** Sync stempelt (derived) → Nutzer tippt (`userEdited:true, derived:false`) →
-   nächster Sync überschreibt NICHT (B2).
-5. **Import-Wert geschützt:** `DerivedFromStore=false, UserEdited=false`, nicht leer → Sync überschreibt
-   NICHT.
-6. **Reconciliation:** Bestandsrecord mit `Anschluesse_verpressen=72 (userEdited:true)` + Store=56 →
-   nach einmaliger Reconciliation `derived:true` → Sync setzt 56; Flag verhindert zweiten Lauf.
-7. Geister `80622-80874` entfernt (`GhostsRemoved=1`); Namensgleichheit → NIE Geist.
-8. **Sweep-Bremse:** Geister-Anteil über Schwelle → nichts gelöscht, `GhostSweepDeferred=true`.
-9. **Fehlende `costs.json`** → keine Feldänderung, kein Save, kein Delete.
-10. Rename A→B mit Store-Eintrag unter A → Eintrag unter B, kein Geist, keine Leerung.
-11. `SetFieldValue`: App-Write (`derived:true`) überschreibt einen `userEdited:true`-Altwert nicht per
-    Guard, aber nach Reconciliation schon (Guard-/Provenance-Zusammenspiel).
-12. Export-Coverage: jedes `ColumnOrder`-Feld bildet auf eine Zielspalte ab oder ist bewusst gelistet;
-    `Renovierung Inliner m` landet in der Spalte.
+Reine Logik (`DerivedCostFieldSynchronizer`, `SanierungCostFieldMapper.SyncRecord`):
+1. Sanieren=Ja + Anschluss-Massnahme N → `Anschluesse_verpressen=N`; Massnahme auf M ändern, erneut → M.
+2. Sanieren=Nein → alle 8 Kostenfelder leer, auch wenn Store-Eintrag vorhanden.
+3. Ja→Nein-Umstellung → Felder der Haltung sofort geleert.
+4. **Pauschal-Schutz:** Sanieren=Ja, keine Massnahme, `Kosten="1200.00"` von Hand → Kosten bleibt,
+   Mengenfelder leer.
+5. **PDF-Import-Wert auf Nein-Haltung** (`Anschluesse_verpressen=5, Source=Pdf`, Sanieren=Nein) → geleert.
+6. **NPK-Filter:** Store mit Ja-, Nein- und Geister-Einträgen → Aggregat enthält nur Ja; Geist
+   (`80622-80874`) fehlt; Summe = 52 Anschlüsse / 582'573 CHF.
+7. **Fehlende `costs.json`** → keine Feldänderung, kein Save.
+8. Rename A→B mit Store-Eintrag unter A → Eintrag unter B, Felder korrekt.
+9. No-op bei bereits synchronem Stand (kein Dirty).
+10. Export-Coverage: jedes `ColumnOrder`-Feld bildet auf eine Zielspalte ab; `Renovierung Inliner m` landet
+    in der Spalte.
 
-Bestehende Tests grün: `SanierungCostFieldMapperTests`, `ProjectPositionAggregatorTests`,
-`ExcelExportTests`, Matrix-/CostCalc-Tests, `HaltungRecord`-Tests.
+Bestehende Tests grün: `SanierungCostFieldMapperTests`, `ProjectPositionAggregatorTests`, `ExcelExportTests`.
 
 ## Vorher/Nachher (Zone 1.15)
 
-Erstes Öffnen: Reconciliation markiert die Kostenfelder als abgeleitet. Nächster Persist/Export:
-Haltungen-Vorlage **und** NPK zeigen denselben aktuellen Stand; Geist `80622-80874` entfernt →
-**–29'132 CHF, –4 Anschlüsse**; handgetippte Pauschalen/Texte bleiben.
+Nach Persist/Export: Haltungen-Vorlage zeigt **52** Anschlüsse (Nein/leer-Haltungen leer), NPK zeigt
+**582'573 CHF** (Geist + Nein raus), handgetippte Pauschalen auf Ja-Haltungen bleiben. Keine Kern-Änderung,
+keine Herkunfts-Logik.
 
-## Scope & Compliance (CLAUDE.md)
+## Compliance (CLAUDE.md)
 
 Eigener Dienst + Interface ✅ · Application-Logik testbar ✅ · im ServiceProvider registriert ✅ ·
-fokussierte Tests ✅ · Engines/NPK-Aggregator unverändert ✅ · VRAM/QualityGate unberührt ✅ ·
-Kommentare deutsch ✅.
-**Bewusste, mit User abgestimmte Kern-Eingriffe** (kein stilles Refactoring): (a) `FieldMetadata`
-+ `SetFieldValue` um `DerivedFromStore` erweitern; (b) `ApplyCosts` stempelt App-Werte als abgeleitet;
-(c) einmalige Reconciliation; (d) `CostPersistenceCoordinator` bündelt die Store-Schreibpfade. Diese vier
-sind die Voraussetzung für „1:1 + zieht überall nach ohne Datenverlust" und ohne sie nicht erfüllbar.
+fokussierte Tests ✅ · Engines/NPK-Aggregator unverändert (nur gefilterter Input) ✅ · additive
+Repository-Overloads, kein Guard-/Metadaten-Umbau ✅ · VRAM/QualityGate unberührt ✅ · Kommentare deutsch ✅ ·
+`CostPersistenceCoordinator` bündelt bestehende Store-Schreibpfade (mit User abgestimmt) ✅.
