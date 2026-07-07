@@ -28,9 +28,15 @@ Das Record-Feld **`Sanieren_JaNein`** (Combo „Sanieren Ja/Nein", `FieldCatalog
 | Nein | 38 | 19 | 0 (7 leere Store-Einträge) |
 | (leer) | 2 | 1 | 0 |
 
-Haltungen-Export zeigte **72** (= 52 + 20 auf Nein/leer, viele aus PDF-Import `FieldSource.Pdf=7`), NPK war
-um **29'132 CHF** zu hoch wegen einer Geister-Haltung (`80622-80874`: gelöschte Haltung, Store-Eintrag blieb
-liegen). Korrekt nach Regel: **52 Anschlüsse, 582'573 CHF.**
+Haltungen-Export zeigte **72** (= 52 + 20 auf Nein/leer, viele aus PDF-Import `FieldSource.Pdf=7`).
+Korrekt nach Regel: **52 Anschlüsse.**
+
+**Korrektur (beim Umsetzungs-Planen verifiziert):** Das **NPK ist bereits korrekt** (~582'573 CHF, 52
+Anschlüsse). Der NPK-Weg (`BuilderPageViewModel.PrepareLvPositions` → `BuilderPageSummaryEntryBuilder.Build`)
+baut aus den **Tabellenzeilen** (Records), nicht direkt aus dem Kostenspeicher. Die Geister-Haltung
+`80622-80874` hat keine Zeile → war im NPK **nie enthalten**; sie ist nur ein harmloser Rest in `costs.json`.
+Die 7 Nein-Haltungen mit Store-Eintrag haben 0 CHF/keine Massnahmen → tragen 0 bei. **Der einzige echte,
+verifizierte Bug ist der Haltungen-Vorlage-Export (72 statt 52).**
 
 ## Ursachen (verifiziert)
 
@@ -168,9 +174,10 @@ Bestehende Tests grün: `SanierungCostFieldMapperTests`, `ProjectPositionAggrega
 
 ## Vorher/Nachher (Zone 1.15)
 
-Nach Persist/Export: Haltungen-Vorlage zeigt **52** Anschlüsse (Nein/leer-Haltungen leer), NPK zeigt
-**582'573 CHF** (Geist + Nein raus), handgetippte Pauschalen auf Ja-Haltungen bleiben. Keine Kern-Änderung,
-keine Herkunfts-Logik.
+Nach Persist/Export: Haltungen-Vorlage zeigt **52** Anschlüsse (Nein/leer-Haltungen leer). NPK bleibt bei
+**582'573 CHF / 52** (war schon korrekt; der NPK-Filter §4 ist Hygiene für den allgemeinen Fall
+„Nein-Haltung mit echten Massnahmen"). Handgetippte Pauschalen auf Ja-Haltungen bleiben. Keine
+Kern-Änderung, keine Herkunfts-Logik.
 
 ## Compliance (CLAUDE.md)
 
