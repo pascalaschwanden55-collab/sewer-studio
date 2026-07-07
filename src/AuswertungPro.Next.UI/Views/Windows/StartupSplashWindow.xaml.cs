@@ -16,11 +16,11 @@ public partial class StartupSplashWindow : Window
 {
     private const int NodeCount = 112;
     private const int ConnectionsPerNode = 3;
-    private const int MaxActivePulses = 24;
-    private const int MaxActiveFlares = 3;
-    private const int MaxCascadeGeneration = 3;
-    private const double PulseIntervalSeconds = 0.18;
-    private const double FlareIntervalSeconds = 0.78;
+    private const int MaxActivePulses = 42;
+    private const int MaxActiveFlares = 5;
+    private const int MaxCascadeGeneration = 4;
+    private const double PulseIntervalSeconds = 0.09;
+    private const double FlareIntervalSeconds = 0.5;
     private const double WaveIntervalSeconds = 2.7;
     private const double WaveDurationSeconds = 1.5;
     private const double WaveBandWidth = 48;
@@ -83,18 +83,27 @@ public partial class StartupSplashWindow : Window
     private bool _readySignaled;
     private Task? _finishTask;
 
-    private static readonly Color AccentDeep = Color.FromRgb(0x25, 0x63, 0xEB);
-    private static readonly Color AccentBlue = Color.FromRgb(0x3B, 0x82, 0xF6);
-    private static readonly Color AccentCyan = Color.FromRgb(0x06, 0xB6, 0xD4);
-    private static readonly Color AccentTeal = Color.FromRgb(0x14, 0xB8, 0xA6);
-    private static readonly Color AccentViolet = Color.FromRgb(0x8B, 0x5C, 0xF6);
-    private static readonly Color NodeCore = Color.FromRgb(0xF5, 0xFA, 0xFF);
-    private static readonly Color LineAccent = Color.FromRgb(0x60, 0xA5, 0xFA);
-    private static readonly Color ReadyAccent = Color.FromRgb(0x14, 0xB8, 0xA6);
+    // Basisnetz (Knoten, Linien, Ringe) bleibt bewusst gedaempft/dunkel als Slate,
+    // damit die farbigen und goldenen Impulse davor klar hervortreten.
+    private static readonly Color AccentDeep = Color.FromRgb(0x33, 0x3B, 0x4B);
+    private static readonly Color AccentBlue = Color.FromRgb(0x48, 0x57, 0x70);
+    private static readonly Color AccentCyan = Color.FromRgb(0x5C, 0x77, 0x88);
+    private static readonly Color NodeCore = Color.FromRgb(0xE6, 0xEB, 0xF0);
+    private static readonly Color LineAccent = Color.FromRgb(0x74, 0x82, 0x96);
+    private static readonly Color ReadyAccent = Color.FromRgb(0x86, 0xCB, 0x92);
 
+    // Lebendige Impuls-Palette: kraeftige Farben mit Gold als wiederkehrendem Blickfang.
+    private static readonly Color PulseGold = Color.FromRgb(0xFF, 0xC6, 0x4B);
+    private static readonly Color PulseAmber = Color.FromRgb(0xFF, 0x9D, 0x3A);
+    private static readonly Color PulseCyan = Color.FromRgb(0x3F, 0xC6, 0xF0);
+    private static readonly Color PulseBlue = Color.FromRgb(0x5B, 0x8B, 0xFF);
+    private static readonly Color PulseTeal = Color.FromRgb(0x33, 0xD6, 0xB8);
+    private static readonly Color PulseViolet = Color.FromRgb(0xA9, 0x84, 0xFF);
+
+    // Gold taucht mehrfach auf, damit goldene Impulse das Bild praegen, es aber bunt bleibt.
     private static readonly Color[] PulsePalette =
     {
-        AccentBlue, AccentCyan, AccentTeal, AccentViolet, AccentDeep
+        PulseGold, PulseAmber, PulseCyan, PulseGold, PulseBlue, PulseTeal, PulseGold, PulseViolet
     };
 
     private sealed class NeuralNode
@@ -311,8 +320,8 @@ public partial class StartupSplashWindow : Window
                 RadiusY = 0.5,
                 GradientStops =
                 {
-                    new GradientStop(Color.FromArgb(72, AccentBlue.R, AccentBlue.G, AccentBlue.B), 0.0),
-                    new GradientStop(Color.FromArgb(28, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.45),
+                    new GradientStop(Color.FromArgb(44, AccentBlue.R, AccentBlue.G, AccentBlue.B), 0.0),
+                    new GradientStop(Color.FromArgb(16, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.45),
                     new GradientStop(Color.FromArgb(0, AccentDeep.R, AccentDeep.G, AccentDeep.B), 1.0)
                 }
             },
@@ -369,10 +378,10 @@ public partial class StartupSplashWindow : Window
             Fill = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
             Effect = new DropShadowEffect
             {
-                BlurRadius = 10,
+                BlurRadius = 9,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.8
+                Opacity = 0.45
             },
             IsHitTestVisible = false
         };
@@ -642,7 +651,8 @@ public partial class StartupSplashWindow : Window
 
             var next = _connections[connIdx];
             var reverse = next.B == nodeIndex;
-            var color = Blend(pulse.Color, AccentCyan, 0.35);
+            // Kaskaden behalten ueberwiegend ihre Farbe (nur leicht Richtung Cyan), damit Gold golden bleibt.
+            var color = Blend(pulse.Color, AccentCyan, 0.18);
             FirePulse(connIdx, color, reverse, pulse.Generation + 1);
         }
     }
@@ -881,13 +891,13 @@ public partial class StartupSplashWindow : Window
             Width = 6,
             Height = 6,
             Opacity = 0.95,
-            Fill = new SolidColorBrush(Color.FromArgb(245, color.R, color.G, color.B)),
+            Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
             Effect = new DropShadowEffect
             {
                 BlurRadius = 14,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.85
+                Opacity = 0.75
             },
             IsHitTestVisible = false
         };
@@ -914,10 +924,10 @@ public partial class StartupSplashWindow : Window
             Opacity = 0.85,
             Effect = new DropShadowEffect
             {
-                BlurRadius = 16,
+                BlurRadius = 14,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.7
+                Opacity = 0.5
             },
             IsHitTestVisible = false
         };

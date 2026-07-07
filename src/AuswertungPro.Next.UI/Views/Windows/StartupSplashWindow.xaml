@@ -12,22 +12,22 @@
         Topmost="True"
         Focusable="True"
         Opacity="0">
-    <Grid Background="{DynamicResource BgLightBrush}">
-        <!-- Full-screen background with subtle vignette. -->
+    <Grid Background="#05060A">
+        <!-- Dunkler Vollbild-Hintergrund: laesst die farbigen und goldenen Impulse hervortreten. -->
         <Border>
             <Border.Background>
-                <RadialGradientBrush Center="0.5,0.5" RadiusX="0.7" RadiusY="0.7">
-                    <GradientStop Color="{DynamicResource ColorCard}" Offset="0"/>
-                    <GradientStop Color="{DynamicResource ColorBgLight}" Offset="1"/>
+                <RadialGradientBrush Center="0.5,0.5" RadiusX="0.75" RadiusY="0.75">
+                    <GradientStop Color="#141821" Offset="0"/>
+                    <GradientStop Color="#05060A" Offset="1"/>
                 </RadialGradientBrush>
             </Border.Background>
         </Border>
 
         <Grid Width="1000" Height="560" HorizontalAlignment="Center" VerticalAlignment="Center">
 
-            <Border CornerRadius="18" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border CornerRadius="18" Background="#0B0E15" BorderBrush="#1E2430" BorderThickness="1">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="48" ShadowDepth="0" Color="{DynamicResource ColorAccent}" Opacity="0.14"/>
+                    <DropShadowEffect BlurRadius="60" ShadowDepth="0" Color="#FFB020" Opacity="0.16"/>
                 </Border.Effect>
             </Border>
 
@@ -36,7 +36,7 @@
             <StackPanel HorizontalAlignment="Left" Margin="440,0,0,0" VerticalAlignment="Center">
                 <TextBlock x:Name="TitleText"
                            Text="SEWER STUDIO"
-                           Foreground="{DynamicResource TextBrush}"
+                           Foreground="#EDF2F9"
                            FontSize="50"
                            FontWeight="SemiBold"
                            FontFamily="Segoe UI"
@@ -51,11 +51,11 @@
                            Text="3D Neural Inspection Core"
                            FontSize="17"
                            Margin="2,6,0,0"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Foreground="#93A2B8"
                            Opacity="0"/>
 
                 <TextBlock x:Name="VersionText"
-                           Foreground="{DynamicResource AccentBrush}"
+                           Foreground="#E9B24C"
                            FontSize="12"
                            FontWeight="SemiBold"
                            FontFamily="Consolas"
@@ -67,10 +67,10 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
                     <Ellipse x:Name="StatusDot" Width="8" Height="8"
-                             Fill="{DynamicResource AccentBrush}" Margin="0,3,8,0" Opacity="0"/>
+                             Fill="#E9B24C" Margin="0,3,8,0" Opacity="0"/>
                     <TextBlock x:Name="StatusText"
                                Text="Initialisiere Anwendung..."
-                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Foreground="#93A2B8"
                                FontSize="13"
                                FontFamily="Segoe UI"
                                Opacity="0"/>
@@ -78,15 +78,15 @@
             </StackPanel>
 
             <Border Height="2" VerticalAlignment="Bottom" Margin="40,0,40,30"
-                    CornerRadius="1" Background="{DynamicResource AccentSubtleBrush}">
+                    CornerRadius="1" Background="#1A1F2A">
                 <Border x:Name="ProgressBar"
                         Height="2" HorizontalAlignment="Left" Width="0"
                         CornerRadius="1">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
-                            <GradientStop Color="{DynamicResource ColorAccentLight}" Offset="0.55"/>
-                            <GradientStop Color="{DynamicResource ColorAccentHover}" Offset="1"/>
+                            <GradientStop Color="#C6892A" Offset="0"/>
+                            <GradientStop Color="#F5C24B" Offset="0.55"/>
+                            <GradientStop Color="#E8A63C" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                 </Border>
