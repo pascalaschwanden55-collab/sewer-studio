@@ -82,6 +82,8 @@ namespace AuswertungPro.Next.UI
         public IExcelExportService ExcelExport { get; }
         public IProtocolService Protocols { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
+        // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
+        public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion
 
         #region VSA-Bewertung
@@ -121,6 +123,7 @@ namespace AuswertungPro.Next.UI
             IbakImport = new IbakExportImportService();
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ExcelExport = new ExcelTemplateExportService();
+            CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
             // Register protocol/photo/pdf services
             Protocols = new ProtocolService();

@@ -85,6 +85,19 @@ public sealed partial class ExportPageViewModel : ObservableObject
         {
             IsPageBusy = true;
             using var busy = Busy.Enter("Haltungen werden exportiert …");
+
+            // Vor dem Export die abgeleiteten Kostenfelder auf den aktuellen Stand ziehen
+            // (Sanieren=Nein/leer -> geleert, damit nur echte Sanierungen exportiert werden).
+            // Gesperrte costs.json (loadError) -> NICHT syncen, um keinen leeren Stand zu schreiben.
+            var projectPath = _sp.Settings.LastProjectPath ?? "";
+            if (!string.IsNullOrWhiteSpace(projectPath))
+            {
+                var store = new AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository()
+                    .Load(projectPath, out var syncLoadError);
+                if (syncLoadError is null)
+                    _sp.CostFieldSync.Sync(_shell.Project, store);
+            }
+
             var res = await Task.Run(() =>
                 _sp.ExcelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
