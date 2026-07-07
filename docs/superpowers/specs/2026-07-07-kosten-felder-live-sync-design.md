@@ -15,7 +15,10 @@ Das Record-Feld **`Sanieren_JaNein`** (Combo „Sanieren Ja/Nein", `FieldCatalog
 - **`Sanieren = Ja`** → Haltung wird saniert → zählt. Abgeleitete Kostenfelder = aus den Massnahmen.
 - **`Sanieren = Nein` / leer** → wird nicht saniert → abgeleitete Kostenfelder **leer**, zählt nirgends
   (weder Haltungen-Export noch NPK).
-- **Umstellen Ja→Nein** → die berechneten Kostenfelder der Haltung werden **sofort geleert**.
+- **Umstellen Ja→Nein** → die berechneten Kostenfelder der Haltung werden geleert — **aber erst nach
+  Rückfrage** (Schutz vor versehentlichem Klick). Die **Massnahmen im Kostenspeicher bleiben erhalten**,
+  sodass **Nein→Ja alles wiederherstellt** (nur ein von Hand getippter Pauschalbetrag ist nicht
+  regenerierbar — dafür ist die Rückfrage da).
 
 ## Auslöser (echter Fall, nachgezählt: Zone 1.15)
 
@@ -120,7 +123,7 @@ sonst würde eine fehlende/gesperrte `costs.json` fälschlich alle Ja-Haltungen 
 | 1 | Matrix-Save (`SanierungsMatrixPageViewModel.cs:1226`) | fresh-merge → `Coordinator.PersistAndSync` |
 | 2 | CostCalc-Save (`CostCalculatorViewModel.cs:242`) | dito; `_applyTotal`-Feldstempel entfällt |
 | 3 | „Kosten neu berechnen" (`BuilderPageViewModel.cs:921`) | über Koordinator → Records ziehen mit |
-| 4 | **Grid-Edit von `Sanieren_JaNein`** (Commit `DataPage.xaml.cs`) | Ja→Nein: Kostenfelder der Zeile **sofort** leeren (Sync auf dieser Haltung) |
+| 4 | **Grid-Edit von `Sanieren_JaNein`** (Commit `DataPage.xaml.cs`) | Ja→Nein: **erst Rückfrage-Dialog** „Kostenwerte entfernen?"; Abbrechen → `Sanieren` zurück auf „Ja", nichts ändern. Bestätigt → nur Record-Kostenfelder leeren, **Store-Massnahmen behalten**. Bei Mehrfachauswahl eine gebündelte Rückfrage. Nein→Ja braucht keine Rückfrage (recomputet aus den erhaltenen Massnahmen) |
 | 5 | Haltungslöschung (**ein** Controller-Pfad) | nach `RemoveRecord`: Store-Eintrag der Haltung gezielt entfernen (`ByHolding.Remove`), dann Koordinator |
 | 6 | Umbenennung (`DataPage.xaml.cs:600`, nach `HoldingRenameService`) | `ByHolding[alt]→[neu]` umschlüsseln, dann Koordinator |
 | 7 | Vor Haltungen-Export + NPK-Export | frischer 2-Arg-`Load` (+ `storeFileExisted`), Sync, bei Fehler abbrechen; NPK filtert §4 |
@@ -146,7 +149,10 @@ werden, wenn `project.Data` vollständig geladen ist.
 Reine Logik (`DerivedCostFieldSynchronizer`, `SanierungCostFieldMapper.SyncRecord`):
 1. Sanieren=Ja + Anschluss-Massnahme N → `Anschluesse_verpressen=N`; Massnahme auf M ändern, erneut → M.
 2. Sanieren=Nein → alle 8 Kostenfelder leer, auch wenn Store-Eintrag vorhanden.
-3. Ja→Nein-Umstellung → Felder der Haltung sofort geleert.
+3. Ja→Nein bestätigt → Felder geleert, **Store-Massnahmen bleiben**. Ja→Nein **abgebrochen** → `Sanieren`
+   bleibt „Ja", Felder unverändert (Dialog-Service gemockt).
+3b. **Wiederherstellung:** Ja→Nein (bestätigt) → Nein→Ja → alle aus Massnahmen berechneten Felder sind
+   wieder da (nur ein reiner Hand-Pauschalbetrag nicht).
 4. **Pauschal-Schutz:** Sanieren=Ja, keine Massnahme, `Kosten="1200.00"` von Hand → Kosten bleibt,
    Mengenfelder leer.
 5. **PDF-Import-Wert auf Nein-Haltung** (`Anschluesse_verpressen=5, Source=Pdf`, Sanieren=Nein) → geleert.
