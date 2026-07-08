@@ -348,7 +348,7 @@ public partial class SanierungsmassnahmenWindow : Window
         while (obj is not null)
         {
             if (obj is T target) return target;
-            obj = VisualTreeHelper.GetParent(obj);
+            obj = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(obj);
         }
         return null;
     }

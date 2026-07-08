@@ -150,7 +150,7 @@ public partial class HaltungsansichtView : UserControl
         _ = sender;
         var dep = e.OriginalSource as System.Windows.DependencyObject;
         while (dep is not null and not System.Windows.Controls.ListBoxItem)
-            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+            dep = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(dep);
         if (dep is System.Windows.Controls.ListBoxItem { DataContext: HaltungRecord record })
         {
             var name = record.GetFieldValue("Haltungsname");
@@ -166,7 +166,7 @@ public partial class HaltungsansichtView : UserControl
         _ = sender;
         var dep = e.OriginalSource as System.Windows.DependencyObject;
         while (dep is not null and not System.Windows.Controls.ListBoxItem)
-            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+            dep = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(dep);
         if (dep is System.Windows.Controls.ListBoxItem { DataContext: HaltungRecord record })
             HaltungList.SelectedItem = record;
     }

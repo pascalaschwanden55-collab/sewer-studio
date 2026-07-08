@@ -48,7 +48,7 @@ public partial class BuilderPage : UserControl
         _ = sender;
         var dep = e.OriginalSource as DependencyObject;
         while (dep is not null and not DataGridRow)
-            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+            dep = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(dep);
         if (dep is DataGridRow row)
             row.IsSelected = true;
     }

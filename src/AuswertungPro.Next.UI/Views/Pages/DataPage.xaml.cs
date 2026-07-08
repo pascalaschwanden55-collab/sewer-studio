@@ -1241,7 +1241,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             if (current is T target)
                 return target;
-            current = VisualTreeHelper.GetParent(current);
+            current = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(current);
         }
         return null;
     }

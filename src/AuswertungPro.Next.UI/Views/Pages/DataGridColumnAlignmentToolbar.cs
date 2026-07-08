@@ -168,7 +168,7 @@ public sealed class DataGridColumnAlignmentToolbar
             if (current is T target)
                 return target;
 
-            current = VisualTreeHelper.GetParent(current);
+            current = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(current);
         }
 
         return null;

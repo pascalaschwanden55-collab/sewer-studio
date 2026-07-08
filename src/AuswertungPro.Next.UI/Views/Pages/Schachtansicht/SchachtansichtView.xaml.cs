@@ -138,7 +138,7 @@ public partial class SchachtansichtView : UserControl
         _ = sender;
         var dep = e.OriginalSource as DependencyObject;
         while (dep is not null and not ListBoxItem)
-            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+            dep = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(dep);
 
         if (dep is ListBoxItem { DataContext: SchachtRecord record })
             SchachtList.SelectedItem = record;
