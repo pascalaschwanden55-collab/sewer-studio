@@ -46,10 +46,10 @@
 
                     <Button Command="{Binding ImportSchachtPdfsFolderCommand}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
-                            ToolTip="Ordner mit Schachtprotokollen waehlen, rekursiv alle PDFs importieren und Schaechte-Datagrid fuellen">
+                            ToolTip="Verteil-Ordner waehlen: verteilt Protokolle name-basiert auf Haltungen UND Schaechte (rekursiv, legt fehlende Schaechte an)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Schachtprotokolle" VerticalAlignment="Center"/>
+                            <TextBlock Text="Protokolle verteilen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 

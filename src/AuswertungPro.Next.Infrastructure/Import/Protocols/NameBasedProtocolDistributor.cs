@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
 {
-    public ProtocolDistributionReport Distribute(Project project, string projectFolder, string sourceFolder)
+    public ProtocolDistributionReport Distribute(Project project, string projectFolder, string sourceFolder, object? collectionLock = null)
     {
         int haltung = 0, schacht = 0, angelegt = 0;
         var nichtZugeordnet = new List<string>();
@@ -52,7 +52,7 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                     {
                         rec = new SchachtRecord();
                         rec.SetFieldValue("Schachtnummer", target.Value.Name);
-                        project.SchaechteData.Add(rec);
+                        AddSchacht(project, rec, collectionLock);
                         angelegt++;
                     }
                     var nr = rec.GetFieldValue("Schachtnummer") ?? target.Value.Name;
@@ -93,6 +93,18 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
         var norm = HoldingKeyNormalizer.Normalize(nr);
         return project.SchaechteData.FirstOrDefault(r =>
             HoldingKeyNormalizer.Normalize(r.GetFieldValue("Schachtnummer")) == norm);
+    }
+
+    // Fügt einen neuen Schacht threadsicher hinzu: SchaechteData ist per EnableCollectionSynchronization
+    // an die UI gebunden -> Add vom Hintergrund-Thread MUSS unter dem Sync-Lock laufen, sonst
+    // Cross-Thread-Fehler im Datagrid. Ohne Lock (z.B. in Tests) direkt.
+    private static void AddSchacht(Project project, SchachtRecord rec, object? collectionLock)
+    {
+        if (collectionLock is null)
+            project.SchaechteData.Add(rec);
+        else
+            lock (collectionLock)
+                project.SchaechteData.Add(rec);
     }
 
     private static string CopyInto(string destDir, string sourcePdf)

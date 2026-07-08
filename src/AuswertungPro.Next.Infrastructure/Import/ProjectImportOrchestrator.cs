@@ -358,7 +358,9 @@ public sealed class ProjectImportOrchestrator
             var recordCountBeforeDistribution = project.Data.Count;
 
             // Name-basierte Protokoll-Verteilung zuerst (narrensicher, Dateiname-basiert).
-            var nameBased = _protocolDistributor?.Distribute(project, projectFolder, archivedPdfDir);
+            // CollectionLock aus dem Lauf-Kontext mitgeben: das Anlegen neuer Schächte läuft ggf. auf
+            // einem Hintergrund-Thread und mutiert die UI-gebundene SchaechteData-Collection.
+            var nameBased = _protocolDistributor?.Distribute(project, projectFolder, archivedPdfDir, ctx?.CollectionLock);
             var nameBasedHits = (nameBased?.HaltungProtokolle ?? 0) + (nameBased?.SchachtProtokolle ?? 0);
             if (nameBased is not null)
             {

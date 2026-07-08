@@ -237,8 +237,10 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(folder))
             return;
 
+        // CollectionLock mitgeben: Distribute laeuft im Hintergrund-Thread und legt ggf. neue
+        // Schaechte in der UI-gebundenen SchaechteData an (EnableCollectionSynchronization).
         var report = await Task.Run(() =>
-            _sp.NameBasedProtocolDistributor.Distribute(_shell.Project, projectFolder, folder));
+            _sp.NameBasedProtocolDistributor.Distribute(_shell.Project, projectFolder, folder, _shell.CollectionLock));
 
         _shell.Project.Dirty = true;
         _shell.SaveCommand.Execute(null);
