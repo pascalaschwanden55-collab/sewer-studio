@@ -30,7 +30,8 @@ public static class SettingsFullBackupPresentationBuilder
         sb.AppendLine($"Gesamt: {ByteSizeFormatter.Format(report.TotalBytes)} / {report.TotalFiles} Dateien");
         sb.AppendLine($"Ziel: {targetRoot}");
         sb.AppendLine();
-        sb.AppendLine("Hinweis: Im Sicherungsordner wird Verwaistes entfernt.");
+        sb.AppendLine("Hinweis: Ersetzte und entfallene Dateien wandern in den Unterordner");
+        sb.AppendLine($"{BackupVersionRetention.VersionsFolderName} (die letzten {BackupVersionRetention.MaxStaende} Staende bleiben erhalten).");
         sb.AppendLine("Projekte und Videos sind nicht enthalten.");
         sb.AppendLine("NTFS/exFAT-Ziel empfohlen (FAT32: 4-GB-Grenze).");
         return sb.ToString();

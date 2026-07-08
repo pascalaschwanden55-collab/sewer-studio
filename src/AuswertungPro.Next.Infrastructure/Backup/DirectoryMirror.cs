@@ -11,8 +11,10 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 /// <summary>
 /// Inkrementeller Verzeichnis-Spiegel der Datensicherung.
 /// Kopiert nur fehlende/geaenderte Dateien (Groesse ODER LastWriteTimeUtc-Differenz
-/// ueber 2 s — FAT32/exFAT-USB-Ziele haben 2-Sekunden-Granularitaet) und loescht
-/// im Ziel Verwaistes. Die Quelle wird NIE beschrieben oder geloescht.
+/// ueber 2 s — FAT32/exFAT-USB-Ziele haben 2-Sekunden-Granularitaet).
+/// Ersetzte und verwaiste Dateien wandern in den datierten Versions-Stand
+/// (siehe <see cref="BackupVersionRetention"/>) statt endgueltig zu verschwinden.
+/// Die Quelle wird NIE beschrieben oder geloescht.
 /// </summary>
 public sealed class DirectoryMirror
 {
@@ -20,6 +22,16 @@ public sealed class DirectoryMirror
     public const string TempSuffix = ".tmp_sewerbackup";
 
     private static readonly TimeSpan TimestampToleranz = TimeSpan.FromSeconds(2);
+
+    private readonly string? _versionsStandName;
+
+    /// <param name="versionsStandName">
+    /// Stand-Name dieses Laufs (aus <see cref="BackupVersionRetention.BuildStandName"/>):
+    /// ersetzte/verwaiste Dateien wandern nach "_Versionen\{Stand}\...".
+    /// null = endgueltig loeschen/ueberschreiben (bewusste Entscheidung des Aufrufers).
+    /// </param>
+    public DirectoryMirror(string? versionsStandName)
+        => _versionsStandName = versionsStandName;
 
     /// <summary>Laufende Zaehler eines Spiegel-Laufs (ueber alle Quellen geteilt).</summary>
     public sealed class MirrorStats
@@ -56,7 +68,7 @@ public sealed class DirectoryMirror
             var targetRel = Path.Combine(source.TargetRelativeRoot, relToSource);
             expectedTargets.Add(targetRel);
 
-            await CopyIfChangedAsync(file, Path.Combine(backupRoot, targetRel), stats, onFileDone, ct)
+            await CopyIfChangedAsync(file, backupRoot, targetRel, stats, onFileDone, ct)
                 .ConfigureAwait(false);
         }
     }
@@ -74,18 +86,20 @@ public sealed class DirectoryMirror
             return;
 
         expectedTargets.Add(file.TargetRelativePath);
-        await CopyIfChangedAsync(file.SourcePath, Path.Combine(backupRoot, file.TargetRelativePath),
+        await CopyIfChangedAsync(file.SourcePath, backupRoot, file.TargetRelativePath,
             stats, onFileDone, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Loescht Dateien und leere Ordner im Spiegel-Root, die nicht erwartet sind.
+    /// Entfernt nicht erwartete Dateien aus dem Spiegel: mit Stand-Name werden sie
+    /// nach "_Versionen" verschoben, ohne endgueltig geloescht. Leere Ordner werden
+    /// abgeraeumt. Der Versions-Ordner selbst wird nie als verwaist behandelt.
     /// NUR aufrufen wenn der Marker verifiziert wurde; zusaetzlich wird jeder
-    /// Loeschpfad gegen den Spiegel-Root geprueft (Defense-in-Depth).
+    /// Pfad gegen den Spiegel-Root geprueft (Defense-in-Depth).
     /// </summary>
-    public void DeleteOrphans(string backupRoot, ISet<string> expectedTargets, MirrorStats stats)
+    public void RemoveOrphans(string backupRoot, ISet<string> expectedTargets, MirrorStats stats)
     {
-        foreach (var file in EnumerateFiles(backupRoot, isDirExcluded: null, stats))
+        foreach (var file in EnumerateFiles(backupRoot, BackupVersionRetention.IsVersionsDir, stats))
         {
             var rel = Path.GetRelativePath(backupRoot, file);
             if (expectedTargets.Contains(rel))
@@ -95,25 +109,39 @@ public sealed class DirectoryMirror
 
             try
             {
-                File.Delete(file);
+                if (_versionsStandName is null)
+                    File.Delete(file);
+                else
+                    MoveToVersions(backupRoot, rel, file);
                 stats.Deleted++;
             }
             catch (Exception ex)
             {
-                stats.Errors.Add($"{file}: Loeschen fehlgeschlagen ({ex.Message})");
+                stats.Errors.Add($"{file}: Entfernen fehlgeschlagen ({ex.Message})");
             }
         }
 
         DeleteEmptyDirectories(backupRoot, stats);
     }
 
-    private static async Task CopyIfChangedAsync(
+    /// <summary>Verschiebt eine Spiegel-Datei in den Stand-Ordner dieses Laufs.</summary>
+    private void MoveToVersions(string backupRoot, string targetRel, string file)
+    {
+        var versionsRel = BackupVersionRetention.BuildVersionsRelativePath(_versionsStandName!, targetRel);
+        var versionsPath = Path.Combine(backupRoot, versionsRel);
+        Directory.CreateDirectory(Path.GetDirectoryName(versionsPath)!);
+        File.Move(file, versionsPath, overwrite: true);
+    }
+
+    private async Task CopyIfChangedAsync(
         string sourceFile,
-        string targetFile,
+        string backupRoot,
+        string targetRel,
         MirrorStats stats,
         Action<string, long>? onFileDone,
         CancellationToken ct)
     {
+        var targetFile = Path.Combine(backupRoot, targetRel);
         try
         {
             var sourceInfo = new FileInfo(sourceFile);
@@ -142,6 +170,7 @@ public sealed class DirectoryMirror
                 }
 
                 File.SetLastWriteTimeUtc(tempFile, sourceInfo.LastWriteTimeUtc);
+                TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
                 File.Move(tempFile, targetFile, overwrite: true);
             }
             catch
@@ -161,6 +190,26 @@ public sealed class DirectoryMirror
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException or NotSupportedException)
         {
             stats.Errors.Add($"{sourceFile}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Schiebt die alte Ziel-Version vor dem Ersetzen in den Stand-Ordner (best effort).
+    /// Schlaegt das fehl, ersetzt der folgende Move die Datei wie bisher — die
+    /// Sicherung bleibt aktuell, nur die Vorversion fehlt (wird protokolliert).
+    /// </summary>
+    private void TryMoveOldVersionAside(string backupRoot, string targetRel, string targetFile, MirrorStats stats)
+    {
+        if (_versionsStandName is null || !File.Exists(targetFile))
+            return;
+
+        try
+        {
+            MoveToVersions(backupRoot, targetRel, targetFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException or NotSupportedException)
+        {
+            stats.Errors.Add($"{targetFile}: Vorversion nicht nach {BackupVersionRetention.VersionsFolderName} verschoben ({ex.Message})");
         }
     }
 

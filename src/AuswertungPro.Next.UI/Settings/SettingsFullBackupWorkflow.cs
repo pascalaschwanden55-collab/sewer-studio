@@ -84,7 +84,7 @@ public static class SettingsFullBackupWorkflow
             request.Ui.SetPercent(100);
             request.Ui.SetCurrentFile(string.Empty);
             request.Ui.SetStatusText(
-                $"Fertig: {result.FilesCopied} kopiert, {result.FilesUnchanged} unveraendert, {result.FilesDeleted} geloescht.");
+                $"Fertig: {result.FilesCopied} kopiert, {result.FilesUnchanged} unveraendert, {result.FilesDeleted} nach {BackupVersionRetention.VersionsFolderName} verschoben.");
             request.Toasts.Success("Datensicherung abgeschlossen.");
 
             request.Settings.LastFullBackupUtc = request.UtcNow();

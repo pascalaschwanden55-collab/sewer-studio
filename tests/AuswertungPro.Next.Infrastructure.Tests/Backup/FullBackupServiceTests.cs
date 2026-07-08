@@ -66,6 +66,58 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.True(second.FilesDeleted >= 1);
         Assert.False(File.Exists(Path.Combine(backupRoot, "verwaist.txt")));
         Assert.True(File.Exists(Path.Combine(backupRoot, "manifest.json.bak")));
+
+        // Verwaistes ist nicht weg, sondern im datierten Versions-Stand gelandet.
+        var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
+        var versioniert = Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories).Single();
+        Assert.Equal("weg", File.ReadAllText(versioniert));
+
+        // Dritter Lauf: _Versionen bleibt erhalten (wird nicht als verwaist abgeraeumt).
+        var third = await service.RunAsync(targetParent);
+        Assert.True(third.Success, third.Error);
+        Assert.True(File.Exists(versioniert));
+    }
+
+    [Fact]
+    public async Task RunAsync_RotiertAlteVersionsStaende()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target");
+        var service = new FullBackupService(() => sources);
+
+        var backupRoot = Path.Combine(targetParent, BackupPlanBuilder.TargetFolderName);
+        var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
+
+        // Erster Lauf legt den Spiegel an, danach kuenstlich zu viele alte Staende anlegen.
+        var first = await service.RunAsync(targetParent);
+        Assert.True(first.Success, first.Error);
+
+        for (var i = 0; i < BackupVersionRetention.MaxStaende + 3; i++)
+        {
+            var standName = BackupVersionRetention.BuildStandName(
+                new DateTime(2026, 1, 1, 0, 0, 0).AddMinutes(i));
+            var standDir = Path.Combine(versionsRoot, standName);
+            Directory.CreateDirectory(standDir);
+            File.WriteAllText(Path.Combine(standDir, "alt.txt"), "alt");
+        }
+        var fremd = Path.Combine(versionsRoot, "kein-stand-name");
+        Directory.CreateDirectory(fremd);
+        File.WriteAllText(Path.Combine(fremd, "fremd.txt"), "bleibt");
+
+        var second = await service.RunAsync(targetParent);
+        Assert.True(second.Success, second.Error);
+
+        var staende = Directory.EnumerateDirectories(versionsRoot)
+            .Select(Path.GetFileName)
+            .Where(n => BackupVersionRetention.IsStandName(n!))
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(BackupVersionRetention.MaxStaende, staende.Length);
+        // Die aeltesten Staende sind entfernt, die neuesten geblieben.
+        Assert.DoesNotContain("2026-01-01_000000", staende);
+        Assert.Contains("2026-01-01_001200", staende);
+        // Fremde Ordner ohne Stand-Muster werden nie geloescht (sichere Richtung).
+        Assert.True(File.Exists(Path.Combine(fremd, "fremd.txt")));
     }
 
     [Fact]

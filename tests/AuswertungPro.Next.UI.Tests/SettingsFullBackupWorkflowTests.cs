@@ -43,7 +43,7 @@ public sealed class SettingsFullBackupWorkflowTests
         Assert.Equal(["flush", "save"], calls);
         Assert.Equal(100, state.Percent);
         Assert.Equal("", state.CurrentFile);
-        Assert.Equal("Fertig: 2 kopiert, 3 unveraendert, 1 geloescht.", state.StatusText);
+        Assert.Equal("Fertig: 2 kopiert, 3 unveraendert, 1 nach _Versionen verschoben.", state.StatusText);
         Assert.Contains(@"E:\Backup", state.LastBackupInfo);
         Assert.Equal(["success:Datensicherung abgeschlossen."], toasts.Messages);
         Assert.Single(dialogs.Warnings);

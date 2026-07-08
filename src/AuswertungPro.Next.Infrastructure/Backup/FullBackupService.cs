@@ -26,7 +26,6 @@ public sealed class FullBackupService : IFullBackupService
     private readonly Func<FullBackupSources> _sourcesFactory;
     private readonly Action? _walCheckpoint;
     private readonly Func<CancellationToken, Task<string?>>? _ollamaList;
-    private readonly DirectoryMirror _mirror = new();
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
@@ -66,6 +65,10 @@ public sealed class FullBackupService : IFullBackupService
 
             _walCheckpoint?.Invoke();
 
+            // Pro Lauf ein datierter Versions-Stand: ersetzte/entfallene Dateien
+            // wandern dorthin statt endgueltig zu verschwinden.
+            var mirror = new DirectoryMirror(BackupVersionRetention.BuildStandName(DateTime.Now));
+
             var sizeReport = Analyze(sources, progress: null, ct);
             var stats = new DirectoryMirror.MirrorStats();
             var expectedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -82,7 +85,7 @@ public sealed class FullBackupService : IFullBackupService
             {
                 foreach (var source in component.Sources)
                 {
-                    await _mirror.MirrorSourceAsync(
+                    await mirror.MirrorSourceAsync(
                         source,
                         backupRoot,
                         expectedTargets,
@@ -95,7 +98,7 @@ public sealed class FullBackupService : IFullBackupService
                 {
                     foreach (var file in component.Files)
                     {
-                        await _mirror.MirrorFileAsync(
+                        await mirror.MirrorFileAsync(
                             file,
                             backupRoot,
                             expectedTargets,
@@ -110,10 +113,11 @@ public sealed class FullBackupService : IFullBackupService
             await WriteGeneratedExtrasAsync(backupRoot, sources, ct).ConfigureAwait(false);
 
             ct.ThrowIfCancellationRequested();
-            _mirror.DeleteOrphans(backupRoot, expectedTargets, stats);
+            mirror.RemoveOrphans(backupRoot, expectedTargets, stats);
+            var versionStaende = RotateVersionStaende(backupRoot, stats);
 
             var skipped = stats.Errors.Take(200).ToArray();
-            var manifest = BuildManifest(sources, plan, sizeReport, stats, skipped);
+            var manifest = BuildManifest(sources, plan, sizeReport, stats, skipped, versionStaende);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
             await AtomicTextFileWriter.WriteAllTextAsync(
                 Path.Combine(backupRoot, "manifest.json"),
@@ -306,12 +310,50 @@ public sealed class FullBackupService : IFullBackupService
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Entfernt die aeltesten Versions-Staende ueber dem Aufbewahrungslimit.
+    /// Liefert die Anzahl der verbleibenden Staende (fuer das Manifest).
+    /// </summary>
+    private static int RotateVersionStaende(string backupRoot, DirectoryMirror.MirrorStats stats)
+    {
+        var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
+        if (!Directory.Exists(versionsRoot))
+            return 0;
+
+        var namen = Directory.EnumerateDirectories(versionsRoot)
+            .Select(Path.GetFileName)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Select(n => n!)
+            .ToArray();
+
+        foreach (var name in BackupVersionRetention.SelectStaendeToDelete(namen))
+        {
+            var standDir = Path.Combine(versionsRoot, name);
+            if (!BackupTargetGuard.IsInsideBackupRoot(backupRoot, standDir))
+                continue;
+
+            try
+            {
+                Directory.Delete(standDir, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                stats.Errors.Add($"{standDir}: Alter Versions-Stand nicht entfernt ({ex.Message})");
+            }
+        }
+
+        return Directory.Exists(versionsRoot)
+            ? Directory.EnumerateDirectories(versionsRoot).Count()
+            : 0;
+    }
+
     private static object BuildManifest(
         FullBackupSources sources,
         IReadOnlyList<BackupComponent> plan,
         FullBackupSizeReport sizeReport,
         DirectoryMirror.MirrorStats stats,
-        IReadOnlyList<string> skipped)
+        IReadOnlyList<string> skipped,
+        int versionStaende)
         => new
         {
             CreatedUtc = DateTimeOffset.UtcNow,
@@ -341,6 +383,11 @@ public sealed class FullBackupService : IFullBackupService
                 stats.Copied,
                 stats.Unchanged,
                 stats.Deleted
+            },
+            Versionen = new
+            {
+                Staende = versionStaende,
+                BackupVersionRetention.MaxStaende
             },
             Plan = plan.Select(c => new
             {

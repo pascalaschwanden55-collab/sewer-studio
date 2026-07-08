@@ -25,6 +25,7 @@ public sealed class SettingsFullBackupPresentationBuilderTests
         Assert.Contains("Gesamt:", text);
         Assert.Contains("5 Dateien", text);
         Assert.Contains(@"Ziel: D:\Backup\SewerStudio_Datensicherung", text);
+        Assert.Contains("_Versionen", text);
         Assert.Contains("Projekte und Videos sind nicht enthalten.", text);
     }
 

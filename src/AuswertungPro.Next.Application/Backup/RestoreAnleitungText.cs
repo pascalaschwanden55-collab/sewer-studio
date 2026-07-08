@@ -23,6 +23,11 @@ public static class RestoreAnleitungText
         sb.AppendLine("(neu ladbar, Liste in umgebung.txt), Werkzeuge wie ffmpeg/Playwright/");
         sb.AppendLine("Tesseract (neu installierbar), TensorRT-Engines (werden neu gebaut).");
         sb.AppendLine();
+        sb.AppendLine($"Ordner \"{BackupVersionRetention.VersionsFolderName}\": aeltere Staende ersetzter oder entfallener");
+        sb.AppendLine("Dateien (Schutz vor versehentlichem Loeschen, die letzten");
+        sb.AppendLine($"{BackupVersionRetention.MaxStaende} Sicherungslaeufe). Fuer die normale Wiederherstellung ignorieren —");
+        sb.AppendLine("nur hineinschauen, wenn eine aeltere Dateiversion gebraucht wird.");
+        sb.AppendLine();
         sb.AppendLine("SCHRITT 1 — Programm zuruecklegen");
         sb.AppendLine($"  Ordner \"Programm\" nach {sources.RepoRoot ?? "C:\\Sewer-Studio_KI_4.4"} kopieren.");
         sb.AppendLine("  Danach benoetigt: Visual Studio (oder .NET 10 SDK) und Python fuer den Sidecar.");

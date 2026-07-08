@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Backup;
+﻿using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Infrastructure.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
@@ -24,7 +24,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         var timestamp = DateTime.UtcNow.AddMinutes(-10);
         File.SetLastWriteTimeUtc(sourceFile, timestamp);
 
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
         var firstStats = new DirectoryMirror.MirrorStats();
         var firstExpected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -65,7 +65,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         var sourceFile = Path.Combine(source, "a.txt");
         File.WriteAllText(sourceFile, "abc");
 
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
         await mirror.MirrorSourceAsync(
             new BackupSource(source, "Ziel"),
             backupRoot,
@@ -95,7 +95,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         var sourceFile = Path.Combine(source, "a.txt");
         File.WriteAllText(sourceFile, "abc");
 
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
         await mirror.MirrorSourceAsync(
             new BackupSource(source, "Ziel"),
             backupRoot,
@@ -125,7 +125,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         var sourceFile = Path.Combine(source, "a.txt");
         File.WriteAllText(sourceFile, "abc");
 
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
         await mirror.MirrorSourceAsync(
             new BackupSource(source, "Ziel"),
             backupRoot,
@@ -159,7 +159,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         var stats = new DirectoryMirror.MirrorStats();
         var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        await new DirectoryMirror().MirrorSourceAsync(
+        await new DirectoryMirror(null).MirrorSourceAsync(
             new BackupSource(source, "Programm", rel => rel == "bin"),
             backupRoot,
             expected,
@@ -171,7 +171,7 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
-    public void DeleteOrphans_EntferntVerwaistesUndLeereOrdner()
+    public void RemoveOrphans_OhneStand_LoeschtVerwaistesUndLeereOrdner()
     {
         var backupRoot = Path.Combine(_root, "backup");
         Directory.CreateDirectory(Path.Combine(backupRoot, "keep"));
@@ -187,12 +187,94 @@ public sealed class DirectoryMirrorTests : IDisposable
         };
         var stats = new DirectoryMirror.MirrorStats();
 
-        new DirectoryMirror().DeleteOrphans(backupRoot, expected, stats);
+        new DirectoryMirror(null).RemoveOrphans(backupRoot, expected, stats);
 
         Assert.True(File.Exists(keepFile));
         Assert.False(File.Exists(orphanFile));
         Assert.False(Directory.Exists(Path.Combine(backupRoot, "old")));
         Assert.Equal(1, stats.Deleted);
+    }
+
+    [Fact]
+    public void RemoveOrphans_MitStand_VerschiebtVerwaistesNachVersionen()
+    {
+        var backupRoot = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(Path.Combine(backupRoot, "old"));
+        var orphanFile = Path.Combine(backupRoot, "old", "b.txt");
+        File.WriteAllText(orphanFile, "alter inhalt");
+
+        var stand = BackupVersionRetention.BuildStandName(new DateTime(2026, 7, 8, 10, 30, 15));
+        var stats = new DirectoryMirror.MirrorStats();
+
+        new DirectoryMirror(stand).RemoveOrphans(
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        var versioniert = Path.Combine(
+            backupRoot, BackupVersionRetention.VersionsFolderName, stand, "old", "b.txt");
+        Assert.False(File.Exists(orphanFile));
+        Assert.True(File.Exists(versioniert));
+        Assert.Equal("alter inhalt", File.ReadAllText(versioniert));
+        Assert.Equal(1, stats.Deleted);
+        Assert.Empty(stats.Errors);
+    }
+
+    [Fact]
+    public void RemoveOrphans_VersionsOrdnerWirdNieAlsVerwaistBehandelt()
+    {
+        var backupRoot = Path.Combine(_root, "backup");
+        var altVersion = Path.Combine(
+            backupRoot, BackupVersionRetention.VersionsFolderName, "2026-07-01_090000", "alt.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(altVersion)!);
+        File.WriteAllText(altVersion, "alt");
+
+        var stats = new DirectoryMirror.MirrorStats();
+
+        // Auch im Loesch-Modus (null) bleibt _Versionen unangetastet.
+        new DirectoryMirror(null).RemoveOrphans(
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.True(File.Exists(altVersion));
+        Assert.Equal(0, stats.Deleted);
+    }
+
+    [Fact]
+    public async Task MirrorSourceAsync_MitStand_VerschiebtErsetzteVorversionNachVersionen()
+    {
+        var source = Path.Combine(_root, "source");
+        var backupRoot = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(source);
+        var sourceFile = Path.Combine(source, "a.txt");
+        File.WriteAllText(sourceFile, "version 1");
+
+        var stand1 = BackupVersionRetention.BuildStandName(new DateTime(2026, 7, 8, 10, 0, 0));
+        await new DirectoryMirror(stand1).MirrorSourceAsync(
+            new BackupSource(source, "Ziel"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new DirectoryMirror.MirrorStats());
+
+        File.WriteAllText(sourceFile, "version 2 laenger");
+        File.SetLastWriteTimeUtc(sourceFile, DateTime.UtcNow.AddMinutes(5));
+
+        var stand2 = BackupVersionRetention.BuildStandName(new DateTime(2026, 7, 8, 11, 0, 0));
+        var stats = new DirectoryMirror.MirrorStats();
+        await new DirectoryMirror(stand2).MirrorSourceAsync(
+            new BackupSource(source, "Ziel"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.Equal("version 2 laenger", File.ReadAllText(Path.Combine(backupRoot, "Ziel", "a.txt")));
+        var vorversion = Path.Combine(
+            backupRoot, BackupVersionRetention.VersionsFolderName, stand2, "Ziel", "a.txt");
+        Assert.True(File.Exists(vorversion));
+        Assert.Equal("version 1", File.ReadAllText(vorversion));
+        Assert.Equal(1, stats.Copied);
+        Assert.Empty(stats.Errors);
     }
 
     [Fact]
@@ -209,7 +291,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         await using var locked = new FileStream(lockedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         var stats = new DirectoryMirror.MirrorStats();
 
-        await new DirectoryMirror().MirrorSourceAsync(
+        await new DirectoryMirror(null).MirrorSourceAsync(
             new BackupSource(source, "Ziel"),
             backupRoot,
             new HashSet<string>(StringComparer.OrdinalIgnoreCase),
@@ -230,7 +312,7 @@ public sealed class DirectoryMirrorTests : IDisposable
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
             mirror.MirrorSourceAsync(
@@ -265,7 +347,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         File.WriteAllText(source, "start");
         var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var stats = new DirectoryMirror.MirrorStats();
-        var mirror = new DirectoryMirror();
+        var mirror = new DirectoryMirror(null);
 
         await mirror.MirrorFileAsync(
             new BackupSingleFile(source, Path.Combine("Extras", "script.bat")),
