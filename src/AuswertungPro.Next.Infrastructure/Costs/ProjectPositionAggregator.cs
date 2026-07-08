@@ -27,6 +27,7 @@ public static class ProjectPositionAggregator
         public int? Dn;
         public decimal TotalQty;
         public decimal TotalNet;
+        public decimal FraesenMeter; // umgerechnete Fraesen-Meter (Zusatzinfo, wenn m->h umgerechnet)
         public readonly HashSet<string> Holdings = new(StringComparer.OrdinalIgnoreCase);
         public readonly HashSet<decimal> UnitPrices = new();
         public readonly HashSet<string> PriceHints = new(StringComparer.OrdinalIgnoreCase);
@@ -64,17 +65,48 @@ public static class ProjectPositionAggregator
                     var isByDn = string.Equals(item?.Type, "ByDN", StringComparison.OrdinalIgnoreCase);
                     int? dn = isByDn ? measure.Dn : null;
 
+                    // Fraesen wird oberflaechlich in Metern erfasst, im LV aber NPK-konform in
+                    // Stunden ausgewiesen (geldwert-erhaltend): h = Meter * Meterpreis / Stundenpreis.
+                    // Der Preis der zugehoerigen Stundenposition (Kanalroboter) gilt fuer die
+                    // Umrechnung; die Meterzahl wird als Zusatz behalten.
+                    var reportUnit = (line.Unit ?? "").Trim();
+                    var reportQty = line.Qty;
+                    var reportUnitPrice = line.UnitPrice;
+                    var fraesenMeter = 0m;
+                    if (MeterToHourReport.TryGetValue((line.ItemKey ?? "").Trim(), out var hourKey)
+                        && catalog is not null && catalog.TryGetValue(hourKey, out var hourItem)
+                        && (hourItem.Price ?? 0m) > 0m)
+                    {
+                        var hourPrice = hourItem.Price!.Value;
+                        fraesenMeter = line.Qty;
+                        reportQty = line.Qty * line.UnitPrice / hourPrice; // Stunden (Geldbetrag bleibt gleich)
+                        reportUnitPrice = hourPrice;
+                        reportUnit = string.IsNullOrWhiteSpace(hourItem.Unit) ? "h" : hourItem.Unit.Trim();
+                    }
+                    var unit = reportUnit;
+
+                    // Kanonischer ItemKey: fachlich gleiche Positionen im LV zu EINER Zeile buendeln.
+                    // Das Fraesen-Haekchen (VORARBEIT_FRAESEN) und der eigenstaendige Kanalroboter
+                    // (HAUPTARBEIT_HINDERNISSE_ROBOTER) sind dieselbe NPK-135-Position 311 (Gruppenstunden).
+                    var canonicalKey = CanonicalItemKey(line.ItemKey);
+                    var wasCanonicalized = !string.Equals(
+                        canonicalKey, (line.ItemKey ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
+
                     var text = string.IsNullOrWhiteSpace(line.Text)
                         ? (line.ItemKey ?? "").Trim()
                         : line.Text.Trim();
-                    var unit = (line.Unit ?? "").Trim();
+                    // Bei Zusammenfuehrung den Namen der kanonischen Katalog-Position verwenden (konsistent).
+                    if (wasCanonicalized && catalog is not null
+                        && catalog.TryGetValue(canonicalKey, out var canonItem)
+                        && !string.IsNullOrWhiteSpace(canonItem.Name))
+                        text = canonItem.Name.Trim();
 
                     // Identitaet: ItemKey ist die echte Leistung (z.B. Nadelfilz vs GFK), darum
                     // PRIMAER. Mehrere App-Positionen teilen sich dieselbe NPK-Nummer (z.B. Nadelfilz,
                     // Open-End und GFK alle 612.110) - wuerde man nur nach NpkCode buendeln, verschmelzen
                     // fachlich verschiedene Leistungen in eine LV-Zeile. NpkCode bleibt nur Anzeige/Kapitel.
                     // DN nur bei ByDN-Positionen Teil des Schluessels.
-                    var idPart = !string.IsNullOrWhiteSpace(line.ItemKey) ? "KEY:" + line.ItemKey.Trim()
+                    var idPart = canonicalKey.Length > 0 ? "KEY:" + canonicalKey
                         : npk.Length > 0 ? "NPK:" + npk
                         : "TXT:" + text;
                     var key = $"{idPart}|{unit}|DN:{(dn?.ToString() ?? "-")}";
@@ -85,7 +117,7 @@ public static class ProjectPositionAggregator
                         {
                             NpkCode = npk,
                             Chapter = chapter,
-                            ItemKey = (line.ItemKey ?? "").Trim(),
+                            ItemKey = canonicalKey,
                             Text = text,
                             Unit = unit,
                             Dn = dn
@@ -93,10 +125,11 @@ public static class ProjectPositionAggregator
                         buckets[key] = bucket;
                     }
 
-                    bucket.TotalQty += line.Qty;
-                    bucket.TotalNet += line.Qty * line.UnitPrice;
+                    bucket.TotalQty += reportQty;
+                    bucket.TotalNet += reportQty * reportUnitPrice; // = Menge*EP, Geldbetrag erhalten
+                    bucket.FraesenMeter += fraesenMeter;
                     bucket.Holdings.Add(holdingName);
-                    bucket.UnitPrices.Add(line.UnitPrice);
+                    bucket.UnitPrices.Add(reportUnitPrice);
                     if (!string.IsNullOrWhiteSpace(line.PriceHint))
                         bucket.PriceHints.Add(line.PriceHint.Trim());
                 }
@@ -114,8 +147,12 @@ public static class ProjectPositionAggregator
                 var variable = distinctPrices.Count > 1;
                 decimal? unitPrice = distinctPrices.Count == 1 ? distinctPrices[0] : null;
                 var priceHint = string.Join("; ", b.PriceHints.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+                // Umgerechnete Fraesen-Meter als Zusatz in der Positionsbezeichnung behalten.
+                var text = b.FraesenMeter > 0m
+                    ? $"{b.Text} (inkl. ca. {b.FraesenMeter:N0} m Fräsen umgerechnet)"
+                    : b.Text;
                 return new AggregatedPosition(
-                    b.NpkCode, b.Chapter, b.ItemKey, b.Text, b.Unit, b.Dn,
+                    b.NpkCode, b.Chapter, b.ItemKey, text, b.Unit, b.Dn,
                     b.TotalQty, b.TotalNet, b.Holdings.Count, variable, unitPrice, priceHint);
             })
             .ToList();
@@ -124,4 +161,27 @@ public static class ProjectPositionAggregator
     /// <summary>NPK-Kapitel numerisch sortieren (100,200,...); Unbekanntes ans Ende.</summary>
     public static int ChapterOrder(string? chapter)
         => int.TryParse((chapter ?? "").Trim(), out var n) ? n : int.MaxValue;
+
+    // Fachlich gleiche Positionen, die im LV zu EINER Zeile gehoeren (kanonischer ItemKey).
+    private static readonly Dictionary<string, string> CanonicalItemKeyMap =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Fraesen-Haekchen = eigenstaendiger Kanalroboter = NPK 311 (Gruppenstunden).
+            ["VORARBEIT_FRAESEN"] = "HAUPTARBEIT_HINDERNISSE_ROBOTER",
+        };
+
+    // Positionen, die oberflaechlich in Metern erfasst, im LV aber in Stunden ausgewiesen werden.
+    // Wert = die stundenbasierte Position, deren Preis die Meter->Stunden-Umrechnung bestimmt.
+    private static readonly Dictionary<string, string> MeterToHourReport =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["VORARBEIT_FRAESEN"] = "HAUPTARBEIT_HINDERNISSE_ROBOTER",
+        };
+
+    /// <summary>Bildet fachlich gleiche ItemKeys auf einen kanonischen Schluessel ab (sonst unveraendert).</summary>
+    public static string CanonicalItemKey(string? itemKey)
+    {
+        var k = (itemKey ?? "").Trim();
+        return CanonicalItemKeyMap.TryGetValue(k, out var canonical) ? canonical : k;
+    }
 }

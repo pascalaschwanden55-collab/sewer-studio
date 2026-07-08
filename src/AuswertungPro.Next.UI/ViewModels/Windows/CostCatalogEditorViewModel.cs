@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
@@ -22,8 +23,23 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
     [ObservableProperty] private CostCatalogItem? _selectedItem;
 
+    // DN-Preise der aktuell gewaehlten ByDN-Position (Liner/Manschette). Spiegelt SelectedItem.DnPrices;
+    // dieselben DnPrice-Objekte, damit direkte Zell-Aenderungen im Grid ins Modell durchschlagen.
+    public ObservableCollection<DnPrice> SelectedDnPrices { get; } = new();
+    [ObservableProperty] private DnPrice? _selectedDnPrice;
+
+    /// <summary>true, wenn die gewaehlte Position nach Durchmesser bepreist wird (Typ "ByDN").</summary>
+    public bool SelectedIsByDn => string.Equals(SelectedItem?.Type, "ByDN", StringComparison.OrdinalIgnoreCase);
+    public Visibility DnEditorVisibility => SelectedIsByDn ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility DnHintVisibility => SelectedIsByDn ? Visibility.Collapsed : Visibility.Visible;
+    public string SelectedDnHeader => SelectedItem is null
+        ? "Preise nach Durchmesser"
+        : $"Preise nach Durchmesser — {SelectedItem.Name} ({SelectedItem.Unit})";
+
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
+    public IRelayCommand AddDnCommand { get; }
+    public IRelayCommand RemoveDnCommand { get; }
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CloseCommand { get; }
 
@@ -39,6 +55,8 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(Remove, () => SelectedItem is not null);
+        AddDnCommand = new RelayCommand(AddDn, () => SelectedIsByDn);
+        RemoveDnCommand = new RelayCommand(RemoveDn, () => SelectedDnPrice is not null);
         SaveCommand = new RelayCommand(Save);
         CloseCommand = new RelayCommand(Close);
     }
@@ -46,6 +64,57 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     partial void OnSelectedItemChanged(CostCatalogItem? value)
     {
         RemoveCommand.NotifyCanExecuteChanged();
+        RebuildSelectedDnPrices();
+        NotifyDnState();
+    }
+
+    partial void OnSelectedDnPriceChanged(DnPrice? value)
+    {
+        RemoveDnCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Wird vom Dialog aufgerufen, wenn im Grid die Typ-Spalte geaendert wurde
+    /// (Fixed &lt;-&gt; ByDN), damit das DN-Panel sofort ein-/ausblendet.</summary>
+    public void NotifyTypeChanged() => NotifyDnState();
+
+    private void NotifyDnState()
+    {
+        OnPropertyChanged(nameof(SelectedIsByDn));
+        OnPropertyChanged(nameof(DnEditorVisibility));
+        OnPropertyChanged(nameof(DnHintVisibility));
+        OnPropertyChanged(nameof(SelectedDnHeader));
+        AddDnCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RebuildSelectedDnPrices()
+    {
+        SelectedDnPrices.Clear();
+        SelectedDnPrice = null;
+        if (SelectedItem?.DnPrices is { } list)
+            foreach (var p in list)
+                SelectedDnPrices.Add(p);
+    }
+
+    private void AddDn()
+    {
+        if (SelectedItem is null || !SelectedIsByDn)
+            return;
+
+        SelectedItem.DnPrices ??= new System.Collections.Generic.List<DnPrice>();
+        var row = CostCatalogDnPriceEditor.CreateNextRow(SelectedItem.DnPrices);
+        SelectedItem.DnPrices.Add(row);   // Modell
+        SelectedDnPrices.Add(row);        // Anzeige (gleiches Objekt)
+        SelectedDnPrice = row;
+    }
+
+    private void RemoveDn()
+    {
+        if (SelectedItem is null || SelectedDnPrice is null)
+            return;
+
+        SelectedItem.DnPrices?.Remove(SelectedDnPrice);
+        SelectedDnPrices.Remove(SelectedDnPrice);
+        SelectedDnPrice = null;
     }
 
     private void Add()

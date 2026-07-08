@@ -388,6 +388,23 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         MeasuresSummary = SanierungsMatrixMeasureSummaryFormatter.FormatSummary(cost);
     }
 
+    /// <summary>
+    /// Setzt die fuenf Zusatz-Haekchen passend zur Detailliste — OHNE Neuberechnung auszuloesen.
+    /// Der Detail-Editor ist die Quelle der Wahrheit; die Zeile spiegelt seine Auswahl nur.
+    /// Ohne <c>_suppress</c> wuerde jedes Setzen ein Recalc/Rebuild der Zeile ausloesen und die
+    /// offene Detail-Sitzung stoeren.
+    /// </summary>
+    public void SetOptionFlags(bool vd, bool wasser, bool fraesen, bool dichtheit, bool doku)
+    {
+        _suppress = true;
+        OptVerkehrsdienst = vd;
+        OptWasserhaltung = wasser;
+        OptFraesen = fraesen;
+        OptDichtheit = dichtheit;
+        OptDokumentation = doku;
+        _suppress = false;
+    }
+
     public void MarkMultipleStoredMeasures()
     {
         HasMultipleStoredMeasures = true;
@@ -1025,7 +1042,24 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             IsDetailDirty = _detailSession.IsDirty;
         }
 
+        // Obere Tabelle mit der Detailliste synchron halten: die Zusatz-Haekchen (VD/Wasser/
+        // Fraesen/Dichtheit/Doku) der Zeile aus den ausgewaehlten Detail-Positionen ableiten.
+        SyncDetailRowOptions();
         NotifyDetailCommands();
+    }
+
+    // Spiegelt die im Detail ausgewaehlten Zusatz-Positionen auf die Haekchen der Matrix-Zeile.
+    private void SyncDetailRowOptions()
+    {
+        if (_detailRow is null || _detailSession is null)
+            return;
+
+        var lines = _detailSession.Measures
+            .SelectMany(m => m.Lines)
+            .Select(l => ((string?)l.ItemKey, l.Selected));
+        var flags = SanierungMatrixOptionDeriver.Derive(
+            lines, KeyVd, KeyWasser, KeyFraesen, KeyDichtheit, KeyDoku);
+        _detailRow.SetOptionFlags(flags.Vd, flags.Wasser, flags.Fraesen, flags.Dichtheit, flags.Doku);
     }
 
     [RelayCommand(CanExecute = nameof(CanApplyDetailChanges))]

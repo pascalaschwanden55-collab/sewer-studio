@@ -170,6 +170,87 @@
         { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
         { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
       ]
+    },
+    {
+      "id": "SCHACHT_PAUSCHAL",
+      "name": "Schachtsanierung pauschal",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "SCHACHT_REINIGUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_SANIERUNG_PAUSCHAL", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_LINER",
+      "name": "Schachtliner (Renovation)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "SCHACHT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Renovierung", "itemKey": "SCHACHT_SCHUTZFOLIE", "enabled": true, "defaultQty": 1 },
+        { "group": "Renovierung", "itemKey": "SCHACHT_LINER_LIEFERN", "enabled": true, "defaultQty": 1 },
+        { "group": "Renovierung", "itemKey": "SCHACHT_ANSCHLUESSE_AUFFRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Renovierung", "itemKey": "SCHACHT_LINERENDEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_LINER_EINBAUEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_BANKETT",
+      "name": "Bankett/Durchlaufrinne Handlaminat",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "SCHACHT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_BANKETT_HANDLAMINAT", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_STEIGEISEN",
+      "name": "Steigeisen ersetzen",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_STEIGEISEN_ERSETZEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_RAHMEN_DECKEL",
+      "name": "Rahmen/Deckel ersetzen",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_RAHMEN_DECKEL", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_FUGEN",
+      "name": "Fugensanierung/Injektion",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "SCHACHT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_FUGEN_INJEKTION", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHACHT_REGIE",
+      "name": "Regiearbeiten (Stunden)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHACHT_REGIE_STD", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
+      ]
     }
   ]
 }

@@ -108,6 +108,11 @@ namespace AuswertungPro.Next.UI
         public IRetrievalService? Retrieval { get; }
         public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
         public IMeasureRecommendationService MeasureRecommendation { get; }
+
+        // Globale, selbst gepflegte Schacht-Massnahmen-Liste (einfacher Weg ohne NPK):
+        // Name + manueller Preis, projektuebergreifend unter %AppData%.
+        public AuswertungPro.Next.Application.Schacht.ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog { get; }
+            = new AuswertungPro.Next.Infrastructure.Schacht.SchachtMassnahmenKatalogStore();
         #endregion
 
         public ServiceProvider(AppSettings settings, DiagnosticsOptions diagnostics, ILogger logger, ILoggerFactory loggerFactory)

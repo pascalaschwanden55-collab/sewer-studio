@@ -71,7 +71,7 @@
     {
       "key": "VORARBEIT_FRAESEN",
       "name": "Fräsen / Hindernisse entfernen",
-      "npkCode": "",
+      "npkCode": "311.100",
       "chapter": "300",
       "unit": "m",
       "type": "Fixed",
@@ -104,7 +104,7 @@
     {
       "key": "VORARBEIT_TV_VORKONTROLLE",
       "name": "TV Vorkontrolle / Referenzaufnahme",
-      "npkCode": "",
+      "npkCode": "221.102",
       "chapter": "200",
       "unit": "m",
       "type": "Fixed",
@@ -289,7 +289,7 @@
     {
       "key": "HAUPTARBEIT_HINDERNISSE_ROBOTER",
       "name": "Ablagerungen / Hindernisse mit Roboter fräsen",
-      "npkCode": "",
+      "npkCode": "311.100",
       "chapter": "300",
       "unit": "h",
       "type": "Fixed",
@@ -311,7 +311,7 @@
     {
       "key": "QK_TV_ABNAHME",
       "name": "TV Abnahme nach Sanierung (VSA-QUICK)",
-      "npkCode": "",
+      "npkCode": "221.102",
       "chapter": "200",
       "unit": "m",
       "type": "Fixed",
@@ -327,6 +327,138 @@
       "unit": "Stk",
       "type": "Fixed",
       "price": 200.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_SANIERUNG_PAUSCHAL",
+      "name": "Schachtsanierung pauschal (KS)",
+      "npkCode": "700.001",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": ["Schachtsanierung", "KS"]
+    },
+    {
+      "key": "SCHACHT_REINIGUNG",
+      "name": "Schachtreinigung",
+      "npkCode": "700.004",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_SCHUTZFOLIE",
+      "name": "Schutzfolie für Schachtliner",
+      "npkCode": "711.101",
+      "chapter": "700",
+      "unit": "m2",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_LINER_LIEFERN",
+      "name": "Schachtliner liefern",
+      "npkCode": "712.101",
+      "chapter": "700",
+      "unit": "m",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_LINER_EINBAUEN",
+      "name": "Schachtliner einbauen",
+      "npkCode": "716.101",
+      "chapter": "700",
+      "unit": "m",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_ANSCHLUESSE_AUFFRAESEN",
+      "name": "Anschlüsse auffräsen (Schacht)",
+      "npkCode": "721.101",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_LINERENDEN",
+      "name": "Linerenden abdichten (Schacht)",
+      "npkCode": "723.101",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_BANKETT_HANDLAMINAT",
+      "name": "Bankett/Durchlaufrinne Handlaminat",
+      "npkCode": "725.101",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_STEIGEISEN_ERSETZEN",
+      "name": "Steigeisen ersetzen",
+      "npkCode": "731.101",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_RAHMEN_DECKEL",
+      "name": "Rahmen/Deckel ersetzen",
+      "npkCode": "733.101",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_FUGEN_INJEKTION",
+      "name": "Fugensanierung/Injektion (Schacht)",
+      "npkCode": "700.002",
+      "chapter": "700",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHACHT_REGIE_STD",
+      "name": "Schachtsanierung Regie",
+      "npkCode": "700.003",
+      "chapter": "700",
+      "unit": "Std",
+      "type": "Fixed",
+      "price": 0.00,
       "active": true,
       "aliases": []
     }

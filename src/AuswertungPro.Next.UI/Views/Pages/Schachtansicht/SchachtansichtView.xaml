@@ -37,6 +37,7 @@
                     <MenuItem Header="Position nach unten" Click="CtxMoveDown_Click"/>
                     <Separator/>
                     <MenuItem Header="Details anzeigen..." Click="CtxDetails_Click"/>
+                    <MenuItem Header="Sanierungsmassnahmen..." Click="CtxSanierung_Click"/>
                     <MenuItem Header="Protokoll (PDF)..." Click="CtxOpenPdf_Click"/>
                     <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click"/>
                     <Separator/>

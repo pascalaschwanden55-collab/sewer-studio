@@ -14,6 +14,13 @@ public sealed class ProjectCostStoreRepository
         WriteIndented = true
     };
 
+    // Dateiname im costs-Ordner. Standard "costs.json" (Haltungen); die Schacht-Matrix nutzt
+    // "schacht_costs.json", damit Schacht- und Haltungs-Keys sich nicht ueberschreiben.
+    private readonly string _fileName;
+
+    public ProjectCostStoreRepository(string fileName = "costs.json")
+        => _fileName = string.IsNullOrWhiteSpace(fileName) ? "costs.json" : fileName.Trim();
+
     public ProjectCostStore Load(string? projectPath) => Load(projectPath, out _);
 
     /// <summary>
@@ -32,7 +39,7 @@ public sealed class ProjectCostStoreRepository
         if (string.IsNullOrWhiteSpace(dir))
             return new ProjectCostStore();
 
-        var path = GetStorePath(dir);
+        var path = ResolveStorePath(dir);
         if (!File.Exists(path))
             return new ProjectCostStore();
 
@@ -44,12 +51,12 @@ public sealed class ProjectCostStoreRepository
         }
         catch (JsonException ex)
         {
-            loadError = $"costs.json ist beschaedigt: {ex.Message}";
+            loadError = $"{_fileName} ist beschaedigt: {ex.Message}";
             return new ProjectCostStore();
         }
         catch (Exception ex)
         {
-            loadError = $"costs.json konnte nicht gelesen werden (Datei evtl. gesperrt): {ex.Message}";
+            loadError = $"{_fileName} konnte nicht gelesen werden (Datei evtl. gesperrt): {ex.Message}";
             return new ProjectCostStore();
         }
     }
@@ -74,7 +81,7 @@ public sealed class ProjectCostStoreRepository
         {
             var folder = Path.Combine(dir, "costs");
             Directory.CreateDirectory(folder);
-            var path = GetStorePath(dir);
+            var path = ResolveStorePath(dir);
             var json = JsonSerializer.Serialize(store, JsonOptions);
             AtomicJsonFileWriter.WriteAllText(path, json);
             return true;
@@ -86,8 +93,13 @@ public sealed class ProjectCostStoreRepository
         }
     }
 
+    /// <summary>Pfad des Standard-Haltungs-Stores (costs.json). Rueckwaertskompatibel.</summary>
     public static string GetStorePath(string projectDir)
         => Path.Combine(projectDir, "costs", "costs.json");
+
+    // Pfad dieser Repo-Instanz (Haltungen: costs.json, Schaechte: schacht_costs.json).
+    private string ResolveStorePath(string projectDir)
+        => Path.Combine(projectDir, "costs", _fileName);
 
     private static ProjectCostStore Normalize(ProjectCostStore store)
     {

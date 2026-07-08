@@ -375,7 +375,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
-        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
+        var defaultName = $"NPK-Leistungsverzeichnis_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
         var output = _sp.Dialogs.SaveFile(
             "NPK-Leistungsverzeichnis speichern",
             "CSV (*.csv)|*.csv",
@@ -390,12 +390,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
                 prep.Positions,
                 "CHF",
                 prep.ExcludedTotal,
-                prep.ExcludedCount);
+                prep.ExcludedCount,
+                projectName: _shell.Project.Name);
             File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
             _sp.Dialogs.Info(
-                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{prep.Positions.Count} Positionen ueber {prep.HoldingCount} Haltung(en).{BuildLvStandHinweis()}",
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{prep.Positions.Count} Positionen — " +
+                $"nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
                 "Druckcenter");
         }
         catch (Exception ex)
@@ -418,7 +420,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
-        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.xlsx";
+        var defaultName = $"NPK-Leistungsverzeichnis_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.xlsx";
         var output = _sp.Dialogs.SaveFile(
             "NPK-Leistungsverzeichnis (Excel) speichern",
             "Excel (*.xlsx)|*.xlsx",
@@ -442,7 +444,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             _sp.Dialogs.Info(
                 $"Excel-Leistungsverzeichnis wurde erstellt:\n{output}\n\n" +
                 $"Reiter 'Zum Ausfüllen' (leere Preise für die Firma) + 'Kalkulation (intern)'.\n" +
-                $"{prep.Positions.Count} Positionen ueber {prep.HoldingCount} Haltung(en).{BuildLvStandHinweis()}",
+                $"{prep.Positions.Count} Positionen — nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
                 "Druckcenter");
         }
         catch (Exception ex)
@@ -468,8 +470,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         filteredRows = Rows.ToList();
         var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
+        // NPK-135-LV nur fuer Haltungen im Eigentum von Abwasser Uri (AWU).
+        // Private werden separat/einzeln abgehandelt und nie ins Sammel-LV genommen.
         var holdings = entries
-            .Where(e => e.Cost is not null)
+            .Where(e => e.Cost is not null && OwnershipAwuFilter.IsAwu(e.Owner))
             .Select(e => e.Cost!)
             .ToList();
         var pauschaleHoldings = holdings
@@ -491,30 +495,68 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         var catalog = _catalogStore.LoadMerged(projectPath);
         var catalogDict = BuildCatalogMap(catalog);
 
-        var positions = ProjectPositionAggregator.Aggregate(holdingsForLv, catalogDict);
+        // Schacht-Matrix-Kosten (NPK Kap. 700) mit ins projektweite LV nehmen. Fehlerhafte Datei
+        // blockiert das Haltungs-LV nicht, wird aber als Warnung gemeldet (Schaechte fehlen dann).
+        var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
+        if (schachtLoadError is not null)
+            _sp.Dialogs.Warn(
+                $"Schacht-Kosten konnten nicht geladen werden und fehlen im Leistungsverzeichnis:\n{schachtLoadError}",
+                "Druckcenter");
+        // Schacht-Positionen (NPK Kap. 700) nur fuer Schaechte im Eigentum AWU.
+        var awuSchacht = BuildAwuSchachtKeys();
+        var awuSchachtCosts = schachtCosts
+            .Where(c => awuSchacht.Contains(OwnershipAwuFilter.NormalizeSchacht(c.Holding)))
+            .ToList();
+        var holdingsWithSchacht = holdingsForLv.Concat(awuSchachtCosts).ToList();
+
+        var positions = ProjectPositionAggregator.Aggregate(holdingsWithSchacht, catalogDict);
         if (positions.Count == 0 && excludedPauschaleTotal <= 0m)
         {
             _sp.Dialogs.Info(
-                "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen.",
+                "Keine AWU-Positionen gefunden. Es gibt keine Haltungen/Schaechte im Eigentum von Abwasser Uri (AWU) " +
+                "mit Massnahmen-Positionen. Private werden separat/einzeln abgehandelt.",
                 "Druckcenter");
             return null;
         }
 
-        return new LvPrep(positions, excludedPauschaleTotal, excludedPauschaleCount, holdingsForLv.Count);
+        return new LvPrep(positions, excludedPauschaleTotal, excludedPauschaleCount, holdingsWithSchacht.Count);
     }
 
     // Audit W14: Der Export liest costs.json von Platte — den Daten-Stand ehrlich benennen,
     // sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
     private string BuildLvStandHinweis()
         => _shell.Project.Dirty
-            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix."
-            : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json).";
+            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs- und Schacht-Matrix."
+            : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json) und Schacht-Matrix (schacht_costs.json).";
 
     private sealed record LvPrep(
         IReadOnlyList<AggregatedPosition> Positions,
         decimal ExcludedTotal,
         int ExcludedCount,
         int HoldingCount);
+
+    /// <summary>
+    /// Menge der Schacht-Nummern (normalisiert) im Eigentum AWU — fuer den AWU-Schacht-Filter
+    /// im NPK-135-LV. Schaechte ohne AWU-Eigentum werden nicht ins Sammel-LV genommen.
+    /// </summary>
+    private HashSet<string> BuildAwuSchachtKeys()
+    {
+        var pairs = _shell.Project.SchaechteData
+            .Select(s => ((string?)s.GetFieldValue("Schachtnummer"), SchachtOwner(s)));
+        return OwnershipAwuFilter.AwuSchachtKeys(pairs);
+    }
+
+    /// <summary>
+    /// Schacht-Eigentuemer tolerant lesen: WinCan schreibt "Eigentümer" (mit Umlaut),
+    /// das Grid/die Schacht-Seite "Eigentuemer" (ASCII).
+    /// </summary>
+    private static string? SchachtOwner(SchachtRecord schacht)
+    {
+        var value = schacht.GetFieldValue("Eigentuemer");
+        if (string.IsNullOrWhiteSpace(value))
+            value = schacht.GetFieldValue("Eigentümer");
+        return value;
+    }
 
     [RelayCommand]
     private async Task ExportNpkOfferPdfAsync()
@@ -535,8 +577,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         filteredRows = Rows.ToList();
         var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
+        // NPK-135-Offerte nur fuer Haltungen im Eigentum AWU (Private separat).
         var holdings = entries
-            .Where(e => e.Cost is not null)
+            .Where(e => e.Cost is not null && OwnershipAwuFilter.IsAwu(e.Owner))
             .Select(e => e.Cost)
             .ToList();
         var pauschaleHoldings = holdings
@@ -549,20 +592,33 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         var projectPath = _sp.Settings.LastProjectPath ?? "";
         var catalog = _catalogStore.LoadMerged(projectPath);
-        var positions = ProjectPositionAggregator.Aggregate(holdingsForOffer, BuildCatalogMap(catalog));
+        // Schacht-Kosten (NPK Kap. 700) auch in die NPK-Offerte aufnehmen.
+        var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
+        if (schachtLoadError is not null)
+            _sp.Dialogs.Warn(
+                $"Schacht-Kosten konnten nicht geladen werden und fehlen in der Offerte:\n{schachtLoadError}",
+                "NPK-Offerte");
+        // Schacht-Positionen (NPK Kap. 700) nur fuer Schaechte im Eigentum AWU.
+        var awuSchacht = BuildAwuSchachtKeys();
+        var awuSchachtCosts = schachtCosts
+            .Where(c => awuSchacht.Contains(OwnershipAwuFilter.NormalizeSchacht(c.Holding)))
+            .ToList();
+        var holdingsWithSchacht = holdingsForOffer.Concat(awuSchachtCosts).ToList();
+        var positions = ProjectPositionAggregator.Aggregate(holdingsWithSchacht, BuildCatalogMap(catalog));
         if (positions.Count == 0)
         {
             var pauschaleHint = excludedPauschaleTotal > 0m
                 ? "\n\nEs gibt nur Pauschalkosten ohne NPK-Position; diese koennen nicht als echte NPK-135-Offerte ausgegeben werden."
                 : "";
             _sp.Dialogs.Info(
-                "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen." + pauschaleHint,
+                "Keine AWU-Positionen gefunden. Es gibt keine Haltungen/Schaechte im Eigentum AWU mit Massnahmen-Positionen " +
+                "(Private werden separat abgehandelt)." + pauschaleHint,
                 "NPK-Offerte");
             return;
         }
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
-        var defaultName = $"NPK-Offerte_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
+        var defaultName = $"NPK-Offerte_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
         var output = _sp.Dialogs.SaveFile(
             "NPK-Offerte als PDF speichern",
             "PDF (*.pdf)|*.pdf",

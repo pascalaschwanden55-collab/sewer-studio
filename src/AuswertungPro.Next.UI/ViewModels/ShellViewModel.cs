@@ -118,6 +118,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
+            new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
@@ -672,6 +673,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             "Medienkonflikte" => "Fehlende, doppelte oder mehrdeutige Medienzuordnungen klaeren.",
             "Druckcenter" => "Dossiers und Berichte fuer Haltungen oder Projektumfang erstellen.",
             "Sanierungs-Matrix" => "Massnahmen, Kosten und Varianten fuer Sanierung bearbeiten.",
+            "Schacht-Matrix" => "Sanierungsmassnahmen und Kosten je Schacht (NPK Kap. 700) erfassen.",
             "VSA" => "VSA-Zustandsklassen und Bewertungsdaten kontrollieren.",
             "Diagnose" => "Logs, Diagnoseinformationen und technische Details pruefen.",
             "Einstellungen" => "Pfade, Theme, KI-Start und Programmverhalten konfigurieren.",

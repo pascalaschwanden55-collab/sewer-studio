@@ -28,12 +28,23 @@ public static class NpkLeistungsverzeichnisExporter
         IReadOnlyList<AggregatedPosition> positions,
         string currency = "CHF",
         decimal excludedPauschaleTotal = 0m,
-        int excludedPauschaleHoldingCount = 0)
+        int excludedPauschaleHoldingCount = 0,
+        string projectName = "")
     {
         var cur = string.IsNullOrWhiteSpace(currency) ? "CHF" : currency.Trim();
         var sb = new StringBuilder();
         // Hinweis: BOM/Encoding macht die Datei-Schicht (UTF8Encoding mit BOM),
         // damit der reine CSV-String testbar bleibt.
+
+        // Kopfblock im Abwasser-Uri-Stil (gleiche Angaben wie das Excel/PDF-LV) —
+        // damit auch die CSV beim Oeffnen/Drucken sofort als AWU-Dokument erkennbar ist.
+        sb.AppendLine("NPK-135-Leistungsverzeichnis;;;;;;;");
+        if (!string.IsNullOrWhiteSpace(projectName))
+            sb.AppendLine($"{Csv("Sanierungsmassnahmen Kanalisation — Projekt: " + projectName.Trim())};;;;;;;");
+        sb.AppendLine($"{Csv("Abwasser Uri — Zentrale Dienste — Giessenstrasse 46 — 6460 Altdorf")};;;;;;;");
+        sb.AppendLine($"Erstellt: {DateTime.Now:dd.MM.yyyy};;;;;;;");
+        sb.AppendLine(";;;;;;;");
+
         sb.AppendLine($"NPK;Position;DN;Menge;Einheit;EP {cur};Total {cur};Haltungen");
         foreach (var warning in BuildDuplicateNpkUnitWarnings(positions))
             sb.AppendLine($";WARNUNG: {Csv(warning)};;;;;;");

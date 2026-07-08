@@ -1,0 +1,56 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.SchachtMassnahmenKatalogEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Schacht-Massnahmen-Liste bearbeiten"
+        Width="560" Height="520"
+        MinWidth="440" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BgBrush}">
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Deine Schacht-Massnahmen (Name + Preis)"
+                   FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Margin="0,0,0,8" FontSize="11" Foreground="{StaticResource MutedBrush}"
+                   TextWrapping="Wrap"
+                   Text="Diese Liste gilt fuer alle Projekte. Preise sind Vorgaben — pro Schacht kannst du sie spaeter anpassen."/>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  Background="Transparent" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Massnahme" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*"/>
+                <DataGridTextColumn Header="Preis" Binding="{Binding Preis, UpdateSourceTrigger=LostFocus}" Width="90"/>
+                <DataGridTextColumn Header="Einheit" Binding="{Binding Einheit, UpdateSourceTrigger=LostFocus}" Width="80"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="3" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="＋ Hinzufügen" Padding="10,6" Command="{Binding HinzufuegenCommand}"/>
+                <Button Content="✕ Entfernen" Padding="10,6" Margin="8,0,0,0"
+                        Command="{Binding EntfernenCommand}"
+                        CommandParameter="{Binding Selected}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="Speichern" Padding="16,6" FontWeight="SemiBold"
+                        Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0"
+                        Command="{Binding SpeichernCommand}" IsDefault="True"/>
+                <Button Content="Abbrechen" Padding="12,6" Margin="8,0,0,0"
+                        Command="{Binding AbbrechenCommand}" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

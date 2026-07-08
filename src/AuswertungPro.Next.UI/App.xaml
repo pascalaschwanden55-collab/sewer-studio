@@ -49,6 +49,10 @@
                 <views:SanierungsMatrixPage/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:SchachtSanierungsMatrixPageViewModel}">
+                <views:SchachtSanierungsMatrixPage/>
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:KarteViewModel}">
                 <views:KartePage/>
             </DataTemplate>
