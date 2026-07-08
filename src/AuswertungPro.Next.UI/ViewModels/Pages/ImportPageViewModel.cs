@@ -675,7 +675,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService(),
             _sp.KinsImport,
             _sp.IbakImport,
-            ErzeugeKiSchiedsrichter());
+            ErzeugeKiSchiedsrichter(),
+            protocolDistributor: _sp.NameBasedProtocolDistributor);
         var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
         ImportProgress = "";
 

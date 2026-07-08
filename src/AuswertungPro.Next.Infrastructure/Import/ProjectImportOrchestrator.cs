@@ -44,18 +44,23 @@ public sealed class ProjectImportOrchestrator
     // R4: optionaler KI-Schiedsrichter (Qwen via Ollama) fuer unklare PDFs.
     private readonly PdfKiSchiedsrichter? _kiSchiedsrichter;
 
+    // Task 4: optionaler name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
+    private readonly AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor? _protocolDistributor;
+
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
         IWinCanDbImportService winCan,
         IKinsImportService? kins = null,
         IIbakImportService? ibak = null,
-        PdfKiSchiedsrichter? kiSchiedsrichter = null)
+        PdfKiSchiedsrichter? kiSchiedsrichter = null,
+        AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor? protocolDistributor = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
         _winCan = winCan ?? throw new ArgumentNullException(nameof(winCan));
         _kins   = kins;
         _ibak   = ibak;
+        _protocolDistributor = protocolDistributor;
     }
 
     /// <summary>
@@ -351,9 +356,20 @@ public sealed class ProjectImportOrchestrator
                 : null;
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
             var recordCountBeforeDistribution = project.Data.Count;
+
+            // Name-basierte Protokoll-Verteilung zuerst (narrensicher, Dateiname-basiert).
+            var nameBased = _protocolDistributor?.Distribute(project, projectFolder, archivedPdfDir);
+            var nameBasedHits = (nameBased?.HaltungProtokolle ?? 0) + (nameBased?.SchachtProtokolle ?? 0);
+            if (nameBased is not null)
+            {
+                messages.Add($"Protokolle name-basiert verteilt: {nameBased.HaltungProtokolle} Haltungen, {nameBased.SchachtProtokolle} Schächte, {nameBased.SchaechteAngelegt} Schächte angelegt.");
+                foreach (var nz in nameBased.NichtZugeordnet)
+                    messages.Add($"Protokoll nicht zugeordnet: {nz}");
+            }
+
             var distResult = KanalImportDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
-                splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
+                splitPdf: nameBasedHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
                 primaryProtocolPdf: kinsGesamtprotokoll);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
