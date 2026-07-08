@@ -361,7 +361,9 @@ public sealed class ProjectImportOrchestrator
             // CollectionLock aus dem Lauf-Kontext mitgeben: das Anlegen neuer Schächte läuft ggf. auf
             // einem Hintergrund-Thread und mutiert die UI-gebundene SchaechteData-Collection.
             var nameBased = _protocolDistributor?.Distribute(project, projectFolder, archivedPdfDir, ctx?.CollectionLock);
-            var nameBasedHits = (nameBased?.HaltungProtokolle ?? 0) + (nameBased?.SchachtProtokolle ?? 0);
+            // Nur HALTUNG-Treffer duerfen den inhaltsbasierten Gesamtprotokoll-Split unterdruecken —
+            // der Split verteilt HALTUNGS-Protokolle. Ein reiner Schacht-Treffer darf ihn NICHT abschalten.
+            var nameBasedHaltungHits = nameBased?.HaltungProtokolle ?? 0;
             if (nameBased is not null)
             {
                 messages.Add($"Protokolle name-basiert verteilt: {nameBased.HaltungProtokolle} Haltungen, {nameBased.SchachtProtokolle} Schächte, {nameBased.SchaechteAngelegt} Schächte angelegt.");
@@ -371,7 +373,7 @@ public sealed class ProjectImportOrchestrator
 
             var distResult = KanalImportDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
-                splitPdf: nameBasedHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
+                splitPdf: nameBasedHaltungHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
                 primaryProtocolPdf: kinsGesamtprotokoll);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 
@@ -18,9 +19,9 @@ public readonly record struct ProtocolTarget(ProtocolKind Kind, string Name);
 public static class ProtocolNameResolver
 {
     // Nicht-Protokolle: an diesen Namensbestandteilen erkennbar (klein geschrieben).
+    // "plan" deckt Uebersichts-/Situations-/Lage-/Katasterplan usw. ab.
     private static readonly string[] NichtProtokoll =
-        { "übersichtsplan", "uebersichtsplan", "ubersichtsplan", "haltungsliste",
-          "statistik", "_orto", "_av", "uebersicht", "übersicht" };
+        { "plan", "haltungsliste", "statistik", "_orto", "_av", "uebersicht", "übersicht" };
 
     public static ProtocolTarget? Resolve(string pdfPath)
     {
@@ -38,8 +39,10 @@ public static class ProtocolNameResolver
         name = StripPrefix(name, prefix);
         name = StripDupSuffix(name).Trim();
 
-        if (name.Length == 0 || !name.Any(char.IsDigit))
-            return null; // sieht nicht nach Haltungs-/Schacht-Id aus
+        // Nur echte Haltungs-/Schacht-Ids akzeptieren (Ziffern, Punkte, Bindestriche). Verhindert,
+        // dass alphanumerische Nicht-Protokolle (z.B. "Katasterplan_Zone3") als Schacht angelegt werden.
+        if (!Regex.IsMatch(name, @"^\d[\d.\-]*$"))
+            return null;
 
         // Art bestimmen: 1) Kategorie-Ordner (Haltungen/Schächte) IRGENDWO im Pfad — im aufgeteilten
         // Baum liegt die Datei unter <Kategorie>\<Id>\..., der Kategorie-Ordner ist also nicht der

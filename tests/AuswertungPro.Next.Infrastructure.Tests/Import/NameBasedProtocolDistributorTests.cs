@@ -89,4 +89,28 @@ public sealed class NameBasedProtocolDistributorTests
             Directory.Delete(source, true);
         }
     }
+
+    [Fact]
+    public void Distribute_matcht_haltung_trotz_ibak_prefix_im_projektnamen()
+    {
+        var projectFolder = NewTempDir();
+        var source = NewTempDir();
+        try
+        {
+            File.WriteAllText(Path.Combine(source, "33390-36268.pdf"), "x"); // bare Name
+            var project = new Project();
+            project.Data.Add(Haltung("H_33390-36268")); // Projektname mit IBAK-Prefix
+
+            var report = new NameBasedProtocolDistributor().Distribute(project, projectFolder, source);
+
+            Assert.Equal(1, report.HaltungProtokolle);        // NormalizeIbak entfernt das H_ -> Treffer
+            Assert.Empty(report.NichtZugeordnet);
+            Assert.False(string.IsNullOrWhiteSpace(project.Data[0].GetFieldValue("PDF_Path")));
+        }
+        finally
+        {
+            Directory.Delete(projectFolder, true);
+            Directory.Delete(source, true);
+        }
+    }
 }

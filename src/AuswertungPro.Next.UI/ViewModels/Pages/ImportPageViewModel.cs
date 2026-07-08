@@ -669,7 +669,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
             _sp.IbakImport,
             ErzeugeKiSchiedsrichter(),
             protocolDistributor: _sp.NameBasedProtocolDistributor);
-        var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
+        // Lauf-Kontext mit CollectionLock: der Import laeuft im Hintergrund-Thread und mutiert die
+        // UI-gebundenen Collections (Project.Data/SchaechteData, EnableCollectionSynchronization).
+        var importCtx = new Application.Import.ImportRunContext(
+            System.Threading.CancellationToken.None,
+            null,
+            new Application.Import.ImportRunLog(),
+            collectionLock: _shell.CollectionLock);
+        var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project, importCtx));
         ImportProgress = "";
 
         if (result.Format == KanalExportFormat.Unknown || result.Format == KanalExportFormat.Ambiguous)

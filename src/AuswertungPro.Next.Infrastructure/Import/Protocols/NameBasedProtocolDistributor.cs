@@ -48,6 +48,10 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                 else
                 {
                     var rec = FindSchacht(project, target.Value.Name);
+                    var nr = rec?.GetFieldValue("Schachtnummer") ?? target.Value.Name;
+                    // Erst kopieren; erst bei Erfolg den fehlenden Schacht anlegen -> keine Geister-Schaechte
+                    // (ohne PDF), falls das Kopieren scheitert.
+                    var dest = CopyInto(ProjectStructure.SchachtVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(nr)), pdf);
                     if (rec is null)
                     {
                         rec = new SchachtRecord();
@@ -55,8 +59,6 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                         AddSchacht(project, rec, collectionLock);
                         angelegt++;
                     }
-                    var nr = rec.GetFieldValue("Schachtnummer") ?? target.Value.Name;
-                    var dest = CopyInto(ProjectStructure.SchachtVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(nr)), pdf);
                     rec.SetFieldValue(FieldKeys.PdfPath, ProjectPathResolver.MakeRelative(dest, projectFolder));
                     schacht++;
                 }
@@ -72,27 +74,27 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
 
     private static HaltungRecord? FindHaltung(Project project, string name)
     {
-        var norm = HoldingKeyNormalizer.Normalize(name);
+        var norm = HoldingKeyNormalizer.NormalizeIbak(name);
         var rec = project.Data.FirstOrDefault(r =>
-            HoldingKeyNormalizer.Normalize(r.GetFieldValue(FieldKeys.HoldingName)) == norm);
+            HoldingKeyNormalizer.NormalizeIbak(r.GetFieldValue(FieldKeys.HoldingName)) == norm);
         if (rec is not null) return rec;
 
         // Vertauschte Schacht-Reihenfolge A-B <-> B-A (nur bei genau einem '-').
         var parts = name.Split('-');
         if (parts.Length == 2)
         {
-            var reversed = HoldingKeyNormalizer.Normalize(parts[1] + "-" + parts[0]);
+            var reversed = HoldingKeyNormalizer.NormalizeIbak(parts[1] + "-" + parts[0]);
             rec = project.Data.FirstOrDefault(r =>
-                HoldingKeyNormalizer.Normalize(r.GetFieldValue(FieldKeys.HoldingName)) == reversed);
+                HoldingKeyNormalizer.NormalizeIbak(r.GetFieldValue(FieldKeys.HoldingName)) == reversed);
         }
         return rec;
     }
 
     private static SchachtRecord? FindSchacht(Project project, string nr)
     {
-        var norm = HoldingKeyNormalizer.Normalize(nr);
+        var norm = HoldingKeyNormalizer.NormalizeIbak(nr);
         return project.SchaechteData.FirstOrDefault(r =>
-            HoldingKeyNormalizer.Normalize(r.GetFieldValue("Schachtnummer")) == norm);
+            HoldingKeyNormalizer.NormalizeIbak(r.GetFieldValue("Schachtnummer")) == norm);
     }
 
     // Fügt einen neuen Schacht threadsicher hinzu: SchaechteData ist per EnableCollectionSynchronization

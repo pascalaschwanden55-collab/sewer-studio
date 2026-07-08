@@ -28,6 +28,10 @@ public sealed class ProtocolNameResolverTests
     [InlineData(@"D:\X\Haltungs-Statistik.pdf")]
     [InlineData(@"D:\X\30x105_Jagdmatt_200_orto.pdf")]
     [InlineData(@"D:\X\30x105_Jagdmatt_200_AV.pdf")]
+    [InlineData(@"D:\X\Situationsplan_5.pdf")]     // "plan" -> uebersprungen
+    [InlineData(@"D:\X\Lageplan.pdf")]
+    [InlineData(@"D:\X\Katasterplan_Zone3.pdf")]   // alphanumerisch -> kein gueltiger Id -> kein Geister-Schacht
+    [InlineData(@"D:\X\Deckblatt.pdf")]            // keine Ziffer -> null
     public void Resolve_ueberspringt_nicht_protokolle(string path)
         => Assert.Null(ProtocolNameResolver.Resolve(path));
 }
