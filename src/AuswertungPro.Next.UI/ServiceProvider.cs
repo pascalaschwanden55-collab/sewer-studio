@@ -70,6 +70,8 @@ namespace AuswertungPro.Next.UI
         #region Import
         // Alle Import-Adapter für externe Datenformate
         public IPdfImportService PdfImport { get; }
+        // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
+        public AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakImportService IbakImport { get; }
@@ -118,6 +120,7 @@ namespace AuswertungPro.Next.UI
 
             Projects = new JsonProjectRepository();
             PdfImport = new PdfImportServiceAdapter();
+            NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             XtfImport = new XtfImportServiceAdapter();
             WinCanImport = new WinCanDbImportService();
             IbakImport = new IbakExportImportService();
@@ -276,6 +279,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
+            if (serviceType == typeof(AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
