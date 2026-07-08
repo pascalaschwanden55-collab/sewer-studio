@@ -89,15 +89,6 @@
                         <TextBox Grid.Row="7" Grid.Column="2" Text="{Binding Project.Metadata[FirmaName], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
-                    <!-- Sanieren & Eigentuemer entfernt -->
-
-                    <TextBlock Text="Firma &amp; Kontakt" Margin="0,12,0,6" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock Text="Adresse" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,4"/>
-                    <TextBox Text="{Binding Project.Metadata[FirmaAdresse], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Telefon" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
-                    <TextBox Text="{Binding Project.Metadata[FirmaTelefon], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="E-Mail" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
-                    <TextBox Text="{Binding Project.Metadata[FirmaEmail], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="{Binding Project.Data.Count, StringFormat=Records: {0}}" Margin="0,12,0,0" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
