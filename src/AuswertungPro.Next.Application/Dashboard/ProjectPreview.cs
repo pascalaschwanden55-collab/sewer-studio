@@ -13,7 +13,6 @@ public sealed record ProjectPreview(
     string Description,
     string Path,
     DateTime? ModifiedAtUtc,
-    string? AppVersion,
     int HoldingCount,
     double TotalLengthMeters,
     decimal TotalCost,
@@ -28,8 +27,6 @@ public sealed record ProjectPreview(
     IReadOnlyList<DashboardBucket> ConditionClasses,
     IReadOnlyList<DashboardCostBucket> DnCostGroups)
 {
-    public bool HasHoldings => HoldingCount > 0;
-
     /// <summary>Lokales Datum (nur Tag) oder „—".</summary>
     public string ModifiedAtDisplay =>
         ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "—";

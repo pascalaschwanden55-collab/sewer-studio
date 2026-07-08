@@ -17,7 +17,6 @@ public static class ProjectPreviewFactory
             Description: project.Description ?? string.Empty,
             Path: path,
             ModifiedAtUtc: project.ModifiedAtUtc,
-            AppVersion: project.AppVersion,
             HoldingCount: stats.TotalHoldings,
             TotalLengthMeters: stats.TotalLengthMeters,
             TotalCost: stats.TotalCost,

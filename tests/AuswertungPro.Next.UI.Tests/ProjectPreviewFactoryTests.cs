@@ -11,7 +11,7 @@ public sealed class ProjectPreviewFactoryTests
     {
         var r = new HaltungRecord();
         r.SetFieldValue("Haltungslaenge_m", laenge.ToString(System.Globalization.CultureInfo.InvariantCulture), FieldSource.Manual, false);
-        r.SetFieldValue("DN", dn, FieldSource.Manual, false);
+        r.SetFieldValue("DN_mm", dn, FieldSource.Manual, false);
         r.SetFieldValue("Kosten", kosten.ToString(System.Globalization.CultureInfo.InvariantCulture), FieldSource.Manual, false);
         return r;
     }
@@ -37,10 +37,14 @@ public sealed class ProjectPreviewFactoryTests
         Assert.Equal("Altdorf", preview.Gemeinde);
         Assert.Equal("1.15", preview.Zone);
 
-        // Balken werden 1:1 aus dem Builder durchgereicht (robust gegen Builder-Interna):
+        // Zustandsklassen werden 1:1 aus dem Builder durchgereicht (robust gegen Builder-Interna):
         var expected = DashboardStatisticsBuilder.Build(project.Data);
         Assert.Equal(expected.ConditionClasses.Count, preview.ConditionClasses.Count);
-        Assert.Equal(expected.DnCostGroups.Count, preview.DnCostGroups.Count);
+
+        // DN/Kosten: beide Haltungen sind DN300 -> genau EIN Bucket mit Count 2 und Kosten 150.
+        Assert.Single(preview.DnCostGroups);
+        Assert.Equal(2, preview.DnCostGroups[0].Count);
+        Assert.Equal(150m, preview.DnCostGroups[0].Cost);
     }
 
     [Fact]

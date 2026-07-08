@@ -18,6 +18,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private ProjectOverviewEntry? _selectedProjectEntry;
         [ObservableProperty]
         private ProjectPreview? _selectedPreview;
+        // Unterdrueckt den Vorschau-Neuaufbau, waehrend ApplyFilter die Liste neu befuellt
+        // (sonst Flackern + Neuladen bei jedem Tastendruck im Suchfeld).
+        private bool _suppressPreviewRebuild;
+        // Pfad des zuletzt geladenen Vorschau-Projekts: gleiche Auswahl -> nicht erneut laden.
+        private string? _previewedPath;
         private readonly ShellViewModel _shell;
         private readonly ServiceProvider _sp;
 
@@ -91,20 +96,37 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
     private void ApplyFilter()
     {
-        ProjectEntries.Clear();
-        var filter = FilterText?.Trim() ?? "";
-        var filtered = string.IsNullOrEmpty(filter)
-            ? _allEntries
-            : _allEntries.Where(e =>
-                e.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                e.Description.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                e.Path.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        // Auswahl merken und Vorschau-Neuaufbau waehrend des Neubefuellens unterdruecken:
+        // Clear() setzt die ListBox-Auswahl transient auf null -> ohne Guard blinkt die Vorschau
+        // und laedt bei jedem Tastendruck das Projekt neu.
+        var previous = SelectedProjectEntry;
+        _suppressPreviewRebuild = true;
+        try
+        {
+            ProjectEntries.Clear();
+            var filter = FilterText?.Trim() ?? "";
+            var filtered = string.IsNullOrEmpty(filter)
+                ? _allEntries
+                : _allEntries.Where(e =>
+                    e.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                    e.Description.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                    e.Path.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        foreach (var entry in filtered)
-            ProjectEntries.Add(entry);
+            foreach (var entry in filtered)
+                ProjectEntries.Add(entry);
 
-        if (SelectedProjectEntry is null || !ProjectEntries.Contains(SelectedProjectEntry))
-            SelectedProjectEntry = ProjectEntries.FirstOrDefault();
+            // Bisherige Auswahl erhalten, wenn sie noch sichtbar ist; sonst erstes Element.
+            SelectedProjectEntry = previous is not null && ProjectEntries.Contains(previous)
+                ? previous
+                : ProjectEntries.FirstOrDefault();
+        }
+        finally
+        {
+            _suppressPreviewRebuild = false;
+        }
+
+        // Genau einmal bauen; der Pfad-Guard in BuildPreview verhindert Neuladen bei gleicher Auswahl.
+        BuildPreview(SelectedProjectEntry);
     }
 
     private void LoadAllProjects()
@@ -277,7 +299,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     {
         (OpenSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (DeleteSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        BuildPreview(value);
+        if (!_suppressPreviewRebuild)
+            BuildPreview(value);
     }
 
     /// <summary>
@@ -287,6 +310,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     /// </summary>
     private void BuildPreview(ProjectOverviewEntry? entry)
     {
+        // Gleiches Projekt wie zuletzt -> nichts tun (spart synchrones Neuladen der Datei).
+        if (string.Equals(entry?.Path, _previewedPath, StringComparison.OrdinalIgnoreCase))
+            return;
+        _previewedPath = entry?.Path;
+
         if (entry is null)
         {
             SelectedPreview = null;
@@ -312,7 +340,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             Description: entry.Description,
             Path: entry.Path,
             ModifiedAtUtc: entry.ModifiedAtUtc,
-            AppVersion: null,
             HoldingCount: entry.RecordCount,
             TotalLengthMeters: 0,
             TotalCost: 0m,
