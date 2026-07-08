@@ -32,33 +32,6 @@ public sealed class ExcelExportTests
         rec.SetFieldValue("Primaere_Schaeden", "RISS", FieldSource.Manual, userEdited: false);
         project.Data.Add(rec);
 
-        // Detect header row (template may shift over time)
-        int FindHeaderRow(IXLWorksheet ws)
-        {
-            for (int r = 1; r <= 100; r++)
-            {
-                var row = ws.Row(r);
-                if (!row.CellsUsed().Any()) continue;
-
-                var headerTokens = row.CellsUsed()
-                    .Select(c => (c.GetString() ?? "").Trim())
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                var hits = 0;
-                if (headerTokens.Contains("Haltungsname (ID)")) hits++;
-                if (headerTokens.Contains("Haltungsnahme (ID)")) hits++;
-                if (headerTokens.Contains("NR.")) hits++;
-                if (headerTokens.Contains("Strasse")) hits++;
-                if (headerTokens.Contains("Rohrmaterial")) hits++;
-
-                // Require more than one token to avoid false positives.
-                if (hits >= 2) return r;
-            }
-            return 11;
-        }
-
         using var templateWbProbe = new XLWorkbook(templatePath);
         var templateWsProbe = templateWbProbe.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Haltungen", StringComparison.OrdinalIgnoreCase))
                               ?? templateWbProbe.Worksheet(1);
@@ -136,5 +109,75 @@ public sealed class ExcelExportTests
 
         Assert.True(ok);
         Assert.Equal(expected, (double)args[1]!, 3);
+    }
+
+    [Fact]
+    public void Export_SchreibtRenovierungInlinerM_InDieBenannteSpalte()
+    {
+        // Regressionsschutz: Ohne den Header "Renovierung Inliner m" (Vorlage hatte nur "m")
+        // matcht der Export das Feld Renovierung_Inliner_m nie -> der Wert wird nie exportiert.
+        var root = TestPaths.FindSolutionRoot();
+        var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
+        Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"Haltungen_{Guid.NewGuid():N}.xlsx");
+
+        var project = new Project();
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungsname", "TEST-INLINER", FieldSource.Manual, userEdited: false);
+        rec.SetFieldValue("Sanieren_JaNein", "Ja", FieldSource.Manual, userEdited: true);
+        rec.SetFieldValue("Renovierung_Inliner_m", "12.5", FieldSource.Manual, userEdited: true);
+        project.Data.Add(rec);
+
+        using var templateWbProbe = new XLWorkbook(templatePath);
+        var templateWsProbe = templateWbProbe.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Haltungen", StringComparison.OrdinalIgnoreCase))
+                              ?? templateWbProbe.Worksheet(1);
+        var headerRow = FindHeaderRow(templateWsProbe);
+        var startRow = headerRow + 1;
+
+        var svc = new ExcelTemplateExportService();
+        var res = svc.ExportToTemplate(project, templatePath, outputPath, headerRow: headerRow, startRow: startRow);
+        Assert.True(res.Ok, $"{res.ErrorCode}: {res.ErrorMessage}");
+
+        using var outWb = new XLWorkbook(outputPath);
+        var outWs = outWb.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Haltungen", StringComparison.OrdinalIgnoreCase))
+                     ?? outWb.Worksheet(1);
+
+        int? inlinerCol = null;
+        foreach (var c in outWs.Row(headerRow).CellsUsed())
+        {
+            if (string.Equals((c.GetString() ?? "").Trim(), "Renovierung Inliner m", StringComparison.OrdinalIgnoreCase))
+                inlinerCol = c.Address.ColumnNumber;
+        }
+
+        Assert.True(inlinerCol.HasValue, "Header 'Renovierung Inliner m' fehlt in der Vorlage — das Feld wird sonst nie exportiert.");
+        Assert.Equal(12.5d, outWs.Cell(startRow, inlinerCol!.Value).GetDouble(), 3);
+    }
+
+    // Header-Zeile robust finden (Vorlage kann sich mit der Zeit verschieben) — von beiden Tests genutzt.
+    private static int FindHeaderRow(IXLWorksheet ws)
+    {
+        for (int r = 1; r <= 100; r++)
+        {
+            var row = ws.Row(r);
+            if (!row.CellsUsed().Any()) continue;
+
+            var headerTokens = row.CellsUsed()
+                .Select(c => (c.GetString() ?? "").Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var hits = 0;
+            if (headerTokens.Contains("Haltungsname (ID)")) hits++;
+            if (headerTokens.Contains("Haltungsnahme (ID)")) hits++;
+            if (headerTokens.Contains("NR.")) hits++;
+            if (headerTokens.Contains("Strasse")) hits++;
+            if (headerTokens.Contains("Rohrmaterial")) hits++;
+
+            // Mehr als ein Token verlangen, um Fehltreffer zu vermeiden.
+            if (hits >= 2) return r;
+        }
+        return 11;
     }
 }
