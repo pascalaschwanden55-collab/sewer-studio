@@ -95,7 +95,42 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <!-- RootContentHost: dezentes, professionelles Einblenden beim Oeffnen.
+         Kurzes Fade (Deckkraft 0->1) mit minimalem Aufziehen (98%->100%) — ruhig,
+         nicht verspielt. Laeuft ueber den Compositor und ist dadurch fluessig. -->
+    <Grid x:Name="RootContentHost" Margin="16" Opacity="0" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="OpenScaleTransform" ScaleX="0.98" ScaleY="0.98"/>
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="RootContentHost"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0" To="1" Duration="0:0:0.16">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName="OpenScaleTransform"
+                                         Storyboard.TargetProperty="ScaleX"
+                                         From="0.98" To="1" Duration="0:0:0.16">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName="OpenScaleTransform"
+                                         Storyboard.TargetProperty="ScaleY"
+                                         From="0.98" To="1" Duration="0:0:0.16">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>      <!-- Header -->
             <RowDefinition Height="*"/>         <!-- Video + Seitenpanel -->
