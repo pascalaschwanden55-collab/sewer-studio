@@ -23,6 +23,10 @@ public static class DataPageSanierungCostMapper
     public static void ClearCosts(HaltungRecord record)
         => SanierungCostFieldMapper.ClearCosts(record);
 
+    /// <inheritdoc cref="SanierungCostFieldMapper.SyncRecord"/>
+    public static bool SyncRecord(HaltungRecord record, HoldingCost? cost)
+        => SanierungCostFieldMapper.SyncRecord(record, cost);
+
     /// <inheritdoc cref="MeasuresTextBuilder.NormalizeRecommendationEntry"/>
     public static string NormalizeRecommendationEntry(string? value)
         => MeasuresTextBuilder.NormalizeRecommendationEntry(value);

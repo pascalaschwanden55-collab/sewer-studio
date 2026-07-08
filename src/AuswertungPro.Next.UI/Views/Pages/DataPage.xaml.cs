@@ -752,7 +752,34 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // generische S3-Zweig sie nicht erneut setzt (keine zweite, synchron zu haltende Namensliste).
         bool handled = false;
 
-        if (fieldName == "Sanieren_JaNein" || fieldName == "Eigentuemer" ||
+        if (fieldName == "Sanieren_JaNein" && e.Row?.Item is HaltungRecord sanRecord)
+        {
+            handled = true;
+            var newValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? string.Empty;
+            var wasJa = string.Equals((sanRecord.GetFieldValue("Sanieren_JaNein") ?? "").Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
+            var isJa = string.Equals(newValue.Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
+            var switchingOffRenovation = wasJa && !isJa;
+
+            // Ja -> Nein/leer: erst Rueckfrage. Bei Abbruch bleibt die Haltung auf 'Ja'.
+            if (switchingOffRenovation && !Dialogs.ConfirmWarn(
+                    "Diese Haltung auf 'nicht sanieren' setzen? Die berechneten Kostenwerte werden entfernt.",
+                    "Sanieren", defaultNo: true))
+            {
+                sanRecord.SetFieldValue("Sanieren_JaNein", "Ja", FieldSource.Manual, userEdited: true);
+                vm.EnsureOptionForField(fieldName, "Ja");
+            }
+            else
+            {
+                // Uebernehmen (bei Ja->Nein auch den leeren Wert), dann Kostenfelder nach Sanieren-Regel nachziehen.
+                if (!string.IsNullOrWhiteSpace(newValue) || switchingOffRenovation)
+                    sanRecord.SetFieldValue(fieldName, newValue, FieldSource.Manual, userEdited: true);
+                if (switchingOffRenovation)
+                    DataPageSanierungCostMapper.SyncRecord(sanRecord, cost: null); // Nein/leer -> alle 8 Kostenfelder leeren
+                vm.EnsureOptionForField(fieldName, newValue);
+            }
+        }
+
+        if (fieldName == "Eigentuemer" ||
             fieldName == "Pruefungsresultat" || fieldName == "Referenzpruefung")
         {
             handled = true;

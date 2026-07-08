@@ -812,6 +812,19 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             haltungRecord: request.Record,
             projectRecords: Records);
 
+        // Nach dem Speichern im Kostenfenster die abgeleiteten Kostenfelder ALLER Haltungen
+        // nach der Sanieren-Regel nachziehen. Das Fenster-VM kennt nur seine eine Haltung,
+        // darum laeuft der projektweite Sync hier (kennt Project + frisch gespeicherten Store).
+        costCalcVm.Saved += () =>
+        {
+            var syncProjectPath = _sp.Settings.LastProjectPath;
+            if (string.IsNullOrWhiteSpace(syncProjectPath))
+                return;
+            var syncStore = new ProjectCostStoreRepository().Load(syncProjectPath, out var syncLoadError);
+            if (syncLoadError is null)
+                _sp.CostFieldSync.Sync(_shell.Project, syncStore);
+        };
+
         SanierungOptimizationViewModel? optimizationVm = null;
         if (request.RuntimeSettings is not null)
         {

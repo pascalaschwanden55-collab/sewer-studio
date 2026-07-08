@@ -981,6 +981,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         _vatRate = vatRate;
         _costStore = store;
+        // Abgeleitete Kostenfelder aller Haltungen nach der Sanieren-Regel nachziehen.
+        _sp.CostFieldSync.Sync(_shell.Project, store);
         RefreshData();
 
         LastResult = changedHoldings.Count == 0

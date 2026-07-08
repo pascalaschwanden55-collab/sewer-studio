@@ -1229,6 +1229,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return;
         }
 
+        // Abgeleitete Kostenfelder aller Haltungen auf den frisch gespeicherten Store nachziehen
+        // (Sanieren-Regel: nur Ja zaehlt; Nein/leer -> Felder leer).
+        _sp.CostFieldSync.Sync(_shell.Project, _store);
+
         _clearedHoldings.Clear();
         _touchedHoldings.Clear();
 
