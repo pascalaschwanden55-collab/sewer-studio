@@ -338,7 +338,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (!ConfirmDiscardUnsavedChanges())
             return;
 
-        ReplaceProject(new Project { Name = string.Empty });
+        ReplaceProject(AuswertungPro.Next.Application.Projects.NewProjectDraftFactory.Create());
         ResetProjectReady();
         HasPersistedProject = false;
         _suppressLeaveGuard = true;
