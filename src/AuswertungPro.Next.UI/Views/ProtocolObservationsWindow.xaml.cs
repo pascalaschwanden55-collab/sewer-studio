@@ -230,6 +230,11 @@ public partial class ProtocolObservationsWindow : Window
             var dlg = new AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow(vm, _videoPath, entry.Zeit)
             {
                 Owner = this,
+                // Feste Groesse hat hier Vorrang: der Konstruktor ruft WindowStateManager.Track,
+                // das aus dem (mit dem Player geteilten) Zustand ggf. Position/Maximiert wiederherstellt.
+                // Normal + zentriert erzwingen, damit die angeforderten 1422x851 immer greifen.
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner,
+                WindowState = System.Windows.WindowState.Normal,
                 Width = 1422,
                 Height = 851
             };

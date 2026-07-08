@@ -48,4 +48,47 @@ public sealed class CodingEventColumnTransferTests
         Assert.Equal(original.Entry.FotoPaths, copy.Entry.FotoPaths);
         Assert.NotSame(original.Entry.FotoPaths, copy.Entry.FotoPaths); // eigene Liste
     }
+
+    [Fact]
+    public void CloneWithNewIds_klont_overlay_codemeta_aicontext_unabhaengig()
+    {
+        var original = new CodingEvent
+        {
+            MeterAtCapture = 5,
+            Entry = new ProtocolEntry
+            {
+                Code = "BAB",
+                Beschreibung = "Riss laengs",
+                CodeMeta = new ProtocolEntryCodeMeta
+                {
+                    Code = "BAB",
+                    Parameters = { ["Uhrlage"] = "12" },
+                },
+            },
+            Overlay = new OverlayGeometry
+            {
+                Points = { new NormalizedPoint { X = 0.1, Y = 0.2 } },
+            },
+            AiContext = new CodingEventAiContext { SuggestedCode = "BAB", Confidence = 0.9 },
+        };
+
+        var clone = CodingEventColumnTransfer.CloneWithNewIds(original);
+
+        // Overlay: neue GeometryId + eigene Points-Liste (Werte gleich, Referenz verschieden).
+        Assert.NotEqual(original.Overlay!.GeometryId, clone.Overlay!.GeometryId);
+        Assert.NotSame(original.Overlay.Points, clone.Overlay.Points);
+        Assert.Equal(0.1, clone.Overlay.Points[0].X);
+        // CodeMeta: eigenes Parameter-Dictionary (Wert gleich, Referenz verschieden).
+        Assert.NotSame(original.Entry.CodeMeta!.Parameters, clone.Entry.CodeMeta!.Parameters);
+        Assert.Equal("12", clone.Entry.CodeMeta.Parameters["Uhrlage"]);
+        // AiContext: eigene Instanz (Wert kopiert).
+        Assert.NotSame(original.AiContext, clone.AiContext);
+        Assert.Equal("BAB", clone.AiContext!.SuggestedCode);
+
+        // Gegenprobe: Mutation an der Kopie faerbt nicht auf das Original ab.
+        clone.Overlay.Points[0].X = 0.99;
+        clone.Entry.CodeMeta.Parameters["Uhrlage"] = "6";
+        Assert.Equal(0.1, original.Overlay.Points[0].X);
+        Assert.Equal("12", original.Entry.CodeMeta.Parameters["Uhrlage"]);
+    }
 }

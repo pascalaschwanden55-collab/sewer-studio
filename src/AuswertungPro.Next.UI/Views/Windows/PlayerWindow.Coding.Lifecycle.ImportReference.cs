@@ -61,8 +61,12 @@ public partial class PlayerWindow
         if (targetIsKi)
         {
             // In die KI-Spalte: als offenen Session-Befund anlegen (unabhaengiger Klon mit neuen IDs).
+            // Ohne Session-Service koennte kein KI-Befund entstehen -> dann die Quelle NICHT entfernen.
+            var service = _codingSessionRuntimeOwner.Service;
+            if (service is null)
+                return;
             var clone = CodingEventColumnTransfer.CloneWithNewIds(ev);
-            _codingSessionRuntimeOwner.Service?.AddEvent(clone.Entry, clone.Overlay);
+            service.AddEvent(clone.Entry, clone.Overlay);
             if (!isCopy)
                 import.Remove(ev); // Verschieben: aus der Import-Spalte entfernen
         }

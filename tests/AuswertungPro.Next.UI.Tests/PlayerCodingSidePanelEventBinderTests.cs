@@ -39,7 +39,10 @@ public sealed class PlayerCodingSidePanelEventBinderTests
                     CodingSelectCode: (_, _) => { },
                     CodingCreateEvent: (_, _) => { },
                     CodingProtocolMatch: (_, _) => protocolCalls++,
-                    CodingAcceptGreenMatches: (_, _) => acceptGreenCalls++));
+                    CodingAcceptGreenMatches: (_, _) => acceptGreenCalls++,
+                    ImportShowPhotos: (_, _) => { },
+                    ImportEdit: (_, _) => { },
+                    ImportConfirmToBrain: (_, _) => { }));
 
             InvokePrivateClick(sidePanel, "RunCodingProtocolMatch_Click");
             InvokePrivateClick(sidePanel, "CodingAcceptGreenMatches_Click");

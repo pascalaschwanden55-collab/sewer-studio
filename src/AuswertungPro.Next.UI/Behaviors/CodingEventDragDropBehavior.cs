@@ -90,7 +90,9 @@ public static class CodingEventDragDropBehavior
 
     private static void OnDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(Format)
+        // Ueber der Herkunftsspalte kein "Drop-OK"-Cursor zeigen (dort ist der Drop ohnehin ein No-Op).
+        var overSource = ReferenceEquals(_sourceList, sender);
+        e.Effects = (!overSource && e.Data.GetDataPresent(Format))
             ? ((e.KeyStates & DragDropKeyStates.ControlKey) != 0 ? DragDropEffects.Copy : DragDropEffects.Move)
             : DragDropEffects.None;
         e.Handled = true;
