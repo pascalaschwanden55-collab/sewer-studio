@@ -26,7 +26,8 @@ public sealed class ProjektEroeffnungShellGuardTests
         var src = ShellSource();
         Assert.Contains("SwitchProjectCommand", src);
         Assert.Contains("public void StartNewProjectDraft", src);
-        Assert.Contains("new Project { Name = string.Empty }", src);
+        // Draft-Projekt wird jetzt ueber die Factory erzeugt (Auftraggeber-Default "Abwasser Uri").
+        Assert.Contains("NewProjectDraftFactory.Create()", src);
         Assert.Contains("public bool CreateProjectFromDraft", src);
         Assert.Contains("public void EnterWorkspaceOn", src);
         Assert.Contains("NewProjectFolderPlanner.Plan", src);
