@@ -227,37 +227,27 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private async Task ImportSchachtPdfsFolderAsync()
     {
         var projectFolder = _shell.GetProjectFolder();
-        var initialFolder = !string.IsNullOrWhiteSpace(projectFolder)
-            ? Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt)
-            : null;
-        if (string.IsNullOrWhiteSpace(initialFolder) || !Directory.Exists(initialFolder))
-            initialFolder = projectFolder;
-
-        var folder = _sp.Dialogs.SelectFolder("Schachtprotokoll-Ordner waehlen", initialFolder);
-        if (string.IsNullOrWhiteSpace(folder))
-            return;
-
-        var paths = EnumerateProjectFiles(
-                folder,
-                new[] { ".pdf" },
-                includeRoot: true,
-                includeDirs: Array.Empty<string>())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        if (paths.Length == 0)
+        if (string.IsNullOrWhiteSpace(projectFolder))
         {
-            _sp.Dialogs.Info("Keine PDF-Dateien im gewaehlten Ordner gefunden.", "Schachtprotokolle");
+            _sp.Dialogs.Info("Kein Projekt geöffnet.", "Protokolle verteilen");
             return;
         }
 
-        await RunImportWithOptionalPreviewAsync(
-            "Schacht-PDF",
-            paths,
-            ImportPdfCore,
-            postImportAsync: PostImportPdfAsync,
-            saveProjectAfterCommit: true);
+        var folder = _sp.Dialogs.SelectFolder("Verteil-Ordner mit Protokollen wählen", projectFolder);
+        if (string.IsNullOrWhiteSpace(folder))
+            return;
+
+        var report = await Task.Run(() =>
+            _sp.NameBasedProtocolDistributor.Distribute(_shell.Project, projectFolder, folder));
+
+        _shell.Project.Dirty = true;
+        _shell.SaveCommand.Execute(null);
+
+        var text = $"Verteilt: {report.HaltungProtokolle} Haltungs-Protokolle, {report.SchachtProtokolle} Schacht-Protokolle" +
+                   $" ({report.SchaechteAngelegt} Schächte neu angelegt).";
+        if (report.NichtZugeordnet.Count > 0)
+            text += $"\n\nNicht zugeordnet ({report.NichtZugeordnet.Count}):\n" + string.Join("\n", report.NichtZugeordnet.Take(30));
+        _sp.Dialogs.Info(text, "Protokolle verteilen");
     }
 
     private Result<ImportStats> ImportPdfCore(string[] paths, Project project, ImportRunContext ctx)
