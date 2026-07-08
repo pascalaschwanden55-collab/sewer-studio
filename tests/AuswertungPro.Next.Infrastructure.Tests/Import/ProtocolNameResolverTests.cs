@@ -12,6 +12,8 @@ public sealed class ProtocolNameResolverTests
     [InlineData(@"D:\X\Haltungen\33390-36268\20260424_33390-36268.pdf", ProtocolKind.Haltung, "33390-36268")]
     [InlineData(@"D:\X\S_952.06.pdf", ProtocolKind.Schacht, "952.06")]
     [InlineData(@"D:\X\36051.pdf", ProtocolKind.Schacht, "36051")]
+    // Kategorie-Ordner zaehlt auch als Vorfahr weiter oben (nicht nur direkter Elternordner):
+    [InlineData(@"D:\Root\Schächte\27581\sub\20260427_27581.pdf", ProtocolKind.Schacht, "27581")]
     public void Resolve_erkennt_art_und_name(string path, ProtocolKind kind, string name)
     {
         var t = ProtocolNameResolver.Resolve(path);

@@ -32,8 +32,6 @@ public static class ProtocolNameResolver
         if (NichtProtokoll.Any(p => lowerFull.Contains(p)))
             return null;
 
-        var parent = new DirectoryInfo(Path.GetDirectoryName(pdfPath) ?? "").Name;
-
         // Name bereinigen: führendes YYYYMMDD_, Präfixe H_/L_/S_, Duplikat-Suffix _<ziffern>.
         var name = StripDatePrefix(file);
         var prefix = DetectPrefix(name);
@@ -43,21 +41,36 @@ public static class ProtocolNameResolver
         if (name.Length == 0 || !name.Any(char.IsDigit))
             return null; // sieht nicht nach Haltungs-/Schacht-Id aus
 
-        // Art bestimmen: 1) Elternordner, 2) Präfix, 3) '-'-Heuristik.
-        ProtocolKind kind;
-        if (parent.Equals("Haltungen", StringComparison.OrdinalIgnoreCase))
-            kind = ProtocolKind.Haltung;
-        else if (parent.Equals("Schächte", StringComparison.OrdinalIgnoreCase) ||
-                 parent.Equals("Schaechte", StringComparison.OrdinalIgnoreCase))
-            kind = ProtocolKind.Schacht;
-        else if (prefix is "H_" or "L_")
-            kind = ProtocolKind.Haltung;
-        else if (prefix is "S_")
-            kind = ProtocolKind.Schacht;
-        else
-            kind = name.Contains('-') ? ProtocolKind.Haltung : ProtocolKind.Schacht;
+        // Art bestimmen: 1) Kategorie-Ordner (Haltungen/Schächte) IRGENDWO im Pfad — im aufgeteilten
+        // Baum liegt die Datei unter <Kategorie>\<Id>\..., der Kategorie-Ordner ist also nicht der
+        // direkte Elternordner. 2) Präfix H_/L_/S_. 3) '-'-Heuristik (Haltung = zwei Schächte).
+        var kind = KindFromAncestors(pdfPath)
+            ?? prefix switch
+            {
+                "H_" or "L_" => ProtocolKind.Haltung,
+                "S_" => ProtocolKind.Schacht,
+                _ => name.Contains('-') ? ProtocolKind.Haltung : ProtocolKind.Schacht
+            };
 
         return new ProtocolTarget(kind, name);
+    }
+
+    // Läuft alle Ordner über der Datei ab und meldet die Kategorie, sobald ein Ordner
+    // „Haltungen" bzw. „Schächte"/„Schaechte" heisst. Rein (nur Pfad-Stringoperationen).
+    private static ProtocolKind? KindFromAncestors(string pdfPath)
+    {
+        var dir = Path.GetDirectoryName(pdfPath);
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var seg = Path.GetFileName(dir);
+            if (seg.Equals("Haltungen", StringComparison.OrdinalIgnoreCase))
+                return ProtocolKind.Haltung;
+            if (seg.Equals("Schächte", StringComparison.OrdinalIgnoreCase) ||
+                seg.Equals("Schaechte", StringComparison.OrdinalIgnoreCase))
+                return ProtocolKind.Schacht;
+            dir = Path.GetDirectoryName(dir);
+        }
+        return null;
     }
 
     private static string StripDatePrefix(string s)
