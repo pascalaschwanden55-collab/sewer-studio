@@ -93,6 +93,28 @@
 
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 
+                        <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
+                        <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
+                                 VerticalContentAlignment="Center" Padding="4,2"
+                                 ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
+                                 KeyDown="MoveToPositionBox_KeyDown"/>
+                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                ToolTip="Selektierten Schacht an Position verschieben"
+                                Click="MoveToPosition_Click"/>
+
+                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,4"/>
+
+                        <TextBlock Text="Gehe zu Zeile:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
+                                 VerticalContentAlignment="Center" Padding="4,2"
+                                 ToolTip="Zeilennummer eingeben und Enter drücken"
+                                 KeyDown="GoToRowBox_KeyDown"/>
+                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                ToolTip="Zu Zeile springen"
+                                Click="GoToRow_Click"/>
+
                         <TextBlock Text="Zeilenhöhe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                         <Slider Width="100"
                                 Minimum="24"
@@ -227,6 +249,7 @@
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Details anzeigen..." Click="DetailsMenu_Click" />
+                    <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click" />
                     <Separator/>
                     <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click" />
                     <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click" />

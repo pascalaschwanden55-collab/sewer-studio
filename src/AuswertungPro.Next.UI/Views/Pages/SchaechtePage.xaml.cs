@@ -15,6 +15,7 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
+using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -347,6 +348,51 @@ public partial class SchaechtePage : UserControl
         _ = e;
         _searchDebounceTimer.Stop();
         _searchDebounceTimer.Start();
+    }
+
+    private void MoveToPositionBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+        MoveToPosition_Click(sender, e);
+    }
+
+    private void MoveToPosition_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (DataContext is not SchaechtePageViewModel vm)
+            return;
+
+        DataPageRowNavigationController.TryMoveToPosition(
+            MoveToPositionBox.Text,
+            vm.MoveToPosition,
+            Services.Dialogs.Info);
+    }
+
+    private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+        GoToRow_Click(sender, e);
+    }
+
+    private void GoToRow_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (DataContext is not SchaechtePageViewModel vm)
+            return;
+
+        if (DataPageRowNavigationController.TryResolveRowIndex(
+            GoToRowBox.Text,
+            vm.Records.Count,
+            Services.Dialogs.Info,
+            out var rowIndex))
+        {
+            vm.Selected = vm.Records[rowIndex];
+            Grid.ScrollIntoView(vm.Selected);
+        }
     }
 
     private void ApplySearchFilter()
@@ -722,6 +768,9 @@ public partial class SchaechtePage : UserControl
             case "delete":
                 _vm.RemoveCommand.Execute(null);
                 break;
+            case "sanierung":
+                OpenSchachtMassnahmen(record);
+                break;
             default:
                 System.Diagnostics.Debug.Fail($"Unbekannter actionKey: {actionKey}");
                 break;
@@ -1096,6 +1145,104 @@ public partial class SchaechtePage : UserControl
         }
 
         ShowRecordDetails(record);
+    }
+
+    private void SanierungsmassnahmenMenu_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_vm is null)
+            return;
+
+        var record = _vm.Selected;
+        if (record is null)
+        {
+            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf einen Schacht rechtsklicken.", "Sanierungsmassnahmen");
+            return;
+        }
+
+        OpenSchachtMassnahmen(record);
+    }
+
+    /// <summary>
+    /// Oeffnet das einfache Schacht-Sanierungsmassnahmen-Fenster (klickbare Liste, manuelle Preise,
+    /// ohne NPK). Die Auswahl wird pro Schacht in schacht_empfehlungen.json abgelegt und als
+    /// "Massnahmen"/"Kosten" in den Record geschrieben (-> Schaechte-Excel-Export).
+    /// </summary>
+    private void OpenSchachtMassnahmen(SchachtRecord record)
+    {
+        if (_vm is null)
+            return;
+
+        var schachtNummer = GetSchachtNumber(record);
+        var projectPath = Services.Settings.LastProjectPath;
+
+        var repo = new AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository("schacht_empfehlungen.json");
+        var store = repo.Load(projectPath, out var loadError);
+        if (loadError is not null)
+        {
+            Services.Dialogs.Warn(
+                $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\nDu kannst neu erfassen; Speichern legt die Datei neu an.",
+                "Sanierungsmassnahmen");
+        }
+
+        HoldingCost? bestehend = null;
+        if (!string.IsNullOrWhiteSpace(schachtNummer))
+            store.ByHolding.TryGetValue(schachtNummer, out bestehend);
+
+        var katalog = Services.SchachtMassnahmenKatalog.Load();
+
+        var vm = new SchachtMassnahmenViewModel(
+            record,
+            katalog,
+            bestehend,
+            onUebernehmen: cost => PersistSchachtEmpfehlung(repo, store, schachtNummer, cost, projectPath),
+            onListeBearbeiten: EditSchachtMassnahmenListe);
+
+        var win = new SchachtMassnahmenWindow(vm) { Owner = Window.GetWindow(this) };
+        win.ShowDialog();
+    }
+
+    private void PersistSchachtEmpfehlung(
+        AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository repo,
+        ProjectCostStore store,
+        string schachtNummer,
+        HoldingCost cost,
+        string? projectPath)
+    {
+        if (!string.IsNullOrWhiteSpace(schachtNummer))
+        {
+            var hatAuswahl = cost.Measures.Any(m => m.Lines.Any(l => l.Selected));
+            if (hatAuswahl)
+                store.ByHolding[schachtNummer] = cost;
+            else
+                store.ByHolding.Remove(schachtNummer);
+
+            if (string.IsNullOrWhiteSpace(projectPath))
+                Services.Dialogs.Info("Projekt bitte zuerst speichern, damit die Auswahl dauerhaft abgelegt wird.", "Sanierungsmassnahmen");
+            else if (!repo.Save(projectPath, store, out var error))
+                Services.Dialogs.Error($"Speichern der Schacht-Empfehlungen fehlgeschlagen:\n{error}", "Sanierungsmassnahmen");
+        }
+
+        // Die Felder "Massnahmen"/"Kosten" hat das ViewModel bereits in den Record geschrieben.
+        MarkProjectDirty();
+        ApplySearchFilter();
+    }
+
+    private IReadOnlyList<SchachtMassnahmeKatalogEintrag>? EditSchachtMassnahmenListe()
+    {
+        var editorVm = new SchachtMassnahmenKatalogEditorViewModel(Services.SchachtMassnahmenKatalog.Load());
+        var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+                    ?? Window.GetWindow(this);
+        var win = new SchachtMassnahmenKatalogEditorWindow(editorVm) { Owner = owner };
+        if (win.ShowDialog() == true)
+        {
+            Services.SchachtMassnahmenKatalog.Save(editorVm.Ergebnis);
+            return editorVm.Ergebnis;
+        }
+
+        return null;
     }
 
     private string? ResolvePdfPath(SchachtRecord record)

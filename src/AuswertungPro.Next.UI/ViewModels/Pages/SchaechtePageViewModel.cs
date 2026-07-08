@@ -7,6 +7,7 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -159,7 +160,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     partial void OnSelectedChanged(SchachtRecord? value)
     {
-        _ = value;
+        // Gewaehlten Schacht der QGIS-Bridge melden -> QGIS zoomt auf den Punkt (analog Haltungen).
+        QgisBridge.QgisBridgeSelection.SetSchacht(value?.GetFieldValue("Schachtnummer"));
         (RemoveCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
@@ -359,6 +361,33 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _shell.Project.Dirty = true;
         (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Verschiebt den ausgewaehlten Schacht auf die angegebene 1-basierte Position
+    /// (analog zur Haltungsansicht). Liefert false, wenn nichts ausgewaehlt ist oder
+    /// der Zug ins Leere laeuft. Renummeriert danach ueber <see cref="UpdateNr"/>.
+    /// </summary>
+    public bool MoveToPosition(int targetPosition)
+    {
+        if (Selected is null)
+            return false;
+
+        lock (_shell.CollectionLock)
+        {
+            var oldIndex = Records.IndexOf(Selected);
+            if (!RecordMovePositionCalculator.TryResolveTargetIndex(
+                    oldIndex, Records.Count, targetPosition, out var targetIndex))
+                return false;
+
+            Records.Move(oldIndex, targetIndex);
+        }
+        UpdateNr();
+        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+        _shell.Project.Dirty = true;
+        (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        return true;
     }
 
     private void Save()
