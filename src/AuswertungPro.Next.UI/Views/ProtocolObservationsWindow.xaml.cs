@@ -230,8 +230,8 @@ public partial class ProtocolObservationsWindow : Window
             var dlg = new AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow(vm, _videoPath, entry.Zeit)
             {
                 Owner = this,
-                Width = 1420,
-                Height = 850
+                Width = 1422,
+                Height = 851
             };
             if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
             {
