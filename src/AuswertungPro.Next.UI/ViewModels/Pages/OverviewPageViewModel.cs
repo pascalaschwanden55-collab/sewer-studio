@@ -16,6 +16,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     {
         [ObservableProperty]
         private ProjectOverviewEntry? _selectedProjectEntry;
+        [ObservableProperty]
+        private ProjectPreview? _selectedPreview;
         private readonly ShellViewModel _shell;
         private readonly ServiceProvider _sp;
 
@@ -100,6 +102,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         foreach (var entry in filtered)
             ProjectEntries.Add(entry);
+
+        if (SelectedProjectEntry is null || !ProjectEntries.Contains(SelectedProjectEntry))
+            SelectedProjectEntry = ProjectEntries.FirstOrDefault();
     }
 
     private void LoadAllProjects()
@@ -272,6 +277,55 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     {
         (OpenSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (DeleteSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        BuildPreview(value);
+    }
+
+    /// <summary>
+    /// Baut die rechte Vorschau aus dem gewählten Listeneintrag: lädt das Projekt aus seiner Datei
+    /// (ohne es zu öffnen). Schlägt das Laden fehl, wird eine minimale Vorschau aus den Listen-
+    /// Metadaten gezeigt — kein Absturz, Panel bleibt nutzbar.
+    /// </summary>
+    private void BuildPreview(ProjectOverviewEntry? entry)
+    {
+        if (entry is null)
+        {
+            SelectedPreview = null;
+            return;
+        }
+
+        try
+        {
+            var res = _sp.Projects.Load(entry.Path);
+            if (res.Ok && res.Value is not null)
+            {
+                SelectedPreview = ProjectPreviewFactory.FromProject(res.Value, entry.Path);
+                return;
+            }
+        }
+        catch
+        {
+            // Fällt unten auf die Metadaten-Vorschau zurück.
+        }
+
+        SelectedPreview = new ProjectPreview(
+            Name: entry.Name,
+            Description: entry.Description,
+            Path: entry.Path,
+            ModifiedAtUtc: entry.ModifiedAtUtc,
+            AppVersion: null,
+            HoldingCount: entry.RecordCount,
+            TotalLengthMeters: 0,
+            TotalCost: 0m,
+            Auftraggeber: string.Empty,
+            Gemeinde: string.Empty,
+            Zone: string.Empty,
+            Strasse: string.Empty,
+            Bearbeiter: string.Empty,
+            Inspektionsdatum: string.Empty,
+            AuftragNr: string.Empty,
+            Firma: string.Empty,
+            ConditionClasses: System.Array.Empty<DashboardBucket>(),
+            DnCostGroups: System.Array.Empty<DashboardCostBucket>());
     }
 
     partial void OnLastProjectPathChanged(string? value)
