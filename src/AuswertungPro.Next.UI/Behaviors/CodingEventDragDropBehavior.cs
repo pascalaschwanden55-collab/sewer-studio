@@ -9,11 +9,12 @@ namespace AuswertungPro.Next.UI.Behaviors;
 
 /// <summary>
 /// Drag&amp;Drop von Befund-Kacheln (<see cref="CodingEvent"/>) zwischen den zwei Spalten des
-/// Abgleich-Panels (KI-Befunde links ↔ Import rechts). Ziehen = Verschieben,
-/// Strg+Ziehen = Kopieren (Windows-Standard).
+/// Abgleich-Panels (KI-Befunde links ↔ Import rechts). Die RICHTUNG bestimmt die Aktion:
+/// Import → KI (rechts → links) = Kopieren (Import bleibt erhalten); KI → Import (links → rechts)
+/// = Verschieben und eingliedern. Die Strg-Taste spielt keine Rolle.
 ///
-/// Das Behavior erkennt NUR Richtung (Ziel = KI-Spalte?) und Kopie/Verschieben und ruft einen
-/// Callback (<c>DropHandler</c>). Die eigentliche Daten-/Session-Logik (Collections + der
+/// Das Behavior erkennt NUR die Richtung (Ziel = KI-Spalte?) und ruft einen Callback
+/// (<c>DropHandler</c>). Die eigentliche Daten-/Session-Logik (Collections + der
 /// <c>CodingSessionService</c>) liegt im Code-behind — denn „in die KI-Spalte" heisst ein
 /// echter, noch unbestaetigter Session-Befund, „aus der KI heraus" ein sauberes Entfernen aus
 /// der Session, und die Import-Spalte ist reine UI-Referenz.
@@ -37,13 +38,14 @@ public static class CodingEventDragDropBehavior
     public static void SetIsKiColumn(DependencyObject d, bool v) => d.SetValue(IsKiColumnProperty, v);
     public static bool GetIsKiColumn(DependencyObject d) => (bool)d.GetValue(IsKiColumnProperty);
 
-    // ── DropHandler: (droppedEvent, targetIsKi, isCopy) — per Code-behind gesetzt ──
+    // ── DropHandler: (droppedEvent, targetIsKi) — per Code-behind gesetzt. Die Richtung (targetIsKi)
+    //    bestimmt die Aktion; ein Kopie/Verschieben-Flag gibt es bewusst nicht mehr. ──
     public static readonly DependencyProperty DropHandlerProperty = DependencyProperty.RegisterAttached(
-        "DropHandler", typeof(Action<CodingEvent, bool, bool>), typeof(CodingEventDragDropBehavior),
+        "DropHandler", typeof(Action<CodingEvent, bool>), typeof(CodingEventDragDropBehavior),
         new PropertyMetadata(null));
-    public static void SetDropHandler(DependencyObject d, Action<CodingEvent, bool, bool>? v) => d.SetValue(DropHandlerProperty, v);
-    public static Action<CodingEvent, bool, bool>? GetDropHandler(DependencyObject d)
-        => (Action<CodingEvent, bool, bool>?)d.GetValue(DropHandlerProperty);
+    public static void SetDropHandler(DependencyObject d, Action<CodingEvent, bool>? v) => d.SetValue(DropHandlerProperty, v);
+    public static Action<CodingEvent, bool>? GetDropHandler(DependencyObject d)
+        => (Action<CodingEvent, bool>?)d.GetValue(DropHandlerProperty);
 
     private static void OnEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -90,11 +92,13 @@ public static class CodingEventDragDropBehavior
 
     private static void OnDragOver(object sender, DragEventArgs e)
     {
-        // Ueber der Herkunftsspalte kein "Drop-OK"-Cursor zeigen (dort ist der Drop ohnehin ein No-Op).
+        // Ueber der Herkunftsspalte kein "Drop-OK"-Cursor (dort ist der Drop ohnehin ein No-Op).
+        // Sonst zeigt die Richtung die Aktion: Ziel = KI (Import→KI) = Kopieren, sonst (KI→Import) = Verschieben.
         var overSource = ReferenceEquals(_sourceList, sender);
-        e.Effects = (!overSource && e.Data.GetDataPresent(Format))
-            ? ((e.KeyStates & DragDropKeyStates.ControlKey) != 0 ? DragDropEffects.Copy : DragDropEffects.Move)
-            : DragDropEffects.None;
+        if (overSource || !e.Data.GetDataPresent(Format) || sender is not ListBox target)
+            e.Effects = DragDropEffects.None;
+        else
+            e.Effects = GetIsKiColumn(target) ? DragDropEffects.Copy : DragDropEffects.Move;
         e.Handled = true;
     }
 
@@ -108,8 +112,7 @@ public static class CodingEventDragDropBehavior
             return; // Drop in dieselbe Spalte -> nichts tun
 
         var targetIsKi = GetIsKiColumn(targetList);
-        var isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
-        GetDropHandler(targetList)?.Invoke(ev, targetIsKi, isCopy);
+        GetDropHandler(targetList)?.Invoke(ev, targetIsKi);
         e.Handled = true;
     }
 

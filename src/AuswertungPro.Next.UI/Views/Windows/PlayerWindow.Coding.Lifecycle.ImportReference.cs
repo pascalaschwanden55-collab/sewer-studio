@@ -46,12 +46,12 @@ public partial class PlayerWindow
     }
 
     /// <summary>
-    /// Fuehrt einen Kachel-Drop im Abgleich-Panel aus. Ziel = KI-Spalte -> echter, noch
-    /// UNBESTAETIGTER Session-Befund (via AddEvent; EventAdded fuellt die VM-Liste). Ziel =
-    /// Import -> reine UI-Referenz. Verschieben aus der KI entfernt zusaetzlich sauber aus der
-    /// Session; Kopieren (Strg) dupliziert mit neuen IDs.
+    /// Fuehrt einen Kachel-Drop im Abgleich-Panel aus. Die RICHTUNG bestimmt die Aktion:
+    /// Import → KI (rechts → links) = NUR kopieren (Import-Referenz bleibt; KI bekommt einen offenen,
+    /// noch UNBESTAETIGTEN Session-Befund via AddEvent). KI → Import (links → rechts) = verschieben und
+    /// eingliedern (nach Meter sortiert) und dabei sauber aus der Session entfernen.
     /// </summary>
-    private void HandleAbgleichDrop(CodingEvent ev, bool targetIsKi, bool isCopy)
+    private void HandleAbgleichDrop(CodingEvent ev, bool targetIsKi)
     {
         var ki = _codingSessionHost.EventCollection;
         var import = _codingImportReferenceEvents.Events;
@@ -60,28 +60,20 @@ public partial class PlayerWindow
 
         if (targetIsKi)
         {
-            // In die KI-Spalte: als offenen Session-Befund anlegen (unabhaengiger Klon mit neuen IDs).
-            // Ohne Session-Service koennte kein KI-Befund entstehen -> dann die Quelle NICHT entfernen.
+            // Rechts → Links (Import → KI): NUR kopieren. Import bleibt; KI bekommt einen unabhaengigen
+            // Klon mit neuen IDs als offenen Session-Befund. Ohne Session-Service passiert nichts.
             var service = _codingSessionRuntimeOwner.Service;
             if (service is null)
                 return;
             var clone = CodingEventColumnTransfer.CloneWithNewIds(ev);
             service.AddEvent(clone.Entry, clone.Overlay);
-            if (!isCopy)
-                import.Remove(ev); // Verschieben: aus der Import-Spalte entfernen
         }
         else
         {
-            // In die Import-Spalte (reine UI-Referenz).
-            if (isCopy)
-            {
-                CodingEventColumnTransfer.Copy(ev, import);
-            }
-            else
-            {
-                CodingEventColumnTransfer.Move(ev, ki, import);
-                _codingSessionRuntimeOwner.Service?.RemoveEvent(ev.EventId); // aus der Session raus
-            }
+            // Links → Rechts (KI → Import): verschieben und (nach Meter) eingliedern; zusaetzlich
+            // sauber aus der Session entfernen.
+            CodingEventColumnTransfer.Move(ev, ki, import);
+            _codingSessionRuntimeOwner.Service?.RemoveEvent(ev.EventId);
         }
 
         RefreshCodingEventsList();
