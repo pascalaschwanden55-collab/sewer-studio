@@ -108,6 +108,7 @@
 
                                     <ListBox x:Name="LstCodingEvents"
                                              behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
+                                             behaviors:CodingEventDragDropBehavior.Enabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
                                              FontSize="11"
@@ -331,6 +332,7 @@
 
                                     <ListBox x:Name="LstImportEvents"
                                              behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
+                                             behaviors:CodingEventDragDropBehavior.Enabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
                                              FontSize="11"
