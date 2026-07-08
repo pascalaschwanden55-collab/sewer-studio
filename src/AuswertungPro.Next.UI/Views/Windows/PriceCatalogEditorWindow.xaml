@@ -41,8 +41,8 @@
                 <DataGridTextColumn Header="Gruppe" Binding="{Binding Group}" Width="140"/>
                 <DataGridTextColumn Header="Bezeichnung" Binding="{Binding Label}" Width="280"/>
                 <DataGridTextColumn Header="Einheit" Binding="{Binding Unit}" Width="60"/>
-                <DataGridTextColumn Header="DN min" Binding="{Binding DnMin}" Width="70"/>
-                <DataGridTextColumn Header="DN max" Binding="{Binding DnMax}" Width="70"/>
+                <DataGridTextColumn Header="DN min" Binding="{Binding DnMin}" Width="70" ElementStyle="{StaticResource MonoCellStyle}"/>
+                <DataGridTextColumn Header="DN max" Binding="{Binding DnMax}" Width="70" ElementStyle="{StaticResource MonoCellStyle}"/>
                 <DataGridTextColumn Header="Preis" Binding="{Binding UnitPrice}" Width="90"/>
                 <DataGridTextColumn Header="Quelle Datei" Binding="{Binding SourceFile}" Width="170"/>
                 <DataGridTextColumn Header="Quelle Pos" Binding="{Binding SourcePos}" Width="110"/>

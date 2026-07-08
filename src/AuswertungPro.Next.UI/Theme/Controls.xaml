@@ -21,6 +21,13 @@
     <CornerRadius x:Key="RadiusL">8</CornerRadius>
     <CornerRadius x:Key="RadiusXL">10</CornerRadius>
 
+    <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
+    <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
+    <!-- Zell-Style fuer technische Grid-Spalten (einmal definiert, keine Inline-Duplikation). -->
+    <Style x:Key="MonoCellStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+    </Style>
+
     <!-- ═══ COMBOBOX ═══ -->
     <Style TargetType="{x:Type ComboBox}">
         <Setter Property="MinHeight" Value="36"/>

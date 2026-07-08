@@ -36,7 +36,7 @@
                   SelectionUnit="FullRow"
                   RowHeaderWidth="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Code" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="110" />
+                <DataGridTextColumn Header="Code" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="110" ElementStyle="{StaticResource MonoCellStyle}" />
                 <DataGridTextColumn Header="Title" Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Width="*" />
                 <DataGridTextColumn Header="Group" Binding="{Binding Group, UpdateSourceTrigger=PropertyChanged}" Width="150" />
             </DataGrid.Columns>

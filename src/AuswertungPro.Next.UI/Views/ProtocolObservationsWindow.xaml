@@ -105,9 +105,9 @@
                     </Style>
                 </DataGrid.RowStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="110"/>
-                    <DataGridTextColumn Header="m+" Binding="{Binding MeterStart, StringFormat=F2}" Width="90"/>
-                    <DataGridTextColumn Header="m-" Binding="{Binding MeterEnd, StringFormat=F2}" Width="90"/>
+                    <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="110" ElementStyle="{StaticResource MonoCellStyle}"/>
+                    <DataGridTextColumn Header="m+" Binding="{Binding MeterStart, StringFormat=F2}" Width="90" ElementStyle="{StaticResource MonoCellStyle}"/>
+                    <DataGridTextColumn Header="m-" Binding="{Binding MeterEnd, StringFormat=F2}" Width="90" ElementStyle="{StaticResource MonoCellStyle}"/>
                     <DataGridCheckBoxColumn Header="Strecke" Binding="{Binding IsStreckenschaden}" Width="80"/>
                     <DataGridTextColumn Header="Zustand / Beschreibung" Binding="{Binding Beschreibung}" Width="*"/>
                     <DataGridTextColumn Header="Zeit" Binding="{Binding Zeit, StringFormat={}{0:hh\\:mm\\:ss}}" Width="110"/>

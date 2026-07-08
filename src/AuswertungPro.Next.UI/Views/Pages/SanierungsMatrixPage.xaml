@@ -79,7 +79,7 @@
                 </DataGrid.Style>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" IsReadOnly="True" Width="2*"/>
-                    <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60"/>
+                    <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60" ElementStyle="{StaticResource MonoCellStyle}"/>
                     <DataGridTextColumn Header="Länge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
                     <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
 

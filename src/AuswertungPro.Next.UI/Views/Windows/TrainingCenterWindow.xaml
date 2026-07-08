@@ -196,9 +196,9 @@
                                   CanUserAddRows="False"
                                   IsReadOnly="True">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="0.6*"/>
-                                <DataGridTextColumn Header="m Start" Binding="{Binding MeterStart, StringFormat=F2}" Width="0.5*"/>
-                                <DataGridTextColumn Header="m End" Binding="{Binding MeterEnd, StringFormat=F2}" Width="0.5*"/>
+                                <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="0.6*" ElementStyle="{StaticResource MonoCellStyle}"/>
+                                <DataGridTextColumn Header="m Start" Binding="{Binding MeterStart, StringFormat=F2}" Width="0.5*" ElementStyle="{StaticResource MonoCellStyle}"/>
+                                <DataGridTextColumn Header="m End" Binding="{Binding MeterEnd, StringFormat=F2}" Width="0.5*" ElementStyle="{StaticResource MonoCellStyle}"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="0.6*"/>
                                 <DataGridCheckBoxColumn Header="OSD ?" Binding="{Binding HasOsdMismatch}" Width="0.4*"/>
                                 <DataGridTextColumn Header="Exportiert" Binding="{Binding ExportedUtc, StringFormat=g}" Width="0.8*"/>

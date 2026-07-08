@@ -77,8 +77,8 @@
                                   HeadersVisibility="Column"
                                   MinHeight="140" MaxHeight="420">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="DN von" Binding="{Binding DnFrom, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
-                                <DataGridTextColumn Header="DN bis" Binding="{Binding DnTo, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
+                                <DataGridTextColumn Header="DN von" Binding="{Binding DnFrom, UpdateSourceTrigger=PropertyChanged}" Width="75" ElementStyle="{StaticResource MonoCellStyle}"/>
+                                <DataGridTextColumn Header="DN bis" Binding="{Binding DnTo, UpdateSourceTrigger=PropertyChanged}" Width="75" ElementStyle="{StaticResource MonoCellStyle}"/>
                                 <DataGridTextColumn Header="Preis" Binding="{Binding Price, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
