@@ -212,7 +212,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private bool OpenObservationDialog(ProtocolEntry entry)
     {
-        if (_sp.CodeCatalog is null)
+        if (_sp.CodeSelectionCatalog is null)
         {
             _sp.Dialogs.Info("Code-Katalog ist nicht verfuegbar.", "Protokoll");
             return false;
@@ -221,18 +221,24 @@ public partial class ProtocolObservationsWindow : Window
         _isOpeningDialog = true;
         try
         {
-            var vm = new ObservationCatalogViewModel(
-                _sp.CodeCatalog,
-                entry,
-                _sp.ProtocolAi,
-                _record.GetFieldValue("Haltungsname"),
-                _videoPath,
-                _projectFolder);
-            var dlg = new ObservationCatalogWindow(vm)
+            // Moderner VSA-KEK-2020-Dialog (wie im Player/Live-Codieren) statt des alten
+            // Beobachtungskatalogs. Beide arbeiten auf ProtocolEntry; der moderne liefert
+            // einen NEUEN Entry (SelectedEntry), dessen Werte wir in den bestehenden
+            // Eintrag zurueckspiegeln.
+            var vm = new AuswertungPro.Next.UI.ViewModels.Windows.VsaCodeExplorerViewModel(
+                entry, entry.MeterStart, entry.Zeit, _sp.CodeSelectionCatalog);
+            var dlg = new AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow(vm, _videoPath, entry.Zeit)
             {
-                Owner = this
+                Owner = this,
+                Width = 1420,
+                Height = 850
             };
-            return dlg.ShowDialog() == true;
+            if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+            {
+                AuswertungPro.Next.UI.Ai.CodingProtocolEntryCopier.CopyEditableValues(dlg.SelectedEntry, entry);
+                return true;
+            }
+            return false;
         }
         finally
         {
