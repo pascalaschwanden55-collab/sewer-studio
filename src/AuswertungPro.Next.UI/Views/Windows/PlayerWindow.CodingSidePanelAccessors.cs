@@ -64,7 +64,10 @@ public partial class PlayerWindow
                 CodingSelectCode: CodingSelectCode_Click,
                 CodingCreateEvent: CodingCreateEvent_Click,
                 CodingProtocolMatch: RunCodingProtocolMatch_Click,
-                CodingAcceptGreenMatches: CodingAcceptGreenMatches_Click));
+                CodingAcceptGreenMatches: CodingAcceptGreenMatches_Click,
+                ImportShowPhotos: ImportShowPhotos_Click,
+                ImportEdit: ImportEdit_Click,
+                ImportConfirmToBrain: ImportConfirmToBrain_Click));
 
     private void InitializeCodingSidePanelControllers()
     {

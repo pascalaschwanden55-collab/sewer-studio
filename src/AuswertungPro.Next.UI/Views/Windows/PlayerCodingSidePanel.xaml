@@ -344,7 +344,10 @@
                                              MouseDoubleClick="ImportEvents_DoubleClick">
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
+                                                <MenuItem Header="&#x2713; Bestätigen → ins KI-Brain" Click="ImportConfirmToBrain_Click"/>
                                                 <MenuItem Header="&#x2713; Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click"/>
+                                                <MenuItem Header="Fotos anzeigen" Click="ImportShowPhotos_Click"/>
+                                                <MenuItem Header="Bearbeiten (Code / BBox ziehen)" Click="ImportEdit_Click"/>
                                                 <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click"/>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>

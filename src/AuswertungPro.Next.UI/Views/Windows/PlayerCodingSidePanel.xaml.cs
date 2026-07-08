@@ -44,6 +44,9 @@ public partial class PlayerCodingSidePanel : UserControl
     public event MouseButtonEventHandler? ImportEventsDoubleClickRequested;
     public event RoutedEventHandler? ImportConfirmRequested;
     public event RoutedEventHandler? ImportSeekRequested;
+    public event RoutedEventHandler? ImportShowPhotosRequested;
+    public event RoutedEventHandler? ImportEditRequested;
+    public event RoutedEventHandler? ImportConfirmToBrainRequested;
     public event RoutedEventHandler? CodingSelectCodeRequested;
     public event RoutedEventHandler? CodingCreateEventRequested;
     public event RoutedEventHandler? CodingProtocolMatchRequested;
@@ -64,6 +67,9 @@ public partial class PlayerCodingSidePanel : UserControl
     private void ImportEvents_DoubleClick(object sender, MouseButtonEventArgs e) => ImportEventsDoubleClickRequested?.Invoke(sender, e);
     private void ImportConfirm_Click(object sender, RoutedEventArgs e) => ImportConfirmRequested?.Invoke(sender, e);
     private void ImportSeek_Click(object sender, RoutedEventArgs e) => ImportSeekRequested?.Invoke(sender, e);
+    private void ImportShowPhotos_Click(object sender, RoutedEventArgs e) => ImportShowPhotosRequested?.Invoke(sender, e);
+    private void ImportEdit_Click(object sender, RoutedEventArgs e) => ImportEditRequested?.Invoke(sender, e);
+    private void ImportConfirmToBrain_Click(object sender, RoutedEventArgs e) => ImportConfirmToBrainRequested?.Invoke(sender, e);
     private void CodingSelectCode_Click(object sender, RoutedEventArgs e) => CodingSelectCodeRequested?.Invoke(sender, e);
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e) => CodingCreateEventRequested?.Invoke(sender, e);
     private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e) => CodingProtocolMatchRequested?.Invoke(sender, e);

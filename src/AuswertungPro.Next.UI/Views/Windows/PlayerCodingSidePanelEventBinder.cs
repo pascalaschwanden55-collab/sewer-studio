@@ -23,7 +23,10 @@ public sealed record PlayerCodingSidePanelEventHandlers(
     RoutedEventHandler CodingSelectCode,
     RoutedEventHandler CodingCreateEvent,
     RoutedEventHandler CodingProtocolMatch,
-    RoutedEventHandler CodingAcceptGreenMatches);
+    RoutedEventHandler CodingAcceptGreenMatches,
+    RoutedEventHandler ImportShowPhotos,
+    RoutedEventHandler ImportEdit,
+    RoutedEventHandler ImportConfirmToBrain);
 
 public static class PlayerCodingSidePanelEventBinder
 {
@@ -53,5 +56,8 @@ public static class PlayerCodingSidePanelEventBinder
         sidePanel.CodingCreateEventRequested += handlers.CodingCreateEvent;
         sidePanel.CodingProtocolMatchRequested += handlers.CodingProtocolMatch;
         sidePanel.CodingAcceptGreenMatchesRequested += handlers.CodingAcceptGreenMatches;
+        sidePanel.ImportShowPhotosRequested += handlers.ImportShowPhotos;
+        sidePanel.ImportEditRequested += handlers.ImportEdit;
+        sidePanel.ImportConfirmToBrainRequested += handlers.ImportConfirmToBrain;
     }
 }
