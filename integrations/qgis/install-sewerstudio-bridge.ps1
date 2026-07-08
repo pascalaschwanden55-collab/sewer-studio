@@ -59,6 +59,10 @@ foreach ($pluginRoot in $pluginRoots) {
     }
 
     Copy-Item -LiteralPath $source -Destination $target -Recurse
+    # __pycache__ nie mitinstallieren: alter Bytecode kann QGIS dazu bringen, die
+    # aktuelle .py zu ignorieren und veralteten Code auszufuehren.
+    Get-ChildItem -LiteralPath $target -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Host "SewerStudio Bridge installiert: $target"
 }
 
@@ -74,6 +78,8 @@ if (-not [string]::IsNullOrWhiteSpace($BackupDir) -and (Test-Path -LiteralPath $
         Remove-Item -LiteralPath $backupFolder -Recurse -Force
     }
     Copy-Item -LiteralPath $source -Destination $backupFolder -Recurse
+    Get-ChildItem -LiteralPath $backupFolder -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
     $versionLine = Get-Content -LiteralPath (Join-Path $source "metadata.txt") |
         Where-Object { $_ -match '^version=' } | Select-Object -First 1

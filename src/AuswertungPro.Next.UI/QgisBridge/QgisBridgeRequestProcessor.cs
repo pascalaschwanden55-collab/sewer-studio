@@ -67,7 +67,10 @@ internal sealed class QgisBridgeRequestProcessor
             var shell = _app.MainWindow?.DataContext as ShellViewModel;
             var project = shell?.Project;
             var current = project is null ? "" : QgisBridgeSelection.CurrentFor(project.Id);
-            return QgisProjectSnapshot.Capture(project, current, QgisBridgeSelection.Stamp);
+            var currentSchacht = project is null ? "" : QgisBridgeSelection.CurrentSchachtFor(project.Id);
+            return QgisProjectSnapshot.Capture(
+                project, current, QgisBridgeSelection.Stamp,
+                currentSchacht, QgisBridgeSelection.SchachtStamp);
         }).Task;
 
     private QgisBridgeResponse BuildResponse(string path, QgisProjectSnapshot snapshot)
@@ -95,6 +98,24 @@ internal sealed class QgisBridgeRequestProcessor
                     "network",
                     snapshot.NetworkFingerprint(_builder.GetNetworkStampTicks()),
                     () => _builder.BuildNetworkGeoJson(snapshot));
+
+            case "/qgis/sanierungstyp.geojson":
+                return GetOrBuildGeoJson(
+                    "sanierungstyp",
+                    snapshot.SanierungstypFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildSanierungstypGeoJson(snapshot));
+
+            case "/qgis/schaechte.geojson":
+                return GetOrBuildGeoJson(
+                    "schaechte",
+                    snapshot.SchaechteFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildSchaechteGeoJson(snapshot));
+
+            case "/qgis/current_schacht.geojson":
+                return GetOrBuildGeoJson(
+                    "current_schacht",
+                    snapshot.CurrentSchachtFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildCurrentSchachtGeoJson(snapshot));
 
             default:
                 return Error(404, "Unbekannter QGIS-Bridge-Endpunkt.");

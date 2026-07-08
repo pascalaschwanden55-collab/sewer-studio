@@ -14,10 +14,16 @@ internal static class QgisBridgeSelection
     private static Guid _projectId = Guid.Empty;
     private static string _current = "";
     private static long _stamp;
+    private static string _currentSchacht = "";
+    private static long _schachtStamp;
 
     /// <summary>Wird nach jeder (neuen) Auswahl ausgeloest — auch bei erneutem Klick auf dieselbe
     /// Haltung. Die In-App-Karte haengt sich hier ein, um wie QGIS auf die Haltung zu zoomen.</summary>
     public static event Action? SelectionChanged;
+
+    /// <summary>Wie <see cref="SelectionChanged"/>, aber fuer die Schacht-Auswahl (eigener Kanal,
+    /// damit Haltungs- und Schacht-Zoom sich nicht gegenseitig ueberschreiben).</summary>
+    public static event Action? SchachtSelectionChanged;
 
     /// <summary>Meldet eine (neue) Auswahl. Leere Werte werden ignoriert (sticky).</summary>
     public static void Set(string? haltungsname)
@@ -48,6 +54,33 @@ internal static class QgisBridgeSelection
         }
     }
 
+    /// <summary>Meldet eine (neue) Schacht-Auswahl. Leere Werte werden ignoriert (sticky), analog
+    /// zu <see cref="Set"/>. Eigener Stempel, damit QGIS unabhaengig von Haltungen auf den Schacht zoomt.</summary>
+    public static void SetSchacht(string? schachtnummer)
+    {
+        var value = schachtnummer?.Trim();
+        if (string.IsNullOrEmpty(value))
+            return;
+
+        lock (Gate)
+        {
+            _currentSchacht = value;
+            _schachtStamp++;
+        }
+
+        SchachtSelectionChanged?.Invoke();
+    }
+
+    /// <summary>Laufender Zaehler der Schacht-Auswahl-Klicks (fuer den Auto-Zoom im Plugin).</summary>
+    public static long SchachtStamp
+    {
+        get
+        {
+            lock (Gate)
+                return _schachtStamp;
+        }
+    }
+
     /// <summary>
     /// Liefert die aktuelle Auswahl fuer das angegebene Projekt.
     /// Wechselt die Projekt-Id, wird die gemerkte Auswahl verworfen.
@@ -56,17 +89,33 @@ internal static class QgisBridgeSelection
     {
         lock (Gate)
         {
-            if (_projectId == Guid.Empty)
-            {
-                _projectId = projectId;
-            }
-            else if (projectId != _projectId)
-            {
-                _projectId = projectId;
-                _current = "";
-            }
-
+            EnsureProject(projectId);
             return _current;
+        }
+    }
+
+    /// <summary>Wie <see cref="CurrentFor"/>, aber fuer die gemerkte Schacht-Auswahl.</summary>
+    public static string CurrentSchachtFor(Guid projectId)
+    {
+        lock (Gate)
+        {
+            EnsureProject(projectId);
+            return _currentSchacht;
+        }
+    }
+
+    // Setzt bei Projektwechsel BEIDE Auswahlen zurueck. Aufruf nur unter Gate.
+    private static void EnsureProject(Guid projectId)
+    {
+        if (_projectId == Guid.Empty)
+        {
+            _projectId = projectId;
+        }
+        else if (projectId != _projectId)
+        {
+            _projectId = projectId;
+            _current = "";
+            _currentSchacht = "";
         }
     }
 
@@ -77,6 +126,7 @@ internal static class QgisBridgeSelection
         {
             _projectId = Guid.Empty;
             _current = "";
+            _currentSchacht = "";
         }
     }
 }

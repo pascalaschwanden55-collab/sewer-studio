@@ -39,6 +39,11 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("/qgis/current.geojson", source);
         Assert.Contains("/qgis/damages.geojson", source);
         Assert.Contains("/qgis/network.geojson", source);
+        // Schacht-Bridge (analog Haltungen): Live-Schacht-Layer + Auto-Zoom-Punkt.
+        Assert.Contains("/qgis/schaechte.geojson", source);
+        Assert.Contains("/qgis/current_schacht.geojson", source);
+        // "Ausgefuehrt durch" live: Layer aktualisiert sich wie die anderen alle paar Sekunden.
+        Assert.Contains("/qgis/sanierungstyp.geojson", source);
         Assert.Contains("current_haltung.geojson", source);
         Assert.Contains("schaeden.geojson", source);
         Assert.Contains("netzbewertung.geojson", source);
@@ -72,8 +77,68 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("selectionStamp", source);
         Assert.Contains("_last_zoom_stamp", source);
 
+        // Schacht-Auswahl hat eigenen Stempel/Zoom-Kanal.
+        Assert.Contains("schachtSelectionStamp", source);
+        Assert.Contains("_last_zoomed_schacht", source);
+
+        // Punkt-Extent-Fix: ein einzelner Schacht-Punkt darf den Zoom nicht per isEmpty()
+        // abwuergen; Extent wird vor der Transformation aufgeblasen.
+        Assert.Contains("extent.grow", source);
+        Assert.Contains("isNull()", source);
+
         // Ehrliches Feedback, wenn die aktuelle Haltung keine Geometrie hat.
         Assert.Contains("currentHoldingHasGeometry", source);
+    }
+
+    [Fact]
+    public void Plugin_hat_status_symbol_und_blinkt_beim_zoom()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        // Professionelles Werkzeugleisten-Symbol (Schacht-Haltung-Schacht, Verbindung
+        // in Statusfarbe) + Aufklapp-Pfeil mit Menue (Verbinden/Aktualisieren/…).
+        Assert.Contains("_make_status_icon", source);
+        Assert.Contains("QToolButton", source);
+        Assert.Contains("setMenu", source);
+        Assert.Contains("setPopupMode", source);
+        Assert.Contains("#16A34A", source); // gruen = verbunden
+
+        // Nach QGIS-Neustart automatisch wieder verbinden (Symbol wird von selbst gruen).
+        Assert.Contains("was_connected", source);
+        Assert.Contains("start_connection", source);
+
+        // Gezoomte Haltung/Schacht blinkt auf (wie das QGIS-Highlight-Werkzeug).
+        Assert.Contains("flashGeometries", source);
+        Assert.Contains("_flash_layer", source);
+    }
+
+    [Fact]
+    public void Plugin_schreibt_in_feste_layer_dateien_und_findet_gestylte_ebene()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        // Live-Ebenen werden in feste Dateien SewerStudio_<key>.geojson geschrieben,
+        // damit vom Nutzer vor-gestylte QGIS-Ebenen (auf genau diese Dateien) sich
+        // automatisch aktualisieren. Ordner einstellbar, Default D:\QGIS_V4.03\Layer.
+        Assert.Contains(@"D:\QGIS_V4.03\Layer", source);
+        Assert.Contains("SewerStudio_", source);
+        Assert.Contains("_layer_target", source);
+        // Bestehende (gestylte) Ebene ueber die Quelle finden -> Stil bleibt beim Reload.
+        Assert.Contains("_find_layer_by_source", source);
+    }
+
+    [Fact]
+    public void Plugin_haelt_zoom_ziel_layer_robust_gegen_leer_erstladung()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        // Ursache "kein Zoom": Ein zuerst LEER geladener GeoJSON-Layer bekommt in QGIS
+        // den Geometrietyp "Unbekannt" und meldet danach eine leere Ausdehnung.
+        // Schutz 1: Zoom-Ziel-Layer nie leer anlegen (leere FeatureCollection ueberspringen).
+        Assert.Contains("\"features\":[]", source);
+        // Schutz 2: Ausdehnung notfalls direkt aus den Features bauen.
+        Assert.Contains("_extent_from_features", source);
+        Assert.Contains("combineExtentWith", source);
     }
 
     [Fact]

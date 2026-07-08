@@ -13,16 +13,34 @@ internal sealed record QgisProjectSnapshot(
     string ProjectName,
     string CurrentHolding,
     IReadOnlyList<QgisHaltungSnapshot> Haltungen,
-    long SelectionStamp = 0)
+    long SelectionStamp = 0,
+    IReadOnlyList<QgisSchachtSnapshot>? Schaechte = null,
+    string CurrentSchacht = "",
+    long SchachtSelectionStamp = 0)
 {
     public static QgisProjectSnapshot Empty { get; } =
         new(Guid.Empty, "", "", Array.Empty<QgisHaltungSnapshot>());
 
-    public static QgisProjectSnapshot Capture(Project? project, string? currentHolding, long selectionStamp = 0)
+    /// <summary>Schacht-Liste nie null (positional-Record-Default ist null).</summary>
+    public IReadOnlyList<QgisSchachtSnapshot> SchaechteList => Schaechte ?? Array.Empty<QgisSchachtSnapshot>();
+
+    public static QgisProjectSnapshot Capture(
+        Project? project,
+        string? currentHolding,
+        long selectionStamp = 0,
+        string? currentSchacht = null,
+        long schachtSelectionStamp = 0)
     {
         var holding = currentHolding?.Trim() ?? "";
+        var schacht = currentSchacht?.Trim() ?? "";
         if (project is null)
-            return Empty with { CurrentHolding = holding, SelectionStamp = selectionStamp };
+            return Empty with
+            {
+                CurrentHolding = holding,
+                SelectionStamp = selectionStamp,
+                CurrentSchacht = schacht,
+                SchachtSelectionStamp = schachtSelectionStamp
+            };
 
         var haltungen = new List<QgisHaltungSnapshot>(project.Data.Count);
         foreach (var record in project.Data)
@@ -36,10 +54,27 @@ internal sealed record QgisProjectSnapshot(
                 TryParseCondition(record.GetFieldValue("Zustandsklasse")),
                 IsGegenFliessrichtung(record.GetFieldValue("Inspektionsrichtung")),
                 CaptureDamages(record),
-                EmptyToNull(record.GetFieldValue("Nutzungsart"))));
+                EmptyToNull(record.GetFieldValue("Nutzungsart")),
+                EmptyToNull(record.GetFieldValue("Ausgefuehrt_durch")),
+                EmptyToNull(record.GetFieldValue("NR"))));
         }
 
-        return new QgisProjectSnapshot(project.Id, project.Name, holding, haltungen, selectionStamp);
+        var schaechte = new List<QgisSchachtSnapshot>(project.SchaechteData.Count);
+        foreach (var record in project.SchaechteData)
+        {
+            var nummer = record.GetFieldValue("Schachtnummer").Trim();
+            if (nummer.Length == 0)
+                continue;
+
+            schaechte.Add(new QgisSchachtSnapshot(
+                nummer,
+                EmptyToNull(record.GetFieldValue("Sanieren")),
+                EmptyToNull(record.GetFieldValue("Pruefungsresultat"))));
+        }
+
+        return new QgisProjectSnapshot(
+            project.Id, project.Name, holding, haltungen, selectionStamp,
+            schaechte, schacht, schachtSelectionStamp);
     }
 
     /// <summary>
@@ -162,6 +197,28 @@ internal sealed record QgisProjectSnapshot(
         return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), count);
     }
 
+    /// <summary>
+    /// Fingerprint fuer sanierungstyp.geojson ("Ausgefuehrt durch"): nur Haltungen mit
+    /// gesetztem Ausfuehrenden zaehlen; Name + Ausfuehrender + Nr + XTF-Stand.
+    /// </summary>
+    public QgisPayloadFingerprint SanierungstypFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        var count = 0;
+        foreach (var haltung in Haltungen)
+        {
+            if (string.IsNullOrWhiteSpace(haltung.AusgefuehrtDurch))
+                continue;
+
+            hash.Add(haltung.Haltungsname, StringComparer.OrdinalIgnoreCase);
+            hash.Add(haltung.AusgefuehrtDurch, StringComparer.OrdinalIgnoreCase);
+            hash.Add(haltung.Nr, StringComparer.Ordinal);
+            count++;
+        }
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), count);
+    }
+
     /// <summary>Fingerprint fuer current.geojson: gewaehlte Haltung + deren Zustand/Schadenzahl + XTF-Stand.</summary>
     public QgisPayloadFingerprint CurrentFingerprint(long xtfTicks)
     {
@@ -177,17 +234,53 @@ internal sealed record QgisProjectSnapshot(
 
         return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
     }
+
+    /// <summary>
+    /// Fingerprint fuer schaechte.geojson: alle Projekt-Schaechte (Nummer + Sanieren +
+    /// Pruefungsresultat) + XTF-Stand. Der XTF-Stand deckt geaenderte Schacht-Koordinaten ab.
+    /// Die aktuelle Auswahl geht bewusst NICHT ein — der "current"-Highlight liegt im
+    /// eigenen current_schacht.geojson-Layer, damit dieser Layer-Cache nicht bei jedem Klick bricht.
+    /// </summary>
+    public QgisPayloadFingerprint SchaechteFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        var count = 0;
+        foreach (var schacht in SchaechteList)
+        {
+            hash.Add(schacht.Schachtnummer, StringComparer.OrdinalIgnoreCase);
+            hash.Add(schacht.Sanieren, StringComparer.OrdinalIgnoreCase);
+            hash.Add(schacht.Pruefungsresultat, StringComparer.OrdinalIgnoreCase);
+            count++;
+        }
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), count);
+    }
+
+    /// <summary>Fingerprint fuer current_schacht.geojson: gewaehlter Schacht + XTF-Stand.</summary>
+    public QgisPayloadFingerprint CurrentSchachtFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        hash.Add(CurrentSchacht, StringComparer.OrdinalIgnoreCase);
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
+    }
 }
 
 /// <summary>Cache-Schluessel eines serialisierten Bridge-Payloads (Wertegleichheit).</summary>
 internal readonly record struct QgisPayloadFingerprint(long XtfTicks, int Hash, int Count);
+
+internal sealed record QgisSchachtSnapshot(
+    string Schachtnummer,
+    string? Sanieren,
+    string? Pruefungsresultat);
 
 internal sealed record QgisHaltungSnapshot(
     string Haltungsname,
     int? Zustandsklasse,
     bool GegenFliessrichtung,
     IReadOnlyList<QgisDamageSnapshot> Schaeden,
-    string? Nutzungsart = null);
+    string? Nutzungsart = null,
+    string? AusgefuehrtDurch = null,
+    string? Nr = null);
 
 internal sealed record QgisDamageSnapshot(
     string? Code,

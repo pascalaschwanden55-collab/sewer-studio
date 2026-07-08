@@ -11,7 +11,8 @@ try:
 except ImportError:
     from qgis.PyQt.QtWidgets import QAction
 
-from qgis.PyQt.QtCore import QSettings, QTimer, Qt
+from qgis.PyQt.QtCore import QRectF, QSettings, QTimer, Qt
+from qgis.PyQt.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QDockWidget,
@@ -20,23 +21,42 @@ from qgis.PyQt.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QSpinBox,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
-from qgis.core import Qgis, QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsVectorLayer
+from qgis.core import (
+    Qgis,
+    QgsCoordinateTransform,
+    QgsMessageLog,
+    QgsProject,
+    QgsRectangle,
+    QgsVectorLayer,
+)
 
 
 PLUGIN_MENU = "&SewerStudio"
 DEFAULT_BRIDGE_URL = "http://127.0.0.1:8765"
 DEFAULT_DATA_ROOT = r"D:\QGIS_V4.03\Export_Sewer_Studio"
+# Fester Ordner, in den die Live-Ebenen als SewerStudio_<key>.geojson geschrieben
+# werden — damit vom Nutzer vor-gestylte QGIS-Ebenen, die auf genau diese Dateien
+# zeigen (z.B. nach ausgefuehrt_durch eingefaerbt), sich automatisch aktualisieren.
+DEFAULT_LAYER_DIR = r"D:\QGIS_V4.03\Layer"
 SETTINGS_PREFIX = "SewerStudioBridge"
 
 REMOTE_LAYERS = (
     ("current", "SewerStudio - Aktuelle Haltung", "/qgis/current.geojson"),
+    ("current_schacht", "SewerStudio - Aktueller Schacht", "/qgis/current_schacht.geojson"),
     ("damages", "SewerStudio - Schaeden", "/qgis/damages.geojson"),
     ("network", "SewerStudio - Netzbewertung", "/qgis/network.geojson"),
+    # "Ausgefuehrt durch": Linien der Haltungen mit gesetztem Ausfuehrenden,
+    # Feld ausgefuehrt_durch = Baumeister/Sanierer/Gartenbauer (in QGIS einmalig
+    # kategorisiert einfaerben; der Stil bleibt beim In-Place-Reload erhalten).
+    ("sanierungstyp", "SewerStudio - Ausgefuehrt durch", "/qgis/sanierungstyp.geojson"),
+    ("schaechte", "SewerStudio - Schaechte (live)", "/qgis/schaechte.geojson"),
 )
 
 LOCAL_GEOJSON_LAYERS = (
@@ -53,23 +73,159 @@ LOCAL_SHAPEFILE_PATTERNS = (
 
 
 class SewerStudioBridgePlugin:
+    # Statusfarben des Werkzeugleisten-Symbols:
+    #   gruen = verbunden & SewerStudio erreichbar, rot = verbunden aber App nicht
+    #   erreichbar, grau = getrennt.
+    _STATUS_COLORS = {"ok": "#16A34A", "error": "#DC2626", "off": "#9CA3AF"}
+    _STATUS_TOOLTIPS = {
+        "ok": "SewerStudio Bridge: verbunden",
+        "error": "SewerStudio Bridge: verbunden, aber SewerStudio nicht erreichbar",
+        "off": "SewerStudio Bridge: getrennt — klicken zum Verbinden",
+    }
+
     def __init__(self, iface):
         self.iface = iface
-        self.action = None
+        self.toolbar = None
+        self.tool_button = None
+        self.menu = None
+        self.toggle_action = None
+        self.settings_action = None
         self.dock = None
+        self._last_status = None
 
     def initGui(self):
-        self.action = QAction("SewerStudio Bridge", self.iface.mainWindow())
-        self.action.setObjectName("SewerStudioBridgeAction")
-        self.action.triggered.connect(self.show_dock)
-        self.iface.addPluginToMenu(PLUGIN_MENU, self.action)
-        self.iface.addToolBarIcon(self.action)
+        # Dock im Hintergrund (versteckt) — traegt die Verbindungslogik, erscheint
+        # nur, wenn der Nutzer die Einstellungen oeffnet.
+        self.dock = SewerStudioBridgeDock(self.iface, status_callback=self._on_bridge_status)
+        self.iface.addDockWidget(right_dock_widget_area(), self.dock)
+        self.dock.hide()
+
+        # Aufklapp-Menue mit allen Funktionen (wie beim MCP-Plugin, ueber den Pfeil).
+        self.menu = QMenu(self.iface.mainWindow())
+        self.toggle_action = self.menu.addAction("Verbinden", self.toggle)
+        self.menu.addAction("Aktualisieren", self._refresh_now)
+        self.menu.addSeparator()
+        self.menu.addAction("Lokale Export-Layer laden", self._load_local)
+        self.menu.addAction("Einstellungen…", self.show_dock)
+
+        # Werkzeugleisten-Knopf: professionelles Symbol (Schacht-Haltung-Schacht,
+        # Verbindung in Statusfarbe) + Aufklapp-Pfeil fuer das Menue. Klick aufs
+        # Symbol selbst verbindet/trennt direkt.
+        self.tool_button = QToolButton(self.iface.mainWindow())
+        self.tool_button.setIcon(self._make_status_icon("off"))
+        self.tool_button.setToolTip(self._STATUS_TOOLTIPS["off"])
+        self.tool_button.setAutoRaise(True)
+        self.tool_button.setMenu(self.menu)
+        self.tool_button.setPopupMode(self._menu_button_popup_mode())
+        self.tool_button.clicked.connect(self.toggle)
+
+        self.toolbar = self.iface.addToolBar("SewerStudio Bridge")
+        self.toolbar.setObjectName("SewerStudioBridgeToolbar")
+        self.toolbar.addWidget(self.tool_button)
+
+        # Zusaetzlich im Erweiterungen-Menue auffindbar.
+        self.settings_action = QAction("SewerStudio Bridge…", self.iface.mainWindow())
+        self.settings_action.triggered.connect(self.show_dock)
+        self.iface.addPluginToMenu(PLUGIN_MENU, self.settings_action)
+
+        # War beim letzten Mal verbunden? Dann nach dem Start automatisch wieder
+        # verbinden (Symbol geht von selbst auf gruen). Verzoegert, damit der
+        # QGIS-Start nicht auf den ersten HTTP-Poll wartet.
+        if self.dock.was_connected():
+            QTimer.singleShot(1500, self._auto_connect)
+
+    @staticmethod
+    def _menu_button_popup_mode():
+        # Qt5: QToolButton.MenuButtonPopup, Qt6: QToolButton.ToolButtonPopupMode.MenuButtonPopup.
+        mode = getattr(QToolButton, "MenuButtonPopup", None)
+        if mode is None:
+            mode = QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        return mode
+
+    def _refresh_now(self):
+        if self.dock is not None:
+            self.dock.refresh_remote_layers()
+
+    def _load_local(self):
+        if self.dock is not None:
+            self.dock.load_local_export_layers()
+
+    def _auto_connect(self):
+        if self.dock is not None and not self.dock.is_connected():
+            self.dock.start_connection()
+
+    def toggle(self):
+        if self.dock is None:
+            return
+        if self.dock.is_connected():
+            self.dock.stop_connection()
+        else:
+            self.dock.start_connection()
+
+    def show_dock(self):
+        if self.dock is not None:
+            self.dock.show()
+            self.dock.raise_()
+
+    def _on_bridge_status(self, state):
+        # Vom Dock nach jedem Poll aufgerufen: Symbol, Tooltip und Menue-Text
+        # aktualisieren — nur bei echtem Zustandswechsel (nicht bei jedem 3s-Poll).
+        if state == self._last_status:
+            return
+        self._last_status = state
+        if self.tool_button is not None:
+            self.tool_button.setIcon(self._make_status_icon(state))
+            self.tool_button.setToolTip(self._STATUS_TOOLTIPS.get(state, self._STATUS_TOOLTIPS["off"]))
+        if self.toggle_action is not None:
+            self.toggle_action.setText("Trennen" if state != "off" else "Verbinden")
+
+    def _make_status_icon(self, state):
+        # Symbol: Kettenglied ("Link") in Statusfarbe — gruen = verbunden,
+        # rot = App nicht erreichbar, grau = getrennt.
+        color = self._STATUS_COLORS.get(state, self._STATUS_COLORS["off"])
+        render = 64  # hoehere Aufloesung -> in der Werkzeugleiste (16/24 px) scharf
+        pixmap = QPixmap(render, render)
+        pixmap.fill(QColor(0, 0, 0, 0))  # transparenter Hintergrund
+        painter = QPainter(pixmap)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)  # Qt6
+        except AttributeError:
+            painter.setRenderHint(QPainter.Antialiasing, True)  # Qt5
+        painter.scale(render / 32.0, render / 32.0)  # in 32er-Logik zeichnen
+
+        pen = QPen(QColor(color))
+        pen.setWidthF(3.0)
+        try:
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)     # Qt6
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        except AttributeError:
+            pen.setCapStyle(Qt.RoundCap)                 # Qt5
+            pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(QColor(0, 0, 0, 0))  # nur Kontur, keine Fuellung
+
+        # Zwei diagonal verschlungene Glieder = "verbunden".
+        for cx, cy in ((13, 19), (19, 13)):
+            painter.save()
+            painter.translate(cx, cy)
+            painter.rotate(-45)
+            painter.drawRoundedRect(QRectF(-8.5, -4.0, 17.0, 8.0), 4.0, 4.0)
+            painter.restore()
+
+        painter.end()
+        return QIcon(pixmap)
 
     def unload(self):
-        if self.action is not None:
-            self.iface.removePluginMenu(PLUGIN_MENU, self.action)
-            self.iface.removeToolBarIcon(self.action)
-            self.action = None
+        if self.settings_action is not None:
+            self.iface.removePluginMenu(PLUGIN_MENU, self.settings_action)
+            self.settings_action = None
+
+        if self.toolbar is not None:
+            self.toolbar.deleteLater()
+            self.toolbar = None
+        self.tool_button = None
+        self.menu = None
+        self.toggle_action = None
 
         if self.dock is not None:
             self.dock.stop()
@@ -77,18 +233,13 @@ class SewerStudioBridgePlugin:
             self.dock.deleteLater()
             self.dock = None
 
-    def show_dock(self):
-        if self.dock is None:
-            self.dock = SewerStudioBridgeDock(self.iface)
-            self.iface.addDockWidget(right_dock_widget_area(), self.dock)
-        self.dock.show()
-        self.dock.raise_()
-
 
 class SewerStudioBridgeDock(QDockWidget):
-    def __init__(self, iface):
+    def __init__(self, iface, status_callback=None):
         super().__init__("SewerStudio Bridge", iface.mainWindow())
         self.iface = iface
+        # Rueckmeldung des Verbindungszustands an das Werkzeugleisten-Symbol.
+        self._status_callback = status_callback
         self.settings = QSettings()
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_remote_layers)
@@ -98,6 +249,9 @@ class SewerStudioBridgeDock(QDockWidget):
         # aber nicht bei jedem Poll ohne neue Auswahl.
         self._last_zoomed_holding = None
         self._last_zoom_stamp = None
+        # Dasselbe fuer die Schacht-Auswahl (eigener Kanal, eigener Stempel).
+        self._last_zoomed_schacht = None
+        self._last_schacht_zoom_stamp = None
         # Speichercache: Hash der zuletzt geladenen Daten je Layer.
         # Unveraenderte Antworten werden uebersprungen (kein Reload, kein Neuzeichnen).
         self._last_payload_hash = {}
@@ -112,6 +266,7 @@ class SewerStudioBridgeDock(QDockWidget):
         form = QFormLayout()
         self.url_edit = QLineEdit(DEFAULT_BRIDGE_URL)
         self.data_root_edit = QLineEdit(DEFAULT_DATA_ROOT)
+        self.layer_dir_edit = QLineEdit(DEFAULT_LAYER_DIR)
         self.poll_seconds = QSpinBox()
         self.poll_seconds.setRange(1, 60)
         self.poll_seconds.setValue(3)
@@ -127,8 +282,18 @@ class SewerStudioBridgeDock(QDockWidget):
         browse_button.clicked.connect(self._browse_data_root)
         data_root_layout.addWidget(browse_button)
 
+        layer_dir_row = QWidget(root)
+        layer_dir_layout = QHBoxLayout(layer_dir_row)
+        layer_dir_layout.setContentsMargins(0, 0, 0, 0)
+        layer_dir_layout.addWidget(self.layer_dir_edit, 1)
+        layer_browse_button = QPushButton("...")
+        layer_browse_button.setMaximumWidth(32)
+        layer_browse_button.clicked.connect(self._browse_layer_dir)
+        layer_dir_layout.addWidget(layer_browse_button)
+
         form.addRow("Bridge-URL", self.url_edit)
         form.addRow("Datenordner", data_root_row)
+        form.addRow("Layer-Ordner (feste Dateien)", layer_dir_row)
         form.addRow("Intervall (s)", self.poll_seconds)
         form.addRow("", self.auto_zoom_check)
         layout.addLayout(form)
@@ -154,6 +319,7 @@ class SewerStudioBridgeDock(QDockWidget):
     def _load_settings(self):
         self.url_edit.setText(self.settings.value(f"{SETTINGS_PREFIX}/bridgeUrl", DEFAULT_BRIDGE_URL))
         self.data_root_edit.setText(self.settings.value(f"{SETTINGS_PREFIX}/dataRoot", DEFAULT_DATA_ROOT))
+        self.layer_dir_edit.setText(self.settings.value(f"{SETTINGS_PREFIX}/layerDir", DEFAULT_LAYER_DIR))
         self.poll_seconds.setValue(int(self.settings.value(f"{SETTINGS_PREFIX}/pollSeconds", 3)))
         auto_zoom = self.settings.value(f"{SETTINGS_PREFIX}/autoZoomCurrent", "true")
         self.auto_zoom_check.setChecked(str(auto_zoom).lower() in ("1", "true", "yes"))
@@ -161,6 +327,7 @@ class SewerStudioBridgeDock(QDockWidget):
     def _save_settings(self):
         self.settings.setValue(f"{SETTINGS_PREFIX}/bridgeUrl", self.url_edit.text().strip())
         self.settings.setValue(f"{SETTINGS_PREFIX}/dataRoot", self.data_root_edit.text().strip())
+        self.settings.setValue(f"{SETTINGS_PREFIX}/layerDir", self.layer_dir_edit.text().strip())
         self.settings.setValue(f"{SETTINGS_PREFIX}/pollSeconds", self.poll_seconds.value())
         self.settings.setValue(f"{SETTINGS_PREFIX}/autoZoomCurrent", self.auto_zoom_check.isChecked())
 
@@ -174,17 +341,76 @@ class SewerStudioBridgeDock(QDockWidget):
             self.data_root_edit.setText(selected)
             self._save_settings()
 
+    def _browse_layer_dir(self):
+        selected = QFileDialog.getExistingDirectory(
+            self,
+            "Ordner fuer die festen SewerStudio-Layerdateien waehlen",
+            self.layer_dir_edit.text().strip() or DEFAULT_LAYER_DIR,
+        )
+        if selected:
+            self.layer_dir_edit.setText(selected)
+            self._save_settings()
+
+    def _layer_target(self, layer_key):
+        # Zieldatei fuer die Live-Ebene: fester Ordner (SewerStudio_<key>.geojson),
+        # damit vor-gestylte QGIS-Ebenen sie lesen. Ohne gesetzten Ordner -> Temp-Cache.
+        layer_dir = self.layer_dir_edit.text().strip()
+        if layer_dir:
+            return Path(layer_dir) / f"SewerStudio_{layer_key}.geojson"
+        return self.cache_dir / f"{layer_key}.geojson"
+
+    def _write_layer_file(self, target, layer_key, data):
+        # Gibt den TATSAECHLICH geschriebenen Pfad zurueck. Ist der feste Ordner nicht
+        # schreibbar, weicht das Plugin auf den Temp-Cache aus (nie den Poll abbrechen).
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            return target
+        except OSError as ex:
+            self._log_warning(f"Layer-Datei nicht schreibbar ({target}): {ex} -> Temp-Cache")
+            fallback = self.cache_dir / f"{layer_key}.geojson"
+            fallback.write_bytes(data)
+            return fallback
+
     def toggle_connection(self):
+        if self.timer.isActive():
+            self.stop_connection()
+        else:
+            self.start_connection()
+
+    def start_connection(self):
         self._save_settings()
+        # Merken, dass verbunden war -> naechster QGIS-Start verbindet automatisch.
+        self.settings.setValue(f"{SETTINGS_PREFIX}/connected", True)
+        self.connect_button.setText("Trennen")
+        # Timer VOR dem ersten Refresh starten, damit is_connected() bereits True ist
+        # und die Statusanzeige schon beim Verbinden auf gruen/rot geht.
+        if not self.timer.isActive():
+            self.timer.start(self.poll_seconds.value() * 1000)
+        self.refresh_remote_layers()
+
+    def stop_connection(self):
         if self.timer.isActive():
             self.timer.stop()
-            self.connect_button.setText("Verbinden")
-            self._set_status("Verbindung gestoppt.")
-            return
+        self.settings.setValue(f"{SETTINGS_PREFIX}/connected", False)
+        self.connect_button.setText("Verbinden")
+        self._set_status("Verbindung gestoppt.")
+        self._notify_status("off")
 
-        self.refresh_remote_layers()
-        self.timer.start(self.poll_seconds.value() * 1000)
-        self.connect_button.setText("Trennen")
+    def is_connected(self):
+        return self.timer.isActive()
+
+    def was_connected(self):
+        return str(self.settings.value(f"{SETTINGS_PREFIX}/connected", "false")).lower() in (
+            "1", "true", "yes")
+
+    def _notify_status(self, state):
+        # Verbindungszustand ans Werkzeugleisten-Symbol melden (gruen/rot/grau).
+        if self._status_callback is not None:
+            try:
+                self._status_callback(state)
+            except Exception:
+                pass
 
     def stop(self):
         if self.timer.isActive():
@@ -197,8 +423,16 @@ class SewerStudioBridgeDock(QDockWidget):
         status = self._fetch_json("/qgis/status.json")
         holding = self._holding_from_payload(status) if status is not None else None
         stamp = status.get("selectionStamp") if status is not None else None
+        schacht = status.get("currentSchacht") if status is not None else None
+        schacht_stamp = status.get("schachtSelectionStamp") if status is not None else None
         if status is not None:
             self._set_status_from_payload(status)
+
+        # Werkzeugleisten-Symbol nur aktualisieren, wenn TATSAECHLICH verbunden
+        # (Poll-Timer laeuft). Sonst wuerde ein einmaliges "Aktualisieren" im
+        # getrennten Zustand das Symbol faelschlich auf gruen setzen.
+        if self.is_connected():
+            self._notify_status("ok" if status is not None else "error")
 
         updated = 0
         for layer_key, layer_name, endpoint in REMOTE_LAYERS:
@@ -207,14 +441,28 @@ class SewerStudioBridgeDock(QDockWidget):
                 continue
 
             digest = hashlib.sha256(data).hexdigest()
-            existing = self._find_layer_named(layer_name)
+            target = self._layer_target(layer_key)
+            # Bestehende Ebene bevorzugt ueber die QUELLE finden — so wird auch die
+            # vom Nutzer vor-gestylte Ebene (die auf dieselbe Datei zeigt) getroffen.
+            existing = self._find_layer_by_source(target) or self._find_layer_named(layer_name)
+
+            # Layer, die anfangs LEER sein koennen, NICHT neu anlegen, solange sie leer
+            # sind: ein leer erstellter GeoJSON-Layer bekommt in QGIS den Geometrietyp
+            # "Unbekannt" und rendert/zoomt danach nicht mehr zuverlaessig. Existiert
+            # die Ebene aber schon (mit korrekter Geometrie), DARF sie auf leer gesetzt
+            # werden — so verschwindet z.B. eine entfernte "Ausgefuehrt durch"-Linie
+            # wieder, statt stehenzubleiben.
+            if (layer_key in ("current", "current_schacht", "sanierungstyp")
+                    and b'"features":[]' in data
+                    and existing is None):
+                continue
+
             if existing is not None and self._last_payload_hash.get(layer_key) == digest:
                 # Unveraendert: nichts schreiben, nichts neu laden, nichts neu zeichnen.
                 layer = existing
             else:
-                target = self.cache_dir / f"{layer_key}.geojson"
-                target.write_bytes(data)
-                layer = self._update_or_create_layer(layer_name, target)
+                written = self._write_layer_file(target, layer_key, data)
+                layer = self._update_or_create_layer(layer_name, written)
                 if layer is not None:
                     self._last_payload_hash[layer_key] = digest
                     updated += 1
@@ -222,20 +470,18 @@ class SewerStudioBridgeDock(QDockWidget):
             if layer is not None:
                 loaded += 1
                 # Zoomen bei jedem Auswahl-Klick in SewerStudio (neuer Stempel) oder
-                # bei Haltungswechsel — aber nie einfach bei jedem Poll.
-                selection_changed = (
-                    holding != self._last_zoomed_holding
-                    or (stamp is not None and stamp != self._last_zoom_stamp)
-                )
-                if (
-                    layer_key == "current"
-                    and self.auto_zoom_check.isChecked()
-                    and holding
-                    and selection_changed
-                ):
-                    self._zoom_to_layer(layer)
-                    self._last_zoomed_holding = holding
-                    self._last_zoom_stamp = stamp
+                # bei Wechsel — aber nie einfach bei jedem Poll. Haltung und Schacht
+                # haben getrennte Kanaele/Stempel.
+                if layer_key == "current" and self.auto_zoom_check.isChecked() and holding:
+                    if holding != self._last_zoomed_holding or (stamp is not None and stamp != self._last_zoom_stamp):
+                        self._zoom_to_layer(layer)
+                        self._last_zoomed_holding = holding
+                        self._last_zoom_stamp = stamp
+                elif layer_key == "current_schacht" and self.auto_zoom_check.isChecked() and schacht:
+                    if schacht != self._last_zoomed_schacht or (schacht_stamp is not None and schacht_stamp != self._last_schacht_zoom_stamp):
+                        self._zoom_to_layer(layer)
+                        self._last_zoomed_schacht = schacht
+                        self._last_schacht_zoom_stamp = schacht_stamp
 
         if loaded == 0 and status is None:
             self._set_status("Kein Live-Bridge-Feed erreichbar. Lokale Export-Layer koennen trotzdem geladen werden.")
@@ -305,7 +551,9 @@ class SewerStudioBridgeDock(QDockWidget):
         if not file_path.exists():
             return None
 
-        existing = self._find_layer_named(layer_name)
+        # Zuerst die Ebene suchen, die auf DIESELBE Datei zeigt (auch eine vom Nutzer
+        # gestylte) — dann bleibt beim Neuladen ihr Stil erhalten. Sonst per Name.
+        existing = self._find_layer_by_source(file_path) or self._find_layer_named(layer_name)
         if existing is not None:
             if self._same_source(existing, file_path):
                 existing.reload()
@@ -334,6 +582,17 @@ class SewerStudioBridgeDock(QDockWidget):
     def _find_layer_named(layer_name):
         for layer in QgsProject.instance().mapLayers().values():
             if layer.name() == layer_name:
+                return layer
+        return None
+
+    @staticmethod
+    def _find_layer_by_source(file_path):
+        # Findet eine geladene Ebene, deren Datenquelle auf DIESELBE Datei zeigt —
+        # unabhaengig vom Ebenennamen. So wird die vom Nutzer gestylte Ebene getroffen.
+        target = os.path.normcase(os.path.normpath(str(file_path)))
+        for layer in QgsProject.instance().mapLayers().values():
+            source = (layer.source() or "").split("|")[0]
+            if os.path.normcase(os.path.normpath(source)) == target:
                 return layer
         return None
 
@@ -369,8 +628,21 @@ class SewerStudioBridgeDock(QDockWidget):
 
     def _zoom_to_layer(self, layer):
         extent = layer.extent()
-        if extent is None or extent.isEmpty():
+        # Fallback: Ein Layer, der zuerst LEER geladen wurde, behaelt in QGIS den
+        # Geometrietyp "Unbekannt" und meldet nach dem Nachladen von Daten oft eine
+        # leere Ausdehnung. Dann die Ausdehnung direkt aus den Features bauen —
+        # unabhaengig vom (falschen) Geometrietyp des Layers.
+        if extent is None or extent.isNull():
+            extent = self._extent_from_features(layer)
+        # isNull() (nicht isEmpty()!) als Abbruch: ein einzelner Punkt (current_schacht)
+        # hat Breite/Hoehe 0 und gilt bei isEmpty() als leer -> der Zoom wuerde nie ausloesen.
+        if extent is None or extent.isNull():
             return
+
+        # Punkt- oder entarteter Linien-Extent (Flaeche 0): vor der Transformation um
+        # 25 m (LV95-Meter) aufblasen, sonst degeneriert der Zoom auf einen Punkt.
+        if extent.width() == 0 or extent.height() == 0:
+            extent.grow(25)
 
         canvas = self.iface.mapCanvas()
         # Layer-Ausdehnung in das Karten-CRS umrechnen — sonst zoomt die Karte
@@ -388,6 +660,38 @@ class SewerStudioBridgeDock(QDockWidget):
         extent.scale(1.3)
         canvas.setExtent(extent)
         canvas.refresh()
+        # Aufblinken wie beim QGIS-"Objekte hervorheben": macht die gezoomte
+        # Haltung bzw. den Schacht sofort sichtbar (mehrfaches Blinken).
+        self._flash_layer(canvas, layer)
+
+    @staticmethod
+    def _flash_layer(canvas, layer):
+        try:
+            geometries = [
+                feature.geometry()
+                for feature in layer.getFeatures()
+                if feature.hasGeometry() and not feature.geometry().isEmpty()
+            ]
+            if geometries:
+                canvas.flashGeometries(geometries, layer.crs())
+        except Exception:
+            # Aufblinken ist reiner Komfort — Fehler nie eskalieren lassen.
+            pass
+
+    @staticmethod
+    def _extent_from_features(layer):
+        # Ausdehnung aus den Feature-Geometrien selbst — greift, wenn layer.extent()
+        # leer ist (z.B. Layer mit Geometrietyp "Unbekannt" nach Leer-Erstladung).
+        rect = QgsRectangle()
+        rect.setMinimal()
+        found = False
+        for feature in layer.getFeatures():
+            geometry = feature.geometry()
+            if geometry is None or geometry.isEmpty():
+                continue
+            rect.combineExtentWith(geometry.boundingBox())
+            found = True
+        return rect if found else None
 
     @staticmethod
     def _holding_from_payload(payload):

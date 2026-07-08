@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -326,6 +327,184 @@ public sealed class QgisBridgeSnapshotBuilderTests
         // nach Nutzungsart einfaerben kann (analog Leitungen-Layer).
         var feature = Assert.Single(current.Features);
         Assert.Equal("Mischabwasser", feature.Properties["nutzungsart"]);
+    }
+
+    [Fact]
+    public void BuildSanierungstypGeoJson_nur_kategorisierte_haltungen_mit_nr_und_kategorie()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        var project = new Project { Name = "Ausgefuehrt-durch-Test" };
+        project.Data.Add(Haltung("A-B", ausgefuehrt: "Baumeister", nr: "1"));      // Kataster-Kante
+        project.Data.Add(Haltung("S1-S2", ausgefuehrt: "Kanalsanierer", nr: "2")); // Schacht-Fallback
+        project.Data.Add(Haltung("S2-S1", ausgefuehrt: "", nr: "3"));              // Geometrie ok, aber kein Ausfuehrender -> raus
+
+        var geoJson = sut.BuildSanierungstypGeoJson(QgisProjectSnapshot.Capture(project, null));
+
+        Assert.Equal(2, geoJson.Features.Count);
+
+        var baumeister = geoJson.Features.Single(f => (string?)f.Properties["haltung"] == "A-B");
+        Assert.Equal("Baumeister", baumeister.Properties["ausgefuehrt_durch"]);
+        Assert.Equal("1", baumeister.Properties["nr"]);
+        Assert.IsType<GeoJsonLineString>(baumeister.Geometry);
+
+        // "Kanalsanierer" faellt kanonisch auf "Sanierer".
+        var sanierer = geoJson.Features.Single(f => (string?)f.Properties["haltung"] == "S1-S2");
+        Assert.Equal("Sanierer", sanierer.Properties["ausgefuehrt_durch"]);
+        Assert.Equal("2", sanierer.Properties["nr"]);
+
+        // Haltung ohne Ausfuehrenden erscheint nicht.
+        Assert.DoesNotContain(geoJson.Features, f => (string?)f.Properties["haltung"] == "S2-S1");
+    }
+
+    [Fact]
+    public void BuildDamagesGeoJson_streckt_meter_bis_rohrende_auf_end_schacht()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        var project = new Project { Name = "Skalierung" };
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "A-B", FieldSource.Manual, userEdited: true);
+        // Inspektion: Rohrende (BCE) bei 7.3 m; ein Schaden bei 3.65 m (= halbe Survey-Strecke).
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BCE", MeterStart = 7.3 });
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAB", MeterStart = 3.65 });
+        project.Data.Add(record);
+
+        var geoJson = sut.BuildDamagesGeoJson(QgisProjectSnapshot.Capture(project, null));
+
+        // Kataster-Linie A-B ist 10 m lang (2690000..2690010).
+        // 3.65 m von 7.3 m Survey = 50% => 5 m => 2690005 (statt unskaliert 2690003.65).
+        var schaden = geoJson.Features.Single(f => (string?)f.Properties["code"] == "BAB");
+        Assert.Equal(2690005, Assert.IsType<GeoJsonPoint>(schaden.Geometry).Coordinates[0], precision: 3);
+
+        // Rohrende (7.3 m) faellt exakt auf das Geometrie-Ende (10 m) => 2690010 (End-Schacht).
+        var rohrende = geoJson.Features.Single(f => (string?)f.Properties["code"] == "BCE");
+        Assert.Equal(2690010, Assert.IsType<GeoJsonPoint>(rohrende.Geometry).Coordinates[0], precision: 3);
+    }
+
+    [Theory]
+    [InlineData(3.65, 7.3, 10.0, 5.0)]   // halbe Survey-Strecke -> halbe Geometrie
+    [InlineData(7.3, 7.3, 10.0, 10.0)]   // Rohrende -> Geometrie-Ende
+    [InlineData(0.0, 7.3, 10.0, 0.0)]    // Rohranfang -> Anfang
+    [InlineData(5.0, null, 10.0, 5.0)]   // kein Rohrende -> absolut (keine Streckung)
+    [InlineData(5.0, 0.0, 10.0, 5.0)]    // ungueltiges Rohrende -> absolut
+    [InlineData(5.0, 7.3, 0.0, 5.0)]     // keine Geometrielaenge -> absolut
+    public void ScaleMeter_streckt_nur_mit_gueltigem_rohrende(double meter, double? surveyEnd, double geomLength, double expected)
+    {
+        Assert.Equal(expected, QgisBridgeSnapshotBuilder.ScaleMeter(meter, surveyEnd, geomLength), precision: 6);
+    }
+
+    [Fact]
+    public void BuildSchaechteGeoJson_liefert_alle_katasterknoten_mit_projektmarkierung()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        // Projekt kennt nur S1, hier bewusst mit Innen-Leerzeichen ("S 1") -> muss auf "S1" matchen.
+        var snapshot = QgisProjectSnapshot.Capture(
+            CreateProjectWithSchacht("S 1", sanieren: "Ja", resultat: "ZK 3"), null);
+
+        var geo = sut.BuildSchaechteGeoJson(snapshot);
+
+        Assert.Equal(2, geo.Features.Count); // S1 + S2 aus dem MiniXtf
+        var s1 = geo.Features.Single(f => (string?)f.Properties["schacht"] == "S1");
+        Assert.Equal(true, s1.Properties["im_projekt"]);
+        Assert.Equal("Ja", s1.Properties["sanieren"]);
+        Assert.Equal("ZK 3", s1.Properties["pruefungsresultat"]);
+        Assert.IsType<GeoJsonPoint>(s1.Geometry);
+
+        var s2 = geo.Features.Single(f => (string?)f.Properties["schacht"] == "S2");
+        Assert.Equal(false, s2.Properties["im_projekt"]);
+    }
+
+    [Fact]
+    public void BuildCurrentSchachtGeoJson_liefert_den_gewaehlten_schacht_als_punkt()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var snapshot = QgisProjectSnapshot.Capture(
+            CreateProjectWithSchacht("S1"), null, currentSchacht: "S1");
+
+        var geo = sut.BuildCurrentSchachtGeoJson(snapshot);
+
+        var feature = Assert.Single(geo.Features);
+        Assert.Equal("S1", feature.Properties["schacht"]);
+        Assert.Equal(true, feature.Properties["current"]);
+        var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
+        // S1 liegt im MiniXtf bei 2690100 / 1190000 (LV95, unveraendert).
+        Assert.Equal(2690100, point.Coordinates[0], precision: 3);
+        Assert.Equal(1190000, point.Coordinates[1], precision: 3);
+    }
+
+    [Fact]
+    public void BuildCurrentSchachtGeoJson_ohne_auswahl_ist_leer()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithSchacht("S1"), null);
+
+        Assert.Empty(sut.BuildCurrentSchachtGeoJson(snapshot).Features);
+    }
+
+    [Fact]
+    public void BuildStatus_meldet_schacht_zaehler_und_auswahl()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var snapshot = QgisProjectSnapshot.Capture(
+            CreateProjectWithSchacht("S1"), null, selectionStamp: 0,
+            currentSchacht: "S1", schachtSelectionStamp: 4);
+
+        var status = sut.BuildStatus(snapshot);
+
+        Assert.Equal(2, status.SchachtFeatureCount);  // 2 Knoten im XTF
+        Assert.Equal(1, status.ProjectSchachtCount);  // 1 im Projekt
+        Assert.Equal("S1", status.CurrentSchacht);
+        Assert.Equal(4, status.SchachtSelectionStamp);
+    }
+
+    [Fact]
+    public void Sanieren_aenderung_invalidiert_den_schaechte_fingerprint()
+    {
+        var before = QgisProjectSnapshot.Capture(CreateProjectWithSchacht("S1", sanieren: "Nein"), null).SchaechteFingerprint(1);
+        var after = QgisProjectSnapshot.Capture(CreateProjectWithSchacht("S1", sanieren: "Ja"), null).SchaechteFingerprint(1);
+
+        Assert.NotEqual(before, after);
+    }
+
+    [Theory]
+    [InlineData("KS 60191", "KS60191")]
+    [InlineData("  ks 60191 ", "KS60191")]
+    [InlineData("S1", "S1")]
+    [InlineData(null, "")]
+    [InlineData("   ", "")]
+    public void QgisSchachtNameMatcher_normalisiert_tolerant(string? input, string expected)
+    {
+        Assert.Equal(expected, QgisSchachtNameMatcher.Normalize(input));
+    }
+
+    private static Project CreateProjectWithSchacht(string nummer, string? sanieren = null, string? resultat = null)
+    {
+        var project = new Project { Name = "Schacht-Test" };
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", nummer);
+        if (sanieren is not null)
+            record.SetFieldValue("Sanieren", sanieren);
+        if (resultat is not null)
+            record.SetFieldValue("Pruefungsresultat", resultat);
+        project.SchaechteData.Add(record);
+        return project;
+    }
+
+    private static HaltungRecord Haltung(string name, string ausgefuehrt, string nr)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", name, FieldSource.Manual, userEdited: true);
+        if (!string.IsNullOrEmpty(ausgefuehrt))
+            record.SetFieldValue("Ausgefuehrt_durch", ausgefuehrt, FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("NR", nr, FieldSource.Manual, userEdited: true);
+        return record;
     }
 
     private static Project CreateProjectWithImportedDamage()

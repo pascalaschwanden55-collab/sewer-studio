@@ -72,4 +72,78 @@ public sealed class QgisBridgeSelectionTests : IDisposable
         QgisBridgeSelection.Set("C-D");
         Assert.Equal("C-D", QgisBridgeSelection.CurrentFor(second));
     }
+
+    [Fact]
+    public void SetSchacht_merkt_sich_schacht_unabhaengig_von_der_haltung()
+    {
+        var projectId = Guid.NewGuid();
+
+        QgisBridgeSelection.Set("A-B");
+        QgisBridgeSelection.SetSchacht("KS 60191");
+
+        // Beide Auswahlen bestehen nebeneinander (getrennte Kanaele).
+        Assert.Equal("A-B", QgisBridgeSelection.CurrentFor(projectId));
+        Assert.Equal("KS 60191", QgisBridgeSelection.CurrentSchachtFor(projectId));
+    }
+
+    [Fact]
+    public void SchachtStempel_ist_getrennt_vom_haltungsstempel()
+    {
+        var beforeSchacht = QgisBridgeSelection.SchachtStamp;
+        var beforeHolding = QgisBridgeSelection.Stamp;
+
+        QgisBridgeSelection.SetSchacht("KS 1");
+        QgisBridgeSelection.SetSchacht("KS 1");
+
+        Assert.Equal(beforeSchacht + 2, QgisBridgeSelection.SchachtStamp);
+        // Haltungsstempel bleibt unberuehrt.
+        Assert.Equal(beforeHolding, QgisBridgeSelection.Stamp);
+    }
+
+    [Fact]
+    public void SetSchacht_ignoriert_leere_werte_und_bleibt_sticky()
+    {
+        var projectId = Guid.NewGuid();
+        QgisBridgeSelection.SetSchacht("KS 1");
+        _ = QgisBridgeSelection.CurrentSchachtFor(projectId);
+
+        QgisBridgeSelection.SetSchacht(null);
+        QgisBridgeSelection.SetSchacht("  ");
+
+        Assert.Equal("KS 1", QgisBridgeSelection.CurrentSchachtFor(projectId));
+    }
+
+    [Fact]
+    public void SchachtSelectionChanged_feuert_bei_jeder_auswahl()
+    {
+        var fired = 0;
+        void Handler() => fired++;
+        QgisBridgeSelection.SchachtSelectionChanged += Handler;
+        try
+        {
+            QgisBridgeSelection.SetSchacht("KS 1");
+            QgisBridgeSelection.SetSchacht("KS 2");
+            QgisBridgeSelection.SetSchacht("");   // ignoriert -> kein Event
+        }
+        finally
+        {
+            QgisBridgeSelection.SchachtSelectionChanged -= Handler;
+        }
+
+        Assert.Equal(2, fired);
+    }
+
+    [Fact]
+    public void Projektwechsel_verwirft_haltung_und_schacht_gemeinsam()
+    {
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+        QgisBridgeSelection.Set("A-B");
+        QgisBridgeSelection.SetSchacht("KS 1");
+        Assert.Equal("KS 1", QgisBridgeSelection.CurrentSchachtFor(first));
+
+        // Wechsel auf ein anderes Projekt leert BEIDE Auswahlen.
+        Assert.Equal("", QgisBridgeSelection.CurrentFor(second));
+        Assert.Equal("", QgisBridgeSelection.CurrentSchachtFor(second));
+    }
 }

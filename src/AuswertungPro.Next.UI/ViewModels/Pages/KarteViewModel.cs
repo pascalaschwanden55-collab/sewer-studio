@@ -151,8 +151,24 @@ public sealed partial class KarteViewModel : ObservableObject
         if (_netzLayer is not null)
         {
             var capturedLayer = _netzLayer;
+            var capturedSchachtLayer = _schachtLayer;
             map.Tapped += (_, e) =>
             {
+                // Zuerst Schaechte (Kreise liegen ueber den Linien): Klick auf einen Schacht
+                // meldet ihn an die QGIS-Bridge -> QGIS zoomt auf den Punkt (analog Haltung).
+                if (capturedSchachtLayer is not null)
+                {
+                    var si = e.GetMapInfo(new[] { capturedSchachtLayer });
+                    if (si?.Feature is GeometryFeature sf
+                        && sf["Schachtnummer"] is string schachtNr
+                        && !string.IsNullOrWhiteSpace(schachtNr))
+                    {
+                        QgisBridge.QgisBridgeSelection.SetSchacht(schachtNr);
+                        StatusText = $"Schacht {schachtNr} an QGIS gemeldet.";
+                        return;
+                    }
+                }
+
                 var mi = e.GetMapInfo(new[] { capturedLayer });
                 if (mi?.Feature is GeometryFeature gf && gf["Haltungsname"] is string name)
                 {

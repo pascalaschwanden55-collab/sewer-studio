@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
 
@@ -62,7 +63,94 @@ internal sealed class QgisBridgeSnapshotBuilder
             DamageFeatureCount: damageStats.Exportable,
             SkippedDamageFeatureCount: damageStats.Skipped,
             XtfPath: network.XtfPath,
-            XtfFound: network.XtfFound);
+            XtfFound: network.XtfFound,
+            SchachtFeatureCount: network.Manholes.Count,
+            ProjectSchachtCount: snapshot.SchaechteList.Count,
+            CurrentSchacht: snapshot.CurrentSchacht,
+            SchachtSelectionStamp: snapshot.SchachtSelectionStamp);
+    }
+
+    /// <summary>
+    /// Alle Schacht-Punkte (Abwasserknoten) aus dem Kataster-XTF als Punkt-Layer. Jeder Punkt
+    /// traegt, ob er im Projekt vorkommt (<c>im_projekt</c>) und — falls ja — Sanieren/Resultat.
+    /// Die aktuelle Auswahl steckt bewusst NICHT hier drin, sondern im eigenen
+    /// current_schacht.geojson-Layer (siehe <see cref="BuildCurrentSchachtGeoJson"/>).
+    /// </summary>
+    public GeoJsonFeatureCollection BuildSchaechteGeoJson(QgisProjectSnapshot snapshot)
+    {
+        var network = LoadNetwork();
+        if (network.Manholes.Count == 0)
+            return GeoJsonFeatureCollection.Empty;
+
+        var projectByNorm = new Dictionary<string, QgisSchachtSnapshot>(StringComparer.Ordinal);
+        foreach (var schacht in snapshot.SchaechteList)
+        {
+            var norm = QgisSchachtNameMatcher.Normalize(schacht.Schachtnummer);
+            if (norm.Length > 0)
+                projectByNorm[norm] = schacht;
+        }
+
+        var features = new List<GeoJsonFeature>(network.Manholes.Count);
+        foreach (var manhole in network.Manholes.Values)
+        {
+            var norm = QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung);
+            projectByNorm.TryGetValue(norm, out var match);
+
+            features.Add(new GeoJsonFeature(
+                new GeoJsonPoint(new[] { manhole.X, manhole.Y }),
+                new Dictionary<string, object?>
+                {
+                    ["schacht"] = manhole.Bezeichnung,
+                    ["im_projekt"] = match is not null,
+                    ["sanieren"] = match?.Sanieren,
+                    ["pruefungsresultat"] = match?.Pruefungsresultat,
+                    ["source"] = "kataster_xtf"
+                }));
+        }
+
+        return new GeoJsonFeatureCollection(features);
+    }
+
+    /// <summary>Der aktuell gewaehlte Schacht als einzelner Punkt (fuer den Auto-Zoom in QGIS).</summary>
+    public GeoJsonFeatureCollection BuildCurrentSchachtGeoJson(QgisProjectSnapshot snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot.CurrentSchacht))
+            return GeoJsonFeatureCollection.Empty;
+
+        var network = LoadNetwork();
+        if (network.Manholes.Count == 0)
+            return GeoJsonFeatureCollection.Empty;
+
+        var currentNorm = QgisSchachtNameMatcher.Normalize(snapshot.CurrentSchacht);
+        ManholeGeometry? hit = null;
+        foreach (var manhole in network.Manholes.Values)
+        {
+            if (QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung) == currentNorm)
+            {
+                hit = manhole;
+                break;
+            }
+        }
+
+        if (hit is null)
+            return GeoJsonFeatureCollection.Empty;
+
+        var match = snapshot.SchaechteList.FirstOrDefault(s =>
+            QgisSchachtNameMatcher.Normalize(s.Schachtnummer) == currentNorm);
+
+        var feature = new GeoJsonFeature(
+            new GeoJsonPoint(new[] { hit.X, hit.Y }),
+            new Dictionary<string, object?>
+            {
+                ["schacht"] = hit.Bezeichnung,
+                ["im_projekt"] = match is not null,
+                ["sanieren"] = match?.Sanieren,
+                ["pruefungsresultat"] = match?.Pruefungsresultat,
+                ["current"] = true,
+                ["source"] = "sewerstudio_selection"
+            });
+
+        return new GeoJsonFeatureCollection(new[] { feature });
     }
 
     public GeoJsonFeatureCollection BuildNetworkGeoJson(QgisProjectSnapshot snapshot)
@@ -146,13 +234,20 @@ internal sealed class QgisBridgeSnapshotBuilder
             // Die Fallback-Linie ist bereits in Aufnahmerichtung gebaut -> immer vorwaerts.
             var fromEnd = !resolved.IsFallback && (resolved.ReversedName || haltung.GegenFliessrichtung);
 
+            // Meterstaende auf die Geometrie STRECKEN: das Rohrende (VSA-Code BCE) markiert die
+            // inspizierte Gesamtlaenge und soll exakt auf dem End-Schacht liegen. Ohne erkanntes
+            // Rohrende bleibt der absolute Meterstand erhalten (keine Verzerrung unvollstaendiger
+            // Aufnahmen). So sitzen Rohranfang (0 m) und Rohrende genau auf den Schaechten.
+            var geomLength = TotalLength(resolved.Geometry);
+            var surveyEnd = ResolveRohrendeMeter(haltung.Schaeden);
+
             foreach (var damage in haltung.Schaeden)
             {
                 var meter = GetDamageMeterForMap(damage);
                 if (meter is null)
                     continue;
 
-                var point = InterpolateLv95(resolved.Geometry, meter.Value, fromEnd);
+                var point = InterpolateLv95(resolved.Geometry, ScaleMeter(meter.Value, surveyEnd, geomLength), fromEnd);
                 if (point is null)
                     continue;
 
@@ -183,6 +278,44 @@ internal sealed class QgisBridgeSnapshotBuilder
                         ["source"] = damage.Source
                     }));
             }
+        }
+
+        return new GeoJsonFeatureCollection(features);
+    }
+
+    /// <summary>
+    /// Baut den Layer "Ausgefuehrt durch" (sanierungstyp.geojson): pro Projekt-Haltung mit
+    /// gesetztem Ausfuehrenden eine Linie, kategorisiert nach Baumeister/Sanierer/Gartenbauer,
+    /// beschriftet mit der laufenden Nr. Haltungen ohne Ausfuehrenden oder ohne aufloesbare
+    /// Geometrie werden ausgelassen — es erscheinen nur die "selektionierten" Haltungen.
+    /// </summary>
+    public GeoJsonFeatureCollection BuildSanierungstypGeoJson(QgisProjectSnapshot snapshot)
+    {
+        var network = LoadNetwork();
+        if (network.GeometryByHolding.Count == 0 && network.Manholes.Count == 0)
+            return GeoJsonFeatureCollection.Empty;
+
+        var features = new List<GeoJsonFeature>();
+        foreach (var haltung in snapshot.Haltungen)
+        {
+            var kategorie = AusgefuehrtDurchKategorie.Resolve(haltung.AusgefuehrtDurch);
+            if (kategorie.Length == 0)
+                continue;
+
+            var resolved = Resolve(network, haltung.Haltungsname);
+            if (resolved is null)
+                continue;
+
+            features.Add(CreateLineFeature(
+                resolved.Geometry,
+                new Dictionary<string, object?>
+                {
+                    ["haltung"] = haltung.Haltungsname,
+                    ["nr"] = haltung.Nr,
+                    // Kanonische Kategorie fuer den QML-Regel-Filter ("Baumeister"/"Sanierer"/"Gartenbauer").
+                    ["ausgefuehrt_durch"] = kategorie,
+                    ["source"] = "sewerstudio_ausgefuehrt_durch"
+                }));
         }
 
         return new GeoJsonFeatureCollection(features);
@@ -453,6 +586,40 @@ internal sealed class QgisBridgeSnapshotBuilder
         return total;
     }
 
+    /// <summary>
+    /// Meterstand des Rohrende-Markers (VSA-Code BCE) = inspizierte Gesamtlaenge der Haltung.
+    /// null, wenn kein Rohrende erkannt wurde (dann wird NICHT gestreckt).
+    /// </summary>
+    internal static double? ResolveRohrendeMeter(IReadOnlyList<QgisDamageSnapshot> schaeden)
+    {
+        double? best = null;
+        foreach (var damage in schaeden)
+        {
+            if (damage.Code is null
+                || !damage.Code.StartsWith("BCE", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var meter = damage.MeterStart ?? damage.MeterEnd;
+            if (meter is double value && double.IsFinite(value) && value > 0)
+                best = best is double b ? Math.Max(b, value) : value;
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Streckt einen Meterstand proportional auf die Geometrielaenge: das Rohrende
+    /// (<paramref name="surveyEnd"/>) faellt auf das Geometrie-Ende, der Rohranfang (0 m) auf den
+    /// Anfang. Ohne gueltiges Rohrende oder ohne Geometrielaenge bleibt der Meterstand absolut.
+    /// </summary>
+    internal static double ScaleMeter(double meter, double? surveyEnd, double geomLength)
+    {
+        if (surveyEnd is double end && end > 0 && geomLength > 0)
+            return meter / end * geomLength;
+
+        return meter;
+    }
+
     private static DamageStats CountExportableDamages(
         QgisProjectSnapshot snapshot,
         NetworkLoadResult network)
@@ -498,7 +665,35 @@ internal sealed record QgisStatusPayload(
     int DamageFeatureCount,
     int SkippedDamageFeatureCount,
     string XtfPath,
-    bool XtfFound);
+    bool XtfFound,
+    // Schacht-Felder ans Ende mit Defaults -> alte Plugin-Versionen bleiben kompatibel.
+    int SchachtFeatureCount = 0,
+    int ProjectSchachtCount = 0,
+    string CurrentSchacht = "",
+    long SchachtSelectionStamp = 0);
+
+/// <summary>
+/// Vergleicht Schacht-Namen tolerant: Trim, Innen-Whitespace weg, Gross-/Kleinschreibung egal —
+/// so matcht "KS 60191" (Projekt) auf "KS60191" (Kataster) und umgekehrt.
+/// </summary>
+internal static class QgisSchachtNameMatcher
+{
+    public static string Normalize(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
+
+        var builder = new System.Text.StringBuilder(name.Length);
+        foreach (var ch in name)
+        {
+            if (char.IsWhiteSpace(ch))
+                continue;
+            builder.Append(char.ToUpperInvariant(ch));
+        }
+
+        return builder.ToString();
+    }
+}
 
 internal sealed class GeoJsonFeatureCollection
 {
