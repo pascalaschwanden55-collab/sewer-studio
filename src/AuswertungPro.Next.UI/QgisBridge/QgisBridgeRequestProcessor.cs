@@ -117,6 +117,12 @@ internal sealed class QgisBridgeRequestProcessor
                     snapshot.CurrentSchachtFingerprint(_builder.GetNetworkStampTicks()),
                     () => _builder.BuildCurrentSchachtGeoJson(snapshot));
 
+            case "/qgis/schacht_sanierungstyp.geojson":
+                return GetOrBuildGeoJson(
+                    "schacht_sanierungstyp",
+                    snapshot.SchachtSanierungstypFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildSchachtSanierungstypGeoJson(snapshot));
+
             default:
                 return Error(404, "Unbekannter QGIS-Bridge-Endpunkt.");
         }

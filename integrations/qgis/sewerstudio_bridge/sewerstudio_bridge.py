@@ -56,6 +56,10 @@ REMOTE_LAYERS = (
     # Feld ausgefuehrt_durch = Baumeister/Sanierer/Gartenbauer (in QGIS einmalig
     # kategorisiert einfaerben; der Stil bleibt beim In-Place-Reload erhalten).
     ("sanierungstyp", "SewerStudio - Ausgefuehrt durch", "/qgis/sanierungstyp.geojson"),
+    # Schacht-Pendant zu "Ausgefuehrt durch": Punkte der Schaechte mit gesetztem
+    # Ausfuehrenden, Feld ausgefuehrt_durch = Baumeister/Sanierer/Gartenbauer (in QGIS
+    # einmalig kategorisiert einfaerben; der Stil bleibt beim In-Place-Reload erhalten).
+    ("schacht_sanierungstyp", "SewerStudio - Schacht Ausgefuehrt durch", "/qgis/schacht_sanierungstyp.geojson"),
     ("schaechte", "SewerStudio - Schaechte (live)", "/qgis/schaechte.geojson"),
 )
 
@@ -452,7 +456,7 @@ class SewerStudioBridgeDock(QDockWidget):
             # die Ebene aber schon (mit korrekter Geometrie), DARF sie auf leer gesetzt
             # werden — so verschwindet z.B. eine entfernte "Ausgefuehrt durch"-Linie
             # wieder, statt stehenzubleiben.
-            if (layer_key in ("current", "current_schacht", "sanierungstyp")
+            if (layer_key in ("current", "current_schacht", "sanierungstyp", "schacht_sanierungstyp")
                     and b'"features":[]' in data
                     and existing is None):
                 continue

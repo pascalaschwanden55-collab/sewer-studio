@@ -322,6 +322,53 @@ internal sealed class QgisBridgeSnapshotBuilder
     }
 
     /// <summary>
+    /// Schacht-Pendant zu <see cref="BuildSanierungstypGeoJson"/> (schacht_sanierungstyp.geojson):
+    /// pro Projekt-Schacht mit gesetztem Ausfuehrenden ein Punkt, kategorisiert nach
+    /// Baumeister/Sanierer/Gartenbauer. Schaechte ohne Ausfuehrenden oder ohne aufloesbare
+    /// Kataster-Geometrie werden ausgelassen — es erscheinen nur die "selektionierten" Schaechte.
+    /// </summary>
+    public GeoJsonFeatureCollection BuildSchachtSanierungstypGeoJson(QgisProjectSnapshot snapshot)
+    {
+        var network = LoadNetwork();
+        if (network.Manholes.Count == 0)
+            return GeoJsonFeatureCollection.Empty;
+
+        // Kataster-Schaechte einmal nach normalisiertem Namen indizieren (Punkt-Match).
+        var manholeByNorm = new Dictionary<string, ManholeGeometry>(StringComparer.Ordinal);
+        foreach (var manhole in network.Manholes.Values)
+        {
+            var norm = QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung);
+            if (norm.Length > 0 && !manholeByNorm.ContainsKey(norm))
+                manholeByNorm[norm] = manhole;
+        }
+
+        var features = new List<GeoJsonFeature>();
+        foreach (var schacht in snapshot.SchaechteList)
+        {
+            var kategorie = AusgefuehrtDurchKategorie.Resolve(schacht.AusgefuehrtDurch);
+            if (kategorie.Length == 0)
+                continue;
+
+            var norm = QgisSchachtNameMatcher.Normalize(schacht.Schachtnummer);
+            if (norm.Length == 0 || !manholeByNorm.TryGetValue(norm, out var manhole))
+                continue;
+
+            features.Add(new GeoJsonFeature(
+                new GeoJsonPoint(new[] { manhole.X, manhole.Y }),
+                new Dictionary<string, object?>
+                {
+                    ["schacht"] = schacht.Schachtnummer,
+                    ["nr"] = schacht.Nr,
+                    // Kanonische Kategorie fuer den QML-Regel-Filter ("Baumeister"/"Sanierer"/"Gartenbauer").
+                    ["ausgefuehrt_durch"] = kategorie,
+                    ["source"] = "sewerstudio_schacht_ausgefuehrt_durch"
+                }));
+        }
+
+        return new GeoJsonFeatureCollection(features);
+    }
+
+    /// <summary>
     /// Aenderungsstand der Kataster-Datei (0 = keine Datei) — Teil des Cache-Fingerprints,
     /// damit ein neues XTF die gecachten GeoJSON-Bytes sofort ungueltig macht.
     /// </summary>

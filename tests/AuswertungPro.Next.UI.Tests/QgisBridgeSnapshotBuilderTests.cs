@@ -359,6 +359,35 @@ public sealed class QgisBridgeSnapshotBuilderTests
     }
 
     [Fact]
+    public void BuildSchachtSanierungstypGeoJson_nur_kategorisierte_schaechte_als_punkte()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        var project = new Project { Name = "Schacht-Ausgefuehrt-durch-Test" };
+        project.SchaechteData.Add(Schacht("S1", ausgefuehrt: "Baumeister", nr: "1"));       // Kataster-Knoten -> Punkt
+        project.SchaechteData.Add(Schacht("S2", ausgefuehrt: "", nr: "2"));                 // im Kataster, aber kein Ausfuehrender -> raus
+        project.SchaechteData.Add(Schacht("KS99", ausgefuehrt: "Kanalsanierer", nr: "3"));  // Ausfuehrender, aber nicht im Kataster -> raus
+
+        var geo = sut.BuildSchachtSanierungstypGeoJson(QgisProjectSnapshot.Capture(project, null));
+
+        var feature = Assert.Single(geo.Features);
+        Assert.Equal("S1", feature.Properties["schacht"]);
+        Assert.Equal("Baumeister", feature.Properties["ausgefuehrt_durch"]);
+        Assert.Equal("1", feature.Properties["nr"]);
+        Assert.IsType<GeoJsonPoint>(feature.Geometry);
+    }
+
+    [Fact]
+    public void Ausgefuehrt_durch_aenderung_invalidiert_den_schacht_sanierungstyp_fingerprint()
+    {
+        var before = QgisProjectSnapshot.Capture(SchachtProjekt("S1", null), null).SchachtSanierungstypFingerprint(1);
+        var after = QgisProjectSnapshot.Capture(SchachtProjekt("S1", "Baumeister"), null).SchachtSanierungstypFingerprint(1);
+
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
     public void BuildDamagesGeoJson_streckt_meter_bis_rohrende_auf_end_schacht()
     {
         using var fixture = QgisBridgeFixture.Create();
@@ -505,6 +534,24 @@ public sealed class QgisBridgeSnapshotBuilderTests
             record.SetFieldValue("Ausgefuehrt_durch", ausgefuehrt, FieldSource.Manual, userEdited: true);
         record.SetFieldValue("NR", nr, FieldSource.Manual, userEdited: true);
         return record;
+    }
+
+    private static SchachtRecord Schacht(string nummer, string? ausgefuehrt = null, string? nr = null)
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", nummer);
+        if (!string.IsNullOrEmpty(ausgefuehrt))
+            record.SetFieldValue("Ausgefuehrt_durch", ausgefuehrt);
+        if (!string.IsNullOrEmpty(nr))
+            record.SetFieldValue("NR", nr);
+        return record;
+    }
+
+    private static Project SchachtProjekt(string nummer, string? ausgefuehrt)
+    {
+        var project = new Project { Name = "Schacht-Fingerprint-Test" };
+        project.SchaechteData.Add(Schacht(nummer, ausgefuehrt));
+        return project;
     }
 
     private static Project CreateProjectWithImportedDamage()

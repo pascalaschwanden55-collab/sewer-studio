@@ -69,7 +69,9 @@ internal sealed record QgisProjectSnapshot(
             schaechte.Add(new QgisSchachtSnapshot(
                 nummer,
                 EmptyToNull(record.GetFieldValue("Sanieren")),
-                EmptyToNull(record.GetFieldValue("Pruefungsresultat"))));
+                EmptyToNull(record.GetFieldValue("Pruefungsresultat")),
+                EmptyToNull(record.GetFieldValue("Ausgefuehrt_durch")),
+                EmptyToNull(record.GetFieldValue("NR"))));
         }
 
         return new QgisProjectSnapshot(
@@ -263,6 +265,29 @@ internal sealed record QgisProjectSnapshot(
         hash.Add(CurrentSchacht, StringComparer.OrdinalIgnoreCase);
         return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
     }
+
+    /// <summary>
+    /// Fingerprint fuer schacht_sanierungstyp.geojson ("Ausgefuehrt durch", Schaechte): nur
+    /// Schaechte mit gesetztem Ausfuehrenden zaehlen; Nummer + Ausfuehrender + Nr + XTF-Stand.
+    /// Analog zu <see cref="SanierungstypFingerprint"/>, nur fuer die Punkt-Ebene.
+    /// </summary>
+    public QgisPayloadFingerprint SchachtSanierungstypFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        var count = 0;
+        foreach (var schacht in SchaechteList)
+        {
+            if (string.IsNullOrWhiteSpace(schacht.AusgefuehrtDurch))
+                continue;
+
+            hash.Add(schacht.Schachtnummer, StringComparer.OrdinalIgnoreCase);
+            hash.Add(schacht.AusgefuehrtDurch, StringComparer.OrdinalIgnoreCase);
+            hash.Add(schacht.Nr, StringComparer.Ordinal);
+            count++;
+        }
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), count);
+    }
 }
 
 /// <summary>Cache-Schluessel eines serialisierten Bridge-Payloads (Wertegleichheit).</summary>
@@ -271,7 +296,9 @@ internal readonly record struct QgisPayloadFingerprint(long XtfTicks, int Hash, 
 internal sealed record QgisSchachtSnapshot(
     string Schachtnummer,
     string? Sanieren,
-    string? Pruefungsresultat);
+    string? Pruefungsresultat,
+    string? AusgefuehrtDurch = null,
+    string? Nr = null);
 
 internal sealed record QgisHaltungSnapshot(
     string Haltungsname,
