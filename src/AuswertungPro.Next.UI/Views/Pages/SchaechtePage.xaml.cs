@@ -16,6 +16,7 @@ using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -780,7 +781,6 @@ public partial class SchaechtePage : UserControl
     private List<RecordDetailGroup> BuildRecordDetails(SchachtRecord record)
     {
         var groups = new List<RecordDetailGroup>();
-        var added = new HashSet<string>(StringComparer.Ordinal);
         var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
         {
             ["Stammdaten"] = new(),
@@ -790,21 +790,29 @@ public partial class SchaechtePage : UserControl
             ["Weitere Angaben"] = new()
         };
 
-        if (_vm is not null)
+        // Encoding-Varianten desselben Feldes ("Ausführung"/"Ausfuehrung"/"AusfÃ¼hrung") werden zu
+        // EINEM Feld zusammengefuehrt (nicht-leerer Wert gewinnt) — analog zum festen FieldCatalog
+        // der Haltungen. Kein rohes Durchreichen aller record.Fields.Keys mehr.
+        var templateSpalten = _vm?.Columns ?? (IEnumerable<string>)Array.Empty<string>();
+        var konsolidiert = SchachtDetailFeldKonsolidierer.Konsolidiere(templateSpalten, record.Fields);
+
+        RecordDetailItem? sanierenSchalter = null;
+        var sanierungFolge = new List<RecordDetailItem>();
+
+        foreach (var feld in konsolidiert)
         {
-            foreach (var column in _vm.Columns.Where(x => added.Add(x)))
-            {
-                var groupName = ResolveSchachtDetailGroup(column);
-                buckets[groupName].Add(CreateSchachtDetailItem(column, record));
-            }
+            var groupName = ResolveSchachtDetailGroup(feld.AnzeigeName);
+            var item = CreateSchachtDetailItem(feld, record);
+            buckets[groupName].Add(item);
+
+            if (string.Equals(ResolveOptionField(feld.AnzeigeName), "Sanieren_JaNein", StringComparison.Ordinal))
+                sanierenSchalter = item;
+            else if (string.Equals(groupName, "Sanierung und Kosten", StringComparison.Ordinal))
+                sanierungFolge.Add(item);
         }
 
-        foreach (var extraField in record.Fields.Keys
-                     .Where(x => !added.Contains(x))
-                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
-        {
-            buckets["Weitere Angaben"].Add(CreateSchachtDetailItem(extraField, record));
-        }
+        // Sanieren = Nein -> Folgefelder der Sanierungs-Gruppe ausblenden (wie bei den Haltungen).
+        WireSchachtSanierungSichtbarkeit(sanierenSchalter, sanierungFolge);
 
         AddSchachtGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.");
         AddSchachtGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.");
@@ -815,18 +823,42 @@ public partial class SchaechtePage : UserControl
         return groups;
     }
 
-    private RecordDetailItem CreateSchachtDetailItem(string fieldName, SchachtRecord record)
+    // Blendet die Sanierungs-Folgefelder aus, solange "Sanieren = Nein" gewaehlt ist. Reagiert live.
+    private static void WireSchachtSanierungSichtbarkeit(RecordDetailItem? sanieren, IReadOnlyList<RecordDetailItem> folge)
     {
-        var label = GetDisplayHeader(fieldName);
-        var value = record.GetFieldValue(fieldName);
+        if (sanieren is null || folge.Count == 0)
+            return;
 
-        if (_vm is not null && TryResolveDropdownColumnSpec(fieldName, out var spec))
+        void Apply()
+        {
+            var sichtbar = !string.Equals(sanieren.Value?.Trim(), "Nein", StringComparison.OrdinalIgnoreCase);
+            foreach (var item in folge)
+                item.IsVisible = sichtbar;
+        }
+
+        Apply();
+        sanieren.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(RecordDetailItem.Value))
+                Apply();
+        };
+    }
+
+    private RecordDetailItem CreateSchachtDetailItem(KonsolidiertesSchachtFeld feld, SchachtRecord record)
+    {
+        var label = GetDisplayHeader(feld.AnzeigeName);
+        var value = feld.Wert;
+        var specField = feld.AnzeigeName;
+
+        void Commit(string? next) => CommitSchachtDetailKonsolidiert(record, feld, next);
+
+        if (_vm is not null && TryResolveDropdownColumnSpec(specField, out var spec))
         {
             var options = ResolveOptions(spec.ItemsSourcePath);
             return new RecordDetailItem(
                 label,
                 value,
-                commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+                commitValue: Commit,
                 isCombo: true,
                 allowFreeText: spec.AllowFreeText,
                 options: options,
@@ -837,15 +869,15 @@ public partial class SchaechtePage : UserControl
                 removeOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.RemoveCommand) : null);
         }
 
-        var normalized = Normalize(fieldName);
-        var isMultiline = IsPrimaryDamagesColumn(fieldName)
+        var normalized = Normalize(specField);
+        var isMultiline = IsPrimaryDamagesColumn(specField)
                           || normalized.Contains("bemerk", StringComparison.Ordinal);
-        if (IsZustandsklasseColumn(fieldName))
+        if (IsZustandsklasseColumn(specField))
         {
             return new RecordDetailItem(
                 label,
                 value,
-                commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+                commitValue: Commit,
                 isCombo: true,
                 allowFreeText: false,
                 options: ZustandsklasseColorPalette.SelectionOptions);
@@ -854,7 +886,7 @@ public partial class SchaechtePage : UserControl
         return new RecordDetailItem(
             label,
             value,
-            commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+            commitValue: Commit,
             isMultiline: isMultiline);
     }
 
@@ -899,6 +931,36 @@ public partial class SchaechtePage : UserControl
         if (_vm is not null)
         {
             var optionField = ResolveOptionField(recordField);
+            if (!string.IsNullOrWhiteSpace(optionField))
+                _vm.EnsureOptionForField(optionField, next);
+        }
+
+        MarkProjectDirty();
+        ApplySearchFilter();
+    }
+
+    // Schreibt den Wert auf ALLE Encoding-Varianten des Feldes, damit keine "Geister-Duplikate"
+    // mit altem Wert zurueckbleiben (die der Konsolidierer sonst wieder anzeigen wuerde).
+    // Schachtnummer-Umbenennung laeuft wie gehabt; Optionen/Filter werden einmal aktualisiert.
+    private void CommitSchachtDetailKonsolidiert(SchachtRecord record, KonsolidiertesSchachtFeld feld, string? value)
+    {
+        var next = value ?? string.Empty;
+
+        if (string.Equals(feld.PrimaerKey, "Schachtnummer", StringComparison.Ordinal))
+        {
+            var oldShaftNumber = record.GetFieldValue("Schachtnummer");
+            if (!ApplySchachtNumberChange(record, oldShaftNumber, next))
+                return;
+        }
+        else
+        {
+            foreach (var key in feld.AlleKeys)
+                record.SetFieldValue(key, next);
+        }
+
+        if (_vm is not null)
+        {
+            var optionField = ResolveOptionField(feld.AnzeigeName);
             if (!string.IsNullOrWhiteSpace(optionField))
                 _vm.EnsureOptionForField(optionField, next);
         }
