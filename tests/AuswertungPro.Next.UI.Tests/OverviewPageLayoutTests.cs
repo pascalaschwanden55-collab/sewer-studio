@@ -1,4 +1,7 @@
+using System.Globalization;
 using System.IO;
+using System.Windows;
+using AuswertungPro.Next.UI.Views.Pages;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -23,6 +26,27 @@ public sealed class OverviewPageLayoutTests
         Assert.Contains("Command=\"{Binding PrintPreviewPdfCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"PDF\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Projekt öffnen\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Projektliste_verwendet_kartenlayout_und_symmetrische_aktionen()
+    {
+        var xaml = ReadOverviewXaml();
+
+        Assert.Contains("Text=\"Projektvorschauen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinHeight=\"74\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding FolderName, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<UniformGrid Grid.Row=\"3\" Columns=\"2\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Projektliste_hat_genug_breite_fuer_vorschaukarten()
+    {
+        var converter = new ProjectListWidthConverter();
+
+        var width = Assert.IsType<GridLength>(converter.Convert(false, typeof(GridLength), null, CultureInfo.InvariantCulture));
+
+        Assert.Equal(360, width.Value);
     }
 
     private static string ReadOverviewXaml()

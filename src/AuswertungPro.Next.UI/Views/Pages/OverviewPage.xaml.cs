@@ -85,7 +85,7 @@ public sealed class InverseBooleanToVisibilityConverter : IValueConverter
 public sealed class ProjectListWidthConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool collapsed && collapsed ? new GridLength(0) : new GridLength(340);
+        => value is bool collapsed && collapsed ? new GridLength(0) : new GridLength(360);
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
