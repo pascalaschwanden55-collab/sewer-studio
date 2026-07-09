@@ -134,16 +134,45 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
-    public async Task ClassifyYoloAsync_HttpFehler_WirftSidecarUnavailableException()
+    public async Task ClassifyYoloAsync_ServiceUnavailable_WirftSidecarUnavailableException()
     {
         var client = new VisionPipelineClient(
             new Uri("http://127.0.0.1:8100"),
-            new HttpClient(new StatusCodeHandler(HttpStatusCode.InternalServerError, "boom")));
+            new HttpClient(new StatusCodeHandler(HttpStatusCode.ServiceUnavailable, "busy")));
 
         var ex = await Assert.ThrowsAsync<SidecarUnavailableException>(
             () => client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1)));
 
         Assert.Contains("/classify/yolo", ex.Message);
+    }
+
+    [Fact]
+    public async Task ClassifyYoloAsync_ClientFehler_WirftSidecarBadRequestException()
+    {
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(new StatusCodeHandler(HttpStatusCode.UnprocessableEntity, "bad image")));
+
+        var ex = await Assert.ThrowsAsync<SidecarBadRequestException>(
+            () => client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1)));
+
+        Assert.Equal("/classify/yolo", ex.Endpoint);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+        Assert.Equal("bad image", ex.ResponseBody);
+    }
+
+    [Fact]
+    public async Task ClassifyYoloAsync_Serverfehler_BleibtHttpRequestException()
+    {
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(new StatusCodeHandler(HttpStatusCode.InternalServerError, "boom")));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1)));
+
+        Assert.Equal(HttpStatusCode.InternalServerError, ex.StatusCode);
+        Assert.Contains("boom", ex.Message);
     }
 
     [Fact]

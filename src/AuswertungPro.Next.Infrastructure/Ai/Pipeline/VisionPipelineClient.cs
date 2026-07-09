@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
@@ -172,13 +173,16 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
 
     private static bool IsTransientSidecarError(Exception ex)
         => ex is HttpRequestException hre
-           && (hre.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable
+           && (hre.StatusCode == HttpStatusCode.ServiceUnavailable
                || hre.StatusCode is null); // null = Transportfehler (Verbindung abgelehnt/abgerissen)
 
     private static bool IsSidecarUnavailableError(Exception ex)
-        => ex is HttpRequestException
-           || ex is SocketException
-           || ex.InnerException is SocketException;
+    {
+        if (ex is HttpRequestException hre)
+            return hre.StatusCode is null or HttpStatusCode.ServiceUnavailable;
+
+        return ex is SocketException || ex.InnerException is SocketException;
+    }
 
     private async Task<TResponse> PostOnceAsync<TResponse>(
         string endpoint, string json, CancellationToken ct)
@@ -196,10 +200,15 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         roundtrip.Stop();
 
         if (!resp.IsSuccessStatusCode)
+        {
+            if (IsClientSidecarRequestError(resp.StatusCode))
+                throw new SidecarBadRequestException(endpoint, resp.StatusCode, body);
+
             throw new HttpRequestException(
                 $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}",
                 inner: null,
                 statusCode: resp.StatusCode);
+        }
 
         var result = JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
             ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
@@ -209,6 +218,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
 
         return result;
     }
+
+    private static bool IsClientSidecarRequestError(HttpStatusCode statusCode)
+        => (int)statusCode is >= 400 and <= 499;
 
     private static SidecarTelemetryEvent CreateTelemetryEvent(
         string endpoint,
