@@ -197,9 +197,26 @@ public sealed class CategoryBars : Grid
             Cursor = BarCommand is null ? Cursors.Arrow : Cursors.Hand,
             ToolTip = BuildToolTip(item)
         };
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         column.RowDefinitions.Add(new RowDefinition { Height = new GridLength(Math.Max(0.001d, 100d - item.NormalizedValue), GridUnitType.Star) });
         column.RowDefinitions.Add(new RowDefinition { Height = new GridLength(Math.Max(0.001d, item.NormalizedValue), GridUnitType.Star) });
         column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var value = new TextBlock
+        {
+            Text = item.ValueText,
+            TextAlignment = TextAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            FontSize = 10,
+            Foreground = ResolveThemeBrush("MutedBrush", Color.FromRgb(102, 112, 128)),
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        column.SizeChanged += (_, _) =>
+        {
+            value.Visibility = column.ActualWidth < 30d ? Visibility.Collapsed : Visibility.Visible;
+        };
+        SetRow(value, 0);
+        column.Children.Add(value);
 
         var bar = new Rectangle
         {
@@ -210,7 +227,7 @@ public sealed class CategoryBars : Grid
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch
         };
-        SetRow(bar, 1);
+        SetRow(bar, 2);
         column.Children.Add(bar);
 
         var label = new TextBlock
@@ -221,7 +238,7 @@ public sealed class CategoryBars : Grid
             FontSize = 11,
             Margin = new Thickness(0, 5, 0, 0)
         };
-        SetRow(label, 2);
+        SetRow(label, 3);
         column.Children.Add(label);
 
         AttachCommand(column, item);

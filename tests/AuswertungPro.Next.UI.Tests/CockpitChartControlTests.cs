@@ -74,6 +74,25 @@ public sealed class CockpitChartControlTests
         });
     }
 
+    [Fact]
+    public void CategoryBars_zeigt_wert_ueber_vertikalem_balken()
+    {
+        RunOnStaThread(() =>
+        {
+            var bars = new CategoryBars
+            {
+                Orientation = Orientation.Vertical,
+                ValuePath = "Cost",
+                ItemsSource = new[] { new { Key = "300", Label = "DN 300", Count = 1, Percent = 100d, Cost = 12345m } }
+            };
+
+            var column = Assert.IsType<Grid>(Assert.Single(bars.Children));
+            var value = column.Children.OfType<TextBlock>().First();
+
+            Assert.Equal(12345m.ToString("N0", System.Globalization.CultureInfo.CurrentCulture), value.Text);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

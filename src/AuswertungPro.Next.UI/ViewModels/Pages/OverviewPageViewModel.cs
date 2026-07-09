@@ -70,6 +70,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand OpenSelectedCommand { get; }
         public IRelayCommand ContinueCommand { get; }
         public IRelayCommand RefreshCommand { get; }
+        public IRelayCommand ClearFilterCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
         public IRelayCommand<object?> NavigateConditionCommand { get; }
         public IRelayCommand<object?> NavigateSchachtConditionCommand { get; }
@@ -96,6 +97,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OpenSelectedCommand = new RelayCommand(OpenSelectedProject, () => SelectedProjectEntry is not null);
             ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
             RefreshCommand = new RelayCommand(LoadAllProjects);
+            ClearFilterCommand = new RelayCommand(ClearFilter);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
             NavigateConditionCommand = new RelayCommand<object?>(NavigateCondition);
             NavigateSchachtConditionCommand = new RelayCommand<object?>(NavigateSchachtCondition);
@@ -259,7 +261,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         private static string FormatDashboardCostText(DashboardStatistics? stats)
-            => stats is null ? "-" : $"{stats.TotalCost:N2} CHF";
+            => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.CurrentCulture);
 
         private void NavigateCondition(object? key)
         {
@@ -301,6 +303,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             => IsProjectListCollapsed = !IsProjectListCollapsed;
 
     partial void OnFilterTextChanged(string value) => ApplyFilter();
+
+    private void ClearFilter()
+        => FilterText = string.Empty;
 
     private void ApplyFilter()
     {
