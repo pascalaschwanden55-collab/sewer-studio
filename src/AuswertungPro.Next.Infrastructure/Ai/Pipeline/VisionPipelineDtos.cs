@@ -102,6 +102,7 @@ public sealed record YoloClassifyResponse(
     // Modell-Governance (active.json-Weg): welches cls-Modell hat geantwortet
     [property: JsonPropertyName("model_name")] string ModelName = "",
     [property: JsonPropertyName("model_source")] string ModelSource = "",
+    [property: JsonPropertyName("classifier_loaded")] bool ClassifierLoaded = true,
     [property: JsonPropertyName("model_sha256")] string ModelSha256 = "",
     [property: JsonPropertyName("imgsz")] int Imgsz = 0,
     [property: JsonPropertyName("preprocessing")] string Preprocessing = "",
@@ -110,6 +111,7 @@ public sealed record YoloClassifyResponse(
     // Frame NICHT als BCE Rohrende codieren (der cls hat keine Bogen-Klasse).
     [property: JsonPropertyName("bend_shift")] double BendShift = 0.0,
     [property: JsonPropertyName("is_bend")] bool IsBend = false,
+    [property: JsonPropertyName("bend_veto_failed")] bool BendVetoFailed = false,
     [property: JsonPropertyName("vanish_x")] double VanishX = 0.5,
     [property: JsonPropertyName("vanish_y")] double VanishY = 0.5
 );

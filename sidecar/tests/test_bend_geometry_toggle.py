@@ -39,6 +39,8 @@ def test_yolo_classify_bend_geometry_disabled_returns_neutral_values(monkeypatch
 
     assert response.bend_shift == 0.0
     assert response.is_bend is False
+    assert response.bend_veto_failed is False
+    assert response.classifier_loaded is False
     assert response.vanish_x == 0.5
     assert response.vanish_y == 0.5
 
@@ -70,8 +72,43 @@ def test_yolo_classify_bend_veto_enabled_runs_without_sam_geometry(monkeypatch):
 
     assert response.bend_shift == 0.18
     assert response.is_bend is True
+    assert response.bend_veto_failed is False
     assert response.vanish_x == 0.62
     assert response.vanish_y == 0.41
+
+
+def test_yolo_classify_bend_veto_failure_is_reported(monkeypatch):
+    from sidecar.config import settings
+    from sidecar.routes import yolo
+    from sidecar.schemas.detection import YoloClassifyRequest
+
+    monkeypatch.setattr(settings, "bend_geometry_enabled", False, raising=False)
+    monkeypatch.setattr(settings, "bend_veto_enabled", True, raising=False)
+    monkeypatch.setattr(
+        yolo.yolo_wrapper,
+        "classify_with_quality",
+        lambda image_base64, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
+    )
+    monkeypatch.setattr(
+        yolo.yolo_wrapper,
+        "classifier_metadata",
+        lambda: {"name": "vsa_cls", "source": "active.json"},
+    )
+    monkeypatch.setattr(yolo, "write_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        yolo,
+        "decode_image_safe",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("decode failed")),
+    )
+
+    response = yolo.classify_yolo(
+        YoloClassifyRequest(image_base64="not-a-real-image", top_k=5)
+    )
+
+    assert response.classifier_loaded is True
+    assert response.bend_veto_failed is True
+    assert response.is_bend is False
+    assert response.bend_shift == 0.0
 
 
 def test_sam_segment_bend_geometry_disabled_returns_neutral_values(monkeypatch):

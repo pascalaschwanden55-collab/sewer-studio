@@ -101,6 +101,7 @@ class YoloClassifyResponse(BaseModel):
     # Leere Werte = kein Modell geladen.
     model_name: str = ""
     model_source: str = ""        # active.json | configured | legacy_fallback
+    classifier_loaded: bool = False
     model_sha256: str = ""
     imgsz: int = 0
     preprocessing: str = ""       # letterbox | default
@@ -110,5 +111,6 @@ class YoloClassifyResponse(BaseModel):
     # das Korrektiv: is_bend=True -> Frame NICHT als BCE Rohrende codieren.
     bend_shift: float = 0.0
     is_bend: bool = False
+    bend_veto_failed: bool = False
     vanish_x: float = 0.5
     vanish_y: float = 0.5

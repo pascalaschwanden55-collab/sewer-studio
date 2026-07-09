@@ -150,6 +150,44 @@ public sealed class SingleFrameMultiModelServiceTests
     }
 
     [Fact]
+    public async Task AnalyzeFrameAsync_bend_veto_failure_does_not_trust_false_is_bend()
+    {
+        var handler = new StaticClassifierHandler("""
+        {
+            "predictions": [
+                { "class_name": "BCE", "confidence": 0.91 },
+                { "class_name": "LEER", "confidence": 0.03 }
+            ],
+            "inference_time_ms": 12,
+            "usable": true,
+            "quality_reason": "ok",
+            "model_name": "vsa_cls_v5_nocrop",
+            "model_source": "active.json",
+            "classifier_loaded": true,
+            "is_bend": false,
+            "bend_veto_failed": true,
+            "bend_shift": 0.0
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "test-token");
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 49.7,
+            reachLengthM: 50.0);
+
+        Assert.False(result.IsRelevant);
+        Assert.Null(result.ClassifierCode);
+        Assert.False(result.HasDetections);
+    }
+
+    [Fact]
     public async Task AnalyzeFrameAsync_does_not_replace_clear_defect_code_with_rohrende()
     {
         var handler = new StaticClassifierHandler("""

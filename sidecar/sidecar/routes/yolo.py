@@ -53,6 +53,7 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
     # Geometrisches Bogen-Veto aus demselben Frame. Dieser leichte Veto bleibt aktiv,
     # auch wenn das alte SAM/Bogen-Overlay deaktiviert ist.
     bend_shift, is_bend, vanish_x, vanish_y = 0.0, False, 0.5, 0.5
+    bend_veto_failed = False
     if settings.bend_veto_enabled or settings.bend_geometry_enabled:
         try:
             _img = decode_image_safe(
@@ -64,6 +65,7 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
             bend_shift, is_bend = round(_bend.shift, 4), _bend.is_bend
             vanish_x, vanish_y = round(_bend.vanish_x, 4), round(_bend.vanish_y, 4)
         except Exception:
+            bend_veto_failed = True
             logger.warning("Bogen-Geometrie im classify fehlgeschlagen", exc_info=True)
 
     predictions = [
@@ -71,6 +73,7 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         for name, conf, _ in preds
     ]
     meta = yolo_wrapper.classifier_metadata()
+    classifier_loaded = bool(meta)
 
     write_event("yolo_classify", {
         "roundtrip_ms": round(elapsed_ms, 1),
@@ -84,8 +87,10 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         "imgsz": meta.get("imgsz"),
         "preprocessing": meta.get("preprocessing"),
         "device": meta.get("device"),
+        "classifier_loaded": classifier_loaded,
         "bend_shift": bend_shift,
         "is_bend": is_bend,
+        "bend_veto_failed": bend_veto_failed,
     })
 
     return YoloClassifyResponse(
@@ -95,12 +100,14 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         quality_reason=quality_reason,
         model_name=meta.get("name") or "",
         model_source=meta.get("source") or "",
+        classifier_loaded=classifier_loaded,
         model_sha256=meta.get("sha256") or "",
         imgsz=int(meta.get("imgsz") or 0),
         preprocessing=meta.get("preprocessing") or "",
         device=meta.get("device") or "",
         bend_shift=bend_shift,
         is_bend=is_bend,
+        bend_veto_failed=bend_veto_failed,
         vanish_x=vanish_x,
         vanish_y=vanish_y,
     )

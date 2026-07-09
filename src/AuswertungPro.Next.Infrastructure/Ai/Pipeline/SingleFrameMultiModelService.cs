@@ -76,7 +76,11 @@ public sealed class SingleFrameMultiModelService
                 var clsResp = await _client.ClassifyYoloAsync(new YoloClassifyRequest(b64, 5), ct);
                 classifierMs = clsResp.InferenceTimeMs;
 
-                if (clsResp.Usable && currentMeterM.HasValue && reachLengthM.HasValue)
+                if (clsResp.Usable
+                    && clsResp.ClassifierLoaded
+                    && !clsResp.BendVetoFailed
+                    && currentMeterM.HasValue
+                    && reachLengthM.HasValue)
                 {
                     classifierPredictions = clsResp.Predictions;
                     classifierDecision = VsaCodeResolver.ResolveFromClassifier(

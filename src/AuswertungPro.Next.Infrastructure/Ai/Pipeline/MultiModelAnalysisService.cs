@@ -293,6 +293,19 @@ public sealed class MultiModelAnalysisService
                 if (topPred != null)
                     _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
                         frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                if (ClassifierDecisionEnabled && !clsResult.ClassifierLoaded)
+                {
+                    MarkTraceDegraded(trace, "classifier_not_loaded");
+                    _logger.LogWarning("Frame {Frame}: YOLO-cls Modell nicht geladen - Klassifikator-Code wird nicht angewendet.",
+                        frameIndex);
+                }
+
+                if (ClassifierDecisionEnabled && clsResult.BendVetoFailed)
+                {
+                    MarkTraceDegraded(trace, "bend_veto_failed");
+                    _logger.LogWarning("Frame {Frame}: Bogen-Veto fehlgeschlagen - is_bend=false wird nicht fuer Klassifikator-Code vertraut.",
+                        frameIndex);
+                }
             }
             catch (Exception ex)
             {
@@ -466,7 +479,9 @@ public sealed class MultiModelAnalysisService
                 // box-losen Befund erzeugen. Rettet Bestandsaufnahme, die DINO nicht boxt.
                 var meterNoBox = EstimateMeter(t, duration, ref lastMeter);
                 EnhancedFinding? structuralOnly = null;
-                if (ClassifierOnlyStructuralEnabled && clsResult is { Predictions.Count: > 0 })
+                if (ClassifierOnlyStructuralEnabled
+                    && clsResult is { Predictions.Count: > 0 }
+                    && CanUseClassifierDecision(clsResult))
                 {
                     var resolved = ClassifierOnlyStructuralPolicy.TryResolve(
                         clsResult.Predictions, meterNoBox, EstimatedReachLengthM,
@@ -563,8 +578,7 @@ public sealed class MultiModelAnalysisService
                     frameIndex, samResult.SkippedBoxes, samResult.RequestedBoxes);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – SAM degraded ({samResult.SkippedBoxes} Box(en) verloren) – Review nötig"));
-                trace.Degraded = true;
-                trace.DegradedReason = $"sam_skipped_{samResult.SkippedBoxes}_of_{samResult.RequestedBoxes}";
+                MarkTraceDegraded(trace, $"sam_skipped_{samResult.SkippedBoxes}_of_{samResult.RequestedBoxes}");
             }
 
             // ── Step 4: Quantification ──
@@ -630,7 +644,9 @@ public sealed class MultiModelAnalysisService
             // Erst ein im Fenster bestaetigter Code ueberschreibt die Label-Heuristik;
             // Qwen darf bestaetigte Codes danach nicht mehr aendern.
             string? classifierCode = null;
-            if (ClassifierDecisionEnabled && clsResult is { Predictions.Count: > 0 })
+            if (ClassifierDecisionEnabled
+                && clsResult is { Predictions.Count: > 0 }
+                && CanUseClassifierDecision(clsResult))
             {
                 var resolved = VsaCodeResolver.ResolveFromClassifier(
                     clsResult.Predictions, meter, EstimatedReachLengthM, isBend: clsResult.IsBend);
@@ -996,5 +1012,21 @@ public sealed class MultiModelAnalysisService
     /// </summary>
     private static string? NormalizeClockPosition(string? clock) =>
         VsaCodeResolver.NormalizeClock(clock);
+
+    private static bool CanUseClassifierDecision(YoloClassifyResponse cls)
+        => cls.ClassifierLoaded && !cls.BendVetoFailed;
+
+    private static void MarkTraceDegraded(PipelineFrameTrace trace, string reason)
+    {
+        trace.Degraded = true;
+        if (string.IsNullOrWhiteSpace(trace.DegradedReason))
+        {
+            trace.DegradedReason = reason;
+            return;
+        }
+
+        if (!trace.DegradedReason.Contains(reason, StringComparison.OrdinalIgnoreCase))
+            trace.DegradedReason += $";{reason}";
+    }
 
 }
