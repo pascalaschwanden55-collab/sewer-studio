@@ -78,6 +78,8 @@ namespace AuswertungPro.Next.UI
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
         public IPhotoImportService PhotoImport { get; }
+        // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
+        public ISchachtProtocolImportService SchachtProtocolImport { get; }
         #endregion
 
         #region Export / Protokoll
@@ -137,6 +139,7 @@ namespace AuswertungPro.Next.UI
             // Register protocol/photo/pdf services
             Protocols = new ProtocolService();
             PhotoImport = new PhotoImportService();
+            SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
@@ -290,6 +293,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
+            if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
