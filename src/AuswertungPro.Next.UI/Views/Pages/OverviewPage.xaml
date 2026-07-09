@@ -38,7 +38,7 @@
                         Command="{Binding NewCommand}"
                         Style="{StaticResource ToolbarButtonAccent}"
                         Margin="0,0,6,0"/>
-                <Button Content="Oeffnen"
+                <Button Content="Öffnen"
                         Command="{Binding OpenCommand}"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,6,0"/>
@@ -126,7 +126,7 @@
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Padding="0"
-                                    ToolTip="Suche loeschen">
+                                    ToolTip="Suche löschen">
                                 <TextBlock Text="&#xE711;"
                                            FontFamily="Segoe MDL2 Assets"
                                            FontSize="10"
@@ -230,14 +230,14 @@
                     </ListBox>
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Oeffnen"
+                        <Button Content="Öffnen"
                                 Command="{Binding OpenSelectedCommand}"
                                 Style="{StaticResource PrimaryButton}"
                                 Padding="14,6"/>
                         <Button Content="Ausblenden"
                                 Command="{Binding DeleteSelectedCommand}"
                                 Margin="8,0,0,0"
-                                ToolTip="Projekt aus der Uebersicht ausblenden - Daten bleiben erhalten"
+                                ToolTip="Projekt aus der Übersicht ausblenden - Daten bleiben erhalten"
                                 Style="{StaticResource SecondaryButton}"/>
                     </StackPanel>
                 </Grid>
@@ -253,11 +253,11 @@
                                        FontSize="32"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,8"/>
-                            <TextBlock Text="Projekt waehlen"
+                            <TextBlock Text="Projekt wählen"
                                        FontSize="18"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Projekt links waehlen - oder Projektordner hierher ziehen."
+                            <TextBlock Text="Projekt links wählen - oder Projektordner hierher ziehen."
                                        Margin="0,6,0,0"
                                        Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
@@ -313,7 +313,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                             <Button DockPanel.Dock="Right"
-                                    Content="Oeffnen"
+                                    Content="Öffnen"
                                     Command="{Binding OpenSelectedCommand}"
                                     Style="{StaticResource SecondaryButton}"
                                     Padding="12,6"
@@ -374,7 +374,7 @@
                                                FontSize="24"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Schaechte" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Schächte" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Card}" Margin="0,0,8,0">
@@ -383,7 +383,7 @@
                                                FontSize="24"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Gesamtlaenge" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Gesamtlänge" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Card}" Margin="0,0,8,0">
@@ -464,7 +464,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.ColumnSpan="2">
-                                        <TextBlock Text="Zustand Schaechte"
+                                        <TextBlock Text="Zustand Schächte"
                                                    FontSize="15"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
@@ -475,7 +475,7 @@
                                                      Height="170"
                                                      ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}"
                                                      CenterText="{Binding ActiveDashboard.Schaechte.Total}"
-                                                     CenterLabel="Schaechte"
+                                                     CenterLabel="Schächte"
                                                      SegmentCommand="{Binding NavigateSchachtConditionCommand}"/>
                                     <ItemsControl Grid.Column="1"
                                                   Margin="0,34,0,0"
@@ -520,7 +520,7 @@
 
                             <Border Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
-                                    <TextBlock Text="Haeufigste Schaeden"
+                                    <TextBlock Text="Häufigste Schäden"
                                                FontSize="15"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextBrush}"
@@ -565,7 +565,7 @@
                                                FontSize="22"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Schaechte mit Massnahmen" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Schächte mit Massnahmen" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Card}" Margin="0,0,8,0">
