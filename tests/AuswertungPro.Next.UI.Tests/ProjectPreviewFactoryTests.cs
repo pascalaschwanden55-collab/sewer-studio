@@ -1,21 +1,10 @@
-using System.Linq;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Domain.Models;
-using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ProjectPreviewFactoryTests
 {
-    private static HaltungRecord Holding(double laenge, string dn, decimal kosten)
-    {
-        var r = new HaltungRecord();
-        r.SetFieldValue("Haltungslaenge_m", laenge.ToString(System.Globalization.CultureInfo.InvariantCulture), FieldSource.Manual, false);
-        r.SetFieldValue("DN_mm", dn, FieldSource.Manual, false);
-        r.SetFieldValue("Kosten", kosten.ToString(System.Globalization.CultureInfo.InvariantCulture), FieldSource.Manual, false);
-        return r;
-    }
-
     [Fact]
     public void FromProject_mappt_kennzahlen_und_metadaten()
     {
@@ -23,28 +12,28 @@ public sealed class ProjectPreviewFactoryTests
         project.Metadata["Auftraggeber"] = "Abwasser Uri";
         project.Metadata["Gemeinde"] = "Altdorf";
         project.Metadata["Zone"] = "1.15";
-        project.Data.Add(Holding(30, "DN300", 100m));
-        project.Data.Add(Holding(20, "DN300", 50m));
+        project.Data.Add(Holding("H1", 30, "300"));
+        project.SchaechteData.Add(Schacht("S1"));
+        var hCosts = new ProjectCostStore { ByHolding = { ["H1"] = Cost("H1", 500m) } };
+        var sCosts = new ProjectCostStore { ByHolding = { ["S1"] = Cost("S1", 100m) } };
 
-        var preview = ProjectPreviewFactory.FromProject(project, @"D:\P\zone.json");
+        var preview = ProjectPreviewFactory.FromProject(project, @"D:\P\zone.json", hCosts, sCosts);
 
         Assert.Equal("Zone 1.15", preview.Name);
         Assert.Equal(@"D:\P\zone.json", preview.Path);
-        Assert.Equal(2, preview.HoldingCount);
-        Assert.Equal(50d, preview.TotalLengthMeters);
-        Assert.Equal(150m, preview.TotalCost);
+        Assert.Equal(1, preview.HoldingCount);
+        Assert.Equal(1, preview.SchachtCount);
+        Assert.Equal(30d, preview.TotalLengthMeters);
+        Assert.Equal(600m, preview.TotalCost);
+        Assert.Equal(600m, preview.Statistics.TotalCost);
         Assert.Equal("Abwasser Uri", preview.Auftraggeber);
         Assert.Equal("Altdorf", preview.Gemeinde);
         Assert.Equal("1.15", preview.Zone);
 
-        // Zustandsklassen werden 1:1 aus dem Builder durchgereicht (robust gegen Builder-Interna):
-        var expected = DashboardStatisticsBuilder.Build(project.Data);
-        Assert.Equal(expected.ConditionClasses.Count, preview.ConditionClasses.Count);
-
-        // DN/Kosten: beide Haltungen sind DN300 -> genau EIN Bucket mit Count 2 und Kosten 150.
+        Assert.Equal(preview.Statistics.Haltungen.Buckets.Count, preview.ConditionClasses.Count);
         Assert.Single(preview.DnCostGroups);
-        Assert.Equal(2, preview.DnCostGroups[0].Count);
-        Assert.Equal(150m, preview.DnCostGroups[0].Cost);
+        Assert.Equal(1, preview.DnCostGroups[0].Count);
+        Assert.Equal(500m, preview.DnCostGroups[0].Cost);
     }
 
     [Fact]
@@ -57,4 +46,47 @@ public sealed class ProjectPreviewFactoryTests
 
         Assert.Equal(string.Empty, preview.Bearbeiter);
     }
+
+    private static HaltungRecord Holding(string name, double laenge, string dn)
+    {
+        var r = new HaltungRecord();
+        r.SetFieldValue("Haltungsname", name, FieldSource.Manual, false);
+        r.SetFieldValue("Haltungslaenge_m", laenge.ToString(System.Globalization.CultureInfo.InvariantCulture), FieldSource.Manual, false);
+        r.SetFieldValue("DN_mm", dn, FieldSource.Manual, false);
+        return r;
+    }
+
+    private static SchachtRecord Schacht(string nummer)
+    {
+        var r = new SchachtRecord();
+        r.SetFieldValue("Schachtnummer", nummer);
+        return r;
+    }
+
+    private static HoldingCost Cost(string key, decimal total)
+        => new()
+        {
+            Holding = key,
+            Total = total,
+            Measures =
+            [
+                new MeasureCost
+                {
+                    MeasureId = "M",
+                    MeasureName = "Massnahme",
+                    Total = total,
+                    Lines =
+                    [
+                        new CostLine
+                        {
+                            ItemKey = "M",
+                            Text = "Massnahme",
+                            Qty = 1m,
+                            UnitPrice = total,
+                            Selected = true
+                        }
+                    ]
+                }
+            ]
+        };
 }

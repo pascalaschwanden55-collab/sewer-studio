@@ -66,7 +66,7 @@
 - Modify: `tests/AuswertungPro.Next.UI.Tests/DashboardStatisticsBuilderTests.cs`
 - Modify: `src/AuswertungPro.Next.Application/Dashboard/DashboardStatisticsBuilder.cs`
 
-- [ ] **Step 1: Failing Tests fuer Projektstatistik schreiben**
+- [x] **Step 1: Failing Tests fuer Projektstatistik schreiben**
 
 Ersetze den bestehenden Testinhalt in `DashboardStatisticsBuilderTests.cs` durch Tests, die das neue Verhalten fixieren:
 
@@ -131,7 +131,7 @@ public void Build_zaehlt_haltungen_schaechte_zustand_kosten_und_fortschritt()
 }
 ```
 
-- [ ] **Step 2: Failing Tests fuer Normalisierung und leeres Projekt schreiben**
+- [x] **Step 2: Failing Tests fuer Normalisierung und leeres Projekt schreiben**
 
 Fuege zwei weitere Tests ein:
 
@@ -161,7 +161,7 @@ public void Build_leeres_projekt_liefert_geordnete_null_buckets()
 }
 ```
 
-- [ ] **Step 3: Tests ausfuehren und Fehlschlag bestaetigen**
+- [x] **Step 3: Tests ausfuehren und Fehlschlag bestaetigen**
 
 Run:
 
@@ -171,7 +171,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: FAIL, weil neue Properties/Signaturen noch fehlen.
 
-- [ ] **Step 4: Statistik-Records und Builder implementieren**
+- [x] **Step 4: Statistik-Records und Builder implementieren**
 
 In `DashboardStatisticsBuilder.cs` die vorhandenen Records ersetzen/erweitern:
 
@@ -249,7 +249,7 @@ public static DashboardStatistics Build(Project? project, ProjectCostStore? halt
 }
 ```
 
-- [ ] **Step 5: Statistiktests ausfuehren**
+- [x] **Step 5: Statistiktests ausfuehren**
 
 Run:
 
@@ -259,7 +259,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.Application/Dashboard/DashboardStatisticsBuilder.cs tests/AuswertungPro.Next.UI.Tests/DashboardStatisticsBuilderTests.cs
@@ -275,7 +275,7 @@ git commit -m "feat: dashboard-statistik fuer haltungen und schaechte"
 - Modify: `src/AuswertungPro.Next.Application/Dashboard/ProjectPreviewFactory.cs`
 - Modify: `tests/AuswertungPro.Next.UI.Tests/ProjectPreviewFactoryTests.cs`
 
-- [ ] **Step 1: Failing Preview-Test erweitern**
+- [x] **Step 1: Failing Preview-Test erweitern**
 
 In `ProjectPreviewFactoryTests.cs` den Haupttest so erweitern, dass Stores uebergeben werden:
 
@@ -295,7 +295,7 @@ Assert.Equal(600m, preview.TotalCost);
 Assert.Equal(600m, preview.Statistics.TotalCost);
 ```
 
-- [ ] **Step 2: Test ausfuehren und Fehlschlag bestaetigen**
+- [x] **Step 2: Test ausfuehren und Fehlschlag bestaetigen**
 
 Run:
 
@@ -305,7 +305,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: FAIL wegen fehlender Signatur/Properties.
 
-- [ ] **Step 3: Preview-Records anpassen**
+- [x] **Step 3: Preview-Records anpassen**
 
 `ProjectPreview.cs` erhaelt neue Properties:
 
@@ -336,7 +336,7 @@ public sealed record ProjectPreview(
 }
 ```
 
-- [ ] **Step 4: Factory-Signatur erweitern**
+- [x] **Step 4: Factory-Signatur erweitern**
 
 `ProjectPreviewFactory.FromProject` ruft:
 
@@ -346,7 +346,7 @@ var stats = DashboardStatisticsBuilder.Build(project, haltungCosts, schachtCosts
 
 und setzt `SchachtCount: stats.SchachtCount`, `TotalCost: stats.TotalCost`, `Statistics: stats`.
 
-- [ ] **Step 5: Preview-Tests ausfuehren**
+- [x] **Step 5: Preview-Tests ausfuehren**
 
 Run:
 
@@ -356,7 +356,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.Application/Dashboard/ProjectPreview.cs src/AuswertungPro.Next.Application/Dashboard/ProjectPreviewFactory.cs tests/AuswertungPro.Next.UI.Tests/ProjectPreviewFactoryTests.cs

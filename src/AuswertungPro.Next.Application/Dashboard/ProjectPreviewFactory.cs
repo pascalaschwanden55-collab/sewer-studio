@@ -3,21 +3,26 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Application.Dashboard;
 
 /// <summary>
-/// Baut aus einem geladenen <see cref="Project"/> eine <see cref="ProjectPreview"/> für die
-/// Projektübersicht. Reiner Helfer (keine Abhängigkeiten), damit unit-testbar. Kennzahlen kommen
-/// aus <see cref="DashboardStatisticsBuilder"/>; Schadensgruppen werden bewusst weggelassen.
+/// Baut aus einem geladenen <see cref="Project"/> eine <see cref="ProjectPreview"/> fuer die
+/// Projektuebersicht. Reiner Helfer (keine Abhaengigkeiten), damit unit-testbar. Kennzahlen kommen
+/// aus <see cref="DashboardStatisticsBuilder"/>.
 /// </summary>
 public static class ProjectPreviewFactory
 {
-    public static ProjectPreview FromProject(Project project, string path)
+    public static ProjectPreview FromProject(
+        Project project,
+        string path,
+        ProjectCostStore? haltungCosts = null,
+        ProjectCostStore? schachtCosts = null)
     {
-        var stats = DashboardStatisticsBuilder.Build(project.Data);
+        var stats = DashboardStatisticsBuilder.Build(project, haltungCosts, schachtCosts);
         return new ProjectPreview(
             Name: project.Name ?? string.Empty,
             Description: project.Description ?? string.Empty,
             Path: path,
             ModifiedAtUtc: project.ModifiedAtUtc,
-            HoldingCount: stats.TotalHoldings,
+            HoldingCount: stats.HoldingCount,
+            SchachtCount: stats.SchachtCount,
             TotalLengthMeters: stats.TotalLengthMeters,
             TotalCost: stats.TotalCost,
             Auftraggeber: Meta(project, "Auftraggeber"),
@@ -28,8 +33,7 @@ public static class ProjectPreviewFactory
             Inspektionsdatum: Meta(project, "InspektionsDatum"),
             AuftragNr: Meta(project, "AuftragNr"),
             Firma: Meta(project, "FirmaName"),
-            ConditionClasses: stats.ConditionClasses,
-            DnCostGroups: stats.DnCostGroups);
+            Statistics: stats);
     }
 
     private static string Meta(Project project, string key)

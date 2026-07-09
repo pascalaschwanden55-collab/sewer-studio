@@ -335,12 +335,14 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             // Fällt unten auf die Metadaten-Vorschau zurück.
         }
 
+        var emptyStatistics = DashboardStatisticsBuilder.Build(new Project(), null, null);
         SelectedPreview = new ProjectPreview(
             Name: entry.Name,
             Description: entry.Description,
             Path: entry.Path,
             ModifiedAtUtc: entry.ModifiedAtUtc,
             HoldingCount: entry.RecordCount,
+            SchachtCount: 0,
             TotalLengthMeters: 0,
             TotalCost: 0m,
             Auftraggeber: string.Empty,
@@ -351,8 +353,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             Inspektionsdatum: string.Empty,
             AuftragNr: string.Empty,
             Firma: string.Empty,
-            ConditionClasses: System.Array.Empty<DashboardBucket>(),
-            DnCostGroups: System.Array.Empty<DashboardCostBucket>());
+            Statistics: emptyStatistics);
     }
 
     partial void OnLastProjectPathChanged(string? value)

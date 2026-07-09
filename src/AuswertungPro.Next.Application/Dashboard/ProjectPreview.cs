@@ -5,8 +5,7 @@ using System.Globalization;
 namespace AuswertungPro.Next.Application.Dashboard;
 
 /// <summary>
-/// Schreibgeschützte Projekt-Vorschau für die Projektübersicht (rechtes Panel). Trägt genau die
-/// Anzeige-Daten eines Projekts, ohne es zu öffnen. Schadensgruppen sind bewusst NICHT enthalten.
+/// Schreibgeschuetzte Projekt-Vorschau fuer die Projektuebersicht.
 /// </summary>
 public sealed record ProjectPreview(
     string Name,
@@ -14,6 +13,7 @@ public sealed record ProjectPreview(
     string Path,
     DateTime? ModifiedAtUtc,
     int HoldingCount,
+    int SchachtCount,
     double TotalLengthMeters,
     decimal TotalCost,
     string Auftraggeber,
@@ -24,10 +24,15 @@ public sealed record ProjectPreview(
     string Inspektionsdatum,
     string AuftragNr,
     string Firma,
-    IReadOnlyList<DashboardBucket> ConditionClasses,
-    IReadOnlyList<DashboardCostBucket> DnCostGroups)
+    DashboardStatistics Statistics)
 {
-    /// <summary>Lokales Datum (nur Tag) oder „—".</summary>
+    public IReadOnlyList<ZustandBucket> HoldingConditionClasses => Statistics.Haltungen.Buckets;
+    public IReadOnlyList<ZustandBucket> SchachtConditionClasses => Statistics.Schaechte.Buckets;
+
+    // Kompatibilitaet fuer bestehende XAML-Bindings bis zum Dashboard-XAML-Umbau.
+    public IReadOnlyList<ZustandBucket> ConditionClasses => HoldingConditionClasses;
+    public IReadOnlyList<DashboardCostBucket> DnCostGroups => Statistics.HaltungDnCosts;
+
     public string ModifiedAtDisplay =>
-        ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "—";
+        ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "-";
 }
