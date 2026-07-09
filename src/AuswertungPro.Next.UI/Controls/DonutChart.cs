@@ -30,6 +30,20 @@ public sealed class DonutChart : Canvas
             typeof(DonutChart),
             new FrameworkPropertyMetadata(null, OnChartChanged));
 
+    public static readonly DependencyProperty CenterTextProperty =
+        DependencyProperty.Register(
+            nameof(CenterText),
+            typeof(string),
+            typeof(DonutChart),
+            new FrameworkPropertyMetadata(string.Empty, OnChartChanged));
+
+    public static readonly DependencyProperty CenterLabelProperty =
+        DependencyProperty.Register(
+            nameof(CenterLabel),
+            typeof(string),
+            typeof(DonutChart),
+            new FrameworkPropertyMetadata(string.Empty, OnChartChanged));
+
     private INotifyCollectionChanged? _observableItems;
 
     public DonutChart()
@@ -49,6 +63,18 @@ public sealed class DonutChart : Canvas
     {
         get => (ICommand?)GetValue(SegmentCommandProperty);
         set => SetValue(SegmentCommandProperty, value);
+    }
+
+    public string CenterText
+    {
+        get => (string)GetValue(CenterTextProperty);
+        set => SetValue(CenterTextProperty, value);
+    }
+
+    public string CenterLabel
+    {
+        get => (string)GetValue(CenterLabelProperty);
+        set => SetValue(CenterLabelProperty, value);
     }
 
     private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -78,7 +104,8 @@ public sealed class DonutChart : Canvas
         var total = items.Sum(i => i.Value);
         if (total <= 0d)
         {
-            DrawEmptyRing();
+            var emptySize = DrawEmptyRing();
+            DrawCenterText(emptySize);
             return;
         }
 
@@ -109,9 +136,11 @@ public sealed class DonutChart : Canvas
 
             startAngle += sweep;
         }
+
+        DrawCenterText(size);
     }
 
-    private void DrawEmptyRing()
+    private double DrawEmptyRing()
     {
         var size = Math.Min(ActualWidth, ActualHeight);
         if (double.IsNaN(size) || size <= 0d)
@@ -121,13 +150,14 @@ public sealed class DonutChart : Canvas
         {
             Width = Math.Max(20d, size - 6d),
             Height = Math.Max(20d, size - 6d),
-            Stroke = new SolidColorBrush(Color.FromRgb(218, 223, 230)),
+            Stroke = ResolveThemeBrush("BorderLightBrush", Color.FromRgb(218, 223, 230)),
             StrokeThickness = Math.Max(8d, size * 0.16d),
             Fill = Brushes.Transparent
         };
         SetLeft(ellipse, 3d);
         SetTop(ellipse, 3d);
         Children.Add(ellipse);
+        return size;
     }
 
     private void AddSegment(ChartItem item, int index, Point center, double outerRadius, double innerRadius, double startAngle, double sweepAngle)
@@ -151,7 +181,7 @@ public sealed class DonutChart : Canvas
         {
             Data = new PathGeometry([figure]),
             Fill = ResolveBrush(item.Key, index),
-            Stroke = Brushes.White,
+            Stroke = ResolveThemeBrush("CardBrush", Colors.White),
             StrokeThickness = 1.2d,
             Tag = item.Key,
             ToolTip = $"{item.Label}: {item.Count} ({item.Percent:N1}%)",
@@ -160,6 +190,8 @@ public sealed class DonutChart : Canvas
 
         if (SegmentCommand is not null)
         {
+            path.MouseEnter += (_, _) => path.Opacity = 0.8d;
+            path.MouseLeave += (_, _) => path.Opacity = 1d;
             path.MouseLeftButtonUp += (_, e) =>
             {
                 if (SegmentCommand.CanExecute(item.Key))
@@ -169,6 +201,49 @@ public sealed class DonutChart : Canvas
         }
 
         Children.Add(path);
+    }
+
+    private void DrawCenterText(double size)
+    {
+        if (string.IsNullOrWhiteSpace(CenterText) && string.IsNullOrWhiteSpace(CenterLabel))
+            return;
+
+        var panel = new StackPanel
+        {
+            Width = size,
+            IsHitTestVisible = false
+        };
+
+        if (!string.IsNullOrWhiteSpace(CenterText))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = CenterText,
+                FontSize = Math.Max(18d, size * 0.17d),
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Foreground = ResolveThemeBrush("TextBrush", Color.FromRgb(24, 31, 42))
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(CenterLabel))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = CenterLabel,
+                FontSize = Math.Max(10d, size * 0.075d),
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Foreground = ResolveThemeBrush("MutedBrush", Color.FromRgb(102, 112, 128))
+            });
+        }
+
+        panel.Measure(new Size(size, size));
+        SetLeft(panel, 0d);
+        SetTop(panel, Math.Max(0d, (size - panel.DesiredSize.Height) / 2d));
+        Panel.SetZIndex(panel, 10);
+        Children.Add(panel);
     }
 
     private static Point PointOnCircle(Point center, double radius, double angleDegrees)
@@ -223,6 +298,9 @@ public sealed class DonutChart : Canvas
         brush.Freeze();
         return brush;
     }
+
+    private Brush ResolveThemeBrush(string key, Color fallback)
+        => TryFindResource(key) as Brush ?? FrozenBrush(fallback.R, fallback.G, fallback.B);
 
     private static readonly Brush[] FallbackPalette =
     [

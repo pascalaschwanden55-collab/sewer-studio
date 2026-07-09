@@ -146,7 +146,7 @@ public sealed class CategoryBars : Grid
         track.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(restStar, GridUnitType.Star) });
         track.Children.Add(new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(230, 234, 239)),
+            Background = ResolveThemeBrush("BorderLightBrush", Color.FromRgb(230, 234, 239)),
             CornerRadius = new CornerRadius(3)
         });
         Grid.SetColumnSpan(track.Children[0], 2);
@@ -321,6 +321,9 @@ public sealed class CategoryBars : Grid
         brush.Freeze();
         return brush;
     }
+
+    private Brush ResolveThemeBrush(string key, Color fallback)
+        => TryFindResource(key) as Brush ?? FrozenBrush(fallback.R, fallback.G, fallback.B);
 
     private static readonly Brush[] FallbackPalette =
     [

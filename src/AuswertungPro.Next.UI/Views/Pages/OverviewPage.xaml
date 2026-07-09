@@ -382,6 +382,8 @@
                                                      Width="170"
                                                      Height="170"
                                                      ItemsSource="{Binding ActiveDashboard.Haltungen.Buckets}"
+                                                     CenterText="{Binding ActiveDashboard.Haltungen.Total}"
+                                                     CenterLabel="Haltungen"
                                                      SegmentCommand="{Binding NavigateConditionCommand}"/>
                                     <ItemsControl Grid.Column="1"
                                                   Margin="0,34,0,0"
@@ -433,6 +435,8 @@
                                                      Width="170"
                                                      Height="170"
                                                      ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}"
+                                                     CenterText="{Binding ActiveDashboard.Schaechte.Total}"
+                                                     CenterLabel="Schaechte"
                                                      SegmentCommand="{Binding NavigateSchachtConditionCommand}"/>
                                     <ItemsControl Grid.Column="1"
                                                   Margin="0,34,0,0"
