@@ -626,7 +626,7 @@ git commit -m "feat: dashboard-refresh und kostenstores verdrahten"
 - Create: `src/AuswertungPro.Next.UI/Controls/DonutChart.cs`
 - Create: `src/AuswertungPro.Next.UI/Controls/CategoryBars.cs`
 
-- [ ] **Step 1: DonutChart implementieren**
+- [x] **Step 1: DonutChart implementieren**
 
 Erstelle ein `Canvas`-basiertes Control mit DependencyProperties:
 
@@ -645,7 +645,7 @@ public sealed class DonutChart : Canvas
 
 `Rebuild()` erzeugt fuer jeden Bucket einen `Path` mit `PathGeometry`, `PathFigure`, `ArcSegment`, `LineSegment`, setzt `Tag = bucket.Key`, `ToolTip`, `Cursor`, `MouseLeftButtonUp`.
 
-- [ ] **Step 2: CategoryBars implementieren**
+- [x] **Step 2: CategoryBars implementieren**
 
 DependencyProperties:
 
@@ -655,7 +655,7 @@ ItemsSource, BarCommand, Orientation, ValuePath
 
 `Rebuild()` erzeugt `Grid`/`Rectangle`/`TextBlock`-Zeilen fuer horizontale Balken und klickt mit `bucket.Key`.
 
-- [ ] **Step 3: Build fuer Controls pruefen**
+- [x] **Step 3: Build fuer Controls pruefen**
 
 Run:
 
@@ -665,7 +665,7 @@ dotnet build AuswertungPro.sln
 
 Expected: 0 Fehler. Vorher `SewerStudio.exe` pruefen; wenn Prozess laeuft, Nutzer bitten zu schliessen.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.UI/Controls/DonutChart.cs src/AuswertungPro.Next.UI/Controls/CategoryBars.cs
