@@ -9,6 +9,7 @@ using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -293,6 +294,23 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var target = NavItems.FirstOrDefault(x => string.Equals(x.Title, title, StringComparison.OrdinalIgnoreCase));
         if (target is not null)
             SelectedNavItem = target;
+    }
+
+    public void NavigateToDataPage(DataPageStartFilter startFilter)
+    {
+        var target = NavItems.FirstOrDefault(x => string.Equals(x.Title, "Haltungen", StringComparison.OrdinalIgnoreCase));
+        if (target is null)
+            return;
+
+        if (!ShellLeaveGuard.CanLeave(CurrentPage))
+            return;
+
+        CurrentMode = ShellMode.Workspace;
+        _suppressLeaveGuard = true;
+        SelectedNavItem = target;
+        _suppressLeaveGuard = false;
+        _navItemBeforeChange = target;
+        SetCurrentPage(new Pages.DataPageViewModel(this, _sp, startFilter));
     }
 
     public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)

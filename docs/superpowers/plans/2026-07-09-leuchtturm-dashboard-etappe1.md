@@ -374,7 +374,7 @@ git commit -m "feat: projektvorschau nutzt dashboard-statistik"
 - Modify: `src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml.cs`
 - Create: `tests/AuswertungPro.Next.UI.Tests/DataPageStartFilterTests.cs`
 
-- [ ] **Step 1: Failing Startfilter-Tests schreiben**
+- [x] **Step 1: Failing Startfilter-Tests schreiben**
 
 Neue Datei `DataPageStartFilterTests.cs`:
 
@@ -403,7 +403,7 @@ public sealed class DataPageStartFilterTests
 }
 ```
 
-- [ ] **Step 2: Test ausfuehren und Fehlschlag bestaetigen**
+- [x] **Step 2: Test ausfuehren und Fehlschlag bestaetigen**
 
 Run:
 
@@ -413,7 +413,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: FAIL, Typ fehlt.
 
-- [ ] **Step 3: DataPageStartFilter implementieren**
+- [x] **Step 3: DataPageStartFilter implementieren**
 
 Implementiere:
 
@@ -441,7 +441,7 @@ public sealed record DataPageStartFilter(string FieldName, string Value)
 }
 ```
 
-- [ ] **Step 4: DataPageViewModel um optionalen Filter erweitern**
+- [x] **Step 4: DataPageViewModel um optionalen Filter erweitern**
 
 Konstruktor:
 
@@ -455,7 +455,7 @@ public DataPageViewModel(ShellViewModel shell, ServiceProvider services, DataPag
 }
 ```
 
-- [ ] **Step 5: Shell-Navigation bauen**
+- [x] **Step 5: Shell-Navigation bauen**
 
 In `ShellViewModel`:
 
@@ -474,7 +474,7 @@ public void NavigateToDataPage(DataPageStartFilter startFilter)
 }
 ```
 
-- [ ] **Step 6: DataPage wendet Startfilter beim Laden an**
+- [x] **Step 6: DataPage wendet Startfilter beim Laden an**
 
 In `DataPage.xaml.cs` Feld und Methode:
 
@@ -495,7 +495,7 @@ private void ApplyStartFilter()
 
 Rufe `ApplyStartFilter()` im bestehenden `Loaded`-Handler nach `EnsureColumns()` auf.
 
-- [ ] **Step 7: Tests ausfuehren**
+- [x] **Step 7: Tests ausfuehren**
 
 Run:
 
@@ -505,7 +505,7 @@ dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.UI/DataPage/DataPageStartFilter.cs src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml.cs tests/AuswertungPro.Next.UI.Tests/DataPageStartFilterTests.cs

@@ -116,6 +116,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
     public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
+    public DataPageStartFilter? StartFilter { get; }
 
     [ObservableProperty] private HaltungRecord? _selected;
     [ObservableProperty] private string _saveStatus = string.Empty;
@@ -139,10 +140,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public bool IsProjectReady => _shell.IsProjectReady;
     public bool IsDataGridReadOnly => !_shell.IsProjectReady;
 
-    public DataPageViewModel(ShellViewModel shell, ServiceProvider services)
+    public DataPageViewModel(ShellViewModel shell, ServiceProvider services, DataPageStartFilter? startFilter = null)
     {
         _shell = shell;
         _sp = services;
+        StartFilter = startFilter;
         _measureRecommendationService = _sp.MeasureRecommendation;
         _timers = new DataPageTimerController(
             value => SaveStatus = value,

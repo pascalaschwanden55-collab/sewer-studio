@@ -37,6 +37,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private bool _updatingAlignmentButtons;
     private bool _isUndocking;
     private DataGridColumn? _activeColumn;
+    private bool _startFilterApplied;
 
     public DataPage()
     {
@@ -95,6 +96,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             ApplyHaltungsansichtSettings();
             EnsureColumns();
+            ApplyStartFilter();
             UpdateAlignmentButtonsForCurrentColumn();
         };
         Unloaded += (_, __) =>
@@ -1131,6 +1133,24 @@ public partial class DataPage : System.Windows.Controls.UserControl
             : null;
 
         Grid.AllowDrop = !filter.IstAktiv;
+        FilterChips.SetTrefferInfo(view.Cast<object>().Count(), vm.Records.Count);
+    }
+
+    private void ApplyStartFilter()
+    {
+        if (_startFilterApplied || DataContext is not DataPageViewModel vm || vm.StartFilter is null)
+            return;
+
+        _startFilterApplied = true;
+        HaltungsansichtToggle.IsChecked = false;
+        HaltungsansichtView.Visibility = Visibility.Collapsed;
+        Grid.Visibility = Visibility.Visible;
+
+        var view = CollectionViewSource.GetDefaultView(vm.Records);
+        view.Filter = obj => vm.StartFilter.Matches(obj as HaltungRecord);
+        view.Refresh();
+
+        Grid.AllowDrop = false;
         FilterChips.SetTrefferInfo(view.Cast<object>().Count(), vm.Records.Count);
     }
 
