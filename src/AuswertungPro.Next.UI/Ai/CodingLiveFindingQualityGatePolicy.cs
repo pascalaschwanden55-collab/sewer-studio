@@ -15,8 +15,8 @@ public static class CodingLiveFindingQualityGatePolicy
         return qualityGate?.Evaluate(evidence)
             ?? new QualityGateResult(
                 finding.Severity / 5.0,
-                finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
+                TrafficLight.Yellow,
                 new Dictionary<string, double>(),
-                "Fallback");
+                "QualityGate nicht verfuegbar");
     }
 }

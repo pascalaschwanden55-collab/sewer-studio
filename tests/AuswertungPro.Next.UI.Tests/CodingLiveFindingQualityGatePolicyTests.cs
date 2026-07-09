@@ -14,17 +14,18 @@ public sealed class CodingLiveFindingQualityGatePolicyTests
 
         Assert.Equal(0.6, result.CompositeConfidence);
         Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
-        Assert.Equal("Fallback", result.Explanation);
+        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
         Assert.Empty(result.WeightsUsed);
     }
 
     [Fact]
-    public void Evaluate_without_service_uses_existing_green_fallback_for_high_severity()
+    public void Evaluate_without_service_keeps_high_severity_yellow()
     {
         var result = CodingLiveFindingQualityGatePolicy.Evaluate(null, Finding(severity: 4));
 
         Assert.Equal(0.8, result.CompositeConfidence);
-        Assert.Equal(TrafficLight.Green, result.TrafficLight);
+        Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
+        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
     }
 
     [Fact]
@@ -34,7 +35,7 @@ public sealed class CodingLiveFindingQualityGatePolicyTests
 
         var result = CodingLiveFindingQualityGatePolicy.Evaluate(service, Finding(severity: 5));
 
-        Assert.NotEqual("Fallback", result.Explanation);
+        Assert.NotEqual("QualityGate nicht verfuegbar", result.Explanation);
         Assert.Contains(nameof(EvidenceVector.QwenVisionConf), result.WeightsUsed.Keys);
         Assert.Contains(nameof(EvidenceVector.PlausibilityScore), result.WeightsUsed.Keys);
     }
