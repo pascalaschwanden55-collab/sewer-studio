@@ -60,6 +60,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         [ObservableProperty] private bool _isProjectListCollapsed;
         [ObservableProperty] private string _dashboardCostText = "-";
         [ObservableProperty] private bool _isPreviewLoading;
+        [ObservableProperty] private bool _isPreviewPdfExportInProgress;
 
         public ObservableCollection<ProjectOverviewEntry> ProjectEntries { get; } = new();
         private List<ProjectOverviewEntry> _allEntries = new();
@@ -70,6 +71,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand OpenSelectedCommand { get; }
         public IRelayCommand ContinueCommand { get; }
         public IRelayCommand RefreshCommand { get; }
+        public IAsyncRelayCommand PrintPreviewPdfCommand { get; }
         public IRelayCommand ClearFilterCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
         public IRelayCommand<object?> NavigateConditionCommand { get; }
@@ -97,6 +99,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OpenSelectedCommand = new RelayCommand(OpenSelectedProject, () => SelectedProjectEntry is not null);
             ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
             RefreshCommand = new RelayCommand(LoadAllProjects);
+            PrintPreviewPdfCommand = new AsyncRelayCommand(PrintPreviewPdfAsync, CanPrintPreviewPdf);
             ClearFilterCommand = new RelayCommand(ClearFilter);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
             NavigateConditionCommand = new RelayCommand<object?>(NavigateCondition);
@@ -159,6 +162,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         partial void OnIsPreviewLoadingChanged(bool value)
             => UpdateDashboardPresentation();
+
+        partial void OnIsPreviewPdfExportInProgressChanged(bool value)
+            => PrintPreviewPdfCommand.NotifyCanExecuteChanged();
 
         partial void OnIsProjectListCollapsedChanged(bool value)
         {
@@ -258,10 +264,85 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OnPropertyChanged(nameof(DashboardTitle));
             OnPropertyChanged(nameof(DashboardProjectName));
             DashboardCostText = FormatDashboardCostText(ActiveDashboard);
+            PrintPreviewPdfCommand.NotifyCanExecuteChanged();
         }
 
         private static string FormatDashboardCostText(DashboardStatistics? stats)
             => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.CurrentCulture);
+
+        private bool CanPrintPreviewPdf()
+            => HasActiveDashboard && !IsPreviewLoading && !IsPreviewPdfExportInProgress;
+
+        private async Task PrintPreviewPdfAsync()
+        {
+            if (!CanPrintPreviewPdf())
+                return;
+
+            var preview = BuildPrintablePreview();
+            if (preview is null)
+            {
+                _sp.Dialogs.Info("Keine Projektvorschau zum Drucken vorhanden.", "Projektvorschau");
+                return;
+            }
+
+            var output = _sp.Dialogs.SaveFile(
+                "Projektvorschau PDF speichern",
+                "PDF (*.pdf)|*.pdf",
+                defaultExt: "pdf",
+                defaultFileName: BuildPreviewPdfFileName(preview.Name));
+            if (string.IsNullOrWhiteSpace(output))
+                return;
+
+            IsPreviewPdfExportInProgress = true;
+            try
+            {
+                var target = Path.GetFullPath(output);
+                var directory = Path.GetDirectoryName(target);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    Directory.CreateDirectory(directory);
+
+                var pdf = await Task.Run(() => ProjectPreviewPdfBuilder.Build(preview));
+                await File.WriteAllBytesAsync(target, pdf);
+                _sp.Dialogs.Info($"PDF erstellt:\n{target}", "Projektvorschau");
+            }
+            catch (Exception ex)
+            {
+                _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Projektvorschau");
+            }
+            finally
+            {
+                IsPreviewPdfExportInProgress = false;
+            }
+        }
+
+        private ProjectPreview? BuildPrintablePreview()
+        {
+            if (!ShowFullDashboard)
+                return SelectedPreview;
+
+            var projectPath = _sp.Settings.LastProjectPath ?? string.Empty;
+            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out _);
+            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out _);
+            return ProjectPreviewFactory.FromProject(Project, projectPath, hCosts, sCosts);
+        }
+
+        internal static string BuildPreviewPdfFileName(string? projectName)
+        {
+            var safeName = SanitizeFilePart(string.IsNullOrWhiteSpace(projectName) ? "Projekt" : projectName);
+            return $"Projektvorschau_{safeName}_{DateTime.Now:yyyyMMdd}.pdf";
+        }
+
+        private static string SanitizeFilePart(string? value)
+        {
+            var text = (value ?? string.Empty).Trim();
+            if (text.Length == 0)
+                return "Projekt";
+
+            foreach (var invalid in Path.GetInvalidFileNameChars())
+                text = text.Replace(invalid, '_');
+
+            return string.IsNullOrWhiteSpace(text) ? "Projekt" : text;
+        }
 
         private void NavigateCondition(object? key)
         {

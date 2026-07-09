@@ -37,18 +37,7 @@
                 <Button Content="Neues Projekt"
                         Command="{Binding NewCommand}"
                         Style="{StaticResource ToolbarButtonAccent}"
-                        Margin="0,0,6,0"/>
-                <Button Content="Öffnen"
-                        Command="{Binding OpenCommand}"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,6,0"/>
-                <Button Content="Fortsetzen"
-                        Command="{Binding ContinueCommand}"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,6,0"/>
-                <Button Content="Aktualisieren"
-                        Command="{Binding RefreshCommand}"
-                        Style="{StaticResource ToolbarButton}"/>
+                        Margin="0"/>
             </WrapPanel>
         </DockPanel>
 
@@ -300,7 +289,7 @@
                     </Border>
 
                     <StackPanel Visibility="{Binding HasActiveDashboard, Converter={StaticResource BoolToVis}}">
-                        <DockPanel Margin="0,0,0,10">
+                        <DockPanel Margin="0,0,0,10" LastChildFill="False">
                             <StackPanel DockPanel.Dock="Left">
                                 <TextBlock Text="{Binding DashboardTitle}"
                                            FontSize="20"
@@ -312,12 +301,28 @@
                                            Foreground="{DynamicResource MutedBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <Button DockPanel.Dock="Right"
-                                    Content="Öffnen"
-                                    Command="{Binding OpenSelectedCommand}"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Padding="12,6"
-                                    Visibility="{Binding ShowFullDashboard, Converter={StaticResource InverseBoolToVis}}"/>
+                            <StackPanel DockPanel.Dock="Right"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Button Command="{Binding PrintPreviewPdfCommand}"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Padding="10,5"
+                                        Margin="0,0,6,0"
+                                        ToolTip="Projektvorschau als PDF speichern">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE749;"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="13"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="PDF"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Content="Projekt öffnen"
+                                        Command="{Binding OpenSelectedCommand}"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Padding="10,5"
+                                        Visibility="{Binding ShowFullDashboard, Converter={StaticResource InverseBoolToVis}}"/>
+                            </StackPanel>
                         </DockPanel>
 
                         <Border Style="{StaticResource Card}"
