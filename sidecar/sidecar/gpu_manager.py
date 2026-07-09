@@ -134,9 +134,9 @@ class GpuModelManager:
             import torch
             if torch.cuda.is_available():
                 vram_allocated = torch.cuda.memory_allocated(0) / (1024**3)
-                vram_total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
+                vram_total = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         except Exception:
-            pass
+            logger.debug("CUDA VRAM status unavailable", exc_info=True)
 
         loaded = {}
         for slot, state in self._slots.items():
