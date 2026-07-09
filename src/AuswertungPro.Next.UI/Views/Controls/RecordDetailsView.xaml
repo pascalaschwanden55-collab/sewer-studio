@@ -160,9 +160,24 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Width="390" Margin="0,0,14,14" Padding="14"
-                                                    Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}"
                                                     BorderThickness="1" CornerRadius="10" VerticalAlignment="Top"
                                                     Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.Sanieren}">
+                                                                <Setter Property="Background" Value="#EAF6E3"/>
+                                                                <Setter Property="BorderBrush" Value="#6AA84F"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.AusgefuehrtDurch}">
+                                                                <Setter Property="Background" Value="#E4F3FA"/>
+                                                                <Setter Property="BorderBrush" Value="#00A2D6"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextSecondaryBrush}"
                                                                FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>

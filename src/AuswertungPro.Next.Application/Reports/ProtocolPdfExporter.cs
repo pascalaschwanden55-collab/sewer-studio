@@ -131,11 +131,12 @@ public sealed class ProtocolPdfExporter
         options ??= new HaltungsprotokollPdfOptions();
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc)
+        var resolvedEntries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+        var length = ProtocolPdfEntryResolver.ResolveHoldingLength(record, resolvedEntries);
+        var entries = CounterInspectionStationingNormalizer.NormalizeForExport(resolvedEntries, length)
             .OrderBy(e => e.MeterStart ?? e.MeterEnd ?? double.MaxValue)
             .ToList();
-
-        var length = ProtocolPdfEntryResolver.ResolveHoldingLength(record, entries);
+        var unknownGaps = InspectionGapDetector.DetectUnknownGaps(entries, length);
         var inspectionDate = ResolveInspectionDate(project, record, doc);
         var nutzungsart = record.GetFieldValue("Nutzungsart")?.Trim() ?? "";
         var brand = ResolveNutzungsartBrand(nutzungsart);
@@ -162,9 +163,9 @@ public sealed class ProtocolPdfExporter
         var (startNode, endNode) = SplitHoldingNodes(holdingLabel);
         var flowDown = ParseFlowDirection(record.GetFieldValue("Inspektionsrichtung"));
 
-        var grafikHeight = 700; // Tall SVG for page-filling graphic
+        var grafikHeight = HaltungsgrafikExportSizing.ChooseSvgHeight(entries.Count);
         var svg = options.IncludeHaltungsgrafik && length.HasValue && length.Value > 0
-            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight)
+            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight, unknownGaps: unknownGaps)
             : null;
 
         var headerItems = BuildHaltungsprotokollHeaderTable(project, record, inspectionDate, length, holdingLabel);
@@ -224,7 +225,7 @@ public sealed class ProtocolPdfExporter
                     {
                         col.Item().PaddingTop(8).Element(c => ComposeSectionHeading(c, "Befunde", brand));
                         col.Item().PaddingTop(2).Element(c =>
-                            ComposeObservationListTable(c, entries, photoNumberMap, options.CodeCatalog, ResolveNutzungsartBrandLight(brand)));
+                            ComposeObservationListTable(c, entries, photoNumberMap, options.CodeCatalog, ResolveNutzungsartBrandLight(brand), unknownGaps));
                     }
 
                     if (options.IncludePhotos)
@@ -721,7 +722,8 @@ public sealed class ProtocolPdfExporter
         IReadOnlyList<ProtocolEntry> entries,
         IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
         ICodeCatalogProvider? catalog = null,
-        string? headerBackground = null)
+        string? headerBackground = null,
+        IReadOnlyList<InspectionGap>? unknownGaps = null)
     {
         var headerBg = string.IsNullOrWhiteSpace(headerBackground) ? "#EAF5F9" : headerBackground;
 
@@ -730,6 +732,10 @@ public sealed class ProtocolPdfExporter
 
         static IContainer BodyCell(IContainer c)
             => c.BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).PaddingHorizontal(4);
+
+        static IContainer GapCell(IContainer c)
+            => c.Background("#F3F4F6").BorderTop(0.8f).BorderBottom(0.8f).BorderColor(Colors.Grey.Medium)
+                .PaddingVertical(3).PaddingHorizontal(4);
 
         container.Table(table =>
         {
@@ -758,10 +764,27 @@ public sealed class ProtocolPdfExporter
             });
 
             // Segmentierung: Hauptinspektion / Gegeninspektion (Trennzeile am ersten Abbruchcode).
+            var gapsWritten = false;
+            void WriteUnknownGaps()
+            {
+                if (gapsWritten || unknownGaps is null || unknownGaps.Count == 0)
+                    return;
+
+                foreach (var gap in unknownGaps)
+                {
+                    table.Cell().ColumnSpan(8).Element(GapCell)
+                        .Text($"Unbekannter Bereich {FmtMeterValue(gap.StartMeter)}-{FmtMeterValue(gap.EndMeter)} m (nicht inspiziert)")
+                        .FontSize(9).Bold().FontColor("#4B5563");
+                }
+
+                gapsWritten = true;
+            }
+
             foreach (var segment in InspectionSegmenter.Segments(entries))
             {
                 if (!string.IsNullOrWhiteSpace(segment.Title))
                 {
+                    WriteUnknownGaps();
                     table.Cell().ColumnSpan(8)
                         .Background("#EEF2F4").BorderTop(0.8f).BorderColor(Colors.Grey.Medium)
                         .PaddingVertical(3).PaddingHorizontal(4)
@@ -780,6 +803,8 @@ public sealed class ProtocolPdfExporter
                     table.Cell().Element(BodyCell).Text(BuildObservationNotesText(entry)).FontSize(9);
                 }
             }
+
+            WriteUnknownGaps();
         });
     }
 
@@ -888,6 +913,7 @@ public sealed class ProtocolPdfExporter
     {
         var items = new List<PhotoItem>();
         var resolveCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var usedPhotoPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in entries)
         {
             if (entry.FotoPaths is null || entry.FotoPaths.Count == 0)
@@ -895,11 +921,19 @@ public sealed class ProtocolPdfExporter
 
             var resolved = ResolvePhotoPaths(entry.FotoPaths, projectRootAbs, maxPhotosPerEntry, resolveCache, preferredFolder);
             foreach (var path in resolved)
+            {
+                if (!usedPhotoPaths.Add(NormalizeExportPhotoPathKey(path)))
+                    continue;
+
                 items.Add(new PhotoItem(entry, path));
+            }
         }
 
         return items;
     }
+
+    private static string NormalizeExportPhotoPathKey(string path)
+        => Path.GetFullPath(path).Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
     private static IReadOnlyDictionary<ProtocolEntry, string> BuildPhotoNumberMap(IReadOnlyList<PhotoItem> photoItems)
     {
@@ -940,8 +974,9 @@ public sealed class ProtocolPdfExporter
         string? endNode,
         bool? flowDown,
         string brand = "#006E9C",
-        int? overrideHeight = null)
-        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight);
+        int? overrideHeight = null,
+        IReadOnlyList<InspectionGap>? unknownGaps = null)
+        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight, unknownGaps);
 
     // Dünne Delegationen zu ProtocolZustandText (verhaltensneutral extrahiert).
     private static string BuildHaltungsgrafikZustandText(ProtocolEntry entry)

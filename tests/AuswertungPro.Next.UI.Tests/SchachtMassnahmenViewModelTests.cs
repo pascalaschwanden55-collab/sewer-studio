@@ -40,6 +40,31 @@ public sealed class SchachtMassnahmenViewModelTests
     }
 
     [Fact]
+    public void Uebernehmen_RahmenUndDeckel_setzt_AbdeckungStk_auf_1()
+    {
+        var record = Record();
+        var vm = Vm(record, E("Rahmen und Deckel ersetzen", 850m));
+
+        vm.HinzufuegenCommand.Execute(E("Rahmen und Deckel ersetzen", 850m));
+        vm.UebernehmenCommand.Execute(null);
+
+        Assert.Equal("1", record.GetFieldValue("Abdeckung Stk."));
+    }
+
+    [Fact]
+    public void Uebernehmen_RahmenUndDeckel_ueberschreibt_bestehende_AbdeckungStk_nicht()
+    {
+        var record = Record();
+        record.SetFieldValue("Abdeckung Stk.", "2");
+        var vm = Vm(record, E("Rahmen und Deckel ersetzen", 850m));
+
+        vm.HinzufuegenCommand.Execute(E("Rahmen und Deckel ersetzen", 850m));
+        vm.UebernehmenCommand.Execute(null);
+
+        Assert.Equal("2", record.GetFieldValue("Abdeckung Stk."));
+    }
+
+    [Fact]
     public void Hinzufuegen_gleicher_Name_erhoeht_Menge_statt_Duplikat()
     {
         var vm = Vm(Record(), E("Deckel", 450m));

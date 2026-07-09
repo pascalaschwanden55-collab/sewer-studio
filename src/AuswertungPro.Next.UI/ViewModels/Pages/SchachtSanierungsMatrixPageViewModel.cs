@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI.ViewModels;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -205,6 +206,11 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         // Schaechte: Menge immer manuell. > 0 uebersteuert die Hauptarbeit; sonst Template-Default (1).
         decimal hauptMenge = row.Menge > 0m ? row.Menge : 1m;
         var hauptKey = row.SelectedMeasure?.HauptItemKey;
+        if (SchachtAbdeckungStkAutoFill.TryApplyForMeasure(row.Record, measureId, row.SelectedMeasure?.Name))
+        {
+            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+            _shell.Project.Dirty = true;
+        }
 
         var cost = SchachtMeasureFactory.Build(row.Schachtnummer, measureId,
             _templates, _catalog, _vatRate, extras, hauptMenge, hauptKey);
@@ -342,7 +348,13 @@ public sealed partial class SchachtMatrixRowVm : ObservableObject
 
     public void SetStoredCost(HoldingCost? cost) => StoredCost = cost;
 
-    partial void OnSelectedMeasureChanged(MeasureOption? value) => Recalc();
+    partial void OnSelectedMeasureChanged(MeasureOption? value)
+    {
+        if (!_suppress && SchachtAbdeckungStkAutoFill.IsRahmenDeckelMeasure(value?.Id, value?.Name) && Menge <= 0m)
+            Menge = 1m;
+
+        Recalc();
+    }
     partial void OnMengeChanged(decimal value) => Recalc();
     partial void OnOptReinigungChanged(bool value) => Recalc();
     partial void OnOptVdChanged(bool value) => Recalc();

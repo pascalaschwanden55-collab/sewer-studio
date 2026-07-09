@@ -1,3 +1,4 @@
+using System;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -124,6 +125,69 @@ public sealed class ProtocolPdfEntryResolverTests
         var entry = Assert.Single(entries);
         Assert.Same(existing, entry);
         Assert.Equal(new[] { "Fotos/original.jpg", "Fotos/finding.jpg" }, entry.FotoPaths);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_uses_imported_finding_only_once_for_duplicate_current_entries()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BCD",
+            MeterStart = 0,
+            Raw = "Rohranfang",
+            FotoPath = "Fotos/044.jpg"
+        });
+
+        var mainStart = new ProtocolEntry { Code = "BCD", MeterStart = 0, Beschreibung = "Rohranfang" };
+        var abort = new ProtocolEntry { Code = "BDCAD", MeterStart = 13.9, Beschreibung = "Gegeninspektion" };
+        var counterStart = new ProtocolEntry { Code = "BCD", MeterStart = 0, Beschreibung = "Rohranfang" };
+        counterStart.FotoPaths.Add("Fotos/061.jpg");
+
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { mainStart, abort, counterStart }
+            }
+        };
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(new[] { "Fotos/044.jpg" }, entries[0].FotoPaths);
+        Assert.Equal(new[] { "Fotos/061.jpg" }, entries[2].FotoPaths);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_merges_thin_imported_rows_instead_of_appending_after_abort()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BDA",
+            MeterStart = 13.9,
+            FotoPath = "Fotos/051.jpg"
+        });
+
+        var mainPhoto = new ProtocolEntry { Code = "BDA", MeterStart = 13.9, Beschreibung = "Allgemeinzustand, Fotobeispiel" };
+        var abort = new ProtocolEntry { Code = "BDCAD", MeterStart = 13.9, Beschreibung = "Gegeninspektion" };
+        var counterEnd = new ProtocolEntry { Code = "BDBD", MeterStart = 23.1, Beschreibung = "Gegeninspektion erfolgreich" };
+
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { mainPhoto, abort, counterEnd }
+            }
+        };
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Same(mainPhoto, entries[0]);
+        Assert.Equal(new[] { "Fotos/051.jpg" }, entries[0].FotoPaths);
+        Assert.DoesNotContain(entries.Skip(1), e => string.Equals(e.Code, "BDA", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

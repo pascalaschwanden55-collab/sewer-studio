@@ -7,6 +7,13 @@ using System.Windows.Input;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
+public enum RecordDetailHighlightKind
+{
+    None,
+    Sanieren,
+    AusgefuehrtDurch
+}
+
 public sealed class RecordDetailItem : INotifyPropertyChanged
 {
     private readonly Action<string> _commitValue;
@@ -26,7 +33,8 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         ICommand? previewOptionsCommand = null,
         ICommand? resetOptionsCommand = null,
         ICommand? addOptionCommand = null,
-        ICommand? removeOptionCommand = null)
+        ICommand? removeOptionCommand = null,
+        RecordDetailHighlightKind highlightKind = RecordDetailHighlightKind.None)
     {
         Label = label;
         _value = value ?? string.Empty;
@@ -42,6 +50,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         ResetOptionsCommand = resetOptionsCommand;
         AddOptionCommand = addOptionCommand;
         RemoveOptionCommand = removeOptionCommand;
+        HighlightKind = highlightKind;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -58,6 +67,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public ICommand? ResetOptionsCommand { get; }
     public ICommand? AddOptionCommand { get; }
     public ICommand? RemoveOptionCommand { get; }
+    public RecordDetailHighlightKind HighlightKind { get; }
     public bool CanEdit => !IsReadOnly;
     public bool HasManagedOptions =>
         EditOptionsCommand is not null ||

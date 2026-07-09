@@ -34,7 +34,7 @@ public sealed class SchaechteTemplateColumnReaderTests
         WriteWorkbook(
             exactPath,
             "Schaechte",
-            [" Funktion ", "Schachtnummer", "", "Daten", "Daten"]);
+            [" Funktion ", "Schachtnummer", "", "Daten", "0", "Daten"]);
         WriteWorkbook(
             Path.Combine(exportDir, "Fallback-Schaechte.xlsx"),
             "Schaechte",
@@ -45,6 +45,22 @@ public sealed class SchaechteTemplateColumnReaderTests
         Assert.True(result.TemplateFound);
         Assert.Equal(exactPath, result.TemplatePath);
         Assert.Equal(["Schachtnummer", "Funktion", "Daten"], result.Columns);
+    }
+
+    [Fact]
+    public void ReadColumns_ignoriert_numerische_Platzhalter_Header()
+    {
+        var root = CreateTempRoot();
+        var exportDir = Directory.CreateDirectory(Path.Combine(root, "Export_Vorlage")).FullName;
+        var exactPath = Path.Combine(exportDir, "Schaechte.xlsx");
+        WriteWorkbook(
+            exactPath,
+            "Schaechte",
+            ["Schachtnummer", "Abdeckung Stk.", "0", "Status"]);
+
+        var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(root);
+
+        Assert.Equal(["Schachtnummer", "Abdeckung Stk.", "Status"], result.Columns);
     }
 
     [Fact]

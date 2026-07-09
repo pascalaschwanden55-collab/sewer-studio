@@ -30,6 +30,29 @@ public static class ObservationCollapser
         if (entries is null || entries.Count <= 1)
             return entries?.ToList() ?? new List<ProtocolEntry>();
 
+        var abortIndex = -1;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            if (ProtocolTextHelpers.IsAbortCode(entries[i]))
+            {
+                abortIndex = i;
+                break;
+            }
+        }
+
+        if (abortIndex >= 0 && abortIndex < entries.Count - 1)
+        {
+            var result = new List<ProtocolEntry>();
+            result.AddRange(CollapseLinear(entries.Take(abortIndex + 1).ToList()));
+            result.AddRange(CollapseLinear(entries.Skip(abortIndex + 1).ToList()));
+            return result;
+        }
+
+        return CollapseLinear(entries);
+    }
+
+    private static List<ProtocolEntry> CollapseLinear(IReadOnlyList<ProtocolEntry> entries)
+    {
         // Gruppen in Reihenfolge des ersten Auftretens (stabil).
         var order = new List<string>();
         var groups = new Dictionary<string, List<ProtocolEntry>>(System.StringComparer.Ordinal);

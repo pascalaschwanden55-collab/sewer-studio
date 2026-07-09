@@ -37,6 +37,8 @@ internal static class ZustandsklasseCellStyleFactory
     private static readonly IValueConverter PruefungsresultatForegroundConverter = new TextPaletteToForegroundConverter(MapPruefungsresultatBackground, ForegroundBrush);
     private static readonly IValueConverter AusgefuehrtDurchBackgroundConverter = new TextPaletteToBackgroundConverter(MapAusgefuehrtDurchBackground);
     private static readonly IValueConverter AusgefuehrtDurchForegroundConverter = new TextPaletteToForegroundConverter(MapAusgefuehrtDurchBackground, ForegroundBrush);
+    private static readonly IValueConverter SanierenBackgroundConverter = new TextPaletteToBackgroundConverter(MapSanierenBackground);
+    private static readonly IValueConverter SanierenForegroundConverter = new TextPaletteToForegroundConverter(MapSanierenBackground, ForegroundBrush);
 
     public static Style CreateHaltungenStyle(string fieldName)
         => CreateStyle(fieldName, HaltungenBackgroundConverter, HaltungenForegroundConverter);
@@ -52,6 +54,9 @@ internal static class ZustandsklasseCellStyleFactory
 
     public static Style CreateAusgefuehrtDurchStyle(string fieldName)
         => CreateStyle(fieldName, AusgefuehrtDurchBackgroundConverter, AusgefuehrtDurchForegroundConverter);
+
+    public static Style CreateSanierenStyle(string fieldName)
+        => CreateStyle(fieldName, SanierenBackgroundConverter, SanierenForegroundConverter);
 
     private static Style CreateStyle(
         string fieldName,
@@ -135,6 +140,20 @@ internal static class ZustandsklasseCellStyleFactory
             return CreateBrush(0x00, 0xB0, 0xF0); // blue/cyan
         if (key.Contains("kanalsanierer", StringComparison.Ordinal) || key.Contains("sanierer", StringComparison.Ordinal))
             return CreateBrush(0xBF, 0x8F, 0x00); // ochre
+
+        return null;
+    }
+
+    private static Brush? MapSanierenBackground(string value)
+    {
+        var key = NormalizeText(value);
+        if (key.Length == 0)
+            return null;
+
+        if (key.Equals("ja", StringComparison.Ordinal))
+            return CreateBrush(0x92, 0xD0, 0x50); // green
+        if (key.Equals("nein", StringComparison.Ordinal))
+            return CreateBrush(0xE7, 0xE6, 0xE6); // light gray
 
         return null;
     }

@@ -106,6 +106,10 @@ public sealed class QgisPluginPackagingTests
         // Nach QGIS-Neustart automatisch wieder verbinden (Symbol wird von selbst gruen).
         Assert.Contains("was_connected", source);
         Assert.Contains("start_connection", source);
+        // QGIS 4 darf Live-Layer nicht schon waehrend QgisApp::QgisApp einfuegen.
+        Assert.Contains("initializationCompleted", source);
+        Assert.Contains("_schedule_auto_connect_after_qgis_startup", source);
+        Assert.DoesNotContain("QTimer.singleShot(1500, self._auto_connect)", source);
 
         // Gezoomte Haltung/Schacht blinkt auf (wie das QGIS-Highlight-Werkzeug).
         Assert.Contains("flashGeometries", source);

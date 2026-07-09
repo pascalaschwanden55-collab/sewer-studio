@@ -106,6 +106,8 @@ public sealed class ProtocolEntryClonerTests
                 Flags = new List<string> { "low_quality" },
                 Accepted = true,
                 FinalCode = "BBA",
+                MeterSource = "LinearEstimate",
+                IsMeterEstimated = true,
                 SuggestedAt = DateTimeOffset.UnixEpoch
             }
         };
@@ -119,6 +121,8 @@ public sealed class ProtocolEntryClonerTests
         Assert.Equal("Wurzeleinwuchs sichtbar", clone.Ai.Reason);
         Assert.True(clone.Ai.Accepted);
         Assert.Equal("BBA", clone.Ai.FinalCode);
+        Assert.Equal("LinearEstimate", clone.Ai.MeterSource);
+        Assert.True(clone.Ai.IsMeterEstimated);
         Assert.Equal(DateTimeOffset.UnixEpoch, clone.Ai.SuggestedAt);
 
         // Tiefkopie der Flags-Liste

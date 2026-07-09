@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Views.Windows;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -36,6 +37,7 @@ public sealed class DataPageDetailItemFactoryTests
         Assert.Equal("Ja", item.Value);
         Assert.True(item.IsCombo);
         Assert.True(item.AllowFreeText);
+        Assert.Equal(RecordDetailHighlightKind.Sanieren, item.HighlightKind);
         Assert.Equal(new[] { "Ja", "Nein" }, item.Options);
         Assert.Same(editCommand, item.EditOptionsCommand);
         Assert.Same(previewCommand, item.PreviewOptionsCommand);

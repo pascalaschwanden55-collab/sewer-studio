@@ -140,6 +140,22 @@ public sealed class HaltungsgrafikSvgBuilderTests
     }
 
     [Fact]
+    public void BuildHaltungsgrafikSvg_unbekannte_luecke_wird_markiert()
+    {
+        var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
+            37.0,
+            Array.Empty<ProtocolEntry>(),
+            null,
+            null,
+            null,
+            null,
+            unknownGaps: new[] { new InspectionGap(10, 17) });
+
+        Assert.Contains("unknownHatch", svg);
+        Assert.Contains("Unbekannt 10.00-17.00 m", svg);
+    }
+
+    [Fact]
     public void BuildHaltungsgrafikSvg_brand_farbe_erscheint_im_rohr_gradient()
     {
         var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(

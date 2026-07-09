@@ -78,9 +78,10 @@ public static class SchachtDetailFeldKonsolidierer
 
         void Erfasse(string? rohKey)
         {
-            if (string.IsNullOrWhiteSpace(rohKey))
+            if (!IstSichtbarerFeldname(rohKey))
                 return;
-            var kanon = Kanonschluessel(rohKey);
+            var key = rohKey!.Trim();
+            var kanon = Kanonschluessel(key);
             if (kanon.Length == 0)
                 return;
             if (!gruppen.TryGetValue(kanon, out var liste))
@@ -89,8 +90,8 @@ public static class SchachtDetailFeldKonsolidierer
                 gruppen[kanon] = liste;
                 reihenfolge.Add(kanon);
             }
-            if (!liste.Contains(rohKey, StringComparer.Ordinal))
-                liste.Add(rohKey);
+            if (!liste.Contains(key, StringComparer.Ordinal))
+                liste.Add(key);
         }
 
         foreach (var t in templateSpalten ?? Enumerable.Empty<string>())
@@ -120,5 +121,14 @@ public static class SchachtDetailFeldKonsolidierer
         }
 
         return ergebnis;
+    }
+
+    private static bool IstSichtbarerFeldname(string? feldName)
+    {
+        if (string.IsNullOrWhiteSpace(feldName))
+            return false;
+
+        var text = feldName.Trim();
+        return !text.All(char.IsDigit);
     }
 }

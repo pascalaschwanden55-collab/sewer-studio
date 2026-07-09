@@ -173,6 +173,23 @@ public sealed class ObservationCollapserTests
     }
 
     [Fact]
+    public void Collapse_does_not_fold_same_meter_across_counter_inspection_boundary()
+    {
+        var start = new ProtocolEntry { Code = "BCD", MeterStart = 0, Beschreibung = "Rohranfang" };
+        start.FotoPaths.Add("Fotos/044.jpg");
+        var abort = new ProtocolEntry { Code = "BDCAD", MeterStart = 13.9, Beschreibung = "Gegeninspektion" };
+        var counterStart = new ProtocolEntry { Code = "BCD", MeterStart = 0, Beschreibung = "Rohranfang" };
+        counterStart.FotoPaths.Add("Fotos/061.jpg");
+
+        var result = ObservationCollapser.Collapse(new[] { start, abort, counterStart });
+
+        Assert.Equal(3, result.Count);
+        Assert.Same(start, result[0]);
+        Assert.Same(abort, result[1]);
+        Assert.Same(counterStart, result[2]);
+    }
+
+    [Fact]
     public void Collapse_keeps_same_file_name_from_different_photo_folders()
     {
         var a = new ProtocolEntry { Code = "BAF", MeterStart = 2, Beschreibung = "Korrosion" };

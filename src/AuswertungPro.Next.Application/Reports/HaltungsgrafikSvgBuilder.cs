@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AuswertungPro.Next.Domain.Protocol;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
@@ -38,7 +41,8 @@ public static class HaltungsgrafikSvgBuilder
         string? endNode,
         bool? flowDown,
         string brand = "#006E9C",
-        int? overrideHeight = null)
+        int? overrideHeight = null,
+        IReadOnlyList<InspectionGap>? unknownGaps = null)
     {
         var width = Width;
         var height = overrideHeight ?? Height;
@@ -93,6 +97,12 @@ public static class HaltungsgrafikSvgBuilder
         // Schaden-Schraffur-Pattern (diagonale rote Linien)
         sb.Append("<pattern id='dmgHatch' patternUnits='userSpaceOnUse' width='6' height='6' patternTransform='rotate(45)'>");
         sb.Append("<line x1='0' y1='0' x2='0' y2='6' stroke='#D64541' stroke-width='2'/>");
+        sb.Append("</pattern>");
+
+        // Unbekannt-Schraffur fuer nicht inspizierte Bereiche.
+        sb.Append("<pattern id='unknownHatch' patternUnits='userSpaceOnUse' width='8' height='8' patternTransform='rotate(45)'>");
+        sb.Append("<rect width='8' height='8' fill='#E5E7EB'/>");
+        sb.Append("<line x1='0' y1='0' x2='0' y2='8' stroke='#9CA3AF' stroke-width='2'/>");
         sb.Append("</pattern>");
 
         // Drop-Shadow fuer Schachtknoten
@@ -173,6 +183,31 @@ public static class HaltungsgrafikSvgBuilder
         // Rohrwand-Randlinien
         sb.Append($"<line x1='{Svg(lineX - pipeHalf)}' y1='{Svg(top)}' x2='{Svg(lineX - pipeHalf)}' y2='{Svg(bottom)}' stroke='{brand}' stroke-width='0.8' opacity='0.6'/>");
         sb.Append($"<line x1='{Svg(lineX + pipeHalf)}' y1='{Svg(top)}' x2='{Svg(lineX + pipeHalf)}' y2='{Svg(bottom)}' stroke='{brand}' stroke-width='0.8' opacity='0.6'/>");
+
+        // --- Unbekannte / nicht inspizierte Bereiche ---
+        if (unknownGaps is { Count: > 0 })
+        {
+            foreach (var gap in unknownGaps)
+            {
+                if (gap.EndMeter <= gap.StartMeter)
+                    continue;
+
+                var y1 = MapToLine(gap.StartMeter, length, top, bottom);
+                var y2 = MapToLine(gap.EndMeter, length, top, bottom);
+                if (y2 < y1)
+                    (y1, y2) = (y2, y1);
+
+                var h = Math.Max(3d, y2 - y1);
+                sb.Append($"<rect x='{Svg(lineX - pipeHalf - 2)}' y='{Svg(y1)}' width='{Svg(pipeWidth + 4)}' height='{Svg(h)}' fill='url(#unknownHatch)' opacity='0.95' rx='2'/>");
+                sb.Append($"<line x1='{Svg(lineX - pipeHalf - 4)}' y1='{Svg(y1)}' x2='{Svg(lineX + pipeHalf + 4)}' y2='{Svg(y1)}' stroke='#6B7280' stroke-width='1.2' stroke-dasharray='3,2'/>");
+                sb.Append($"<line x1='{Svg(lineX - pipeHalf - 4)}' y1='{Svg(y2)}' x2='{Svg(lineX + pipeHalf + 4)}' y2='{Svg(y2)}' stroke='#6B7280' stroke-width='1.2' stroke-dasharray='3,2'/>");
+
+                var labelY = y1 + h / 2d;
+                var labelText = $"Unbekannt {gap.StartMeter:0.00}-{gap.EndMeter:0.00} m";
+                sb.Append($"<text x='{Svg(lineX + pipeHalf + 10)}' y='{Svg(labelY + 3)}' font-size='9' font-weight='600' fill='#4B5563' font-family='sans-serif'>" +
+                          $"{EscapeSvgText(labelText)}</text>");
+            }
+        }
 
         // --- Bodenlinien an Schachtpositionen (Erdreich-Darstellung) ---
         var hasAbort = entries.Any(e => IsAbortCode(e));

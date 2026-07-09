@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.ViewModels;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -148,6 +149,7 @@ public sealed partial class SchachtMassnahmenViewModel : ObservableObject
     private void Uebernehmen()
     {
         var cost = BuildCost();
+        ApplyAbdeckungStkDefault();
 
         if (Positionen.Count == 0)
             SchachtEmpfehlungRecordMapper.Clear(_record);
@@ -181,6 +183,12 @@ public sealed partial class SchachtMassnahmenViewModel : ObservableObject
         measure.Total = Positionen.Sum(p => p.ZeilenTotal);
 
         return new HoldingCost { Holding = SchachtNummer, Measures = { measure }, Total = measure.Total };
+    }
+
+    private void ApplyAbdeckungStkDefault()
+    {
+        foreach (var position in Positionen)
+            SchachtAbdeckungStkAutoFill.TryApplyForMeasure(_record, null, position.Name);
     }
 
     private void Recalc()

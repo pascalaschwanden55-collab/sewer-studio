@@ -48,6 +48,8 @@ public static class ProtocolEntryCloner
                     Flags = new List<string>(source.Ai.Flags),
                     Accepted = source.Ai.Accepted,
                     FinalCode = source.Ai.FinalCode,
+                    MeterSource = source.Ai.MeterSource,
+                    IsMeterEstimated = source.Ai.IsMeterEstimated,
                     SuggestedAt = source.Ai.SuggestedAt
                 }
         };

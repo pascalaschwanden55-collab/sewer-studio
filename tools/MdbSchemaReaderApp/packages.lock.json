@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "System.Data.OleDb": {
+        "type": "Direct",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "/YVeBa7iHwhvokst2neLLVBwhcTEcOSjLZPPhjBEPHVxkY5WsffnJ6pya2DhdaKsbCYsWAJfyvnoAPGIE1gwYA==",
+        "dependencies": {
+          "System.Configuration.ConfigurationManager": "10.0.3",
+          "System.Diagnostics.PerformanceCounter": "10.0.3"
+        }
+      },
+      "System.Configuration.ConfigurationManager": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "69ZT/MYxQSxwdiiHRtI08noXiG5drj/bXDDZISmeWkNUtbIfYgmTiof16tCVOLTdmSQY7W7gwxkMliKdreWHGQ==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "10.0.3",
+          "System.Security.Cryptography.ProtectedData": "10.0.3"
+        }
+      },
+      "System.Diagnostics.EventLog": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "+bZnyzt0/vt4g3QSllhsRNGTpa09p7Juy5K8spcK73cOTOefu4+HoY89hZOgIOmzB5A4hqPyEDKnzra7KKnhZw=="
+      },
+      "System.Diagnostics.PerformanceCounter": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "pQHdkk3QNDYRsNzWVUIamlTiHb3/I50PxGXMRaEqiLmUe+FkInuMj92lCOhvTT6KbLlnMWGRgZq1rDaMJdQixw==",
+        "dependencies": {
+          "System.Configuration.ConfigurationManager": "10.0.3"
+        }
+      },
+      "System.Security.Cryptography.ProtectedData": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "JCKbH/CN5l0CSoJBILEvJmNQVp5vV+FY3q2ue4K9p4eDT4mFEv0bjTQCV+MD6Qk1b/qk9fWmZZKhG1TklbXw1Q=="
+      }
+    }
+  }
+}

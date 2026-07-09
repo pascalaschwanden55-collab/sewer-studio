@@ -16,6 +16,7 @@ public sealed class DataGridColorCellStyleFactoryTests
     [InlineData("Pruefungsresultat")]
     [InlineData("Referenzpruefung")]
     [InlineData("Ausgefuehrt_durch")]
+    [InlineData("Sanieren_JaNein")]
     public void CreateHaltungenStyle_returns_style_for_highlighted_fields(string fieldName)
     {
         RunOnSta(() =>
@@ -42,6 +43,10 @@ public sealed class DataGridColorCellStyleFactoryTests
     [InlineData("Zustandsklasse")]
     [InlineData("Eigentumer")]
     [InlineData("Ausgefuehrt durch")]
+    [InlineData("Ausgeführt durch")]
+    [InlineData("Sanieren durch")]
+    [InlineData("Sanieren Ja/Nein")]
+    [InlineData("Ja/Nein")]
     [InlineData("Dichtheit")]
     public void CreateSchaechteStyle_returns_style_for_normalized_highlighted_columns(string columnName)
     {

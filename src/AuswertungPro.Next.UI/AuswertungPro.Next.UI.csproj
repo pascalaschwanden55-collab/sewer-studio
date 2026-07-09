@@ -33,7 +33,7 @@
     <PackageReference Include="LibVLCSharp.WPF" Version="3.9.5" />
     <PackageReference Include="QuestPDF" Version="2026.2.0" />
     <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" GeneratePathProperty="true" />
     <PackageReference Include="Mapsui.Wpf" Version="5.1.0" />
     <!-- Fix: Mapsui.Wpf 5.1.0 zieht SkiaSharp.Views.WPF als transitive Abhängigkeit rein.
          Ohne expliziten Pin greift NuGet auf net462-Assets zurück (net10.0-windows7.0 ist
@@ -115,4 +115,19 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
+
+  <Target Name="EnsureLibVlcMainLibrariesCopied" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' and '$(PkgVideoLAN_LibVLC_Windows)' != ''">
+    <ItemGroup>
+      <_LibVlcX64MainLibraries Include="$(PkgVideoLAN_LibVLC_Windows)\build\x64\libvlc.dll;$(PkgVideoLAN_LibVLC_Windows)\build\x64\libvlccore.dll"
+        Condition="'$(PlatformTarget)' == 'x64' or '$(Platform)' == 'x64' or '$(Platform)' == 'AnyCPU'" />
+      <_LibVlcX86MainLibraries Include="$(PkgVideoLAN_LibVLC_Windows)\build\x86\libvlc.dll;$(PkgVideoLAN_LibVLC_Windows)\build\x86\libvlccore.dll"
+        Condition="'$(PlatformTarget)' == 'x86' or '$(Platform)' == 'x86'" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(OutDir)libvlc\win-x64" Condition="'@(_LibVlcX64MainLibraries)' != ''" />
+    <Copy SourceFiles="@(_LibVlcX64MainLibraries)" DestinationFolder="$(OutDir)libvlc\win-x64" SkipUnchangedFiles="true" Condition="'@(_LibVlcX64MainLibraries)' != ''" />
+
+    <MakeDir Directories="$(OutDir)libvlc\win-x86" Condition="'@(_LibVlcX86MainLibraries)' != ''" />
+    <Copy SourceFiles="@(_LibVlcX86MainLibraries)" DestinationFolder="$(OutDir)libvlc\win-x86" SkipUnchangedFiles="true" Condition="'@(_LibVlcX86MainLibraries)' != ''" />
+  </Target>
 </Project>

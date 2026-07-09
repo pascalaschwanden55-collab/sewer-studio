@@ -33,6 +33,7 @@ public sealed class DataPageDetailItemFactory
         var def = FieldCatalog.Get(fieldName);
         var label = def.Label;
         var value = record.GetFieldValue(fieldName);
+        var highlightKind = RecordDetailHighlightPolicy.Resolve(fieldName);
         var managedCombo = _resolveManagedComboSpec(fieldName);
         if (managedCombo is not null)
         {
@@ -47,7 +48,8 @@ public sealed class DataPageDetailItemFactory
                 previewOptionsCommand: managedCombo.PreviewOptionsCommand,
                 resetOptionsCommand: managedCombo.ResetOptionsCommand,
                 addOptionCommand: managedCombo.AddOptionCommand,
-                removeOptionCommand: managedCombo.RemoveOptionCommand);
+                removeOptionCommand: managedCombo.RemoveOptionCommand,
+                highlightKind: highlightKind);
         }
 
         var catalogItems = FieldCatalog.GetComboItems(fieldName);
@@ -59,7 +61,8 @@ public sealed class DataPageDetailItemFactory
                 commitValue: next => _commitValue(record, fieldName, next),
                 isCombo: true,
                 allowFreeText: false,
-                options: catalogItems);
+                options: catalogItems,
+                highlightKind: highlightKind);
         }
 
         var isMultiline = fieldName is "Primaere_Schaeden" or "Bemerkungen" or "Empfohlene_Sanierungsmassnahmen";
@@ -70,6 +73,7 @@ public sealed class DataPageDetailItemFactory
             value,
             commitValue: next => _commitValue(record, fieldName, next),
             isMultiline: isMultiline,
-            digitsOnly: digitsOnly);
+            digitsOnly: digitsOnly,
+            highlightKind: highlightKind);
     }
 }

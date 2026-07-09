@@ -51,6 +51,14 @@ internal static class ProtocolPdfEntryResolver
             if (deletedKeys.Contains(key))
                 continue;
 
+            var similarExisting = active.FirstOrDefault(existing => LooksLikeSameObservation(existing, entry));
+            if (similarExisting is not null)
+            {
+                ProtocolPhotoPathMerger.MergePhotoPaths(similarExisting, entry);
+                MergeCodeMeta(similarExisting, entry);
+                continue;
+            }
+
             if (existingKeys.Contains(key))
             {
                 if (keyToEntry.TryGetValue(key, out var existing))
@@ -89,9 +97,23 @@ internal static class ProtocolPdfEntryResolver
         if (active.Count == 0 || importedFromFindings.Count == 0)
             return;
 
+        var usedImportedIndexes = new HashSet<int>();
         foreach (var existing in active)
         {
-            var imported = importedFromFindings.FirstOrDefault(f => LooksLikeSameObservation(existing, f));
+            ProtocolEntry? imported = null;
+            for (var i = 0; i < importedFromFindings.Count; i++)
+            {
+                if (usedImportedIndexes.Contains(i))
+                    continue;
+
+                if (!LooksLikeSameObservation(existing, importedFromFindings[i]))
+                    continue;
+
+                imported = importedFromFindings[i];
+                usedImportedIndexes.Add(i);
+                break;
+            }
+
             if (imported is null)
                 continue;
 

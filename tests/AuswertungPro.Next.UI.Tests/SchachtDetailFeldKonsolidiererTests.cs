@@ -74,4 +74,15 @@ public sealed class SchachtDetailFeldKonsolidiererTests
         => Assert.Empty(SchachtDetailFeldKonsolidierer.Konsolidiere(
             Array.Empty<string>(),
             new Dictionary<string, string>(StringComparer.Ordinal)));
+
+    [Fact]
+    public void Konsolidiere_ignoriert_numerische_Platzhalterfelder()
+    {
+        var result = SchachtDetailFeldKonsolidierer.Konsolidiere(
+            new[] { "Abdeckung Stk.", "0", "Status" },
+            Felder(("Abdeckung Stk.", "1"), ("0", ""), ("Status", "offen")));
+
+        var namen = result.Select(f => f.AnzeigeName).ToList();
+        Assert.Equal(new[] { "Abdeckung Stk.", "Status" }, namen);
+    }
 }

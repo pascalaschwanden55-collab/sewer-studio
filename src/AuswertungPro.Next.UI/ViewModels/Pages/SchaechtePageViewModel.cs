@@ -25,6 +25,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly DropdownCommandGroup _eigentuemerDropdownCommands;
     private readonly DropdownCommandGroup _pruefungsresultatDropdownCommands;
     private readonly DropdownCommandGroup _referenzpruefungDropdownCommands;
+    private bool _suppressRequiredFieldWarning;
 
     internal ServiceProvider Services => _sp;
 
@@ -173,6 +174,24 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         (RefreshProtocolCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedChanging(SchachtRecord? oldValue, SchachtRecord? newValue)
+    {
+        if (_suppressRequiredFieldWarning)
+            return;
+        if (oldValue is null || newValue is null)
+            return;
+        if (ReferenceEquals(oldValue, newValue) || oldValue.Id == newValue.Id)
+            return;
+
+        var missing = SchachtSanierungPflichtfeldValidator.MissingFields(oldValue);
+        if (missing.Count == 0)
+            return;
+
+        _sp.Dialogs.Warn(
+            $"Beim Schacht {ResolveSchachtNummer(oldValue)} fehlen:\n- {string.Join("\n- ", missing)}",
+            "Schacht-Felder fehlen");
+    }
+
     partial void OnGridMinRowHeightChanged(double value)
     {
         var clamped = Math.Clamp(value, 24d, 240d);
@@ -289,7 +308,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         {
             Records.Add(rec);
         }
-        Selected = rec;
+        SetSelectedWithoutRequiredFieldWarning(rec);
         UpdateSearchResultInfo(Records.Count);
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
@@ -311,7 +330,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             neueAuswahl = idx < Records.Count ? Records[idx] : Records.LastOrDefault();
         }
 
-        Selected = neueAuswahl;
+        SetSelectedWithoutRequiredFieldWarning(neueAuswahl);
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -579,5 +598,32 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void EnforceEigentuemerOptionsExact()
     {
         DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
+    }
+
+    private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)
+    {
+        _suppressRequiredFieldWarning = true;
+        try
+        {
+            Selected = record;
+        }
+        finally
+        {
+            _suppressRequiredFieldWarning = false;
+        }
+    }
+
+    private static string ResolveSchachtNummer(SchachtRecord record)
+    {
+        var nummer = record.GetFieldValue("Schachtnummer");
+        if (!string.IsNullOrWhiteSpace(nummer))
+            return nummer.Trim();
+
+        var nr = record.GetFieldValue("Nr.");
+        if (!string.IsNullOrWhiteSpace(nr))
+            return nr.Trim();
+
+        nr = record.GetFieldValue("NR.");
+        return string.IsNullOrWhiteSpace(nr) ? "(ohne Nummer)" : nr.Trim();
     }
 }

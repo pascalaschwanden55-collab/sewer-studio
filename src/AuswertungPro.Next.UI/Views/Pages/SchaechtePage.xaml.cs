@@ -849,6 +849,7 @@ public partial class SchaechtePage : UserControl
         var label = GetDisplayHeader(feld.AnzeigeName);
         var value = feld.Wert;
         var specField = feld.AnzeigeName;
+        var highlightKind = RecordDetailHighlightPolicy.Resolve(specField);
 
         void Commit(string? next) => CommitSchachtDetailKonsolidiert(record, feld, next);
 
@@ -866,7 +867,8 @@ public partial class SchaechtePage : UserControl
                 previewOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.PreviewCommand) : null,
                 resetOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.ResetCommand) : null,
                 addOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.AddCommand) : null,
-                removeOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.RemoveCommand) : null);
+                removeOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.RemoveCommand) : null,
+                highlightKind: highlightKind);
         }
 
         var normalized = Normalize(specField);
@@ -880,14 +882,16 @@ public partial class SchaechtePage : UserControl
                 commitValue: Commit,
                 isCombo: true,
                 allowFreeText: false,
-                options: ZustandsklasseColorPalette.SelectionOptions);
+                options: ZustandsklasseColorPalette.SelectionOptions,
+                highlightKind: highlightKind);
         }
 
         return new RecordDetailItem(
             label,
             value,
             commitValue: Commit,
-            isMultiline: isMultiline);
+            isMultiline: isMultiline,
+            highlightKind: highlightKind);
     }
 
     private IEnumerable<string> ResolveOptions(string itemsSourcePath)

@@ -96,6 +96,18 @@ public sealed class SchachtSanierungsMatrixPageViewModelTests : IDisposable
         Assert.Equal("", row.Hinweis);
     }
 
+    [Fact]
+    public void RahmenDeckel_Massnahme_setzt_AbdeckungStk_auf_1()
+    {
+        var (shell, sp) = CreateShell(("KS 1", "", ""));
+        var vm = new SchachtSanierungsMatrixPageViewModel(shell, sp);
+        var row = vm.Rows.Single();
+
+        row.SelectedMeasure = vm.MeasureOptions.First(o => o.Id == "SCHACHT_RAHMEN_DECKEL");
+
+        Assert.Equal("1", row.Record.GetFieldValue("Abdeckung Stk."));
+    }
+
     public void Dispose()
     {
         _lf.Dispose();

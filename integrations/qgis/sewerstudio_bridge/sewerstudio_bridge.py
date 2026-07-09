@@ -96,6 +96,7 @@ class SewerStudioBridgePlugin:
         self.settings_action = None
         self.dock = None
         self._last_status = None
+        self._auto_connect_pending = False
 
     def initGui(self):
         # Dock im Hintergrund (versteckt) — traegt die Verbindungslogik, erscheint
@@ -132,11 +133,11 @@ class SewerStudioBridgePlugin:
         self.settings_action.triggered.connect(self.show_dock)
         self.iface.addPluginToMenu(PLUGIN_MENU, self.settings_action)
 
-        # War beim letzten Mal verbunden? Dann nach dem Start automatisch wieder
-        # verbinden (Symbol geht von selbst auf gruen). Verzoegert, damit der
-        # QGIS-Start nicht auf den ersten HTTP-Poll wartet.
+        # War beim letzten Mal verbunden? Dann erst nach vollstaendigem QGIS-Start
+        # automatisch wieder verbinden. QGIS 4 kann abstuerzen, wenn Plugins schon
+        # waehrend QgisApp::QgisApp Layer per addMapLayer einfuegen.
         if self.dock.was_connected():
-            QTimer.singleShot(1500, self._auto_connect)
+            self._schedule_auto_connect_after_qgis_startup()
 
     @staticmethod
     def _menu_button_popup_mode():
@@ -154,13 +155,45 @@ class SewerStudioBridgePlugin:
         if self.dock is not None:
             self.dock.load_local_export_layers()
 
+    def _schedule_auto_connect_after_qgis_startup(self):
+        self._auto_connect_pending = True
+        initialization_completed = getattr(self.iface, "initializationCompleted", None)
+        if initialization_completed is not None:
+            try:
+                initialization_completed.connect(self._on_qgis_initialization_completed)
+                return
+            except Exception:
+                pass
+
+        # Fallback fuer sehr alte/abweichende QGIS-APIs ohne Signal.
+        QTimer.singleShot(5000, self._auto_connect)
+
+    def _disconnect_qgis_initialization_completed(self):
+        initialization_completed = getattr(self.iface, "initializationCompleted", None)
+        if initialization_completed is not None:
+            try:
+                initialization_completed.disconnect(self._on_qgis_initialization_completed)
+            except Exception:
+                pass
+
+    def _on_qgis_initialization_completed(self):
+        self._disconnect_qgis_initialization_completed()
+
+        # Ein weiterer Event-Loop-Durchlauf laesst Projekt-/Dock-Signale abklingen,
+        # bevor Live-Layer in das Projekt eingefuegt werden.
+        QTimer.singleShot(250, self._auto_connect)
+
     def _auto_connect(self):
+        if not self._auto_connect_pending:
+            return
+        self._auto_connect_pending = False
         if self.dock is not None and not self.dock.is_connected():
             self.dock.start_connection()
 
     def toggle(self):
         if self.dock is None:
             return
+        self._auto_connect_pending = False
         if self.dock.is_connected():
             self.dock.stop_connection()
         else:
@@ -230,6 +263,8 @@ class SewerStudioBridgePlugin:
         self.tool_button = None
         self.menu = None
         self.toggle_action = None
+        self._auto_connect_pending = False
+        self._disconnect_qgis_initialization_completed()
 
         if self.dock is not None:
             self.dock.stop()

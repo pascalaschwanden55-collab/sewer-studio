@@ -37,7 +37,11 @@ public static class SchaechteTemplateColumnReader
         for (var column = 1; column <= lastColumn; column++)
         {
             var header = worksheet.Cell(HeaderRow, column).GetString()?.Trim();
-            if (!string.IsNullOrWhiteSpace(header) && !columns.Contains(header))
+            if (!IsUsableHeader(header))
+                continue;
+
+            header = header!.Trim();
+            if (!columns.Contains(header))
                 columns.Add(header);
         }
 
@@ -83,5 +87,13 @@ public static class SchaechteTemplateColumnReader
 
         columns[firstIndex] = second;
         columns[secondIndex] = first;
+    }
+
+    private static bool IsUsableHeader(string? header)
+    {
+        if (string.IsNullOrWhiteSpace(header))
+            return false;
+
+        return !header.Trim().All(char.IsDigit);
     }
 }
