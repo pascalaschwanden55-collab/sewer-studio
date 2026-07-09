@@ -388,6 +388,35 @@ public sealed class QgisBridgeSnapshotBuilderTests
     }
 
     [Fact]
+    public void Snapshot_liest_echte_schacht_vorlagen_feldnamen_robust()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        // Die reale Schacht-Vorlage benennt die Felder anders als die Haltungen:
+        // "Ja/Nein" statt "Sanieren", "Ausgefuehrt durch" (mit Umlaut) statt "Ausgefuehrt_durch",
+        // "NR." mit Punkt. Der Snapshot muss trotzdem korrekt lesen (normalisierter Namensvergleich).
+        var project = new Project { Name = "Echte-Feldnamen" };
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "S1");
+        record.SetFieldValue("Ja/Nein", "Ja");
+        record.SetFieldValue("Ausgeführt durch", "Baumeister"); // Ausgefuehrt durch (echter Umlaut)
+        record.SetFieldValue("NR.", "7");
+        project.SchaechteData.Add(record);
+
+        // Sanieren wird aus "Ja/Nein" gelesen.
+        var s1 = sut.BuildSchaechteGeoJson(QgisProjectSnapshot.Capture(project, null))
+            .Features.Single(f => (string?)f.Properties["schacht"] == "S1");
+        Assert.Equal("Ja", s1.Properties["sanieren"]);
+
+        // Ausgefuehrt durch (Umlaut) + NR. (Punkt) landen im Ausgefuehrt-durch-Layer.
+        var punkt = Assert.Single(
+            sut.BuildSchachtSanierungstypGeoJson(QgisProjectSnapshot.Capture(project, null)).Features);
+        Assert.Equal("Baumeister", punkt.Properties["ausgefuehrt_durch"]);
+        Assert.Equal("7", punkt.Properties["nr"]);
+    }
+
+    [Fact]
     public void BuildDamagesGeoJson_streckt_meter_bis_rohrende_auf_end_schacht()
     {
         using var fixture = QgisBridgeFixture.Create();

@@ -242,6 +242,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         foreach (var column in result.Columns)
             Columns.Add(column);
 
+        // Schaechte kennen in der Vorlage kein "Ausgefuehrt durch" — fuer die kategorisierte
+        // QGIS-Einfaerbung + Auswertung ergaenzen wir es als editierbare Dropdown-Spalte. Die
+        // Optionen (Baumeister/Sanierer/Gaertner) stehen ueber AusgefuehrtDurchOptions bereit.
+        if (!Columns.Any(c => c.IndexOf("usgef", StringComparison.OrdinalIgnoreCase) >= 0
+                           && c.IndexOf("durch", StringComparison.OrdinalIgnoreCase) >= 0))
+            Columns.Add("Ausgefuehrt durch");
+
         EnsureRecordColumns();
         UpdateNr();
         LastResult = $"Spalten geladen: {Columns.Count}";

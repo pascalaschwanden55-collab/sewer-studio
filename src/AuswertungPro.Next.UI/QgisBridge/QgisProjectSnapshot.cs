@@ -68,10 +68,13 @@ internal sealed record QgisProjectSnapshot(
 
             schaechte.Add(new QgisSchachtSnapshot(
                 nummer,
-                EmptyToNull(record.GetFieldValue("Sanieren")),
-                EmptyToNull(record.GetFieldValue("Pruefungsresultat")),
-                EmptyToNull(record.GetFieldValue("Ausgefuehrt_durch")),
-                EmptyToNull(record.GetFieldValue("NR"))));
+                // Schacht-Feldnamen sind uneinheitlich (Encoding-Varianten + andere Bezeichnungen als
+                // bei den Haltungen: "Ja/Nein" statt "Sanieren", kein "Pruefungsresultat") — darum
+                // robust ueber einen normalisierten Namensvergleich statt festem GetFieldValue.
+                SchachtFeldWert(record, "Ja/Nein", "Sanieren", "Sanieren_JaNein"),
+                SchachtFeldWert(record, "Pruefungsresultat"),
+                SchachtFeldWert(record, "Ausgefuehrt durch", "Ausgefuehrt_durch"),
+                SchachtFeldWert(record, "NR", "Nr")));
         }
 
         return new QgisProjectSnapshot(
@@ -154,6 +157,49 @@ internal sealed record QgisProjectSnapshot(
 
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>
+    /// Robuste Schacht-Feld-Suche: liefert den ersten nicht-leeren Wert, dessen Feldname
+    /// (encoding- und satzzeichen-normalisiert) einem der Kandidaten entspricht. Faengt die
+    /// Mojibake-/Umlaut-/Schreibvarianten der Schacht-Felder ab (z.B. "NR." == "NR" == "Nr.",
+    /// "AusfÃ¼hrt durch" == "Ausgefuehrt durch").
+    /// </summary>
+    private static string? SchachtFeldWert(SchachtRecord record, params string[] namensKandidaten)
+    {
+        var ziele = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var k in namensKandidaten)
+            ziele.Add(NormSchachtKey(k));
+
+        foreach (var kv in record.Fields)
+        {
+            if (!string.IsNullOrWhiteSpace(kv.Value) && ziele.Contains(NormSchachtKey(kv.Key)))
+                return kv.Value.Trim();
+        }
+        return null;
+    }
+
+    /// <summary>Feldname auf reine Kleinbuchstaben+Ziffern reduzieren (Umlaute/Mojibake vereinheitlicht).</summary>
+    private static string NormSchachtKey(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
+
+        var s = name.ToLowerInvariant()
+            .Replace("ã¼", "ue", StringComparison.Ordinal)
+            .Replace("ã¤", "ae", StringComparison.Ordinal)
+            .Replace("ã¶", "oe", StringComparison.Ordinal)
+            .Replace("ãÿ", "ss", StringComparison.Ordinal)
+            .Replace("ü", "ue", StringComparison.Ordinal)
+            .Replace("ä", "ae", StringComparison.Ordinal)
+            .Replace("ö", "oe", StringComparison.Ordinal)
+            .Replace("ß", "ss", StringComparison.Ordinal);
+
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (var ch in s)
+            if (char.IsLetterOrDigit(ch))
+                sb.Append(ch);
+        return sb.ToString();
+    }
 
     // ── Fingerprints fuer den Payload-Cache ─────────────────────────────────
     // Aendert sich der Fingerprint nicht, kann der Server die zuletzt
