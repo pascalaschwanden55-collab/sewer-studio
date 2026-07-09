@@ -163,6 +163,58 @@ public sealed class TrainingYoloExportWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_nutzt_lokalen_export_wenn_sidecar_payload_mehr_als_500_samples_hat()
+    {
+        var state = new WorkflowState();
+        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var frame = Path.Combine(root, "frame.jpg");
+        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
+        var approved = ApprovedSample(frame);
+        var client = new FakeVisionPipelineClient
+        {
+            Health = new SidecarHealthResponse(
+                Status: "ok",
+                Version: "1.0",
+                Gpu: new GpuStatus("yolo", 1, 8))
+        };
+        var localCalls = 0;
+
+        try
+        {
+            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
+                state,
+                samples: [approved],
+                client: client,
+                buildPayloadAsync: _ => Task.FromResult(new TrainingYoloSidecarExportPayloadResult(
+                    new TrainingExportRequestDto(
+                        Enumerable.Range(0, 501)
+                            .Select(_ => new TrainingExportSample(
+                                "ZmFrZQ==",
+                                [new TrainingExportSampleLabel("BAB", 0.1, 0.2, 0.3, 0.4)]))
+                            .ToList(),
+                        @"D:\Yolo",
+                        0.8),
+                    SkipEvalHash: 0,
+                    SkipEvalCase: 0,
+                    SkipNoBox: 0)),
+                runLocalExportAsync: _ =>
+                {
+                    localCalls++;
+                    return Task.CompletedTask;
+                }));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+
+        Assert.Equal(0, client.ExportCalls);
+        Assert.Equal(1, localCalls);
+        Assert.Contains(state.Logs, line => line.Contains("Sidecar-Limit von 500", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task RunAsync_beendet_frueh_wenn_keine_approved_samples_vorhanden_sind()
     {
         var state = new WorkflowState();

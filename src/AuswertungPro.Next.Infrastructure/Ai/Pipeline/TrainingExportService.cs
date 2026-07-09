@@ -14,6 +14,8 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class TrainingExportService
 {
+    private const int SidecarExportMaxSamplesPerRequest = 500;
+
     private readonly IVisionPipelineClient _client;
 
     public TrainingExportService(IVisionPipelineClient client)
@@ -58,6 +60,14 @@ public sealed class TrainingExportService
 
         if (exportSamples.Count == 0)
             return new TrainingExportResult(false, "Keine gültigen Bilder gefunden.", 0, 0, 0);
+
+        if (exportSamples.Count > SidecarExportMaxSamplesPerRequest)
+            return new TrainingExportResult(
+                false,
+                $"Sidecar-Export unterstuetzt maximal {SidecarExportMaxSamplesPerRequest} Samples pro Request. Bitte lokalen Export verwenden.",
+                0,
+                0,
+                0);
 
         try
         {

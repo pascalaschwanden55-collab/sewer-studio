@@ -77,6 +77,8 @@ public static class TrainingYoloExportRequestFactory
 
 public static class TrainingYoloExportWorkflow
 {
+    private const int SidecarExportMaxSamplesPerRequest = 500;
+
     public static async Task RunAsync(TrainingYoloExportWorkflowRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -166,6 +168,13 @@ public static class TrainingYoloExportWorkflow
             {
                 request.Log("YOLO-Export: nach Eval-/Box-Filter keine Samples uebrig.");
                 request.SetStatusText("YOLO-Export: keine exportierbaren Samples (Eval/Box-Filter).");
+                return;
+            }
+
+            if (payload.ExportRequest.Samples.Count > SidecarExportMaxSamplesPerRequest)
+            {
+                request.Log($"YOLO-Export: {payload.ExportRequest.Samples.Count} Samples ueberschreiten das Sidecar-Limit von {SidecarExportMaxSamplesPerRequest}. Lokaler Export wird verwendet...");
+                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
                 return;
             }
 
