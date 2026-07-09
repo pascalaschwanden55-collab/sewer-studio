@@ -162,6 +162,9 @@
                                                     <DataTrigger Binding="{Binding IsLastProject}" Value="True">
                                                         <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
                                                     </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsCorrupt}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                    </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
@@ -204,11 +207,11 @@
                                 Command="{Binding OpenSelectedCommand}"
                                 Style="{StaticResource PrimaryButton}"
                                 Padding="14,6"/>
-                        <Button Content="Loeschen"
+                        <Button Content="Ausblenden"
                                 Command="{Binding DeleteSelectedCommand}"
                                 Margin="8,0,0,0"
-                                Style="{StaticResource SecondaryButton}"
-                                Foreground="{DynamicResource DangerBrush}"/>
+                                ToolTip="Projekt aus der Uebersicht ausblenden - Daten bleiben erhalten"
+                                Style="{StaticResource SecondaryButton}"/>
                     </StackPanel>
                 </Grid>
             </Border>

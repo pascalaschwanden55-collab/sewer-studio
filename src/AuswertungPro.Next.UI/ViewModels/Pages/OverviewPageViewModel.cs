@@ -343,10 +343,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 var desc = root.TryGetProperty("Description", out var d) ? d.GetString() : "";
                 var modified = TryReadModifiedAt(root) ?? File.GetLastWriteTimeUtc(file);
 
-                // Record-Anzahl aus JSON lesen
+                // Record-Anzahl aus JSON lesen.
                 int recordCount = 0;
                 if (root.TryGetProperty("Data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
                     recordCount = dataEl.GetArrayLength();
+                int schachtCount = 0;
+                if (root.TryGetProperty("SchaechteData", out var schaechteEl) && schaechteEl.ValueKind == JsonValueKind.Array)
+                    schachtCount = schaechteEl.GetArrayLength();
 
                 entries.Add(new ProjectOverviewEntry
                 {
@@ -355,10 +358,14 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                     Path = file,
                     ModifiedAtUtc = modified,
                     IsLastProject = isLast,
-                    RecordCount = recordCount
+                    RecordCount = recordCount,
+                    SchachtCount = schachtCount
                 });
             }
-            catch { /* ignore invalid files */ }
+            catch
+            {
+                entries.Add(ProjectOverviewEntry.Corrupt(file, isLast));
+            }
         }
 
         // 1. Letztes Projekt
@@ -567,8 +574,44 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public DateTime? ModifiedAtUtc { get; set; }
         public bool IsLastProject { get; set; }
         public int RecordCount { get; set; }
+        public int SchachtCount { get; set; }
+        public bool IsCorrupt { get; set; }
         public string ModifiedAtDisplay => ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-";
         public string FolderName => string.IsNullOrEmpty(Path) ? "" : System.IO.Path.GetDirectoryName(Path) ?? "";
-        public string StatsText => RecordCount > 0 ? $"{RecordCount} Haltungen" : "Leer";
+        public string StatsText => FormatStatsText(RecordCount, SchachtCount, IsCorrupt);
+
+        public static ProjectOverviewEntry Corrupt(string file, bool isLast)
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(file);
+            if (string.Equals(name, "projekt", StringComparison.OrdinalIgnoreCase))
+            {
+                var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(file);
+                if (!string.IsNullOrWhiteSpace(projectRoot))
+                    name = System.IO.Path.GetFileName(projectRoot);
+            }
+
+            return new ProjectOverviewEntry
+            {
+                Name = string.IsNullOrWhiteSpace(name) ? System.IO.Path.GetFileName(file) : name,
+                Description = "Projektdatei konnte nicht gelesen werden.",
+                Path = file,
+                ModifiedAtUtc = File.Exists(file) ? File.GetLastWriteTimeUtc(file) : null,
+                IsLastProject = isLast,
+                IsCorrupt = true
+            };
+        }
+
+        internal static string FormatStatsText(int haltungCount, int schachtCount, bool isCorrupt = false)
+        {
+            if (isCorrupt)
+                return "Datei fehlerhaft";
+            if (haltungCount > 0 && schachtCount > 0)
+                return $"{haltungCount} Haltungen · {schachtCount} Schaechte";
+            if (haltungCount > 0)
+                return $"{haltungCount} Haltungen";
+            if (schachtCount > 0)
+                return $"{schachtCount} Schaechte";
+            return "Leer";
+        }
     }
 }
