@@ -47,6 +47,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public bool HasActiveDashboard => ActiveDashboard?.HasData == true;
         public bool ShowProjectChoice => !ShowFullDashboard && SelectedPreview is null && !IsPreviewLoading;
         public bool ShowDataEmptyState => !ShowProjectChoice && !IsPreviewLoading && !HasActiveDashboard;
+        public IReadOnlyList<ProjectPreviewMetadataItem> PreviewMetadataItems
+            => ProjectPreviewMetadataItems.Build(SelectedPreview);
+        public bool ShowPreviewMetadata => !ShowFullDashboard && !IsPreviewLoading && PreviewMetadataItems.Count > 0;
         public string DashboardTitle => ShowFullDashboard ? "Projekt-Cockpit" : "Projektvorschau";
         public string DashboardProjectName => ShowFullDashboard ? Project.Name ?? string.Empty : SelectedPreview?.Name ?? string.Empty;
 
@@ -248,6 +251,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OnPropertyChanged(nameof(HasActiveDashboard));
             OnPropertyChanged(nameof(ShowProjectChoice));
             OnPropertyChanged(nameof(ShowDataEmptyState));
+            OnPropertyChanged(nameof(PreviewMetadataItems));
+            OnPropertyChanged(nameof(ShowPreviewMetadata));
             OnPropertyChanged(nameof(DashboardTitle));
             OnPropertyChanged(nameof(DashboardProjectName));
             DashboardCostText = FormatDashboardCostText(ActiveDashboard);
@@ -766,6 +771,36 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (schachtCount > 0)
                 return $"{schachtCount} Schaechte";
             return "Leer";
+        }
+    }
+
+    public sealed record ProjectPreviewMetadataItem(string Label, string Value);
+
+    internal static class ProjectPreviewMetadataItems
+    {
+        public static IReadOnlyList<ProjectPreviewMetadataItem> Build(ProjectPreview? preview)
+        {
+            if (preview is null)
+                return Array.Empty<ProjectPreviewMetadataItem>();
+
+            var items = new List<ProjectPreviewMetadataItem>(capacity: 8);
+            Add(items, "Auftraggeber", preview.Auftraggeber);
+            Add(items, "Gemeinde", preview.Gemeinde);
+            Add(items, "Zone", preview.Zone);
+            Add(items, "Strasse", preview.Strasse);
+            Add(items, "Bearbeiter", preview.Bearbeiter);
+            Add(items, "Inspektionsdatum", preview.Inspektionsdatum);
+            Add(items, "Auftrag-Nr", preview.AuftragNr);
+            Add(items, "Firma", preview.Firma);
+            return items;
+        }
+
+        private static void Add(List<ProjectPreviewMetadataItem> items, string label, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            items.Add(new ProjectPreviewMetadataItem(label, value.Trim()));
         }
     }
 }
