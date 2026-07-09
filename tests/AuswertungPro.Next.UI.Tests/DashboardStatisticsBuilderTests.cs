@@ -58,11 +58,40 @@ public sealed class DashboardStatisticsBuilderTests
         Assert.Equal(2, stats.DringendCount);
         Assert.Equal(2, stats.OhneZustandCount);
         Assert.Contains(stats.Haltungen.Buckets, b => b.Key == "0" && b.Count == 1);
-        Assert.Contains(stats.Haltungen.Buckets, b => b.Key == "ohne" && b.Count == 1);
+        Assert.Contains(stats.Haltungen.Buckets, b => b.Key == "ohne" && b.Label == "ZU" && b.Count == 1);
         Assert.Contains(stats.Schaechte.Buckets, b => b.Key == "1" && b.Count == 1);
-        Assert.Contains(stats.Schaechte.Buckets, b => b.Key == "ohne" && b.Count == 1);
-        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAB" && b.Count == 1);
+        Assert.Contains(stats.Schaechte.Buckets, b => b.Key == "ohne" && b.Label == "ZU" && b.Count == 1);
+        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAB" && b.Label == "BAB (Riss)" && b.Count == 1);
+        Assert.DoesNotContain(stats.TopSchaeden, b => b.Key == "BCA");
         Assert.Contains(stats.HaltungDnCosts, b => b.Key == "300" && b.Cost == 1200m);
+    }
+
+    [Fact]
+    public void Build_top_schaeden_zeigt_klartext_und_filtert_nicht_schaeden()
+    {
+        var record = Holding("H1", "2", "300", "12.5", "Nein");
+        record.Protocol = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries =
+                [
+                    new ProtocolEntry { Code = "BAB01" },
+                    new ProtocolEntry { Code = "BAF.A" },
+                    new ProtocolEntry { Code = "BCA02" },
+                    new ProtocolEntry { Code = "BCC" },
+                    new ProtocolEntry { Code = "BCD" },
+                    new ProtocolEntry { Code = "BCE" },
+                    new ProtocolEntry { Code = "BDA" }
+                ]
+            }
+        };
+
+        var stats = DashboardStatisticsBuilder.Build([record]);
+
+        Assert.Equal(["BAB", "BAF"], stats.TopSchaeden.Select(b => b.Key).OrderBy(k => k));
+        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAB" && b.Label == "BAB (Riss)");
+        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAF" && b.Label == "BAF (Oberflaeche)");
     }
 
     [Theory]

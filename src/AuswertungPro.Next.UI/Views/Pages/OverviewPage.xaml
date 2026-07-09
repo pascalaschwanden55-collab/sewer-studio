@@ -583,7 +583,7 @@
                                                FontSize="22"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource MutedBrush}"/>
-                                    <TextBlock Text="ohne Zustand" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Zustand unbekannt (ZU)" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                         </UniformGrid>

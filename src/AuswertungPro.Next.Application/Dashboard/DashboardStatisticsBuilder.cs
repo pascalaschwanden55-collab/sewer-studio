@@ -2,6 +2,7 @@ using System.Globalization;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 
 namespace AuswertungPro.Next.Application.Dashboard;
 
@@ -66,7 +67,36 @@ public static class DashboardStatisticsBuilder
             ["2"] = "Z2",
             ["3"] = "Z3",
             ["4"] = "Z4",
-            ["ohne"] = "ohne Zustand"
+            ["ohne"] = "ZU"
+        };
+
+    private static readonly IReadOnlyDictionary<string, string> DamageShortLabels =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BAA"] = "Verformung",
+            ["BAB"] = "Riss",
+            ["BAC"] = "Bruch",
+            ["BAD"] = "Mauerwerk",
+            ["BAE"] = "Moertel",
+            ["BAF"] = "Oberflaeche",
+            ["BAG"] = "Anschluss ragt ein",
+            ["BAH"] = "Anschluss defekt",
+            ["BAI"] = "Dichtungsmaterial",
+            ["BAJ"] = "Rohrverbindung",
+            ["BAK"] = "Innenauskleidung",
+            ["BAL"] = "Reparatur defekt",
+            ["BAM"] = "Schweissnaht",
+            ["BAN"] = "Poroese Leitung",
+            ["BAO"] = "Boden sichtbar",
+            ["BAP"] = "Hohlraum",
+            ["BBA"] = "Wurzeln",
+            ["BBB"] = "Anhaftungen",
+            ["BBC"] = "Ablagerung",
+            ["BBD"] = "Boden dringt ein",
+            ["BBE"] = "Hindernis",
+            ["BBF"] = "Infiltration",
+            ["BBG"] = "Exfiltration",
+            ["BBH"] = "Ungeziefer"
         };
 
     public static DashboardStatistics Build(Project? project, ProjectCostStore? haltungCosts, ProjectCostStore? schachtCosts)
@@ -147,6 +177,7 @@ public static class DashboardStatisticsBuilder
         var codes = records
             .SelectMany(EnumerateDamageCodes)
             .Select(NormalizeDamageGroup)
+            .Where(IsDashboardDamageGroup)
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .ToList();
 
@@ -156,7 +187,7 @@ public static class DashboardStatisticsBuilder
 
         return codes
             .GroupBy(c => c, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new DashboardBucket(g.Key, g.Key, g.Count(), Percent(g.Count(), total)))
+            .Select(g => new DashboardBucket(g.Key, FormatDamageLabel(g.Key), g.Count(), Percent(g.Count(), total)))
             .OrderByDescending(b => b.Count)
             .ThenBy(b => b.Key, StringComparer.OrdinalIgnoreCase)
             .Take(6)
@@ -231,6 +262,29 @@ public static class DashboardStatisticsBuilder
             return string.Empty;
 
         return text.Length <= 3 ? text : text[..3];
+    }
+
+    private static bool IsDashboardDamageGroup(string code)
+    {
+        if (code.Length != 3)
+            return false;
+
+        if (!code.StartsWith("BA", StringComparison.OrdinalIgnoreCase)
+            && !code.StartsWith("BB", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return VsaCodeTree.Groups.TryGetValue(code[..2], out var group) && group.Codes.ContainsKey(code);
+    }
+
+    private static string FormatDamageLabel(string code)
+    {
+        var label = DamageShortLabels.TryGetValue(code, out var shortLabel)
+            ? shortLabel
+            : VsaCodeTree.LookupLabel(code);
+
+        return string.IsNullOrWhiteSpace(label)
+            ? code
+            : $"{code} ({label})";
     }
 
     private static string NormalizeDnKey(string? value)
