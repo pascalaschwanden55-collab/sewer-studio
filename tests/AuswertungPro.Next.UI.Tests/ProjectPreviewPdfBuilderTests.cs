@@ -1,6 +1,8 @@
+using System.IO;
 using System.Text;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Domain.Models;
+using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -23,6 +25,8 @@ public sealed class ProjectPreviewPdfBuilderTests
 
         Assert.True(pdf.Length > 1000);
         Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
+        using var document = PdfDocument.Open(new MemoryStream(pdf));
+        Assert.Equal(2, document.NumberOfPages);
     }
 
     private static HaltungRecord Holding(string name, string zustand, string dn, double length)
