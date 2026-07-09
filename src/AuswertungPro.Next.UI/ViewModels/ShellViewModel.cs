@@ -109,6 +109,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         NavItems = new List<NavItem>
         {
+            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
@@ -586,7 +587,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     private void OpenProjectWithDialog()
     {
         if (TryOpenProjectWithDialog())
-            EnterWorkspaceOn("Haltungen");
+            EnterWorkspaceOn("Uebersicht");
     }
 
     private void SaveProjectAs()
@@ -682,6 +683,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         public string ToolTipDescription => Title switch
         {
+            "Uebersicht" => "Projekt-Cockpit mit Zustands-, Kosten- und Fortschrittsauswertung.",
             "Projekt" => "Projektstammdaten, Speicherort und Bearbeitungsdaten pflegen.",
             "Haltungen" => "Haltungen pruefen, filtern, Videos und Protokolle oeffnen.",
             "Schaechte" => "Schachtdaten anzeigen, kontrollieren und zugehoerige Protokolle oeffnen.",

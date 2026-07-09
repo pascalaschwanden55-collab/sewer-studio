@@ -350,7 +350,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.EnterWorkspaceOn("Haltungen");
+        _shell.EnterWorkspaceOn("Uebersicht");
     }
 
     private void OpenSelectedProject()
@@ -364,7 +364,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.EnterWorkspaceOn("Haltungen");
+        _shell.EnterWorkspaceOn("Uebersicht");
     }
 
     private void DeleteSelectedProject()
@@ -413,7 +413,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.EnterWorkspaceOn("Haltungen");
+        _shell.EnterWorkspaceOn("Uebersicht");
     }
 
     partial void OnSelectedProjectEntryChanged(ProjectOverviewEntry? value)

@@ -680,7 +680,7 @@ git commit -m "feat: wpf-chart-controls fuer dashboard"
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs`
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Pages/OverviewPageViewModel.cs`
 
-- [ ] **Step 1: NavItem einfuegen**
+- [x] **Step 1: NavItem einfuegen**
 
 Fuege vor `Projekt` ein:
 
@@ -694,7 +694,7 @@ Ergaenze ToolTip-Text fuer `"Uebersicht"`:
 "Uebersicht" => "Projekt-Cockpit mit Zustands-, Kosten- und Fortschrittsauswertung.",
 ```
 
-- [ ] **Step 2: Projekt-Oeffnen landet auf Uebersicht**
+- [x] **Step 2: Projekt-Oeffnen landet auf Uebersicht**
 
 In `OverviewPageViewModel.OpenProject`, `OpenSelectedProject`, `OpenLastProject`:
 
@@ -704,11 +704,11 @@ _shell.EnterWorkspaceOn("Uebersicht");
 
 statt `"Haltungen"`.
 
-- [ ] **Step 3: Bestehende Navigation weiter erhalten**
+- [x] **Step 3: Bestehende Navigation weiter erhalten**
 
 `ShellViewModel.NavigateToDataPage` aus Task 3 navigiert weiterhin explizit zu `"Haltungen"`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs src/AuswertungPro.Next.UI/ViewModels/Pages/OverviewPageViewModel.cs
