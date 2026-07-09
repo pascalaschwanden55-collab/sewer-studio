@@ -65,6 +65,23 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
+                    <Button Command="{Binding RefreshProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Verknuepftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Einzelnes Schacht-Protokoll (PDF) importieren und ins Projekt verteilen">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
+
                     <ToggleButton Content="Spalten anordnen"
                                   Margin="0,0,2,0"
                                   Style="{StaticResource CompactToggleButton}"
