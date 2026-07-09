@@ -25,6 +25,18 @@ public sealed class DataPageStartFilterTests
     }
 
     [Fact]
+    public void FromDashboardZustand_ohne_matcht_leere_zustandsklasse()
+    {
+        var record = new HaltungRecord();
+
+        var filter = DataPageStartFilter.FromDashboardZustand("ohne");
+
+        Assert.Equal("Zustandsklasse", filter.FieldName);
+        Assert.Equal("ohne", filter.Value);
+        Assert.True(filter.Matches(record));
+    }
+
+    [Fact]
     public void Matches_prueft_dn_und_schadenscode()
     {
         var record = new HaltungRecord();

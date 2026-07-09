@@ -69,6 +69,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand RefreshCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
         public IRelayCommand<object?> NavigateConditionCommand { get; }
+        public IRelayCommand<object?> NavigateSchachtConditionCommand { get; }
         public IRelayCommand<object?> NavigateDamageCommand { get; }
         public IRelayCommand<object?> NavigateDnCommand { get; }
         public IRelayCommand ToggleProjectListCommand { get; }
@@ -94,6 +95,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             RefreshCommand = new RelayCommand(LoadAllProjects);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
             NavigateConditionCommand = new RelayCommand<object?>(NavigateCondition);
+            NavigateSchachtConditionCommand = new RelayCommand<object?>(NavigateSchachtCondition);
             NavigateDamageCommand = new RelayCommand<object?>(NavigateDamage);
             NavigateDnCommand = new RelayCommand<object?>(NavigateDn);
             ToggleProjectListCommand = new RelayCommand(ToggleProjectList);
@@ -257,10 +259,19 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private void NavigateCondition(object? key)
         {
             var text = key?.ToString();
-            if (string.IsNullOrWhiteSpace(text) || string.Equals(text, "ohne", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(text))
                 return;
 
             _shell.NavigateToDataPage(DataPageStartFilter.FromDashboardZustand(text));
+        }
+
+        private void NavigateSchachtCondition(object? key)
+        {
+            var text = key?.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            _shell.EnterWorkspaceOn("Schaechte");
         }
 
         private void NavigateDamage(object? key)

@@ -388,7 +388,7 @@
                                                      Width="170"
                                                      Height="170"
                                                      ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}"
-                                                     IsHitTestVisible="False"/>
+                                                     SegmentCommand="{Binding NavigateSchachtConditionCommand}"/>
                                     <ItemsControl Grid.Column="1"
                                                   Margin="0,34,0,0"
                                                   ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}">
