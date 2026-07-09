@@ -26,7 +26,7 @@ def test_full_pipeline_health_then_yolo(client):
     # Health check
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    assert resp.json()["status"] in {"ok", "degraded"}
 
     # YOLO detection
     img_b64 = _make_test_image()

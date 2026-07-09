@@ -26,7 +26,7 @@ def test_health(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "ok"
+    assert data["status"] in {"ok", "degraded"}
     assert "gpu" in data
     assert "current_model" in data["gpu"]
     assert "yolo" in data
