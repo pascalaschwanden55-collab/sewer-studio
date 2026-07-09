@@ -20,17 +20,25 @@ def test_yolo_classify_bend_geometry_disabled_returns_neutral_values(monkeypatch
 
     monkeypatch.setattr(settings, "bend_geometry_enabled", False, raising=False)
     monkeypatch.setattr(settings, "bend_veto_enabled", False, raising=False)
+    decode_calls = 0
+
+    def fake_decode(_image_base64):
+        nonlocal decode_calls
+        decode_calls += 1
+        return Image.new("RGB", (32, 24))
+
+    monkeypatch.setattr(yolo.yolo_wrapper, "decode_image", fake_decode)
     monkeypatch.setattr(
         yolo.yolo_wrapper,
-        "classify_with_quality",
-        lambda image_base64, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
+        "classify_image_with_quality",
+        lambda img, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
     )
     monkeypatch.setattr(yolo.yolo_wrapper, "classifier_metadata", lambda: {})
     monkeypatch.setattr(yolo, "write_event", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         yolo,
-        "decode_image_safe",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("bend decode called")),
+        "analyze_bend",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("bend analysis called")),
     )
 
     response = yolo.classify_yolo(
@@ -43,6 +51,7 @@ def test_yolo_classify_bend_geometry_disabled_returns_neutral_values(monkeypatch
     assert response.classifier_loaded is False
     assert response.vanish_x == 0.5
     assert response.vanish_y == 0.5
+    assert decode_calls == 1
 
 
 def test_yolo_classify_bend_veto_enabled_runs_without_sam_geometry(monkeypatch):
@@ -52,14 +61,21 @@ def test_yolo_classify_bend_veto_enabled_runs_without_sam_geometry(monkeypatch):
 
     monkeypatch.setattr(settings, "bend_geometry_enabled", False, raising=False)
     monkeypatch.setattr(settings, "bend_veto_enabled", True, raising=False)
+    decode_calls = 0
+
+    def fake_decode(_image_base64):
+        nonlocal decode_calls
+        decode_calls += 1
+        return Image.new("RGB", (32, 24))
+
+    monkeypatch.setattr(yolo.yolo_wrapper, "decode_image", fake_decode)
     monkeypatch.setattr(
         yolo.yolo_wrapper,
-        "classify_with_quality",
-        lambda image_base64, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
+        "classify_image_with_quality",
+        lambda img, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
     )
     monkeypatch.setattr(yolo.yolo_wrapper, "classifier_metadata", lambda: {})
     monkeypatch.setattr(yolo, "write_event", lambda *args, **kwargs: None)
-    monkeypatch.setattr(yolo, "decode_image_safe", lambda *args, **kwargs: Image.new("RGB", (32, 24)))
     monkeypatch.setattr(
         yolo,
         "analyze_bend",
@@ -75,6 +91,7 @@ def test_yolo_classify_bend_veto_enabled_runs_without_sam_geometry(monkeypatch):
     assert response.bend_veto_failed is False
     assert response.vanish_x == 0.62
     assert response.vanish_y == 0.41
+    assert decode_calls == 1
 
 
 def test_yolo_classify_bend_veto_failure_is_reported(monkeypatch):
@@ -84,10 +101,18 @@ def test_yolo_classify_bend_veto_failure_is_reported(monkeypatch):
 
     monkeypatch.setattr(settings, "bend_geometry_enabled", False, raising=False)
     monkeypatch.setattr(settings, "bend_veto_enabled", True, raising=False)
+    decode_calls = 0
+
+    def fake_decode(_image_base64):
+        nonlocal decode_calls
+        decode_calls += 1
+        return Image.new("RGB", (32, 24))
+
+    monkeypatch.setattr(yolo.yolo_wrapper, "decode_image", fake_decode)
     monkeypatch.setattr(
         yolo.yolo_wrapper,
-        "classify_with_quality",
-        lambda image_base64, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
+        "classify_image_with_quality",
+        lambda img, top_k=5: ([("BCE", 0.9, 0)], True, "ok"),
     )
     monkeypatch.setattr(
         yolo.yolo_wrapper,
@@ -97,8 +122,8 @@ def test_yolo_classify_bend_veto_failure_is_reported(monkeypatch):
     monkeypatch.setattr(yolo, "write_event", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         yolo,
-        "decode_image_safe",
-        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("decode failed")),
+        "analyze_bend",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("bend failed")),
     )
 
     response = yolo.classify_yolo(
@@ -109,6 +134,7 @@ def test_yolo_classify_bend_veto_failure_is_reported(monkeypatch):
     assert response.bend_veto_failed is True
     assert response.is_bend is False
     assert response.bend_shift == 0.0
+    assert decode_calls == 1
 
 
 def test_sam_segment_bend_geometry_disabled_returns_neutral_values(monkeypatch):

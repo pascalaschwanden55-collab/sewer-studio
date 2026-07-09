@@ -11,7 +11,6 @@ from ..schemas.detection import (
 )
 from ..models import yolo_wrapper
 from ..models.bend_geometry import analyze_bend
-from ..models.image_decode import decode_image_safe
 from ..config import settings
 from ..telemetry import write_event, write_yolo_detection
 
@@ -46,8 +45,9 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
     strukturlos, unscharf) kommen mit usable=False zurueck, ohne Klassifikation.
     """
     t0 = time.perf_counter()
-    preds, usable, quality_reason = yolo_wrapper.classify_with_quality(
-        req.image_base64, top_k=req.top_k)
+    img = yolo_wrapper.decode_image(req.image_base64)
+    preds, usable, quality_reason = yolo_wrapper.classify_image_with_quality(
+        img, top_k=req.top_k)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     # Geometrisches Bogen-Veto aus demselben Frame. Dieser leichte Veto bleibt aktiv,
@@ -56,12 +56,7 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
     bend_veto_failed = False
     if settings.bend_veto_enabled or settings.bend_geometry_enabled:
         try:
-            _img = decode_image_safe(
-                req.image_base64,
-                max_bytes=settings.inference_max_image_bytes,
-                max_pixels=settings.max_image_pixels,
-            )
-            _bend = analyze_bend(np.array(_img))
+            _bend = analyze_bend(np.array(img))
             bend_shift, is_bend = round(_bend.shift, 4), _bend.is_bend
             vanish_x, vanish_y = round(_bend.vanish_x, 4), round(_bend.vanish_y, 4)
         except Exception:

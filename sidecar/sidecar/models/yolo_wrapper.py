@@ -32,6 +32,10 @@ _cpu_lock = threading.Lock()
 # Serialisiert YOLO-Detect-Inferenz (Gesamtaudit P7): parallele Threadpool-Requests
 # auf demselben Ultralytics-Modell koennen sich sonst verschraenken (Race/OOM).
 _yolo_predict_lock = threading.Lock()
+_gpu_utilization_lock = threading.Lock()
+_gpu_utilization_cached_at = 0.0
+_gpu_utilization_cached_value: float | None = None
+_GPU_UTILIZATION_TTL_SECONDS = 2.0
 
 
 def _resolve_yolo_model_path() -> tuple[str, bool]:
@@ -290,25 +294,42 @@ def _gpu_utilization_percent() -> float | None:
     if not _resolve_device().startswith("cuda"):
         return None
 
-    try:
-        result = subprocess.run(
-            [
-                "nvidia-smi",
-                "--query-gpu=utilization.gpu",
-                "--format=csv,noheader,nounits",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=0.5,
-            check=False,
-        )
-        if result.returncode != 0:
-            return None
+    global _gpu_utilization_cached_at, _gpu_utilization_cached_value
+    now = time.monotonic()
+    with _gpu_utilization_lock:
+        if now - _gpu_utilization_cached_at < _GPU_UTILIZATION_TTL_SECONDS:
+            return _gpu_utilization_cached_value
 
-        first_line = result.stdout.strip().splitlines()[0]
-        return float(first_line.strip())
-    except Exception:
-        return None
+        value: float | None = None
+        _gpu_utilization_cached_at = now
+
+        try:
+            result = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=utilization.gpu",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=0.5,
+                check=False,
+            )
+            if result.returncode == 0:
+                first_line = result.stdout.strip().splitlines()[0]
+                value = float(first_line.strip())
+        except Exception:
+            value = None
+
+        _gpu_utilization_cached_value = value
+        return value
+
+
+def _reset_gpu_utilization_cache_for_tests() -> None:
+    global _gpu_utilization_cached_at, _gpu_utilization_cached_value
+    with _gpu_utilization_lock:
+        _gpu_utilization_cached_at = 0.0
+        _gpu_utilization_cached_value = None
 
 
 def decode_image(image_base64: str) -> Image.Image:
@@ -610,6 +631,13 @@ def classify_with_quality(
     der Aufrufer kann sie verwerfen, bevor DINO/SAM/Qwen Zeit kosten.
     """
     img = decode_image(image_base64)
+    return classify_image_with_quality(img, top_k)
+
+
+def classify_image_with_quality(
+    img: Image.Image, top_k: int = 5
+) -> tuple[list[tuple[str, float, float]], bool, str]:
+    """Quality-Gate + Whole-Frame-Klassifikation fuer ein bereits dekodiertes Bild."""
     usable, reason = _is_frame_usable(img)
     if not usable:
         return [], False, reason
