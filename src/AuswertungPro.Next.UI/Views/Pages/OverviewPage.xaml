@@ -232,6 +232,21 @@
                     </Border>
 
                     <Border Style="{StaticResource Card}"
+                            Visibility="{Binding IsPreviewLoading, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Vorschau wird geladen..."
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Height="4"
+                                         Margin="0,12,0,0"
+                                         Background="{DynamicResource BorderLightBrush}"
+                                         Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}"
                             Visibility="{Binding ShowDataEmptyState, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Noch keine Daten"
