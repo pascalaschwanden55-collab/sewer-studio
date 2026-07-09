@@ -821,7 +821,7 @@ git commit -m "feat: leuchtturm-dashboard-ui"
 **Files:**
 - No source edits expected.
 
-- [ ] **Step 1: SewerStudio-Prozess pruefen**
+- [x] **Step 1: SewerStudio-Prozess pruefen**
 
 Run:
 
@@ -831,7 +831,7 @@ Get-Process SewerStudio -ErrorAction SilentlyContinue
 
 Expected: keine Ausgabe. Wenn Ausgabe kommt: Nutzer bitten, SewerStudio zu schliessen; nicht killen.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 
@@ -841,7 +841,7 @@ dotnet build AuswertungPro.sln
 
 Expected: 0 Fehler.
 
-- [ ] **Step 3: Tests**
+- [x] **Step 3: Tests**
 
 Run:
 
@@ -851,7 +851,7 @@ dotnet test AuswertungPro.sln --no-build
 
 Expected: 0 Fehler, bekannter Skip bleibt ok.
 
-- [ ] **Step 4: Arbeitsbaum pruefen**
+- [x] **Step 4: Arbeitsbaum pruefen**
 
 Run:
 

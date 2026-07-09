@@ -21,7 +21,7 @@
 
         <DockPanel Margin="0,0,0,14">
             <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Uebersicht" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="Projektübersicht" Style="{StaticResource PageTitle}"/>
                 <TextBlock Text="{Binding ProjectStatus}" Margin="0,4,0,0" Style="{StaticResource Caption}"/>
             </StackPanel>
             <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
