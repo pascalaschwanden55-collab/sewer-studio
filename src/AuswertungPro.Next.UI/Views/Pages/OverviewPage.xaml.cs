@@ -47,32 +47,8 @@ public partial class OverviewPage : UserControl
 
         foreach (var path in files)
         {
-            // JSON-Datei direkt oeffnen
-            if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
-            {
-                vm.SelectedProjectEntry = vm.ProjectEntries.FirstOrDefault(p =>
-                    string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
-                if (vm.SelectedProjectEntry != null)
-                    vm.OpenSelectedCommand.Execute(null);
+            if (vm.OpenProjectFromPath(path))
                 break;
-            }
-
-            // Ordner: nach .json darin suchen
-            if (Directory.Exists(path))
-            {
-                var jsonFiles = Directory.GetFiles(path, "*.json", SearchOption.TopDirectoryOnly);
-                var projektJson = jsonFiles.FirstOrDefault(f =>
-                    Path.GetFileName(f).Contains("projekt", StringComparison.OrdinalIgnoreCase))
-                    ?? jsonFiles.FirstOrDefault();
-                if (projektJson != null)
-                {
-                    vm.SelectedProjectEntry = vm.ProjectEntries.FirstOrDefault(p =>
-                        string.Equals(p.Path, projektJson, StringComparison.OrdinalIgnoreCase));
-                    if (vm.SelectedProjectEntry != null)
-                        vm.OpenSelectedCommand.Execute(null);
-                }
-                break;
-            }
         }
     }
 }

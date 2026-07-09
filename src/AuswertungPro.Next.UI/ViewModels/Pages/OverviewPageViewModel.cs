@@ -422,13 +422,28 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         var path = SelectedProjectEntry?.Path;
         if (string.IsNullOrWhiteSpace(path))
             return;
+        OpenProjectFile(path);
+    }
+
+    public bool OpenProjectFromPath(string path)
+    {
+        var projectFile = ProjectDropPathResolver.ResolveProjectFile(path);
+        if (string.IsNullOrWhiteSpace(projectFile))
+            return false;
+
+        return OpenProjectFile(projectFile);
+    }
+
+    private bool OpenProjectFile(string path)
+    {
         if (!_shell.TryOpenProject(path))
-            return;
+            return false;
         // Merkliste pflegt TryOpenProject selbst.
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
         _shell.EnterWorkspaceOn("Uebersicht");
+        return true;
     }
 
     private void DeleteSelectedProject()
