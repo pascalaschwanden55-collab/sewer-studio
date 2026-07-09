@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure;
@@ -514,79 +513,14 @@ public sealed class LegacyPdfImportService
             created = true;
         }
 
-        SetSchachtField(target, "Schachtnummer", key);
-        SetSchachtField(target, "NR.", key);
-        SetSchachtField(target, "Nr.", key);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Datum))
-            SetSchachtField(target, "Ausfuehrung Datum/Jahr", parsed.Datum);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Funktion))
-            SetSchachtField(target, "Funktion", parsed.Funktion);
-
-        if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden))
-            SetSchachtField(target, "Primaere Schaeden", parsed.PrimaereSchaeden);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen))
-            SetSchachtField(target, "Bemerkungen", parsed.Bemerkungen);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Link))
-            SetSchachtField(target, "Link", parsed.Link);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Status))
-            SetSchachtField(target, "Status offen/abgeschlossen", parsed.Status);
-
-        // PDF-Pfad speichern fuer spaeteres Oeffnen per Rechtsklick
-        target.SetFieldValue("PDF_Path", pdfPath);
-
-        // Strukturiertes Protokoll aus Bauteil-Schaeden erstellen
         var damageEntries = ParseSchachtDamageEntries(fullText);
-        if (damageEntries.Count > 0)
-        {
-            var protocolEntries = damageEntries.Select(d => new ProtocolEntry
-            {
-                Code = d.Component,
-                Beschreibung = d.Damage,
-                Source = ProtocolEntrySource.Imported
-            }).ToList();
-
-            var originalRevision = new ProtocolRevision
-            {
-                Comment = $"Import aus PDF: {Path.GetFileName(pdfPath)}",
-                Entries = protocolEntries
-            };
-            var currentRevision = new ProtocolRevision
-            {
-                Comment = "Arbeitskopie",
-                Entries = protocolEntries.Select(e => new ProtocolEntry
-                {
-                    Code = e.Code,
-                    Beschreibung = e.Beschreibung,
-                    Source = e.Source
-                }).ToList()
-            };
-
-            target.Protocol = new ProtocolDocument
-            {
-                HaltungId = key,
-                Original = originalRevision,
-                Current = currentRevision
-            };
-        }
+        var imported = SchachtProtocolApplier.Apply(target, key, parsed, damageEntries, pdfPath);
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
 
         if (!created)
             stats.UpdatedRecords++;
-
-        var imported = new List<string>();
-        if (!string.IsNullOrWhiteSpace(parsed.SchachtNummer)) imported.Add("Schachtnummer");
-        if (!string.IsNullOrWhiteSpace(parsed.Datum)) imported.Add("Ausfuehrung Datum/Jahr");
-        if (!string.IsNullOrWhiteSpace(parsed.Funktion)) imported.Add("Funktion");
-        if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden)) imported.Add("Primaere Schaeden");
-        if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen)) imported.Add("Bemerkungen");
-        if (damageEntries.Count > 0) imported.Add($"Protokoll ({damageEntries.Count} Beobachtungen)");
 
         stats.Messages.Add(new ImportMessage
         {
@@ -677,32 +611,6 @@ public sealed class LegacyPdfImportService
     /// </summary>
     internal static IReadOnlyList<(string Component, string Damage)> ParseSchachtDamageEntries(string text)
         => SchachtProtocolParser.ParseSchachtDamageEntries(text);
-    private static void SetSchachtField(SchachtRecord record, string logicalField, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return;
-
-        foreach (var candidate in GetSchachtFieldAliases(logicalField))
-            record.SetFieldValue(candidate, value);
-    }
-
-    private static IReadOnlyList<string> GetSchachtFieldAliases(string logicalField)
-    {
-        return logicalField switch
-        {
-            "Schachtnummer" => new[] { "Schachtnummer" },
-            "Funktion" => new[] { "Funktion" },
-            "Primaere Schaeden" => new[] { "Primäre Schäden", "Primaere Schaeden", "PrimÃ¤re SchÃ¤den" },
-            "Bemerkungen" => new[] { "Bemerkungen" },
-            "Link" => new[] { "Link" },
-            "NR." => new[] { "NR.", "Nr." },
-            "Nr." => new[] { "Nr.", "NR." },
-            "Ausfuehrung Datum/Jahr" => new[] { "Ausführung Datum/Jahr", "Ausführung\nDatum/Jahr", "Ausfuehrung Datum/Jahr", "Ausfuehrung\nDatum/Jahr", "AusfÃ¼hrung Datum/Jahr" },
-            "Status offen/abgeschlossen" => new[] { "Status offen/abgeschlossen", "Status\noffen/abgeschlossen" },
-            _ => new[] { logicalField }
-        };
-    }
-
     private static void ApplyProjectMetadata(PdfTextExtraction extraction, Project project, ImportStats stats)
     {
         project.EnsureMetadataDefaults();
