@@ -163,12 +163,13 @@ public sealed class DataGridColumnAlignmentToolbar
 
     private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
     {
-        while (current is not null)
+        DependencyObject? node = current;
+        while (node is not null)
         {
-            if (current is T target)
+            if (node is T target)
                 return target;
 
-            current = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(current);
+            node = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(node);
         }
 
         return null;
