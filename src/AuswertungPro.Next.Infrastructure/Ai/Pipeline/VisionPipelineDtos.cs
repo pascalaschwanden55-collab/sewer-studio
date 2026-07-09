@@ -8,7 +8,34 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 public sealed record SidecarHealthResponse(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("version")] string Version,
-    [property: JsonPropertyName("gpu")] GpuStatus? Gpu
+    [property: JsonPropertyName("gpu")] GpuStatus? Gpu,
+    [property: JsonPropertyName("models_present")] SidecarModelsPresent? ModelsPresent = null
+)
+{
+    [JsonIgnore]
+    public IReadOnlyList<string> MissingRequiredModels
+    {
+        get
+        {
+            var missing = new List<string>();
+            if (ModelsPresent is { Dino: false })
+                missing.Add("DINO");
+            if (ModelsPresent is { Sam: false })
+                missing.Add("SAM");
+            return missing;
+        }
+    }
+
+    [JsonIgnore]
+    public bool HasRequiredModels => MissingRequiredModels.Count == 0;
+
+    [JsonIgnore]
+    public string MissingRequiredModelsText => string.Join(", ", MissingRequiredModels);
+}
+
+public sealed record SidecarModelsPresent(
+    [property: JsonPropertyName("dino")] bool Dino,
+    [property: JsonPropertyName("sam")] bool Sam
 );
 
 public sealed record GpuStatus(

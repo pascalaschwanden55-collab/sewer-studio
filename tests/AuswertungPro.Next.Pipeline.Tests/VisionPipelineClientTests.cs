@@ -163,6 +163,26 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task HealthCheckAsync_DeserializesModelsPresent()
+    {
+        var handler = new CaptureHandler("""
+        {"status":"degraded","version":"1.2.0","gpu":null,"models_present":{"dino":false,"sam":true}}
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler));
+
+        var result = await client.HealthCheckAsync(CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ModelsPresent);
+        Assert.False(result.ModelsPresent.Dino);
+        Assert.True(result.ModelsPresent.Sam);
+        Assert.False(result.HasRequiredModels);
+        Assert.Equal("DINO", result.MissingRequiredModelsText);
+    }
+
+    [Fact]
     public void YoloRequest_SerializesCorrectly()
     {
         var request = new YoloRequest("base64data==", 0.3);

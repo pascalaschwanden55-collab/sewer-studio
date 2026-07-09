@@ -219,7 +219,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
 
-            if (health is null || health.Status != "ok")
+            if (health is null)
             {
                 if (pipelineCfg.Mode == PipelineMode.MultiModel)
                     throw new InvalidOperationException(
@@ -227,6 +227,16 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 // Unerwarteter Fallback: Nutzer wollte Multi-Model, Sidecar ist aber tot.
                 return (false, pipelineCfg,
                     $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
+            }
+
+            var notReadyReason = DescribeSidecarNotReady(health);
+            if (notReadyReason is not null)
+            {
+                if (pipelineCfg.Mode == PipelineMode.MultiModel)
+                    throw new InvalidOperationException(
+                        $"{notReadyReason}, aber PipelineMode=MultiModel erzwungen.");
+                return (false, pipelineCfg,
+                    $"{notReadyReason} - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
             }
 
             return (true, pipelineCfg, null);
@@ -239,6 +249,16 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return (false, pipelineCfg,
                 $"Sidecar-Fehler ({ex.Message}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
         }
+    }
+
+    private static string? DescribeSidecarNotReady(SidecarHealthResponse health)
+    {
+        if (!health.HasRequiredModels)
+            return $"Sidecar unvollstaendig: {health.MissingRequiredModelsText}-Gewichte fehlen";
+
+        return string.Equals(health.Status, "ok", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : $"Sidecar meldet Status '{health.Status}'";
     }
 
     private OllamaClient CreateOllamaClient() => new(

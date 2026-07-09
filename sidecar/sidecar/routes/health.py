@@ -25,19 +25,20 @@ async def health():
     # Gesamtaudit P2: Health pro Modell statt nur Pauschal-Status — "Full mode" darf
     # nicht behaupten, was faktisch degradiert ist (fehlende Gewichte sichtbar machen).
     gpu_status = gpu_manager.get_status()
+    models_present = {
+        "dino": (
+            _weights_present("grounding_dino_swinb", ("*.pth", "*.pt"))
+            or _weights_present("grounding_dino_1.5", ("*.pth", "*.pt"))
+        ),
+        "sam": _weights_present("sam2.1", ("*.pth", "*.pt")),
+    }
     return {
-        "status": "ok",
+        "status": "ok" if all(models_present.values()) else "degraded",
         "version": VERSION,
         "gpu": gpu_status,
         "yolo": yolo_wrapper.get_runtime_status(),
         "classifier": yolo_wrapper.get_classifier_status(),
-        "models_present": {
-            "dino": (
-                _weights_present("grounding_dino_swinb", ("*.pth", "*.pt"))
-                or _weights_present("grounding_dino_1.5", ("*.pth", "*.pt"))
-            ),
-            "sam": _weights_present("sam2.1", ("*.pth", "*.pt")),
-        },
+        "models_present": models_present,
         "device_config": {
             "gpu_device": settings.gpu_device,
             "yolo_device": settings.effective_yolo_device,
