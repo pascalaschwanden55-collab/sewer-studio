@@ -1,99 +1,209 @@
 using System.Globalization;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Dashboard;
 
-public sealed record DashboardBucket(
-    string Label,
-    int Count,
-    double Percent);
+public sealed record DashboardBucket(string Key, string Label, int Count, double Percent)
+{
+    public DashboardBucket(string label, int count, double percent)
+        : this(label, label, count, percent)
+    {
+    }
+}
 
-public sealed record DashboardCostBucket(
-    string Label,
-    int Count,
-    decimal Cost,
-    double Percent);
+public sealed record DashboardCostBucket(string Key, string Label, int Count, decimal Cost, double Percent)
+{
+    public DashboardCostBucket(string label, int count, decimal cost, double percent)
+        : this(label, label, count, cost, percent)
+    {
+    }
+}
+
+public sealed record ZustandBucket(string Key, string Label, int Count, double Percent);
+
+public sealed record ZustandVerteilung(IReadOnlyList<ZustandBucket> Buckets)
+{
+    public int Total => Buckets.Sum(b => b.Count);
+}
 
 public sealed record DashboardStatistics(
-    int TotalHoldings,
+    int HoldingCount,
+    int SchachtCount,
     double TotalLengthMeters,
     decimal TotalCost,
-    IReadOnlyList<DashboardBucket> ConditionClasses,
-    IReadOnlyList<DashboardBucket> DamageGroups,
-    IReadOnlyList<DashboardCostBucket> DnCostGroups)
+    ZustandVerteilung Haltungen,
+    ZustandVerteilung Schaechte,
+    IReadOnlyList<DashboardBucket> TopSchaeden,
+    IReadOnlyList<DashboardCostBucket> HaltungDnCosts,
+    int SanierenHaltungen,
+    int HaltungenGesamt,
+    int SchaechteMitMassnahmen,
+    int DringendCount,
+    int OhneZustandCount)
 {
-    public bool HasHoldings => TotalHoldings > 0;
+    public bool HasData => HoldingCount > 0 || SchachtCount > 0;
+    public bool HasHoldings => HoldingCount > 0;
+
+    // Kompatibilitaet fuer bestehende Preview-/Overview-Bindings bis zur UI-Migration.
+    public int TotalHoldings => HoldingCount;
+    public IReadOnlyList<DashboardBucket> DamageGroups => TopSchaeden;
+    public IReadOnlyList<DashboardCostBucket> DnCostGroups => HaltungDnCosts;
+    public IReadOnlyList<DashboardBucket> ConditionClasses =>
+        Haltungen.Buckets.Select(b => new DashboardBucket(b.Key, b.Label, b.Count, b.Percent)).ToList();
 }
 
 public static class DashboardStatisticsBuilder
 {
-    private static readonly string[] ConditionOrder = ["0", "1", "2", "3", "4", "5", "Unbekannt"];
+    private static readonly string[] ZustandOrder = ["0", "1", "2", "3", "4", "ohne"];
+
+    private static readonly IReadOnlyDictionary<string, string> ZustandLabels =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["0"] = "Z0",
+            ["1"] = "Z1",
+            ["2"] = "Z2",
+            ["3"] = "Z3",
+            ["4"] = "Z4",
+            ["ohne"] = "ohne Zustand"
+        };
+
+    public static DashboardStatistics Build(Project? project, ProjectCostStore? haltungCosts, ProjectCostStore? schachtCosts)
+    {
+        var holdings = project?.Data?.ToList() ?? new List<HaltungRecord>();
+        var schaechte = project?.SchaechteData?.ToList() ?? new List<SchachtRecord>();
+        var hCostMap = haltungCosts?.ByHolding ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
+        var sCostMap = schachtCosts?.ByHolding ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
+
+        var hVerteilung = BuildZustandVerteilung(holdings.Select(r => r.GetFieldValue("Zustandsklasse")));
+        var sVerteilung = BuildZustandVerteilung(schaechte.Select(r => r.GetFieldValue("Zustandsklasse")));
+        var totalCost = hCostMap.Values.Sum(ResolveNetTotal) + sCostMap.Values.Sum(ResolveNetTotal);
+
+        return new DashboardStatistics(
+            holdings.Count,
+            schaechte.Count,
+            Math.Round(holdings.Sum(r => ParseDouble(r.GetFieldValue("Haltungslaenge_m")) ?? 0d), 2),
+            totalCost,
+            hVerteilung,
+            sVerteilung,
+            BuildDamageGroups(holdings),
+            BuildDnCostGroups(holdings, hCostMap),
+            holdings.Count(r => IsJa(r.GetFieldValue("Sanieren_JaNein"))),
+            holdings.Count,
+            sCostMap.Values.Count(c => ResolveNetTotal(c) > 0m),
+            CountKeys(hVerteilung, "0", "1") + CountKeys(sVerteilung, "0", "1"),
+            CountKeys(hVerteilung, "ohne") + CountKeys(sVerteilung, "ohne"));
+    }
 
     public static DashboardStatistics Build(IEnumerable<HaltungRecord>? records)
     {
-        var list = records?.ToList() ?? new List<HaltungRecord>();
-        var total = list.Count;
-        var totalLength = list.Sum(r => ParseDouble(r.GetFieldValue("Haltungslaenge_m")) ?? 0d);
-        var totalCost = list.Sum(r => ParseDecimal(r.GetFieldValue("Kosten")) ?? 0m);
+        var project = new Project();
+        foreach (var record in records ?? Enumerable.Empty<HaltungRecord>())
+            project.Data.Add(record);
 
-        return new DashboardStatistics(
-            total,
-            totalLength,
-            totalCost,
-            BuildConditionClasses(list, total),
-            BuildDamageGroups(list),
-            BuildDnCostGroups(list, totalCost));
+        return Build(project, new ProjectCostStore(), new ProjectCostStore());
     }
 
-    private static IReadOnlyList<DashboardBucket> BuildConditionClasses(IReadOnlyList<HaltungRecord> records, int total)
+    public static string NormalizeZustandsklasse(object? value)
     {
-        var counts = records
-            .GroupBy(r => NormalizeCondition(r.GetFieldValue("Zustandsklasse")), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        var text = (value?.ToString() ?? string.Empty).Trim();
+        if (text.Length == 0)
+            return "ohne";
 
-        return ConditionOrder
-            .Select(label => new DashboardBucket(label, counts.GetValueOrDefault(label), Percent(counts.GetValueOrDefault(label), total)))
-            .Where(b => b.Count > 0 || b.Label != "Unbekannt")
-            .ToList();
+        var normalized = text.Replace(',', '.');
+        if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        {
+            var rounded = (int)Math.Round(number, MidpointRounding.AwayFromZero);
+            return rounded is >= 0 and <= 4 ? rounded.ToString(CultureInfo.InvariantCulture) : "ohne";
+        }
+
+        if (text.Length == 1 && text[0] is >= '0' and <= '4')
+            return text;
+
+        return "ohne";
+    }
+
+    private static ZustandVerteilung BuildZustandVerteilung(IEnumerable<string?> values)
+    {
+        var normalizedValues = values.Select(NormalizeZustandsklasse).ToList();
+        var total = normalizedValues.Count;
+        var counts = normalizedValues
+            .GroupBy(v => v, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
+        return new ZustandVerteilung(
+            ZustandOrder
+                .Select(key => new ZustandBucket(
+                    key,
+                    ZustandLabels[key],
+                    counts.GetValueOrDefault(key),
+                    Percent(counts.GetValueOrDefault(key), total)))
+                .ToList());
     }
 
     private static IReadOnlyList<DashboardBucket> BuildDamageGroups(IReadOnlyList<HaltungRecord> records)
     {
-        var codes = records.SelectMany(EnumerateDamageCodes)
+        var codes = records
+            .SelectMany(EnumerateDamageCodes)
             .Select(NormalizeDamageGroup)
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .ToList();
 
         var total = codes.Count;
         if (total == 0)
-            return new[] { new DashboardBucket("Keine Daten", 0, 0d) };
+            return Array.Empty<DashboardBucket>();
 
         return codes
             .GroupBy(c => c, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new DashboardBucket(g.Key, g.Count(), Percent(g.Count(), total)))
+            .Select(g => new DashboardBucket(g.Key, g.Key, g.Count(), Percent(g.Count(), total)))
             .OrderByDescending(b => b.Count)
-            .ThenBy(b => b.Label)
+            .ThenBy(b => b.Key, StringComparer.OrdinalIgnoreCase)
             .Take(6)
             .ToList();
     }
 
-    private static IReadOnlyList<DashboardCostBucket> BuildDnCostGroups(IReadOnlyList<HaltungRecord> records, decimal totalCost)
+    private static IReadOnlyList<DashboardCostBucket> BuildDnCostGroups(
+        IReadOnlyList<HaltungRecord> records,
+        IReadOnlyDictionary<string, HoldingCost> haltungCosts)
     {
-        var buckets = records
-            .GroupBy(r => NormalizeDn(r.GetFieldValue("DN_mm")), StringComparer.OrdinalIgnoreCase)
-            .Select(g =>
+        var rows = records
+            .Select(record =>
             {
-                var cost = g.Sum(r => ParseDecimal(r.GetFieldValue("Kosten")) ?? 0m);
-                return new DashboardCostBucket(g.Key, g.Count(), cost, Percent(cost, totalCost));
+                var holding = (record.GetFieldValue("Haltungsname") ?? string.Empty).Trim();
+                var cost = TryGetCostByHolding(haltungCosts, holding);
+                return new
+                {
+                    DnKey = NormalizeDnKey(record.GetFieldValue("DN_mm")),
+                    Cost = cost is null ? 0m : ResolveNetTotal(cost)
+                };
             })
-            .OrderBy(b => DnSortKey(b.Label))
-            .ThenBy(b => b.Label)
             .ToList();
 
-        return buckets.Count == 0
-            ? new[] { new DashboardCostBucket("Keine Daten", 0, 0m, 0d) }
-            : buckets;
+        var totalCost = rows.Sum(r => r.Cost);
+        return rows
+            .GroupBy(r => r.DnKey, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new DashboardCostBucket(
+                g.Key,
+                g.Key == "?" ? "DN ?" : $"DN {g.Key}",
+                g.Count(),
+                g.Sum(x => x.Cost),
+                Percent(g.Sum(x => x.Cost), totalCost)))
+            .OrderBy(b => DnSortKey(b.Key))
+            .ThenBy(b => b.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static HoldingCost? TryGetCostByHolding(IReadOnlyDictionary<string, HoldingCost> haltungCosts, string holding)
+    {
+        if (string.IsNullOrWhiteSpace(holding))
+            return null;
+
+        if (haltungCosts.TryGetValue(holding, out var direct))
+            return direct;
+
+        return haltungCosts.FirstOrDefault(kvp =>
+            string.Equals(kvp.Key, holding, StringComparison.OrdinalIgnoreCase)).Value;
     }
 
     private static IEnumerable<string> EnumerateDamageCodes(HaltungRecord record)
@@ -114,39 +224,40 @@ public static class DashboardStatisticsBuilder
         }
     }
 
-    private static string NormalizeCondition(string? value)
-    {
-        var text = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(text))
-            return "Unbekannt";
-
-        return ConditionOrder.Contains(text, StringComparer.OrdinalIgnoreCase) ? text : "Unbekannt";
-    }
-
     private static string NormalizeDamageGroup(string? code)
     {
-        var text = new string((code ?? "").Trim().ToUpperInvariant().TakeWhile(char.IsLetterOrDigit).ToArray());
+        var text = new string((code ?? string.Empty).Trim().ToUpperInvariant().TakeWhile(char.IsLetterOrDigit).ToArray());
         if (text.Length == 0)
-            return "";
+            return string.Empty;
+
         return text.Length <= 3 ? text : text[..3];
     }
 
-    private static string NormalizeDn(string? value)
+    private static string NormalizeDnKey(string? value)
     {
         var dn = ParseDouble(value);
         if (dn is null || dn <= 0)
-            return "DN ?";
+            return "?";
 
-        return $"DN {Math.Round(dn.Value, 0):0}";
+        return Math.Round(dn.Value, 0).ToString("0", CultureInfo.InvariantCulture);
     }
 
-    private static int DnSortKey(string label)
-    {
-        var digits = new string(label.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+    private static int DnSortKey(string key)
+        => int.TryParse(key, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value
             : int.MaxValue;
+
+    private static int CountKeys(ZustandVerteilung verteilung, params string[] keys)
+    {
+        var set = keys.ToHashSet(StringComparer.Ordinal);
+        return verteilung.Buckets.Where(b => set.Contains(b.Key)).Sum(b => b.Count);
     }
+
+    private static bool IsJa(string? value)
+        => string.Equals((value ?? string.Empty).Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal ResolveNetTotal(HoldingCost? cost)
+        => TablePauschaleCostHelper.ResolveNetTotal(cost);
 
     private static double Percent(int count, int total)
         => total <= 0 ? 0d : Math.Round(count * 100d / total, 1);
@@ -162,14 +273,6 @@ public static class DashboardStatisticsBuilder
             : null;
     }
 
-    private static decimal? ParseDecimal(string? value)
-    {
-        var text = NormalizeNumber(value);
-        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : null;
-    }
-
     private static string NormalizeNumber(string? value)
-        => (value ?? "").Trim().Replace("'", "").Replace(" ", "").Replace(',', '.');
+        => (value ?? string.Empty).Trim().Replace("'", string.Empty).Replace(" ", string.Empty).Replace(',', '.');
 }
