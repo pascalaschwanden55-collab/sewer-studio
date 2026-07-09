@@ -824,7 +824,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 return;
             var syncStore = new ProjectCostStoreRepository().Load(syncProjectPath, out var syncLoadError);
             if (syncLoadError is null)
+            {
                 _sp.CostFieldSync.Sync(_shell.Project, syncStore);
+                _sp.DashboardRefresh.NotifyCostsChanged();
+            }
         };
 
         SanierungOptimizationViewModel? optimizationVm = null;

@@ -55,6 +55,7 @@ namespace AuswertungPro.Next.UI
         // Setter nur fuer Tests (InternalsVisibleTo): echte Dialoge durch Fakes ersetzen.
         public IDialogService Dialogs { get; internal set; } = new DialogService();
         public ToastService Toasts { get; } = new ToastService();
+        public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();

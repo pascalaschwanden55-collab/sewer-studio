@@ -524,7 +524,7 @@ git commit -m "feat: startfilter fuer dashboard-navigation"
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Pages/SchachtSanierungsMatrixPageViewModel.cs`
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs`
 
-- [ ] **Step 1: DashboardRefreshNotifier erstellen**
+- [x] **Step 1: DashboardRefreshNotifier erstellen**
 
 ```csharp
 namespace AuswertungPro.Next.UI.Services;
@@ -536,7 +536,7 @@ public sealed class DashboardRefreshNotifier
 }
 ```
 
-- [ ] **Step 2: ServiceProvider erweitern**
+- [x] **Step 2: ServiceProvider erweitern**
 
 In `ServiceProvider`:
 
@@ -544,7 +544,7 @@ In `ServiceProvider`:
 public DashboardRefreshNotifier DashboardRefresh { get; } = new();
 ```
 
-- [ ] **Step 3: Matrix-Saves melden**
+- [x] **Step 3: Matrix-Saves melden**
 
 Nach erfolgreichem `_costRepo.Save(...)` und nach Status-Setzen:
 
@@ -560,7 +560,7 @@ Im bestehenden `costCalcVm.Saved += () => { ... }`-Handler in `DataPageViewModel
 _sp.DashboardRefresh.NotifyCostsChanged();
 ```
 
-- [ ] **Step 4: OverviewPageViewModel Dashboard-State einbauen**
+- [x] **Step 4: OverviewPageViewModel Dashboard-State einbauen**
 
 Fuege Felder/Properties ein:
 
@@ -579,7 +579,7 @@ public DashboardStatistics? ActiveDashboard => ShowFullDashboard ? Dashboard : S
 
 Konstruktor initialisiert Timer mit 300 ms und laedt `IsProjectListCollapsed` aus Settings.
 
-- [ ] **Step 5: Kosten-Stores laden und Builder aufrufen**
+- [x] **Step 5: Kosten-Stores laden und Builder aufrufen**
 
 Implementiere:
 
@@ -595,7 +595,7 @@ private DashboardStatistics BuildStatsFor(Project project, string? projectPath, 
 
 `LoadCostStore` ruft `repo.Load(projectPath, out var error)` und gibt bei Fehler leeren Store + `false` zurueck.
 
-- [ ] **Step 6: Debounce-Refresh verdrahten**
+- [x] **Step 6: Debounce-Refresh verdrahten**
 
 Abonnieren:
 
@@ -607,11 +607,11 @@ _sp.DashboardRefresh.CostsChanged += DashboardCostsChanged;
 
 Bei Events `ScheduleDashboardRefresh()`; im Timer `RefreshDashboard()`.
 
-- [ ] **Step 7: Dispose sauber erweitern**
+- [x] **Step 7: Dispose sauber erweitern**
 
 Beim Dispose Timer stoppen und alle Events abmelden.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.UI/Services/DashboardRefreshNotifier.cs src/AuswertungPro.Next.UI/ServiceProvider.cs src/AuswertungPro.Next.UI/ViewModels/Pages/OverviewPageViewModel.cs src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs src/AuswertungPro.Next.UI/ViewModels/Pages/SchachtSanierungsMatrixPageViewModel.cs src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs

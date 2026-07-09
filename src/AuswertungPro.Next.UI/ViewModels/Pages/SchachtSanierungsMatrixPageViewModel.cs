@@ -281,6 +281,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         _touchedSchaechte.Clear();
         _hasUnsavedChanges = false;
         Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schaechte).";
+        _sp.DashboardRefresh.NotifyCostsChanged();
     }
 
     public bool ConfirmLeave()

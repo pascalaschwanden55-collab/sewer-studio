@@ -3,12 +3,15 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Text.Json;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using System;
 using AuswertungPro.Next.Application.Dashboard;
+using AuswertungPro.Next.Infrastructure.Costs;
+using System.Windows.Threading;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -25,14 +28,22 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private string? _previewedPath;
         private readonly ShellViewModel _shell;
         private readonly ServiceProvider _sp;
+        private readonly DispatcherTimer _dashboardRefreshTimer;
+        private readonly ProjectCostStoreRepository _haltungCostRepo = new();
+        private readonly ProjectCostStoreRepository _schachtCostRepo = new("schacht_costs.json");
+        private Project? _subscribedProject;
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
-        public DashboardStatistics Dashboard => DashboardStatisticsBuilder.Build(Project.Data);
+        public bool ShowFullDashboard => _shell.IsProjectReady;
+        public DashboardStatistics? ActiveDashboard => ShowFullDashboard ? Dashboard : SelectedPreview?.Statistics;
 
         [ObservableProperty] private string? _lastProjectPath;
         [ObservableProperty] private string _projectStatus = string.Empty;
         [ObservableProperty] private string _filterText = string.Empty;
+        [ObservableProperty] private DashboardStatistics? _dashboard;
+        [ObservableProperty] private bool _isProjectListCollapsed;
+        [ObservableProperty] private string _dashboardCostText = "-";
 
         public ObservableCollection<ProjectOverviewEntry> ProjectEntries { get; } = new();
         private List<ProjectOverviewEntry> _allEntries = new();
@@ -50,9 +61,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             _shell = shell;
             _sp = sp;
+            _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
 
             LastProjectPath = _sp.Settings.LastProjectPath;
             ProjectStatus = BuildProjectStatus();
+            IsProjectListCollapsed = false;
 
             NewCommand = new RelayCommand(NewProject);
             OpenCommand = new RelayCommand(OpenProject);
@@ -64,6 +78,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             LoadAllProjects();
 
             _shell.PropertyChanged += ShellPropertyChanged;
+            _sp.DashboardRefresh.CostsChanged += DashboardCostsChanged;
+            SubscribeProject(_shell.Project);
+            RefreshDashboard();
         }
 
         public void Dispose()
@@ -73,6 +90,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             _disposed = true;
             _shell.PropertyChanged -= ShellPropertyChanged;
+            _sp.DashboardRefresh.CostsChanged -= DashboardCostsChanged;
+            UnsubscribeProject();
+            _dashboardRefreshTimer.Stop();
+            _dashboardRefreshTimer.Tick -= DashboardRefreshTimerTick;
         }
 
         private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -84,13 +105,113 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             {
                 OnPropertyChanged(nameof(Project));
                 OnPropertyChanged(nameof(IsProjectReady));
-                OnPropertyChanged(nameof(Dashboard));
+                OnPropertyChanged(nameof(ShowFullDashboard));
+                if (e.PropertyName == nameof(ShellViewModel.Project))
+                    SubscribeProject(_shell.Project);
+                ScheduleDashboardRefresh();
+                UpdateDashboardPresentation();
                 ProjectStatus = BuildProjectStatus();
                 LastProjectPath = _sp.Settings.LastProjectPath;
                 if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
                     LoadAllProjects();
             }
         }
+
+        partial void OnSelectedPreviewChanged(ProjectPreview? value)
+            => UpdateDashboardPresentation();
+
+        partial void OnDashboardChanged(DashboardStatistics? value)
+            => UpdateDashboardPresentation();
+
+        private void SubscribeProject(Project? project)
+        {
+            if (ReferenceEquals(_subscribedProject, project))
+                return;
+
+            UnsubscribeProject();
+            _subscribedProject = project;
+            if (_subscribedProject is null)
+                return;
+
+            _subscribedProject.Data.CollectionChanged += ProjectCollectionChanged;
+            _subscribedProject.SchaechteData.CollectionChanged += ProjectCollectionChanged;
+        }
+
+        private void UnsubscribeProject()
+        {
+            if (_subscribedProject is null)
+                return;
+
+            _subscribedProject.Data.CollectionChanged -= ProjectCollectionChanged;
+            _subscribedProject.SchaechteData.CollectionChanged -= ProjectCollectionChanged;
+            _subscribedProject = null;
+        }
+
+        private void ProjectCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => ScheduleDashboardRefresh();
+
+        private void DashboardCostsChanged(object? sender, EventArgs e)
+            => ScheduleDashboardRefresh();
+
+        private void DashboardRefreshTimerTick(object? sender, EventArgs e)
+        {
+            _dashboardRefreshTimer.Stop();
+            RefreshDashboard();
+        }
+
+        private void ScheduleDashboardRefresh()
+        {
+            if (_disposed)
+                return;
+
+            var dispatcher = _dashboardRefreshTimer.Dispatcher;
+            if (!dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke((Action)ScheduleDashboardRefresh);
+                return;
+            }
+
+            _dashboardRefreshTimer.Stop();
+            _dashboardRefreshTimer.Start();
+        }
+
+        private void RefreshDashboard()
+        {
+            if (_disposed)
+                return;
+
+            Dashboard = _shell.IsProjectReady
+                ? BuildStatsFor(_shell.Project, _sp.Settings.LastProjectPath, out _)
+                : null;
+        }
+
+        private DashboardStatistics BuildStatsFor(Project project, string? projectPath, out bool costAvailable)
+        {
+            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hOk);
+            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sOk);
+            costAvailable = hOk || sOk;
+            return DashboardStatisticsBuilder.Build(project, hCosts, sCosts);
+        }
+
+        private static ProjectCostStore LoadCostStore(ProjectCostStoreRepository repo, string? projectPath, out bool ok)
+        {
+            ok = false;
+            if (string.IsNullOrWhiteSpace(projectPath))
+                return new ProjectCostStore();
+
+            var store = repo.Load(projectPath, out var error);
+            ok = error is null;
+            return error is null ? store : new ProjectCostStore();
+        }
+
+        private void UpdateDashboardPresentation()
+        {
+            OnPropertyChanged(nameof(ActiveDashboard));
+            DashboardCostText = FormatDashboardCostText(ActiveDashboard);
+        }
+
+        private static string FormatDashboardCostText(DashboardStatistics? stats)
+            => stats is null ? "-" : $"{stats.TotalCost:N2} CHF";
 
     partial void OnFilterTextChanged(string value) => ApplyFilter();
 
@@ -326,7 +447,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             var res = _sp.Projects.Load(entry.Path);
             if (res.Ok && res.Value is not null)
             {
-                SelectedPreview = ProjectPreviewFactory.FromProject(res.Value, entry.Path);
+                var hCosts = LoadCostStore(_haltungCostRepo, entry.Path, out _);
+                var sCosts = LoadCostStore(_schachtCostRepo, entry.Path, out _);
+                SelectedPreview = ProjectPreviewFactory.FromProject(res.Value, entry.Path, hCosts, sCosts);
                 return;
             }
         }

@@ -1241,6 +1241,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             DetailEditStatus = "";
         _shell.Project.Dirty = true;
         Status = $"Gespeichert: {BelegteHaltungen} Haltungen, Total {GesamtTotal:N2} CHF.";
+        _sp.DashboardRefresh.NotifyCostsChanged();
         _sp.Dialogs.Info(
             $"Sanierungs-Matrix gespeichert.\n{BelegteHaltungen} Haltungen mit Massnahme, Total {GesamtTotal:N2} CHF (exkl. MwSt.).\n\nDas NPK-Leistungsverzeichnis exportierst du im Druckcenter.",
             "Sanierungs-Matrix");
