@@ -88,7 +88,7 @@ Damit „ändert sich sofort mit" wirklich stimmt, reicht `Dashboard => Build(..
 **Layout A** (vom Nutzer gewählt): Projektliste links (einklappbar), Dashboard rechts.
 
 **Projekt offen — volles Dashboard:**
-1. Kennzahlen-Zeile: **Haltungen · Schächte · Gesamtlänge · CHF Sanierung** (CHF = Haltungs-Total aus `costs.json` + Schacht-Total aus `schacht_costs.json`; Betrags-Bedeutung siehe Offener Punkt 4).
+1. Kennzahlen-Zeile: **Haltungen · Schächte · Gesamtlänge · CHF Sanierung** (CHF = **Massnahmen-Total exkl. MwSt**: Haltungs-Total aus `costs.json` + Schacht-Total aus `schacht_costs.json`).
 2. Zustand-Kachel (breit): zwei Donuts (Haltungen | Schächte) mit Symbol im Zentrum + gemeinsame, **tabellarisch ausgerichtete** Legende (Z0–Z4 + „ohne Zustand", je **Anzahl und %**, getrennt Halt/Sch).
 3. Häufigste Schäden (waagrechte Balken) | **Haltungskosten nach DN** (senkrechte Balken; die DN-Aufschlüsselung ist naturgemäss nur Haltungen — die Kachel heisst darum ausdrücklich so, damit die Summe erklärbar bleibt).
 4. Sanierungs-Fortschritt + Dringliches + „ohne Zustand"-Zähler.
@@ -132,4 +132,4 @@ A4-Übersichtsseite in **QuestPDF** (scharfe Vektor-Seite), Einbau **ganz vorne 
 1. **Schacht-Segmente:** Etappe 1 reine Anzeige, nicht klickbar. Nur Haltungs-Segmente/-Balken navigieren. *(Entschieden.)*
 2. **Gelb Z2:** Palette bleibt `#FFFF00`; View darf für Lesbarkeit leicht dunkler rendern. *(Entschieden.)*
 3. **Vorschau:** Nur das markierte Projekt einzeln laden (wie `ProjectPreviewFactory`), nicht alle vorab; bei spürbarer Blockade grosser Projekte später async/cancelbar. *(Entschieden.)*
-4. **Kostensumme-Bedeutung** *(offen — Nutzer entscheidet):* „CHF Sanierung" = **Massnahmen-Total** exkl. MwSt (identisch zur Sanierungs-/Schacht-Matrix, `GesamtTotal`) — ODER der **NPK-Angebotsbetrag** mit Einrichtung/Zuschlägen/MwSt (Druckcenter-Export). Beides sind verschiedene, legitime Zahlen. **Annahme bis zur Klärung: Massnahmen-Total (exkl. MwSt).**
+4. **Kostensumme-Bedeutung:** „CHF Sanierung" = **Massnahmen-Total exkl. MwSt** — Summe der pro-Objekt-Totals aus `costs.json` + `schacht_costs.json` (identisch zur Sanierungs-/Schacht-Matrix `GesamtTotal`). Ausdrücklich NICHT der NPK-Angebotsbetrag mit Einrichtung/Zuschlägen/MwSt. *(Entschieden.)*
