@@ -22,7 +22,7 @@ SPLIT_SEED = 1337
 
 
 @router.post("/training/export-yolo", response_model=TrainingExportResponse)
-async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
+def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     """Export training samples to YOLO format (images + labels + data.yaml)."""
     out = _resolve_output_dir(req.output_dir)
 

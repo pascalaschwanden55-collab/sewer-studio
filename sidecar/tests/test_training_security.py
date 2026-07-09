@@ -2,6 +2,7 @@
 
 import base64
 import io
+import inspect
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -138,6 +139,29 @@ def test_training_export_rejects_invalid_base64_image(tmp_path, monkeypatch):
 
     assert resp.status_code == 400
     assert not (root / "bad-image").exists()
+
+
+def test_training_export_rejects_more_than_500_samples():
+    from sidecar.main import app
+
+    image = _make_test_image()
+    client = TestClient(app)
+    resp = client.post(
+        "/training/export-yolo",
+        json={
+            "samples": [_sample("BBA", image) for _ in range(501)],
+            "output_dir": "too-many",
+            "train_split": 1.0,
+        },
+    )
+
+    assert resp.status_code == 422
+
+
+def test_training_export_route_is_sync_threadpool_handler():
+    from sidecar.routes import training
+
+    assert not inspect.iscoroutinefunction(training.export_yolo)
 
 
 def test_training_export_overwrite_removes_old_generated_dataset_files(tmp_path, monkeypatch):
