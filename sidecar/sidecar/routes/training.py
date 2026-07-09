@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import random
+import shutil
 import logging
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from ..schemas.segmentation import TrainingExportRequest, TrainingExportResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+SPLIT_SEED = 1337
 
 
 @router.post("/training/export-yolo", response_model=TrainingExportResponse)
@@ -48,6 +50,8 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     lbl_train = out / "labels" / "train"
     lbl_val = out / "labels" / "val"
 
+    _prepare_output_dir(out, req.overwrite)
+
     for d in [img_train, img_val, lbl_train, lbl_val]:
         d.mkdir(parents=True, exist_ok=True)
 
@@ -60,10 +64,7 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     class_map = {name: idx for idx, name in enumerate(class_list)}
 
     # Shuffle and split
-    indices = list(range(len(req.samples)))
-    random.shuffle(indices)
-    split_idx = int(len(indices) * req.train_split)
-    train_indices = set(indices[:split_idx])
+    train_indices = _split_indices(len(req.samples), req.train_split)
 
     train_count = 0
     val_count = 0
@@ -130,6 +131,29 @@ def _resolve_output_dir(output_dir: str) -> Path:
         )
 
     return resolved
+
+
+def _prepare_output_dir(out: Path, overwrite: bool) -> None:
+    generated_paths = [out / "images", out / "labels", out / "data.yaml"]
+    existing = [p for p in generated_paths if p.exists()]
+    if existing and not overwrite:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="training export already exists; set overwrite=true to replace generated files",
+        )
+
+    for path in generated_paths:
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+
+
+def _split_indices(sample_count: int, train_split: float) -> set[int]:
+    indices = list(range(sample_count))
+    random.Random(SPLIT_SEED).shuffle(indices)
+    split_idx = int(len(indices) * train_split)
+    return set(indices[:split_idx])
 
 
 def _decode_training_image(image_base64: str) -> Image.Image:

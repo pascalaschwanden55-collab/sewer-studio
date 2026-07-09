@@ -35,6 +35,21 @@ def _request(output_dir: str, image_base64: str) -> dict:
     }
 
 
+def _sample(class_name: str, image_base64: str | None = None) -> dict:
+    return {
+        "image_base64": image_base64 or _make_test_image(),
+        "labels": [
+            {
+                "class_name": class_name,
+                "x_center": 0.5,
+                "y_center": 0.5,
+                "width": 0.2,
+                "height": 0.1,
+            }
+        ],
+    }
+
+
 def test_training_export_allows_relative_output_inside_sandbox(tmp_path, monkeypatch):
     from sidecar.main import app
     from sidecar.routes import training
@@ -123,3 +138,66 @@ def test_training_export_rejects_invalid_base64_image(tmp_path, monkeypatch):
 
     assert resp.status_code == 400
     assert not (root / "bad-image").exists()
+
+
+def test_training_export_overwrite_removes_old_generated_dataset_files(tmp_path, monkeypatch):
+    from sidecar.main import app
+    from sidecar.routes import training
+
+    root = tmp_path / "exports"
+    out = root / "case-a"
+    stale_img = out / "images" / "train" / "sample_999999.jpg"
+    stale_lbl = out / "labels" / "train" / "sample_999999.txt"
+    stale_img.parent.mkdir(parents=True)
+    stale_lbl.parent.mkdir(parents=True)
+    stale_img.write_bytes(b"old")
+    stale_lbl.write_text("99 0.5 0.5 0.1 0.1", encoding="utf-8")
+    monkeypatch.setattr(training.settings, "training_export_root", str(root), raising=False)
+
+    client = TestClient(app)
+    resp = client.post(
+        "/training/export-yolo",
+        json={
+            "samples": [_sample("BBA")],
+            "output_dir": "case-a",
+            "train_split": 1.0,
+        },
+    )
+
+    assert resp.status_code == 200
+    assert not stale_img.exists()
+    assert not stale_lbl.exists()
+    label_files = list((out / "labels").rglob("*.txt"))
+    assert len(label_files) == 1
+    assert label_files[0].read_text(encoding="utf-8").startswith("0 ")
+
+
+def test_training_export_overwrite_false_rejects_existing_generated_dataset(tmp_path, monkeypatch):
+    from sidecar.main import app
+    from sidecar.routes import training
+
+    root = tmp_path / "exports"
+    existing = root / "case-a" / "labels" / "train" / "sample_000000.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_text("0 0.5 0.5 0.1 0.1", encoding="utf-8")
+    monkeypatch.setattr(training.settings, "training_export_root", str(root), raising=False)
+
+    client = TestClient(app)
+    resp = client.post(
+        "/training/export-yolo",
+        json={
+            "samples": [_sample("BBA")],
+            "output_dir": "case-a",
+            "train_split": 1.0,
+            "overwrite": False,
+        },
+    )
+
+    assert resp.status_code == 409
+    assert existing.exists()
+
+
+def test_training_export_split_is_deterministic():
+    from sidecar.routes.training import _split_indices
+
+    assert _split_indices(12, 0.75) == _split_indices(12, 0.75)

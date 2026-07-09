@@ -213,7 +213,8 @@ public sealed record TrainingExportSample(
 public sealed record TrainingExportRequestDto(
     [property: JsonPropertyName("samples")] IReadOnlyList<TrainingExportSample> Samples,
     [property: JsonPropertyName("output_dir")] string OutputDir,
-    [property: JsonPropertyName("train_split")] double TrainSplit
+    [property: JsonPropertyName("train_split")] double TrainSplit,
+    [property: JsonPropertyName("overwrite")] bool Overwrite = true
 );
 
 public sealed record TrainingExportResponseDto(

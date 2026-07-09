@@ -66,6 +66,7 @@ class TrainingExportRequest(BaseModel):
     samples: list[TrainingSample] = []
     output_dir: str = "./training_export"
     train_split: float = Field(default=0.8, ge=0.1, le=1.0)
+    overwrite: bool = True
 
 
 class TrainingExportResponse(BaseModel):
