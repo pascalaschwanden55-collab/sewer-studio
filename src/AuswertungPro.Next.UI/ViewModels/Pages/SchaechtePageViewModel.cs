@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
@@ -49,6 +50,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand MoveUpCommand { get; }
     public IRelayCommand MoveDownCommand { get; }
     public IRelayCommand SaveCommand { get; }
+    public IRelayCommand RefreshProtocolCommand { get; }
+    public IRelayCommand ImportProtocolCommand { get; }
     public IRelayCommand ClearSearchCommand { get; }
 
     public IRelayCommand EditSanierenOptionsCommand => _sanierenDropdownCommands.Edit;
@@ -125,6 +128,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
         SaveCommand = new RelayCommand(Save);
+        RefreshProtocolCommand = new RelayCommand(RefreshProtocol, CanRefreshProtocol);
+        ImportProtocolCommand = new RelayCommand(ImportProtocol);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
@@ -165,6 +170,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         (RemoveCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (RefreshProtocolCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
     partial void OnGridMinRowHeightChanged(double value)
@@ -401,6 +407,124 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var ok = _shell.TrySaveProject();
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
+    }
+
+    // "Aktualisieren": verknuepftes Protokoll neu einlesen -> Schacht komplett neu aufbauen (mit Warnung).
+    private bool CanRefreshProtocol()
+        => Selected is not null && !string.IsNullOrWhiteSpace(Selected.GetFieldValue("PDF_Path"));
+
+    private void RefreshProtocol()
+    {
+        var schacht = Selected;
+        if (schacht is null)
+            return;
+
+        var relPath = schacht.GetFieldValue("PDF_Path");
+        if (string.IsNullOrWhiteSpace(relPath))
+            return;
+
+        var projektOrdner = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projektOrdner))
+        {
+            _sp.Dialogs.Info("Kein Projekt geoeffnet.", "Aktualisieren");
+            return;
+        }
+
+        if (!_sp.Dialogs.ConfirmWarn(
+                "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
+                "Aktualisieren"))
+            return;
+
+        var absPath = ProjectPathResolver.ResolveFilePathFromProjectFolder(relPath, projektOrdner);
+        if (absPath is null)
+        {
+            _sp.Dialogs.Warn("Die verknuepfte Protokoll-Datei wurde nicht gefunden.", "Aktualisieren");
+            return;
+        }
+
+        var ergebnis = _sp.SchachtProtocolImport.Parse(absPath);
+        if (!ergebnis.IstSchachtprotokoll || string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
+        {
+            _sp.Dialogs.Warn("Das verknuepfte PDF ist kein lesbares Schachtprotokoll.", "Aktualisieren");
+            return;
+        }
+
+        // Relativen Pfad behalten (Datei liegt bereits im Projekt).
+        _sp.SchachtProtocolImport.Apply(schacht, ergebnis, relPath);
+
+        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+        _shell.Project.Dirty = true;
+        _shell.TrySaveProject();
+        LastResult = $"Schacht {ergebnis.Schachtnummer} aktualisiert ({ergebnis.Schaeden.Count} Beobachtungen).";
+    }
+
+    // "Protokoll importieren": einzelnes PDF waehlen -> bei Kollision nachfragen -> verteilen + anwenden.
+    private void ImportProtocol()
+    {
+        var projektOrdner = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projektOrdner))
+        {
+            _sp.Dialogs.Info("Kein Projekt geoeffnet.", "Protokoll importieren");
+            return;
+        }
+
+        var pdfPfad = _sp.Dialogs.OpenFile("Protokoll importieren", "PDF (*.pdf)|*.pdf");
+        if (string.IsNullOrWhiteSpace(pdfPfad))
+            return;
+
+        var ergebnis = _sp.SchachtProtocolImport.Parse(pdfPfad);
+        if (!ergebnis.IstSchachtprotokoll)
+        {
+            _sp.Dialogs.Warn("Das gewaehlte PDF ist kein Schachtprotokoll.", "Protokoll importieren");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
+        {
+            _sp.Dialogs.Warn("Im Protokoll wurde keine Schachtnummer gefunden.", "Protokoll importieren");
+            return;
+        }
+
+        var vorhanden = _sp.SchachtProtocolImport.FindSchacht(_shell.Project, ergebnis.Schachtnummer);
+        SchachtRecord ziel;
+        if (vorhanden is not null)
+        {
+            var wahl = _sp.Dialogs.ConfirmCancel(
+                $"Schacht {ergebnis.Schachtnummer} ist bereits vorhanden.\n\n" +
+                "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
+                "Protokoll importieren");
+
+            if (wahl == DialogConfirm.Cancel)
+                return;
+            if (wahl == DialogConfirm.Yes)
+            {
+                ziel = vorhanden;
+            }
+            else
+            {
+                ziel = new SchachtRecord();
+                lock (_shell.CollectionLock)
+                {
+                    Records.Add(ziel);
+                }
+            }
+        }
+        else
+        {
+            ziel = new SchachtRecord();
+            lock (_shell.CollectionLock)
+            {
+                Records.Add(ziel);
+            }
+        }
+
+        var relPath = _sp.SchachtProtocolImport.DistributePdf(projektOrdner, ergebnis.Schachtnummer, pdfPfad);
+        _sp.SchachtProtocolImport.Apply(ziel, ergebnis, relPath);
+        Selected = ziel;
+
+        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+        _shell.Project.Dirty = true;
+        _shell.TrySaveProject();
+        LastResult = $"Protokoll importiert: Schacht {ergebnis.Schachtnummer} ({ergebnis.Schaeden.Count} Beobachtungen).";
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
