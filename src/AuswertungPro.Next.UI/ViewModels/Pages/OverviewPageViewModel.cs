@@ -12,6 +12,7 @@ using System;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Infrastructure.Costs;
 using System.Windows.Threading;
+using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -37,6 +38,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public bool IsProjectReady => _shell.IsProjectReady;
         public bool ShowFullDashboard => _shell.IsProjectReady;
         public DashboardStatistics? ActiveDashboard => ShowFullDashboard ? Dashboard : SelectedPreview?.Statistics;
+        public bool HasActiveDashboard => ActiveDashboard?.HasData == true;
+        public bool ShowProjectChoice => !ShowFullDashboard && SelectedPreview is null;
+        public bool ShowDataEmptyState => !ShowProjectChoice && !HasActiveDashboard;
+        public string DashboardTitle => ShowFullDashboard ? "Projekt-Cockpit" : "Projektvorschau";
+        public string DashboardProjectName => ShowFullDashboard ? Project.Name ?? string.Empty : SelectedPreview?.Name ?? string.Empty;
 
         [ObservableProperty] private string? _lastProjectPath;
         [ObservableProperty] private string _projectStatus = string.Empty;
@@ -55,6 +61,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand ContinueCommand { get; }
         public IRelayCommand RefreshCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
+        public IRelayCommand<object?> NavigateConditionCommand { get; }
+        public IRelayCommand<object?> NavigateDamageCommand { get; }
+        public IRelayCommand<object?> NavigateDnCommand { get; }
+        public IRelayCommand ToggleProjectListCommand { get; }
         public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
         public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
@@ -66,7 +76,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             LastProjectPath = _sp.Settings.LastProjectPath;
             ProjectStatus = BuildProjectStatus();
-            IsProjectListCollapsed = false;
+            IsProjectListCollapsed = _sp.Settings.OverviewProjectListCollapsed;
 
             NewCommand = new RelayCommand(NewProject);
             OpenCommand = new RelayCommand(OpenProject);
@@ -74,6 +84,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
             RefreshCommand = new RelayCommand(LoadAllProjects);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
+            NavigateConditionCommand = new RelayCommand<object?>(NavigateCondition);
+            NavigateDamageCommand = new RelayCommand<object?>(NavigateDamage);
+            NavigateDnCommand = new RelayCommand<object?>(NavigateDn);
+            ToggleProjectListCommand = new RelayCommand(ToggleProjectList);
 
             LoadAllProjects();
 
@@ -106,6 +120,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 OnPropertyChanged(nameof(Project));
                 OnPropertyChanged(nameof(IsProjectReady));
                 OnPropertyChanged(nameof(ShowFullDashboard));
+                OnPropertyChanged(nameof(DashboardTitle));
+                OnPropertyChanged(nameof(DashboardProjectName));
                 if (e.PropertyName == nameof(ShellViewModel.Project))
                     SubscribeProject(_shell.Project);
                 ScheduleDashboardRefresh();
@@ -122,6 +138,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         partial void OnDashboardChanged(DashboardStatistics? value)
             => UpdateDashboardPresentation();
+
+        partial void OnIsProjectListCollapsedChanged(bool value)
+        {
+            _sp.Settings.OverviewProjectListCollapsed = value;
+            _sp.Settings.Save();
+        }
 
         private void SubscribeProject(Project? project)
         {
@@ -207,11 +229,46 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private void UpdateDashboardPresentation()
         {
             OnPropertyChanged(nameof(ActiveDashboard));
+            OnPropertyChanged(nameof(HasActiveDashboard));
+            OnPropertyChanged(nameof(ShowProjectChoice));
+            OnPropertyChanged(nameof(ShowDataEmptyState));
+            OnPropertyChanged(nameof(DashboardTitle));
+            OnPropertyChanged(nameof(DashboardProjectName));
             DashboardCostText = FormatDashboardCostText(ActiveDashboard);
         }
 
         private static string FormatDashboardCostText(DashboardStatistics? stats)
             => stats is null ? "-" : $"{stats.TotalCost:N2} CHF";
+
+        private void NavigateCondition(object? key)
+        {
+            var text = key?.ToString();
+            if (string.IsNullOrWhiteSpace(text) || string.Equals(text, "ohne", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _shell.NavigateToDataPage(DataPageStartFilter.FromDashboardZustand(text));
+        }
+
+        private void NavigateDamage(object? key)
+        {
+            var text = key?.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            _shell.NavigateToDataPage(DataPageStartFilter.FromDashboardSchaden(text));
+        }
+
+        private void NavigateDn(object? key)
+        {
+            var text = key?.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            _shell.NavigateToDataPage(DataPageStartFilter.FromDashboardDn(text));
+        }
+
+        private void ToggleProjectList()
+            => IsProjectListCollapsed = !IsProjectListCollapsed;
 
     partial void OnFilterTextChanged(string value) => ApplyFilter();
 

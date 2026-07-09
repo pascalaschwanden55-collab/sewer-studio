@@ -1,45 +1,66 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.OverviewPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
-             AllowDrop="True" Drop="OverviewPage_Drop" DragOver="OverviewPage_DragOver">
+             AllowDrop="True"
+             Drop="OverviewPage_Drop"
+             DragOver="OverviewPage_DragOver">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <local:ProjectListWidthConverter x:Key="ProjectListWidth"/>
+        <local:ProjectListGapWidthConverter x:Key="ProjectListGapWidth"/>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- ═══ HEADER ═══ -->
-        <StackPanel Margin="0,0,0,16">
-            <TextBlock Text="Projektübersicht" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Projekt öffnen, erstellen oder fortsetzen"
-                       Margin="0,4,0,0" Style="{StaticResource Caption}"/>
-            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                <Button Content="Neues Projekt" Command="{Binding NewCommand}"
-                        Style="{StaticResource PrimaryButton}" Padding="16,8"
-                        ToolTip="Neues Projekt mit leerem Stammdatenblatt anlegen."/>
-                <Button Content="Projekt öffnen" Command="{Binding OpenCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
-                        ToolTip="SewerStudio-Projektdatei auswaehlen und laden."/>
-                <Button Content="Letztes Projekt fortsetzen" Command="{Binding ContinueCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
-                        ToolTip="Zuletzt verwendetes Projekt direkt oeffnen."/>
-                <Button Content="Aktualisieren" Command="{Binding RefreshCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
-                        ToolTip="Projektliste und zuletzt verwendete Eintraege neu laden."/>
+        <DockPanel Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock Text="Uebersicht" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="{Binding ProjectStatus}" Margin="0,4,0,0" Style="{StaticResource Caption}"/>
             </StackPanel>
-        </StackPanel>
+            <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Command="{Binding ToggleProjectListCommand}"
+                        Style="{StaticResource ToolbarButton}"
+                        Width="34"
+                        Padding="0"
+                        Margin="0,0,6,0"
+                        ToolTip="Projektliste ein- oder ausklappen">
+                    <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                </Button>
+                <Button Content="Neues Projekt"
+                        Command="{Binding NewCommand}"
+                        Style="{StaticResource ToolbarButtonAccent}"
+                        Margin="0,0,6,0"/>
+                <Button Content="Oeffnen"
+                        Command="{Binding OpenCommand}"
+                        Style="{StaticResource ToolbarButton}"
+                        Margin="0,0,6,0"/>
+                <Button Content="Fortsetzen"
+                        Command="{Binding ContinueCommand}"
+                        Style="{StaticResource ToolbarButton}"
+                        Margin="0,0,6,0"/>
+                <Button Content="Aktualisieren"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ToolbarButton}"/>
+            </WrapPanel>
+        </DockPanel>
 
-        <!-- ═══ HAUPTBEREICH ═══ -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="{Binding IsProjectListCollapsed, Converter={StaticResource ProjectListWidth}}"/>
+                <ColumnDefinition Width="{Binding IsProjectListCollapsed, Converter={StaticResource ProjectListGapWidth}}"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ── LINKS: Projektliste ── -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
+            <Border Grid.Column="0"
+                    Style="{StaticResource Card}"
+                    Visibility="{Binding IsProjectListCollapsed, Converter={StaticResource InverseBoolToVis}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -48,39 +69,50 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Titel -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Alle Projekte" FontSize="15" FontWeight="SemiBold"
+                    <DockPanel Margin="0,0,0,10">
+                        <TextBlock Text="Projekte"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"/>
-                        <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="10"
-                                Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding ProjectEntries.Count}" FontSize="11" FontWeight="Bold"
+                        <Border DockPanel.Dock="Right"
+                                Background="{DynamicResource AccentSubtleBrush}"
+                                CornerRadius="8"
+                                Padding="7,2">
+                            <TextBlock Text="{Binding ProjectEntries.Count}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentBrush}"/>
                         </Border>
-                    </StackPanel>
+                    </DockPanel>
 
-                    <!-- Suchfeld -->
-                    <Border Grid.Row="1" CornerRadius="6" BorderThickness="1"
+                    <Border Grid.Row="1"
+                            CornerRadius="6"
+                            BorderThickness="1"
                             BorderBrush="{DynamicResource BorderLightBrush}"
-                            Background="{DynamicResource BgLightBrush}" Margin="0,0,0,10">
+                            Background="{DynamicResource BgLightBrush}"
+                            Margin="0,0,0,10">
                         <Grid>
-                            <TextBlock Text="Projekt suchen..." FontSize="12"
+                            <TextBlock Text="Suchen"
+                                       FontSize="12"
                                        Foreground="{DynamicResource MutedBrush}"
-                                       VerticalAlignment="Center" Margin="10,0"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0"
                                        IsHitTestVisible="False"
                                        Visibility="{Binding FilterText, Converter={x:Static local:StringToVisibilityConverter.Instance}, ConverterParameter=invert}"/>
                             <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="Transparent" BorderThickness="0"
-                                     FontSize="12" Padding="8,6"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     FontSize="12"
+                                     Padding="8,6"
                                      Foreground="{DynamicResource TextBrush}"/>
                         </Grid>
                     </Border>
 
-                    <!-- Projektliste mit Karten -->
                     <ListBox Grid.Row="2"
                              ItemsSource="{Binding ProjectEntries}"
                              SelectedItem="{Binding SelectedProjectEntry, Mode=TwoWay}"
-                             Background="Transparent" BorderThickness="0"
+                             Background="Transparent"
+                             BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              MouseDoubleClick="ProjectListBox_MouseDoubleClick">
                         <ListBox.ItemContainerStyle>
@@ -91,8 +123,9 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="ItemBorder" CornerRadius="8"
-                                                    BorderThickness="1" Padding="0"
+                                            <Border x:Name="ItemBorder"
+                                                    CornerRadius="6"
+                                                    BorderThickness="1"
                                                     BorderBrush="{DynamicResource BorderLightBrush}"
                                                     Background="{DynamicResource CardBrush}"
                                                     Cursor="Hand">
@@ -100,16 +133,12 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background"
-                                                            Value="{DynamicResource AccentSubtleBrush}"/>
-                                                    <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                            Value="{DynamicResource AccentBrush}"/>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                 </Trigger>
                                                 <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background"
-                                                            Value="{DynamicResource AccentSubtleBrush}"/>
-                                                    <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                            Value="{DynamicResource AccentBrush}"/>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -125,9 +154,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Farbbalken links -->
-                                    <Border Grid.Column="0" CornerRadius="4,0,0,4"
-                                            Width="5" HorizontalAlignment="Stretch">
+                                    <Border Grid.Column="0" CornerRadius="5,0,0,5">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -140,23 +167,30 @@
                                         </Border.Style>
                                     </Border>
 
-                                    <!-- Inhalt -->
-                                    <StackPanel Grid.Column="1" Margin="10,8,10,8">
+                                    <StackPanel Grid.Column="1" Margin="10,8">
                                         <DockPanel>
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextBrush}"/>
-                                            <!-- Badge: Haltungen -->
-                                            <Border DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Border DockPanel.Dock="Right"
                                                     Background="{DynamicResource AccentSubtleBrush}"
-                                                    CornerRadius="8" Padding="6,2" Margin="6,0,0,0">
-                                                <TextBlock Text="{Binding StatsText}" FontSize="10"
+                                                    CornerRadius="8"
+                                                    Padding="6,2"
+                                                    Margin="6,0,0,0">
+                                                <TextBlock Text="{Binding StatsText}"
+                                                           FontSize="10"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
                                         </DockPanel>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0">
+                                        <TextBlock FontSize="11"
+                                                   Foreground="{DynamicResource MutedBrush}"
+                                                   Margin="0,3,0,0"
+                                                   TextTrimming="CharacterEllipsis">
                                             <Run Text="{Binding ModifiedAtDisplay, Mode=OneWay}"/>
-                                            <Run Text=" · "/>
+                                            <Run Text=" / "/>
                                             <Run Text="{Binding FolderName, Mode=OneWay}"/>
                                         </TextBlock>
                                     </StackPanel>
@@ -165,253 +199,285 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- Buttons unten -->
                     <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Öffnen" Command="{Binding OpenSelectedCommand}"
-                                Style="{StaticResource PrimaryButton}" Padding="14,6"/>
-                        <Button Content="Löschen" Command="{Binding DeleteSelectedCommand}"
-                                Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                        <Button Content="Oeffnen"
+                                Command="{Binding OpenSelectedCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Padding="14,6"/>
+                        <Button Content="Loeschen"
+                                Command="{Binding DeleteSelectedCommand}"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}"
                                 Foreground="{DynamicResource DangerBrush}"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- ── RECHTS: Projektinfo (Vorschau des gewählten Projekts) ── -->
-            <Border Grid.Column="2" Style="{StaticResource Card}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="Projektinfo" FontSize="15" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding ShowProjectChoice, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Projekt waehlen"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="Keine Vorschau aktiv."
+                                       Margin="0,6,0,0"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- Kopf: Name, Status, Pfad, Beschreibung -->
-                        <Border CornerRadius="8" BorderThickness="1"
-                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                Background="{DynamicResource BgLightBrush}" Padding="14" Margin="0,0,0,12">
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,8">
-                                    <TextBlock Text="{Binding SelectedPreview.Name}" FontSize="16" FontWeight="Bold"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                    <Border DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                            CornerRadius="6" Padding="8,3"
-                                            Background="{DynamicResource SuccessBrush}">
-                                        <TextBlock Text="Projekt gespeichert" FontSize="10" FontWeight="Bold"
-                                                   Foreground="White"/>
-                                    </Border>
-                                </DockPanel>
-                                <TextBlock Text="{Binding SelectedPreview.Description}" TextWrapping="Wrap"
-                                           FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding SelectedPreview.Path}" FontSize="11"
-                                           Foreground="{DynamicResource MutedBrush}"/>
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding ShowDataEmptyState, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Noch keine Daten"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="{Binding DashboardProjectName}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Visibility="{Binding HasActiveDashboard, Converter={StaticResource BoolToVis}}">
+                        <DockPanel Margin="0,0,0,10">
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="{Binding DashboardTitle}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="{Binding DashboardProjectName}"
+                                           Margin="0,3,0,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                        </Border>
+                            <Button DockPanel.Dock="Right"
+                                    Content="Oeffnen"
+                                    Command="{Binding OpenSelectedCommand}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="12,6"
+                                    Visibility="{Binding ShowFullDashboard, Converter={StaticResource InverseBoolToVis}}"/>
+                        </DockPanel>
 
-                        <!-- Kennzahl-Kacheln -->
-                        <TextBlock Text="Kennzahlen" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                        <UniformGrid Columns="4" Margin="0,0,0,12">
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.HoldingCount}"
+                                               FontSize="26"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Haltungen" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.SchachtCount}"
+                                               FontSize="26"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="Schaechte" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.TotalLengthMeters, StringFormat={}{0:N0} m}"
+                                               FontSize="24"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="Gesamtlaenge" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding DashboardCostText}"
+                                               FontSize="20"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="CHF Sanierung" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
                         <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="12"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" CornerRadius="8" Padding="12,10"
-                                    Background="{DynamicResource AccentSubtleBrush}">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedPreview.HoldingCount}"
-                                               FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource AccentBrush}"/>
-                                    <TextBlock Text="Haltungen" FontSize="10" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource MutedBrush}"/>
+                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.ColumnSpan="2">
+                                        <TextBlock Text="Zustand Haltungen"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                    <ctrl:DonutChart Grid.Column="0"
+                                                     Margin="0,28,12,0"
+                                                     Width="170"
+                                                     Height="170"
+                                                     ItemsSource="{Binding ActiveDashboard.Haltungen.Buckets}"
+                                                     SegmentCommand="{Binding NavigateConditionCommand}"/>
+                                    <ItemsControl Grid.Column="1"
+                                                  Margin="0,34,0,0"
+                                                  ItemsSource="{Binding ActiveDashboard.Haltungen.Buckets}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="72"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="42"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="1" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                                 BorderThickness="0" Background="{DynamicResource BorderBrush}"
+                                                                 Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Count}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="2" Style="{StaticResource Card}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.ColumnSpan="2">
+                                        <TextBlock Text="Zustand Schaechte"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                    <ctrl:DonutChart Grid.Column="0"
+                                                     Margin="0,28,12,0"
+                                                     Width="170"
+                                                     Height="170"
+                                                     ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}"
+                                                     IsHitTestVisible="False"/>
+                                    <ItemsControl Grid.Column="1"
+                                                  Margin="0,34,0,0"
+                                                  ItemsSource="{Binding ActiveDashboard.Schaechte.Buckets}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="72"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="42"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="1" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                                 BorderThickness="0" Background="{DynamicResource BorderBrush}"
+                                                                 Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Count}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="Haeufigste Schaeden"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,8"/>
+                                    <ctrl:CategoryBars ItemsSource="{Binding ActiveDashboard.TopSchaeden}"
+                                                       BarCommand="{Binding NavigateDamageCommand}"
+                                                       ValuePath="Percent"
+                                                       Orientation="Horizontal"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="2" CornerRadius="8" Padding="12,10"
-                                    Background="{DynamicResource BgLightBrush}">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedPreview.TotalLengthMeters, StringFormat={}{0:N0}}"
-                                               FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Meter" FontSize="10" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource MutedBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="4" CornerRadius="8" Padding="12,10"
-                                    Background="{DynamicResource BgLightBrush}">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedPreview.TotalCost, StringFormat={}{0:N0}}"
-                                               FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="CHF" FontSize="10" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource MutedBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="6" CornerRadius="8" Padding="12,10"
-                                    Background="{DynamicResource BgLightBrush}">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedPreview.ModifiedAtDisplay}"
-                                               FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="gespeichert" FontSize="10" HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource MutedBrush}"/>
+                            <Border Grid.Column="2" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="Haltungskosten nach DN"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,8"/>
+                                    <ctrl:CategoryBars ItemsSource="{Binding ActiveDashboard.HaltungDnCosts}"
+                                                       BarCommand="{Binding NavigateDnCommand}"
+                                                       ValuePath="Cost"
+                                                       Orientation="Vertical"
+                                                       Height="155"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <!-- Stammdaten -->
-                        <TextBlock Text="Projektdaten" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
-                        <Border CornerRadius="8" Padding="14" Margin="0,0,0,12"
-                                Background="{DynamicResource BgLightBrush}"
-                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="24"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.Resources>
-                                    <Style TargetType="TextBlock" x:Key="MetaLabel">
-                                        <Setter Property="FontSize" Value="11"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                                        <Setter Property="Margin" Value="0,3,10,3"/>
-                                    </Style>
-                                    <Style TargetType="TextBlock" x:Key="MetaValue">
-                                        <Setter Property="FontSize" Value="11"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                        <Setter Property="Margin" Value="0,3,0,3"/>
-                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                    </Style>
-                                </Grid.Resources>
-
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Auftraggeber" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPreview.Auftraggeber}" Style="{StaticResource MetaValue}"/>
-                                <TextBlock Grid.Row="0" Grid.Column="3" Text="Gemeinde" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding SelectedPreview.Gemeinde}" Style="{StaticResource MetaValue}"/>
-
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Zone" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPreview.Zone}" Style="{StaticResource MetaValue}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="3" Text="Straße" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="4" Text="{Binding SelectedPreview.Strasse}" Style="{StaticResource MetaValue}"/>
-
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Bearbeiter" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPreview.Bearbeiter}" Style="{StaticResource MetaValue}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="3" Text="Inspektionsdatum" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="4" Text="{Binding SelectedPreview.Inspektionsdatum}" Style="{StaticResource MetaValue}"/>
-
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Auftrag-Nr." Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedPreview.AuftragNr}" Style="{StaticResource MetaValue}"/>
-                                <TextBlock Grid.Row="3" Grid.Column="3" Text="Firma" Style="{StaticResource MetaLabel}"/>
-                                <TextBlock Grid.Row="3" Grid.Column="4" Text="{Binding SelectedPreview.Firma}" Style="{StaticResource MetaValue}"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- Auswertung: Zustandsklassen + DN/Kosten (KEINE Schadensgruppen) -->
-                        <Border CornerRadius="8" Padding="12" Margin="0,0,0,12"
-                                Background="{DynamicResource BgLightBrush}"
-                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,10">
-                                    <TextBlock Text="Auswertung" FontSize="13" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock DockPanel.Dock="Right" FontSize="10"
-                                               Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right">
-                                        <Run Text="{Binding SelectedPreview.TotalLengthMeters, StringFormat={}{0:N0} m, Mode=OneWay}"/>
+                        <UniformGrid Columns="4">
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="{Binding ActiveDashboard.SanierenHaltungen}"/>
                                         <Run Text=" / "/>
-                                        <Run Text="{Binding SelectedPreview.TotalCost, StringFormat={}{0:N0} CHF, Mode=OneWay}"/>
+                                        <Run Text="{Binding ActiveDashboard.HaltungenGesamt}"/>
                                     </TextBlock>
-                                </DockPanel>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="16"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Zustandsklassen" FontSize="11" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                                        <ItemsControl ItemsSource="{Binding SelectedPreview.ConditionClasses}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0,0,0,5">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="28"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="44"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource TextBrush}"/>
-                                                        <ProgressBar Grid.Column="1" Height="6" Maximum="100" Value="{Binding Percent}"
-                                                                     BorderThickness="0" Background="{DynamicResource BorderBrush}"
-                                                                     Foreground="{DynamicResource Severity3Brush}" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Percent, StringFormat={}{0:0.#}%}"
-                                                                   FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="DN / Kosten" FontSize="11" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                                        <ItemsControl ItemsSource="{Binding SelectedPreview.DnCostGroups}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0,0,0,5">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="54"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="58"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource TextBrush}"/>
-                                                        <ProgressBar Grid.Column="1" Height="6" Maximum="100" Value="{Binding Percent}"
-                                                                     BorderThickness="0" Background="{DynamicResource BorderBrush}"
-                                                                     Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Cost, StringFormat={}{0:N0}}"
-                                                                   FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Öffnen -->
-                        <Button Content="Öffnen" Command="{Binding OpenSelectedCommand}"
-                                Style="{StaticResource PrimaryButton}" Padding="14,6"
-                                HorizontalAlignment="Left" Margin="0,0,0,12"/>
-
-                        <!-- Drag & Drop Hinweis -->
-                        <Border CornerRadius="8" Padding="12" BorderThickness="2"
-                                BorderBrush="{DynamicResource BorderLightBrush}" Background="Transparent">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="Projekt-Datei hierher ziehen" FontSize="12"
-                                           HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                                <TextBlock Text=".json Datei oder Ordner" FontSize="10"
-                                           HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Border>
+                                    <TextBlock Text="Haltungen sanieren" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.SchaechteMitMassnahmen}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="Schaechte mit Massnahmen" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.DringendCount}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource DangerBrush}"/>
+                                    <TextBlock Text="Z0/Z1" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.OhneZustandCount}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="ohne Zustand" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
                     </StackPanel>
-                </ScrollViewer>
-            </Border>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

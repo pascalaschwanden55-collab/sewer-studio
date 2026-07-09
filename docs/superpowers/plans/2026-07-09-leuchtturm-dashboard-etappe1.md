@@ -725,7 +725,7 @@ git commit -m "feat: uebersicht als workspace-cockpit"
 - Modify: `src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml`
 - Modify: `src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml.cs`
 
-- [ ] **Step 1: AppSettings fuer einklappbare Liste**
+- [x] **Step 1: AppSettings fuer einklappbare Liste**
 
 Fuege hinzu:
 
@@ -733,7 +733,7 @@ Fuege hinzu:
 public bool OverviewProjectListCollapsed { get; set; }
 ```
 
-- [ ] **Step 2: ViewModel Commands fuer Dashboard-Klicks**
+- [x] **Step 2: ViewModel Commands fuer Dashboard-Klicks**
 
 Fuege Commands hinzu:
 
@@ -757,7 +757,7 @@ private void NavigateCondition(object? key)
 
 Analog Schaden/DN.
 
-- [ ] **Step 3: XAML-Namespaces setzen**
+- [x] **Step 3: XAML-Namespaces setzen**
 
 `OverviewPage.xaml` erhaelt:
 
@@ -765,7 +765,7 @@ Analog Schaden/DN.
 xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
 ```
 
-- [ ] **Step 4: Linke Liste einklappbar machen**
+- [x] **Step 4: Linke Liste einklappbar machen**
 
 Spaltenbreite an `IsProjectListCollapsed` binden und Toggle-Button einbauen:
 
@@ -775,7 +775,7 @@ Spaltenbreite an `IsProjectListCollapsed` binden und Toggle-Button einbauen:
 </Button>
 ```
 
-- [ ] **Step 5: Rechte Spalte durch Dashboard ersetzen**
+- [x] **Step 5: Rechte Spalte durch Dashboard ersetzen**
 
 Die rechte Spalte enthaelt:
 
@@ -793,11 +793,11 @@ Die rechte Spalte enthaelt:
 
 KPI-Text bindet an `ActiveDashboard.HoldingCount`, `SchachtCount`, `TotalLengthMeters`, `DashboardCostText`.
 
-- [ ] **Step 6: Empty States**
+- [x] **Step 6: Empty States**
 
 Nutze DataTrigger fuer `ActiveDashboard.HasData == false` und Text `"Noch keine Daten"`; fuer `SelectedPreview == null` Text `"Projekt waehlen"`.
 
-- [ ] **Step 7: Build pruefen**
+- [x] **Step 7: Build pruefen**
 
 Run:
 
@@ -807,7 +807,7 @@ dotnet build AuswertungPro.sln
 
 Expected: 0 Fehler. Vorher `SewerStudio.exe` pruefen.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add src/AuswertungPro.Next.UI/AppSettings.cs src/AuswertungPro.Next.UI/ViewModels/Pages/OverviewPageViewModel.cs src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml.cs

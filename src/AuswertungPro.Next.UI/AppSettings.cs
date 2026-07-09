@@ -40,6 +40,7 @@ public sealed class AppSettings : IAiStartupSettings
     // Aus der Projektuebersicht ausgeblendete Projekte. "Loeschen" in der Uebersicht
     // entfernt ein Projekt nur aus der Liste — die Dateien im Ordner bleiben erhalten.
     public List<string> HiddenProjectPaths { get; set; } = new();
+    public bool OverviewProjectListCollapsed { get; set; }
 
     /// <summary>Projekt-Pfad in RecentProjectPaths einfuegen (Duplikate vermeiden, max 20).</summary>
     public void AddRecentProject(string path)
