@@ -4,86 +4,102 @@ using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
-/// <summary>
-/// Charakterisierungs-Tests fuer <see cref="DefectStatusPolicy"/>.
-/// Prueft die Konfidenz-Schwellwerte und die Benutzerentscheidungs-Logik.
-/// </summary>
 public sealed class DefectStatusPolicyTests
 {
-    // --- GetStatus: kein AiContext ---
-
     [Fact]
     public void GetStatus_OhneAiContext_GibtPending()
     {
-        var ev = EvOhneKontext();
-        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(EvOhneKontext()));
     }
-
-    // --- GetStatus: Konfidenz-Zonen (Ignored-Decision) ---
 
     [Theory]
     [InlineData(1.00)]
+    [InlineData(0.92)]
     [InlineData(0.85)]
-    public void GetStatus_KonfidenzGreenZone_GibtAutoAccepted(double confidence)
+    public void HoheConfidenceOhneSicherheitsnachweise_WirdNichtAutoAkzeptiert(double confidence)
     {
         var ev = EvMitKonfidenz(confidence);
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
+    }
+
+    [Fact]
+    public void VollstaendigerSicherheitsnachweis_WirdAutoAkzeptiert()
+    {
+        var ev = EvMitKonfidenz(
+            0.94,
+            qualityGate: "Green",
+            kbAgreement: true,
+            epistemicUncertainty: 0.10);
+
         Assert.Equal(DefectStatus.AutoAccepted, DefectStatusPolicy.GetStatus(ev));
+    }
+
+    [Theory]
+    [InlineData("Yellow", true, 0.10)]
+    [InlineData("Green", false, 0.10)]
+    [InlineData("Green", true, 0.16)]
+    public void UnvollstaendigerOderWiderspruechlicherNachweis_BleibtPending(
+        string qualityGate,
+        bool kbAgreement,
+        double uncertainty)
+    {
+        var ev = EvMitKonfidenz(0.99, qualityGate, kbAgreement, uncertainty);
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
+    }
+
+    [Fact]
+    public void FehlendeUnsicherheit_BleibtPending()
+    {
+        var ev = EvMitKonfidenz(0.99, "Green", true, epistemicUncertainty: null);
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
     }
 
     [Theory]
     [InlineData(0.84)]
     [InlineData(0.60)]
-    public void GetStatus_KonfidenzYellowZone_GibtPending(double confidence)
+    public void MittlereConfidence_GibtPending(double confidence)
     {
-        var ev = EvMitKonfidenz(confidence);
-        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(EvMitKonfidenz(confidence)));
     }
 
     [Theory]
     [InlineData(0.59)]
     [InlineData(0.00)]
-    public void GetStatus_KonfidenzRedZone_GibtReviewRequired(double confidence)
+    public void NiedrigeConfidence_GibtReviewRequired(double confidence)
     {
-        var ev = EvMitKonfidenz(confidence);
-        Assert.Equal(DefectStatus.ReviewRequired, DefectStatusPolicy.GetStatus(ev));
+        Assert.Equal(DefectStatus.ReviewRequired, DefectStatusPolicy.GetStatus(EvMitKonfidenz(confidence)));
     }
 
-    // --- GetStatus: Manuelle Entscheidung schlaegt Konfidenz-Zone ---
+    [Fact]
+    public void AutoApprovalThreshold_IstExakt92Prozent()
+    {
+        var atThreshold = EvMitKonfidenz(0.92, "Green", true, 0.15);
+        var belowThreshold = EvMitKonfidenz(0.919, "Green", true, 0.10);
+
+        Assert.Equal(DefectStatus.AutoAccepted, DefectStatusPolicy.GetStatus(atThreshold));
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(belowThreshold));
+    }
 
     [Fact]
-    public void GetStatus_ManuelleAkzeptanz_GibtAccepted()
+    public void ManuelleAkzeptanz_SchlaegtKiPolicy()
     {
         var ev = EvMitEntscheidung(CodingUserDecision.Accepted, confidence: 0.30);
         Assert.Equal(DefectStatus.Accepted, DefectStatusPolicy.GetStatus(ev));
     }
 
     [Fact]
-    public void GetStatus_ManuelleBearbeitung_GibtAcceptedWithEdit()
+    public void ManuelleBearbeitung_GibtAcceptedWithEdit()
     {
         var ev = EvMitEntscheidung(CodingUserDecision.AcceptedWithEdit, confidence: 0.90);
         Assert.Equal(DefectStatus.AcceptedWithEdit, DefectStatusPolicy.GetStatus(ev));
     }
 
     [Fact]
-    public void GetStatus_ManuelleAblehnung_GibtRejected()
+    public void ManuelleAblehnung_GibtRejected()
     {
         var ev = EvMitEntscheidung(CodingUserDecision.Rejected, confidence: 0.80);
         Assert.Equal(DefectStatus.Rejected, DefectStatusPolicy.GetStatus(ev));
     }
-
-    // --- GetStatus: Schwellwert-Grenzen exakt ---
-
-    [Theory]
-    [InlineData(0.85, DefectStatus.AutoAccepted)]   // Exakt Green-Grenze
-    [InlineData(0.60, DefectStatus.Pending)]         // Exakt Yellow-Grenze
-    [InlineData(0.599, DefectStatus.ReviewRequired)] // Knapp darunter
-    public void GetStatus_Schwellwertgrenzen_SindKorrekt(double confidence, DefectStatus erwartet)
-    {
-        var ev = EvMitKonfidenz(confidence);
-        Assert.Equal(erwartet, DefectStatusPolicy.GetStatus(ev));
-    }
-
-    // --- CanAct ---
 
     [Fact]
     public void CanAct_NullEvent_GibtFalse()
@@ -92,42 +108,31 @@ public sealed class DefectStatusPolicyTests
     }
 
     [Theory]
-    [InlineData(0.90)] // AutoAccepted
-    [InlineData(0.70)] // Pending
-    [InlineData(0.30)] // ReviewRequired
+    [InlineData(0.95)]
+    [InlineData(0.70)]
+    [InlineData(0.30)]
     public void CanAct_NochNichtEntschieden_GibtTrue(double confidence)
     {
-        var ev = EvMitKonfidenz(confidence);
-        Assert.True(DefectStatusPolicy.CanAct(ev));
+        Assert.True(DefectStatusPolicy.CanAct(EvMitKonfidenz(confidence)));
     }
 
-    [Fact]
-    public void CanAct_NachManueller_Akzeptanz_GibtFalse()
+    [Theory]
+    [InlineData(CodingUserDecision.Accepted)]
+    [InlineData(CodingUserDecision.AcceptedWithEdit)]
+    [InlineData(CodingUserDecision.Rejected)]
+    public void CanAct_NachManuellerEntscheidung_GibtFalse(CodingUserDecision decision)
     {
-        var ev = EvMitEntscheidung(CodingUserDecision.Accepted);
-        Assert.False(DefectStatusPolicy.CanAct(ev));
+        Assert.False(DefectStatusPolicy.CanAct(EvMitEntscheidung(decision)));
     }
-
-    [Fact]
-    public void CanAct_NachAblehnung_GibtFalse()
-    {
-        var ev = EvMitEntscheidung(CodingUserDecision.Rejected);
-        Assert.False(DefectStatusPolicy.CanAct(ev));
-    }
-
-    [Fact]
-    public void CanAct_NachBearbeitung_GibtFalse()
-    {
-        var ev = EvMitEntscheidung(CodingUserDecision.AcceptedWithEdit);
-        Assert.False(DefectStatusPolicy.CanAct(ev));
-    }
-
-    // --- Hilfsmethoden ---
 
     private static CodingEvent EvOhneKontext() =>
         new() { Entry = new ProtocolEntry { Code = "BAB" } };
 
-    private static CodingEvent EvMitKonfidenz(double confidence) =>
+    private static CodingEvent EvMitKonfidenz(
+        double confidence,
+        string? qualityGate = null,
+        bool? kbAgreement = null,
+        double? epistemicUncertainty = null) =>
         new()
         {
             Entry = new ProtocolEntry { Code = "BAB" },
@@ -135,6 +140,9 @@ public sealed class DefectStatusPolicyTests
             {
                 SuggestedCode = "BAB",
                 Confidence = confidence,
+                QualityGateLevel = qualityGate,
+                KbCodeAgreement = kbAgreement,
+                EpistemicUncertainty = epistemicUncertainty,
                 Decision = CodingUserDecision.Ignored
             }
         };
