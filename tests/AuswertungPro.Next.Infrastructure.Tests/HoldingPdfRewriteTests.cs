@@ -31,10 +31,15 @@ public sealed class HoldingPdfRewriteTests
             Assert.Equal(1, rewritten);
             Assert.Equal(0, failed);
             Assert.True(File.Exists(pdf));
+            Assert.True(File.Exists(pdf + ".bak"));
 
             // In-place ersetzt + weiterhin ein gueltiges PDF.
             using var doc = PdfDocument.Open(pdf);
             Assert.True(doc.NumberOfPages >= 1);
+
+            // Die vorherige Fassung bleibt als lesbare Sicherung erhalten.
+            using var backup = PdfDocument.Open(pdf + ".bak");
+            Assert.True(backup.NumberOfPages >= 1);
         }
         finally { TryDelete(dir); }
     }
@@ -79,6 +84,53 @@ public sealed class HoldingPdfRewriteTests
         Assert.Equal(0, rewritten);
         Assert.Equal(0, skipped);
         Assert.Equal(0, failed);
+    }
+
+    [Fact]
+    public void AppendPdfFile_ErsetztAtomarUndLoeschtZusatzErstNachErfolg()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfappend-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var target = Path.Combine(dir, "ziel.pdf");
+        var additional = Path.Combine(dir, "zusatz.pdf");
+        WritePdf(target, "Seite eins");
+        WritePdf(additional, "Seite zwei");
+
+        try
+        {
+            HoldingFolderDistributor.AppendPdfFile(target, additional, removeAdditionalWhenMoved: true);
+
+            using var merged = PdfDocument.Open(target);
+            Assert.Equal(2, merged.NumberOfPages);
+            Assert.False(File.Exists(additional));
+            Assert.True(File.Exists(target + ".bak"));
+
+            using var backup = PdfDocument.Open(target + ".bak");
+            Assert.Equal(1, backup.NumberOfPages);
+        }
+        finally { TryDelete(dir); }
+    }
+
+    [Fact]
+    public void AppendPdfFile_UngueltigerZusatz_LaesstBeideOriginaleUnveraendert()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfappend-invalid-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var target = Path.Combine(dir, "ziel.pdf");
+        var additional = Path.Combine(dir, "zusatz.pdf");
+        WritePdf(target, "Original");
+        File.WriteAllText(additional, "keine PDF");
+        var originalBytes = File.ReadAllBytes(target);
+
+        try
+        {
+            Assert.ThrowsAny<Exception>(() =>
+                HoldingFolderDistributor.AppendPdfFile(target, additional, removeAdditionalWhenMoved: true));
+
+            Assert.Equal(originalBytes, File.ReadAllBytes(target));
+            Assert.True(File.Exists(additional));
+        }
+        finally { TryDelete(dir); }
     }
 
     private static void WritePdf(string path, params string[] lines)

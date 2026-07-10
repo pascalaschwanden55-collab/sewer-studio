@@ -1203,7 +1203,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static void AppendPdfFile(string targetPdfPath, string additionalPdfPath, bool removeAdditionalWhenMoved)
+    internal static void AppendPdfFile(string targetPdfPath, string additionalPdfPath, bool removeAdditionalWhenMoved)
     {
         if (string.IsNullOrWhiteSpace(targetPdfPath)
             || string.IsNullOrWhiteSpace(additionalPdfPath)
@@ -1235,7 +1235,7 @@ public static partial class HoldingFolderDistributor
                 File.WriteAllBytes(mergedTempPath, bytes);
             }
 
-            File.Copy(mergedTempPath, targetPdfPath, overwrite: true);
+            AtomicPdfFileReplacer.ReplaceValidated(mergedTempPath, targetPdfPath);
 
             if (removeAdditionalWhenMoved)
             {
@@ -1300,7 +1300,7 @@ public static partial class HoldingFolderDistributor
                     && !string.Equals(res.OutputPdfPath, pdf, StringComparison.OrdinalIgnoreCase)
                     && File.Exists(res.OutputPdfPath))
                 {
-                    File.Copy(res.OutputPdfPath, pdf, overwrite: true);
+                    AtomicPdfFileReplacer.ReplaceValidated(res.OutputPdfPath, pdf);
                     try { File.Delete(res.OutputPdfPath); } catch { /* best-effort cleanup */ }
                     rewritten++;
                 }
