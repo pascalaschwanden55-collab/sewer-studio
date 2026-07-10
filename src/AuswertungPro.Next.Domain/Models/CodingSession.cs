@@ -134,8 +134,20 @@ public sealed class CodingEventAiContext
     public string? Reason { get; set; }
     public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
 
-    /// <summary>QualityGate-Ampel ("Green"/"Yellow"/"Red") zum Bestaetigungszeitpunkt, vom UI gesetzt. Null = unbekannt.</summary>
+    /// <summary>QualityGate-Ampel ("Green"/"Yellow"/"Red") zum Bestaetigungszeitpunkt. Null = unbekannt.</summary>
     public string? QualityGateLevel { get; set; }
+
+    /// <summary>True nur, wenn der Top-Treffer der Wissensbasis den vorgeschlagenen Code bestaetigt.</summary>
+    public bool? KbCodeAgreement { get; set; }
+
+    /// <summary>Epistemische Unsicherheit der Entscheidung. Null bedeutet: nicht bestimmt.</summary>
+    public double? EpistemicUncertainty { get; set; }
+
+    /// <summary>Begruendung der zentralen Auto-Freigabepolicy.</summary>
+    public string? AutoApprovalReason { get; set; }
+
+    /// <summary>Version der Policy, mit der die Entscheidung bewertet wurde.</summary>
+    public string? DecisionPolicyVersion { get; set; }
 
     /// <summary>SAM-RLE-Maske fuer markierte Beweisbilder. Kein Trainingslabel, nur UI/Protokoll-Beleg.</summary>
     public string? SamMaskRle { get; set; }
