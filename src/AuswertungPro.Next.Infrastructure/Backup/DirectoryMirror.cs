@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
@@ -147,9 +148,29 @@ public sealed class DirectoryMirror
             var sourceInfo = new FileInfo(sourceFile);
             var targetInfo = new FileInfo(targetFile);
 
-            if (targetInfo.Exists
-                && targetInfo.Length == sourceInfo.Length
-                && (targetInfo.LastWriteTimeUtc - sourceInfo.LastWriteTimeUtc).Duration() <= TimestampToleranz)
+            var sameLength = targetInfo.Exists && targetInfo.Length == sourceInfo.Length;
+            var timestampDifference = targetInfo.Exists
+                ? (targetInfo.LastWriteTimeUtc - sourceInfo.LastWriteTimeUtc).Duration()
+                : TimeSpan.MaxValue;
+            var unchanged = sameLength && timestampDifference == TimeSpan.Zero;
+
+            // FAT/exFAT runden Zeitstempel auf bis zu zwei Sekunden. Bei einem kleinen,
+            // aber echten Unterschied darf gleiche Dateigroesse allein nicht genuegen:
+            // SQLite-/JSON-Inhalte koennen sich ohne Groessenaenderung veraendern.
+            if (!unchanged
+                && sameLength
+                && timestampDifference <= TimestampToleranz)
+            {
+                unchanged = await FilesHaveSameContentAsync(
+                        sourceFile,
+                        targetFile,
+                        sourceInfo.Length,
+                        sourceInfo.LastWriteTimeUtc,
+                        ct)
+                    .ConfigureAwait(false);
+            }
+
+            if (unchanged)
             {
                 stats.Unchanged++;
                 onFileDone?.Invoke(sourceFile, sourceInfo.Length);
@@ -191,6 +212,47 @@ public sealed class DirectoryMirror
         {
             stats.Errors.Add($"{sourceFile}: {ex.Message}");
         }
+    }
+
+    private static async Task<bool> FilesHaveSameContentAsync(
+        string sourceFile,
+        string targetFile,
+        long expectedSourceLength,
+        DateTime expectedSourceWriteTimeUtc,
+        CancellationToken ct)
+    {
+        byte[] sourceHash;
+        await using (var source = new FileStream(
+                         sourceFile,
+                         FileMode.Open,
+                         FileAccess.Read,
+                         FileShare.ReadWrite,
+                         bufferSize: 128 * 1024,
+                         useAsync: true))
+        {
+            sourceHash = await SHA256.HashDataAsync(source, ct).ConfigureAwait(false);
+        }
+
+        // Wurde die Quelle waehrend der Pruefung veraendert, gilt sie bewusst als
+        // geaendert. Der anschliessende Kopierweg versucht dann den aktuellen Stand.
+        var sourceAfterHash = new FileInfo(sourceFile);
+        if (sourceAfterHash.Length != expectedSourceLength
+            || sourceAfterHash.LastWriteTimeUtc != expectedSourceWriteTimeUtc)
+            return false;
+
+        byte[] targetHash;
+        await using (var target = new FileStream(
+                         targetFile,
+                         FileMode.Open,
+                         FileAccess.Read,
+                         FileShare.Read,
+                         bufferSize: 128 * 1024,
+                         useAsync: true))
+        {
+            targetHash = await SHA256.HashDataAsync(target, ct).ConfigureAwait(false);
+        }
+
+        return sourceHash.AsSpan().SequenceEqual(targetHash);
     }
 
     /// <summary>

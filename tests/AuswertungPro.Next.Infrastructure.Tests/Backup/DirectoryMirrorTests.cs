@@ -117,6 +117,39 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task MirrorSourceAsync_GleicheGroesseAberAndererInhalt_KopiertTrotzZeitToleranz()
+    {
+        var source = Path.Combine(_root, "source");
+        var backupRoot = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(source);
+        var sourceFile = Path.Combine(source, "a.txt");
+        File.WriteAllText(sourceFile, "abc");
+
+        var mirror = new DirectoryMirror(null);
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Ziel"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new DirectoryMirror.MirrorStats());
+
+        var targetFile = Path.Combine(backupRoot, "Ziel", "a.txt");
+        var targetTime = File.GetLastWriteTimeUtc(targetFile);
+        File.WriteAllText(sourceFile, "xyz");
+        File.SetLastWriteTimeUtc(sourceFile, targetTime.AddSeconds(1));
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Ziel"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.Equal(1, stats.Copied);
+        Assert.Equal(0, stats.Unchanged);
+        Assert.Equal("xyz", File.ReadAllText(targetFile));
+    }
+
+    [Fact]
     public async Task MirrorSourceAsync_ZeitdifferenzUeberZweiSekunden_KopiertNeu()
     {
         var source = Path.Combine(_root, "source");
