@@ -18,7 +18,7 @@ public static class CodingSessionStateFactory
         => Create(
             CodingSessionServiceFactory.Create(settings),
             new OverlayToolService(),
-            new CodingFeedbackRecorder(),
+            feedbackRecorder: null,
             videoPath);
 
     public static CodingSessionStateComponents Create(
@@ -29,7 +29,7 @@ public static class CodingSessionStateFactory
         => Create(
             existingSessionService ?? CodingSessionServiceFactory.Create(settings),
             existingOverlayService ?? new OverlayToolService(),
-            new CodingFeedbackRecorder(),
+            feedbackRecorder: null,
             videoPath);
 
     public static CodingSessionStateComponents Create(
@@ -41,7 +41,13 @@ public static class CodingSessionStateFactory
         ArgumentNullException.ThrowIfNull(sessionService);
         ArgumentNullException.ThrowIfNull(overlayService);
 
-        var viewModel = new CodingSessionViewModel(sessionService, overlayService, feedbackRecorder)
+        var effectiveFeedbackRecorder = feedbackRecorder ?? new CodingFeedbackRecorder(
+            new CodingSessionTrainingSampleIndexer(sessionService));
+
+        var viewModel = new CodingSessionViewModel(
+            sessionService,
+            overlayService,
+            effectiveFeedbackRecorder)
         {
             VideoPath = videoPath
         };
