@@ -97,10 +97,52 @@ public sealed class QualityGateServiceTests
         var ev = new EvidenceVector(LlmCodeConf: 0.95, PlausibilityScore: 0.50, DamageCategory: "BAB");
         var result = svc.Evaluate(ev);
 
-        // With 80% weight on LLM (0.95) and 20% on Plausibility (0.50):
-        // Composite ≈ (0.80*0.95 + 0.20*0.50) / 1.0 = 0.86
         Assert.True(result.CompositeConfidence > 0.80);
         Assert.Equal(TrafficLight.Green, result.TrafficLight);
+    }
+
+    [Fact]
+    public void ActivatedProcessSnapshot_UpdatesExistingServiceInstance()
+    {
+        const string category = "TEST_PROCESS_WEIGHT_ACTIVATION";
+        var svc = new QualityGateService();
+        var evidence = new EvidenceVector(
+            LlmCodeConf: 0.95,
+            PlausibilityScore: 0.10,
+            DamageCategory: category);
+
+        var before = svc.Evaluate(evidence);
+        var learned = new CategoryWeights
+        {
+            Category = category,
+            WLlm = 0,
+            WPlausibility = 1,
+            WYolo = 0,
+            WDino = 0,
+            WSam = 0,
+            WQwen = 0,
+            WKb = 0,
+            WKbAgreement = 0,
+            UpdatedUtc = DateTime.UtcNow,
+            ValidationCount = 25
+        };
+
+        try
+        {
+            QualityGateService.ConfigureProcessWeights(new[] { learned }, "test-version-25");
+            var after = svc.Evaluate(evidence);
+
+            Assert.True(before.CompositeConfidence > after.CompositeConfidence);
+            Assert.Equal(0.10, after.CompositeConfidence, precision: 6);
+            Assert.Equal("test-version-25", QualityGateService.ActiveProcessWeightVersion);
+            Assert.Contains("weights=test-version-25", after.Explanation);
+        }
+        finally
+        {
+            QualityGateService.ConfigureProcessWeights(
+                Array.Empty<CategoryWeights>(),
+                QualityGateWeightSnapshot.DefaultVersion);
+        }
     }
 
     [Fact]
@@ -115,14 +157,11 @@ public sealed class QualityGateServiceTests
         Assert.Contains("DinoConf", result.Explanation);
     }
 
-    // QualityGate-Ehrlichkeit: ein einzelnes hohes Signal darf NICHT "Green" werden,
-    // auch wenn der Composite-Score ueber der Green-Schwelle liegt. "Green" verlangt
-    // Kreuzvalidierung durch >= MinSignalsForGreen unabhaengige Signale.
     [Fact]
     public void SingleHighSignal_IsCappedToYellow_NotGreen()
     {
         var svc = new QualityGateService();
-        var ev = new EvidenceVector(YoloConf: 0.95); // nur EIN Signal (z.B. evtl. halluzinierte YOLO-Box)
+        var ev = new EvidenceVector(YoloConf: 0.95);
 
         var result = svc.Evaluate(ev);
 
@@ -137,7 +176,7 @@ public sealed class QualityGateServiceTests
     public void TwoHighSignals_AllowGreen()
     {
         var svc = new QualityGateService();
-        var ev = new EvidenceVector(YoloConf: 0.95, DinoConf: 0.90); // zwei unabhaengige Signale
+        var ev = new EvidenceVector(YoloConf: 0.95, DinoConf: 0.90);
 
         var result = svc.Evaluate(ev);
 
