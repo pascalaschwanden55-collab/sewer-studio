@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System;
@@ -534,8 +534,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 SetStatus("Speichern abgebrochen");
                 return false;
             }
-            _sp.Settings.AddRecentProject(NormalizeProjectPath(path)); // setzt auch LastProjectPath
-            _sp.Settings.Save();
+            path = NormalizeProjectPath(path);
         }
 
         EnsureProjectDirectory(path);
@@ -543,15 +542,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             TryCreateProjectRestorePoint(path);
 
         var res = _sp.Projects.Save(Project, path);
-        SetStatus(res.Ok ? "Gespeichert" : $"Fehler: {res.ErrorMessage}");
-        if (res.Ok)
+        if (!res.Ok)
         {
-            IsProjectReady = true;
-            HasPersistedProject = true;
-            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-            _sp.Toasts.Success("Projekt gespeichert");
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return false;
         }
-        return res.Ok;
+
+        var settingsWarning = CommitSuccessfulProjectPath(path);
+        IsProjectReady = true;
+        HasPersistedProject = true;
+        RefreshTitleAndDirty();
+        SetStatus(settingsWarning is null ? "Gespeichert" : $"Gespeichert; Einstellungen: {settingsWarning}");
+        _sp.Toasts.Success("Projekt gespeichert");
+        return true;
     }
 
     public bool TrySaveProjectAs()
@@ -565,23 +568,44 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         }
 
         path = NormalizeProjectPath(path);
-        _sp.Settings.AddRecentProject(path); // Merkliste pflegen (setzt auch LastProjectPath)
-        _sp.Settings.Save();
-        MarkProjectReady();
-
         EnsureProjectDirectory(path);
         if (_sp.Settings.EnableRestorePoints)
             TryCreateProjectRestorePoint(path);
 
+        // Transaktionale Reihenfolge: Datei zuerst. Session-/Settings-Zustand wird erst
+        // nach erfolgreicher Persistenz auf den neuen Pfad umgeschaltet.
         var res = _sp.Projects.Save(Project, path);
-        SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
-        if (res.Ok)
+        if (!res.Ok)
         {
-            HasPersistedProject = true;
-            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-            _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return false;
         }
-        return res.Ok;
+
+        var settingsWarning = CommitSuccessfulProjectPath(path);
+        MarkProjectReady();
+        HasPersistedProject = true;
+        RefreshTitleAndDirty();
+        SetStatus(settingsWarning is null
+            ? $"Gespeichert: {Path.GetFileName(path)}"
+            : $"Gespeichert: {Path.GetFileName(path)}; Einstellungen: {settingsWarning}");
+        _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
+        return true;
+    }
+
+    private string? CommitSuccessfulProjectPath(string path)
+    {
+        try
+        {
+            _sp.Settings.AddRecentProject(path); // setzt auch LastProjectPath
+            _sp.Settings.Save();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            // Die Projektdatei ist bereits sicher geschrieben. Ein Settings-Fehler darf
+            // deshalb nicht faelschlich als fehlgeschlagener Projektsave gemeldet werden.
+            return ex.Message;
+        }
     }
 
     private void OpenProjectWithDialog()
@@ -723,5 +747,4 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         public void UpdateAvailability(bool isProjectReady)
             => IsAvailable = isProjectReady || CanOpenWithoutProject;
     }
-
 }
