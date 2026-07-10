@@ -19,23 +19,24 @@ public sealed class DefectStatusPolicyTests
         Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
     }
 
-    // --- GetStatus: Konfidenz-Zonen (Ignored-Decision) ---
+    // --- GetStatus: zentrale Freigabe-Regel (Ignored-Decision) ---
 
     [Theory]
     [InlineData(1.00)]
-    [InlineData(0.85)]
-    public void GetStatus_KonfidenzGreenZone_GibtAutoAccepted(double confidence)
+    [InlineData(0.92)]
+    public void GetStatus_HoheSicherheitUndGrueneAmpel_GibtAutoAccepted(double confidence)
     {
-        var ev = EvMitKonfidenz(confidence);
+        var ev = EvMitKonfidenz(confidence, gate: "Green");
         Assert.Equal(DefectStatus.AutoAccepted, DefectStatusPolicy.GetStatus(ev));
     }
 
     [Theory]
-    [InlineData(0.84)]
-    [InlineData(0.60)]
-    public void GetStatus_KonfidenzYellowZone_GibtPending(double confidence)
+    [InlineData(0.99, null)]     // hohe Sicherheit, aber Ampel fehlt
+    [InlineData(0.99, "Yellow")] // hohe Sicherheit, aber gelbe Ampel
+    [InlineData(0.85, "Green")]  // gruene Ampel, aber Sicherheit unter 0.92
+    public void GetStatus_UnvollstaendigeBelege_GibtPending(double confidence, string? gate)
     {
-        var ev = EvMitKonfidenz(confidence);
+        var ev = EvMitKonfidenz(confidence, gate);
         Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
     }
 
@@ -71,18 +72,6 @@ public sealed class DefectStatusPolicyTests
         Assert.Equal(DefectStatus.Rejected, DefectStatusPolicy.GetStatus(ev));
     }
 
-    // --- GetStatus: Schwellwert-Grenzen exakt ---
-
-    [Theory]
-    [InlineData(0.85, DefectStatus.AutoAccepted)]   // Exakt Green-Grenze
-    [InlineData(0.60, DefectStatus.Pending)]         // Exakt Yellow-Grenze
-    [InlineData(0.599, DefectStatus.ReviewRequired)] // Knapp darunter
-    public void GetStatus_Schwellwertgrenzen_SindKorrekt(double confidence, DefectStatus erwartet)
-    {
-        var ev = EvMitKonfidenz(confidence);
-        Assert.Equal(erwartet, DefectStatusPolicy.GetStatus(ev));
-    }
-
     // --- CanAct ---
 
     [Fact]
@@ -92,7 +81,7 @@ public sealed class DefectStatusPolicyTests
     }
 
     [Theory]
-    [InlineData(0.90)] // AutoAccepted
+    [InlineData(0.90)] // Pending (hohe Sicherheit, aber ohne Ampel kein Gruen)
     [InlineData(0.70)] // Pending
     [InlineData(0.30)] // ReviewRequired
     public void CanAct_NochNichtEntschieden_GibtTrue(double confidence)
@@ -127,7 +116,7 @@ public sealed class DefectStatusPolicyTests
     private static CodingEvent EvOhneKontext() =>
         new() { Entry = new ProtocolEntry { Code = "BAB" } };
 
-    private static CodingEvent EvMitKonfidenz(double confidence) =>
+    private static CodingEvent EvMitKonfidenz(double confidence, string? gate = null) =>
         new()
         {
             Entry = new ProtocolEntry { Code = "BAB" },
@@ -135,6 +124,7 @@ public sealed class DefectStatusPolicyTests
             {
                 SuggestedCode = "BAB",
                 Confidence = confidence,
+                QualityGateLevel = gate,
                 Decision = CodingUserDecision.Ignored
             }
         };
