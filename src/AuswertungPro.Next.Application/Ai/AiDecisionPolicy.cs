@@ -43,8 +43,8 @@ public static class AiDecisionPolicy
         if (evidence.KbCodeAgreement != true)
         {
             return Reject(evidence.KbCodeAgreement == false
-                ? "Wissensbasis widerspricht dem vorgeschlagenen Code."
-                : "Keine bestaetigte Uebereinstimmung mit der Wissensbasis vorhanden.");
+                ? "KB-Code widerspricht dem vorgeschlagenen Code."
+                : "Keine bestaetigte KB-Code-Uebereinstimmung vorhanden.");
         }
 
         if (!evidence.EpistemicUncertainty.HasValue)
