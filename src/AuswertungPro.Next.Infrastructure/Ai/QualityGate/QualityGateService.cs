@@ -90,16 +90,17 @@ public sealed class QualityGateService
         EnsureProcessWeightsApplied();
 
         var category = evidence.DamageCategory ?? "default";
-        CategoryWeights weights;
+        CategoryWeights? selectedWeights;
         lock (_instanceSync)
         {
-            if (!_categoryWeights.TryGetValue(category, out weights!))
+            if (!_categoryWeights.TryGetValue(category, out selectedWeights) &&
+                !_categoryWeights.TryGetValue("default", out selectedWeights))
             {
-                if (!_categoryWeights.TryGetValue("default", out weights!))
-                    weights = CategoryWeights.Default();
+                selectedWeights = null;
             }
         }
 
+        var weights = selectedWeights ?? CategoryWeights.Default();
         var signals = new List<(string Name, double Value, double Weight)>();
         TryAdd(signals, nameof(EvidenceVector.YoloConf), evidence.YoloConf, weights.WYolo);
         TryAdd(signals, nameof(EvidenceVector.DinoConf), evidence.DinoConf, weights.WDino);
