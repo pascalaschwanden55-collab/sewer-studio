@@ -78,7 +78,6 @@ public static class CodingMultiModelFindingEventWorkflow
                 request.Meter,
                 request.CodingSessionService.ActiveSession?.Events,
                 request.ViewEvents);
-
             if (addDecision.TraceMessage != null)
                 actions.Trace(addDecision.TraceMessage);
 
@@ -112,7 +111,7 @@ public static class CodingMultiModelFindingEventWorkflow
                 request.Meter,
                 request.VideoTime,
                 dinoConfidence,
-                gateResult.CompositeConfidence,
+                gateResult,
                 request.ImageWidth,
                 request.ImageHeight,
                 request.MeterFromOsd,
