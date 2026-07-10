@@ -22,15 +22,17 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 
+from repo_paths import BENCHMARK_REPORT_ROOT, CLEAN_EVAL_ROOT, HIDDEN_EVAL_ROOT
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eval_threshold import gt_from_filename, load_gt_map  # noqa: E402
 from nocrop_patch import letterbox_pil  # noqa: E402
 
 KEY = ["BAI", "BAB", "BBA", "BDD", "BAJ"]
-DEF_EVAL = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set"
-DEF_HIDDEN = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_unclean_or_hidden_eval_set"
+DEF_EVAL = CLEAN_EVAL_ROOT
+DEF_HIDDEN = HIDDEN_EVAL_ROOT
 CAND_DIR = r"C:\KI_BRAIN\model_candidates"
-REPORT_DIR = os.path.join("docs", "benchmarks")
+REPORT_DIR = BENCHMARK_REPORT_ROOT
 TS = [0.0, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
 
 

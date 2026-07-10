@@ -216,6 +216,18 @@
       "auswertungpro.next.domain": {
         "type": "Project"
       }
+    },
+    "net10.0/win-x64": {
+      "QuestPDF": {
+        "type": "Transitive",
+        "resolved": "2026.2.0",
+        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
+      },
+      "SourceGear.sqlite3": {
+        "type": "Transitive",
+        "resolved": "3.50.4.5",
+        "contentHash": "UtnipXhJYZKQOQIfpws/msLK7IRhMplE1CZCaZLIQXRnGD474QVpO/J9nMlQQY8NZueGz1aidjoxDRnrC1NT3Q=="
+      }
     }
   }
 }

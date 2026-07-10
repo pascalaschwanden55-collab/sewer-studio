@@ -3,7 +3,9 @@ import os
 import re
 from PIL import Image, ImageDraw, ImageFont
 
-EVAL_IMG = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set\images"
+from repo_paths import CLEAN_EVAL_ROOT
+
+EVAL_IMG = os.path.join(CLEAN_EVAL_ROOT, "images")
 OUT = r"C:\tmp\enhance_preview"
 
 

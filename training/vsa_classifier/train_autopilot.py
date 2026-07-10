@@ -24,17 +24,19 @@ import subprocess
 import sys
 import time
 
+from repo_paths import BENCHMARK_REPORT_ROOT, CLEAN_EVAL_ROOT, HIDDEN_EVAL_ROOT
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 PY = sys.executable
 
 DEF_EVAL_MANIFEST = r"C:\KI_BRAIN\eval_set\_manifest.json"
 DEF_DATA = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
-DEF_EVAL = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set"
-DEF_HIDDEN = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_unclean_or_hidden_eval_set"
+DEF_EVAL = CLEAN_EVAL_ROOT
+DEF_HIDDEN = HIDDEN_EVAL_ROOT
 DEF_BASELINE = r"C:\KI_BRAIN\yolo_cls_runs\vsa_cls_v5_nocrop\weights\best.pt"
 DEF_PROJECT = r"C:\KI_BRAIN\yolo_cls_runs"
 CAND_DIR = r"C:\KI_BRAIN\model_candidates"
-REPORT_DIR = os.path.join("docs", "benchmarks")
+REPORT_DIR = BENCHMARK_REPORT_ROOT
 KEY_CLASSES = ["BAI", "BAB", "BBA", "BDD", "BAJ"]
 
 

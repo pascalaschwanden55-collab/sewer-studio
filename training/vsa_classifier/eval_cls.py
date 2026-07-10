@@ -16,6 +16,8 @@ from collections import Counter, defaultdict
 
 from ultralytics import YOLO
 
+from repo_paths import CLEAN_EVAL_ROOT
+
 # Paket 5: BCA/BCC/BBC/BAA ergaenzt. Im 57er-clean kommen sie nicht vor (Messung dort
 # unveraendert, 57 Frames); im 63er-hidden werden damit 9 bisher uebersprungene Frames
 # mitgemessen (hidden-frames steigt 49 -> 58, alte hidden-Reports nicht 1:1 vergleichbar).
@@ -60,7 +62,7 @@ def load_gt_map(eval_root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", required=True)
-    ap.add_argument("--eval-root", default=r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set")
+    ap.add_argument("--eval-root", default=CLEAN_EVAL_ROOT)
     ap.add_argument("--imgsz", type=int, default=224)
     ap.add_argument("--no-crop", action="store_true", help="Bild letterboxen statt predict croppen lassen")
     ap.add_argument("--json-out", default=None, help="Metriken als JSON-Datei schreiben (fuer Autopilot)")

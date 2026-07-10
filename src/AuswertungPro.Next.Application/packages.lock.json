@@ -11,6 +11,14 @@
       "auswertungpro.next.domain": {
         "type": "Project"
       }
+    },
+    "net10.0/win-x64": {
+      "QuestPDF": {
+        "type": "Direct",
+        "requested": "[2026.2.0, )",
+        "resolved": "2026.2.0",
+        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
+      }
     }
   }
 }

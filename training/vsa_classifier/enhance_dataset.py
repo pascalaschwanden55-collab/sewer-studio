@@ -15,10 +15,12 @@ import time
 import cv2
 import numpy as np
 
+from repo_paths import CLEAN_EVAL_ROOT, EVAL_REVIEW_ROOT
+
 SRC_DS = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
 DST_DS = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal_bilateral"
-SRC_EVAL = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set"
-DST_EVAL = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set_bilateral"
+SRC_EVAL = CLEAN_EVAL_ROOT
+DST_EVAL = str(EVAL_REVIEW_ROOT / "eval_visible_clean_eval_set_bilateral")
 
 # Moderat, kantenerhaltend (kleine Nachbarschaft d=5 -> haelt Riss-Kanten).
 D, SIGMA_COLOR, SIGMA_SPACE = 5, 50, 50

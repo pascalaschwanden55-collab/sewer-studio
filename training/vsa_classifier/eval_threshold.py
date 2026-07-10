@@ -13,6 +13,8 @@ import re
 
 from ultralytics import YOLO
 
+from repo_paths import CLEAN_EVAL_ROOT
+
 # Paket 5: gleiche Zielmenge wie eval_cls.py, damit threshold_select.py die
 # neuen v8-Klassen nicht aus der Ground Truth herausfiltert.
 TARGET = {"BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER",
@@ -51,7 +53,7 @@ def load_gt_map(eval_root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", required=True)
-    ap.add_argument("--eval-root", default=r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set")
+    ap.add_argument("--eval-root", default=CLEAN_EVAL_ROOT)
     ap.add_argument("--imgsz", type=int, default=1024)
     args = ap.parse_args()
 
