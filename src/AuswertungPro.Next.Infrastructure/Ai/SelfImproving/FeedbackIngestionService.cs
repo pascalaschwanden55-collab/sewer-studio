@@ -97,7 +97,13 @@ public sealed class FeedbackIngestionService
 
         _feedbackCount++;
 
-        if (_feedbackCount % ReLearnInterval == 0)
+        // ReLearn-Trigger auf PERSISTENTEM Zaehler (Audit P0-1): Der fruehere Instanz-Zaehler
+        // _feedbackCount begann bei jedem neuen FeedbackIngestionService wieder bei 0 — und der
+        // CodingFeedbackRecorder legt pro Benutzerentscheidung einen neuen Service an. Dadurch
+        // erreichte er die Schwelle von 25 nie. Die Zahl der ValidationLog-Zeilen ueberlebt
+        // Service- und App-Neustarts und zaehlt zuverlaessig weiter.
+        var persistentCount = _logger.GetTotalCount();
+        if (persistentCount > 0 && persistentCount % ReLearnInterval == 0)
         {
             try
             {
@@ -112,6 +118,6 @@ public sealed class FeedbackIngestionService
         }
     }
 
-    /// <summary>Total feedback events processed in this session.</summary>
+    /// <summary>Feedback-Ereignisse, die diese Service-Instanz verarbeitet hat (nicht persistent).</summary>
     public int TotalProcessed => _feedbackCount;
 }

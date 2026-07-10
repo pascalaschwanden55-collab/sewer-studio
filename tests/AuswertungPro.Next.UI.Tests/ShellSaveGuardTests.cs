@@ -65,6 +65,51 @@ public sealed class ShellSaveGuardTests
         Assert.True(shell.HasPersistedProject);
     }
 
+    [Fact]
+    public void TrySaveProjectAs_WennSpeichernFehlschlaegt_BleibtLastProjectPathUnveraendert()
+    {
+        using var temp = new TempDir();
+
+        // Ausgangszustand: ein gespeichertes fremdes Projekt, LastProjectPath zeigt darauf.
+        var fremdPath = Path.Combine(temp.Path, "Fremd", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(fremdPath)!);
+        var repo = new JsonProjectRepository();
+        Assert.True(repo.Save(new Project { Name = "Fremd" }, fremdPath).Ok);
+
+        var settings = new AppSettings
+        {
+            EnableRestorePoints = false,
+            LastProjectPath = fremdPath
+        };
+
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            settings,
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+
+        // Der "Speichern unter"-Dialog liefert einen Pfad, der in Wahrheit ein VERZEICHNIS ist.
+        // Der Name endet auf .json, damit NormalizeProjectPath ihn nicht veraendert — so schlaegt
+        // das Schreiben der Projektdatei deterministisch fehl (Ziel ist ein Ordner).
+        var blockierterPfad = Path.Combine(temp.Path, "Blockiert.json");
+        Directory.CreateDirectory(blockierterPfad);
+        services.Dialogs = new SaveFileDialogFake(blockierterPfad);
+
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.Project.Name = "Neues Projekt";
+        shell.Project.Dirty = true;
+
+        var ok = shell.TrySaveProjectAs();
+
+        Assert.False(ok); // Speichern ist fehlgeschlagen.
+        // Kerngarantie (Audit P0-5b): Weil zuerst gespeichert und erst bei Erfolg die Merkliste
+        // geschrieben wird, zeigt LastProjectPath weiter auf das fremde Projekt — NICHT auf die
+        // nie erzeugte neue Datei. Vor dem Fix waere LastProjectPath = blockierterPfad gewesen.
+        Assert.Equal(fremdPath, settings.LastProjectPath);
+        Assert.False(shell.HasPersistedProject);
+    }
+
     private sealed class SaveFileDialogFake : IDialogService
     {
         private readonly string _saveFileResult;

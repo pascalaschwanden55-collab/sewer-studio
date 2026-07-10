@@ -525,6 +525,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         // stammt (HasPersistedProject). Sonst zeigt LastProjectPath noch auf das zuvor
         // geoeffnete Projekt und "Speichern" wuerde dessen Datei still ueberschreiben.
         var path = NormalizeProjectPath(_sp.Settings.LastProjectPath);
+        bool isNewPath = false;
         if (string.IsNullOrWhiteSpace(path) || !HasPersistedProject)
         {
             var defaultName = MakeSafeFileName(Project.Name);
@@ -534,8 +535,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 SetStatus("Speichern abgebrochen");
                 return false;
             }
-            _sp.Settings.AddRecentProject(NormalizeProjectPath(path)); // setzt auch LastProjectPath
-            _sp.Settings.Save();
+            isNewPath = true;
         }
 
         EnsureProjectDirectory(path);
@@ -543,15 +543,26 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             TryCreateProjectRestorePoint(path);
 
         var res = _sp.Projects.Save(Project, path);
-        SetStatus(res.Ok ? "Gespeichert" : $"Fehler: {res.ErrorMessage}");
-        if (res.Ok)
+        if (!res.Ok)
         {
-            IsProjectReady = true;
-            HasPersistedProject = true;
-            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-            _sp.Toasts.Success("Projekt gespeichert");
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return false;
         }
-        return res.Ok;
+
+        // Merkliste/LastProjectPath erst NACH erfolgreichem Schreiben setzen (Audit P0-5b):
+        // bei einem neuen Pfad wuerde ein Schreibfehler sonst LastProjectPath auf eine nie
+        // erzeugte Datei zeigen lassen.
+        if (isNewPath)
+        {
+            _sp.Settings.AddRecentProject(NormalizeProjectPath(path)); // setzt auch LastProjectPath
+            _sp.Settings.Save();
+        }
+        IsProjectReady = true;
+        HasPersistedProject = true;
+        RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
+        SetStatus("Gespeichert");
+        _sp.Toasts.Success("Projekt gespeichert");
+        return true;
     }
 
     public bool TrySaveProjectAs()
@@ -565,23 +576,29 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         }
 
         path = NormalizeProjectPath(path);
-        _sp.Settings.AddRecentProject(path); // Merkliste pflegen (setzt auch LastProjectPath)
-        _sp.Settings.Save();
-        MarkProjectReady();
 
+        // Transaktionale Reihenfolge (Audit P0-5b): ZUERST tatsaechlich speichern. Merkliste,
+        // LastProjectPath und "bereit"-Status erst NACH erfolgreichem Schreiben setzen — sonst
+        // zeigt LastProjectPath bei einem Schreibfehler auf eine Datei, die es nie gab.
         EnsureProjectDirectory(path);
         if (_sp.Settings.EnableRestorePoints)
             TryCreateProjectRestorePoint(path);
 
         var res = _sp.Projects.Save(Project, path);
-        SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
-        if (res.Ok)
+        if (!res.Ok)
         {
-            HasPersistedProject = true;
-            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-            _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return false;
         }
-        return res.Ok;
+
+        _sp.Settings.AddRecentProject(path); // Merkliste pflegen (setzt auch LastProjectPath)
+        _sp.Settings.Save();
+        MarkProjectReady();
+        HasPersistedProject = true;
+        RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
+        SetStatus($"Gespeichert: {Path.GetFileName(path)}");
+        _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
+        return true;
     }
 
     private void OpenProjectWithDialog()
