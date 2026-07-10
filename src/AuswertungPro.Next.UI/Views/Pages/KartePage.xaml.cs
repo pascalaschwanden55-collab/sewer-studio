@@ -7,60 +7,115 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class KartePage : UserControl
 {
     private KarteViewModel? _vm;
+    private bool _selectionSubscribed;
+    private bool _mapInitialized;
+    private bool _mapBuildInProgress;
 
     public KartePage()
     {
         InitializeComponent();
 
-        // ViewModel aus DataContext lesen sobald es gesetzt ist
         DataContextChanged += (_, _) => _vm = DataContext as KarteViewModel;
+        Loaded += KartePage_Loaded;
+        Unloaded += KartePage_Unloaded;
+    }
 
-        // Wird eine Haltung irgendwo in der App gewaehlt, zoomt die Karte darauf (wie QGIS).
-        QgisBridge.QgisBridgeSelection.SelectionChanged += OnBridgeSelectionChanged;
-        Unloaded += (_, _) => QgisBridge.QgisBridgeSelection.SelectionChanged -= OnBridgeSelectionChanged;
+    private async void KartePage_Loaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
 
-        Loaded += async (_, _) =>
+        SubscribeBridgeSelection();
+        _vm = DataContext as KarteViewModel;
+        if (_vm is null)
+            return;
+
+        if (!_mapInitialized && !_mapBuildInProgress)
         {
-            _vm = DataContext as KarteViewModel;
-            if (_vm is null)
+            _mapBuildInProgress = true;
+            var vm = _vm;
+
+            try
+            {
+                var map = await vm.BuildMapAsync();
+                if (!ReferenceEquals(vm, _vm))
+                    return;
+
+                MapControl.Map = map;
+                _mapInitialized = true;
+                await RefreshWhenSizedAsync(centerInitial: true);
+            }
+            finally
+            {
+                _mapBuildInProgress = false;
+            }
+
+            return;
+        }
+
+        await RefreshWhenSizedAsync(centerInitial: false);
+    }
+
+    private void KartePage_Unloaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        UnsubscribeBridgeSelection();
+    }
+
+    private void SubscribeBridgeSelection()
+    {
+        if (_selectionSubscribed)
+            return;
+
+        QgisBridge.QgisBridgeSelection.SelectionChanged += OnBridgeSelectionChanged;
+        _selectionSubscribed = true;
+    }
+
+    private void UnsubscribeBridgeSelection()
+    {
+        if (!_selectionSubscribed)
+            return;
+
+        QgisBridge.QgisBridgeSelection.SelectionChanged -= OnBridgeSelectionChanged;
+        _selectionSubscribed = false;
+    }
+
+    private Task RefreshWhenSizedAsync(bool centerInitial)
+        => Dispatcher.InvokeAsync(
+            () => ApplyViewportRefresh(centerInitial),
+            DispatcherPriority.Loaded).Task;
+
+    private void ApplyViewportRefresh(bool centerInitial)
+    {
+        if (MapControl.ActualWidth > 0 && MapControl.ActualHeight > 0)
+        {
+            if (centerInitial)
+                _vm?.CenterOnUriAndRefresh();
+            else
+                _vm?.RefreshVisibleNetworkLayer(force: true);
+
+            MapControl.ForceUpdate();
+            return;
+        }
+
+        void OnSizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
+        {
+            _ = sender;
+            if (e.NewSize.Width <= 0 || e.NewSize.Height <= 0)
                 return;
 
-            var map = await _vm.BuildMapAsync();
-            MapControl.Map = map;
+            MapControl.SizeChanged -= OnSizeChanged;
 
-            // Zentrieren + erstes Laden erst wenn der MapControl eine echte Größe hat.
-            // Grund: Navigator.CenterOnAndZoomTo hat keinen Effekt bevor der Viewport
-            // initialisiert ist (ActualWidth/Height > 0 UND Mapsui-Resolution > 0).
-            await Dispatcher.InvokeAsync(
-                () =>
-                {
-                    if (MapControl.ActualWidth > 0 && MapControl.ActualHeight > 0)
-                    {
-                        // Steuerelement bereits dimensioniert → sofort zentrieren
-                        _vm?.CenterOnUriAndRefresh();
-                        MapControl.ForceUpdate();
-                    }
-                    else
-                    {
-                        // Noch kein Layout → SizeChanged einmalig abonnieren
-                        void OnSizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
-                        {
-                            if (e.NewSize.Width <= 0 || e.NewSize.Height <= 0)
-                                return;
+            if (centerInitial)
+                _vm?.CenterOnUriAndRefresh();
+            else
+                _vm?.RefreshVisibleNetworkLayer(force: true);
 
-                            // Einmal-Handler: sofort abmelden
-                            MapControl.SizeChanged -= OnSizeChanged;
+            MapControl.ForceUpdate();
+        }
 
-                            // Auf UI-Thread bleiben (SizeChanged läuft bereits dort)
-                            _vm?.CenterOnUriAndRefresh();
-                            MapControl.ForceUpdate();
-                        }
-
-                        MapControl.SizeChanged += OnSizeChanged;
-                    }
-                },
-                DispatcherPriority.Loaded);
-        };
+        MapControl.SizeChanged += OnSizeChanged;
     }
 
     private void ZoomIn_Click(object sender, System.Windows.RoutedEventArgs e)
