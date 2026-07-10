@@ -11,14 +11,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 /// <summary>
 /// Coordinate-descent optimizer for per-category evidence weights.
-/// For each category with >= MinSamples validation entries, searches
-/// 8 dimensions × 7 candidate values, minimizing binary cross-entropy.
-/// Learned weights are persisted to SQLite CategoryWeights table.
+/// Learned weights are persisted to SQLite and can be activated process-wide by
+/// <see cref="QualityGateService.ConfigureProcessWeights"/>.
 /// </summary>
-// EXPERIMENTELL / HALB-OFFENER LERNKREIS (siehe ADR-008): Diese Klasse lernt und speichert
-// Gewichte (via FeedbackIngestionService, ausgeloest beim Bestaetigen/Verwerfen im Codiermodus),
-// ABER kein QualityGate laedt sie aktuell (LoadWeights/SetWeights ohne Aufrufer). Das Gate laeuft
-// bewusst mit CategoryWeights.Default(). NICHT als aktives "adaptives Gate" annehmen.
 public sealed class WeightLearningService
 {
     public int MinSamples { get; set; } = 20;
@@ -30,25 +25,34 @@ public sealed class WeightLearningService
 
     public WeightLearningService(SqliteConnection connection)
     {
-        _conn = connection;
+        _conn = connection ?? throw new ArgumentNullException(nameof(connection));
     }
 
     /// <summary>
     /// Re-learn weights for all categories that have enough validation data.
+    /// All categories written during one run receive the same version timestamp.
     /// </summary>
     public async Task ReLearnAsync(CancellationToken ct = default)
     {
         var categories = GetCategoriesWithSufficientData();
+        var versionUtc = DateTime.UtcNow;
 
         foreach (var category in categories)
         {
             ct.ThrowIfCancellationRequested();
             var samples = LoadValidationSamples(category);
-            if (samples.Count < MinSamples) continue;
+            if (samples.Count < MinSamples)
+                continue;
 
             var bestWeights = await Task.Run(() => OptimizeWeights(samples, ct), ct).ConfigureAwait(false);
-            SaveWeights(category, bestWeights, samples.Count);
+            SaveWeights(category, bestWeights, samples.Count, versionUtc);
         }
+    }
+
+    public async Task<QualityGateWeightSnapshot> ReLearnAndLoadSnapshotAsync(CancellationToken ct = default)
+    {
+        await ReLearnAsync(ct).ConfigureAwait(false);
+        return LoadSnapshot();
     }
 
     /// <summary>Load persisted weights for a specific category.</summary>
@@ -63,17 +67,38 @@ public sealed class WeightLearningService
 
     /// <summary>Load all persisted category weights.</summary>
     public IReadOnlyList<CategoryWeights> LoadAllWeights()
+        => LoadSnapshot().Weights;
+
+    /// <summary>
+    /// Loads a complete immutable snapshot. The newest UpdatedUtc value is the snapshot version.
+    /// </summary>
+    public QualityGateWeightSnapshot LoadSnapshot()
     {
         var result = new List<CategoryWeights>();
+        DateTime? newest = null;
+
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT WeightsJson FROM CategoryWeights";
+        cmd.CommandText = "SELECT WeightsJson, UpdatedUtc FROM CategoryWeights ORDER BY Category";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             var json = reader.GetString(0);
-            result.Add(CategoryWeights.FromJson(json));
+            var weights = CategoryWeights.FromJson(json);
+            result.Add(weights);
+
+            if (!reader.IsDBNull(1) && DateTime.TryParse(reader.GetString(1), out var parsed))
+            {
+                parsed = parsed.ToUniversalTime();
+                if (!newest.HasValue || parsed > newest.Value)
+                    newest = parsed;
+            }
         }
-        return result;
+
+        var version = newest.HasValue
+            ? newest.Value.ToString("O")
+            : QualityGateWeightSnapshot.DefaultVersion;
+
+        return new QualityGateWeightSnapshot(version, result);
     }
 
     private IReadOnlyList<string> GetCategoriesWithSufficientData()
@@ -105,30 +130,33 @@ public sealed class WeightLearningService
             var correct = reader.GetInt32(0) == 1;
             var evidenceJson = reader.GetString(1);
             EvidenceVector? evidence = null;
-            try { evidence = JsonSerializer.Deserialize<EvidenceVector>(evidenceJson); }
-            catch { /* skip malformed */ }
+            try
+            {
+                evidence = JsonSerializer.Deserialize<EvidenceVector>(evidenceJson);
+            }
+            catch
+            {
+                // Malformed historical rows are ignored; the remaining clean samples still learn.
+            }
+
             if (evidence is not null)
                 samples.Add(new ValidationSample(correct, evidence));
         }
         return samples;
     }
 
-    /// <summary>
-    /// Coordinate descent: for each dimension, try all candidate values keeping others fixed.
-    /// Pick the value that minimizes BCE loss. Repeat until convergence.
-    /// </summary>
     private double[] OptimizeWeights(IReadOnlyList<ValidationSample> samples, CancellationToken ct)
     {
         var weights = CategoryWeights.Default().ToArray();
         var bestLoss = ComputeBceLoss(weights, samples);
 
         const int maxIterations = 5;
-        for (int iter = 0; iter < maxIterations; iter++)
+        for (var iter = 0; iter < maxIterations; iter++)
         {
             ct.ThrowIfCancellationRequested();
-            bool improved = false;
+            var improved = false;
 
-            for (int dim = 0; dim < WeightDimensions; dim++)
+            for (var dim = 0; dim < WeightDimensions; dim++)
             {
                 var original = weights[dim];
                 var bestVal = original;
@@ -153,14 +181,16 @@ public sealed class WeightLearningService
                 }
             }
 
-            if (!improved) break;
+            if (!improved)
+                break;
         }
 
-        // Normalize
         var sum = weights.Sum();
         if (sum > 0)
-            for (int i = 0; i < weights.Length; i++)
+        {
+            for (var i = 0; i < weights.Length; i++)
                 weights[i] /= sum;
+        }
 
         return weights;
     }
@@ -168,13 +198,14 @@ public sealed class WeightLearningService
     private static double ComputeBceLoss(double[] weights, IReadOnlyList<ValidationSample> samples)
     {
         double totalLoss = 0;
-        int count = 0;
+        var count = 0;
         const double eps = 1e-7;
 
         foreach (var sample in samples)
         {
             var score = ComputeWeightedScore(weights, sample.Evidence);
-            if (double.IsNaN(score)) continue;
+            if (double.IsNaN(score))
+                continue;
 
             score = Math.Clamp(score, eps, 1.0 - eps);
             var target = sample.WasCorrect ? 1.0 : 0.0;
@@ -199,10 +230,12 @@ public sealed class WeightLearningService
             ev.PlausibilityScore ?? double.NaN
         };
 
-        double sumW = 0, sumWV = 0;
-        for (int i = 0; i < 8; i++)
+        double sumW = 0;
+        double sumWV = 0;
+        for (var i = 0; i < WeightDimensions; i++)
         {
-            if (double.IsNaN(signals[i])) continue;
+            if (double.IsNaN(signals[i]))
+                continue;
             sumW += weights[i];
             sumWV += weights[i] * Math.Clamp(signals[i], 0, 1);
         }
@@ -210,9 +243,14 @@ public sealed class WeightLearningService
         return sumW > 0 ? sumWV / sumW : double.NaN;
     }
 
-    private void SaveWeights(string category, double[] weights, int validationCount)
+    private void SaveWeights(string category, double[] weights, int validationCount, DateTime versionUtc)
     {
-        var cw = new CategoryWeights { Category = category, ValidationCount = validationCount, UpdatedUtc = DateTime.UtcNow };
+        var cw = new CategoryWeights
+        {
+            Category = category,
+            ValidationCount = validationCount,
+            UpdatedUtc = versionUtc
+        };
         cw.FromArray(weights);
 
         using var cmd = _conn.CreateCommand();
@@ -223,9 +261,17 @@ public sealed class WeightLearningService
         cmd.Parameters.AddWithValue("@cat", category);
         cmd.Parameters.AddWithValue("@json", cw.ToJson());
         cmd.Parameters.AddWithValue("@count", validationCount);
-        cmd.Parameters.AddWithValue("@utc", DateTime.UtcNow.ToString("o"));
+        cmd.Parameters.AddWithValue("@utc", versionUtc.ToString("O"));
         cmd.ExecuteNonQuery();
     }
 
     private sealed record ValidationSample(bool WasCorrect, EvidenceVector Evidence);
+}
+
+public sealed record QualityGateWeightSnapshot(
+    string Version,
+    IReadOnlyList<CategoryWeights> Weights)
+{
+    public const string DefaultVersion = "default";
+    public bool HasLearnedWeights => Weights.Count > 0;
 }
