@@ -97,12 +97,17 @@ public static class CodingMultiModelFindingEventWorkflow
             code = addDecision.Code!;
             var officialLabel = actions.LookupVsaLabel(code);
             var dinoConfidence = dino?.Confidence ?? quant.Confidence;
-            var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(
-                request.QualityGate,
+            var evidence = CodingMultiModelQualityGatePolicy.BuildEvidence(
                 request.YoloMaxConfidence,
                 dinoConfidence,
                 quant.Confidence,
-                officialLabel);
+                officialLabel) with
+            {
+                DamageCategory = code
+            };
+            var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(
+                request.QualityGate,
+                evidence);
 
             var quantRule = CodingManifestQuantRuleResolver.Resolve(request.CodeSelectionCatalog, code);
             var draft = CodingMultiModelEventFactory.Create(
@@ -117,7 +122,8 @@ public static class CodingMultiModelFindingEventWorkflow
                 request.ImageHeight,
                 request.MeterFromOsd,
                 request.Calibration,
-                quantRule);
+                quantRule,
+                evidence);
 
             // Audit Fix 3: Ampel aus dem bereits ausgewerteten gateResult in den AiContext uebernehmen.
             draft.AiContext.QualityGateLevel = gateResult.TrafficLight.ToString();

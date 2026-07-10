@@ -137,10 +137,34 @@ public sealed class CodingEventAiContext
     /// <summary>QualityGate-Ampel ("Green"/"Yellow"/"Red") zum Bestaetigungszeitpunkt, vom UI gesetzt. Null = unbekannt.</summary>
     public string? QualityGateLevel { get; set; }
 
+    /// <summary>
+    /// Die beim KI-Vorschlag wirklich vorhandenen Belege. Dieser Schnappschuss
+    /// wird fuer spaeteres, nachvollziehbares Lernen mit dem Ereignis gespeichert.
+    /// </summary>
+    public CodingEventAiEvidence? Evidence { get; set; }
+
     /// <summary>SAM-RLE-Maske fuer markierte Beweisbilder. Kein Trainingslabel, nur UI/Protokoll-Beleg.</summary>
     public string? SamMaskRle { get; set; }
     public int? SamMaskImageWidth { get; set; }
     public int? SamMaskImageHeight { get; set; }
+}
+
+/// <summary>
+/// Schicht-neutraler Schnappschuss der KI-Belege. Die Domain kennt dadurch
+/// keine QualityGate-Dienste, kann die Werte aber verlustfrei speichern.
+/// </summary>
+public sealed class CodingEventAiEvidence
+{
+    public double? YoloConf { get; set; }
+    public double? DinoConf { get; set; }
+    public double? SamMaskStability { get; set; }
+    public double? QwenVisionConf { get; set; }
+    public double? LlmCodeConf { get; set; }
+    public double? KbSimilarity { get; set; }
+    public bool? KbCodeAgreement { get; set; }
+    public double? PlausibilityScore { get; set; }
+    public string? DamageCategory { get; set; }
+    public int? FrameCount { get; set; }
 }
 
 public enum CodingUserDecision

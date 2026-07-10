@@ -50,8 +50,8 @@ public static class CodingAiRuntimeFactory
         var liveDetection = new LiveDetectionService(ollamaClient, runtimeSettings.VisionModel);
         var enhancedVision = new EnhancedVisionAnalysisService(ollamaClient, runtimeSettings.VisionModel, codeCatalog);
         var protocolVerifier = new GuidedVerificationService(ollamaClient, runtimeSettings.VisionModel, codeCatalog);
-        // Audit P0-2: Gate mit den gelernten CategoryWeights aus der KnowledgeBase starten,
-        // statt dauerhaft mit Default-Gewichten zu laufen. Faellt bei fehlender DB auf Default.
+        // Produktiv nur validierte Default-Gewichte. Gelernte Gewichte bleiben bis
+        // zu einem getrennten Eval im Schattenbetrieb.
         var qualityGate = LearnedWeightsGateFactory.Create();
 
         try

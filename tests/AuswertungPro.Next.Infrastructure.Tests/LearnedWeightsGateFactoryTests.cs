@@ -9,9 +9,8 @@ using Xunit;
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
 /// <summary>
-/// Audit P0-2: LearnedWeightsGateFactory muss die gelernten CategoryWeights aus der KB laden
-/// und im Gate aktivieren — und bei fehlender DB/leeren Gewichten verhaltensneutral auf die
-/// Default-Gewichte zurueckfallen.
+/// Gelernte Gewichte bleiben produktiv im Schattenbetrieb und koennen nur fuer
+/// ein getrenntes Eval ausdruecklich aktiviert werden.
 /// </summary>
 public sealed class LearnedWeightsGateFactoryTests
 {
@@ -63,7 +62,12 @@ public sealed class LearnedWeightsGateFactoryTests
             var evidence = new EvidenceVector(YoloConf: 0.2, LlmCodeConf: 0.9, DamageCategory: "BAB");
 
             var defaultComposite = new QualityGateService().Evaluate(evidence).CompositeConfidence;
-            var learnedComposite = LearnedWeightsGateFactory.Create(dbPath).Evaluate(evidence).CompositeConfidence;
+            var shadowComposite = LearnedWeightsGateFactory.Create(dbPath).Evaluate(evidence).CompositeConfidence;
+            var learnedComposite = LearnedWeightsGateFactory.Create(
+                dbPath,
+                activateExperimentalWeights: true).Evaluate(evidence).CompositeConfidence;
+
+            Assert.Equal(defaultComposite, shadowComposite, precision: 6);
 
             // Default gewichtet LLM (0.9) staerker -> hoher Composite. Gelernt zaehlt fast nur
             // YOLO (0.2) -> deutlich niedriger. Der Unterschied beweist: Gewichte sind aktiv.

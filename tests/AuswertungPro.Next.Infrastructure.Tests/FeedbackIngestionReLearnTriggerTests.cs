@@ -83,4 +83,28 @@ public sealed class FeedbackIngestionReLearnTriggerTests
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ReLearn_IgnoriertEintraegeOhneBeweissignale()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fb-trigger", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
+            var logger = new ValidationLogger(db.Connection);
+            for (var i = 0; i < 5; i++)
+                logger.Log("BAB", "BAB", "BAB", wasCorrect: true, evidence: null);
+
+            var learner = new WeightLearningService(db.Connection) { MinSamples = 3 };
+            await learner.ReLearnAsync();
+
+            Assert.Empty(learner.LoadAllWeights());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
 }

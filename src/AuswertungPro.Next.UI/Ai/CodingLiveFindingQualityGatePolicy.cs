@@ -6,12 +6,14 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public static class CodingLiveFindingQualityGatePolicy
 {
-    public static QualityGateResult Evaluate(QualityGateService? qualityGate, LiveFrameFinding finding)
-    {
-        var evidence = new EvidenceVector(
+    public static EvidenceVector BuildEvidence(LiveFrameFinding finding)
+        => new(
             QwenVisionConf: finding.Severity / 5.0,
             PlausibilityScore: 0.6);
 
+    public static QualityGateResult Evaluate(QualityGateService? qualityGate, LiveFrameFinding finding)
+    {
+        var evidence = BuildEvidence(finding);
         return qualityGate?.Evaluate(evidence)
             ?? new QualityGateResult(
                 finding.Severity / 5.0,

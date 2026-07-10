@@ -107,7 +107,7 @@ public sealed class WeightLearningService
             EvidenceVector? evidence = null;
             try { evidence = JsonSerializer.Deserialize<EvidenceVector>(evidenceJson); }
             catch { /* skip malformed */ }
-            if (evidence is not null)
+            if (evidence is { SignalCount: > 0 })
                 samples.Add(new ValidationSample(correct, evidence));
         }
         return samples;

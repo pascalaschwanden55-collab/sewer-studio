@@ -46,19 +46,21 @@ public sealed class FeedbackIngestionService
         CancellationToken ct = default)
     {
         var suggestedCode = entry.SuggestedCode ?? "";
-        var vsaCode = !string.IsNullOrWhiteSpace(finalCode) ? finalCode : suggestedCode;
+        // Die Gewichte bewerten die Zuverlaessigkeit des vorgeschlagenen Codes.
+        // Eine Korrektur darf deshalb nicht unter dem neuen Zielcode gruppiert werden.
+        var vsaCode = suggestedCode;
         var wasCorrect = accepted && string.Equals(suggestedCode, finalCode, StringComparison.OrdinalIgnoreCase);
 
         _logger.Log(vsaCode, suggestedCode, finalCode, wasCorrect, entry.Detection.Evidence);
 
-        if (accepted && _sampleIndexer is not null && !string.IsNullOrWhiteSpace(vsaCode))
+        if (accepted && _sampleIndexer is not null && !string.IsNullOrWhiteSpace(finalCode))
         {
             var det = entry.Detection;
             var sample = new TrainingSample
             {
                 SampleId = $"feedback_{Guid.NewGuid():N}",
                 CaseId = det.FindingLabel ?? "",
-                Code = vsaCode,
+                Code = finalCode,
                 Beschreibung = det.FindingLabel ?? "",
                 MeterStart = det.MeterStart,
                 MeterEnd = det.MeterEnd

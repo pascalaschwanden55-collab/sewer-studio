@@ -50,10 +50,8 @@ public sealed class FullProtocolGenerationService : IDisposable
             keepAlive: cfg.OllamaKeepAlive,
             numCtx: cfg.OllamaNumCtx);
         _retrieval = retrieval;
-        // Audit P0-2: Wird kein Gate uebergeben, mit den gelernten CategoryWeights aus der
-        // KnowledgeBase starten (schliesst den frueher halb-offenen Lernkreis aus ADR-008).
-        // LearnedWeightsGateFactory faellt bei fehlender DB/leeren Gewichten auf Default zurueck,
-        // der Fallback ist also verhaltensneutral gegenueber dem alten new QualityGateService().
+        // Produktiv bewusst mit validierten Default-Gewichten starten. Experimentell
+        // gelernte Gewichte bleiben bis zu einem getrennten Eval im Schattenbetrieb.
         _qualityGate = qualityGate ?? LearnedWeightsGateFactory.Create();
 
         // Only create own KB when none provided and AI is active

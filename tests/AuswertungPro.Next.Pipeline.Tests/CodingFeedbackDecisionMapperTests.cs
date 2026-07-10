@@ -17,6 +17,11 @@ public sealed class CodingFeedbackDecisionMapperTests
             Q2Mm = 3.2,
             FillPercent = 18.6
         };
+        ev.AiContext!.Evidence = new CodingEventAiEvidence
+        {
+            YoloConf = 0.81,
+            DamageCategory = "BBA"
+        };
 
         var decision = CodingFeedbackDecisionMapper.TryCreate(ev, "H-500");
 
@@ -31,6 +36,8 @@ public sealed class CodingFeedbackDecisionMapperTests
         Assert.Equal("mittel", decision.Severity);
         Assert.Equal(0.72, decision.Confidence);
         Assert.Equal("Testgrund", decision.Reason);
+        Assert.Equal(0.81, decision.Evidence!.YoloConf);
+        Assert.Equal("BBA", decision.Evidence.DamageCategory);
         Assert.Equal("6.5", decision.PositionClock);
         Assert.Equal(12, decision.HeightMm);
         Assert.Equal(3, decision.WidthMm);

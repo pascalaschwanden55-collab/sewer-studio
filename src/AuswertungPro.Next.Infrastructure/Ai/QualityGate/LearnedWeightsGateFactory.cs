@@ -4,26 +4,23 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 /// <summary>
-/// Baut einen <see cref="QualityGateService"/> und laedt dabei die vom
-/// <see cref="WeightLearningService"/> gelernten, persistierten CategoryWeights aus der
-/// KnowledgeBase (Audit P0-2). Ohne diese Bruecke lief jedes Gate dauerhaft mit
-/// <c>CategoryWeights.Default()</c>, egal wie viele Feedbacks gelernt wurden — der
-/// halb-offene Lernkreis (siehe ADR-008) wird hiermit geschlossen.
-///
-/// Robust: Faellt bei fehlender/gesperrter DB oder leerer Gewichtstabelle still auf
-/// Default-Gewichte zurueck. Ein QualityGateService ohne gesetzte Gewichte verhaelt sich
-/// exakt wie bisher, d.h. dieser Fallback ist verhaltensneutral.
+/// Baut das QualityGate. Gelernte Gewichte bleiben standardmaessig im Schattenbetrieb:
+/// Ohne getrennte Validierung duerfen sie produktive Freigaben nicht veraendern.
 /// </summary>
 public static class LearnedWeightsGateFactory
 {
     /// <summary>
-    /// Erstellt einen QualityGateService und aktiviert alle gelernten CategoryWeights.
+    /// Erstellt ein QualityGate. Experimentelle Gewichte werden nur nach einer
+    /// ausdruecklichen Aktivierung geladen.
     /// </summary>
     /// <param name="dbPath">Optionaler DB-Pfad (fuer Tests); sonst die Standard-KnowledgeBase.</param>
-    public static QualityGateService Create(string? dbPath = null)
+    public static QualityGateService Create(
+        string? dbPath = null,
+        bool activateExperimentalWeights = false)
     {
         var gate = new QualityGateService();
-        LoadInto(gate, dbPath);
+        if (activateExperimentalWeights)
+            LoadInto(gate, dbPath);
         return gate;
     }
 

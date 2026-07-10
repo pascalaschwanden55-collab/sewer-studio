@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -24,7 +25,8 @@ public static class CodingMultiModelEventFactory
         double imageHeight,
         bool meterFromOsd,
         PipeCalibration? calibration,
-        QuantificationGate.ManifestQuantRule manifestRule)
+        QuantificationGate.ManifestQuantRule manifestRule,
+        EvidenceVector? evidence = null)
     {
         var quant = segmented.Quant;
         var mask = segmented.Mask;
@@ -59,6 +61,12 @@ public static class CodingMultiModelEventFactory
             SuggestedCode = code,
             Confidence = compositeConfidence,
             Reason = $"{quant.Label} (DINO {dinoConfidence:P0})",
+            Evidence = CodingEventEvidenceMapper.ToSnapshot(
+                evidence ?? new EvidenceVector(
+                    DinoConf: dinoConfidence,
+                    SamMaskStability: quant.Confidence,
+                    PlausibilityScore: officialLabel != null ? 0.8 : 0.4,
+                    DamageCategory: code)),
             SamMaskRle = mask.MaskRle,
             SamMaskImageWidth = (int)Math.Round(imageWidth),
             SamMaskImageHeight = (int)Math.Round(imageHeight),

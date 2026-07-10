@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -32,19 +33,27 @@ public sealed class CodingSessionViewModelFeedbackTests
             var recorder = new CodingFeedbackRecorder(dbPath);
             var ev = MakeAiEvent("BBA", "BBA");
             ev.AiContext!.Decision = CodingUserDecision.Accepted;
+            ev.AiContext.Evidence = new CodingEventAiEvidence
+            {
+                YoloConf = 0.83,
+                DamageCategory = "BBA"
+            };
 
             await recorder.RecordDecisionAsync(ev, "H-400");
 
             using var conn = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly");
             conn.Open();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT SuggestedCode, FinalCode, WasCorrect FROM ValidationLog";
+            cmd.CommandText = "SELECT SuggestedCode, FinalCode, WasCorrect, EvidenceJson FROM ValidationLog";
             using var reader = cmd.ExecuteReader();
 
             Assert.True(reader.Read());
             Assert.Equal("BBA", reader.GetString(0));
             Assert.Equal("BBA", reader.GetString(1));
             Assert.Equal(1, reader.GetInt32(2));
+            using var evidence = JsonDocument.Parse(reader.GetString(3));
+            Assert.Equal(0.83, evidence.RootElement.GetProperty("YoloConf").GetDouble());
+            Assert.Equal("BBA", evidence.RootElement.GetProperty("DamageCategory").GetString());
             Assert.False(reader.Read());
         }
         finally

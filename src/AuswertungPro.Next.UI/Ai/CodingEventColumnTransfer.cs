@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -117,6 +118,7 @@ public static class CodingEventColumnTransfer
             Reason = a.Reason,
             Decision = a.Decision,
             QualityGateLevel = a.QualityGateLevel,
+            Evidence = CodingEventEvidenceMapper.Clone(a.Evidence),
             SamMaskRle = a.SamMaskRle,
             SamMaskImageWidth = a.SamMaskImageWidth,
             SamMaskImageHeight = a.SamMaskImageHeight,

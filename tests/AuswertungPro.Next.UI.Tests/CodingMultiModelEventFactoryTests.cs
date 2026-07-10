@@ -41,6 +41,9 @@ public sealed class CodingMultiModelEventFactoryTests
         Assert.Equal("BCAEB", draft.AiContext.SuggestedCode);
         Assert.Equal(0.81, draft.AiContext.Confidence);
         Assert.Equal("connection (DINO 73%)", draft.AiContext.Reason);
+        Assert.Equal(0.73, draft.AiContext.Evidence!.DinoConf);
+        Assert.Equal(0.87, draft.AiContext.Evidence.SamMaskStability);
+        Assert.Equal("BCAEB", draft.AiContext.Evidence.DamageCategory);
         Assert.Equal("mask-rle", draft.AiContext.SamMaskRle);
         Assert.Equal(100, draft.AiContext.SamMaskImageWidth);
         Assert.Equal(100, draft.AiContext.SamMaskImageHeight);

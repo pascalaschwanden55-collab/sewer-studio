@@ -63,5 +63,6 @@ public sealed class CodingFeedbackRecorder : ICodingFeedbackRecorder
             PositionClock: decision.PositionClock,
             HeightMm: decision.HeightMm,
             WidthMm: decision.WidthMm,
-            CrossSectionReductionPercent: decision.CrossSectionReductionPercent);
+            CrossSectionReductionPercent: decision.CrossSectionReductionPercent,
+            Evidence: CodingEventEvidenceMapper.ToEvidence(decision.Evidence));
 }

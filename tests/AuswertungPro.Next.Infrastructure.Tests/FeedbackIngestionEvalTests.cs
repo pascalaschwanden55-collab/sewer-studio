@@ -111,4 +111,34 @@ public sealed class FeedbackIngestionEvalTests
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task CorrectedFeedback_IsGroupedUnderSuggestedCode()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fb-ingest", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
+            var svc = new FeedbackIngestionService(
+                new ValidationLogger(db.Connection),
+                new WeightLearningService(db.Connection));
+
+            await svc.ProcessFeedbackAsync(Entry("865-864"), finalCode: "BAA", accepted: true);
+
+            using var cmd = db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT VsaCode, SuggestedCode, FinalCode, WasCorrect FROM ValidationLog";
+            using var reader = cmd.ExecuteReader();
+            Assert.True(reader.Read());
+            Assert.Equal("BAB", reader.GetString(0));
+            Assert.Equal("BAB", reader.GetString(1));
+            Assert.Equal("BAA", reader.GetString(2));
+            Assert.Equal(0, reader.GetInt32(3));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
 }

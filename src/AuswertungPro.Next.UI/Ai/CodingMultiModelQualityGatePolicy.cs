@@ -5,24 +5,40 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public static class CodingMultiModelQualityGatePolicy
 {
+    public static EvidenceVector BuildEvidence(
+        double? yoloMaxConfidence,
+        double dinoConfidence,
+        double samMaskConfidence,
+        string? officialLabel)
+        => new(
+            YoloConf: yoloMaxConfidence,
+            DinoConf: dinoConfidence,
+            SamMaskStability: samMaskConfidence,
+            PlausibilityScore: officialLabel != null ? 0.8 : 0.4);
+
+    public static QualityGateResult Evaluate(
+        QualityGateService? qualityGate,
+        EvidenceVector evidence)
+    {
+        return qualityGate?.Evaluate(evidence)
+            ?? new QualityGateResult(
+                evidence.DinoConf ?? 0,
+                TrafficLight.Yellow,
+                new Dictionary<string, double>(),
+                "Multi-Model");
+    }
+
     public static QualityGateResult Evaluate(
         QualityGateService? qualityGate,
         double? yoloMaxConfidence,
         double dinoConfidence,
         double samMaskConfidence,
         string? officialLabel)
-    {
-        var evidence = new EvidenceVector(
-            YoloConf: yoloMaxConfidence,
-            DinoConf: dinoConfidence,
-            SamMaskStability: samMaskConfidence,
-            PlausibilityScore: officialLabel != null ? 0.8 : 0.4);
-
-        return qualityGate?.Evaluate(evidence)
-            ?? new QualityGateResult(
+        => Evaluate(
+            qualityGate,
+            BuildEvidence(
+                yoloMaxConfidence,
                 dinoConfidence,
-                TrafficLight.Yellow,
-                new Dictionary<string, double>(),
-                "Multi-Model");
-    }
+                samMaskConfidence,
+                officialLabel));
 }
