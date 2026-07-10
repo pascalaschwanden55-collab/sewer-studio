@@ -31,5 +31,22 @@ public sealed class ReleasePackagingScriptTests
             "AuswertungPro.Next.UI",
             "AuswertungPro.Next.UI.csproj"));
         Assert.Contains("<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>", project, StringComparison.Ordinal);
+
+        foreach (var projectName in new[]
+                 {
+                     "AuswertungPro.Next.Domain",
+                     "AuswertungPro.Next.Application",
+                     "AuswertungPro.Next.Infrastructure"
+                 })
+        {
+            var libraryProject = File.ReadAllText(TestRepoPaths.RepoFile(
+                "src",
+                projectName,
+                $"{projectName}.csproj"));
+            Assert.Contains(
+                "<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>",
+                libraryProject,
+                StringComparison.Ordinal);
+        }
     }
 }
