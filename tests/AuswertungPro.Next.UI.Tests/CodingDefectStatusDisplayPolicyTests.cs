@@ -46,7 +46,9 @@ public sealed class CodingDefectStatusDisplayPolicyTests
             MeterAtCapture = 1.234,
             AiContext = new CodingEventAiContext
             {
-                Confidence = 0.876,
+                // AutoAccepted verlangt jetzt hohe Sicherheit UND gruene Ampel (Audit Fix 3).
+                Confidence = 0.94,
+                QualityGateLevel = "Green",
                 Decision = CodingUserDecision.Ignored
             }
         };
@@ -56,8 +58,8 @@ public sealed class CodingDefectStatusDisplayPolicyTests
         Assert.Equal("BAB", state.CodeText);
         Assert.Equal("Riss", state.DescriptionText);
         Assert.Equal("1.23m", state.DistanceText);
-        Assert.Equal("88%", state.ConfidenceText);
-        Assert.Equal(0.876, state.Confidence);
+        Assert.Equal("94%", state.ConfidenceText);
+        Assert.Equal(0.94, state.Confidence);
         Assert.Equal(DefectStatus.AutoAccepted, state.Status);
         Assert.Equal("Auto-Akzeptiert (Green Zone)", state.StatusText);
         Assert.True(state.CanAct);
