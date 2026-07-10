@@ -38,6 +38,9 @@ public static class CodingLiveFindingEventFactory
             SuggestedCode = code,
             Confidence = gateResult.CompositeConfidence,
             Reason = finding.Label,
+            // Audit Fix 3: Ampel schon beim Anlegen sichern, damit die Live-Anzeige
+            // die zentrale Freigabe-Regel (zweiter Beleg) anwenden kann.
+            QualityGateLevel = gateResult.TrafficLight.ToString(),
             Decision = CodingUserDecision.Ignored
         };
 

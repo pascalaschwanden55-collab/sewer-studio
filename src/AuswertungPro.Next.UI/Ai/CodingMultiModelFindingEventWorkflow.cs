@@ -119,6 +119,9 @@ public static class CodingMultiModelFindingEventWorkflow
                 request.Calibration,
                 quantRule);
 
+            // Audit Fix 3: Ampel aus dem bereits ausgewerteten gateResult in den AiContext uebernehmen.
+            draft.AiContext.QualityGateLevel = gateResult.TrafficLight.ToString();
+
             actions.AttachAnalyzedFramePhoto(draft.Entry);
             CodingMultiModelEventAppender.Apply(draft, request.CodingSessionService);
             addedCount++;
