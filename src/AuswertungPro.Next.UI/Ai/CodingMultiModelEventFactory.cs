@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -19,7 +20,7 @@ public static class CodingMultiModelEventFactory
         double meter,
         TimeSpan videoTime,
         double dinoConfidence,
-        double compositeConfidence,
+        QualityGateResult gateResult,
         double imageWidth,
         double imageHeight,
         bool meterFromOsd,
@@ -54,15 +55,27 @@ public static class CodingMultiModelEventFactory
             calibration,
             manifestRule);
 
+        var uncertainty = UncertaintyEstimate.FromSinglePass(gateResult.CompositeConfidence);
+        var approval = AiDecisionPolicy.Evaluate(new AiDecisionEvidence(
+            gateResult.CompositeConfidence,
+            gateResult.TrafficLight.ToString(),
+            KbCodeAgreement: null,
+            uncertainty.EpistemicUncertainty));
+
         var aiContext = new CodingEventAiContext
         {
             SuggestedCode = code,
-            Confidence = compositeConfidence,
+            Confidence = gateResult.CompositeConfidence,
             Reason = $"{quant.Label} (DINO {dinoConfidence:P0})",
             SamMaskRle = mask.MaskRle,
             SamMaskImageWidth = (int)Math.Round(imageWidth),
             SamMaskImageHeight = (int)Math.Round(imageHeight),
-            Decision = CodingUserDecision.Ignored
+            Decision = CodingUserDecision.Ignored,
+            QualityGateLevel = gateResult.TrafficLight.ToString(),
+            KbCodeAgreement = null,
+            EpistemicUncertainty = uncertainty.EpistemicUncertainty,
+            AutoApprovalReason = approval.Reason,
+            DecisionPolicyVersion = approval.PolicyVersion
         };
 
         return new CodingMultiModelEventDraft(
