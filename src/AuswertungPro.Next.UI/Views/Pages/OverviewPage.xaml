@@ -2,292 +2,85 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
-             AllowDrop="True" Drop="OverviewPage_Drop" DragOver="OverviewPage_DragOver">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- ═══ HEADER ═══ -->
-        <StackPanel Margin="0,0,0,16">
-            <TextBlock Text="Projektuebersicht" FontSize="22" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}"/>
-            <TextBlock Text="Projekt oeffnen, erstellen oder fortsetzen"
-                       Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource MutedBrush}"/>
-            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                <Button Content="Neues Projekt" Command="{Binding NewCommand}"
-                        Style="{StaticResource PrimaryButton}" Padding="16,8"/>
-                <Button Content="Projekt oeffnen" Command="{Binding OpenCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Letztes Projekt fortsetzen" Command="{Binding ContinueCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Aktualisieren" Command="{Binding RefreshCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-            </StackPanel>
-        </StackPanel>
-
-        <!-- ═══ HAUPTBEREICH ═══ -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="3*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- ── LINKS: Projektliste ── -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Titel -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Alle Projekte" FontSize="15" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextBrush}"/>
-                        <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="10"
-                                Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding ProjectEntries.Count}" FontSize="11" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}"/>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Suchfeld -->
-                    <Border Grid.Row="1" CornerRadius="6" BorderThickness="1"
-                            BorderBrush="{DynamicResource BorderLightBrush}"
-                            Background="{DynamicResource BgLightBrush}" Margin="0,0,0,10">
-                        <Grid>
-                            <TextBlock Text="Projekt suchen..." FontSize="12"
-                                       Foreground="{DynamicResource MutedBrush}"
-                                       VerticalAlignment="Center" Margin="10,0"
-                                       IsHitTestVisible="False"
-                                       Visibility="{Binding FilterText, Converter={x:Static local:StringToVisibilityConverter.Instance}, ConverterParameter=invert}"/>
-                            <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="Transparent" BorderThickness="0"
-                                     FontSize="12" Padding="8,6"
-                                     Foreground="{DynamicResource TextBrush}"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Projektliste mit Karten -->
-                    <ListBox Grid.Row="2"
-                             ItemsSource="{Binding ProjectEntries}"
-                             SelectedItem="{Binding SelectedProjectEntry, Mode=TwoWay}"
-                             Background="Transparent" BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             MouseDoubleClick="ProjectListBox_MouseDoubleClick">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,0,6"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="ItemBorder" CornerRadius="8"
-                                                    BorderThickness="1" Padding="0"
-                                                    BorderBrush="{DynamicResource BorderLightBrush}"
-                                                    Background="{DynamicResource CardBrush}"
-                                                    Cursor="Hand">
-                                                <ContentPresenter/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background"
-                                                            Value="{DynamicResource AccentSubtleBrush}"/>
-                                                    <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                            Value="{DynamicResource AccentBrush}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background"
-                                                            Value="{DynamicResource AccentSubtleBrush}"/>
-                                                    <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                            Value="{DynamicResource AccentBrush}"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="5"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Farbbalken links -->
-                                    <Border Grid.Column="0" CornerRadius="4,0,0,4"
-                                            Width="5" HorizontalAlignment="Stretch">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsLastProject}" Value="True">
-                                                        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                    </Border>
-
-                                    <!-- Inhalt -->
-                                    <StackPanel Grid.Column="1" Margin="10,8,10,8">
-                                        <DockPanel>
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextBrush}"/>
-                                            <!-- Badge: Haltungen -->
-                                            <Border DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                                    Background="{DynamicResource AccentSubtleBrush}"
-                                                    CornerRadius="8" Padding="6,2" Margin="6,0,0,0">
-                                                <TextBlock Text="{Binding StatsText}" FontSize="10"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource AccentBrush}"/>
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0">
-                                            <Run Text="{Binding ModifiedAtDisplay, Mode=OneWay}"/>
-                                            <Run Text=" · "/>
-                                            <Run Text="{Binding FolderName, Mode=OneWay}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <!-- Buttons unten -->
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Oeffnen" Command="{Binding OpenSelectedCommand}"
-                                Style="{StaticResource PrimaryButton}" Padding="14,6"/>
-                        <Button Content="Loeschen" Command="{Binding DeleteSelectedCommand}"
-                                Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
-                                Foreground="{DynamicResource DangerBrush}"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- ── RECHTS: Projektinfo ── -->
-            <Border Grid.Column="2" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="Projektinfo" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
-
-                    <!-- Info-Karte: Aktuelles Projekt -->
-                    <Border CornerRadius="8" BorderThickness="1"
-                            BorderBrush="{DynamicResource BorderLightBrush}"
-                            Background="{DynamicResource BgLightBrush}" Padding="14" Margin="0,0,0,12">
-                        <StackPanel>
-                            <DockPanel Margin="0,0,0,8">
-                                <TextBlock Text="{Binding Project.Name}" FontSize="16" FontWeight="Bold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <Border DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                        CornerRadius="6" Padding="8,3">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ProjectStatus}" Value="Projekt noch nicht gespeichert">
-                                                    <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding ProjectStatus}" FontSize="10" FontWeight="Bold"
-                                               Foreground="White"/>
-                                </Border>
-                            </DockPanel>
-                            <TextBlock Text="{Binding Project.Description}" TextWrapping="Wrap"
-                                       FontSize="12" Foreground="{DynamicResource MutedBrush}"
-                                       Margin="0,0,0,8"/>
-                            <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}">
-                                <Run Text="{Binding LastProjectPath, TargetNullValue=-, Mode=OneWay}"/>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Statistiken -->
-                    <TextBlock Text="Statistiken" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Haltungen -->
-                        <Border Grid.Column="0" CornerRadius="8" Padding="12,10"
-                                Background="{DynamicResource AccentSubtleBrush}">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding Project.Data.Count, StringFormat={}{0}}"
-                                           FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource AccentBrush}"/>
-                                <TextBlock Text="Haltungen" FontSize="10" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Gespeichert -->
-                        <Border Grid.Column="2" CornerRadius="8" Padding="12,10"
-                                Background="{DynamicResource BgLightBrush}">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding Project.ModifiedAtUtc, StringFormat={}{0:dd.MM.yyyy}}"
-                                           FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="Zuletzt gespeichert" FontSize="10" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Version -->
-                        <Border Grid.Column="4" CornerRadius="8" Padding="12,10"
-                                Background="{DynamicResource BgLightBrush}">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding Project.AppVersion, TargetNullValue=—}"
-                                           FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="App-Version" FontSize="10" HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Schnellaktionen -->
-                    <TextBlock Text="Schnellaktionen" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,4,0,8"/>
-                    <WrapPanel>
-                        <Button Content="Import starten" Margin="0,0,6,6"
-                                Command="{Binding ContinueCommand}" Style="{StaticResource SecondaryButton}"/>
-                    </WrapPanel>
-
-                    <!-- Drag & Drop Hinweis -->
-                    <Border CornerRadius="8" Padding="12" Margin="0,12,0,0"
-                            BorderThickness="2" BorderBrush="{DynamicResource BorderLightBrush}"
-                            Background="Transparent">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="Projekt-Datei hierher ziehen" FontSize="12"
-                                       HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                            <TextBlock Text=".json Datei oder Ordner" FontSize="10"
-                                       HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </Border>
-        </Grid>
-    </Grid>
-</UserControl>
+             AllowDrop="True" Drop="OverviewPage_Drop" DragOver="OverviewPage_DragOver"><UserControl.Resources><Color x:Key="OverviewTeal">#FF22D3EE</Color><LinearGradientBrush x:Key="AccentBarBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/><GradientStop Color="{StaticResource OverviewTeal}" Offset="1"/></LinearGradientBrush><Style x:Key="OverviewCard" TargetType="Border" BasedOn="{StaticResource Card}"><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="8"/><Setter Property="ClipToBounds" Value="True"/></Style><Style x:Key="OverviewPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"><Setter Property="Height" Value="40"/><Setter Property="MinWidth" Value="168"/><Setter Property="Padding" Value="16,8"/></Style><Style x:Key="OverviewSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}"><Setter Property="Height" Value="40"/><Setter Property="MinWidth" Value="152"/><Setter Property="Padding" Value="16,8"/></Style><Style x:Key="OverviewCompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}"><Setter Property="Height" Value="36"/><Setter Property="MinWidth" Value="120"/><Setter Property="Padding" Value="12,8"/><Setter Property="FontSize" Value="12"/></Style><DataTemplate x:Key="OverviewActionContent"><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=Tag}"
+                           FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0"
+                           Foreground="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=Foreground}"/><TextBlock Text="{Binding}" VerticalAlignment="Center"
+                           Foreground="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=Foreground}"/></StackPanel></DataTemplate><Style x:Key="OverviewSectionLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/><Setter Property="CharacterSpacing" Value="80"/></Style><Style x:Key="OverviewMetricCard" TargetType="Border"><Setter Property="MinHeight" Value="76"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="12"/><Setter Property="Background" Value="{DynamicResource BgLightBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/><Setter Property="BorderThickness" Value="1"/></Style><Style x:Key="OverviewMetricValue" TargetType="TextBlock"><Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/><Setter Property="FontSize" Value="18"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="HorizontalAlignment" Value="Center"/><Setter Property="TextAlignment" Value="Center"/><Setter Property="TextTrimming" Value="CharacterEllipsis"/></Style><Style x:Key="OverviewMetricLabel" TargetType="TextBlock" BasedOn="{StaticResource OverviewSectionLabel}"><Setter Property="FontSize" Value="9"/><Setter Property="HorizontalAlignment" Value="Center"/><Setter Property="TextAlignment" Value="Center"/><Setter Property="Margin" Value="0,4,0,0"/></Style></UserControl.Resources><Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><StackPanel Margin="0,0,0,20"><TextBlock Text="Projektübersicht" FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="Projekt öffnen, erstellen oder fortsetzen" Margin="0,4,0,0"
+                       FontSize="13" Foreground="{DynamicResource MutedBrush}"/><WrapPanel Margin="0,16,0,0"><Button Content="Neues Projekt" Tag="&#xE710;" Command="{Binding NewCommand}"
+                        ContentTemplate="{StaticResource OverviewActionContent}"
+                        Style="{StaticResource OverviewPrimaryButton}" Margin="0,0,8,8"/><Button Content="Projekt öffnen" Tag="&#xE8E5;" Command="{Binding OpenCommand}"
+                        ContentTemplate="{StaticResource OverviewActionContent}"
+                        Style="{StaticResource OverviewSecondaryButton}" Margin="0,0,8,8"/><Button Content="Letztes Projekt fortsetzen" Tag="&#xE768;" Command="{Binding ContinueCommand}"
+                        ContentTemplate="{StaticResource OverviewActionContent}"
+                        Style="{StaticResource OverviewSecondaryButton}" Margin="0,0,8,8"/><Button Content="Aktualisieren" Tag="&#xE72C;" Command="{Binding RefreshCommand}"
+                        ContentTemplate="{StaticResource OverviewActionContent}"
+                        Style="{StaticResource OverviewSecondaryButton}" Margin="0,0,0,8"/></WrapPanel></StackPanel><Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="3*"/></Grid.ColumnDefinitions><Border Grid.Column="0" Style="{StaticResource OverviewCard}"><Grid><Grid.RowDefinitions><RowDefinition Height="2"/><RowDefinition Height="*"/></Grid.RowDefinitions><Border Background="{StaticResource AccentBarBrush}" CornerRadius="8,8,0,0"/><Grid Grid.Row="1" Margin="20"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><DockPanel Margin="0,0,0,12"><TextBlock Text="ALLE PROJEKTE" Style="{StaticResource OverviewSectionLabel}"
+                                       VerticalAlignment="Center"/><Border DockPanel.Dock="Right" Background="{DynamicResource AccentSubtleBrush}"
+                                    CornerRadius="8" Padding="8,4" HorizontalAlignment="Right"><TextBlock Text="{Binding ProjectEntries.Count}" FontFamily="Cascadia Mono, Consolas"
+                                           FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/></Border></DockPanel><Border Grid.Row="1" CornerRadius="8" BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                Background="{DynamicResource BgLightBrush}" Margin="0,0,0,12"><Grid><TextBlock Text="Projekt suchen..." FontSize="12"
+                                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                                           Margin="12,0" IsHitTestVisible="False"
+                                           Visibility="{Binding FilterText, Converter={x:Static local:StringToVisibilityConverter.Instance}, ConverterParameter=invert}"/><TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="Transparent" BorderThickness="0" FontSize="12"
+                                         Padding="12,8" Foreground="{DynamicResource TextBrush}"/></Grid></Border><ListBox Grid.Row="2" ItemsSource="{Binding ProjectEntries}"
+                                 SelectedItem="{Binding SelectedProjectEntry, Mode=TwoWay}"
+                                 Background="Transparent" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 MouseDoubleClick="ProjectListBox_MouseDoubleClick"><ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,8"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="ItemBorder" CornerRadius="8" BorderThickness="1"
+                                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                                        Background="{DynamicResource CardBrush}" Cursor="Hand"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemBorder" Property="Background"
+                                                                Value="{DynamicResource AccentSubtleBrush}"/><Setter TargetName="ItemBorder" Property="BorderBrush"
+                                                                Value="{DynamicResource AccentBrush}"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemBorder" Property="Background"
+                                                                Value="{DynamicResource AccentSubtleBrush}"/><Setter TargetName="ItemBorder" Property="BorderBrush"
+                                                                Value="{DynamicResource AccentBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle><ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Grid.Column="0" Width="4" CornerRadius="8,0,0,8"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="{DynamicResource AccentBrush}"/><Style.Triggers><DataTrigger Binding="{Binding IsLastProject}" Value="True"><Setter Property="Background" Value="{DynamicResource SuccessBrush}"/></DataTrigger></Style.Triggers></Style></Border.Style></Border><Grid Grid.Column="1" Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/><Border Grid.Column="1" Background="{DynamicResource AccentSubtleBrush}"
+                                                    CornerRadius="8" Padding="8,4" Margin="8,0,0,0"><TextBlock Text="{Binding StatsText}" FontFamily="Cascadia Mono, Consolas"
+                                                           FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AccentBrush}"/></Border><TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0"
+                                                       FontFamily="Cascadia Mono, Consolas" FontSize="10"
+                                                       Foreground="{DynamicResource MutedBrush}"
+                                                       TextTrimming="CharacterEllipsis"><Run Text="{Binding ModifiedAtDisplay, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding FolderName, Mode=OneWay}"/></TextBlock></Grid></Grid></DataTemplate></ListBox.ItemTemplate></ListBox><WrapPanel Grid.Row="3" Margin="0,12,0,0"><Button Content="Öffnen" Tag="&#xE8E5;" Command="{Binding OpenSelectedCommand}"
+                                    ContentTemplate="{StaticResource OverviewActionContent}"
+                                    Style="{StaticResource OverviewPrimaryButton}" Margin="0,0,8,0"/><Button Content="Löschen" Tag="&#xE74D;" Command="{Binding DeleteSelectedCommand}"
+                                    ContentTemplate="{StaticResource OverviewActionContent}"
+                                    Style="{StaticResource OverviewCompactButton}"
+                                    Foreground="{DynamicResource DangerBrush}"/></WrapPanel></Grid></Grid></Border><Border Grid.Column="2" Style="{StaticResource OverviewCard}"><Grid><Grid.RowDefinitions><RowDefinition Height="2"/><RowDefinition Height="*"/></Grid.RowDefinitions><Border Background="{StaticResource AccentBarBrush}" CornerRadius="8,8,0,0"/><ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="20"><TextBlock Text="PROJEKTINFO" Style="{StaticResource OverviewSectionLabel}"
+                                       Margin="0,0,0,12"/><Border CornerRadius="8" BorderThickness="1"
+                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                    Background="{DynamicResource BgLightBrush}" Padding="16" Margin="0,0,0,16"><StackPanel><DockPanel Margin="0,0,0,8"><TextBlock Text="{Binding Project.Name}" FontSize="16" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   TextTrimming="CharacterEllipsis"/><Border DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                                CornerRadius="8" Padding="8,4" Margin="8,0,0,0"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="{DynamicResource SuccessBrush}"/><Style.Triggers><DataTrigger Binding="{Binding ProjectStatus}" Value="Projekt noch nicht gespeichert"><Setter Property="Background" Value="{DynamicResource WarningBrush}"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock Text="{Binding ProjectStatus}" FontSize="10"
+                                                       FontWeight="Bold" Foreground="White"/></Border></DockPanel><TextBlock Text="{Binding Project.Description}" TextWrapping="Wrap"
+                                               FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                                               Margin="0,0,0,8"/><TextBlock Text="{Binding LastProjectPath, TargetNullValue=-, Mode=OneWay}"
+                                               FontFamily="Cascadia Mono, Consolas" FontSize="10"
+                                               Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel></Border><TextBlock Text="STATISTIK" Style="{StaticResource OverviewSectionLabel}"
+                                       Margin="0,0,0,8"/><Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Grid.Column="0" Style="{StaticResource OverviewMetricCard}"
+                                        Background="{DynamicResource AccentSubtleBrush}"
+                                        BorderBrush="{DynamicResource AccentBrush}"><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Project.Data.Count, StringFormat={}{0}}"
+                                                   Style="{StaticResource OverviewMetricValue}"
+                                                   Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="HALTUNGEN" Style="{StaticResource OverviewMetricLabel}"/></StackPanel></Border><Border Grid.Column="2" Style="{StaticResource OverviewMetricCard}"><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Project.ModifiedAtUtc, StringFormat={}{0:dd.MM.yyyy}}"
+                                                   Style="{StaticResource OverviewMetricValue}"
+                                                   Foreground="{DynamicResource TextBrush}"/><TextBlock Text="ZULETZT GESPEICHERT" Style="{StaticResource OverviewMetricLabel}"/></StackPanel></Border><Border Grid.Column="4" Style="{StaticResource OverviewMetricCard}"><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Project.AppVersion, TargetNullValue=—}"
+                                                   Style="{StaticResource OverviewMetricValue}"
+                                                   Foreground="{DynamicResource TextBrush}"/><TextBlock Text="APP-VERSION" Style="{StaticResource OverviewMetricLabel}"/></StackPanel></Border></Grid><TextBlock Text="ZUSTANDSSKALA" Style="{StaticResource OverviewSectionLabel}"
+                                       Margin="0,0,0,8"/><Border CornerRadius="8" BorderThickness="1"
+                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                    Background="{DynamicResource BgLightBrush}"
+                                    Padding="12" Margin="0,0,0,16"><Grid><Grid.RowDefinitions><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Grid.Column="0" Background="{DynamicResource SuccessBrush}" CornerRadius="4,0,0,4"/><Border Grid.Column="2" Background="{DynamicResource InfoBrush}"/><Border Grid.Column="4" Background="{DynamicResource WarningBrush}"/><Border Grid.Column="6" Background="{DynamicResource NeonOrangeBrush}"/><Border Grid.Column="8" Background="{DynamicResource DangerBrush}" CornerRadius="0,4,4,0"/><TextBlock Grid.Row="1" Grid.Column="0" Text="Z0" Style="{StaticResource OverviewMetricLabel}" Margin="0,8,0,0"/><TextBlock Grid.Row="1" Grid.Column="2" Text="Z1" Style="{StaticResource OverviewMetricLabel}" Margin="0,8,0,0"/><TextBlock Grid.Row="1" Grid.Column="4" Text="Z2" Style="{StaticResource OverviewMetricLabel}" Margin="0,8,0,0"/><TextBlock Grid.Row="1" Grid.Column="6" Text="Z3" Style="{StaticResource OverviewMetricLabel}" Margin="0,8,0,0"/><TextBlock Grid.Row="1" Grid.Column="8" Text="Z4" Style="{StaticResource OverviewMetricLabel}" Margin="0,8,0,0"/></Grid></Border><TextBlock Text="SCHNELLAKTIONEN" Style="{StaticResource OverviewSectionLabel}"
+                                       Margin="0,0,0,8"/><Button Content="Import starten" Tag="&#xE896;" Command="{Binding ContinueCommand}"
+                                    ContentTemplate="{StaticResource OverviewActionContent}"
+                                    Style="{StaticResource OverviewCompactButton}"
+                                    HorizontalAlignment="Left" Margin="0,0,0,8"/><Border CornerRadius="8" Padding="16" Margin="0,8,0,0"
+                                    BorderThickness="1" BorderBrush="{DynamicResource BorderLightBrush}"
+                                    Background="Transparent"><StackPanel HorizontalAlignment="Center"><TextBlock Text="Projekt-Datei hierher ziehen" FontSize="12"
+                                               FontWeight="SemiBold" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/><TextBlock Text=".json-Datei oder Ordner"
+                                               FontFamily="Cascadia Mono, Consolas" FontSize="10"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></Border></StackPanel></ScrollViewer></Grid></Border></Grid></Grid></UserControl>
