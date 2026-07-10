@@ -197,8 +197,12 @@ Write-Host "Sidecar-Installation abgeschlossen." -ForegroundColor Green
 Write-Utf8NoBom (Join-Path $outputPath "Install-Sidecar.ps1") $sidecarInstaller
 
 $commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -First 1)
-$sourceDirty = -not [string]::IsNullOrWhiteSpace(
-    [string]((& git -C $repoRoot status --porcelain 2>$null) -join "`n"))
+& git -C $repoRoot diff --quiet -- src sidecar tools/Publish-SewerStudio.ps1
+$trackedWorktreeDirty = $LASTEXITCODE -ne 0
+& git -C $repoRoot diff --cached --quiet -- src sidecar tools/Publish-SewerStudio.ps1
+$trackedIndexDirty = $LASTEXITCODE -ne 0
+$untrackedBuildInputs = @(& git -C $repoRoot ls-files --others --exclude-standard -- src sidecar/sidecar).Count -gt 0
+$sourceDirty = $trackedWorktreeDirty -or $trackedIndexDirty -or $untrackedBuildInputs
 $manifest = [ordered]@{
     product = "SewerStudio"
     version = "4.5.0"

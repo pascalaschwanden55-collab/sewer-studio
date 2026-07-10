@@ -19,10 +19,17 @@ public sealed class ReleasePackagingScriptTests
         Assert.Contains("active.classifier.weights_path", source, StringComparison.Ordinal);
         Assert.Contains("classifier/$classifierFileName", source, StringComparison.Ordinal);
         Assert.Contains("UTF8Encoding($false)", source, StringComparison.Ordinal);
+        Assert.Contains("ls-files --others --exclude-standard -- src sidecar/sidecar", source, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "Copy-Item -LiteralPath $sidecarSource -Destination",
             source,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("training_export", source, StringComparison.OrdinalIgnoreCase);
+
+        var project = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "AuswertungPro.Next.UI.csproj"));
+        Assert.Contains("<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>", project, StringComparison.Ordinal);
     }
 }
