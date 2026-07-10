@@ -50,7 +50,7 @@ public sealed class AutoApprovalTests
         var result = svc.Evaluate(entry);
 
         Assert.False(result.IsApproved);
-        Assert.Contains("Confidence", result.Reason);
+        Assert.Contains("Sicherheit", result.Reason);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class AutoApprovalTests
         var result = svc.Evaluate(entry);
 
         Assert.False(result.IsApproved);
-        Assert.Contains("Yellow", result.Reason);
+        Assert.Contains("Gruen", result.Reason);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class AutoApprovalTests
         var result = svc.Evaluate(entry);
 
         Assert.False(result.IsApproved);
-        Assert.Contains("KB", result.Reason);
+        Assert.Contains("Datenbank", result.Reason);
     }
 
     [Fact]

@@ -2,31 +2,29 @@ using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
+/// <summary>
+/// Duenner Adapter: baut die Belege eines KI-Befunds aus dem MappedProtocolEntry und
+/// laesst die zentrale IAiDecisionPolicy entscheiden (Audit Fix 3). Keine eigene Schwellen-Logik mehr.
+/// </summary>
 public sealed class AutoApprovalService
 {
-    public double MinConfidence { get; set; } = 0.92;
-    public double MaxEpistemicUncertainty { get; set; } = 0.15;
+    private readonly IAiDecisionPolicy _policy;
+
+    public AutoApprovalService(IAiDecisionPolicy? policy = null)
+        => _policy = policy ?? StandardAiDecisionPolicy.Default;
 
     public AutoApprovalResult Evaluate(MappedProtocolEntry entry)
     {
-        if (entry.QualityGateResult is null)
-            return AutoApprovalResult.Rejected("Kein QualityGate-Ergebnis vorhanden.");
+        var signals = new AiDecisionSignals(
+            Confidence: entry.Confidence,
+            QualityGate: entry.QualityGateResult?.TrafficLight,
+            KbAgreement: entry.Detection.Evidence?.KbCodeAgreement,
+            EpistemicUncertainty: entry.Uncertainty?.EpistemicUncertainty);
 
-        if (!entry.QualityGateResult.IsGreen)
-            return AutoApprovalResult.Rejected($"TrafficLight ist {entry.QualityGateResult.TrafficLight}, nicht Green.");
-
-        if (entry.Confidence < MinConfidence)
-            return AutoApprovalResult.Rejected($"Confidence {entry.Confidence:F2} < {MinConfidence:F2}.");
-
-        var evidence = entry.Detection.Evidence;
-        if (evidence?.KbCodeAgreement != true)
-            return AutoApprovalResult.Rejected("KB-Code stimmt nicht ueberein.");
-
-        if (entry.Uncertainty is { EpistemicUncertainty: var ep } && ep >= MaxEpistemicUncertainty)
-            return AutoApprovalResult.Rejected($"Epistemische Unsicherheit {ep:F2} >= {MaxEpistemicUncertainty:F2}.");
-
-        return AutoApprovalResult.Approved(
-            $"Auto-Approved: Conf={entry.Confidence:F2}, Green, KB-Agree, Epistemic={entry.Uncertainty?.EpistemicUncertainty:F2}");
+        var decision = _policy.Decide(signals);
+        return decision.Outcome == AiDecisionOutcome.AutoAccept
+            ? AutoApprovalResult.Approved(decision.Reason)
+            : AutoApprovalResult.Rejected(decision.Reason);
     }
 }
 
