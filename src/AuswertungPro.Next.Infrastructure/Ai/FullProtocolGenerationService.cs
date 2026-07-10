@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -16,12 +16,9 @@ using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
-/// Workflow: Detections -> vollstÃ¤ndiges ProtocolDocument
-///
-/// BUG 1.3 FIX: GenerateAsync analysiert das Video NICHT mehr selbst.
-/// Stattdessen akzeptiert GenerateFromDetectionsAsync bereits analysierte
-/// RawVideoDetections. VideoAnalysisPipelineService Ã¼bergibt diese.
-/// Damit wird jede Video-Analyse nur noch einmal durchgefÃ¼hrt.
+/// Workflow: Detections -> vollstaendiges ProtocolDocument.
+/// GenerateFromDetectionsAsync verarbeitet bereits analysierte RawVideoDetections;
+/// eine Video-Analyse wird dadurch nur einmal ausgefuehrt.
 /// </summary>
 public sealed class FullProtocolGenerationService : IDisposable
 {
@@ -50,7 +47,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             keepAlive: cfg.OllamaKeepAlive,
             numCtx: cfg.OllamaNumCtx);
         _retrieval = retrieval;
-        // Fallback laeuft bewusst mit statischen Default-Gewichten (siehe ADR-008).
+        // Die Instanz uebernimmt den beim Programmstart aktivierten Weight-Snapshot.
         _qualityGate = qualityGate ?? new QualityGateService();
 
         // Only create own KB when none provided and AI is active
@@ -80,8 +77,6 @@ public sealed class FullProtocolGenerationService : IDisposable
 
     public void Dispose() => _ownedKbContext?.Dispose();
 
-    // â”€â”€ BUG 1.3 FIX: Nimmt bereits analysierte Detections entgegen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     /// <summary>
     /// Mappt bereits erkannte Detections auf VSA-Codes und baut ein ProtocolDocument.
     /// Das Video wird NICHT erneut analysiert.
@@ -104,7 +99,7 @@ public sealed class FullProtocolGenerationService : IDisposable
                 Document: BuildEmptyDocument(request),
                 MappedEntries: Array.Empty<MappedProtocolEntry>(),
                 Error: null,
-                Warnings: new[] { "Keine SchÃ¤den erkannt." });
+                Warnings: new[] { "Keine Schaeden erkannt." });
         }
 
         var mappedEntries = new List<MappedProtocolEntry>();
@@ -133,7 +128,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             .ToArray();
 
         progress?.Report(new CodeMappingProgress(total, total,
-            $"Fertig â€“ {protocolEntries.Count} EintrÃ¤ge gemappt."));
+            $"Fertig – {protocolEntries.Count} Eintraege gemappt."));
 
         return new FullProtocolGenerationResult(
             Document: BuildDocument(request, protocolEntries),
@@ -141,8 +136,6 @@ public sealed class FullProtocolGenerationService : IDisposable
             Error: null,
             Warnings: warnings);
     }
-
-    // â”€â”€ Private â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private async Task<MappedProtocolEntry> MapDetectionAsync(
         RawVideoDetection detection,
@@ -152,7 +145,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         var kbExamples = await GetKnowledgeExamplesAsync(detection, request, ct).ConfigureAwait(false);
 
         // Wenn EnhancedVision bereits einen Code-Hinweis geliefert hat,
-        // diesen im Prompt priorisieren â†’ spart LLM-Aufwand
+        // diesen im Prompt priorisieren -> spart LLM-Aufwand.
         var vsaHint = !string.IsNullOrWhiteSpace(detection.VsaCodeHint)
             ? $"\nVision-Code-Hinweis (priorisiere falls plausibel): {detection.VsaCodeHint}"
             : string.Empty;
@@ -173,63 +166,69 @@ public sealed class FullProtocolGenerationService : IDisposable
                 options: OllamaDeterministicOptions.Create(),
                 ct: ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            // QualityGate MUSS auch im Fehler-/Fallback-Pfad laufen — sonst bleibt
-            // QualityGateResult null und die UI zeigt stilles "Gelb" fuer einen nie
-            // bewerteten Befund. Ohne LLM-Evidenz liefert der Gate korrekt Rot. (Audit R3)
+            // Auch der KB-only-Fehlerpfad durchlaeuft Plausibilitaet, Quality Gate
+            // und Unsicherheit. Sein Confidence-Deckel liegt bewusst unter jeder
+            // Auto-Freigabegrenze.
             if (kbExamples.Count > 0)
             {
-                var fallback = kbExamples[0];
-                var fbEvidence = (detection.Evidence ?? new EvidenceVector()) with
-                {
-                    KbSimilarity = fallback.Score,
-                    DamageCategory = fallback.Code
-                };
-                return new MappedProtocolEntry(
-                    Detection: detection with { Evidence = fbEvidence },
-                    SuggestedCode: fallback.Code,
-                    Confidence: Math.Clamp(fallback.Score, 0.35, 0.85),
-                    Reason: "LLM-Fehler, KB-Fallback verwendet: " + ex.Message,
-                    Warnings: new[] { "Code-Mapping fehlgeschlagen, KB-Fallback verwendet." },
-                    QualityGateResult: _qualityGate.Evaluate(fbEvidence));
+                return KbFallbackMappingPolicy.Build(
+                    detection,
+                    kbExamples[0],
+                    ex.Message,
+                    _plausibility,
+                    _qualityGate);
             }
 
             var emptyEvidence = detection.Evidence ?? new EvidenceVector();
+            var emptyGate = _qualityGate.Evaluate(emptyEvidence);
             return new MappedProtocolEntry(
-                Detection: detection,
+                Detection: detection with { Evidence = emptyEvidence },
                 SuggestedCode: null,
                 Confidence: 0,
                 Reason: ex.Message,
                 Warnings: new[] { "Code-Mapping fehlgeschlagen: " + ex.Message },
-                QualityGateResult: _qualityGate.Evaluate(emptyEvidence));
+                QualityGateResult: emptyGate,
+                Uncertainty: UncertaintyEstimate.FromSinglePass(0));
         }
 
-        var checked_ = _plausibility.ApplyChecks(
+        var checkedSuggestion = _plausibility.ApplyChecks(
             dto.ToDomain(),
             new ObservationContext(detection.FindingLabel));
 
-        var suggestedCode = checked_.SuggestedCode;
-        var confidence = checked_.Confidence;
-        var reason = checked_.Rationale;
-        var warnings = checked_.Warnings?.ToList() ?? new List<string>();
+        var suggestedCode = checkedSuggestion.SuggestedCode;
+        var confidence = checkedSuggestion.Confidence;
+        var reason = checkedSuggestion.Rationale;
+        var warnings = checkedSuggestion.Warnings?.ToList() ?? new List<string>();
 
         if (string.IsNullOrWhiteSpace(suggestedCode) && kbExamples.Count > 0)
         {
-            var fallback = kbExamples[0];
-            suggestedCode = fallback.Code;
-            confidence = Math.Max(confidence, Math.Clamp(fallback.Score, 0.35, 0.85));
-            reason = string.IsNullOrWhiteSpace(reason)
-                ? $"KB-Fallback: {fallback.Code}"
-                : $"{reason} | KB-Fallback: {fallback.Code}";
-            warnings.Add("LLM lieferte keinen gÃ¼ltigen Code, KB-Fallback verwendet.");
+            var fallback = KbFallbackMappingPolicy.Build(
+                detection,
+                kbExamples[0],
+                "LLM lieferte keinen gueltigen Code.",
+                _plausibility,
+                _qualityGate);
+
+            warnings.AddRange(fallback.Warnings);
+            return fallback with
+            {
+                Reason = string.IsNullOrWhiteSpace(reason)
+                    ? fallback.Reason
+                    : $"{reason} | {fallback.Reason}",
+                Warnings = warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+            };
         }
 
-        // â”€â”€ QualityGate: build EvidenceVector and evaluate â”€â”€
+        // QualityGate: build EvidenceVector and evaluate.
         var kbTopScore = kbExamples.Count > 0 ? kbExamples[0].Score : (double?)null;
-        var kbAgrees = kbExamples.Count > 0 && !string.IsNullOrWhiteSpace(suggestedCode)
-            && kbExamples[0].Code.Equals(suggestedCode, StringComparison.OrdinalIgnoreCase);
+        var kbAgrees = kbExamples.Count > 0 && !string.IsNullOrWhiteSpace(suggestedCode) &&
+            kbExamples[0].Code.Equals(suggestedCode, StringComparison.OrdinalIgnoreCase);
 
         var evidence = detection.Evidence ?? new EvidenceVector();
         evidence = evidence with
@@ -237,14 +236,12 @@ public sealed class FullProtocolGenerationService : IDisposable
             LlmCodeConf = confidence,
             KbSimilarity = kbTopScore,
             KbCodeAgreement = kbExamples.Count > 0 ? kbAgrees : null,
-            PlausibilityScore = checked_.Confidence,
+            PlausibilityScore = checkedSuggestion.Confidence,
             DamageCategory = suggestedCode
         };
 
         var qgResult = _qualityGate.Evaluate(evidence);
         var compositeConfidence = qgResult.CompositeConfidence;
-
-        // Update detection with enriched evidence
         var enrichedDetection = detection with { Evidence = evidence };
 
         return new MappedProtocolEntry(
@@ -316,13 +313,11 @@ public sealed class FullProtocolGenerationService : IDisposable
         FullProtocolGenerationRequest request)
         => ProtocolEntryFactory.BuildKnowledgeQuery(detection, request);
 
-    private string BuildSystemPrompt()
+    private static string BuildSystemPrompt()
     {
-        var basePrompt = "Du bist ein Kanalinspektion-Experte nach DIN EN 13508-2 / VSA-DSS. " +
-            "Mappe einen erkannten Befund auf den korrekten Schadenskode. " +
-            "Antworte nur mit gÃ¼ltigem JSON.";
-
-        return basePrompt;
+        return "Du bist ein Kanalinspektion-Experte nach DIN EN 13508-2 / VSA-DSS. " +
+               "Mappe einen erkannten Befund auf den korrekten Schadenskode. " +
+               "Antworte nur mit gueltigem JSON.";
     }
 
     private static ProtocolEntry BuildProtocolEntry(MappedProtocolEntry mapped)
@@ -346,8 +341,14 @@ public sealed class FullProtocolGenerationService : IDisposable
         return new ProtocolDocument
         {
             HaltungId = request.HaltungId,
-            Original = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Original aus Video-Analyse"),
-            Current = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Automatisch generiert aus Video-Analyse")
+            Original = ProtocolRevisionCloner.CloneRevision(
+                revision,
+                "KI (FullProtocolGeneration)",
+                "Original aus Video-Analyse"),
+            Current = ProtocolRevisionCloner.CloneRevision(
+                revision,
+                "KI (FullProtocolGeneration)",
+                "Automatisch generiert aus Video-Analyse")
         };
     }
 
@@ -358,17 +359,20 @@ public sealed class FullProtocolGenerationService : IDisposable
             RevisionId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = "KI (FullProtocolGeneration)",
-            Comment = "Keine SchÃ¤den erkannt",
+            Comment = "Keine Schaeden erkannt",
             Entries = new List<ProtocolEntry>()
         };
         return new ProtocolDocument
         {
             HaltungId = request.HaltungId,
-            Original = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Original aus Video-Analyse"),
-            Current = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Keine Schaeden erkannt")
+            Original = ProtocolRevisionCloner.CloneRevision(
+                revision,
+                "KI (FullProtocolGeneration)",
+                "Original aus Video-Analyse"),
+            Current = ProtocolRevisionCloner.CloneRevision(
+                revision,
+                "KI (FullProtocolGeneration)",
+                "Keine Schaeden erkannt")
         };
     }
 }
-
-// â”€â”€ DTOs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
