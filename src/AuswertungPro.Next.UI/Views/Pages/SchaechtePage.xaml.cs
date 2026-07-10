@@ -1015,10 +1015,17 @@ public partial class SchaechtePage : UserControl
 
         if (pdfSet.Count > 0)
         {
-            AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+            var pdfRewrite = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
                 new List<string>(pdfSet),
                 oldNumber,
                 newNumber);
+            if (pdfRewrite.Failed > 0)
+            {
+                DialogHost.Current.Error(
+                    $"{pdfRewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
+                    "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
+                    "PDF nicht aktualisiert");
+            }
         }
 
         return true;

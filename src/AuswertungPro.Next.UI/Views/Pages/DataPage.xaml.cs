@@ -618,8 +618,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
         CollectPdf(record.GetFieldValue("PDF_Path"));
         CollectPdf(record.GetFieldValue("PDF_All"));
         if (pdfSet.Count > 0)
-            AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+        {
+            var pdfRewrite = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
                 new System.Collections.Generic.List<string>(pdfSet), oldName, newName);
+            if (pdfRewrite.Failed > 0)
+            {
+                Dialogs.Error(
+                    $"{pdfRewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
+                    "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
+                    "PDF nicht aktualisiert");
+            }
+        }
 
         return true;
     }
