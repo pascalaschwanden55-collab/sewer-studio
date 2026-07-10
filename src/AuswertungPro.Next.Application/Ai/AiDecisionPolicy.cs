@@ -30,9 +30,9 @@ public interface IAiDecisionPolicy
 }
 
 /// <summary>
-/// Kontextabhaengig streng: Pflicht sind hohe Sicherheit (>= 0.92) UND gruene Ampel
-/// (zwei unabhaengige Belege). Jeder zusaetzlich vorhandene Beleg (Datenbank-Abgleich,
-/// Unsicherheit) darf nicht widersprechen. Fehlende Belege werden nicht gefordert.
+/// Strenge Freigabe: Hohe Sicherheit und gruene Ampel sind Pflicht, gelten aber nicht
+/// als unabhaengige Belege, weil beide aus derselben Gate-Berechnung stammen koennen.
+/// Fuer AutoAccept muss der Datenbank-Abgleich den Code zusaetzlich bestaetigen.
 /// </summary>
 public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
 {
@@ -50,15 +50,17 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
         if (s.Confidence < RejectConfidence)
             return new AiDecision(AiDecisionOutcome.Reject, $"Sicherheit zu niedrig ({s.Confidence:P0}).");
 
-        // Zwei Pflicht-Belege fuer Gruen: hohe Sicherheit UND gruene Ampel.
+        // Pflichtwerte des Gates. Sie sind noch kein unabhaengiger Zweitbeleg.
         if (s.Confidence < AutoAcceptConfidence)
             return new AiDecision(AiDecisionOutcome.Review, $"Sicherheit unter {AutoAcceptConfidence:P0}.");
         if (s.QualityGate != TrafficLight.Green)
             return new AiDecision(AiDecisionOutcome.Review, "QualityGate nicht auf Gruen.");
 
-        // Jeder zusaetzlich vorhandene Beleg darf nicht widersprechen.
+        // Der KB-Abgleich ist der explizite, unabhaengige Zweitbeleg.
         if (s.KbAgreement == false)
             return new AiDecision(AiDecisionOutcome.Review, "Datenbank-Abgleich widerspricht.");
+        if (s.KbAgreement != true)
+            return new AiDecision(AiDecisionOutcome.Review, "Unabhaengiger Datenbank-Abgleich fehlt.");
         if (s.EpistemicUncertainty is { } u && u >= MaxEpistemicUncertainty)
             return new AiDecision(AiDecisionOutcome.Review, $"Unsicherheit zu hoch ({u:F2}).");
 

@@ -42,13 +42,13 @@ public static class DefectStatusPolicy
         };
     }
 
-    // Noch nicht vom Nutzer entschieden: zentrale Freigabe-Regel anwenden. Der Live-Kontext
-    // liefert nur Sicherheit + Ampel; Datenbank-Abgleich/Unsicherheit sind hier nicht vorhanden.
+    // Noch nicht vom Nutzer entschieden: zentrale Freigabe-Regel anwenden.
     private static DefectStatus MapCentralDecision(CodingEventAiContext ctx)
     {
         var signals = new AiDecisionSignals(
             Confidence: ctx.Confidence,
-            QualityGate: ParseLight(ctx.QualityGateLevel));
+            QualityGate: ParseLight(ctx.QualityGateLevel),
+            KbAgreement: ctx.Evidence?.KbCodeAgreement);
 
         return StandardAiDecisionPolicy.Default.Decide(signals).Outcome switch
         {

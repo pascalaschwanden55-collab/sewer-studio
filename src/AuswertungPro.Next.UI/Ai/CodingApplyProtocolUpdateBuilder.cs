@@ -24,12 +24,12 @@ public static class CodingApplyProtocolUpdateBuilder
         document.Current ??= new ProtocolRevision();
         document.Current.Entries ??= new List<ProtocolEntry>();
 
-        var eventEntryCount = events.Count(ev => !string.IsNullOrWhiteSpace(ev.Entry.Code));
+        var applicableEvents = CodingEventProtocolApplyPolicy.Filter(events);
 
         return new CodingApplyProtocolUpdate(
             document,
             document.Current,
-            events,
-            eventEntryCount);
+            applicableEvents,
+            applicableEvents.Count);
     }
 }

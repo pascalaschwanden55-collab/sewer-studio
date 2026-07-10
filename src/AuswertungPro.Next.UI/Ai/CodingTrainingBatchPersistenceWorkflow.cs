@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -12,10 +11,10 @@ public enum CodingTrainingBatchPersistenceWorkflowOutcome
 
 public sealed record CodingTrainingBatchPersistenceWorkflowRequest(
     bool HasCodingViewModel,
-    ObservableCollection<CodingEvent>? Events);
+    IReadOnlyList<CodingEvent>? Events);
 
 public sealed record CodingTrainingBatchPersistenceWorkflowActions(
-    Action<ObservableCollection<CodingEvent>> PersistEvents);
+    Action<IReadOnlyList<CodingEvent>> PersistEvents);
 
 public sealed record CodingTrainingBatchPersistenceWorkflowResult(
     CodingTrainingBatchPersistenceWorkflowOutcome Outcome,

@@ -46,9 +46,10 @@ public sealed class CodingDefectStatusDisplayPolicyTests
             MeterAtCapture = 1.234,
             AiContext = new CodingEventAiContext
             {
-                // AutoAccepted verlangt jetzt hohe Sicherheit UND gruene Ampel (Audit Fix 3).
+                // AutoAccepted verlangt Gate-Werte plus unabhaengigen KB-Abgleich.
                 Confidence = 0.94,
                 QualityGateLevel = "Green",
+                Evidence = new CodingEventAiEvidence { KbCodeAgreement = true },
                 Decision = CodingUserDecision.Ignored
             }
         };

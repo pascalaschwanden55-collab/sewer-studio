@@ -27,7 +27,7 @@ public sealed class CodingStatisticsPolicyTests
         var events = new[]
         {
             EventWithoutAi(),
-            AiEvent(0.95, CodingUserDecision.Ignored, gate: "Green"),
+            AiEvent(0.95, CodingUserDecision.Ignored, gate: "Green", kbAgreement: true),
             AiEvent(0.70, CodingUserDecision.Ignored),
             AiEvent(0.30, CodingUserDecision.Ignored),
             AiEvent(0.80, CodingUserDecision.AcceptedWithEdit),
@@ -48,13 +48,20 @@ public sealed class CodingStatisticsPolicyTests
 
     private static CodingEvent EventWithoutAi() => new();
 
-    private static CodingEvent AiEvent(double confidence, CodingUserDecision decision, string? gate = null)
+    private static CodingEvent AiEvent(
+        double confidence,
+        CodingUserDecision decision,
+        string? gate = null,
+        bool? kbAgreement = null)
         => new()
         {
             AiContext = new CodingEventAiContext
             {
                 Confidence = confidence,
                 QualityGateLevel = gate,
+                Evidence = kbAgreement.HasValue
+                    ? new CodingEventAiEvidence { KbCodeAgreement = kbAgreement }
+                    : null,
                 Decision = decision
             }
         };

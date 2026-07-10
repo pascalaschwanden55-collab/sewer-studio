@@ -13,8 +13,8 @@ public static class CodingProtocolRevisionUpdater
         revision.Entries ??= new List<ProtocolEntry>();
 
         var eventEntries = events
+            .Where(CodingEventProtocolApplyPolicy.CanApply)
             .Select(ev => ev.Entry)
-            .Where(e => !string.IsNullOrWhiteSpace(e.Code))
             .GroupBy(e => e.EntryId)
             .Select(g => g.Last())
             .ToDictionary(e => e.EntryId, e => e);

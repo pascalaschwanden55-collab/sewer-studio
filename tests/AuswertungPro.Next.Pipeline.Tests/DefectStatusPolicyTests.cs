@@ -21,12 +21,17 @@ public sealed class DefectStatusPolicyTests
 
     // --- GetStatus: zentrale Freigabe-Regel (Ignored-Decision) ---
 
-    [Theory]
-    [InlineData(1.00)]
-    [InlineData(0.92)]
-    public void GetStatus_HoheSicherheitUndGrueneAmpel_GibtAutoAccepted(double confidence)
+    [Fact]
+    public void GetStatus_HoheSicherheitUndGrueneAmpel_OhneKbBeleg_GibtPending()
     {
-        var ev = EvMitKonfidenz(confidence, gate: "Green");
+        var ev = EvMitKonfidenz(0.99, gate: "Green");
+        Assert.Equal(DefectStatus.Pending, DefectStatusPolicy.GetStatus(ev));
+    }
+
+    [Fact]
+    public void GetStatus_MitUnabhaengigemKbBeleg_GibtAutoAccepted()
+    {
+        var ev = EvMitKonfidenz(0.99, gate: "Green", kbAgreement: true);
         Assert.Equal(DefectStatus.AutoAccepted, DefectStatusPolicy.GetStatus(ev));
     }
 
@@ -116,7 +121,10 @@ public sealed class DefectStatusPolicyTests
     private static CodingEvent EvOhneKontext() =>
         new() { Entry = new ProtocolEntry { Code = "BAB" } };
 
-    private static CodingEvent EvMitKonfidenz(double confidence, string? gate = null) =>
+    private static CodingEvent EvMitKonfidenz(
+        double confidence,
+        string? gate = null,
+        bool? kbAgreement = null) =>
         new()
         {
             Entry = new ProtocolEntry { Code = "BAB" },
@@ -125,6 +133,9 @@ public sealed class DefectStatusPolicyTests
                 SuggestedCode = "BAB",
                 Confidence = confidence,
                 QualityGateLevel = gate,
+                Evidence = kbAgreement.HasValue
+                    ? new CodingEventAiEvidence { KbCodeAgreement = kbAgreement }
+                    : null,
                 Decision = CodingUserDecision.Ignored
             }
         };

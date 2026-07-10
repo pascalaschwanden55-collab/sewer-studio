@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
@@ -16,12 +17,12 @@ public partial class PlayerWindow
             ev,
             CreateCodingTrainingSamplePersistenceRequest(_liveDetectionController.PendingConfirmationFrameBytes));
 
-    private void PersistCodingEventsAsTrainingSamples()
+    private void PersistCodingEventsAsTrainingSamples(IReadOnlyList<CodingEvent> events)
     {
         CodingTrainingBatchPersistenceWorkflow.Execute(
             new CodingTrainingBatchPersistenceWorkflowRequest(
                 _codingSessionHost.HasViewModel,
-                _codingSessionHost.EventCollection),
+                events),
             new CodingTrainingBatchPersistenceWorkflowActions(
                 PersistEvents: events => CodingTrainingSamples
                     .PersistEventsAsync(

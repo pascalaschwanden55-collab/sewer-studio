@@ -4,18 +4,19 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 /// <summary>
-/// Regel-Tests fuer die zentrale KI-Freigabe (Audit Fix 3). Kontextabhaengig streng:
-/// alle vorhandenen Belege muessen passen, Pflicht sind hohe Sicherheit + gruene Ampel.
+/// Regel-Tests fuer die zentrale KI-Freigabe. AutoAccept braucht neben den
+/// Gate-Werten einen unabhaengigen, bestaetigenden Datenbank-Abgleich.
 /// </summary>
 public sealed class StandardAiDecisionPolicyTests
 {
     private static AiDecision Decide(AiDecisionSignals s) => StandardAiDecisionPolicy.Default.Decide(s);
 
-    [Fact] // Live-Fall: zwei Belege (Sicherheit + Ampel) reichen fuer Gruen.
-    public void LiveZweiBelege_HoheSicherheitUndGrueneAmpel_AutoAccept()
+    [Fact]
+    public void GleicherGateWertAlsSicherheitUndAmpel_OhneKbBeleg_BleibtReview()
     {
         var d = Decide(new AiDecisionSignals(0.94, TrafficLight.Green));
-        Assert.Equal(AiDecisionOutcome.AutoAccept, d.Outcome);
+        Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
+        Assert.Contains("Datenbank-Abgleich", d.Reason);
     }
 
     [Fact] // Der Kern-Fix: hohe Sicherheit, aber Ampel NICHT gruen -> nie AutoAccept.

@@ -22,7 +22,7 @@ public sealed record CodingApplyChangesWorkflowActions(
     Action<ProtocolDocument> AssignProtocol,
     Action MarkProjectDirty,
     Action<ProtocolDocument> SyncCodingToPrimaryDamages,
-    Action PersistCodingEventsAsTrainingSamples,
+    Action<IReadOnlyList<CodingEvent>> PersistCodingEventsAsTrainingSamples,
     Action<string> SetBaselineSignature,
     Action SaveProjectAfterCoding,
     Action<string, TimeSpan> ShowOverlay);
@@ -61,15 +61,15 @@ public static class CodingApplyChangesWorkflow
         actions.SyncCodingToPrimaryDamages(update.Document);
         actions.MarkProjectDirty();
 
-        actions.PersistCodingEventsAsTrainingSamples();
+        actions.PersistCodingEventsAsTrainingSamples(update.Events);
         actions.SetBaselineSignature(CodingEventsSignatureBuilder.Build(request.Events));
         actions.SaveProjectAfterCoding();
 
         if (request.ShowOverlay)
         {
-            var message = request.Events.Count == 0
+            var message = update.EventEntryCount == 0
                 ? "Prim\u00e4re Sch\u00e4den geleert"
-                : $"{request.Events.Count} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
+                : $"{update.EventEntryCount} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
             actions.ShowOverlay(message, TimeSpan.FromSeconds(4));
         }
 

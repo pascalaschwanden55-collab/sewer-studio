@@ -110,7 +110,7 @@ public sealed class CodingApplyChangesWorkflowTests
                     synced = document;
                     calls.Add($"sync:{document.Current!.Entries.Count}");
                 },
-                PersistCodingEventsAsTrainingSamples: () => calls.Add("training"),
+                PersistCodingEventsAsTrainingSamples: persisted => calls.Add($"training:{persisted.Count}"),
                 SetBaselineSignature: signature =>
                 {
                     baseline = signature;
@@ -127,7 +127,7 @@ public sealed class CodingApplyChangesWorkflowTests
         Assert.Equal(CodingApplyChangesWorkflowOutcome.Applied, result.Outcome);
         Assert.True(result.Applied);
         Assert.Equal(
-            ["confirm:False", "assign:2", "dirty", "sync:2", "dirty", "training", "baseline", "save", "overlay"],
+            ["confirm:False", "assign:2", "dirty", "sync:2", "dirty", "training:2", "baseline", "save", "overlay"],
             calls);
         Assert.NotNull(assigned);
         Assert.Same(assigned, synced);
@@ -153,7 +153,7 @@ public sealed class CodingApplyChangesWorkflowTests
                 assignProtocol: _ => { },
                 markProjectDirty: () => { },
                 syncCodingToPrimaryDamages: _ => { },
-                persistCodingEventsAsTrainingSamples: () => { },
+                persistCodingEventsAsTrainingSamples: _ => { },
                 setBaselineSignature: _ => { },
                 saveProjectAfterCoding: () => { }));
 
@@ -166,7 +166,7 @@ public sealed class CodingApplyChangesWorkflowTests
         Action<ProtocolDocument>? assignProtocol = null,
         Action? markProjectDirty = null,
         Action<ProtocolDocument>? syncCodingToPrimaryDamages = null,
-        Action? persistCodingEventsAsTrainingSamples = null,
+        Action<IReadOnlyList<CodingEvent>>? persistCodingEventsAsTrainingSamples = null,
         Action<string>? setBaselineSignature = null,
         Action? saveProjectAfterCoding = null,
         Action<string, TimeSpan>? showOverlay = null)
@@ -175,7 +175,7 @@ public sealed class CodingApplyChangesWorkflowTests
             AssignProtocol: assignProtocol ?? (_ => throw new InvalidOperationException("Assign should not run.")),
             MarkProjectDirty: markProjectDirty ?? (() => throw new InvalidOperationException("Dirty should not run.")),
             SyncCodingToPrimaryDamages: syncCodingToPrimaryDamages ?? (_ => throw new InvalidOperationException("Sync should not run.")),
-            PersistCodingEventsAsTrainingSamples: persistCodingEventsAsTrainingSamples ?? (() => throw new InvalidOperationException("Training should not run.")),
+            PersistCodingEventsAsTrainingSamples: persistCodingEventsAsTrainingSamples ?? (_ => throw new InvalidOperationException("Training should not run.")),
             SetBaselineSignature: setBaselineSignature ?? (_ => throw new InvalidOperationException("Baseline should not run.")),
             SaveProjectAfterCoding: saveProjectAfterCoding ?? (() => throw new InvalidOperationException("Save should not run.")),
             ShowOverlay: showOverlay ?? ((_, _) => throw new InvalidOperationException("Overlay should not run.")));

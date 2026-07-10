@@ -74,6 +74,26 @@ public sealed class CodingProtocolRevisionUpdaterTests
         Assert.Equal("last", revision.Entries[0].Beschreibung);
     }
 
+    [Fact]
+    public void ApplyCodingEvents_does_not_apply_pending_or_rejected_ai_events()
+    {
+        var revision = new ProtocolRevision();
+        var accepted = Event(Entry(Guid.NewGuid(), "BAA", "akzeptiert"));
+        accepted.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Accepted };
+        var pending = Event(Entry(Guid.NewGuid(), "BAB", "offen"));
+        pending.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Ignored };
+        var rejected = Event(Entry(Guid.NewGuid(), "BAC", "abgelehnt"));
+        rejected.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Rejected };
+
+        var count = CodingProtocolRevisionUpdater.ApplyCodingEvents(
+            revision,
+            [accepted, pending, rejected]);
+
+        Assert.Equal(1, count);
+        Assert.Single(revision.Entries);
+        Assert.Equal("BAA", revision.Entries[0].Code);
+    }
+
     private static CodingEvent Event(ProtocolEntry entry)
         => new() { Entry = entry };
 

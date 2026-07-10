@@ -56,9 +56,39 @@ public sealed class CodingApplyProtocolUpdateBuilderTests
         Assert.Equal("OLD", record.Protocol.Current.Entries[0].Code);
     }
 
+    [Fact]
+    public void Create_keeps_only_manual_and_explicitly_accepted_events()
+    {
+        var record = new HaltungRecord();
+        var manual = Event("BAA");
+        var accepted = AiEvent("BAB", CodingUserDecision.Accepted);
+        var edited = AiEvent("BAC", CodingUserDecision.AcceptedWithEdit);
+        var pending = AiEvent("BAD", CodingUserDecision.Ignored);
+        var rejected = AiEvent("BAE", CodingUserDecision.Rejected);
+
+        var update = CodingApplyProtocolUpdateBuilder.Create(
+            record,
+            [manual, accepted, edited, pending, rejected]);
+
+        Assert.Equal(3, update.EventEntryCount);
+        Assert.Equal([manual, accepted, edited], update.Events);
+    }
+
     private static CodingEvent Event(string code)
         => new()
         {
             Entry = new ProtocolEntry { Code = code }
+        };
+
+    private static CodingEvent AiEvent(string code, CodingUserDecision decision)
+        => new()
+        {
+            Entry = new ProtocolEntry { Code = code },
+            AiContext = new CodingEventAiContext
+            {
+                SuggestedCode = code,
+                Confidence = 0.99,
+                Decision = decision
+            }
         };
 }
