@@ -33,12 +33,24 @@ public static class CodingLiveFindingEventFactory
 
         CodingLiveFindingCodeMetaWriter.ApplyToEntry(entry, code, finding);
 
+        var uncertainty = UncertaintyEstimate.FromSinglePass(gateResult.CompositeConfidence);
+        var approval = AiDecisionPolicy.Evaluate(new AiDecisionEvidence(
+            gateResult.CompositeConfidence,
+            gateResult.TrafficLight.ToString(),
+            KbCodeAgreement: null,
+            uncertainty.EpistemicUncertainty));
+
         var aiContext = new CodingEventAiContext
         {
             SuggestedCode = code,
             Confidence = gateResult.CompositeConfidence,
             Reason = finding.Label,
-            Decision = CodingUserDecision.Ignored
+            Decision = CodingUserDecision.Ignored,
+            QualityGateLevel = gateResult.TrafficLight.ToString(),
+            KbCodeAgreement = null,
+            EpistemicUncertainty = uncertainty.EpistemicUncertainty,
+            AutoApprovalReason = approval.Reason,
+            DecisionPolicyVersion = approval.PolicyVersion
         };
 
         return new CodingLiveFindingEventDraft(
