@@ -17,7 +17,12 @@ public static class TrainingCenterLoadWorkflow
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var state = await request.LoadStateAsync().ConfigureAwait(false);
+        // KEIN ConfigureAwait(false): dieser Workflow orchestriert UI-Callbacks
+        // (ObservableCollection-Ersatz, RootFolder-Mutation, Statuszeile) und muss
+        // deshalb auf dem Aufrufer-Kontext (UI-Thread) bleiben. Sonst wirft die
+        // CollectionView der Faelle-Liste (APP-A5BD1B09, Regressionstest:
+        // TrainingCenterLoadWorkflowThreadingTests).
+        var state = await request.LoadStateAsync();
         request.ReplaceCases(state.Cases);
 
         var restoredRootFolders = TrainingCenterStateController.RestoreExistingRootFolders(
@@ -31,8 +36,8 @@ public static class TrainingCenterLoadWorkflow
 
         request.SetStatusText($"Geladen: {state.Cases.Count} Fälle");
 
-        await request.LoadSamplesAsync().ConfigureAwait(false);
-        await request.RefreshKbStatusAsync().ConfigureAwait(false);
-        await request.LoadLastMatchRateAsync().ConfigureAwait(false);
+        await request.LoadSamplesAsync();
+        await request.RefreshKbStatusAsync();
+        await request.LoadLastMatchRateAsync();
     }
 }
