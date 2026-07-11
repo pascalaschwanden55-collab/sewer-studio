@@ -2,6 +2,27 @@
   "version": 1,
   "codes": [
     {
+      "code": "AEC",
+      "title": "Rohrprofilwechsel",
+      "canonicalCode": "AEC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/AEC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "AEC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "AECXA",
       "title": "Rohrprofilwechsel",
       "canonicalCode": "AECXA",
@@ -162,6 +183,27 @@
         "VSA-KEK 2020",
         "Kanal",
         "AEC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "AED",
+      "title": "Rohrmaterialwechsel",
+      "canonicalCode": "AED",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/AED",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "AED"
       ],
       "parameters": [],
       "examples": [],
@@ -7465,6 +7507,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BBE",
+      "title": "Hindernis",
+      "canonicalCode": "BBE",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BBE",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BBE"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BBEA",
       "title": "Hindernis: Mauer- oder Backstein liegt in der Rohrsohle",
       "canonicalCode": "BBEA",
@@ -7897,6 +7960,27 @@
         "VSA-KEK 2020",
         "Kanal",
         "BBG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "BBH",
+      "title": "Ungeziefer",
+      "canonicalCode": "BBH",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BBH",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BBH"
       ],
       "parameters": [],
       "examples": [],
@@ -10234,6 +10318,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BDC",
+      "title": "Abbruch der Inspektion",
+      "canonicalCode": "BDC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BDC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BDC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BDCA",
       "title": "Abbruch der Inspektion, Hindernis (ung\u00FCltig: Ersatz BDCAZ)",
       "canonicalCode": "BDCA",
@@ -11050,6 +11155,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BDE",
+      "title": "Abwasserzufluss (Fehlanschluss)",
+      "canonicalCode": "BDE",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BDE",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BDE"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BDEAA",
       "title": "Fehlanschluss, Abwasserzufluss klar, Schmutzabwasser fliesst in Regenabwasser",
       "canonicalCode": "BDEAA",
@@ -11428,6 +11554,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BDF",
+      "title": "Gef\u00E4hrdung vorhanden",
+      "canonicalCode": "BDF",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BDF",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BDF"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BDFA",
       "title": "Gef\u00E4hrdung vorhanden: Sauerstoffmangel",
       "canonicalCode": "BDFA",
@@ -11512,6 +11659,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BDG",
+      "title": "Keine Sicht",
+      "canonicalCode": "BDG",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BDG",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BDG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BDGA",
       "title": "Keine Sicht, Kamera unter Wasser",
       "canonicalCode": "BDGA",
@@ -11575,6 +11743,48 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BDGZ",
+      "title": "Keine Sicht, andere",
+      "canonicalCode": "BDGZ",
+      "source": "WinCan-Fallback",
+      "isObservedExtension": false,
+      "isSelectable": false,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BDG",
+      "description": "EN 13508-2 Z-Code (andere); in WinCan-Katalogen vorhanden, nicht in der VSA-KEK-2020-ILI-Enum. Nur Import-/Anzeige-Anker.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BDG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAA",
+      "title": "Verformung (Schacht)",
+      "canonicalCode": "DAA",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAA",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAA"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DAAA",
       "title": "Allgemeine Verformung",
       "canonicalCode": "DAAA",
@@ -11609,6 +11819,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DAA"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAB",
+      "title": "Riss (Schacht)",
+      "canonicalCode": "DAB",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAB",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAB"
       ],
       "parameters": [],
       "examples": [],
@@ -11932,6 +12163,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAC",
+      "title": "Bruch / Einsturz (Schacht)",
+      "canonicalCode": "DAC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DACA",
       "title": "In der Lage verschobene Scherbe",
       "canonicalCode": "DACA",
@@ -11987,6 +12239,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DAC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAD",
+      "title": "Defektes Mauerwerk (Schacht)",
+      "canonicalCode": "DAD",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAD",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAD"
       ],
       "parameters": [],
       "examples": [],
@@ -12071,6 +12344,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DAE"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAF",
+      "title": "Oberfl\u00E4chenschaden (Schacht)",
+      "canonicalCode": "DAF",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAF",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAF"
       ],
       "parameters": [],
       "examples": [],
@@ -13423,6 +13717,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAH",
+      "title": "Schadhafter Anschluss (Schacht)",
+      "canonicalCode": "DAH",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAH",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAH"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DAHA",
       "title": "Anschluss falsch eingef\u00FChrt",
       "canonicalCode": "DAHA",
@@ -13549,6 +13864,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAI",
+      "title": "Einragendes Dichtungsmaterial (Schacht)",
+      "canonicalCode": "DAI",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAI",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAI"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DAIAA",
       "title": "Dichtring verschoben",
       "canonicalCode": "DAIAA",
@@ -13633,6 +13969,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAJ",
+      "title": "Verschobene Schachtelementverbindung",
+      "canonicalCode": "DAJ",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAJ",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAJ"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DAJA",
       "title": "Breite Schachtelementverbindung",
       "canonicalCode": "DAJA",
@@ -13688,6 +14045,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DAJ"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAK",
+      "title": "Feststellung der Innenauskleidung (Schacht)",
+      "canonicalCode": "DAK",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAK",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAK"
       ],
       "parameters": [],
       "examples": [],
@@ -14074,6 +14452,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAL",
+      "title": "Schadhafte Reparatur (Schacht)",
+      "canonicalCode": "DAL",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAL",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAL"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DALA",
       "title": "Reparatur mangelhaft, Wand fehlt teilweise",
       "canonicalCode": "DALA",
@@ -14242,6 +14641,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAM",
+      "title": "Schadhafte Schweissnaht (Schacht)",
+      "canonicalCode": "DAM",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAM",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAM"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DAMA",
       "title": "Vertikale Schweissnaht mangelhaft",
       "canonicalCode": "DAMA",
@@ -14360,6 +14780,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DAP"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DAQ",
+      "title": "Schadhafte Steighilfe",
+      "canonicalCode": "DAQ",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAQ",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAQ"
       ],
       "parameters": [],
       "examples": [],
@@ -14620,6 +15061,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DAR",
+      "title": "Schadhafte Abdeckung",
+      "canonicalCode": "DAR",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DAR",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DAR"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DARA",
       "title": "Deckel gebrochen",
       "canonicalCode": "DARA",
@@ -14809,6 +15271,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DBA",
+      "title": "Wurzeln (Schacht)",
+      "canonicalCode": "DBA",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBA",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBA"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DBAA",
       "title": "Pfahlwurzel",
       "canonicalCode": "DBAA",
@@ -14864,6 +15347,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DBA"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DBB",
+      "title": "Anhaftende Stoffe (Schacht)",
+      "canonicalCode": "DBB",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBB",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBB"
       ],
       "parameters": [],
       "examples": [],
@@ -14948,6 +15452,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DBB"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DBC",
+      "title": "Ablagerung (Schacht)",
+      "canonicalCode": "DBC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBC"
       ],
       "parameters": [],
       "examples": [],
@@ -15053,6 +15578,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DBD"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DBE",
+      "title": "Hindernis (Schacht)",
+      "canonicalCode": "DBE",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBE",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBE"
       ],
       "parameters": [],
       "examples": [],
@@ -15242,6 +15788,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DBE"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DBF",
+      "title": "Infiltration (Schacht)",
+      "canonicalCode": "DBF",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBF",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBF"
       ],
       "parameters": [],
       "examples": [],
@@ -15515,6 +16082,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DBG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DBH",
+      "title": "Ungeziefer (Schacht)",
+      "canonicalCode": "DBH",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DBH",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DBH"
       ],
       "parameters": [],
       "examples": [],
@@ -16207,6 +16795,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DCB",
+      "title": "Punktuelle Reparatur (Schacht)",
+      "canonicalCode": "DCB",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCB",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCB"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DCBA",
       "title": "Reparatur, Teil der Schachtwand ausgetauscht",
       "canonicalCode": "DCBA",
@@ -16346,6 +16955,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DCB"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DCF",
+      "title": "Material (Schacht)",
+      "canonicalCode": "DCF",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCF",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCF"
       ],
       "parameters": [],
       "examples": [],
@@ -18370,6 +19000,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DCH",
+      "title": "Bankett",
+      "canonicalCode": "DCH",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCH",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCH"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DCHA",
       "title": "Bankett mangelhaft",
       "canonicalCode": "DCHA",
@@ -18467,6 +19118,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DCH"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DCI",
+      "title": "Durchlaufrinne",
+      "canonicalCode": "DCI",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCI",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCI"
       ],
       "parameters": [],
       "examples": [],
@@ -18664,6 +19336,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DCL",
+      "title": "Rohrdurchf\u00FChrung",
+      "canonicalCode": "DCL",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCL",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCL"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DCLAA",
       "title": "Rohrdurchf\u00FChrung ohne \u00D6ffnungsm\u00F6glichkeit, schadhaft",
       "canonicalCode": "DCLAA",
@@ -18790,6 +19483,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DCM",
+      "title": "Schlammeimer",
+      "canonicalCode": "DCM",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DCM",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DCM"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DCMA",
       "title": "Schlammeimer vorhanden",
       "canonicalCode": "DCMA",
@@ -18887,6 +19601,27 @@
         "VSA-KEK 2020",
         "Schacht",
         "DDB"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DDC",
+      "title": "Inspektion nicht m\u00F6glich",
+      "canonicalCode": "DDC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DDC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DDC"
       ],
       "parameters": [],
       "examples": [],
@@ -19315,6 +20050,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DDE",
+      "title": "Abwasserzufluss / Fehlanschluss (Schacht)",
+      "canonicalCode": "DDE",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DDE",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DDE"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DDEAA",
       "title": "Fehlanschluss, Abwasserzufluss klar, Schmutzabwasser fliesst in Regenabwasserleitung",
       "canonicalCode": "DDEAA",
@@ -19693,6 +20449,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DDF",
+      "title": "Gef\u00E4hrdung vorhanden (Schacht)",
+      "canonicalCode": "DDF",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DDF",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DDF"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DDFA",
       "title": "Gef\u00E4hrdung vorhanden: Sauerstoffmangel",
       "canonicalCode": "DDFA",
@@ -19777,6 +20554,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "DDG",
+      "title": "Keine Sicht (Schacht)",
+      "canonicalCode": "DDG",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DDG",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DDG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "DDGA",
       "title": "Keine Sicht, Kamera unter Wasser",
       "canonicalCode": "DDGA",
@@ -19828,6 +20626,27 @@
       "standardAnnotation": null,
       "group": "VSA-KEK 2020/Schacht/DDG",
       "description": "Keine Sicht, Dampf",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Schacht",
+        "DDG"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "DDGZ",
+      "title": "Keine Sicht, andere (Schacht)",
+      "canonicalCode": "DDGZ",
+      "source": "WinCan-Fallback",
+      "isObservedExtension": false,
+      "isSelectable": false,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Schacht/DDG",
+      "description": "EN 13508-2 Z-Code (andere); in WinCan-Katalogen vorhanden, nicht in der VSA-KEK-2020-ILI-Enum. Nur Import-/Anzeige-Anker.",
       "categoryPath": [
         "VSA-KEK 2020",
         "Schacht",

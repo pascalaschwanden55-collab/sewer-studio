@@ -39,7 +39,66 @@ public static partial class VsaKekCatalogBuilder
         // aber keinen nackten Hauptcode. Ohne diesen Eintrag liefert die
         // Klartext-Aufloesung fuer "BCC" nichts -> die KI-Befundliste zeigt
         // dann den rohen (englischen) Modelltext statt "Bogen".
-        ("BCC", "Bogen")
+        ("BCC", "Bogen"),
+        // Weitere Kanal-Basisgruppen, die in der ILI-Enum nur als Untercodes
+        // existieren. Noetig fuer Klartext-Aufloesung nackter Hauptcodes aus
+        // KI-Befundliste und Fremdformat-Importen (IBAK/KIAS exportiert nur
+        // Hauptcodes, WinCan liefert teils Zwischenebenen).
+        // ACHTUNG: BBD fehlt hier BEWUSST - es gibt keinen Basiscode BBD,
+        // nur Untercodes (siehe VsaKekManifestTruthTests + CLAUDE.md).
+        ("AEC", "Rohrprofilwechsel"),
+        ("AED", "Rohrmaterialwechsel"),
+        ("BBE", "Hindernis"),
+        ("BBH", "Ungeziefer"),
+        ("BDC", "Abbruch der Inspektion"),
+        ("BDE", "Abwasserzufluss (Fehlanschluss)"),
+        ("BDF", "Gefährdung vorhanden"),
+        ("BDG", "Keine Sicht")
+    ];
+
+    // Schacht-Basisgruppen (Spiegel der Kanal-Gruppen bzw. schachtspezifisch).
+    // Gleiche Begruendung wie OfficialChannelHeadings: ILI-Enum kennt nur
+    // Untercodes, Klartext-Aufloesung fuer nackte Hauptcodes braucht Eintraege.
+    private static readonly (string Code, string Title)[] OfficialManholeHeadings =
+    [
+        ("DAA", "Verformung (Schacht)"),
+        ("DAB", "Riss (Schacht)"),
+        ("DAC", "Bruch / Einsturz (Schacht)"),
+        ("DAD", "Defektes Mauerwerk (Schacht)"),
+        ("DAF", "Oberflächenschaden (Schacht)"),
+        ("DAH", "Schadhafter Anschluss (Schacht)"),
+        ("DAI", "Einragendes Dichtungsmaterial (Schacht)"),
+        ("DAJ", "Verschobene Schachtelementverbindung"),
+        ("DAK", "Feststellung der Innenauskleidung (Schacht)"),
+        ("DAL", "Schadhafte Reparatur (Schacht)"),
+        ("DAM", "Schadhafte Schweissnaht (Schacht)"),
+        ("DAQ", "Schadhafte Steighilfe"),
+        ("DAR", "Schadhafte Abdeckung"),
+        ("DBA", "Wurzeln (Schacht)"),
+        ("DBB", "Anhaftende Stoffe (Schacht)"),
+        ("DBC", "Ablagerung (Schacht)"),
+        ("DBE", "Hindernis (Schacht)"),
+        ("DBF", "Infiltration (Schacht)"),
+        ("DBH", "Ungeziefer (Schacht)"),
+        ("DCB", "Punktuelle Reparatur (Schacht)"),
+        ("DCF", "Material (Schacht)"),
+        ("DCH", "Bankett"),
+        ("DCI", "Durchlaufrinne"),
+        ("DCL", "Rohrdurchführung"),
+        ("DCM", "Schlammeimer"),
+        ("DDC", "Inspektion nicht möglich"),
+        ("DDE", "Abwasserzufluss / Fehlanschluss (Schacht)"),
+        ("DDF", "Gefährdung vorhanden (Schacht)"),
+        ("DDG", "Keine Sicht (Schacht)")
+    ];
+
+    // EN-13508-2-Z-Codes ("andere"), die WinCan-Kataloge fuehren, die
+    // VSA-KEK-2020-ILI-Enum aber nicht kennt. Nur Import-/Anzeige-Anker,
+    // bewusst NICHT selektierbar (kein Neu-Erfassen ausserhalb der ILI).
+    private static readonly (string Code, string ObjectType, string Title)[] WinCanCompatibilityZCodes =
+    [
+        ("BDGZ", ChannelType, "Keine Sicht, andere"),
+        ("DDGZ", ManholeType, "Keine Sicht, andere (Schacht)")
     ];
 
     // Offizielle Klartext-Titel fuer Hauptcodes, die nur ueber die ICM-Mengenregeln
@@ -90,6 +149,7 @@ public static partial class VsaKekCatalogBuilder
 
         AddOfficialHeadingDefinitions(byCode);
         AddRuleOnlyDefinitions(byCode, rules);
+        AddWinCanCompatibilityZCodes(byCode);
         AddObservedXtfCodes(byCode, observedXtfTexts);
 
         return new CodeCatalogDocument
@@ -166,7 +226,16 @@ public static partial class VsaKekCatalogBuilder
 
     private static void AddOfficialHeadingDefinitions(IDictionary<string, CodeDefinition> byCode)
     {
-        foreach (var (code, title) in OfficialChannelHeadings)
+        AddHeadingDefinitions(byCode, OfficialChannelHeadings, ChannelType);
+        AddHeadingDefinitions(byCode, OfficialManholeHeadings, ManholeType);
+    }
+
+    private static void AddHeadingDefinitions(
+        IDictionary<string, CodeDefinition> byCode,
+        IEnumerable<(string Code, string Title)> headings,
+        string objectType)
+    {
+        foreach (var (code, title) in headings)
         {
             if (byCode.ContainsKey(code))
                 continue;
@@ -178,9 +247,30 @@ public static partial class VsaKekCatalogBuilder
                 CanonicalCode = code,
                 Source = VsaKekCatalogSources.Heading,
                 IsSelectable = true,
-                Group = $"VSA-KEK 2020/{ChannelType}/{code}",
-                CategoryPath = ["VSA-KEK 2020", ChannelType, code],
+                Group = $"VSA-KEK 2020/{objectType}/{code}",
+                CategoryPath = ["VSA-KEK 2020", objectType, code],
                 Description = "Offizielle VSA-KEK-2020 Basisgruppe."
+            });
+        }
+    }
+
+    private static void AddWinCanCompatibilityZCodes(IDictionary<string, CodeDefinition> byCode)
+    {
+        foreach (var (code, objectType, title) in WinCanCompatibilityZCodes)
+        {
+            if (byCode.ContainsKey(code))
+                continue;
+
+            AddOrMerge(byCode, new CodeDefinition
+            {
+                Code = code,
+                Title = title,
+                CanonicalCode = code,
+                Source = VsaKekCatalogSources.WinCanFallback,
+                IsSelectable = false,
+                Group = $"VSA-KEK 2020/{objectType}/{code[..3]}",
+                CategoryPath = ["VSA-KEK 2020", objectType, code[..3]],
+                Description = "EN 13508-2 Z-Code (andere); in WinCan-Katalogen vorhanden, nicht in der VSA-KEK-2020-ILI-Enum. Nur Import-/Anzeige-Anker."
             });
         }
     }
