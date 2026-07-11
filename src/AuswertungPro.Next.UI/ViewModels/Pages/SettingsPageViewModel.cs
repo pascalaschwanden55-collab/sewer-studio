@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Services;
 
@@ -18,6 +19,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private const double DefaultDinoTextThreshold = 0.20d;
 
     private readonly ServiceProvider _sp;
+    private readonly ProgramCleanupService _programCleanup = new();
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -52,6 +54,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _fullBackupCurrentFile = string.Empty;
     [ObservableProperty] private string _lastFullBackupInfo = string.Empty;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
+    [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
+    [ObservableProperty] private bool _isProgramCleanupRunning;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
     private bool _syncingThemeState;
@@ -108,6 +112,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IAsyncRelayCommand ImportBackupCommand { get; }
     public AsyncRelayCommand CreateFullBackupCommand { get; }
     public IRelayCommand CancelFullBackupCommand { get; }
+    public AsyncRelayCommand CleanProgramDataCommand { get; }
 
     public SettingsPageViewModel(ServiceProvider sp)
     {
@@ -167,12 +172,20 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         CancelFullBackupCommand = new RelayCommand(
             () => CreateFullBackupCommand.Cancel(),
             () => IsFullBackupRunning);
+        CleanProgramDataCommand = new AsyncRelayCommand(
+            CleanProgramDataAsync,
+            () => !IsProgramCleanupRunning);
     }
 
     partial void OnIsFullBackupRunningChanged(bool value)
     {
         CreateFullBackupCommand?.NotifyCanExecuteChanged();
         CancelFullBackupCommand?.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsProgramCleanupRunningChanged(bool value)
+    {
+        CleanProgramDataCommand?.NotifyCanExecuteChanged();
     }
 
     partial void OnUiThemeChanged(string value)
@@ -326,6 +339,19 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                 _sp.Settings.SaveImmediate,
                 () => DateTime.UtcNow),
             ct).ConfigureAwait(true);
+    }
+
+    private async Task CleanProgramDataAsync()
+    {
+        await SettingsProgramCleanupWorkflow.RunAsync(
+            new SettingsProgramCleanupWorkflowRequest(
+                SettingsProgramCleanupRequestFactory.Create(_sp.Settings, DateTime.UtcNow),
+                _programCleanup,
+                _sp.Dialogs,
+                _sp.Toasts,
+                new SettingsProgramCleanupWorkflowUi(
+                    value => IsProgramCleanupRunning = value,
+                    value => ProgramCleanupStatusText = value))).ConfigureAwait(true);
     }
 
     public sealed record AutoSaveModeOption(AutoSaveMode Value, string Label);
