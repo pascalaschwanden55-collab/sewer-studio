@@ -89,6 +89,21 @@ public sealed class AutoApprovalTests
         Assert.Contains("Unsicherheit", result.Reason);
     }
 
+    [Theory] // Review 11.07., Empfehlung 2: Urteil + Grund als sichtbarer Hinweis fuer die Vollanalyse.
+    [InlineData(true, "Zentrale Freigabe: verlaesslich —")]
+    [InlineData(false, "Zentrale Freigabe: pruefen —")]
+    public void AlsHinweis_FormatiertUrteilUndGrund(bool approved, string erwarteterPrefix)
+    {
+        var result = approved
+            ? AutoApprovalResult.Approved("Alle Belege bestaetigt.")
+            : AutoApprovalResult.Rejected("Datenbank-Abgleich fehlt.");
+
+        var hinweis = AutoApprovalService.AlsHinweis(result);
+
+        Assert.StartsWith(erwarteterPrefix, hinweis);
+        Assert.Contains(result.Reason, hinweis);
+    }
+
     [Fact]
     public void NoQualityGateResult_IsRejected()
     {

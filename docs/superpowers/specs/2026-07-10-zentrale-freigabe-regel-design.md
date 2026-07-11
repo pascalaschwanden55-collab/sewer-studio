@@ -3,7 +3,27 @@
 - **Datum:** 2026-07-10
 - **Branch:** feature/gis-karte
 - **Bezug:** Programm-Audit PR #23, Befund P0-3; folgt auf Commit 1f96fb99 (Fix 1/2/4)
-- **Status:** Design zur Freigabe
+- **Status:** UMGESETZT und danach REVIDIERT — siehe Revisionsblock unten. Die Abschnitte
+  3/4 beschreiben den urspruenglichen Entwurf und sind in einem Punkt ueberholt.
+
+## Revision (11.07.2026, nach externem Review)
+
+1. **Der „Live mit 2 Belegen"-Ansatz aus §3 war ein Denkfehler:** Beim Live-Codieren
+   stammen Confidence UND Ampel aus demselben `gateResult` (CodingLiveFindingEventFactory
+   setzt `Confidence = gateResult.CompositeConfidence`) — das sind KEINE zwei unabhaengigen
+   Belege. Commit `4d5696a1` hat deshalb verschaerft: **AutoAccept verlangt immer einen
+   bestaetigenden Datenbank-Abgleich** (`KbAgreement == true`). Live-Codieren (ohne KB-Beleg)
+   bleibt damit grundsaetzlich auf „Pruefen" — gewollt.
+2. **Zahlen-Haertung:** NaN/unendlich/ausserhalb 0..1 bei Confidence → Reject;
+   unbrauchbare Unsicherheitswerte (NaN/Inf) → Review. Per Tests bewiesen.
+3. **Vollanalyse angeschlossen:** `FullProtocolGenerationService` berechnet das zentrale
+   Urteil jetzt fuer JEDEN gemappten Befund und haengt „Zentrale Freigabe: verlaesslich/
+   pruefen — Grund" an die Warnings (→ Ai.Flags, sichtbar in der Review). Es wird weiterhin
+   nichts automatisch uebernommen oder verworfen (User-Entscheidung „nur Anzeige").
+4. **Bekannte, bewusst offene Punkte:** (a) Die „Mehrfach-Pruef-Unsicherheit" ist im
+   Vollanalyse-Pfad nur `FromSinglePass` aus derselben Confidence — kein unabhaengiger
+   Zweitlauf. (b) Die Schwellen (0.92/0.60/0.15) sind NICHT kalibriert; vor einer
+   „Sicher"-Kommunikation braucht es die Messung am (zu revidierenden) Eval-Set.
 
 ## 1. Problem
 

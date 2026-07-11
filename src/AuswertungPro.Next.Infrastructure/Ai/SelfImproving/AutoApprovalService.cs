@@ -26,6 +26,16 @@ public sealed class AutoApprovalService
             ? AutoApprovalResult.Approved(decision.Reason)
             : AutoApprovalResult.Rejected(decision.Reason);
     }
+
+    /// <summary>
+    /// Formatiert das Freigabe-Urteil als sichtbaren Hinweis fuer Warnings/Ai.Flags
+    /// (Review 11.07., Empfehlung 2: die Vollanalyse zeigt Ergebnis UND Grund an —
+    /// automatisch uebernommen wird weiterhin nichts).
+    /// </summary>
+    public static string AlsHinweis(AutoApprovalResult result)
+        => result.IsApproved
+            ? $"Zentrale Freigabe: verlaesslich — {result.Reason}"
+            : $"Zentrale Freigabe: pruefen — {result.Reason}";
 }
 
 public sealed record AutoApprovalResult(bool IsApproved, string Reason)

@@ -74,4 +74,28 @@ public sealed class StandardAiDecisionPolicyTests
         var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: 0.30));
         Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
     }
+
+    // ── Ungueltige Zahlen (Review 11.07., Befund 3): NaN laesst alle Vergleiche
+    //    fehlschlagen — ohne Guard wuerde NaN mit gruener Ampel + KB-Beleg AutoAccept
+    //    erreichen. Solche Werte sind Datenfehler und muessen hart auf Reject gehen. ──
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    [InlineData(1.5)]
+    [InlineData(-0.1)]
+    public void UngueltigeSicherheit_IstImmerReject(double confidence)
+    {
+        var d = Decide(new AiDecisionSignals(confidence, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: 0.05));
+        Assert.Equal(AiDecisionOutcome.Reject, d.Outcome);
+        Assert.Contains("ngueltig", d.Reason); // "Ungueltige Sicherheit ..."
+    }
+
+    [Fact] // NaN-Unsicherheit ist "vorhanden, aber unbrauchbar" -> nie AutoAccept.
+    public void UnbrauchbareUnsicherheit_Review()
+    {
+        var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: double.NaN));
+        Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
+    }
 }

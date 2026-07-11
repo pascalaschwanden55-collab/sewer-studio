@@ -145,6 +145,19 @@ public sealed class FullProtocolGenerationService : IDisposable
 
     // â”€â”€ Private â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    // Zentrale Freigabe-Regel als ANZEIGE fuer jeden gemappten Befund (Review 11.07.,
+    // Empfehlung 2): Urteil + Grund landen in den Warnings (-> Ai.Flags im Protokoll),
+    // damit die Review sie sieht. Es wird weiterhin nichts automatisch uebernommen
+    // oder verworfen — die Entscheidung bleibt beim Menschen.
+    private readonly SelfImproving.AutoApprovalService _autoApproval = new();
+
+    private MappedProtocolEntry MitZentralerFreigabe(MappedProtocolEntry entry)
+    {
+        var urteil = _autoApproval.Evaluate(entry);
+        var hinweis = SelfImproving.AutoApprovalService.AlsHinweis(urteil);
+        return entry with { Warnings = entry.Warnings.Append(hinweis).ToArray() };
+    }
+
     private async Task<MappedProtocolEntry> MapDetectionAsync(
         RawVideoDetection detection,
         FullProtocolGenerationRequest request,
@@ -188,23 +201,23 @@ public sealed class FullProtocolGenerationService : IDisposable
                     KbSimilarity = fallback.Score,
                     DamageCategory = fallback.Code
                 };
-                return new MappedProtocolEntry(
+                return MitZentralerFreigabe(new MappedProtocolEntry(
                     Detection: detection with { Evidence = fbEvidence },
                     SuggestedCode: fallback.Code,
                     Confidence: Math.Clamp(fallback.Score, 0.35, 0.85),
                     Reason: "LLM-Fehler, KB-Fallback verwendet: " + ex.Message,
                     Warnings: new[] { "Code-Mapping fehlgeschlagen, KB-Fallback verwendet." },
-                    QualityGateResult: _qualityGate.Evaluate(fbEvidence));
+                    QualityGateResult: _qualityGate.Evaluate(fbEvidence)));
             }
 
             var emptyEvidence = detection.Evidence ?? new EvidenceVector();
-            return new MappedProtocolEntry(
+            return MitZentralerFreigabe(new MappedProtocolEntry(
                 Detection: detection,
                 SuggestedCode: null,
                 Confidence: 0,
                 Reason: ex.Message,
                 Warnings: new[] { "Code-Mapping fehlgeschlagen: " + ex.Message },
-                QualityGateResult: _qualityGate.Evaluate(emptyEvidence));
+                QualityGateResult: _qualityGate.Evaluate(emptyEvidence)));
         }
 
         var checked_ = _plausibility.ApplyChecks(
@@ -248,14 +261,14 @@ public sealed class FullProtocolGenerationService : IDisposable
         // Update detection with enriched evidence
         var enrichedDetection = detection with { Evidence = evidence };
 
-        return new MappedProtocolEntry(
+        return MitZentralerFreigabe(new MappedProtocolEntry(
             Detection: enrichedDetection,
             SuggestedCode: suggestedCode,
             Confidence: compositeConfidence,
             Reason: reason,
             Warnings: warnings,
             QualityGateResult: qgResult,
-            Uncertainty: UncertaintyEstimate.FromSinglePass(compositeConfidence));
+            Uncertainty: UncertaintyEstimate.FromSinglePass(compositeConfidence)));
     }
 
     private static string BuildPrompt(

@@ -44,6 +44,19 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
 
     public AiDecision Decide(AiDecisionSignals s)
     {
+        // Ungueltige Zahlen sind Datenfehler, keine Meinung (Review 11.07., Befund 3):
+        // NaN laesst jeden Vergleich fehlschlagen und wuerde sonst bis AutoAccept
+        // durchrutschen. Confidence muss ein echter Wert in [0..1] sein.
+        if (double.IsNaN(s.Confidence) || double.IsInfinity(s.Confidence)
+            || s.Confidence is < 0.0 or > 1.0)
+            return new AiDecision(AiDecisionOutcome.Reject,
+                $"Ungueltige Sicherheit ({s.Confidence}) — Datenfehler, kein Wert in 0..1.");
+
+        // Unsicherheit: vorhanden, aber unbrauchbar (NaN/Inf) darf nie als "niedrig" gelten.
+        if (s.EpistemicUncertainty is { } eu && (double.IsNaN(eu) || double.IsInfinity(eu)))
+            return new AiDecision(AiDecisionOutcome.Review,
+                "Unsicherheitswert unbrauchbar (NaN/unendlich).");
+
         // Rote Ampel oder sehr niedrige Sicherheit -> sofort ablehnen.
         if (s.QualityGate == TrafficLight.Red)
             return new AiDecision(AiDecisionOutcome.Reject, "QualityGate steht auf Rot.");
