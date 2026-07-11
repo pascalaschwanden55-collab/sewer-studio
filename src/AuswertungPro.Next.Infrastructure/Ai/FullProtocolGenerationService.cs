@@ -160,9 +160,14 @@ public sealed class FullProtocolGenerationService : IDisposable
 
     private MappedProtocolEntry MitZentralerFreigabe(MappedProtocolEntry entry)
     {
-        var urteil = _autoApproval.Evaluate(entry);
+        var urteil = _autoApproval.Decide(entry);
         var hinweis = SelfImproving.AutoApprovalService.AlsHinweis(urteil);
-        return entry with { Warnings = entry.Warnings.Append(hinweis).ToArray() };
+        return entry with
+        {
+            Freigabe = urteil,
+            EntryId = entry.EntryId == Guid.Empty ? Guid.NewGuid() : entry.EntryId,
+            Warnings = entry.Warnings.Append(hinweis).ToArray()
+        };
     }
 
     private async Task<MappedProtocolEntry> MapDetectionAsync(

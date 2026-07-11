@@ -30,7 +30,9 @@ public sealed class CodingLiveFindingEventFactoryTests
         Assert.Equal("BCAEB", draft.AiContext.SuggestedCode);
         Assert.Equal(0.82, draft.AiContext.Confidence);
         Assert.Equal("lateral connection", draft.AiContext.Reason);
-        Assert.Equal(0.4, draft.AiContext.Evidence!.QwenVisionConf);
+        // Kein echter Modellwert am Finding -> kein Qwen-Signal (Severity ist keine
+        // Confidence mehr; Fehlerpruefung 11.07., Kritisch 3).
+        Assert.Null(draft.AiContext.Evidence!.QwenVisionConf);
         Assert.Equal(0.6, draft.AiContext.Evidence.PlausibilityScore);
         Assert.Equal("BCAEB", draft.AiContext.Evidence.DamageCategory);
         Assert.Equal(CodingUserDecision.Ignored, draft.AiContext.Decision);

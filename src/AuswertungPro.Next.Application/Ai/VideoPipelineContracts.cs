@@ -151,7 +151,13 @@ public sealed record MappedProtocolEntry(
     string? Reason,
     IReadOnlyList<string> Warnings,
     QualityGateResult? QualityGateResult = null,
-    UncertaintyEstimate? Uncertainty = null);
+    UncertaintyEstimate? Uncertainty = null,
+    // Strukturiertes Urteil der zentralen Freigabe-Regel (Fehlerpruefung 11.07.,
+    // Kritisch 2): 3 Outcomes + Grund, fuer Anzeige und Auswahl VOR der Uebernahme.
+    AiDecision? Freigabe = null,
+    // Stabile Kennung, die der Protokolleintrag uebernimmt — verbindet die
+    // Fenster-Auswahl mit dem Dokument (Uebernahme-Filter).
+    Guid EntryId = default);
 
 public sealed record CodeMappingProgress(int Done, int Total, string Status)
 {

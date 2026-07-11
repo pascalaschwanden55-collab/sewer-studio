@@ -101,6 +101,30 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
 
 public sealed class DetectionItem
 {
+    // ── Zentrale Freigabe (Fehlerpruefung 11.07., Kritisch 2) ──
+    // Verbindet die Zeile mit dem Protokolleintrag (Uebernahme-Filter).
+    public Guid EntryId { get; init; }
+    // Urteil der zentralen Regel; null = kein Urteil (z.B. rohe Detection).
+    public AiDecisionOutcome? Outcome { get; init; }
+    public string OutcomeReason { get; init; } = "";
+    // Checkbox der Uebernahme: nur "verlaesslich" ist vorausgewaehlt; Pruefen/Ablehnen
+    // gelangen NUR nach ausdruecklicher Auswahl ins Fachprotokoll.
+    public bool IsSelected { get; set; }
+    public string OutcomeLabel => Outcome switch
+    {
+        AiDecisionOutcome.AutoAccept => "verlässlich",
+        AiDecisionOutcome.Review => "prüfen",
+        AiDecisionOutcome.Reject => "ablehnen",
+        _ => ""
+    };
+    public Color OutcomeColor => Outcome switch
+    {
+        AiDecisionOutcome.AutoAccept => Color.FromRgb(0x22, 0xC5, 0x5E),
+        AiDecisionOutcome.Review => Color.FromRgb(0xF5, 0x9E, 0x0B),
+        AiDecisionOutcome.Reject => Color.FromRgb(0xEF, 0x44, 0x44),
+        _ => Color.FromRgb(0x94, 0xA3, 0xB8)
+    };
+
     public string Code { get; init; } = "";
     public string Label { get; init; } = "";
     public double MeterStart { get; init; }
@@ -178,7 +202,11 @@ public sealed class DetectionItem
         DiameterReductionMm = m.Detection.DiameterReductionMm,
         PositionSummary = BuildPositionSummary(m.Detection.PositionClock, m.Detection.ExtentPercent),
         SeverityColor = MapSeverityColor(m.Detection.Severity),
-        TrafficLight = m.QualityGateResult?.TrafficLight ?? TrafficLight.Yellow
+        TrafficLight = m.QualityGateResult?.TrafficLight ?? TrafficLight.Yellow,
+        EntryId = m.EntryId,
+        Outcome = m.Freigabe?.Outcome,
+        OutcomeReason = m.Freigabe?.Reason ?? "",
+        IsSelected = m.Freigabe?.Outcome == AiDecisionOutcome.AutoAccept
     };
 
     private static Color MapSeverityColor(string? severity)

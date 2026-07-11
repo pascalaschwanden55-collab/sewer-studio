@@ -13,7 +13,11 @@ public sealed class AutoApprovalService
     public AutoApprovalService(IAiDecisionPolicy? policy = null)
         => _policy = policy ?? StandardAiDecisionPolicy.Default;
 
-    public AutoApprovalResult Evaluate(MappedProtocolEntry entry)
+    /// <summary>
+    /// Volles 3-stufiges Urteil (AutoAccept/Review/Reject) — Fehlerpruefung 11.07.,
+    /// Wichtig 1: die bool-Reduktion verlor die Unterscheidung Grenzfall vs. Datenfehler.
+    /// </summary>
+    public AiDecision Decide(MappedProtocolEntry entry)
     {
         var signals = new AiDecisionSignals(
             Confidence: entry.Confidence,
@@ -21,11 +25,25 @@ public sealed class AutoApprovalService
             KbAgreement: entry.Detection.Evidence?.KbCodeAgreement,
             EpistemicUncertainty: entry.Uncertainty?.EpistemicUncertainty);
 
-        var decision = _policy.Decide(signals);
+        return _policy.Decide(signals);
+    }
+
+    public AutoApprovalResult Evaluate(MappedProtocolEntry entry)
+    {
+        var decision = Decide(entry);
         return decision.Outcome == AiDecisionOutcome.AutoAccept
             ? AutoApprovalResult.Approved(decision.Reason)
             : AutoApprovalResult.Rejected(decision.Reason);
     }
+
+    /// <summary>Sichtbarer Hinweis mit allen DREI Ausgaengen.</summary>
+    public static string AlsHinweis(AiDecision decision)
+        => decision.Outcome switch
+        {
+            AiDecisionOutcome.AutoAccept => $"Zentrale Freigabe: verlaesslich — {decision.Reason}",
+            AiDecisionOutcome.Reject => $"Zentrale Freigabe: ablehnen — {decision.Reason}",
+            _ => $"Zentrale Freigabe: pruefen — {decision.Reason}"
+        };
 
     /// <summary>
     /// Formatiert das Freigabe-Urteil als sichtbaren Hinweis fuer Warnings/Ai.Flags

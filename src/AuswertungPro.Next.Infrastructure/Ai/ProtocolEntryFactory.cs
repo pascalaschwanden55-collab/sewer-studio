@@ -105,7 +105,9 @@ internal static class ProtocolEntryFactory
         var det = mapped.Detection;
         return new ProtocolEntry
         {
-            EntryId = Guid.NewGuid(),
+            // Kennung aus dem Mapping uebernehmen: verbindet die Auswahl im
+            // Vollanalyse-Fenster mit dem Dokument (Uebernahme-Filter, Stufe 1B).
+            EntryId = mapped.EntryId != Guid.Empty ? mapped.EntryId : Guid.NewGuid(),
             Code = mapped.SuggestedCode ?? string.Empty,
             Beschreibung = det.FindingLabel,
             MeterStart = det.MeterStart,

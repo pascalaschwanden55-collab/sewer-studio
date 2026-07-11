@@ -221,11 +221,19 @@ public partial class VideoAnalysisPipelineWindow : Window
 
             Vm.TelemetryText = TelemetryFmt.Format(result.Telemetry);
 
-            // einfache Liste für UI
+            // Beurteilte Eintraege anzeigen (zentrales Urteil + Auswahl-Checkbox) —
+            // rohe Detections nur als Fallback, wenn kein Mapping vorliegt
+            // (Fehlerpruefung 11.07., Kritisch 2: Urteil war vor Uebernahme unsichtbar).
             Vm.Detections.Clear();
-            foreach (var d in (result.Detections ?? Array.Empty<RawVideoDetection>()).Take(250))
+            if (result.MappedEntries is { Count: > 0 } gemappt)
             {
-                Vm.Detections.Add(DetectionItem.From(d));
+                foreach (var m in gemappt.Take(250))
+                    Vm.Detections.Add(DetectionItem.FromMapped(m));
+            }
+            else
+            {
+                foreach (var d in (result.Detections ?? Array.Empty<RawVideoDetection>()).Take(250))
+                    Vm.Detections.Add(DetectionItem.From(d));
             }
             RenderPipeRadar();
 
@@ -779,6 +787,30 @@ public partial class VideoAnalysisPipelineWindow : Window
         {
             DialogHost.Current.Info("Kein gültiges Ergebnis zum Übertragen vorhanden.", "Videoanalyse KI");
             return;
+        }
+
+        // Nur AUSGEWAEHLTE Eintraege gelangen ins Fachprotokoll (Fehlerpruefung 11.07.,
+        // Kritisch 2). Vorausgewaehlt ist nur "verlaesslich"; Pruefen/Ablehnen muss der
+        // Nutzer bewusst anhaken. Ohne Mapping (Alt-Fallback) bleibt das Verhalten wie bisher.
+        if (_result.MappedEntries is { Count: > 0 })
+        {
+            var ausgewaehlt = Vm.Detections
+                .Where(d => d.IsSelected && d.EntryId != Guid.Empty)
+                .Select(d => d.EntryId)
+                .ToHashSet();
+
+            if (ausgewaehlt.Count == 0)
+            {
+                DialogHost.Current.Info(
+                    "Kein Eintrag ausgewählt. Bitte die zu übernehmenden Befunde anhaken " +
+                    "(nur 'verlässlich' ist vorausgewählt).",
+                    "Videoanalyse KI");
+                return;
+            }
+
+            var gesamt = Vm.Detections.Count;
+            AiProtocolAcceptancePolicy.Apply(_result.Document, ausgewaehlt);
+            Vm.StatusText = $"Übernommen: {ausgewaehlt.Count} von {gesamt} Befunden (Rest verworfen).";
         }
 
         DialogResult = true;
