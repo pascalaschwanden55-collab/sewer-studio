@@ -11,6 +11,10 @@ public partial class KartePage : UserControl
     private bool _mapInitialized;
     private bool _mapBuildInProgress;
 
+    // Hover-Halo: Mausposition gedrosselt (~60 ms) ans ViewModel melden — nie pro Pixel.
+    private DispatcherTimer? _hoverTimer;
+    private System.Windows.Point _hoverPosition;
+
     public KartePage()
     {
         InitializeComponent();
@@ -18,6 +22,27 @@ public partial class KartePage : UserControl
         DataContextChanged += (_, _) => _vm = DataContext as KarteViewModel;
         Loaded += KartePage_Loaded;
         Unloaded += KartePage_Unloaded;
+
+        MapControl.MouseMove += (_, e) =>
+        {
+            _hoverPosition = e.GetPosition(MapControl);
+            if (_hoverTimer is null)
+            {
+                _hoverTimer = new DispatcherTimer { Interval = System.TimeSpan.FromMilliseconds(60) };
+                _hoverTimer.Tick += (_, _) =>
+                {
+                    _hoverTimer!.Stop();
+                    _vm?.HoverAtScreen(_hoverPosition.X, _hoverPosition.Y);
+                };
+            }
+            if (!_hoverTimer.IsEnabled)
+                _hoverTimer.Start();
+        };
+        MapControl.MouseLeave += (_, _) =>
+        {
+            _hoverTimer?.Stop();
+            _vm?.HoverAtScreen(-1, -1); // ausserhalb: Halo entfernen
+        };
     }
 
     private async void KartePage_Loaded(object sender, System.Windows.RoutedEventArgs e)

@@ -17,20 +17,35 @@ public static class KarteNetzFeatureBuilder
         ProjectedHaltungGeometry hg,
         IReadOnlyDictionary<string, int?> kondition,
         bool invertiert)
+        => Build(hg, kondition, invertiert, dnByName: null);
+
+    /// <summary>
+    /// Premium-Variante: 5-Klassen-Farbe (Excel-Palette) + Linienbreite nach Nennweite.
+    /// Ohne DN-Daten bleibt die bisherige Einheitsbreite; ohne EZ-Skala der 3-Stufen-Rueckfall.
+    /// </summary>
+    public static GeometryFeature Build(
+        ProjectedHaltungGeometry hg,
+        IReadOnlyDictionary<string, int?> kondition,
+        bool invertiert,
+        IReadOnlyDictionary<string, int?>? dnByName)
     {
         var coords = hg.Points.Select(p => new Coordinate(p.X, p.Y)).ToArray();
 
-        var farbe = ZustandColorMapper.Map(
-            kondition.TryGetValue(hg.Haltungsname, out var k) ? k : null,
-            invertiert);
+        var wert = kondition.TryGetValue(hg.Haltungsname, out var k) ? k : null;
 
-        // Eine Farbsprache: Netzfarben kommen aus der zentralen Karten-Palette
-        // (theme-neutral, weil Mapsui nicht theme-abhaengig rendert).
-        var color = ZustandsklasseMapColors.Fallback3Stufen(farbe);
+        // Eine Farbsprache: 5 Zustandsklassen aus der Excel-Palette, wenn die EZ-Skala
+        // aktiv ist (invertiert, 0=schlecht..4=gut — dieselbe Skala wie die Palette).
+        // Sonst bzw. bei Werten ausserhalb 0..4 der bisherige 3-Stufen-Rueckfall.
+        var color = invertiert && wert is >= 0 and <= 4
+            ? ZustandsklasseMapColors.Fill(wert.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                ?? ZustandsklasseMapColors.Unbekannt
+            : ZustandsklasseMapColors.Fallback3Stufen(ZustandColorMapper.Map(wert, invertiert));
+
+        var dn = dnByName is not null && dnByName.TryGetValue(hg.Haltungsname, out var d) ? d : null;
 
         var feature = new GeometryFeature { Geometry = new LineString(coords) };
         feature["Haltungsname"] = hg.Haltungsname;
-        feature.Styles.Add(new VectorStyle { Line = new Pen(color, 4) });
+        feature.Styles.Add(new VectorStyle { Line = new Pen(color, DnLineWidthMapper.Breite(dn)) });
         return feature;
     }
 }

@@ -153,24 +153,33 @@
                 BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderLightBrush}">
             <DockPanel>
 
-                <!-- Legende links -->
+                <!-- Legende links: 5 Zustandsklassen (EZ-Skala) aus der Excel-Palette.
+                     Feste Hex wie die Netzlinien selbst — Mapsui rendert nicht theme-abhaengig. -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Zustand: " FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}"/>
 
-                    <Border Width="14" Height="14" Background="{DynamicResource Severity1Brush}" CornerRadius="2" Margin="4,0,2,0"/>
-                    <TextBlock Text="Gut" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+                    <Border Width="14" Height="14" Background="#FF0000" CornerRadius="2" Margin="4,0,2,0"/>
+                    <TextBlock Text="0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,6,0" ToolTip="Zustandsklasse 0 — Sofortmassnahme"/>
 
-                    <Border Width="14" Height="14" Background="{DynamicResource Severity3Brush}" CornerRadius="2" Margin="0,0,2,0"/>
-                    <TextBlock Text="Mittel" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+                    <Border Width="14" Height="14" Background="#FF6600" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="1" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,6,0" ToolTip="Zustandsklasse 1 — kurzfristig"/>
 
-                    <Border Width="14" Height="14" Background="{DynamicResource Severity5Brush}" CornerRadius="2" Margin="0,0,2,0"/>
-                    <TextBlock Text="Schlecht" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+                    <Border Width="14" Height="14" Background="#FFFF00" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="2" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,6,0" ToolTip="Zustandsklasse 2 — mittelfristig"/>
 
-                    <Border Width="14" Height="14" Background="{DynamicResource MutedBrush}" CornerRadius="2" Margin="0,0,2,0"/>
+                    <Border Width="14" Height="14" Background="#AEB135" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="3" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,6,0" ToolTip="Zustandsklasse 3 — langfristig"/>
+
+                    <Border Width="14" Height="14" Background="#92D050" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="4" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,6,0" ToolTip="Zustandsklasse 4 — kein Handlungsbedarf"/>
+
+                    <Border Width="14" Height="14" Background="#3D4D63" CornerRadius="2" Margin="6,0,2,0"/>
                     <TextBlock Text="Unbekannt" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" Margin="0,0,16,0"/>
                 </StackPanel>

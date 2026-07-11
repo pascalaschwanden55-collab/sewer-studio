@@ -41,8 +41,16 @@ public sealed class NetworkFeatureCache
 
     /// <summary>Baut den Netz-Index, falls sich XTF/Zustandsdaten/Skala geaendert haben; sonst No-op.</summary>
     public void EnsureBuilt(string? xtfPath, IReadOnlyDictionary<string, int?> kondition, bool invertiert)
+        => EnsureBuilt(xtfPath, kondition, invertiert, dnByName: null);
+
+    /// <summary>Premium-Variante mit Nennweiten: Linienbreite nach DN. Key beruecksichtigt die DN-Daten.</summary>
+    public void EnsureBuilt(
+        string? xtfPath,
+        IReadOnlyDictionary<string, int?> kondition,
+        bool invertiert,
+        IReadOnlyDictionary<string, int?>? dnByName)
     {
-        var key = BuildKey(xtfPath, kondition, invertiert);
+        var key = BuildKey(xtfPath, kondition, invertiert, dnByName);
         lock (_lock)
         {
             if (key == _key && _index is not null)
@@ -60,7 +68,7 @@ public sealed class NetworkFeatureCache
                 var projected = NetworkViewportFilter.Project(geometries);
                 foreach (var g in projected)
                 {
-                    var feature = KarteNetzFeatureBuilder.Build(g, kondition, invertiert);
+                    var feature = KarteNetzFeatureBuilder.Build(g, kondition, invertiert, dnByName);
                     index.Add(g.Bounds, feature);
                     boundsByName[g.Haltungsname] = g.Bounds;
                     featureByName[g.Haltungsname] = feature;
@@ -169,8 +177,12 @@ public sealed class NetworkFeatureCache
     private static MapBounds Union(MapBounds a, MapBounds b)
         => new(Math.Min(a.MinX, b.MinX), Math.Min(a.MinY, b.MinY), Math.Max(a.MaxX, b.MaxX), Math.Max(a.MaxY, b.MaxY));
 
-    // Key aendert sich bei anderem XTF (Pfad/mtime/Groesse), anderen Zustandsdaten oder Skala.
-    private static string BuildKey(string? xtfPath, IReadOnlyDictionary<string, int?> kondition, bool invertiert)
+    // Key aendert sich bei anderem XTF (Pfad/mtime/Groesse), anderen Zustands-/DN-Daten oder Skala.
+    private static string BuildKey(
+        string? xtfPath,
+        IReadOnlyDictionary<string, int?> kondition,
+        bool invertiert,
+        IReadOnlyDictionary<string, int?>? dnByName)
     {
         var (mtime, size) = XtfStamp(xtfPath);
 
@@ -181,7 +193,17 @@ public sealed class NetworkFeatureCache
             hash.Add(kv.Value);
         }
 
-        return $"{xtfPath}|{mtime}|{size}|{invertiert}|{kondition.Count}|{hash.ToHashCode()}";
+        var dnHash = new HashCode();
+        if (dnByName is not null)
+        {
+            foreach (var kv in dnByName.OrderBy(k => k.Key, StringComparer.Ordinal))
+            {
+                dnHash.Add(kv.Key, StringComparer.Ordinal);
+                dnHash.Add(kv.Value);
+            }
+        }
+
+        return $"{xtfPath}|{mtime}|{size}|{invertiert}|{kondition.Count}|{hash.ToHashCode()}|{dnByName?.Count ?? -1}|{dnHash.ToHashCode()}";
     }
 
     // Schaechte haengen nur an der XTF selbst (nicht an Zustandsdaten/Skala).

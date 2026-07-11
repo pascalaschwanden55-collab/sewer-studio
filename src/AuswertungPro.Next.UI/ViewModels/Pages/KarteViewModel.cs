@@ -38,10 +38,17 @@ public sealed partial class KarteViewModel : ObservableObject
 
     // Zustandsfarben je Haltungsname aus dem aktuellen Projekt (fuers Feature-Bauen im Cache).
     private IReadOnlyDictionary<string, int?> _kondition = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
+    // Nennweiten je Haltungsname (Linienbreite nach DN).
+    private IReadOnlyDictionary<string, int?> _dnByName = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
     private MemoryLayer? _netzLayer;
+    private MemoryLayer? _detailLayer;      // Labels + Fliessrichtungs-Pfeile (nur Detail-Zoom)
     private MemoryLayer? _schachtLayer;
+    private MemoryLayer? _hoverLayer;       // Halo unter dem Mauszeiger
+    private MemoryLayer? _schadenLayer;     // Schadenspunkte der gewaehlten Haltung
     private MemoryLayer? _highlightLayer;   // pulsierende Hervorhebung der gewaehlten Haltung
     private Map? _map;
+    private KarteZoomSicht? _letzteDetailSicht;
+    private string? _hoverName;
 
     // Puls-Animation (kurzes Aufblinken der angeklickten Haltung, wie ein QGIS-Flash).
     private DispatcherTimer? _pulseTimer;
@@ -84,7 +91,11 @@ public sealed partial class KarteViewModel : ObservableObject
         _services = services;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
-        SchliesseInfoCommand = new RelayCommand(() => SelectedInfo = null);
+        SchliesseInfoCommand = new RelayCommand(() =>
+        {
+            SelectedInfo = null;
+            LeereSchadenLayer(); // Panel zu = Schadenspunkte wieder ausblenden
+        });
     }
 
     /// <summary>
@@ -116,16 +127,29 @@ public sealed partial class KarteViewModel : ObservableObject
         try
         {
             _kondition = HaltungConditionProvider.Build(_shell.Project.Data);
-            await Task.Run(() => _services.NetworkFeatures.EnsureBuilt(XtfPath, _kondition, _invertiert));
+            _dnByName = HaltungDnProvider.Build(_shell.Project.Data);
+            await Task.Run(() => _services.NetworkFeatures.EnsureBuilt(XtfPath, _kondition, _invertiert, _dnByName));
             HasNetworkGeometry = _services.NetworkFeatures.HasGeometry;
 
             _netzLayer = new MemoryLayer("Netz") { Features = Array.Empty<GeometryFeature>(), Style = null };
             map.Layers.Add(_netzLayer);
 
+            // Hover-Halo UNTER allen Markierungen, direkt ueber dem Netz.
+            _hoverLayer = new MemoryLayer("Hover") { Features = Array.Empty<GeometryFeature>(), Style = null };
+            map.Layers.Add(_hoverLayer);
+
+            // Detail-Layer: Haltungs-Labels + Fliessrichtungs-Pfeile, erst im Detail-Zoom befuellt.
+            _detailLayer = new MemoryLayer("Details") { Features = Array.Empty<GeometryFeature>(), Style = null };
+            map.Layers.Add(_detailLayer);
+
             // Schaechte-Layer (Kreise) UEBER dem Netz, damit die Knoten auf den Linien sitzen.
             // Bleibt leer, bis weit genug reingezoomt wird (SchachtSichtbarkeitPolicy).
             _schachtLayer = new MemoryLayer("Schaechte") { Features = Array.Empty<GeometryFeature>(), Style = null };
             map.Layers.Add(_schachtLayer);
+
+            // Schadenspunkte der gewaehlten Haltung (Klick fuellt sie, Panel-Schliessen leert sie).
+            _schadenLayer = new MemoryLayer("Schaeden") { Features = Array.Empty<GeometryFeature>(), Style = null };
+            map.Layers.Add(_schadenLayer);
 
             // Hervorhebungs-Layer GANZ OBEN: die angeklickte Haltung blinkt hier pulsierend auf.
             _highlightLayer = new MemoryLayer("Auswahl-Puls") { Features = Array.Empty<GeometryFeature>(), Style = null };
@@ -169,6 +193,19 @@ public sealed partial class KarteViewModel : ObservableObject
                     }
                 }
 
+                // Schadenspunkt angeklickt? Code + Meterstand in der Statuszeile zeigen.
+                if (_schadenLayer is not null)
+                {
+                    var di = e.GetMapInfo(new[] { _schadenLayer });
+                    if (di?.Feature is GeometryFeature df
+                        && df["Code"] is string schadenCode
+                        && df["Meter"] is double schadenMeter)
+                    {
+                        StatusText = $"Schaden {schadenCode} bei {schadenMeter:0.00} m";
+                        return;
+                    }
+                }
+
                 var mi = e.GetMapInfo(new[] { capturedLayer });
                 if (mi?.Feature is GeometryFeature gf && gf["Haltungsname"] is string name)
                 {
@@ -177,6 +214,8 @@ public sealed partial class KarteViewModel : ObservableObject
                     SelectedInfo = KarteHaltungInfoBuilder.Build(FindeRecord(name));
                     // Angeklickte Haltung pulsierend aufblinken lassen (Geometrie direkt vom Klick).
                     PulseGeometry(gf.Geometry);
+                    // Ihre Schadenspunkte entlang der Linie einblenden.
+                    ZeigeSchaedenFuerHaltung(name, gf.Geometry);
                 }
             };
         }
@@ -268,9 +307,136 @@ public sealed partial class KarteViewModel : ObservableObject
         // am Ausschnitt+Zoom (Detailstufe). Nur bei echter Aenderung neu zeichnen (spart Redraws).
         var netzGeaendert = RefreshNetzLayer(force, viewport.Value, paddedViewport, resolution);
         var schaechteGeaendert = RefreshSchachtLayer(paddedViewport);
+        var detailsGeaendert = RefreshDetailLayer(netzGeaendert || force, resolution);
 
-        if (netzGeaendert || schaechteGeaendert)
+        if (netzGeaendert || schaechteGeaendert || detailsGeaendert)
             _map.RefreshGraphics();
+    }
+
+    // Labels + Fliessrichtungs-Pfeile fuer die SICHTBAREN Netzlinien, nur im Detail-Zoom.
+    // On-the-fly gebaut (nie im Netz-Cache) und gedeckelt (KarteDetailFeatureBuilder.MaxHaltungen).
+    private bool RefreshDetailLayer(bool quelleGeaendert, double resolution)
+    {
+        if (_detailLayer is null || _map is null)
+            return false;
+
+        var sicht = KarteZoomStufenPolicy.Fuer(resolution, ShowSchaechte);
+        var sichtGewechselt = _letzteDetailSicht is null
+            || _letzteDetailSicht.LabelsSichtbar != sicht.LabelsSichtbar
+            || _letzteDetailSicht.PfeileSichtbar != sicht.PfeileSichtbar;
+        if (!quelleGeaendert && !sichtGewechselt)
+            return false;
+        _letzteDetailSicht = sicht;
+
+        if (!sicht.LabelsSichtbar && !sicht.PfeileSichtbar)
+        {
+            if (!_detailLayer.Features.Any())
+                return false;
+            _detailLayer.Features = Array.Empty<GeometryFeature>();
+            _detailLayer.DataHasChanged();
+            return true;
+        }
+
+        var sichtbareLinien = _netzLayer?.Features?.OfType<GeometryFeature>()
+            ?? Enumerable.Empty<GeometryFeature>();
+        _detailLayer.Features = KarteDetailFeatureBuilder.Build(
+            sichtbareLinien, resolution, sicht.LabelsSichtbar, sicht.PfeileSichtbar);
+        _detailLayer.DataHasChanged();
+        return true;
+    }
+
+    // Schadenspunkte der gewaehlten Haltung entlang der Linie einblenden.
+    private void ZeigeSchaedenFuerHaltung(string? name, Geometry? geometry)
+    {
+        if (_schadenLayer is null)
+            return;
+
+        var record = FindeRecord(name);
+        var entries = record?.Protocol?.Current?.Entries;
+        var sollLaenge = ParseLaenge(record?.GetFieldValue("Haltungslaenge_m"));
+
+        var features = KarteSchadenFeatureBuilder.Build(geometry, entries, sollLaenge);
+        _schadenLayer.Features = features;
+        _schadenLayer.DataHasChanged();
+        if (features.Count > 0)
+            StatusText = $"{features.Count} Schadenspunkte auf {name}";
+    }
+
+    private void LeereSchadenLayer()
+    {
+        if (_schadenLayer is null || !_schadenLayer.Features.Any())
+            return;
+        _schadenLayer.Features = Array.Empty<GeometryFeature>();
+        _schadenLayer.DataHasChanged();
+        _map?.RefreshGraphics();
+    }
+
+    // Haltungslaenge tolerant lesen ("45.3", "45,3"); null wenn unlesbar.
+    private static double? ParseLaenge(string? roh)
+    {
+        if (string.IsNullOrWhiteSpace(roh))
+            return null;
+        var normalisiert = roh.Trim().Replace(',', '.');
+        return double.TryParse(normalisiert, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var l) && l > 0 ? l : null;
+    }
+
+    /// <summary>Hover-Halo unter dem Mauszeiger (von der Page mit Drossel aufgerufen).
+    /// Koordinaten in Screen-Einheiten des MapControls; ausserhalb = Halo entfernen.</summary>
+    public void HoverAtScreen(double screenX, double screenY)
+    {
+        if (_map is null || _hoverLayer is null)
+            return;
+
+        var viewport = _map.Navigator.Viewport;
+        if (viewport.Width <= 0 || viewport.Height <= 0 || viewport.Resolution <= 0)
+            return;
+
+        GeometryFeature? treffer = null;
+        if (screenX >= 0 && screenY >= 0)
+        {
+            var welt = viewport.ScreenToWorld(screenX, screenY);
+            var fangradius = viewport.Resolution * 8; // ~8 Pixel Fangdistanz
+            var box = new MapBounds(welt.X - fangradius, welt.Y - fangradius,
+                                    welt.X + fangradius, welt.Y + fangradius);
+
+            var beste = double.PositiveInfinity;
+            foreach (var kandidat in _services.NetworkFeatures.QueryVisible(box))
+            {
+                if (kandidat.Geometry is not LineString linie)
+                    continue;
+                var punkte = linie.Coordinates.Select(c => (c.X, c.Y)).ToArray();
+                var distanz = PolylineMath.DistanzZuPunkt(punkte, (welt.X, welt.Y));
+                if (distanz < beste)
+                {
+                    beste = distanz;
+                    treffer = kandidat;
+                }
+            }
+
+            if (beste > fangradius)
+                treffer = null;
+        }
+
+        var name = treffer?["Haltungsname"] as string;
+        if (string.Equals(name, _hoverName, StringComparison.Ordinal))
+            return;
+        _hoverName = name;
+
+        if (treffer is null)
+        {
+            _hoverLayer.Features = Array.Empty<GeometryFeature>();
+        }
+        else
+        {
+            // Breiter halbtransparenter Halo in Akzentblau — hebt ohne zu schreien.
+            var halo = new GeometryFeature { Geometry = treffer.Geometry };
+            halo.Styles.Add(new VectorStyle { Line = new Pen(new Color(37, 99, 235, 90), 14) });
+            _hoverLayer.Features = new[] { halo };
+        }
+
+        _hoverLayer.DataHasChanged();
+        _map.RefreshGraphics();
     }
 
     // Sichtbare Netzlinien nachziehen. Ueberspringt, wenn Ausschnitt UND Zoom schon geladen sind
@@ -376,6 +542,8 @@ public sealed partial class KarteViewModel : ObservableObject
         RefreshVisibleNetworkLayer(force: true);
         // Auch bei Auswahl anderswo (Liste/QGIS-Bridge): die Haltung auf der Karte aufblinken lassen.
         PulseHaltung(name);
+        // Und ihre Schadenspunkte zeigen (Geometrie aus dem Cache).
+        ZeigeSchaedenFuerHaltung(name, _services.NetworkFeatures.TryGetGeometry(name));
         _map.RefreshGraphics();
     }
 
