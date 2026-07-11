@@ -66,6 +66,8 @@ namespace AuswertungPro.Next.UI
         public IStatusColorService StatusColors { get; } = new StatusColorService();
         // Nutzungszaehler fuer VSA-Codes (Favoriten-Chips im Code-Explorer).
         public ICodeUsageTracker CodeUsage { get; } = new CodeUsageTracker();
+        // ETA fuer lange Laeufe: pro Lauf eine frische Instanz (gleitende Rate ist lauf-spezifisch).
+        public AuswertungPro.Next.Application.Common.IEtaCalculator CreateEtaCalculator() => new AuswertungPro.Next.Application.Common.EtaCalculator();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.

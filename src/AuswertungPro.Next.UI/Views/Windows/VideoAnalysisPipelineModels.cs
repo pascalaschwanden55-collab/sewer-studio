@@ -33,6 +33,8 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
     [ObservableProperty] private string _currentMeter = "";
     [ObservableProperty] private string _meterRange = "";
     [ObservableProperty] private string _statsText = "";
+    // Restzeit + Durchsatz ("12.4 Frames/s · Rest ~ 04:12"), erscheint nach dem ETA-Warmup.
+    [ObservableProperty] private string _etaText = "";
     [ObservableProperty] private ImageSource? _liveFrameImage;
     [ObservableProperty] private string _liveFrameStatus = "Warte auf erstes Frame...";
     [ObservableProperty] private string _liveFrameInfo = "";

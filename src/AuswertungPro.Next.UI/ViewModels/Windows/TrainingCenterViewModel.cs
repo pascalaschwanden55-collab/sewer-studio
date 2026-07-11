@@ -93,6 +93,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _kbStaleSampleCount;
     [ObservableProperty] private string _kbTrendText = "";
     [ObservableProperty] private string _kbTrendDirection = "";
+    // Exact-Quoten der letzten Laeufe (0..1) fuer die Trend-Sparkline im KB-Tab.
+    [ObservableProperty] private IReadOnlyList<double> _kbTrendSeries = [];
 
     // Review Queue (Self-Improving Loop)
     public ObservableCollection<InfraSelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
@@ -314,6 +316,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                 value => KbStaleSampleCount = value,
                 value => KbTrendText = value,
                 value => KbTrendDirection = value));
+
+        // Sparkline-Daten laufen additiv neben dem bestehenden Controller-Fluss.
+        KbTrendSeries = presentation.TrendExactSeries ?? [];
     }
 
     public TrainingCenterViewModel(

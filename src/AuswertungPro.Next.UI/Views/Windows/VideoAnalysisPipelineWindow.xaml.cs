@@ -93,6 +93,10 @@ public partial class VideoAnalysisPipelineWindow : Window
 
         Vm.SetPhase("Videoanalyse", "Starte Analyse ...");
 
+        // Restzeit-Schaetzung fuer den Lauf (frische Instanz je Lauf, Zeit via Stopwatch).
+        var eta = new AuswertungPro.Next.Application.Common.EtaCalculator();
+        var etaUhr = System.Diagnostics.Stopwatch.StartNew();
+
         try
         {
             var progress = new Progress<PipelineProgress>(p =>
@@ -131,6 +135,13 @@ public partial class VideoAnalysisPipelineWindow : Window
                         Vm.FramesAnalyzed = Math.Max(0, p.FramesDone.Value);
                     if (p.FramesTotal.HasValue)
                         Vm.TotalFrames = Math.Max(0, p.FramesTotal.Value);
+
+                    // Restzeit + Durchsatz nachfuehren (erscheint erst nach dem Warmup).
+                    if (Vm.TotalFrames > 0)
+                    {
+                        var etaErgebnis = eta.MeldeFortschritt(Vm.FramesAnalyzed, Vm.TotalFrames, etaUhr.Elapsed);
+                        Vm.EtaText = Services.EtaAnzeigeFormatter.Format(etaErgebnis);
+                    }
 
                     var meter = StatusParser.TryExtractMeter(p.Status);
                     if (!string.IsNullOrWhiteSpace(meter))

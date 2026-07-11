@@ -10,7 +10,10 @@ public sealed record TrainingKnowledgeBaseQualityPresentation(
     int StaleSampleCount,
     string TrendText,
     string TrendDirection,
-    IReadOnlyList<string> LogLines);
+    IReadOnlyList<string> LogLines,
+    // Rohwerte 0..1 der letzten Laeufe (Exact-Quote) fuer die Trend-Sparkline;
+    // optional am Ende, damit bestehende Konstruktor-Aufrufe unveraendert bleiben.
+    IReadOnlyList<double>? TrendExactSeries = null);
 
 public static class TrainingKnowledgeBaseQualityPresentationBuilder
 {
@@ -44,6 +47,9 @@ public static class TrainingKnowledgeBaseQualityPresentationBuilder
         if (quality.StaleSampleCount > 0)
             logLines.Add($"KB-Qualitaet: {quality.StaleSampleCount} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
 
+        // Kurvendaten fuer die Sparkline: Exact-Quote der letzten 10 Laeufe (Rohwerte 0..1).
+        var trendSerie = runs.TakeLast(10).Select(r => r.ExactPercent).ToList();
+
         return new TrainingKnowledgeBaseQualityPresentation(
             quality.CoverageGapsText,
             quality.CoverageGapsCount,
@@ -51,6 +57,7 @@ public static class TrainingKnowledgeBaseQualityPresentationBuilder
             quality.StaleSampleCount,
             trendText,
             direction,
-            logLines);
+            logLines,
+            trendSerie);
     }
 }

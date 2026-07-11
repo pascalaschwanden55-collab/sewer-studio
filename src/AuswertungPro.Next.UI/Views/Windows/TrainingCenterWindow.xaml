@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
+        xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Training Center" Height="900" Width="1400" MinWidth="1200" MinHeight="720"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}"
@@ -875,7 +876,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Match-Rate Trend -->
+                        <!-- Match-Rate Trend: Kurve statt Text-Pfeil; Details bleiben als Text darunter -->
                         <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
@@ -883,6 +884,10 @@
                                     <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
                                                Foreground="{DynamicResource SuccessBrush}" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
                                 </StackPanel>
+                                <ctrl:Sparkline Values="{Binding KbTrendSeries, Mode=OneWay}"
+                                                Stroke="{DynamicResource AccentBrush}"
+                                                Height="42" Margin="0,6,0,2"
+                                                ToolTip="Exact-Quote der letzten Selbsttraining-Läufe"/>
                                 <TextBlock Text="{Binding KbTrendText, Mode=OneWay}"
                                            FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="NoWrap" Margin="0,4,0,0"/>

@@ -440,6 +440,10 @@
                                 <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding FramesAnalyzed}"/>/<Run Text="{Binding TotalFrames}"/>
                                 </TextBlock>
+                                <!-- Restzeit + Durchsatz (nach ETA-Warmup) -->
+                                <TextBlock Text="{Binding EtaText}" FontSize="10" FontFamily="Consolas"
+                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                                           Margin="10,0,0,0"/>
                             </StackPanel>
                             <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" FontSize="10"
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
