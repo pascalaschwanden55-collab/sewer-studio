@@ -2,6 +2,11 @@ using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Player;
 
+/// <summary>
+/// Overlay-Palette fuer Zeichnen UEBER Video/Foto (bewusst theme-unabhaengig, gesaettigt).
+/// Teil der einen Farbsprache: StatusColorService.Overlay* liefert exakt diese Werte —
+/// Aenderungen NUR hier vornehmen (StatusColorServiceTests sichern die Kopplung ab).
+/// </summary>
 public static class PlayerStatusColors
 {
     public static Color Success => Color.FromRgb(0x22, 0xC5, 0x5E);

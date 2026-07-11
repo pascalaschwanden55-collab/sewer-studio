@@ -24,16 +24,9 @@ public static class KarteNetzFeatureBuilder
             kondition.TryGetValue(hg.Haltungsname, out var k) ? k : null,
             invertiert);
 
-        // Farben spiegeln die Theme-Severity-Brushes (Severity1/3/5, Muted), damit Netzlinien
-        // und Kartenlegende dieselbe Farbsprache nutzen. Feste Hex-Werte, weil Mapsui nicht
-        // theme-abhaengig ist.
-        var color = farbe switch
-        {
-            ZustandFarbe.Gut => new Color(22, 163, 74),      // Severity1 #16A34A
-            ZustandFarbe.Mittel => new Color(245, 158, 11),  // Severity3 #F59E0B
-            ZustandFarbe.Schlecht => new Color(220, 38, 38), // Severity5 #DC2626
-            _ => new Color(61, 77, 99),                      // MutedBrush #3D4D63
-        };
+        // Eine Farbsprache: Netzfarben kommen aus der zentralen Karten-Palette
+        // (theme-neutral, weil Mapsui nicht theme-abhaengig rendert).
+        var color = ZustandsklasseMapColors.Fallback3Stufen(farbe);
 
         var feature = new GeometryFeature { Geometry = new LineString(coords) };
         feature["Haltungsname"] = hg.Haltungsname;

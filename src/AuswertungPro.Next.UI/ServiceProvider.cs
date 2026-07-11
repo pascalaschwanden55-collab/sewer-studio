@@ -62,6 +62,8 @@ namespace AuswertungPro.Next.UI
         // Setter nur fuer Tests (InternalsVisibleTo): echte Dialoge durch Fakes ersetzen.
         public IDialogService Dialogs { get; internal set; } = new DialogService();
         public ToastService Toasts { get; } = new ToastService();
+        // Zentrale Statusfarben (Ampel/Severity/Konfidenz) — eine Farbsprache fuer alle Fenster.
+        public IStatusColorService StatusColors { get; } = new StatusColorService();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
@@ -132,6 +134,9 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
+
+            // Statische Fassade auf dieselbe Instanz zeigen lassen (Konsumenten ohne DI).
+            Theme.StatusColors.Current = StatusColors;
 
             Projects = new JsonProjectRepository();
             PdfImport = new PdfImportServiceAdapter();
@@ -372,6 +377,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)) return CodeSelectionCatalog;
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
+            if (serviceType == typeof(IStatusColorService)) return StatusColors;
             return null;
         }
 

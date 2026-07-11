@@ -13,6 +13,10 @@ public static class ThemeManager
 
     public static string CurrentTheme { get; private set; } = Light;
 
+    /// <summary>Feuert nach jedem Theme-Wechsel (Argument: neues Theme). Fuer Code-Renderer,
+    /// die Statusfarben nicht per DynamicResource beziehen koennen (Charts, Overlays).</summary>
+    public static event Action<string>? ThemeChanged;
+
     public static string NormalizeTheme(string? value)
         => string.Equals(value, Dark, StringComparison.OrdinalIgnoreCase) ? Dark : Light;
 
@@ -44,12 +48,14 @@ public static class ThemeManager
             merged[existingIndex] = replacement;
             CurrentTheme = normalized;
             WindowBackdropHelper.ApplyToOpenWindows(normalized);
+            ThemeChanged?.Invoke(normalized);
             return;
         }
 
         merged.Insert(0, replacement);
         CurrentTheme = normalized;
         WindowBackdropHelper.ApplyToOpenWindows(normalized);
+        ThemeChanged?.Invoke(normalized);
     }
 
     private static bool IsThemeDictionary(ResourceDictionary dictionary)

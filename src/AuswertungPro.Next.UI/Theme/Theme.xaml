@@ -72,6 +72,29 @@
         <GradientStop Color="#FF22D3EE" Offset="1"/>
     </LinearGradientBrush>
 
+    <!-- ── STATUSFARBEN-TOKENS (eine Farbsprache; C#-Quelle: StatusColorService) ── -->
+    <!-- QualityGate-Ampel: semantisch getrennt von Severity, Werte = Success/Warning/Danger. -->
+    <SolidColorBrush x:Key="GateOkBrush" Color="#FF3FB950"/>
+    <SolidColorBrush x:Key="GateReviewBrush" Color="#FFD29922"/>
+    <SolidColorBrush x:Key="GateFailBrush" Color="#FFF85149"/>
+    <SolidColorBrush x:Key="ConfidenceHighBrush" Color="#FF3FB950"/>
+    <SolidColorBrush x:Key="ConfidenceMidBrush" Color="#FFD29922"/>
+    <SolidColorBrush x:Key="ConfidenceLowBrush" Color="#FFF85149"/>
+    <!-- WinCan-Erbe: warme Eingabefeld-Toenung (Wiedererkennung ohne Billig-Gelb). -->
+    <SolidColorBrush x:Key="InputWarmBrush" Color="#FF3A3526"/>
+    <SolidColorBrush x:Key="InputWarmBorderBrush" Color="#FF6B5D33"/>
+    <!-- VSA-Hauptgruppen (BA/BB/BC/BD...): eigene Hues, bewusst KEINE Ampelfarben. -->
+    <SolidColorBrush x:Key="CodeGroupStrukturBrush" Color="#FF8B7CF6"/>
+    <SolidColorBrush x:Key="CodeGroupStrukturSubtleBrush" Color="#FF2E2A4D"/>
+    <SolidColorBrush x:Key="CodeGroupBetriebBrush" Color="#FF22D3EE"/>
+    <SolidColorBrush x:Key="CodeGroupBetriebSubtleBrush" Color="#FF16404C"/>
+    <SolidColorBrush x:Key="CodeGroupBestandBrush" Color="#FF539BF5"/>
+    <SolidColorBrush x:Key="CodeGroupBestandSubtleBrush" Color="#FF1C3050"/>
+    <SolidColorBrush x:Key="CodeGroupSonstigBrush" Color="#FF8891A0"/>
+    <SolidColorBrush x:Key="CodeGroupSonstigSubtleBrush" Color="#FF32383F"/>
+    <!-- Glow-Farbe fuer Premium-Akzente (DropShadow-Glows, Puls-Ringe). -->
+    <Color x:Key="GlowAccentColor">#FF539BF5</Color>
+
     <!-- ── GRADIENT BRUSHES ── -->
     <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FF21262D" Offset="0"/>

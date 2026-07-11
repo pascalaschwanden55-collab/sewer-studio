@@ -89,9 +89,9 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" Text="Samples: "/>
                     <TextBlock Foreground="{DynamicResource TextBrush}" Text="{Binding KbSampleCount}" FontWeight="Bold"/>
-                    <TextBlock Foreground="#FBBF24" FontSize="11"
+                    <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="11"
                                Text="{Binding KbErrorCount, StringFormat=' ({0}'}"/>
-                    <TextBlock Foreground="#FBBF24" FontSize="11"
+                    <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="11"
                                Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets"/>
                     <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                Text="{Binding KbNewCount, StringFormat=' {0} neu)'}"/>
@@ -401,7 +401,7 @@
                             <!-- Technik-Note -->
                             <StackPanel Grid.Column="3" Orientation="Horizontal">
                                 <TextBlock Text="Technik: " Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding CurrentTechniqueGrade, Mode=OneWay}" Foreground="#FBBF24"
+                                <TextBlock Text="{Binding CurrentTechniqueGrade, Mode=OneWay}" Foreground="{DynamicResource WarningBrush}"
                                            FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
@@ -463,11 +463,11 @@
                                             <ColumnDefinition Width="0" x:Name="NoFindingsCol"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="#4ADE80" CornerRadius="3,0,0,3"
+                                        <Border Grid.Column="0" Background="{DynamicResource SuccessBrush}" CornerRadius="3,0,0,3"
                                                 ToolTip="ExactMatch"/>
-                                        <Border Grid.Column="1" Background="#FBBF24"
+                                        <Border Grid.Column="1" Background="{DynamicResource WarningBrush}"
                                                 ToolTip="PartialMatch"/>
-                                        <Border Grid.Column="2" Background="#F87171"
+                                        <Border Grid.Column="2" Background="{DynamicResource DangerBrush}"
                                                 ToolTip="Mismatch"/>
                                         <Border Grid.Column="3" Background="{DynamicResource MutedBrush}" CornerRadius="0,3,3,0"
                                                 ToolTip="NoFindings"/>
@@ -475,11 +475,11 @@
                                     </Grid>
                                     <!-- Legende -->
                                     <StackPanel Grid.Row="4" Orientation="Horizontal">
-                                        <Border Width="8" Height="8" Background="#4ADE80" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding ExactPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,0,10,0"/>
-                                        <Border Width="8" Height="8" Background="#FBBF24" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource WarningBrush}" CornerRadius="2" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding PartialPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,0,10,0"/>
-                                        <Border Width="8" Height="8" Background="#F87171" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource DangerBrush}" CornerRadius="2" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding MismatchPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,0,10,0"/>
                                         <Border Width="8" Height="8" Background="{DynamicResource MutedBrush}" CornerRadius="2" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding NoFindingsPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"/>
@@ -553,13 +553,13 @@
                                                 </Border>
                                                 <DataTemplate.Triggers>
                                                     <DataTrigger Binding="{Binding Level}" Value="ExactMatch">
-                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#4ADE80"/>
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="{DynamicResource SuccessBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Level}" Value="PartialMatch">
-                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#FBBF24"/>
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="{DynamicResource WarningBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Level}" Value="Mismatch">
-                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#F87171"/>
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="{DynamicResource DangerBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Level}" Value="NoFindings">
                                                         <Setter TargetName="LevelBorder" Property="Background" Value="{DynamicResource MutedBrush}"/>
@@ -600,9 +600,9 @@
                                                             <ColumnDefinition Width="{Binding NoFindings, FallbackValue=0}"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <Border Grid.Column="0" Background="#4ADE80" CornerRadius="2,0,0,2"/>
-                                                        <Border Grid.Column="1" Background="#FBBF24"/>
-                                                        <Border Grid.Column="2" Background="#F87171"/>
+                                                        <Border Grid.Column="0" Background="{DynamicResource SuccessBrush}" CornerRadius="2,0,0,2"/>
+                                                        <Border Grid.Column="1" Background="{DynamicResource WarningBrush}"/>
+                                                        <Border Grid.Column="2" Background="{DynamicResource DangerBrush}"/>
                                                         <Border Grid.Column="3" Background="{DynamicResource MutedBrush}" CornerRadius="0,2,2,0"/>
                                                     </Grid>
                                                     <TextBlock Grid.Column="2" Text="{Binding Total}" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -712,7 +712,7 @@
                                             </StackPanel>
                                             <TextBlock Grid.Column="1"
                                                        Text="{Binding PriorityLabel}"
-                                                       Foreground="#FBBF24" FontSize="10"
+                                                       Foreground="{DynamicResource WarningBrush}" FontSize="10"
                                                        VerticalAlignment="Center" Margin="4,0,0,0"/>
                                         </Grid>
                                     </Border>
@@ -769,7 +769,7 @@
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="KI-Erkennung: " Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
                                         <TextBlock Text="{Binding SelectedReviewCard.KiAussage, Converter={StaticResource VsaCodeToText}}"
-                                                   Foreground="#FBBF24" FontSize="12"
+                                                   Foreground="{DynamicResource WarningBrush}" FontSize="12"
                                                    TextWrapping="Wrap"/>
                                     </StackPanel>
 
@@ -791,7 +791,7 @@
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                         <TextBlock Text="Priorität: " Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
                                         <TextBlock Text="{Binding SelectedReviewCard.PriorityLabel}"
-                                                   Foreground="#FBBF24" FontSize="12"/>
+                                                   Foreground="{DynamicResource WarningBrush}" FontSize="12"/>
                                     </StackPanel>
 
                                     <!-- Hinweis Box-Zeichnen (B5) -->
@@ -846,7 +846,7 @@
                                 <TextBlock Text="Coverage-Analyse" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0">
                                     <Run Text="Codes mit weniger als 3 KB-Samples: "/>
-                                    <Run Text="{Binding KbCoverageGapsCount, Mode=OneWay}" Foreground="#FBBF24" FontWeight="Bold"/>
+                                    <Run Text="{Binding KbCoverageGapsCount, Mode=OneWay}" Foreground="{DynamicResource WarningBrush}" FontWeight="Bold"/>
                                 </TextBlock>
                                 <TextBlock Text="{Binding KbCoverageGapsText, Mode=OneWay}"
                                            FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource TextBrush}"
@@ -871,7 +871,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Problematische KB-Samples: " Foreground="{DynamicResource TextBrush}" FontSize="13"/>
                                 <TextBlock Text="{Binding KbStaleSampleCount, Mode=OneWay}"
-                                           Foreground="#F87171" FontWeight="Bold" FontSize="13"/>
+                                           Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" FontSize="13"/>
                             </StackPanel>
                         </Border>
 
@@ -881,7 +881,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Match-Rate Trend (letzte Läufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
                                     <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
-                                               Foreground="#4ADE80" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
+                                               Foreground="{DynamicResource SuccessBrush}" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding KbTrendText, Mode=OneWay}"
                                            FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource TextBrush}"

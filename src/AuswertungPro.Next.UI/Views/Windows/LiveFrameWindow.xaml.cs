@@ -191,14 +191,10 @@ public partial class LiveFrameWindow : Window
         return $"{clock} / {extent}{extra} - {baseText}";
     }
 
-    private static Color MapSeverityColor(int severity) => Math.Clamp(severity, 1, 5) switch
-    {
-        >= 5 => Color.FromRgb(239, 68, 68),
-        4 => Color.FromRgb(249, 115, 22),
-        3 => Color.FromRgb(245, 158, 11),
-        2 => Color.FromRgb(132, 204, 22),
-        _ => Color.FromRgb(34, 197, 94)
-    };
+    // Ring liegt UEBER dem Videobild -> gesaettigte Overlay-Rampe aus der zentralen Farbquelle
+    // (bewusst theme-unabhaengig, Werte identisch zur bisherigen Rampe).
+    private static Color MapSeverityColor(int severity)
+        => Theme.StatusColors.Current.SeverityOverlay(severity);
 
     private static int? ParseClockHour(string? raw)
     {

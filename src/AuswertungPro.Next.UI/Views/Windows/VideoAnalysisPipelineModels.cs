@@ -117,13 +117,8 @@ public sealed class DetectionItem
         AiDecisionOutcome.Reject => "ablehnen",
         _ => ""
     };
-    public Color OutcomeColor => Outcome switch
-    {
-        AiDecisionOutcome.AutoAccept => Color.FromRgb(0x22, 0xC5, 0x5E),
-        AiDecisionOutcome.Review => Color.FromRgb(0xF5, 0x9E, 0x0B),
-        AiDecisionOutcome.Reject => Color.FromRgb(0xEF, 0x44, 0x44),
-        _ => Color.FromRgb(0x94, 0xA3, 0xB8)
-    };
+    // Eine Farbsprache: Urteil-Farbe kommt aus dem zentralen Statusfarben-Dienst (theme-abhaengig).
+    public Color OutcomeColor => Theme.StatusColors.Current.Outcome(Outcome);
 
     public string Code { get; init; } = "";
     public string Label { get; init; } = "";
@@ -148,15 +143,9 @@ public sealed class DetectionItem
 
     public Color SeverityColor { get; init; } = Color.FromRgb(148, 163, 184);
 
-    // QualityGate Traffic Light
+    // QualityGate Traffic Light — Farbe aus dem zentralen Statusfarben-Dienst (theme-abhaengig).
     public TrafficLight TrafficLight { get; init; } = TrafficLight.Yellow;
-    public Color TrafficLightColor => TrafficLight switch
-    {
-        TrafficLight.Green => Color.FromRgb(0x22, 0xC5, 0x5E),
-        TrafficLight.Yellow => Color.FromRgb(0xF5, 0x9E, 0x0B),
-        TrafficLight.Red => Color.FromRgb(0xEF, 0x44, 0x44),
-        _ => Color.FromRgb(0x94, 0xA3, 0xB8)
-    };
+    public Color TrafficLightColor => Theme.StatusColors.Current.Ampel(TrafficLight);
     public string TrafficLightLabel => TrafficLight switch
     {
         TrafficLight.Green => "Sicher",
