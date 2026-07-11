@@ -243,6 +243,23 @@ namespace AuswertungPro.Next.UI
             return new AiSanierungOptimizationService(cfg, http);
         }
 
+        // ── Schattenauswertung: eigenstaendige Parallel-Auswertung (nur lesend) ──
+        // Ergebnis-Ablage als eigene Datei im Projektordner, nie in projekt.json.
+        public AuswertungPro.Next.Application.Schatten.ISchattenAuswertungStore SchattenStore { get; }
+            = new AuswertungPro.Next.Infrastructure.Schatten.SchattenAuswertungStoreRepository();
+
+        /// <summary>
+        /// Baut den Schatten-Rechendienst. KI-Teil nur, wenn die KI-Plattform aktiviert ist —
+        /// sonst laeuft die Seite rein regelbasiert (Hybrid-Prinzip mit Regel-Rueckfall).
+        /// </summary>
+        public AuswertungPro.Next.Application.Schatten.ISchattenAuswertungService CreateSchattenAuswertung()
+        {
+            var cfg = new Services.AppSettingsAiSettingsProvider().Load().ToRuntimeSettings();
+            var ki = cfg.Enabled ? CreateSanierungOptimization(cfg) : null;
+            return new AuswertungPro.Next.Infrastructure.Schatten.SchattenAuswertungService(
+                Vsa, MeasureRecommendation, ki, cfg.Enabled ? cfg.TextModel : null);
+        }
+
         public ProjectImportOrchestrator CreateProjectImportOrchestrator()
             => new(
                 XtfImport,

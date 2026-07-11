@@ -53,6 +53,10 @@
                 <views:SchachtSanierungsMatrixPage/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:SchattenauswertungPageViewModel}">
+                <views:SchattenauswertungPage/>
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:KarteViewModel}">
                 <views:KartePage/>
             </DataTemplate>
