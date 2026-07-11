@@ -64,6 +64,8 @@ namespace AuswertungPro.Next.UI
         public ToastService Toasts { get; } = new ToastService();
         // Zentrale Statusfarben (Ampel/Severity/Konfidenz) — eine Farbsprache fuer alle Fenster.
         public IStatusColorService StatusColors { get; } = new StatusColorService();
+        // Nutzungszaehler fuer VSA-Codes (Favoriten-Chips im Code-Explorer).
+        public ICodeUsageTracker CodeUsage { get; } = new CodeUsageTracker();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
@@ -135,8 +137,9 @@ namespace AuswertungPro.Next.UI
             Logger = logger;
             LoggerFactory = loggerFactory;
 
-            // Statische Fassade auf dieselbe Instanz zeigen lassen (Konsumenten ohne DI).
+            // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
             Theme.StatusColors.Current = StatusColors;
+            CodeUsageTrackers.Current = CodeUsage;
 
             Projects = new JsonProjectRepository();
             PdfImport = new PdfImportServiceAdapter();
@@ -378,6 +381,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             if (serviceType == typeof(IStatusColorService)) return StatusColors;
+            if (serviceType == typeof(ICodeUsageTracker)) return CodeUsage;
             return null;
         }
 

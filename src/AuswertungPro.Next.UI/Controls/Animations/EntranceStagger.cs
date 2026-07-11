@@ -41,10 +41,23 @@ public static class EntranceStagger
         if (panel is VirtualizingPanel)
             return; // Virtualisierung: Realisieren wuerde staendig neu animieren.
 
-        var index = 0;
+        var elemente = new System.Collections.Generic.List<FrameworkElement>();
         foreach (var child in panel.Children)
         {
-            if (child is not FrameworkElement element || element.Visibility != Visibility.Visible)
+            if (child is FrameworkElement element)
+                elemente.Add(element);
+        }
+
+        PlayForElements(elemente);
+    }
+
+    /// <summary>Staffelung fuer eine bereits bekannte Element-Liste (z. B. Code-Behind-Kacheln).</summary>
+    public static void PlayForElements(System.Collections.Generic.IReadOnlyList<FrameworkElement> elemente)
+    {
+        var index = 0;
+        foreach (var element in elemente)
+        {
+            if (element.Visibility != Visibility.Visible)
                 continue;
 
             AnimateChild(element, StaggerDelayPolicy.DelayFor(index));

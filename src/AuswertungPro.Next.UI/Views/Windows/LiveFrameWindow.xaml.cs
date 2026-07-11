@@ -208,24 +208,11 @@ public partial class LiveFrameWindow : Window
         return hour == 0 ? 12 : hour;
     }
 
+    // Gemeinsame Formsprache: Sektor-Geometrie liegt zentral in RingSectorGeometry
+    // (auch vom Rohrquerschnitt-Eingabe-Control genutzt).
     private static Geometry BuildRingSectorGeometry(
         double cx, double cy, double innerR, double outerR, double startDeg, double sweepDeg)
-    {
-        var startRad = DegToRad(startDeg);
-        var endRad = DegToRad(startDeg + sweepDeg);
-        var large = sweepDeg > 180;
-
-        var p1 = new Point(cx + Math.Cos(startRad) * outerR, cy + Math.Sin(startRad) * outerR);
-        var p2 = new Point(cx + Math.Cos(endRad) * outerR, cy + Math.Sin(endRad) * outerR);
-        var p3 = new Point(cx + Math.Cos(endRad) * innerR, cy + Math.Sin(endRad) * innerR);
-        var p4 = new Point(cx + Math.Cos(startRad) * innerR, cy + Math.Sin(startRad) * innerR);
-
-        var fig = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
-        fig.Segments.Add(new ArcSegment(p2, new Size(outerR, outerR), 0, large, SweepDirection.Clockwise, true));
-        fig.Segments.Add(new LineSegment(p3, true));
-        fig.Segments.Add(new ArcSegment(p4, new Size(innerR, innerR), 0, large, SweepDirection.Counterclockwise, true));
-        return new PathGeometry(new[] { fig });
-    }
+        => AuswertungPro.Next.UI.Controls.RingSectorGeometry.Build(cx, cy, innerR, outerR, startDeg, sweepDeg);
 
     private static double DegToRad(double deg) => deg * Math.PI / 180.0;
 }

@@ -13,6 +13,8 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using Anim = AuswertungPro.Next.UI.Controls.Animations;
+using UiControls = AuswertungPro.Next.UI.Controls;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -121,31 +123,32 @@ public partial class VsaCodeExplorerWindow : Window
         // Bemerkungen
         TxtBemerkungen.TextChanged += (_, _) => _vm.Bemerkungen = TxtBemerkungen.Text;
 
-        // Clock Controls -> Textboxen (via DependencyPropertyDescriptor)
+        // Rohrquerschnitt-Controls -> Textboxen (via DependencyPropertyDescriptor).
+        // Werteformat unveraendert (Stunden als Text), Renderer-Klassen bleiben unberuehrt.
         var singleValueDesc = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
-            Controls.ClockPickerControl.ValueProperty, typeof(Controls.ClockPickerControl));
-        singleValueDesc?.AddValueChanged(ClockSingle, (_, _) =>
+            Controls.RohrquerschnittControl.UhrVonProperty, typeof(Controls.RohrquerschnittControl));
+        singleValueDesc?.AddValueChanged(QuerschnittSingle, (_, _) =>
         {
             VsaCodeExplorerClockPickerRenderer.ApplySingleValueChanged(
-                ClockSingle.Value,
+                QuerschnittSingle.UhrVon,
                 new VsaCodeExplorerClockPickerRenderTargets(TxtClockVon, TxtClockBis));
         });
 
         var rangeFromDesc = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
-            Controls.ClockRangePickerControl.ValueFromProperty, typeof(Controls.ClockRangePickerControl));
-        rangeFromDesc?.AddValueChanged(ClockRange, (_, _) =>
+            Controls.RohrquerschnittControl.UhrVonProperty, typeof(Controls.RohrquerschnittControl));
+        rangeFromDesc?.AddValueChanged(QuerschnittRange, (_, _) =>
         {
             VsaCodeExplorerClockPickerRenderer.ApplyRangeFromChanged(
-                ClockRange.ValueFrom,
+                QuerschnittRange.UhrVon,
                 new VsaCodeExplorerClockPickerRenderTargets(TxtClockVon, TxtClockBis));
         });
 
         var rangeToDesc = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
-            Controls.ClockRangePickerControl.ValueToProperty, typeof(Controls.ClockRangePickerControl));
-        rangeToDesc?.AddValueChanged(ClockRange, (_, _) =>
+            Controls.RohrquerschnittControl.UhrBisProperty, typeof(Controls.RohrquerschnittControl));
+        rangeToDesc?.AddValueChanged(QuerschnittRange, (_, _) =>
         {
             VsaCodeExplorerClockPickerRenderer.ApplyRangeToChanged(
-                ClockRange.ValueTo,
+                QuerschnittRange.UhrBis,
                 new VsaCodeExplorerClockPickerRenderTargets(TxtClockVon, TxtClockBis));
         });
 
@@ -158,6 +161,9 @@ public partial class VsaCodeExplorerWindow : Window
         // Keyboard
         PreviewKeyDown += OnPreviewKeyDown;
         Closed += OnWindowClosed;
+
+        // Favoriten-Chips (haeufigste Codes) — nach dem Laden, damit Ressourcen aufgeloest sind.
+        Loaded += (_, _) => BuildFavoritenChips();
 
         // Initiale Werte setzen (leichtgewichtig)
         VsaCodeExplorerInitialFieldsRenderer.Apply(
@@ -303,11 +309,17 @@ public partial class VsaCodeExplorerWindow : Window
     private void RenderColumnTiles(ItemsControl list, System.Collections.ObjectModel.ObservableCollection<TileItem> tiles, Action<TileItem> onSelect)
     {
         list.Items.Clear();
+        var buttons = new System.Collections.Generic.List<System.Windows.FrameworkElement>();
         foreach (var tile in tiles)
         {
             var btn = CreateColumnTileButton(tile, onSelect);
+            Anim.HoverLift.SetIsEnabled(btn, true);
             list.Items.Add(btn);
+            buttons.Add(btn);
         }
+
+        // Spaltenwechsel: Kacheln gestaffelt einblenden (Premium-Wizard-Gefuehl).
+        Anim.EntranceStagger.PlayForElements(buttons);
 
         var columnLayout = VsaCodeExplorerColumnLayoutPresenter.Build(_vm.Char2Tiles.Count);
         Char2Column.Width = columnLayout.ShowChar2Column ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
@@ -381,6 +393,44 @@ public partial class VsaCodeExplorerWindow : Window
                 _colorBorderLight,
                 _textSecondaryBrush ?? Brushes.Gray,
                 _mutedBrush ?? Brushes.Gray));
+
+        AnimateActiveProgressSegment();
+    }
+
+    private int _lastProgressLevel = -1;
+
+    // Das gerade erreichte Segment waechst kurz von links — der Wizard-Fortschritt wird spuerbar.
+    private void AnimateActiveProgressSegment()
+    {
+        var level = Math.Clamp(_vm.CurrentLevel, 0, 3);
+        if (level == _lastProgressLevel)
+            return;
+        _lastProgressLevel = level;
+
+        var segment = level switch
+        {
+            0 => ProgressBar0,
+            1 => ProgressBar1,
+            2 => ProgressBar2,
+            _ => ProgressBar3
+        };
+
+        var scale = new ScaleTransform(0d, 1d);
+        segment.RenderTransform = scale;
+        segment.RenderTransformOrigin = new Point(0, 0.5);
+        var wachsen = new System.Windows.Media.Animation.DoubleAnimation(0d, 1d, UiControls.AnimationTokens.Slow)
+        {
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        wachsen.Completed += (_, _) =>
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.ScaleX = 1d;
+        };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, wachsen);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -465,9 +515,9 @@ public partial class VsaCodeExplorerWindow : Window
                 BtnClockRechts,
                 BtnClockGesamt,
                 TxtClockBis,
-                value => ClockSingle.Value = value,
-                value => ClockRange.ValueFrom = value,
-                value => ClockRange.ValueTo = value,
+                value => QuerschnittSingle.UhrVon = value,
+                value => QuerschnittRange.UhrVon = value,
+                value => QuerschnittRange.UhrBis = value,
                 TxtClockTransfer));
     }
 
@@ -613,8 +663,79 @@ public partial class VsaCodeExplorerWindow : Window
         if (!_vm.CanConfirm) return;
 
         SelectedEntry = _vm.BuildProtocolEntry();
+
+        // Nutzung zaehlen -> naechstes Mal als Favoriten-Chip verfuegbar.
+        CodeUsageTrackers.Current.Erfasse(_vm.FinalCode);
+
         DialogResult = true;
         Close();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Favoriten-Chips (haeufigste Codes ueberspringen die Kaskade)
+    // ═══════════════════════════════════════════════════════════════
+
+    private void BuildFavoritenChips()
+    {
+        var top = CodeUsageTrackers.Current.TopCodes(8);
+        if (top.Count == 0)
+            return;
+
+        FavoritenPanel.Children.Clear();
+        var chips = new System.Collections.Generic.List<FrameworkElement>();
+        foreach (var eintrag in top)
+        {
+            var badge = ViewModels.Protocol.CodeGroupBadgePolicy.Resolve(eintrag.Code);
+            var chip = new Button
+            {
+                Margin = new Thickness(0, 0, 6, 0),
+                Padding = new Thickness(9, 3, 9, 3),
+                Cursor = Cursors.Hand,
+                Background = TryFindResource(badge.SubtleBrushKey) as Brush ?? Brushes.Transparent,
+                Foreground = TryFindResource(badge.BrushKey) as Brush ?? (_textBrush ?? Brushes.Black),
+                BorderBrush = TryFindResource(badge.BrushKey) as Brush ?? Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Content = $"{eintrag.Code}  ·{eintrag.Anzahl}",
+                ToolTip = $"{badge.Kurzlabel} — {eintrag.Anzahl}× verwendet. Klick springt zum Hauptcode."
+            };
+            // Runde Chip-Form ueber Template-freien Weg: eigene Border-Optik.
+            chip.Resources.Add(typeof(Border), new Style(typeof(Border))
+            {
+                Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(10)) }
+            });
+
+            var code = eintrag.Code;
+            chip.Click += (_, _) => NavigiereZuHauptcode(code);
+            Anim.HoverLift.SetIsEnabled(chip, true);
+            FavoritenPanel.Children.Add(chip);
+            chips.Add(chip);
+        }
+
+        FavoritenReihe.Visibility = Visibility.Visible;
+        Anim.EntranceStagger.PlayForElements(chips);
+    }
+
+    /// <summary>Kaskade bis zum Hauptcode durchlaufen (Char1/Char2 bleiben Fall-Entscheidung).</summary>
+    private void NavigiereZuHauptcode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Length < 3)
+            return;
+
+        _vm.ResetToMainCodes();
+        var gruppe = _vm.GroupTiles.FirstOrDefault(
+            t => code.StartsWith(t.Key, StringComparison.OrdinalIgnoreCase));
+        if (gruppe is null)
+            return;
+        _vm.SelectGroup(gruppe.Key);
+
+        var hauptcode = code[..3];
+        var haupt = _vm.CodeTiles.FirstOrDefault(
+            t => string.Equals(t.Key, hauptcode, StringComparison.OrdinalIgnoreCase));
+        if (haupt is not null)
+            _vm.SelectCode(haupt.Key);
     }
 
     // ═══════════════════════════════════════════════════════════════

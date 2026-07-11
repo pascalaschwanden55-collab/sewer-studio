@@ -49,6 +49,14 @@
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
 
+                <!-- Favoriten-Chips: haeufigste Codes ueberspringen die Kaskade -->
+                <DockPanel x:Name="FavoritenReihe" Margin="0,0,0,8" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Left" Text="HÄUFIG" FontSize="10" FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <WrapPanel x:Name="FavoritenPanel" Orientation="Horizontal"/>
+                </DockPanel>
+
                 <!-- Fortschrittsbalken (4 Segmente) -->
                 <UniformGrid Columns="4" Margin="0,0,0,2">
                     <StackPanel Margin="0,0,4,0">
@@ -245,7 +253,7 @@
                                             </Border>
                                         </DockPanel>
                                         <DockPanel>
-                                            <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
                                             <TextBlock x:Name="TxtQ1Unit" FontSize="12" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
@@ -272,7 +280,7 @@
                                             </Border>
                                         </DockPanel>
                                         <DockPanel>
-                                            <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
                                             <TextBlock x:Name="TxtQ2Unit" FontSize="12" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
@@ -306,16 +314,17 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- Uhr (links) -->
+                                        <!-- Rohrquerschnitt (links): Uhrlage in der Formsprache des KI-Rings -->
                                         <StackPanel Grid.Column="0">
-                                            <!-- Single Clock -->
+                                            <!-- Einzelposition -->
                                             <StackPanel x:Name="ClockSinglePanel" Visibility="Collapsed">
-                                                <controls:ClockPickerControl x:Name="ClockSingle"
+                                                <controls:RohrquerschnittControl x:Name="QuerschnittSingle"
+                                                    AllowRange="False"
                                                     Width="170" Height="170" HorizontalAlignment="Left"/>
                                             </StackPanel>
-                                            <!-- Range Clock -->
+                                            <!-- Bereich (Sektor aufziehen) -->
                                             <StackPanel x:Name="ClockRangePanel" Visibility="Collapsed">
-                                                <controls:ClockRangePickerControl x:Name="ClockRange"
+                                                <controls:RohrquerschnittControl x:Name="QuerschnittRange"
                                                     Width="170" Height="170" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                         </StackPanel>
@@ -352,7 +361,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
                                                     <TextBlock Text="VON" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
-                                                    <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas"
+                                                    <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
                                                              FontSize="14" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="14"
@@ -361,7 +370,7 @@
                                                            Margin="0,0,0,4"/>
                                                 <StackPanel Grid.Column="2">
                                                     <TextBlock Text="BIS" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
-                                                    <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas"
+                                                    <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
                                                              FontSize="14" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
@@ -410,12 +419,12 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="Meter Start (m)" FontSize="11" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
-                                        <TextBox x:Name="TxtMeterStart"/>
+                                        <TextBox x:Name="TxtMeterStart" Style="{StaticResource WarmTextBox}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Meter Ende (m)" FontSize="11" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
-                                        <TextBox x:Name="TxtMeterEnd"/>
+                                        <TextBox x:Name="TxtMeterEnd" Style="{StaticResource WarmTextBox}"/>
                                     </StackPanel>
                                 </Grid>
                                 <!-- Streckenschaden mit Anfang/Ende -->
@@ -438,7 +447,7 @@
                                 <StackPanel Margin="0,8,0,0">
                                     <TextBlock Text="Videozeit (mm:ss)" FontSize="11" FontWeight="SemiBold"
                                                Margin="0,0,0,3"/>
-                                    <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left"/>
+                                    <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left" Style="{StaticResource WarmTextBox}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -450,7 +459,7 @@
                             <StackPanel>
                                 <TextBlock Text="BEMERKUNGEN" FontSize="10" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
-                                <TextBox x:Name="TxtBemerkungen" AcceptsReturn="True"
+                                <TextBox x:Name="TxtBemerkungen" AcceptsReturn="True" Style="{StaticResource WarmTextBox}"
                                          TextWrapping="Wrap" MinHeight="40" MaxHeight="80"
                                          VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
