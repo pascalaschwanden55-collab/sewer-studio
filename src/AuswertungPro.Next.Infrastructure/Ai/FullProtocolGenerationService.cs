@@ -31,6 +31,8 @@ public sealed class FullProtocolGenerationService : IDisposable
     private readonly IRetrievalService? _retrieval;
     private readonly KnowledgeBaseContext? _ownedKbContext;
     private readonly QualityGateService _qualityGate;
+    // Blinder KB-Validierungsabruf (unabhaengiger Zweitbeleg); null ohne Retrieval.
+    private readonly KbBlindValidationService? _kbValidation;
     private readonly Dictionary<string, IReadOnlyList<RetrievalResult>> _retrievalCache =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -77,6 +79,11 @@ public sealed class FullProtocolGenerationService : IDisposable
                 _retrieval = null;
             }
         }
+
+        // Blinde KB-Validierung des LLM-Vorschlags (Fehlerpruefung 11.07., Kritisch 1):
+        // eigener Abruf OHNE Code-Hinweis/Haltungs-ID, damit sich der Beleg nicht selbst
+        // bestaetigt. Nur mit verfuegbarem Retrieval moeglich.
+        _kbValidation = _retrieval is not null ? new KbBlindValidationService(_retrieval) : null;
     }
 
     public void Dispose() => _ownedKbContext?.Dispose();
@@ -242,15 +249,36 @@ public sealed class FullProtocolGenerationService : IDisposable
 
         // â”€â”€ QualityGate: build EvidenceVector and evaluate â”€â”€
         var kbTopScore = kbExamples.Count > 0 ? kbExamples[0].Score : (double?)null;
-        var kbAgrees = kbExamples.Count > 0 && !string.IsNullOrWhiteSpace(suggestedCode)
-            && kbExamples[0].Code.Equals(suggestedCode, StringComparison.OrdinalIgnoreCase);
+
+        // BLINDE Validierung statt Vergleich mit den Prompt-Beispielen (Kritisch 1):
+        // Die kbExamples wurden mit Code-Hinweis+Haltungs-ID gesucht und haben das LLM
+        // beeinflusst — ein Treffer dort ist KEIN unabhaengiger Beleg. Der blinde Abruf
+        // sucht ohne Code/Haltung und zaehlt nur fremde, menschlich bestaetigte Gold-Faelle.
+        bool? kbAgreement = null;
+        if (_kbValidation is not null && !string.IsNullOrWhiteSpace(suggestedCode))
+        {
+            try
+            {
+                var validation = await _kbValidation
+                    .ValidateAsync(detection, request.HaltungId, suggestedCode!, ct)
+                    .ConfigureAwait(false);
+                kbAgreement = validation.Agrees;
+                if (!validation.Agrees)
+                    warnings.Add($"KB-Validierung: {validation.Reason}");
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                warnings.Add($"KB-Validierung fehlgeschlagen: {ex.Message}");
+            }
+        }
 
         var evidence = detection.Evidence ?? new EvidenceVector();
         evidence = evidence with
         {
             LlmCodeConf = confidence,
             KbSimilarity = kbTopScore,
-            KbCodeAgreement = kbExamples.Count > 0 ? kbAgrees : null,
+            KbCodeAgreement = kbAgreement,
             PlausibilityScore = checked_.Confidence,
             DamageCategory = suggestedCode
         };
