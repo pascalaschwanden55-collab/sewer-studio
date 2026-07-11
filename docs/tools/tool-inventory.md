@@ -24,6 +24,7 @@ Zweck: lokale Tools sichtbar machen, damit keine versteckte Werkzeuglandschaft e
 | `tools/StageAExporter` | aktiv | Stage-A/YOLO-Export mit Eval-Schutz und echter BBox | Training samples | Export nur mit Guard |
 | `tools/EvalSetBenchmark` | aktiv | Qwen/Sidecar-Kontexte gegen Eval-Set messen | eingefrorenes Eval-Set | Report, kein Training |
 | `tools/EvalSetManifestHasher` | aktiv | Eval-Manifest mit Hashes/Counts aktualisieren | Eval-Set | `_manifest.json` |
+| `tools/EvalSetV2Builder` | aktiv | Menschlich geprueftes V2 mit Streuungs- und Leakage-Schutz einfrieren | Kandidaten-JSON, V1 nur lesend | `C:\KI_BRAIN\eval_set\v2` |
 
 ## Analyse- und Diagnose-Tools
 
@@ -34,6 +35,7 @@ Zweck: lokale Tools sichtbar machen, damit keine versteckte Werkzeuglandschaft e
 | `tools/SelfTrainingHarness` | analyse | Self-Training-Pfade isoliert starten | nicht Produktiv-UI |
 | `tools/VsaShadowReport` | analyse | Shadow-Ergebnisse auswerten | in Solution |
 | `tools/VsaClassificationRuleBuilder` | analyse | VSA-Regel-/Klassifizierungslogik bauen/pruefen | in Solution |
+| `tools/AiQualityReport` | analyse | Deduplizierte Feldfehler und Schattenauswertung gemeinsam berichten | Markdown, JSON und CSV |
 | `tools/IliCatalogReader` | analyse | ILI-Katalog lesen | in Solution |
 | `tools/CadasterDbReader` | analyse | Kataster-/DB-Lesepfad pruefen | Lockfile getrackt |
 
