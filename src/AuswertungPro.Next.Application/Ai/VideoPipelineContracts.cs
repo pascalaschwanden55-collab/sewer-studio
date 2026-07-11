@@ -112,6 +112,10 @@ public sealed record RawVideoDetection(
     public string Code => VsaCodeHint ?? string.Empty;
     public string Label => FindingLabel;
 
+    // ACHTUNG: abgeleitet aus dem SCHADENSGRAD (high/mid/low), keine Modell-Sicherheit.
+    // Nur fuer Anzeige/Overlay-Zwecke — darf NIE als Freigabe-Signal dienen
+    // (Fehlerpruefung 11.07., Kritisch 3; die Freigabe nutzt MappedProtocolEntry.Confidence
+    // = QualityGate-Composite). Abloesung durch echte Pipeline-Werte: Stufe 2.
     public double Confidence => Severity?.ToLowerInvariant() switch
     {
         "high" => 0.90,

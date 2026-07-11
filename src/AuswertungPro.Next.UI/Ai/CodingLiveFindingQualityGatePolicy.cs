@@ -8,16 +8,19 @@ public static class CodingLiveFindingQualityGatePolicy
 {
     public static EvidenceVector BuildEvidence(LiveFrameFinding finding)
         => new(
-            QwenVisionConf: finding.Severity / 5.0,
+            // Nur ECHTE Modell-Sicherheit als Signal — der Schadensgrad ist fachlich etwas
+            // anderes und darf das Gate nicht speisen (Fehlerpruefung 11.07., Kritisch 3).
+            QwenVisionConf: finding.ModelConfidence,
             PlausibilityScore: 0.6);
 
     public static QualityGateResult Evaluate(QualityGateService? qualityGate, LiveFrameFinding finding)
     {
         var evidence = BuildEvidence(finding);
+        // Ohne Gate gibt es keine Bewertung — ehrlich Rot statt Severity als Pseudo-Composite.
         return qualityGate?.Evaluate(evidence)
             ?? new QualityGateResult(
-                finding.Severity / 5.0,
-                TrafficLight.Yellow,
+                0.0,
+                TrafficLight.Red,
                 new Dictionary<string, double>(),
                 "QualityGate nicht verfuegbar");
     }

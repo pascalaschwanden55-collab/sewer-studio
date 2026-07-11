@@ -21,4 +21,10 @@ public sealed record LiveFrameFinding(
     double? BboxX1 = null,
     double? BboxY1 = null,
     double? BboxX2 = null,
-    double? BboxY2 = null);
+    double? BboxY2 = null,
+    // Echte Modell-Sicherheit (0..1) — NICHT der Schadensgrad! Null = kein echter Wert;
+    // dann zeigt die UI "n/v" und das QualityGate bekommt KEIN Ersatzsignal
+    // (Fehlerpruefung 11.07., Kritisch 3: Severity/5 war als QwenVisionConf getarnt).
+    double? ModelConfidence = null,
+    // Herkunft des Werts (z.B. "qwen", "dino"), fuer Nachvollziehbarkeit.
+    string? ConfidenceSource = null);

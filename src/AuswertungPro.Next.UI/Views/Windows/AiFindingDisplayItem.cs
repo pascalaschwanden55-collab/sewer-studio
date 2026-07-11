@@ -52,12 +52,14 @@ public sealed class AiFindingDisplayItem
             detailParts.Add($"Einragung {f.IntrusionPercent}%");
         DetailText = detailParts.Count > 0 ? string.Join("  |  ", detailParts) : "Keine Details";
 
-        // Confidence
-        ConfidencePercent = f.Severity * 20; // Severity 1-5 → 20-100%
-        ConfidenceText = $"{ConfidencePercent}%";
+        // Sicherheit nur aus ECHTEM Modellwert — Schadensgrad ist keine Confidence
+        // (Fehlerpruefung 11.07., Kritisch 3: Severity*20 wurde als gruene Prozent-
+        // Sicherheit angezeigt und konnte den Inspekteur direkt irrefuehren).
+        ConfidencePercent = f.ModelConfidence is { } mc ? (int)System.Math.Round(mc * 100) : null;
+        ConfidenceText = ConfidencePercent is { } p ? $"{p}%" : "Sicherheit: n/v";
 
-        // Tooltip: Alles zusammen
-        FullTooltip = $"{VsaCode} {Description}\n{DetailText}\nSeverity: {Severity}/5";
+        // Tooltip: Alles zusammen (Schadensgrad ausdruecklich getrennt ausgewiesen)
+        FullTooltip = $"{VsaCode} {Description}\n{DetailText}\nSchadensgrad: {Severity}/5 · {ConfidenceText}";
 
         var severityColor = f.Severity switch
         {
@@ -69,12 +71,15 @@ public sealed class AiFindingDisplayItem
         };
         SeverityBrush = new SolidColorBrush(severityColor);
 
-        // Confidence-Farbe: Gruen >=85%, Gelb 60-85%, Rot <60%
-        ConfidenceBrush = new SolidColorBrush(ConfidencePercent >= 85
-            ? Color.FromRgb(0x22, 0xC5, 0x5E)
-            : ConfidencePercent >= 60
-                ? Color.FromRgb(0xF5, 0x9E, 0x0B)
-                : Color.FromRgb(0xEF, 0x44, 0x44));
+        // Sicherheits-Farbe: Gruen >=85%, Gelb 60-85%, Rot <60% — ohne echten Wert GRAU
+        // (neutral), niemals gruen fuer einen erfundenen Ersatzwert.
+        ConfidenceBrush = new SolidColorBrush(ConfidencePercent switch
+        {
+            null => Color.FromRgb(0x94, 0xA3, 0xB8),
+            >= 85 => Color.FromRgb(0x22, 0xC5, 0x5E),
+            >= 60 => Color.FromRgb(0xF5, 0x9E, 0x0B),
+            _ => Color.FromRgb(0xEF, 0x44, 0x44)
+        });
     }
 
     public string Label { get; }
@@ -84,7 +89,7 @@ public sealed class AiFindingDisplayItem
     public string SeverityText { get; }
     public string DetailText { get; }
     public string PositionText { get; }
-    public int ConfidencePercent { get; }
+    public int? ConfidencePercent { get; }
     public string ConfidenceText { get; }
     public string FullTooltip { get; }
     public SolidColorBrush SeverityBrush { get; }

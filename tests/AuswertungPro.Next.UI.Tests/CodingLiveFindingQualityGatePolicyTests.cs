@@ -5,46 +5,63 @@ using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+/// <summary>
+/// Fehlerpruefung 11.07., Kritisch 3: Der Schadensgrad ist KEINE Modell-Sicherheit.
+/// Das Gate bekommt nur echte ModelConfidence-Werte; ohne Gate gibt es ehrlich Rot
+/// statt Severity/5 als Pseudo-Composite.
+/// </summary>
 public sealed class CodingLiveFindingQualityGatePolicyTests
 {
     [Fact]
-    public void Evaluate_without_service_uses_existing_yellow_fallback_for_low_severity()
+    public void Evaluate_ohne_Gate_liefert_Rot_ohne_Severity_Ersatzwert()
     {
-        var result = CodingLiveFindingQualityGatePolicy.Evaluate(null, Finding(severity: 3));
+        var result = CodingLiveFindingQualityGatePolicy.Evaluate(null, Finding(severity: 4));
 
-        Assert.Equal(0.6, result.CompositeConfidence);
-        Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
+        Assert.Equal(0.0, result.CompositeConfidence); // NICHT 0.8 (= Severity*0.2)
+        Assert.Equal(TrafficLight.Red, result.TrafficLight);
         Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
         Assert.Empty(result.WeightsUsed);
     }
 
     [Fact]
-    public void Evaluate_without_service_keeps_high_severity_yellow()
+    public void BuildEvidence_ohne_ModelConfidence_liefert_kein_QwenSignal()
     {
-        var result = CodingLiveFindingQualityGatePolicy.Evaluate(null, Finding(severity: 4));
+        var evidence = CodingLiveFindingQualityGatePolicy.BuildEvidence(Finding(severity: 5));
 
-        Assert.Equal(0.8, result.CompositeConfidence);
-        Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
-        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
+        Assert.Null(evidence.QwenVisionConf); // Severity 5 darf NICHT als 1.0 erscheinen
+        Assert.Equal(0.6, evidence.PlausibilityScore);
     }
 
     [Fact]
-    public void Evaluate_with_service_delegates_to_quality_gate()
+    public void Evaluate_mit_Gate_und_echter_ModelConfidence_nutzt_beide_Signale()
     {
         var service = new QualityGateService();
 
-        var result = CodingLiveFindingQualityGatePolicy.Evaluate(service, Finding(severity: 5));
+        var result = CodingLiveFindingQualityGatePolicy.Evaluate(
+            service, Finding(severity: 5, modelConfidence: 0.9));
 
         Assert.NotEqual("QualityGate nicht verfuegbar", result.Explanation);
         Assert.Contains(nameof(EvidenceVector.QwenVisionConf), result.WeightsUsed.Keys);
         Assert.Contains(nameof(EvidenceVector.PlausibilityScore), result.WeightsUsed.Keys);
     }
 
-    private static LiveFrameFinding Finding(int severity)
+    [Fact]
+    public void Evaluate_mit_Gate_ohne_ModelConfidence_bewertet_nur_Plausibilitaet()
+    {
+        var service = new QualityGateService();
+
+        var result = CodingLiveFindingQualityGatePolicy.Evaluate(service, Finding(severity: 5));
+
+        Assert.DoesNotContain(nameof(EvidenceVector.QwenVisionConf), result.WeightsUsed.Keys);
+        Assert.Contains(nameof(EvidenceVector.PlausibilityScore), result.WeightsUsed.Keys);
+    }
+
+    private static LiveFrameFinding Finding(int severity, double? modelConfidence = null)
         => new(
             Label: "finding",
             Severity: severity,
             PositionClock: null,
             ExtentPercent: null,
-            VsaCodeHint: null);
+            VsaCodeHint: null,
+            ModelConfidence: modelConfidence);
 }
