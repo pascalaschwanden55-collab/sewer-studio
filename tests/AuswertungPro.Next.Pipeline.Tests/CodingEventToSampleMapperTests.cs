@@ -79,14 +79,27 @@ public sealed class CodingEventToSampleMapperTests
             Entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry { Code = "BCA", Beschreibung = "x" },
             MeterAtCapture = 12.3,
             VideoTimestamp = System.TimeSpan.FromSeconds(5),
-            AiContext = new CodingEventAiContext { SuggestedCode = "BCA", Confidence = 0.8, Decision = decision, QualityGateLevel = qg }
+            AiContext = new CodingEventAiContext
+            {
+                SuggestedCode = "BCA",
+                Confidence = 0.8,
+                Decision = decision,
+                QualityGateLevel = qg,
+                CentralDecision = new AiDecisionAudit
+                {
+                    Outcome = "AutoAccept",
+                    ReasonCode = "EvidenceConfirmed",
+                    PolicyVersion = "test-v2"
+                }
+            }
         };
 
     [Fact]
     public void FromCodingEvent_Accept_SetztHumanConfirmedTrueOhneCorrected()
     {
+        var ev = BuildEvent(CodingUserDecision.Accepted, qg: "Green");
         var s = CodingEventToSampleMapper.FromCodingEvent(
-            BuildEvent(CodingUserDecision.Accepted, qg: "Green"), "H1", null, null,
+            ev, "H1", null, null,
             confirmedByUser: "tester",
             confirmedAtUtc: new System.DateTime(2026, 6, 13, 9, 0, 0, System.DateTimeKind.Utc));
 
@@ -94,6 +107,8 @@ public sealed class CodingEventToSampleMapperTests
         Assert.Equal(false, s.Corrected);
         Assert.Equal("tester", s.ConfirmedByUser);
         Assert.Equal("Green", s.QualityGateLevel);
+        Assert.Equal("test-v2", s.CentralDecision!.PolicyVersion);
+        Assert.NotSame(ev.AiContext!.CentralDecision, s.CentralDecision);
     }
 
     [Fact]

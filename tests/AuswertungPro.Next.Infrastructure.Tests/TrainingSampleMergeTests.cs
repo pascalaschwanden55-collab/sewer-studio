@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using Xunit;
 
@@ -117,5 +118,27 @@ public sealed class TrainingSampleMergeTests
         TrainingSampleMerge.ApplyUpdatableFields(target, source);
 
         Assert.Equal(@"C:\frames\s1_markiert.png", target.EvidenceFramePath);
+    }
+
+    [Fact]
+    public void ApplyUpdatableFields_uebernimmt_Freigabeentscheidung_als_Tiefkopie()
+    {
+        var target = new TrainingSample { SampleId = "s1" };
+        var source = new TrainingSample
+        {
+            SampleId = "s1",
+            CentralDecision = new AiDecisionAudit
+            {
+                Outcome = "AutoAccept",
+                ReasonCode = "EvidenceConfirmed",
+                PolicyVersion = "central-ai-release-v2"
+            }
+        };
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.NotNull(target.CentralDecision);
+        Assert.Equal("EvidenceConfirmed", target.CentralDecision!.ReasonCode);
+        Assert.NotSame(source.CentralDecision, target.CentralDecision);
     }
 }

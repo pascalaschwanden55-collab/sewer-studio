@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
@@ -124,6 +125,8 @@ public sealed class TrainingSample
     public DateTime? ConfirmedAtUtc { get; set; }
     /// <summary>QualityGate-Ampel zum Bestaetigungszeitpunkt: "Green"/"Yellow"/"Red". Null = unbekannt.</summary>
     public string? QualityGateLevel { get; set; }
+    /// <summary>Versioniertes Urteil der zentralen KI-Freigabe, falls vorhanden.</summary>
+    public AiDecisionAudit? CentralDecision { get; set; }
     /// <summary>Grund, falls der Snapshot beim Akzeptieren nicht gezogen werden konnte. Null = ok.</summary>
     public string? SnapshotError { get; set; }
 

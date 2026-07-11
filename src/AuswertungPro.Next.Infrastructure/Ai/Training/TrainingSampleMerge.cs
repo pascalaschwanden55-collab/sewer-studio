@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -58,6 +59,8 @@ public static class TrainingSampleMerge
         if (source.ConfirmedByUser is not null) target.ConfirmedByUser = source.ConfirmedByUser;
         if (source.ConfirmedAtUtc is not null) target.ConfirmedAtUtc = source.ConfirmedAtUtc;
         if (source.QualityGateLevel is not null) target.QualityGateLevel = source.QualityGateLevel;
+        if (source.CentralDecision is not null)
+            target.CentralDecision = AiDecisionAuditCloner.Clone(source.CentralDecision);
         if (source.SnapshotError is not null) target.SnapshotError = source.SnapshotError;
         if (!string.IsNullOrWhiteSpace(source.EvidenceFramePath)) target.EvidenceFramePath = source.EvidenceFramePath;
     }

@@ -94,7 +94,8 @@ public static class CodingEventToSampleMapper
             } : null,
             ConfirmedByUser = confirmedByUser,
             ConfirmedAtUtc = confirmedAtUtc,
-            QualityGateLevel = ev.AiContext?.QualityGateLevel
+            QualityGateLevel = ev.AiContext?.QualityGateLevel,
+            CentralDecision = AiDecisionAuditCloner.Clone(ev.AiContext?.CentralDecision)
         };
     }
 
