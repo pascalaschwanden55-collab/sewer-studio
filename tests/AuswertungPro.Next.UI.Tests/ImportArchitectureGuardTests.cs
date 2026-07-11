@@ -41,4 +41,20 @@ public sealed class ImportArchitectureGuardTests
 
         Assert.Contains("RunImportWithOptionalPreviewAsync(", viewModel);
     }
+
+    [Fact]
+    public void ImportPage_uses_centrally_wired_import_services()
+    {
+        var viewModel = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs"));
+        var provider = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+
+        Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
+        Assert.DoesNotContain("new XtfImportServiceAdapter", viewModel);
+        Assert.DoesNotContain("new WinCanDbImportService", viewModel);
+        Assert.DoesNotContain("new System.Net.Http.HttpClient", viewModel);
+        Assert.Contains("CreateProjectImportOrchestrator", provider);
+        Assert.Contains("_importAiHttp", provider);
+    }
 }

@@ -45,7 +45,7 @@ public sealed class ProjectImportOrchestrator
     private readonly PdfKiSchiedsrichter? _kiSchiedsrichter;
 
     // Task 4: optionaler name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
-    private readonly AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor? _protocolDistributor;
+    private readonly INameBasedProtocolDistributor? _protocolDistributor;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -53,7 +53,7 @@ public sealed class ProjectImportOrchestrator
         IKinsImportService? kins = null,
         IIbakImportService? ibak = null,
         PdfKiSchiedsrichter? kiSchiedsrichter = null,
-        AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor? protocolDistributor = null)
+        INameBasedProtocolDistributor? protocolDistributor = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));

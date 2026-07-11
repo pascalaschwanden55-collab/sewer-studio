@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 using AuswertungPro.Next.Application.Diagnostics;
@@ -23,6 +24,7 @@ using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -45,6 +47,10 @@ namespace AuswertungPro.Next.UI
     /// </summary>
     public sealed class ServiceProvider : IServiceProvider
     {
+        // Ein langlebiger Client fuer den optionalen Import-Schiedsrichter. HttpClient ist
+        // thread-sicher und soll nicht bei jedem Import neu erzeugt werden.
+        private readonly HttpClient _importAiHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
+
         #region Infrastruktur / Querschnitt
         // Basis-Einstellungen, Logging und Fehlercode-Generator
         public AppSettings Settings { get; }
@@ -72,7 +78,7 @@ namespace AuswertungPro.Next.UI
         // Alle Import-Adapter für externe Datenformate
         public IPdfImportService PdfImport { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
-        public AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
+        public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakImportService IbakImport { get; }
@@ -237,6 +243,51 @@ namespace AuswertungPro.Next.UI
             return new AiSanierungOptimizationService(cfg, http);
         }
 
+        public ProjectImportOrchestrator CreateProjectImportOrchestrator()
+            => new(
+                XtfImport,
+                WinCanImport,
+                KinsImport,
+                IbakImport,
+                CreateImportAiArbitrator(),
+                NameBasedProtocolDistributor);
+
+        private PdfKiSchiedsrichter? CreateImportAiArbitrator()
+        {
+            try
+            {
+                var platform = AiSettingsFactory.Load(
+                    AppSettingsAiSettingsProvider.ToSource(Settings));
+                if (!platform.Enabled)
+                    return null;
+
+                var ollama = new OllamaClient(
+                    platform.OllamaBaseUri,
+                    _importAiHttp,
+                    TimeSpan.FromSeconds(45),
+                    keepAlive: platform.OllamaKeepAlive,
+                    numCtx: platform.OllamaNumCtx);
+                var schema = JsonDocument
+                    .Parse(PdfKiSchiedsrichter.JsonSchema)
+                    .RootElement.Clone();
+
+                return new PdfKiSchiedsrichter(async (prompt, ct) =>
+                {
+                    var answer = await ollama.ChatStructuredAsync<JsonElement>(
+                        platform.TextModel,
+                        [new OllamaClient.ChatMessage("user", prompt)],
+                        schema,
+                        ct).ConfigureAwait(false);
+                    return answer.GetRawText();
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogInformation(ex, "KI-Schiedsrichter fuer Import ist nicht verfuegbar.");
+                return null;
+            }
+        }
+
         private void LogCodeCatalogWarnings(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider provider, string? sourcePath)
         {
             IReadOnlyList<string>? warnings = provider switch
@@ -288,7 +339,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
-            if (serviceType == typeof(AuswertungPro.Next.Infrastructure.Import.Protocols.INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
+            if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Models;
 
-namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
+namespace AuswertungPro.Next.Application.Import;
 
 /// <summary>Ergebnis einer name-basierten Protokoll-Verteilung.</summary>
 public sealed record ProtocolDistributionReport(
