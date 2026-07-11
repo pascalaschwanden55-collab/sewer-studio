@@ -44,13 +44,35 @@ public sealed class DonutChart : Canvas
             typeof(DonutChart),
             new FrameworkPropertyMetadata(string.Empty, OnChartChanged));
 
+    public static readonly DependencyProperty AnimateBuildProperty =
+        DependencyProperty.Register(
+            nameof(AnimateBuild),
+            typeof(bool),
+            typeof(DonutChart),
+            new FrameworkPropertyMetadata(true));
+
+    // Interner Aufbau-Fortschritt 0..1: Segmente sweepen bis BuildProgress * 360 Grad.
+    private static readonly DependencyProperty BuildProgressProperty =
+        DependencyProperty.Register(
+            "BuildProgress",
+            typeof(double),
+            typeof(DonutChart),
+            new FrameworkPropertyMetadata(1d, (d, _) => ((DonutChart)d).Rebuild()));
+
     private INotifyCollectionChanged? _observableItems;
 
     public DonutChart()
     {
         SizeChanged += (_, _) => Rebuild();
+        Loaded += (_, _) => StartBuildAnimation();
         MinWidth = 120;
         MinHeight = 120;
+    }
+
+    public bool AnimateBuild
+    {
+        get => (bool)GetValue(AnimateBuildProperty);
+        set => SetValue(AnimateBuildProperty, value);
     }
 
     public IEnumerable? ItemsSource
@@ -87,14 +109,42 @@ public sealed class DonutChart : Canvas
         if (chart._observableItems is not null)
             chart._observableItems.CollectionChanged += chart.ItemsCollectionChanged;
 
-        chart.Rebuild();
+        chart.StartBuildAnimation();
     }
 
     private static void OnChartChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         => ((DonutChart)d).Rebuild();
 
     private void ItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => Rebuild();
+        => StartBuildAnimation();
+
+    /// <summary>Sweep-Aufbau starten (neue Daten/erstes Anzeigen); ohne Animation direkt voll zeichnen.</summary>
+    private void StartBuildAnimation()
+    {
+        if (!AnimateBuild || !IsLoaded)
+        {
+            BeginAnimation(BuildProgressProperty, null);
+            SetValue(BuildProgressProperty, 1d);
+            Rebuild(); // Explizit: SetValue feuert kein Rebuild, wenn der Wert schon 1.0 war.
+            return;
+        }
+
+        var sweep = new System.Windows.Media.Animation.DoubleAnimation(
+            0d, 1d, AnimationTokens.Slow)
+        {
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        sweep.Completed += (_, _) =>
+        {
+            // Clock freigeben und Endzustand festschreiben.
+            BeginAnimation(BuildProgressProperty, null);
+            SetValue(BuildProgressProperty, 1d);
+        };
+        BeginAnimation(BuildProgressProperty, sweep);
+    }
 
     private void Rebuild()
     {
@@ -120,18 +170,22 @@ public sealed class DonutChart : Canvas
         var innerRadius = Math.Max(10d, outerRadius * 0.58d);
         var startAngle = -90d;
 
+        // Sweep-Aufbau: Segmente nur bis zum animierten Winkel-Limit zeichnen.
+        var progress = Math.Clamp((double)GetValue(BuildProgressProperty), 0d, 1d);
+        var angleLimit = -90d + progress * 360d;
+
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
             var sweep = item.Value / total * 360d;
             if (sweep >= 359.99d)
             {
-                AddSegment(item, i, center, outerRadius, innerRadius, startAngle, 180d);
-                AddSegment(item, i, center, outerRadius, innerRadius, startAngle + 180d, 180d);
+                AddSegmentClipped(item, i, center, outerRadius, innerRadius, startAngle, 180d, angleLimit);
+                AddSegmentClipped(item, i, center, outerRadius, innerRadius, startAngle + 180d, 180d, angleLimit);
             }
             else
             {
-                AddSegment(item, i, center, outerRadius, innerRadius, startAngle, sweep);
+                AddSegmentClipped(item, i, center, outerRadius, innerRadius, startAngle, sweep, angleLimit);
             }
 
             startAngle += sweep;
@@ -158,6 +212,16 @@ public sealed class DonutChart : Canvas
         SetTop(ellipse, 3d);
         Children.Add(ellipse);
         return size;
+    }
+
+    // Kappt den Sweep am Aufbau-Limit (Sweep-Animation); volle 1.0 zeichnet unveraendert.
+    private void AddSegmentClipped(ChartItem item, int index, Point center, double outerRadius, double innerRadius, double startAngle, double sweepAngle, double angleLimit)
+    {
+        var allowed = angleLimit - startAngle;
+        if (allowed <= 0d)
+            return;
+
+        AddSegment(item, index, center, outerRadius, innerRadius, startAngle, Math.Min(sweepAngle, allowed));
     }
 
     private void AddSegment(ChartItem item, int index, Point center, double outerRadius, double innerRadius, double startAngle, double sweepAngle)

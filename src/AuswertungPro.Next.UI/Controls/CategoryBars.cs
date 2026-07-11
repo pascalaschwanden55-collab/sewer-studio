@@ -44,7 +44,26 @@ public sealed class CategoryBars : Grid
             typeof(CategoryBars),
             new FrameworkPropertyMetadata("Percent", FrameworkPropertyMetadataOptions.AffectsMeasure, OnChartChanged));
 
+    public static readonly DependencyProperty AnimateBuildProperty =
+        DependencyProperty.Register(
+            nameof(AnimateBuild),
+            typeof(bool),
+            typeof(CategoryBars),
+            new FrameworkPropertyMetadata(true));
+
     private INotifyCollectionChanged? _observableItems;
+
+    public CategoryBars()
+    {
+        // Erst nach dem Laden gebaute Optik animiert; das erste Rebuild passiert oft davor.
+        Loaded += (_, _) => Rebuild();
+    }
+
+    public bool AnimateBuild
+    {
+        get => (bool)GetValue(AnimateBuildProperty);
+        set => SetValue(AnimateBuildProperty, value);
+    }
 
     public IEnumerable? ItemsSource
     {
@@ -158,6 +177,7 @@ public sealed class CategoryBars : Grid
             RadiusY = 3,
             MinWidth = item.NormalizedValue > 0d ? 2d : 0d
         };
+        AnimateBarGrowth(bar, index, vertikal: false);
         track.Children.Add(bar);
         Grid.SetColumn(track, 1);
         row.Children.Add(track);
@@ -227,6 +247,7 @@ public sealed class CategoryBars : Grid
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch
         };
+        AnimateBarGrowth(bar, index, vertikal: true);
         SetRow(bar, 2);
         column.Children.Add(bar);
 
@@ -243,6 +264,35 @@ public sealed class CategoryBars : Grid
 
         AttachCommand(column, item);
         return column;
+    }
+
+    // Balken wachsen gestaffelt aus ihrer Basis (reine Transform-Animation, GPU-freundlich).
+    private void AnimateBarGrowth(Rectangle bar, int index, bool vertikal)
+    {
+        if (!AnimateBuild || !IsLoaded)
+            return;
+
+        var scale = new ScaleTransform(vertikal ? 1d : 0d, vertikal ? 0d : 1d);
+        bar.RenderTransform = scale;
+        bar.RenderTransformOrigin = vertikal ? new Point(0.5, 1d) : new Point(0d, 0.5);
+
+        var wachsen = new System.Windows.Media.Animation.DoubleAnimation(0d, 1d, AnimationTokens.Slow)
+        {
+            BeginTime = Animations.StaggerDelayPolicy.DelayFor(index),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+
+        var achse = vertikal ? ScaleTransform.ScaleYProperty : ScaleTransform.ScaleXProperty;
+        wachsen.Completed += (_, _) =>
+        {
+            scale.BeginAnimation(achse, null);
+            scale.ScaleX = 1d;
+            scale.ScaleY = 1d;
+        };
+        scale.BeginAnimation(achse, wachsen);
     }
 
     private void AttachCommand(FrameworkElement element, BarItem item)
