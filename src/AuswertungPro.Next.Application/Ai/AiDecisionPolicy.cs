@@ -52,10 +52,12 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
             return new AiDecision(AiDecisionOutcome.Reject,
                 $"Ungueltige Sicherheit ({s.Confidence}) — Datenfehler, kein Wert in 0..1.");
 
-        // Unsicherheit: vorhanden, aber unbrauchbar (NaN/Inf) darf nie als "niedrig" gelten.
-        if (s.EpistemicUncertainty is { } eu && (double.IsNaN(eu) || double.IsInfinity(eu)))
+        // Unsicherheit: vorhanden, aber unbrauchbar (NaN/Inf/negativ/ueber 1) darf nie
+        // als "niedrig" gelten (Fehlerpruefung 11.07., Wichtig 6).
+        if (s.EpistemicUncertainty is { } eu
+            && (double.IsNaN(eu) || double.IsInfinity(eu) || eu is < 0.0 or > 1.0))
             return new AiDecision(AiDecisionOutcome.Review,
-                "Unsicherheitswert unbrauchbar (NaN/unendlich).");
+                "Unsicherheitswert unbrauchbar (kein Wert in 0..1).");
 
         // Rote Ampel oder sehr niedrige Sicherheit -> sofort ablehnen.
         if (s.QualityGate == TrafficLight.Red)

@@ -92,10 +92,14 @@ public sealed class StandardAiDecisionPolicyTests
         Assert.Contains("ngueltig", d.Reason); // "Ungueltige Sicherheit ..."
     }
 
-    [Fact] // NaN-Unsicherheit ist "vorhanden, aber unbrauchbar" -> nie AutoAccept.
-    public void UnbrauchbareUnsicherheit_Review()
+    [Theory] // Unsicherheit "vorhanden, aber unbrauchbar" (auch negativ!) -> nie AutoAccept.
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(-0.05)]
+    [InlineData(1.2)]
+    public void UnbrauchbareUnsicherheit_Review(double uncertainty)
     {
-        var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: double.NaN));
+        var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: uncertainty));
         Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
     }
 }
