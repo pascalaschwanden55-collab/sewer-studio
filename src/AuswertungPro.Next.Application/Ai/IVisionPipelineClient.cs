@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Abstraktion des HTTP-Clients zum Python-FastAPI-Vision-Sidecar.

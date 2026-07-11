@@ -1,4 +1,5 @@
 using System.Windows;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;

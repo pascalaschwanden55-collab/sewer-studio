@@ -1,3 +1,4 @@
+global using AuswertungPro.Next.Application.Ai;
 global using Xunit;
 
 // Alle Tests die Env-Vars manipulieren müssen sequenziell laufen.

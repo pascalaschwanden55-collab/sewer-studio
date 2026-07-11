@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 var options = SidecarSmokeOptions.Parse(args);

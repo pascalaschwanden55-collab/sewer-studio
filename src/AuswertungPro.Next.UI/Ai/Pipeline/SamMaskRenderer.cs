@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using Microsoft.Extensions.Logging;

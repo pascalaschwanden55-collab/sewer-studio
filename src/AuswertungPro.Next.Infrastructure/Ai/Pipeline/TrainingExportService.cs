@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Ai;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 

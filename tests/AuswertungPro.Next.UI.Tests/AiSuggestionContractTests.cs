@@ -439,18 +439,22 @@ public sealed class AiSuggestionContractTests
     }
 
     [Fact]
-    public void VisionPipelineClient_LivesInInfrastructureLayer()
+    public void VisionPipelineContract_LivesInApplication_AndImplementationInInfrastructure()
     {
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
             typeof(VisionPipelineClient).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(
-            "AuswertungPro.Next.Infrastructure",
+            "AuswertungPro.Next.Application",
+            typeof(IVisionPipelineClient).Namespace!,
+            StringComparison.Ordinal);
+        Assert.StartsWith(
+            "AuswertungPro.Next.Application",
             typeof(YoloRequest).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(
-            "AuswertungPro.Next.Infrastructure",
+            "AuswertungPro.Next.Application",
             typeof(SamResponse).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(

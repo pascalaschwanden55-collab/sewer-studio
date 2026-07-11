@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;

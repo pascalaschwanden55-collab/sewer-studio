@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;

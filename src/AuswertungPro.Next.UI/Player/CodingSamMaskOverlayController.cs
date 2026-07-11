@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using Microsoft.Extensions.Logging;

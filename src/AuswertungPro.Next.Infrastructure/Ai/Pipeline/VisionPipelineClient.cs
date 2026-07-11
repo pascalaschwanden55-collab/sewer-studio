@@ -264,14 +264,3 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
     }
 
 }
-
-/// <summary>
-/// Detailliertes Ergebnis eines Health-Checks. Unterscheidet offline / 401 / ok,
-/// damit die UI Token-Fehler nicht als "offline" anzeigt.
-/// </summary>
-public sealed record PipelineHealthCheckResult(
-    bool IsReachable,
-    bool IsAuthorized,
-    int? StatusCode,
-    SidecarHealthResponse? Health,
-    string? Error);

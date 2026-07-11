@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai;
 
 // ── Health ─────────────────────────────────────────────────────────────────
 
@@ -241,3 +241,13 @@ public sealed record MultiModelFrameResult(
     double DinoTimeMs,
     double SamTimeMs
 );
+
+/// <summary>
+/// Detailliertes Ergebnis eines Health-Checks. Unterscheidet offline, nicht autorisiert und bereit.
+/// </summary>
+public sealed record PipelineHealthCheckResult(
+    bool IsReachable,
+    bool IsAuthorized,
+    int? StatusCode,
+    SidecarHealthResponse? Health,
+    string? Error);
