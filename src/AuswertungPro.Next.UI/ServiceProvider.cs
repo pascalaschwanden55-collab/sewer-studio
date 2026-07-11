@@ -32,6 +32,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -158,6 +159,7 @@ namespace AuswertungPro.Next.UI
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
+            TrainingSamplesStore.ConfigureEvalProtection(settings.EvalSetRoot);
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();

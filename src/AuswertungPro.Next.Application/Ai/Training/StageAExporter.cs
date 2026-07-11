@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 
@@ -427,37 +426,9 @@ public sealed class StageAExporter
     }
 
     private static HashSet<string> LoadEvalImageHashes(string evalSetRoot)
-    {
-        var manifestPath = Path.Combine(evalSetRoot, "_manifest.json");
-        if (File.Exists(manifestPath))
-        {
-            var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
-            var hashes = manifest?["hashes"]?.AsObject();
-            if (hashes is not null)
-            {
-                var fromManifest = hashes
-                    .Where(p => p.Key.StartsWith("images/", StringComparison.OrdinalIgnoreCase))
-                    .Select(p => p.Value?["sha256"]?.GetValue<string>())
-                    .Where(h => !string.IsNullOrWhiteSpace(h))
-                    .Select(h => h!.Trim().ToLowerInvariant())
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                if (fromManifest.Count > 0)
-                    return fromManifest;
-            }
-        }
-
-        var imageRoot = Path.Combine(evalSetRoot, "images");
-        if (!Directory.Exists(imageRoot))
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        return Directory
-            .EnumerateFiles(imageRoot, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(path => ImageExtensions.Contains(Path.GetExtension(path)))
-            .AsParallel()
-            .Select(ComputeSha256Hex)
+        => EvalContaminationGuard
+            .LoadEvalImageHashes(evalSetRoot)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
 
     private static string ComputeHashListSha256(IReadOnlySet<string> hashes)
     {

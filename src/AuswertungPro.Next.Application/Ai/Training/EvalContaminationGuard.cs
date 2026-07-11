@@ -59,47 +59,56 @@ public static class EvalContaminationGuard
     /// </summary>
     public static IReadOnlySet<string> LoadEvalImageHashes(string? evalSetRoot)
     {
-        var empty = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(evalSetRoot) || !Directory.Exists(evalSetRoot))
-            return empty;
+            return result;
 
-        var manifestPath = Path.Combine(evalSetRoot, "_manifest.json");
-        if (File.Exists(manifestPath))
+        foreach (var setRoot in EnumerateEvalSetRoots(evalSetRoot))
         {
-            try
+            var loadedFromManifest = false;
+            var manifestPath = Path.Combine(setRoot, "_manifest.json");
+            if (File.Exists(manifestPath))
             {
-                var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
-                var hashes = manifest?["hashes"]?.AsObject();
-                if (hashes is not null)
+                try
                 {
-                    var fromManifest = hashes
-                        .Where(p => p.Key.StartsWith("images/", StringComparison.OrdinalIgnoreCase))
-                        .Select(p => p.Value?["sha256"]?.GetValue<string>())
-                        .Where(h => !string.IsNullOrWhiteSpace(h))
-                        .Select(h => h!.Trim().ToLowerInvariant())
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                    if (fromManifest.Count > 0)
-                        return fromManifest;
+                    var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
+                    var hashes = manifest?["hashes"]?.AsObject();
+                    if (hashes is not null)
+                    {
+                        foreach (var hash in hashes
+                                     .Where(p => p.Key.StartsWith("images/", StringComparison.OrdinalIgnoreCase))
+                                     .Select(p => p.Value?["sha256"]?.GetValue<string>())
+                                     .Where(h => !string.IsNullOrWhiteSpace(h)))
+                        {
+                            result.Add(hash!.Trim().ToLowerInvariant());
+                            loadedFromManifest = true;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Defektes Einzel-Manifest blockiert die anderen Eval-Sets nicht.
                 }
             }
-            catch
+
+            if (loadedFromManifest)
+                continue;
+
+            var imageRoot = Path.Combine(setRoot, "images");
+            if (!Directory.Exists(imageRoot))
+                continue;
+
+            foreach (var hash in Directory
+                         .EnumerateFiles(imageRoot, "*.*", SearchOption.TopDirectoryOnly)
+                         .Where(p => ImageExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))
+                         .Select(ComputeFileHash)
+                         .Where(h => h is not null))
             {
-                // Defektes Manifest -> Fallback auf direkte Berechnung statt Crash.
+                result.Add(hash!);
             }
         }
 
-        var imageRoot = Path.Combine(evalSetRoot, "images");
-        if (!Directory.Exists(imageRoot))
-            return empty;
-
-        return Directory
-            .EnumerateFiles(imageRoot, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(p => ImageExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))
-            .Select(ComputeFileHash)
-            .Where(h => h is not null)
-            .Select(h => h!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return result;
     }
 
     // ── Haltungs-/CaseId-Sperrliste ────────────────────────────────────────
@@ -165,49 +174,81 @@ public static class EvalContaminationGuard
     /// </summary>
     public static IReadOnlySet<string> LoadEvalHaltungKeys(string? evalSetRoot)
     {
-        var empty = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(evalSetRoot) || !Directory.Exists(evalSetRoot))
-            return empty;
+            return result;
 
-        var candidatesPath = Path.Combine(evalSetRoot, "_candidates.json");
-        if (File.Exists(candidatesPath))
+        foreach (var setRoot in EnumerateEvalSetRoots(evalSetRoot))
         {
-            try
+            var loadedFromCandidates = false;
+            var candidatesPath = Path.Combine(setRoot, "_candidates.json");
+            if (File.Exists(candidatesPath))
             {
-                var node = JsonNode.Parse(File.ReadAllText(candidatesPath));
-                var array = node as JsonArray ?? node?["candidates"] as JsonArray;
-                if (array is not null)
+                try
                 {
-                    var keys = array
-                        // ToString() statt GetValue<string>(): ein nicht-string haltung_key
-                        // (Zahl/Objekt) darf nicht die GANZE Liste per Exception verwerfen.
-                        .Select(it => (it as JsonObject)?["haltung_key"]?.ToString())
-                        .Select(NormalizeHaltungKey)
-                        .Where(k => !string.IsNullOrWhiteSpace(k))
-                        .Select(k => k!)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                    if (keys.Count > 0)
-                        return keys;
+                    var node = JsonNode.Parse(File.ReadAllText(candidatesPath));
+                    var array = node as JsonArray ?? node?["candidates"] as JsonArray;
+                    if (array is not null)
+                    {
+                        foreach (var key in array
+                                     .Select(it => (it as JsonObject)?["haltung_key"]?.ToString())
+                                     .Select(NormalizeHaltungKey)
+                                     .Where(k => !string.IsNullOrWhiteSpace(k)))
+                        {
+                            result.Add(key!);
+                            loadedFromCandidates = true;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Defekte Einzeldatei -> Dateinamen-Fallback fuer dieses Set.
                 }
             }
-            catch
+
+            if (loadedFromCandidates)
+                continue;
+
+            var imageRoot = Path.Combine(setRoot, "images");
+            if (!Directory.Exists(imageRoot))
+                continue;
+
+            foreach (var key in Directory
+                         .EnumerateFiles(imageRoot, "*.*", SearchOption.TopDirectoryOnly)
+                         .Where(p => ImageExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))
+                         .Select(p => NormalizeHaltungKey(Path.GetFileName(p)))
+                         .Where(k => k is not null && HaltungKeyPattern.IsMatch(k)))
             {
-                // Defekte Datei -> Fallback auf Dateinamen statt Crash.
+                result.Add(key!);
             }
         }
 
-        var imageRoot = Path.Combine(evalSetRoot, "images");
-        if (!Directory.Exists(imageRoot))
-            return empty;
+        return result;
+    }
 
-        return Directory
-            .EnumerateFiles(imageRoot, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(p => ImageExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))
-            .Select(p => NormalizeHaltungKey(Path.GetFileName(p)))
-            .Where(k => k is not null && HaltungKeyPattern.IsMatch(k))
-            .Select(k => k!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private static IReadOnlyList<string> EnumerateEvalSetRoots(string evalSetRoot)
+    {
+        var fullRoot = Path.GetFullPath(evalSetRoot);
+        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { fullRoot };
+
+        try
+        {
+            foreach (var manifest in Directory.EnumerateFiles(
+                         fullRoot,
+                         "_manifest.json",
+                         SearchOption.AllDirectories))
+            {
+                var directory = Path.GetDirectoryName(manifest);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    roots.Add(Path.GetFullPath(directory));
+            }
+        }
+        catch
+        {
+            // Hauptset bleibt trotzdem aktiv.
+        }
+
+        return roots.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     // ── Kombinierte Export-Pruefung ────────────────────────────────────────

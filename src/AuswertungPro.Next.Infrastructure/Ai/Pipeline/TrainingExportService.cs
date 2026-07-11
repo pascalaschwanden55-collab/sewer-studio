@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -17,10 +18,14 @@ public sealed class TrainingExportService
     private const int SidecarExportMaxSamplesPerRequest = 500;
 
     private readonly IVisionPipelineClient _client;
+    private readonly string _evalSetRoot;
 
-    public TrainingExportService(IVisionPipelineClient client)
+    public TrainingExportService(IVisionPipelineClient client, string? evalSetRoot = null)
     {
         _client = client;
+        _evalSetRoot = string.IsNullOrWhiteSpace(evalSetRoot)
+            ? TrainingSamplesStore.EffectiveEvalSetRoot
+            : Path.GetFullPath(evalSetRoot);
     }
 
     /// <summary>
@@ -35,11 +40,19 @@ public sealed class TrainingExportService
         if (samples.Count == 0)
             return new TrainingExportResult(false, "Keine Trainingssamples vorhanden.", 0, 0, 0);
 
+        var evalImageHashes = EvalContaminationGuard.LoadEvalImageHashes(_evalSetRoot);
         var exportSamples = new List<TrainingExportSample>();
+        var skippedEvalSamples = 0;
         foreach (var sample in samples)
         {
             if (string.IsNullOrWhiteSpace(sample.ExtractedFramePath) || !File.Exists(sample.ExtractedFramePath))
                 continue;
+
+            if (EvalContaminationGuard.IsEvalContaminated(evalImageHashes, sample.ExtractedFramePath))
+            {
+                skippedEvalSamples++;
+                continue;
+            }
 
             var imageBytes = await File.ReadAllBytesAsync(sample.ExtractedFramePath, ct).ConfigureAwait(false);
             var imageBase64 = Convert.ToBase64String(imageBytes);
@@ -59,7 +72,12 @@ public sealed class TrainingExportService
         }
 
         if (exportSamples.Count == 0)
-            return new TrainingExportResult(false, "Keine gültigen Bilder gefunden.", 0, 0, 0);
+        {
+            var reason = skippedEvalSamples > 0
+                ? "Alle gueltigen Bilder gehoeren zu einem geschuetzten Eval-Set."
+                : "Keine gueltigen Bilder gefunden.";
+            return new TrainingExportResult(false, reason, 0, 0, 0, skippedEvalSamples);
+        }
 
         if (exportSamples.Count > SidecarExportMaxSamplesPerRequest)
             return new TrainingExportResult(
@@ -78,7 +96,8 @@ public sealed class TrainingExportService
                 true, null,
                 response.TotalSamples,
                 response.TrainCount,
-                response.ValCount);
+                response.ValCount,
+                skippedEvalSamples);
         }
         catch (Exception ex)
         {
@@ -92,5 +111,6 @@ public sealed record TrainingExportResult(
     string? Error,
     int TotalSamples,
     int TrainCount,
-    int ValCount
+    int ValCount,
+    int SkippedEvalSamples = 0
 );

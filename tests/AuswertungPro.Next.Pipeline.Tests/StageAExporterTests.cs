@@ -79,6 +79,47 @@ public sealed class StageAExporterTests : IDisposable
     }
 
     [Fact]
+    public async Task DryRun_blockt_BildAusUntergeordnetemEvalSetV2()
+    {
+        var evalRoot = Path.Combine(_root, "eval");
+        var v2Root = Path.Combine(evalRoot, "v2");
+        var v2Images = Path.Combine(v2Root, "images");
+        Directory.CreateDirectory(v2Images);
+        var evalImage = Path.Combine(v2Images, "v2.png");
+        File.WriteAllBytes(evalImage, [9, 8, 7, 6]);
+        WriteEvalManifest(v2Root, evalImage);
+
+        var sourceImage = Path.Combine(_root, "same-content-new-name.png");
+        File.Copy(evalImage, sourceImage);
+        var samplesPath = Path.Combine(_root, "v2-training-samples.json");
+        var sample = MarkEligible(new TrainingSample
+        {
+            SampleId = "v2-overlap",
+            CaseId = "900-901",
+            Code = "BABAC",
+            Beschreibung = "Laengsriss mit V2-Hash",
+            FramePath = sourceImage,
+            Status = TrainingSampleStatus.Approved,
+            BboxXCenter = 0.5,
+            BboxYCenter = 0.5,
+            BboxWidth = 0.2,
+            BboxHeight = 0.2
+        });
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(
+            new[] { sample },
+            StageAExporter.JsonOptions));
+
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: samplesPath,
+            EvalSetRoot: evalRoot,
+            OutputRoot: Path.Combine(_root, "v2-output"),
+            DryRun: true));
+
+        Assert.Equal(1, result.SkippedEvalSet);
+        Assert.Equal(0, result.FinalSamples);
+    }
+
+    [Fact]
     public async Task Export_schreibt_clean_samples_manifest_data_yaml_und_labels()
     {
         var source = PrepareSourceWithEvalOverlap();

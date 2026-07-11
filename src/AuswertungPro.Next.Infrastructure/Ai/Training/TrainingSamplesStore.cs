@@ -13,17 +13,34 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
 {
     public static class TrainingSamplesStore
     {
+        private const string DefaultEvalSetRoot = @"C:\KI_BRAIN\eval_set";
         // Verhindert gleichzeitige Load+Save-Operationen (Race Condition bei MergeAndSaveAsync)
         private static readonly SemaphoreSlim _fileLock = new(1, 1);
+        private static string? _configuredEvalSetRoot;
 
         private static string GetStorePath() => KnowledgeBasePaths.GetTrainingSamplesPath();
+
+        /// <summary>
+        /// Setzt den schreibseitigen Eval-Schutz. Der konfigurierte Hauptordner schuetzt
+        /// automatisch auch alle darunterliegenden Eval-Sets mit eigenem Manifest.
+        /// </summary>
+        public static void ConfigureEvalProtection(string? evalSetRoot)
+            => Volatile.Write(
+                ref _configuredEvalSetRoot,
+                string.IsNullOrWhiteSpace(evalSetRoot) ? null : Path.GetFullPath(evalSetRoot));
+
+        public static string EffectiveEvalSetRoot
+            => Volatile.Read(ref _configuredEvalSetRoot)
+               ?? Environment.GetEnvironmentVariable("SEWERSTUDIO_EVAL_SET_ROOT")
+               ?? DefaultEvalSetRoot;
 
         public static async Task<List<TrainingSample>> LoadAsync()
         {
             await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                return await LoadInternalAsync().ConfigureAwait(false);
+                return FilterEvalContamination(
+                    await LoadInternalAsync().ConfigureAwait(false));
             }
             finally
             {
@@ -36,7 +53,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                await SaveInternalAsync(samples).ConfigureAwait(false);
+                await SaveInternalAsync(FilterEvalContamination(samples)).ConfigureAwait(false);
             }
             finally
             {
@@ -54,13 +71,15 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var existing = await LoadInternalAsync().ConfigureAwait(false);
+                var protectedNewSamples = FilterEvalContamination(newSamples);
+                var existing = FilterEvalContamination(
+                    await LoadInternalAsync().ConfigureAwait(false));
                 var existingSigs = existing
                     .Where(s => !string.IsNullOrEmpty(s.Signature))
                     .Select(s => s.Signature)
                     .ToHashSet(StringComparer.Ordinal);
 
-                foreach (var s in newSamples)
+                foreach (var s in protectedNewSamples)
                 {
                     if (!string.IsNullOrEmpty(s.Signature) && existingSigs.Contains(s.Signature))
                         continue;
@@ -87,7 +106,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var existing = await LoadInternalAsync().ConfigureAwait(false);
+                var protectedSamples = FilterEvalContamination(samples);
+                var existing = FilterEvalContamination(
+                    await LoadInternalAsync().ConfigureAwait(false));
                 var sigIndex = new Dictionary<string, int>(StringComparer.Ordinal);
                 for (var i = 0; i < existing.Count; i++)
                 {
@@ -95,7 +116,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                         sigIndex[existing[i].Signature] = i;
                 }
 
-                foreach (var s in samples)
+                foreach (var s in protectedSamples)
                 {
                     if (!string.IsNullOrEmpty(s.Signature) && sigIndex.TryGetValue(s.Signature, out var idx))
                     {
@@ -120,6 +141,40 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
         }
 
         // ── Interne Methoden (ohne Lock, nur innerhalb von _fileLock aufrufen) ──
+
+        private static List<TrainingSample> FilterEvalContamination(IEnumerable<TrainingSample> samples)
+        {
+            var input = samples?.Where(sample => sample is not null).ToList()
+                ?? new List<TrainingSample>();
+            if (input.Count == 0)
+                return input;
+
+            var evalRoot = EffectiveEvalSetRoot;
+            var evalHashes = EvalContaminationGuard.LoadEvalImageHashes(evalRoot);
+            var evalHoldings = EvalContaminationGuard.LoadEvalHaltungKeys(evalRoot);
+            if (evalHashes.Count == 0 && evalHoldings.Count == 0)
+                return input;
+
+            var clean = new List<TrainingSample>(input.Count);
+            foreach (var sample in input)
+            {
+                var classification = EvalContaminationGuard.ClassifyForExport(
+                    evalHashes,
+                    evalHoldings,
+                    sample.FramePath,
+                    sample.CaseId);
+                if (classification == EvalContaminationGuard.ExportContaminationResult.Clean)
+                {
+                    clean.Add(sample);
+                    continue;
+                }
+
+                Debug.WriteLine(
+                    $"[TrainingSamplesStore] Sample {sample.SampleId} blockiert: {classification}.");
+            }
+
+            return clean;
+        }
 
         private static async Task<List<TrainingSample>> LoadInternalAsync()
         {
