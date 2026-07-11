@@ -23,13 +23,16 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 public static class NpkLeistungsverzeichnisExcelExporter
 {
     private const int ColNpk = 1;
-    private const int ColPosition = 2;
-    private const int ColDn = 3;
-    private const int ColMenge = 4;
-    private const int ColEinheit = 5;
-    private const int ColEp = 6;
-    private const int ColTotal = 7;
-    private const int ColHaltungen = 8;
+    // D/16-Praxisnummer (heutige Ausgabe) direkt neben der Revisions-Nummer,
+    // damit das LV mit echten Unternehmer-Offerten vergleichbar ist.
+    private const int ColNpkD16 = 2;
+    private const int ColPosition = 3;
+    private const int ColDn = 4;
+    private const int ColMenge = 5;
+    private const int ColEinheit = 6;
+    private const int ColEp = 7;
+    private const int ColTotal = 8;
+    private const int ColHaltungen = 9;
 
     private const string MoneyFormat = "#,##0.00";
 
@@ -146,7 +149,7 @@ public static class NpkLeistungsverzeichnisExcelExporter
 
         // ── Spaltenüberschriften (AWU-Akzentbalken) ────────────────
         const int headerRow = 7;
-        string[] headers = { "NPK", "Position", "DN", "Menge", "Einheit", $"EP {cur}", $"Total {cur}", "Haltungen" };
+        string[] headers = { "NPK", "NPK D/16", "Position", "DN", "Menge", "Einheit", $"EP {cur}", $"Total {cur}", "Haltungen" };
         for (var c = 0; c < headers.Length; c++)
         {
             var cell = ws.Cell(headerRow, c + 1);
@@ -191,6 +194,8 @@ public static class NpkLeistungsverzeichnisExcelExporter
 
                 ws.Cell(r, ColNpk).Style.NumberFormat.Format = "@"; // Text, damit "612.113" nicht zur Zahl wird
                 ws.Cell(r, ColNpk).Value = p.NpkCode ?? "";
+                ws.Cell(r, ColNpkD16).Style.NumberFormat.Format = "@";
+                ws.Cell(r, ColNpkD16).Value = p.NpkCodeD16 ?? "";
                 ws.Cell(r, ColPosition).Value = AppendPriceHint(p.Text, p.PriceHint);
                 if (p.Dn is int dn)
                     ws.Cell(r, ColDn).Value = dn;
@@ -289,6 +294,7 @@ public static class NpkLeistungsverzeichnisExcelExporter
 
         // ── Spaltenbreiten + Fixierung ──────────────────────────────
         ws.Column(ColNpk).Width = 11;
+        ws.Column(ColNpkD16).Width = 13;
         ws.Column(ColPosition).Width = 44;
         ws.Column(ColDn).Width = 6;
         ws.Column(ColMenge).Width = 10;

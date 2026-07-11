@@ -23,10 +23,15 @@ public sealed record CostCatalogItem
     public List<string> Aliases { get; set; } = new();
 
     // NPK-135-Positionsnummer (CRB), z.B. "612.110". Leer = noch nicht zugeordnet.
+    // Bezugsausgabe: Revision D/V27 ("Unterhalt von Entwaessungssystemen").
     public string NpkCode { get; set; } = "";
     // NPK-Kapitel: 100 Einrichtung, 200 Reinigung/Zustand, 300 Vorarbeiten,
     // 400 Wasserhaltung, 500 Reparatur, 600 Renovierung. Leer = unbestimmt.
     public string Chapter { get; set; } = "";
+    // Praxisnummer der heute gueltigen Ausgabe D/16, wie sie in echten Unternehmer-
+    // Offerten/Rechnungen erscheint (6-stellig, z.B. "700.712.107"). Leer = keine bekannt.
+    // Macht App-Leistungsverzeichnisse direkt mit heutigen Offerten vergleichbar.
+    public string NpkCodeD16 { get; set; } = "";
 }
 
 public sealed record DnPrice
@@ -143,4 +148,5 @@ public sealed record AggregatedPosition(
     int HoldingCount,
     bool IsVariablePrice,
     decimal? UnitPrice,
-    string PriceHint = "");
+    string PriceHint = "",
+    string NpkCodeD16 = "");

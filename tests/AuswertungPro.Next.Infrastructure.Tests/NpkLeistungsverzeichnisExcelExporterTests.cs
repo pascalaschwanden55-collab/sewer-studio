@@ -8,11 +8,11 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class NpkLeistungsverzeichnisExcelExporterTests
 {
-    // NPK=A, Position=B, DN=C, Menge=D, Einheit=E, EP=F, Total=G, Haltungen=H
+    // NPK=A, NPK D/16=B, Position=C, DN=D, Menge=E, Einheit=F, EP=G, Total=H, Haltungen=I
     private const int ColNpk = 1;
-    private const int ColMenge = 4;
-    private const int ColEp = 6;
-    private const int ColTotal = 7;
+    private const int ColMenge = 5;
+    private const int ColEp = 7;
+    private const int ColTotal = 8;
 
     private static AggregatedPosition Fixed(string npk, decimal qty, decimal ep, decimal net)
         => new(npk, "600", "key-" + npk, "Position " + npk, "m", 250, qty, net, 2, false, ep, "");
@@ -71,7 +71,7 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         {
             var ws = wb.Worksheet(sheet);
             var hasTotal = ws.RowsUsed().Any(r =>
-                r.Cell(2).GetString().Contains("TOTAL", System.StringComparison.OrdinalIgnoreCase));
+                r.Cell(3).GetString().Contains("TOTAL", System.StringComparison.OrdinalIgnoreCase));
             Assert.True(hasTotal, $"Reiter '{sheet}' hat keine TOTAL-Zeile.");
         }
     }

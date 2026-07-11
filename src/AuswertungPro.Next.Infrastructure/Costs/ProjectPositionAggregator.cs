@@ -20,6 +20,7 @@ public static class ProjectPositionAggregator
     private sealed class Bucket
     {
         public string NpkCode = "";
+        public string NpkCodeD16 = "";
         public string Chapter = "";
         public string ItemKey = "";
         public string Text = "";
@@ -61,6 +62,7 @@ public static class ProjectPositionAggregator
                         catalog.TryGetValue(line.ItemKey.Trim(), out item);
 
                     var npk = (item?.NpkCode ?? "").Trim();
+                    var npkD16 = (item?.NpkCodeD16 ?? "").Trim();
                     var chapter = (item?.Chapter ?? "").Trim();
                     var isByDn = string.Equals(item?.Type, "ByDN", StringComparison.OrdinalIgnoreCase);
                     int? dn = isByDn ? measure.Dn : null;
@@ -116,6 +118,7 @@ public static class ProjectPositionAggregator
                         bucket = new Bucket
                         {
                             NpkCode = npk,
+                            NpkCodeD16 = npkD16,
                             Chapter = chapter,
                             ItemKey = canonicalKey,
                             Text = text,
@@ -153,7 +156,8 @@ public static class ProjectPositionAggregator
                     : b.Text;
                 return new AggregatedPosition(
                     b.NpkCode, b.Chapter, b.ItemKey, text, b.Unit, b.Dn,
-                    b.TotalQty, b.TotalNet, b.Holdings.Count, variable, unitPrice, priceHint);
+                    b.TotalQty, b.TotalNet, b.Holdings.Count, variable, unitPrice, priceHint,
+                    b.NpkCodeD16);
             })
             .ToList();
     }

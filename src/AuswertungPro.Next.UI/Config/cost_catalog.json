@@ -7,20 +7,24 @@
       "name": "Installation HL-Anlage mehrere Haltungen",
       "npkCode": "151.001",
       "chapter": "100",
+      "npkCodeD16": "160.161.101",
       "unit": "pl",
       "type": "Fixed",
-      "price": 500.00,
+      "price": 500.0,
       "active": true,
-      "aliases": ["Installation HL-Anlage"]
+      "aliases": [
+        "Installation HL-Anlage"
+      ]
     },
     {
       "key": "INSTALL_UV_ANLAGE",
       "name": "Installation UV-Anlage",
       "npkCode": "151.001",
       "chapter": "100",
+      "npkCodeD16": "160.161.106",
       "unit": "pl",
       "type": "Fixed",
-      "price": 1500.00,
+      "price": 1500.0,
       "active": true,
       "aliases": []
     },
@@ -29,9 +33,10 @@
       "name": "Installation Manuelle Gruppe",
       "npkCode": "121.001",
       "chapter": "100",
+      "npkCodeD16": "",
       "unit": "pl",
       "type": "Fixed",
-      "price": 426.70,
+      "price": 426.7,
       "active": true,
       "aliases": []
     },
@@ -40,9 +45,10 @@
       "name": "Installation Roboteranlage",
       "npkCode": "141.001",
       "chapter": "100",
+      "npkCodeD16": "160.161",
       "unit": "pl",
       "type": "Fixed",
-      "price": 976.00,
+      "price": 976.0,
       "active": true,
       "aliases": []
     },
@@ -51,53 +57,64 @@
       "name": "Kanalreinigung Vorreinigung",
       "npkCode": "211.110",
       "chapter": "200",
+      "npkCodeD16": "200.211.101",
       "unit": "m",
       "type": "Fixed",
-      "price": 5.00,
+      "price": 5.0,
       "active": true,
-      "aliases": ["Kanalreinigung"]
+      "aliases": [
+        "Kanalreinigung"
+      ]
     },
     {
       "key": "VORARBEIT_VD",
       "name": "Verkehrsdienst (VD)",
       "npkCode": "",
       "chapter": "100",
+      "npkCodeD16": "",
       "unit": "pro Tag",
       "type": "Fixed",
-      "price": 1000.00,
+      "price": 1000.0,
       "active": true,
-      "aliases": ["Verkehrsdienst"]
+      "aliases": [
+        "Verkehrsdienst"
+      ]
     },
     {
       "key": "VORARBEIT_FRAESEN",
       "name": "Fräsen / Hindernisse entfernen",
-      "npkCode": "311.100",
+      "npkCode": "321.111",
       "chapter": "300",
+      "npkCodeD16": "",
       "unit": "m",
       "type": "Fixed",
-      "price": 29.00,
+      "price": 29.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "VORARBEIT_EINMESSUNG",
       "name": "Haltung einmessung / Kalibrierung",
-      "npkCode": "226.001",
-      "chapter": "200",
+      "npkCode": "351.101",
+      "chapter": "300",
+      "npkCodeD16": "300.350.101",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 80.00,
+      "price": 80.0,
       "active": true,
-      "aliases": ["Haltung einmessen"]
+      "aliases": [
+        "Haltung einmessen"
+      ]
     },
     {
       "key": "VORARBEIT_ANSCHLUSS_EINMESSEN",
       "name": "Seitlicher Anschluss einmessen",
-      "npkCode": "351.101",
+      "npkCode": "",
       "chapter": "300",
+      "npkCodeD16": "",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 80.00,
+      "price": 80.0,
       "active": true,
       "aliases": []
     },
@@ -106,9 +123,10 @@
       "name": "TV Vorkontrolle / Referenzaufnahme",
       "npkCode": "221.102",
       "chapter": "200",
+      "npkCodeD16": "200.220.101",
       "unit": "m",
       "type": "Fixed",
-      "price": 3.00,
+      "price": 3.0,
       "active": true,
       "aliases": []
     },
@@ -117,9 +135,10 @@
       "name": "Wasserhaltung",
       "npkCode": "411.100",
       "chapter": "400",
+      "npkCodeD16": "400.411.101",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 500.00,
+      "price": 500.0,
       "active": true,
       "aliases": []
     },
@@ -128,17 +147,44 @@
       "name": "Schlauchliner (Nadelfilz)",
       "npkCode": "612.111",
       "chapter": "600",
+      "npkCodeD16": "600.612",
       "unit": "m",
       "type": "ByDN",
       "active": true,
-      "aliases": ["Nadelfilzliner"],
+      "aliases": [
+        "Nadelfilzliner"
+      ],
       "dnPrices": [
-        { "dnFrom": 100, "dnTo": 100, "price": 240.00 },
-        { "dnFrom": 125, "dnTo": 125, "price": 240.00 },
-        { "dnFrom": 150, "dnTo": 150, "price": 250.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 270.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 300.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 320.00 }
+        {
+          "dnFrom": 100,
+          "dnTo": 100,
+          "price": 240.0
+        },
+        {
+          "dnFrom": 125,
+          "dnTo": 125,
+          "price": 240.0
+        },
+        {
+          "dnFrom": 150,
+          "dnTo": 150,
+          "price": 250.0
+        },
+        {
+          "dnFrom": 200,
+          "dnTo": 200,
+          "price": 270.0
+        },
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 300.0
+        },
+        {
+          "dnFrom": 300,
+          "dnTo": 300,
+          "price": 320.0
+        }
       ]
     },
     {
@@ -146,17 +192,44 @@
       "name": "Schlauchliner (Nadelfilz) Open-End",
       "npkCode": "612.112",
       "chapter": "600",
+      "npkCodeD16": "600.612",
       "unit": "m",
       "type": "ByDN",
       "active": true,
-      "aliases": ["Nadelfilzliner Open-End"],
+      "aliases": [
+        "Nadelfilzliner Open-End"
+      ],
       "dnPrices": [
-        { "dnFrom": 100, "dnTo": 100, "price": 240.00 },
-        { "dnFrom": 125, "dnTo": 125, "price": 240.00 },
-        { "dnFrom": 150, "dnTo": 150, "price": 250.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 270.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 300.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 320.00 }
+        {
+          "dnFrom": 100,
+          "dnTo": 100,
+          "price": 240.0
+        },
+        {
+          "dnFrom": 125,
+          "dnTo": 125,
+          "price": 240.0
+        },
+        {
+          "dnFrom": 150,
+          "dnTo": 150,
+          "price": 250.0
+        },
+        {
+          "dnFrom": 200,
+          "dnTo": 200,
+          "price": 270.0
+        },
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 300.0
+        },
+        {
+          "dnFrom": 300,
+          "dnTo": 300,
+          "price": 320.0
+        }
       ]
     },
     {
@@ -164,21 +237,64 @@
       "name": "Schlauchliner (GFK)",
       "npkCode": "612.113",
       "chapter": "600",
+      "npkCodeD16": "600.612.104",
       "unit": "m",
       "type": "ByDN",
       "active": true,
-      "aliases": ["GFK-Schlauchliner"],
+      "aliases": [
+        "GFK-Schlauchliner"
+      ],
       "dnPrices": [
-        { "dnFrom": 250, "dnTo": 250, "price": 200.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 220.00 },
-        { "dnFrom": 350, "dnTo": 350, "price": 230.00 },
-        { "dnFrom": 400, "dnTo": 400, "price": 275.00 },
-        { "dnFrom": 450, "dnTo": 450, "price": 280.00 },
-        { "dnFrom": 500, "dnTo": 500, "price": 300.00 },
-        { "dnFrom": 600, "dnTo": 600, "price": 400.00 },
-        { "dnFrom": 700, "dnTo": 700, "price": 550.00 },
-        { "dnFrom": 800, "dnTo": 800, "price": 800.00 },
-        { "dnFrom": 900, "dnTo": 900, "price": 900.00 }
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 200.0
+        },
+        {
+          "dnFrom": 300,
+          "dnTo": 300,
+          "price": 220.0
+        },
+        {
+          "dnFrom": 350,
+          "dnTo": 350,
+          "price": 230.0
+        },
+        {
+          "dnFrom": 400,
+          "dnTo": 400,
+          "price": 275.0
+        },
+        {
+          "dnFrom": 450,
+          "dnTo": 450,
+          "price": 280.0
+        },
+        {
+          "dnFrom": 500,
+          "dnTo": 500,
+          "price": 300.0
+        },
+        {
+          "dnFrom": 600,
+          "dnTo": 600,
+          "price": 400.0
+        },
+        {
+          "dnFrom": 700,
+          "dnTo": 700,
+          "price": 550.0
+        },
+        {
+          "dnFrom": 800,
+          "dnTo": 800,
+          "price": 800.0
+        },
+        {
+          "dnFrom": 900,
+          "dnTo": 900,
+          "price": 900.0
+        }
       ]
     },
     {
@@ -186,22 +302,70 @@
       "name": "Linerendmanschette (LEM) / Schachtanbindung",
       "npkCode": "621.110",
       "chapter": "600",
+      "npkCodeD16": "600.621.110",
       "unit": "Stk",
       "type": "ByDN",
       "active": true,
-      "aliases": ["LEM", "Endmanschette"],
+      "aliases": [
+        "LEM",
+        "Endmanschette"
+      ],
       "dnPrices": [
-        { "dnFrom": 150, "dnTo": 150, "price": 420.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 450.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 490.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 500.00 },
-        { "dnFrom": 350, "dnTo": 350, "price": 580.00 },
-        { "dnFrom": 400, "dnTo": 400, "price": 640.00 },
-        { "dnFrom": 450, "dnTo": 450, "price": 720.00 },
-        { "dnFrom": 500, "dnTo": 500, "price": 780.00 },
-        { "dnFrom": 600, "dnTo": 600, "price": 850.00 },
-        { "dnFrom": 700, "dnTo": 700, "price": 900.00 },
-        { "dnFrom": 800, "dnTo": 800, "price": 950.00 }
+        {
+          "dnFrom": 150,
+          "dnTo": 150,
+          "price": 420.0
+        },
+        {
+          "dnFrom": 200,
+          "dnTo": 200,
+          "price": 450.0
+        },
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 490.0
+        },
+        {
+          "dnFrom": 300,
+          "dnTo": 300,
+          "price": 500.0
+        },
+        {
+          "dnFrom": 350,
+          "dnTo": 350,
+          "price": 580.0
+        },
+        {
+          "dnFrom": 400,
+          "dnTo": 400,
+          "price": 640.0
+        },
+        {
+          "dnFrom": 450,
+          "dnTo": 450,
+          "price": 720.0
+        },
+        {
+          "dnFrom": 500,
+          "dnTo": 500,
+          "price": 780.0
+        },
+        {
+          "dnFrom": 600,
+          "dnTo": 600,
+          "price": 850.0
+        },
+        {
+          "dnFrom": 700,
+          "dnTo": 700,
+          "price": 900.0
+        },
+        {
+          "dnFrom": 800,
+          "dnTo": 800,
+          "price": 950.0
+        }
       ]
     },
     {
@@ -209,16 +373,41 @@
       "name": "Kurzliner (Pointliner, Partliner)",
       "npkCode": "521.110",
       "chapter": "500",
+      "npkCodeD16": "500.520.103",
       "unit": "Stk",
       "type": "ByDN",
       "active": true,
-      "aliases": ["Kurzliner", "Pointliner", "Partliner"],
+      "aliases": [
+        "Kurzliner",
+        "Pointliner",
+        "Partliner"
+      ],
       "dnPrices": [
-        { "dnFrom": 100, "dnTo": 100, "price": 1000.00 },
-        { "dnFrom": 120, "dnTo": 120, "price": 1000.00 },
-        { "dnFrom": 150, "dnTo": 150, "price": 1200.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 1300.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 1400.00 }
+        {
+          "dnFrom": 100,
+          "dnTo": 100,
+          "price": 1000.0
+        },
+        {
+          "dnFrom": 120,
+          "dnTo": 120,
+          "price": 1000.0
+        },
+        {
+          "dnFrom": 150,
+          "dnTo": 150,
+          "price": 1200.0
+        },
+        {
+          "dnFrom": 200,
+          "dnTo": 200,
+          "price": 1300.0
+        },
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 1400.0
+        }
       ]
     },
     {
@@ -226,20 +415,59 @@
       "name": "Manschette (Edelstahl / Quick-Lock)",
       "npkCode": "522.110",
       "chapter": "500",
+      "npkCodeD16": "500.522.100",
       "unit": "Stk",
       "type": "ByDN",
       "active": true,
-      "aliases": ["Edelstahl-Manschette"],
+      "aliases": [
+        "Edelstahl-Manschette"
+      ],
       "dnPrices": [
-        { "dnFrom": 150, "dnTo": 150, "price": 600.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 640.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 680.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 700.00 },
-        { "dnFrom": 350, "dnTo": 350, "price": 740.00 },
-        { "dnFrom": 400, "dnTo": 400, "price": 780.00 },
-        { "dnFrom": 450, "dnTo": 450, "price": 840.00 },
-        { "dnFrom": 500, "dnTo": 500, "price": 890.00 },
-        { "dnFrom": 600, "dnTo": 600, "price": 920.00 }
+        {
+          "dnFrom": 150,
+          "dnTo": 150,
+          "price": 600.0
+        },
+        {
+          "dnFrom": 200,
+          "dnTo": 200,
+          "price": 640.0
+        },
+        {
+          "dnFrom": 250,
+          "dnTo": 250,
+          "price": 680.0
+        },
+        {
+          "dnFrom": 300,
+          "dnTo": 300,
+          "price": 700.0
+        },
+        {
+          "dnFrom": 350,
+          "dnTo": 350,
+          "price": 740.0
+        },
+        {
+          "dnFrom": 400,
+          "dnTo": 400,
+          "price": 780.0
+        },
+        {
+          "dnFrom": 450,
+          "dnTo": 450,
+          "price": 840.0
+        },
+        {
+          "dnFrom": 500,
+          "dnTo": 500,
+          "price": 890.0
+        },
+        {
+          "dnFrom": 600,
+          "dnTo": 600,
+          "price": 920.0
+        }
       ]
     },
     {
@@ -247,9 +475,10 @@
       "name": "Anschluss auffräsen / im Liner öffnen (nach Liner)",
       "npkCode": "616.110",
       "chapter": "600",
+      "npkCodeD16": "",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 150.00,
+      "price": 150.0,
       "active": true,
       "aliases": []
     },
@@ -258,64 +487,81 @@
       "name": "Anschluss in Liner einbinden / dicht (nach Liner)",
       "npkCode": "617.110",
       "chapter": "600",
+      "npkCodeD16": "",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 800.00,
+      "price": 800.0,
       "active": true,
-      "aliases": ["Anschluss einbinden"]
+      "aliases": [
+        "Anschluss einbinden"
+      ]
     },
     {
       "key": "ANSCHLUSS_DICHTEN",
       "name": "Anschluss dichten / verpressen (Roboter, innen bündig)",
       "npkCode": "515.110",
       "chapter": "500",
+      "npkCodeD16": "",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 750.00,
+      "price": 750.0,
       "active": true,
-      "aliases": ["Anschluss verpressen", "Anschluss dichten"]
+      "aliases": [
+        "Anschluss verpressen",
+        "Anschluss dichten"
+      ]
     },
     {
       "key": "ANSCHLUSS_VERSCHLIESSEN",
       "name": "Anschluss verschliessen / stilllegen (Roboter)",
       "npkCode": "517.110",
       "chapter": "500",
+      "npkCodeD16": "",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 400.00,
+      "price": 400.0,
       "active": true,
-      "aliases": ["Anschluss verschliessen"]
+      "aliases": [
+        "Anschluss verschliessen"
+      ]
     },
     {
       "key": "HAUPTARBEIT_HINDERNISSE_ROBOTER",
       "name": "Ablagerungen / Hindernisse mit Roboter fräsen",
-      "npkCode": "311.100",
+      "npkCode": "311.111",
       "chapter": "300",
+      "npkCodeD16": "300.310.111",
       "unit": "h",
       "type": "Fixed",
-      "price": 290.00,
+      "price": 290.0,
       "active": true,
-      "aliases": ["Kanalroboter Hindernisse entfernen"]
+      "aliases": [
+        "Kanalroboter Hindernisse entfernen"
+      ]
     },
     {
       "key": "QK_DICHTHEITSPRUEFUNG",
       "name": "Dichtheitsprüfung Luft (SIA 190) — NPK 112 Prüfung",
       "npkCode": "",
       "chapter": "112",
+      "npkCodeD16": "800.852.111",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 220.00,
+      "price": 220.0,
       "active": true,
-      "aliases": ["Dichtheitsprüfung"]
+      "aliases": [
+        "Dichtheitsprüfung"
+      ]
     },
     {
       "key": "QK_TV_ABNAHME",
       "name": "TV Abnahme nach Sanierung (VSA-QUICK)",
       "npkCode": "221.102",
       "chapter": "200",
+      "npkCodeD16": "800.821.111",
       "unit": "m",
       "type": "Fixed",
-      "price": 3.00,
+      "price": 3.0,
       "active": true,
       "aliases": []
     },
@@ -324,31 +570,37 @@
       "name": "Dokumentation",
       "npkCode": "234.101",
       "chapter": "200",
+      "npkCodeD16": "800.852.200",
       "unit": "Stk",
       "type": "Fixed",
-      "price": 200.00,
+      "price": 200.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "SCHACHT_SANIERUNG_PAUSCHAL",
       "name": "Schachtsanierung pauschal (KS)",
-      "npkCode": "700.001",
+      "npkCode": "",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
-      "aliases": ["Schachtsanierung", "KS"]
+      "aliases": [
+        "Schachtsanierung",
+        "KS"
+      ]
     },
     {
       "key": "SCHACHT_REINIGUNG",
       "name": "Schachtreinigung",
-      "npkCode": "700.004",
+      "npkCode": "",
       "chapter": "700",
+      "npkCodeD16": "700.711.101",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -357,9 +609,10 @@
       "name": "Schutzfolie für Schachtliner",
       "npkCode": "711.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "m2",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -368,9 +621,10 @@
       "name": "Schachtliner liefern",
       "npkCode": "712.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "m",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -379,9 +633,10 @@
       "name": "Schachtliner einbauen",
       "npkCode": "716.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "m",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -390,9 +645,10 @@
       "name": "Anschlüsse auffräsen (Schacht)",
       "npkCode": "721.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -401,9 +657,10 @@
       "name": "Linerenden abdichten (Schacht)",
       "npkCode": "723.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
@@ -412,53 +669,58 @@
       "name": "Bankett/Durchlaufrinne Handlaminat",
       "npkCode": "725.101",
       "chapter": "700",
+      "npkCodeD16": "",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "SCHACHT_STEIGEISEN_ERSETZEN",
       "name": "Steigeisen ersetzen",
-      "npkCode": "731.101",
-      "chapter": "700",
+      "npkCode": "933.300",
+      "chapter": "900",
+      "npkCodeD16": "700.712.107",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "SCHACHT_RAHMEN_DECKEL",
       "name": "Rahmen/Deckel ersetzen",
-      "npkCode": "733.101",
-      "chapter": "700",
+      "npkCode": "",
+      "chapter": "900",
+      "npkCodeD16": "",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "SCHACHT_FUGEN_INJEKTION",
       "name": "Fugensanierung/Injektion (Schacht)",
-      "npkCode": "700.002",
+      "npkCode": "",
       "chapter": "700",
+      "npkCodeD16": "700.712.112",
       "unit": "St",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     },
     {
       "key": "SCHACHT_REGIE_STD",
       "name": "Schachtsanierung Regie",
-      "npkCode": "700.003",
-      "chapter": "700",
+      "npkCode": "",
+      "chapter": "111",
+      "npkCodeD16": "",
       "unit": "Std",
       "type": "Fixed",
-      "price": 0.00,
+      "price": 0.0,
       "active": true,
       "aliases": []
     }

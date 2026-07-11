@@ -38,16 +38,18 @@ public static class NpkLeistungsverzeichnisExporter
 
         // Kopfblock im Abwasser-Uri-Stil (gleiche Angaben wie das Excel/PDF-LV) —
         // damit auch die CSV beim Oeffnen/Drucken sofort als AWU-Dokument erkennbar ist.
-        sb.AppendLine("NPK-135-Leistungsverzeichnis;;;;;;;");
+        sb.AppendLine("NPK-135-Leistungsverzeichnis;;;;;;;;");
         if (!string.IsNullOrWhiteSpace(projectName))
-            sb.AppendLine($"{Csv("Sanierungsmassnahmen Kanalisation — Projekt: " + projectName.Trim())};;;;;;;");
-        sb.AppendLine($"{Csv("Abwasser Uri — Zentrale Dienste — Giessenstrasse 46 — 6460 Altdorf")};;;;;;;");
-        sb.AppendLine($"Erstellt: {DateTime.Now:dd.MM.yyyy};;;;;;;");
-        sb.AppendLine(";;;;;;;");
+            sb.AppendLine($"{Csv("Sanierungsmassnahmen Kanalisation — Projekt: " + projectName.Trim())};;;;;;;;");
+        sb.AppendLine($"{Csv("Abwasser Uri — Zentrale Dienste — Giessenstrasse 46 — 6460 Altdorf")};;;;;;;;");
+        sb.AppendLine($"Erstellt: {DateTime.Now:dd.MM.yyyy};;;;;;;;");
+        sb.AppendLine(";;;;;;;;");
 
-        sb.AppendLine($"NPK;Position;DN;Menge;Einheit;EP {cur};Total {cur};Haltungen");
+        // "NPK" = Revisions-Nummer (D/V27); "NPK D/16" = Praxisnummer der heute gueltigen
+        // Ausgabe, wie sie in Unternehmer-Offerten erscheint (Offerten-Abgleich 11.07.2026).
+        sb.AppendLine($"NPK;NPK D/16;Position;DN;Menge;Einheit;EP {cur};Total {cur};Haltungen");
         foreach (var warning in BuildDuplicateNpkUnitWarnings(positions))
-            sb.AppendLine($";WARNUNG: {Csv(warning)};;;;;;");
+            sb.AppendLine($";;WARNUNG: {Csv(warning)};;;;;;");
 
         var grandTotal = 0m;
 
@@ -55,7 +57,7 @@ public static class NpkLeistungsverzeichnisExporter
                      .GroupBy(p => p.Chapter ?? "")
                      .OrderBy(g => ProjectPositionAggregator.ChapterOrder(g.Key)))
         {
-            sb.AppendLine($";{Csv(ChapterTitle(chapterGroup.Key))};;;;;;");
+            sb.AppendLine($";;{Csv(ChapterTitle(chapterGroup.Key))};;;;;;");
 
             var chapterTotal = 0m;
             foreach (var p in chapterGroup)
@@ -69,6 +71,7 @@ public static class NpkLeistungsverzeichnisExporter
                 var text = AppendPriceHint(p.Text, p.PriceHint);
 
                 sb.Append(CsvText(p.NpkCode)).Append(';')
+                    .Append(CsvText(p.NpkCodeD16)).Append(';')
                     .Append(Csv(text)).Append(';')
                     .Append(p.Dn?.ToString(CultureInfo.InvariantCulture) ?? "").Append(';')
                     .Append(p.TotalQty.ToString("0.###", Nf)).Append(';')
@@ -80,16 +83,16 @@ public static class NpkLeistungsverzeichnisExporter
             }
 
             grandTotal += chapterTotal;
-            sb.AppendLine($";Zwischentotal {Csv(ChapterTitle(chapterGroup.Key))};;;;;{chapterTotal.ToString("0.00", Nf)};");
+            sb.AppendLine($";;Zwischentotal {Csv(ChapterTitle(chapterGroup.Key))};;;;;{chapterTotal.ToString("0.00", Nf)};");
         }
 
-        sb.AppendLine($";TOTAL (exkl. MwSt.);;;;;{grandTotal.ToString("0.00", Nf)};");
+        sb.AppendLine($";;TOTAL (exkl. MwSt.);;;;;{grandTotal.ToString("0.00", Nf)};");
         if (excludedPauschaleTotal > 0m)
         {
             var countText = excludedPauschaleHoldingCount > 0
                 ? $" ({excludedPauschaleHoldingCount} Haltung(en))"
                 : "";
-            sb.AppendLine($";Nicht enthaltene Pauschalkosten{countText};;;;;{excludedPauschaleTotal.ToString("0.00", Nf)};");
+            sb.AppendLine($";;Nicht enthaltene Pauschalkosten{countText};;;;;{excludedPauschaleTotal.ToString("0.00", Nf)};");
         }
 
         return sb.ToString();
@@ -98,6 +101,7 @@ public static class NpkLeistungsverzeichnisExporter
     public static string ChapterTitle(string? chapter) => (chapter ?? "").Trim() switch
     {
         "100" => "NPK 100 — Einrichtung",
+        "111" => "NPK 111 — Regiearbeiten",
         "112" => "NPK 112 — Prüfungen (Dichtheit)",
         "200" => "NPK 200 — Reinigung / Zustandserfassung",
         "300" => "NPK 300 — Vorarbeiten",
@@ -105,7 +109,7 @@ public static class NpkLeistungsverzeichnisExporter
         "500" => "NPK 500 — Reparatur",
         "600" => "NPK 600 — Renovierung",
         "700" => "NPK 700 — Schächte / Bauwerke",
-        "900" => "NPK 900 — Abschluss",
+        "900" => "NPK 900 — Weitere Arbeiten / Einbauten",
         "" => "Übrige Positionen (ohne NPK-Kapitel)",
         _ => $"NPK {chapter}"
     };

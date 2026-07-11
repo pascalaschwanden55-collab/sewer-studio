@@ -116,6 +116,8 @@ public sealed class CostCatalogStore
                 item.NpkCode = "";
             if (string.Equals((item.Chapter ?? "").Trim(), (def.Chapter ?? "").Trim(), StringComparison.OrdinalIgnoreCase))
                 item.Chapter = "";
+            if (string.Equals((item.NpkCodeD16 ?? "").Trim(), (def.NpkCodeD16 ?? "").Trim(), StringComparison.OrdinalIgnoreCase))
+                item.NpkCodeD16 = "";
         }
 
         return toSave;
@@ -277,6 +279,7 @@ public sealed class CostCatalogStore
             item.Type ??= "Fixed";
             item.NpkCode ??= "";
             item.Chapter ??= "";
+            item.NpkCodeD16 ??= "";
             normalized.Items.Add(item);
         }
 
@@ -332,6 +335,8 @@ public sealed class CostCatalogStore
                 item.NpkCode = fallback.NpkCode;
             if (string.IsNullOrWhiteSpace(item.Chapter))
                 item.Chapter = fallback.Chapter;
+            if (string.IsNullOrWhiteSpace(item.NpkCodeD16))
+                item.NpkCodeD16 = fallback.NpkCodeD16;
         }
         return item;
     }
@@ -371,6 +376,7 @@ public sealed class CostCatalogStore
             Active = item.Active,
             Aliases = (item.Aliases ?? new List<string>()).Select(a => a).ToList(),
             NpkCode = item.NpkCode ?? "",
-            Chapter = item.Chapter ?? ""
+            Chapter = item.Chapter ?? "",
+            NpkCodeD16 = item.NpkCodeD16 ?? ""
         };
 }
