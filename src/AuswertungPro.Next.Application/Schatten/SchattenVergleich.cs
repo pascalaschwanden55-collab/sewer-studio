@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.Application.Schatten;
 /// <summary>Gesamt-Ampel des Vergleichs Mensch vs. Schatten fuer eine Haltung.</summary>
 public enum SchattenAbweichung
 {
-    KeinVergleich,   // Mensch hat (noch) keine Auswertung -> grau
+    KeinVergleich,   // eine Seite hat (noch) keine Auswertung -> grau
     Gleich,          // gruen
     LeichtAbweichend,// gelb: Massnahme anders ODER Kosten > +-25 %
     StarkAbweichend  // rot: Zustandsklasse anders
@@ -37,14 +37,23 @@ public static class SchattenVergleich
         if (!hatMenschWerte)
             return SchattenAbweichung.KeinVergleich;
 
-        // Rot: Zustandsklasse widerspricht (nur wenn beide Seiten eine Klasse haben).
+        // Leere Schatten-Seite (kein Schattenlauf) ist KEINE Uebereinstimmung:
+        // ohne diesen Riegel zaehlte der Feldqualitaetsbericht Haltungen ohne
+        // Schattenergebnis als "Gleich" (Nullbericht 11.07.).
         var klasseSchatten = Normalize(schattenKlasse);
+        var massnahmeSchatten = Normalize(schattenMassnahme);
+        var hatSchattenWerte = klasseSchatten.Length > 0
+            || massnahmeSchatten.Length > 0
+            || schattenKosten is > 0m;
+        if (!hatSchattenWerte)
+            return SchattenAbweichung.KeinVergleich;
+
+        // Rot: Zustandsklasse widerspricht (nur wenn beide Seiten eine Klasse haben).
         if (klasseMensch.Length > 0 && klasseSchatten.Length > 0 &&
             !string.Equals(klasseMensch, klasseSchatten, StringComparison.OrdinalIgnoreCase))
             return SchattenAbweichung.StarkAbweichend;
 
         // Gelb: Massnahme passt nicht zusammen (nur wenn beide vorhanden).
-        var massnahmeSchatten = Normalize(schattenMassnahme);
         if (massnahmeMensch.Length > 0 && massnahmeSchatten.Length > 0 &&
             !MassnahmeStimmtUeberein(massnahmeMensch, massnahmeSchatten))
             return SchattenAbweichung.LeichtAbweichend;

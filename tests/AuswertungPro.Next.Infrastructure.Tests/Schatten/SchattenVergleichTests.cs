@@ -10,6 +10,18 @@ public sealed class SchattenVergleichTests
         => Assert.Equal(SchattenAbweichung.KeinVergleich,
             SchattenVergleich.Bewerte(null, "", null, "3", "Schlauchliner", 12000m));
 
+    // Nullbericht 11.07.: 167 Haltungen ohne Schattenlauf wurden als "Gleich" gezaehlt.
+    // Leere Schatten-Seite darf NIE als Uebereinstimmung gelten -> grau.
+    [Fact]
+    public void OhneSchattenWerte_KeinVergleich()
+        => Assert.Equal(SchattenAbweichung.KeinVergleich,
+            SchattenVergleich.Bewerte("3", "Schlauchliner", "10000", null, null, null));
+
+    [Fact]
+    public void SchattenKostenNull_ZaehltNichtAlsWert()
+        => Assert.Equal(SchattenAbweichung.KeinVergleich,
+            SchattenVergleich.Bewerte("3", "Schlauchliner", "10000", "", "", 0m));
+
     [Fact]
     public void KlasseAbweichend_IstRot()
         => Assert.Equal(SchattenAbweichung.StarkAbweichend,
