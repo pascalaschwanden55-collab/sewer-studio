@@ -190,13 +190,13 @@
                                 Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="MM" FontFamily="Consolas" FontSize="10"
-                                       FontWeight="Bold" Foreground="#16A34A"
+                                       FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock FontFamily="Consolas" FontSize="10"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
-                                     Foreground="#F59E0B"/>
+                                     Foreground="{DynamicResource WarningBrush}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -310,7 +310,7 @@
                                     <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
-                                               Foreground="#16A34A"/>
+                                               Foreground="{DynamicResource SuccessBrush}"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding MappingProgressPct}"
@@ -323,7 +323,7 @@
                             </Border>
                             <!-- Top accent line (green) -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#16A34A" Margin="1,1,1,0"/>
+                                    Background="{DynamicResource SuccessBrush}" Margin="1,1,1,0"/>
                         </Grid>
 
                         <!-- Säule 3: LOKALISIERUNG -->
@@ -345,7 +345,7 @@
                                     <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
-                                               Foreground="#F59E0B"/>
+                                               Foreground="{DynamicResource WarningBrush}"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}">
                                         <ProgressBar.Value>
@@ -364,7 +364,7 @@
                             </Border>
                             <!-- Top accent line (amber) -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#F59E0B" Margin="1,1,1,0"/>
+                                    Background="{DynamicResource WarningBrush}" Margin="1,1,1,0"/>
                         </Grid>
                     </Grid>
 
@@ -430,7 +430,7 @@
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="&#xE73E;"/>
                                                     <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -459,7 +459,7 @@
                                                 <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="&#xE73E;"/>
                                                     <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="●"/>
@@ -488,7 +488,7 @@
                                                 <DataTrigger Binding="{Binding IsDone}" Value="True">
                                                     <Setter Property="Text" Value="&#xE73E;"/>
                                                     <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -519,7 +519,7 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="Text" Value="Fertig"/>
-                                            <Setter Property="Foreground" Value="#16A34A"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding HasError}" Value="True">
                                             <Setter Property="Text" Value="Fehler"/>
@@ -538,7 +538,7 @@
                             <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
                             <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#16A34A"
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
                     </DockPanel>
