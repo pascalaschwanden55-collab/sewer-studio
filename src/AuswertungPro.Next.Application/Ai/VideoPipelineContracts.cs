@@ -157,7 +157,11 @@ public sealed record MappedProtocolEntry(
     AiDecision? Freigabe = null,
     // Stabile Kennung, die der Protokolleintrag uebernimmt — verbindet die
     // Fenster-Auswahl mit dem Dokument (Uebernahme-Filter).
-    Guid EntryId = default);
+    Guid EntryId = default,
+    // Laufzeit-Identitaeten fuer die spaetere Erklaerbarkeit des KI-Urteils.
+    string? VisionModel = null,
+    string? TextModel = null,
+    string? QualityGateVersion = null);
 
 public sealed record CodeMappingProgress(int Done, int Total, string Status)
 {

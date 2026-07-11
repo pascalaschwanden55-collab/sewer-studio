@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -62,4 +63,34 @@ public sealed class AiProtocolAcceptancePolicyTests
         Assert.Empty(doc.Current.Entries);
         Assert.Empty(doc.Original.Entries);
     }
+
+    [Fact]
+    public void CodingEvents_verlangen_Annahme_bei_Ai_und_manuellem_Review()
+    {
+        var imported = Event(ProtocolEntrySource.Imported);
+        var aiAccepted = Event(ProtocolEntrySource.Ai, aiDecision: CodingUserDecision.Accepted);
+        var aiRejected = Event(ProtocolEntrySource.Ai, aiDecision: CodingUserDecision.Rejected);
+        var manualAccepted = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Accepted);
+        var manualOpen = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Ignored);
+
+        var result = AiProtocolAcceptancePolicy.FilterCodingEvents(
+            [imported, aiAccepted, aiRejected, manualAccepted, manualOpen]);
+
+        Assert.Equal([imported, aiAccepted, manualAccepted], result);
+    }
+
+    private static CodingEvent Event(
+        ProtocolEntrySource source,
+        CodingUserDecision? aiDecision = null,
+        CodingUserDecision? reviewDecision = null)
+        => new()
+        {
+            Entry = new ProtocolEntry { Code = "BAB", Source = source },
+            AiContext = aiDecision.HasValue
+                ? new CodingEventAiContext { Decision = aiDecision.Value }
+                : null,
+            ReviewContext = reviewDecision.HasValue
+                ? new CodingEventReviewContext { Decision = reviewDecision.Value }
+                : null
+        };
 }

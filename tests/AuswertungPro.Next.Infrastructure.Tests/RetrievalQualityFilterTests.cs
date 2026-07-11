@@ -17,7 +17,9 @@ public sealed class RetrievalQualityFilterTests
 
     // Cosine zu Query=[1,0,0]: [1,0,0]->1.0  [1,1,0]->0.7071  [1,2,0]->0.4472
     private static (string, float[], SampleRecord?) Cand(string id, float[] vec, string quality)
-        => (id, vec, new SampleRecord(id, "case", "BAB", "Riss", 0, 0, quality));
+        => (id, vec, new SampleRecord(
+            id, "case", "BAB", "Riss", 0, 0, quality,
+            HumanConfirmed: true));
 
     private static IReadOnlyList<RetrievalResult> Rank(
         IReadOnlyList<(string, float[], SampleRecord?)> cands, int topK, RetrievalQualityPolicy policy, out int mismatch)
@@ -186,5 +188,23 @@ public sealed class RetrievalQualityFilterTests
 
         Assert.Single(res);
         Assert.Equal("g", res[0].Sample.SampleId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    public void UnconfirmedOrRejectedSample_IsNeverReturned(bool? humanConfirmed)
+    {
+        var sample = new SampleRecord(
+            "not-gold", "case", "BAB", "Riss", 0, 0, "Green",
+            HumanConfirmed: humanConfirmed);
+
+        var result = Rank(
+            [("not-gold", new[] { 1f, 0f, 0f }, sample)],
+            topK: 5,
+            RetrievalQualityPolicy.Default,
+            out _);
+
+        Assert.Empty(result);
     }
 }

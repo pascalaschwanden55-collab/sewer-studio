@@ -16,32 +16,39 @@ public sealed class CodingStatisticsControlsTests
         {
             var total = new Run();
             var open = new Run();
-            var autoAccepted = new TextBlock();
-            var pending = new TextBlock();
-            var reviewRequired = new TextBlock();
-            var averageConfidence = new TextBlock();
+            var aiCriteriaMet = new TextBlock();
+            var humanAccepted = new TextBlock();
+            var humanCorrected = new TextBlock();
+            var rejected = new TextBlock();
+            var openTile = new TextBlock();
+            var averageAiConfidence = new TextBlock();
             var controls = new CodingStatisticsControls(
                 total,
                 open,
-                autoAccepted,
-                pending,
-                reviewRequired,
-                averageConfidence);
+                aiCriteriaMet,
+                humanAccepted,
+                humanCorrected,
+                rejected,
+                openTile,
+                averageAiConfidence);
 
             controls.Apply(new CodingStatisticsSummary(
                 Total: 12,
                 Open: 3,
-                AutoAccepted: 7,
-                Pending: 2,
-                ReviewRequired: 1,
-                AverageConfidenceText: "82%"));
+                AiCriteriaMet: 4,
+                HumanAccepted: 3,
+                HumanCorrected: 2,
+                Rejected: 1,
+                AverageAiConfidenceText: "82%"));
 
             Assert.Equal("12", total.Text);
             Assert.Equal("3", open.Text);
-            Assert.Equal("7", autoAccepted.Text);
-            Assert.Equal("2", pending.Text);
-            Assert.Equal("1", reviewRequired.Text);
-            Assert.Equal("82%", averageConfidence.Text);
+            Assert.Equal("4", aiCriteriaMet.Text);
+            Assert.Equal("3", humanAccepted.Text);
+            Assert.Equal("2", humanCorrected.Text);
+            Assert.Equal("1", rejected.Text);
+            Assert.Equal("3", openTile.Text);
+            Assert.Equal("82%", averageAiConfidence.Text);
         });
     }
 

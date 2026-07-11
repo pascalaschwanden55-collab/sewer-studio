@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
 /// Fehlerpruefung 11.07., Kritisch 2: Das zentrale Urteil ist an der Zeile sichtbar,
-/// und nur 'verlaesslich' ist fuer die Uebernahme vorausgewaehlt.
+/// und nur erfuellte KI-Kriterien sind fuer die Uebernahme vorausgewaehlt.
 /// </summary>
 public sealed class DetectionItemFreigabeTests
 {
@@ -28,7 +28,7 @@ public sealed class DetectionItemFreigabeTests
     {
         var item = DetectionItem.FromMapped(Entry(AiDecisionOutcome.AutoAccept));
         Assert.True(item.IsSelected);
-        Assert.Equal("verlässlich", item.OutcomeLabel);
+        Assert.Equal("KI-Kriterien erfüllt", item.OutcomeLabel);
         Assert.NotEqual(Guid.Empty, item.EntryId);
     }
 

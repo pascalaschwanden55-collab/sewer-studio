@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 /// </summary>
 public sealed class QualityGateService
 {
+    public const string PolicyVersion = "quality-gate-v1";
     public const double GreenThreshold = 0.75;
     public const double YellowThreshold = 0.45;
 

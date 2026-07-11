@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -73,7 +74,8 @@ public static class ProtocolRevisionCloner
                 FinalCode = source.FinalCode,
                 SuggestedAt = source.SuggestedAt,
                 MeterSource = source.MeterSource,
-                IsMeterEstimated = source.IsMeterEstimated
+                IsMeterEstimated = source.IsMeterEstimated,
+                CentralDecision = AiDecisionAuditCloner.Clone(source.CentralDecision)
             };
 
     private static ProtocolChange CloneChange(ProtocolChange source)

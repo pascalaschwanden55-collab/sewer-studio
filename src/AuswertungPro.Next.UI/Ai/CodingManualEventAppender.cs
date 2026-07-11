@@ -15,7 +15,7 @@ public static class CodingManualEventAppender
         ArgumentNullException.ThrowIfNull(codingSessionService);
 
         var ev = codingSessionService.AddEvent(draft.Entry, overlay);
-        ev.AiContext = draft.AiContext;
+        ev.ReviewContext = draft.ReviewContext;
         return ev;
     }
 
@@ -28,7 +28,7 @@ public static class CodingManualEventAppender
         ArgumentNullException.ThrowIfNull(codingSessionService);
 
         var ev = codingSessionService.AddEvent(entry, overlay);
-        ev.AiContext = CodingManualEventFactory.CreateUnconfirmedContext(entry.Code ?? "");
+        ev.ReviewContext = CodingManualEventFactory.CreateUnconfirmedContext();
         return ev;
     }
 }

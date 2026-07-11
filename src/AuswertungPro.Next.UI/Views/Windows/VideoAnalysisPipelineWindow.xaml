@@ -735,7 +735,7 @@
 
                                         <!-- Titel-Zeile -->
                                         <DockPanel Grid.Row="0">
-                                            <!-- Uebernahme-Auswahl: nur 'verlaesslich' ist vorausgewaehlt -->
+                                            <!-- Uebernahme-Auswahl: nur erfuellte KI-Kriterien sind vorausgewaehlt -->
                                             <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,6,0"

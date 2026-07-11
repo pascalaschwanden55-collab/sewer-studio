@@ -47,6 +47,7 @@ public static class CodingEventColumnTransfer
             Entry = CloneEntry(ev.Entry),
             Overlay = CloneOverlay(ev.Overlay),
             AiContext = CloneAiContext(ev.AiContext),
+            ReviewContext = CloneReviewContext(ev.ReviewContext),
         };
     }
 
@@ -118,9 +119,21 @@ public static class CodingEventColumnTransfer
             Reason = a.Reason,
             Decision = a.Decision,
             QualityGateLevel = a.QualityGateLevel,
+            QualityGateWeights = new System.Collections.Generic.Dictionary<string, double>(
+                a.QualityGateWeights,
+                StringComparer.Ordinal),
+            QualityGateExplanation = a.QualityGateExplanation,
+            CentralDecision = AiDecisionAuditCloner.Clone(a.CentralDecision),
             Evidence = CodingEventEvidenceMapper.Clone(a.Evidence),
             SamMaskRle = a.SamMaskRle,
             SamMaskImageWidth = a.SamMaskImageWidth,
             SamMaskImageHeight = a.SamMaskImageHeight,
+        };
+
+    private static CodingEventReviewContext? CloneReviewContext(CodingEventReviewContext? context)
+        => context is null ? null : new CodingEventReviewContext
+        {
+            Decision = context.Decision,
+            Reason = context.Reason
         };
 }

@@ -63,7 +63,11 @@ public sealed class FeedbackIngestionService
                 Code = finalCode,
                 Beschreibung = det.FindingLabel ?? "",
                 MeterStart = det.MeterStart,
-                MeterEnd = det.MeterEnd
+                MeterEnd = det.MeterEnd,
+                Status = TrainingSampleStatus.Approved,
+                HumanConfirmed = true,
+                Corrected = !string.Equals(suggestedCode, finalCode, StringComparison.OrdinalIgnoreCase),
+                ConfirmedAtUtc = DateTime.UtcNow
             };
 
             // Audit Fix #6b: Ein Feedback-Sample aus RawVideoDetection traegt KEINEN FramePath

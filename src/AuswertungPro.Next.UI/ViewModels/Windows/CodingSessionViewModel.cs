@@ -482,7 +482,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public string SelectedDefectStatusText => SelectedDefectStatus switch
     {
-        DefectStatus.AutoAccepted     => "Auto-Akzeptiert",
+        DefectStatus.AutoAccepted     => "KI-Kriterien erfüllt",
         DefectStatus.Pending          => "Review empfohlen",
         DefectStatus.ReviewRequired   => "Manuell erforderlich",
         DefectStatus.Accepted         => "Akzeptiert",
@@ -567,24 +567,22 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     // --- Session-Statistiken ---
 
-    [ObservableProperty] private int _statAutoAccepted;
-    [ObservableProperty] private int _statPending;
-    [ObservableProperty] private int _statReviewRequired;
-    [ObservableProperty] private double _statAverageConfidence;
-
-    public string StatAverageConfidenceText => $"{StatAverageConfidence * 100:F0}%";
+    [ObservableProperty] private int _statAiCriteriaMet;
+    [ObservableProperty] private int _statHumanAccepted;
+    [ObservableProperty] private int _statHumanCorrected;
+    [ObservableProperty] private int _statRejected;
+    [ObservableProperty] private int _statOpen;
+    [ObservableProperty] private string _statAverageAiConfidenceText = "\u2013";
 
     private void RefreshStatistics()
     {
-        var eventsWithAi = Events.Where(e => e.AiContext != null).ToList();
-        StatAutoAccepted = eventsWithAi.Count(e => GetDefectStatus(e) == DefectStatus.AutoAccepted
-                                                    || GetDefectStatus(e) == DefectStatus.Accepted);
-        StatPending = eventsWithAi.Count(e => GetDefectStatus(e) == DefectStatus.Pending);
-        StatReviewRequired = eventsWithAi.Count(e => GetDefectStatus(e) == DefectStatus.ReviewRequired);
-        StatAverageConfidence = eventsWithAi.Count > 0
-            ? eventsWithAi.Average(e => e.AiContext!.Confidence)
-            : 0;
-        OnPropertyChanged(nameof(StatAverageConfidenceText));
+        var summary = CodingStatisticsPolicy.Build(Events, GetDefectStatus);
+        StatAiCriteriaMet = summary.AiCriteriaMet;
+        StatHumanAccepted = summary.HumanAccepted;
+        StatHumanCorrected = summary.HumanCorrected;
+        StatRejected = summary.Rejected;
+        StatOpen = summary.Open;
+        StatAverageAiConfidenceText = summary.AverageAiConfidenceText;
     }
 
     // --- Hilfsmethoden fuer Zone/Status/Farbe ---

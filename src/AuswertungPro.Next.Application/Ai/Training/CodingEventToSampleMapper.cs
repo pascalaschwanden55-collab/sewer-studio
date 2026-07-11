@@ -1,5 +1,6 @@
 using System;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
@@ -32,15 +33,20 @@ public static class CodingEventToSampleMapper
         DateTime? confirmedAtUtc = null,
         string? evidenceFramePath = null)
     {
-        // Ohne KI-Kontext landet das Sample in der Review-Queue (New), nicht direkt im Training.
-        // Verhindert dass rein manuelle Codiereintraege ungesehen die Trainingsdaten erweitern.
-        var status = ev.AiContext != null
-            ? MapDecision(ev.AiContext.Decision)
+        var decision = ev.AiContext?.Decision ?? ev.ReviewContext?.Decision;
+        var status = decision.HasValue
+            ? MapDecision(decision.Value)
             : TrainingSampleStatus.New;
+        var isAiSuggestion = ev.AiContext is not null;
 
-        var sourceType = ev.Overlay != null
-            ? SourceTypeNames.TeacherAnnotation
-            : SourceTypeNames.VideoTimestamp;
+        var sourceType = ev.Entry.Source switch
+        {
+            ProtocolEntrySource.Manual => SourceTypeNames.ManualCoding,
+            ProtocolEntrySource.Imported => SourceTypeNames.ImportedProtocol,
+            _ => ev.Overlay is not null
+                ? SourceTypeNames.TeacherAnnotation
+                : SourceTypeNames.VideoTimestamp
+        };
 
         var meterStart = Math.Round(ev.Entry.MeterStart ?? ev.MeterAtCapture, 1);
         var meterEnd = Math.Round(ev.Entry.MeterEnd ?? ev.MeterAtCapture, 1);
@@ -60,11 +66,11 @@ public static class CodingEventToSampleMapper
             EvidenceFramePath = evidenceFramePath,
             Status = status,
             SourceType = sourceType,
-            KiCode = ev.AiContext?.SuggestedCode,
-            MatchLevel = ev.AiContext != null
-                ? DetermineMatchLevel(ev.AiContext)
+            KiCode = isAiSuggestion ? ev.AiContext!.SuggestedCode : null,
+            MatchLevel = isAiSuggestion
+                ? DetermineMatchLevel(ev.AiContext!)
                 : null,
-            Notes = ev.AiContext?.Reason ?? string.Empty,
+            Notes = ev.AiContext?.Reason ?? ev.ReviewContext?.Reason ?? string.Empty,
             InspectionDate = inspectionDate,
             TrainingEligible = eligibility.IsEligible,
             TrainingEligibilityReason = eligibility.Reason,
@@ -74,18 +80,18 @@ public static class CodingEventToSampleMapper
             BboxYCenter = ExtractBboxField(ev.Overlay, bboxCenter: true, isX: false),
             BboxWidth = ExtractBboxField(ev.Overlay, bboxCenter: false, isX: true),
             BboxHeight = ExtractBboxField(ev.Overlay, bboxCenter: false, isX: false),
-            HumanConfirmed = ev.AiContext?.Decision switch
+            HumanConfirmed = decision switch
             {
                 CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit => true,
                 CodingUserDecision.Rejected => false,
                 _ => (bool?)null
             },
-            Corrected = ev.AiContext?.Decision switch
+            Corrected = isAiSuggestion ? ev.AiContext!.Decision switch
             {
                 CodingUserDecision.AcceptedWithEdit => true,
                 CodingUserDecision.Accepted or CodingUserDecision.Rejected => false,
                 _ => (bool?)null
-            },
+            } : null,
             ConfirmedByUser = confirmedByUser,
             ConfirmedAtUtc = confirmedAtUtc,
             QualityGateLevel = ev.AiContext?.QualityGateLevel

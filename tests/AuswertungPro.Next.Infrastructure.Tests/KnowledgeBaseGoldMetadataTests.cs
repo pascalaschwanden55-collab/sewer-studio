@@ -54,6 +54,7 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
                 MeterStart     = 10.0,
                 MeterEnd       = 10.0,
                 QualityGateLevel = "Green",
+                Status         = TrainingSampleStatus.Approved,
                 HumanConfirmed = true,
                 Corrected      = true,
                 ConfirmedByUser = "pascal",
@@ -95,7 +96,7 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task GoldMetadata_Null_WirdAlsNullPersistiert()
+    public async Task UnbestaetigtesSample_WirdNichtIndexiert()
     {
         var root = Path.Combine(Path.GetTempPath(), "kb-gold-meta", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -120,17 +121,54 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
                 ConfirmedAtUtc  = null
             };
 
-            Assert.True(await mgr.IndexSampleAsync(sample, CancellationToken.None));
+            Assert.False(KnowledgeBaseManager.IsIndexWorthy(sample));
+            Assert.False(await mgr.IndexSampleAsync(sample, CancellationToken.None));
 
             using var cmd = db.Connection.CreateCommand();
-            cmd.CommandText = "SELECT HumanConfirmed, Corrected, ConfirmedByUser, ConfirmedAtUtc FROM Samples WHERE SampleId = 'gold2'";
-            using var reader = cmd.ExecuteReader();
-            Assert.True(reader.Read(), "Sample nicht in DB gefunden");
+            cmd.CommandText = "SELECT COUNT(*) FROM Samples WHERE SampleId = 'gold2'";
+            Assert.Equal(0L, (long)cmd.ExecuteScalar()!);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
 
-            Assert.True(reader.IsDBNull(0), "HumanConfirmed sollte NULL sein");
-            Assert.True(reader.IsDBNull(1), "Corrected sollte NULL sein");
-            Assert.True(reader.IsDBNull(2), "ConfirmedByUser sollte NULL sein");
-            Assert.True(reader.IsDBNull(3), "ConfirmedAtUtc sollte NULL sein");
+    [Fact]
+    public async Task Rebuild_IndexiertNurMenschlichBestaetigtesGold()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kb-gold-rebuild", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
+            var mgr = new KnowledgeBaseManager(db, FakeEmbedder());
+            var gold = new TrainingSample
+            {
+                SampleId = "gold",
+                CaseId = "H-01",
+                Code = "BAB",
+                Beschreibung = "Bestaetigter Laengsriss im Scheitel sichtbar",
+                Status = TrainingSampleStatus.Approved,
+                HumanConfirmed = true
+            };
+            var unconfirmed = new TrainingSample
+            {
+                SampleId = "new",
+                CaseId = "H-02",
+                Code = "BAB",
+                Beschreibung = "Unbestaetigter Laengsriss im Scheitel sichtbar",
+                Status = TrainingSampleStatus.New,
+                HumanConfirmed = null
+            };
+
+            var indexed = await mgr.RebuildAsync([gold, unconfirmed]);
+
+            Assert.Equal(1, indexed);
+            Assert.True(mgr.IsIndexed("gold"));
+            Assert.False(mgr.IsIndexed("new"));
         }
         finally
         {

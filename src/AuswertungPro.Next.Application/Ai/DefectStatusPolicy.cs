@@ -31,31 +31,50 @@ public static class DefectStatusPolicy
     /// </summary>
     public static DefectStatus GetStatus(CodingEvent ev)
     {
-        if (ev.AiContext == null) return DefectStatus.Pending;
+        if (ev.AiContext is null)
+            return ev.ReviewContext is null
+                ? DefectStatus.Pending
+                : MapUserDecision(ev.ReviewContext.Decision, DefectStatus.Pending);
 
-        return ev.AiContext.Decision switch
-        {
-            CodingUserDecision.Accepted        => DefectStatus.Accepted,
-            CodingUserDecision.AcceptedWithEdit => DefectStatus.AcceptedWithEdit,
-            CodingUserDecision.Rejected        => DefectStatus.Rejected,
-            _ => MapCentralDecision(ev.AiContext)
-        };
+        return MapUserDecision(
+            ev.AiContext.Decision,
+            MapCentralDecision(ev.AiContext));
     }
+
+    private static DefectStatus MapUserDecision(
+        CodingUserDecision decision,
+        DefectStatus ignoredStatus)
+        => decision switch
+        {
+            CodingUserDecision.Accepted => DefectStatus.Accepted,
+            CodingUserDecision.AcceptedWithEdit => DefectStatus.AcceptedWithEdit,
+            CodingUserDecision.Rejected => DefectStatus.Rejected,
+            _ => ignoredStatus
+        };
 
     // Noch nicht vom Nutzer entschieden: zentrale Freigabe-Regel anwenden.
     private static DefectStatus MapCentralDecision(CodingEventAiContext ctx)
-    {
-        var signals = new AiDecisionSignals(
-            Confidence: ctx.Confidence,
-            QualityGate: ParseLight(ctx.QualityGateLevel),
-            KbAgreement: ctx.Evidence?.KbCodeAgreement);
-
-        return StandardAiDecisionPolicy.Default.Decide(signals).Outcome switch
+        => GetCentralDecision(ctx).Outcome switch
         {
             AiDecisionOutcome.AutoAccept => DefectStatus.AutoAccepted,
             AiDecisionOutcome.Review     => DefectStatus.Pending,
             _                            => DefectStatus.ReviewRequired
         };
+
+    /// <summary>
+    /// Bewertet den gespeicherten KI-Kontext mit der aktuellen zentralen Regel.
+    /// Der Aufrufer kann das Ergebnis anschliessend versioniert persistieren.
+    /// </summary>
+    public static AiDecision GetCentralDecision(CodingEventAiContext ctx)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+
+        var signals = new AiDecisionSignals(
+            Confidence: ctx.Confidence,
+            QualityGate: ParseLight(ctx.QualityGateLevel),
+            KbAgreement: ctx.Evidence?.KbCodeAgreement);
+
+        return StandardAiDecisionPolicy.Default.Decide(signals);
     }
 
     private static TrafficLight? ParseLight(string? level)

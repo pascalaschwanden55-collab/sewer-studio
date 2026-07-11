@@ -37,10 +37,12 @@ public partial class PlayerWindow
     private Button BtnCodingSelectCode => CodingSidePanelControl.BtnCodingSelectCode;
     private TextBlock TxtCodingSelectedCode => CodingSidePanelControl.TxtCodingSelectedCode;
     private Button BtnCodingCreateEvent => CodingSidePanelControl.BtnCodingCreateEvent;
-    private TextBlock TxtCodingStatAutoAccepted => CodingSidePanelControl.TxtCodingStatAutoAccepted;
-    private TextBlock TxtCodingStatPending => CodingSidePanelControl.TxtCodingStatPending;
-    private TextBlock TxtCodingStatReviewRequired => CodingSidePanelControl.TxtCodingStatReviewRequired;
-    private TextBlock TxtCodingStatAvgConfidence => CodingSidePanelControl.TxtCodingStatAvgConfidence;
+    private TextBlock TxtCodingStatAiCriteriaMet => CodingSidePanelControl.TxtCodingStatAiCriteriaMet;
+    private TextBlock TxtCodingStatHumanAccepted => CodingSidePanelControl.TxtCodingStatHumanAccepted;
+    private TextBlock TxtCodingStatHumanCorrected => CodingSidePanelControl.TxtCodingStatHumanCorrected;
+    private TextBlock TxtCodingStatRejected => CodingSidePanelControl.TxtCodingStatRejected;
+    private TextBlock TxtCodingStatOpen => CodingSidePanelControl.TxtCodingStatOpen;
+    private TextBlock TxtCodingStatAvgAiConfidence => CodingSidePanelControl.TxtCodingStatAvgAiConfidence;
 
     private void WireCodingSidePanelEvents()
         => PlayerCodingSidePanelEventBinder.Bind(

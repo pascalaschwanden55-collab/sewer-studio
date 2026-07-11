@@ -9,6 +9,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -127,6 +128,7 @@ public sealed class CodingSessionService : ICodingSessionService
         EnsureSession();
         _session!.State = CodingSessionState.Completed;
         _session.CompletedAt = DateTimeOffset.UtcNow;
+        CaptureAiDecisionAudits(_session);
 
         // Protokoll aus gesammelten Events generieren
         var doc = new ProtocolDocument
@@ -140,7 +142,13 @@ public sealed class CodingSessionService : ICodingSessionService
             Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} – {_session.Events.Count} Ereignisse"
         };
 
-        foreach (var ev in _session.Events.OrderBy(e => e.MeterAtCapture))
+        var acceptedEvents = AiProtocolAcceptancePolicy
+            .FilterCodingEvents(_session.Events)
+            .OrderBy(e => e.MeterAtCapture)
+            .ToList();
+        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} uebernommene Ereignisse";
+
+        foreach (var ev in acceptedEvents)
         {
             revision.Entries.Add(ev.Entry);
             revision.Changes.Add(new ProtocolChange
@@ -171,6 +179,7 @@ public sealed class CodingSessionService : ICodingSessionService
         EnsureSession();
         _session!.State = CodingSessionState.Completed;
         _session.CompletedAt = DateTimeOffset.UtcNow;
+        CaptureAiDecisionAudits(_session);
 
         // Protokoll aus gesammelten Events generieren
         var doc = new ProtocolDocument
@@ -184,7 +193,13 @@ public sealed class CodingSessionService : ICodingSessionService
             Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} â€“ {_session.Events.Count} Ereignisse"
         };
 
-        foreach (var ev in _session.Events.OrderBy(e => e.MeterAtCapture))
+        var acceptedEvents = AiProtocolAcceptancePolicy
+            .FilterCodingEvents(_session.Events)
+            .OrderBy(e => e.MeterAtCapture)
+            .ToList();
+        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} uebernommene Ereignisse";
+
+        foreach (var ev in acceptedEvents)
         {
             revision.Entries.Add(ev.Entry);
             revision.Changes.Add(new ProtocolChange
@@ -206,6 +221,32 @@ public sealed class CodingSessionService : ICodingSessionService
 
         StateChanged?.Invoke(this, _session.State);
         return doc;
+    }
+
+    private void CaptureAiDecisionAudits(CodingSession session)
+    {
+        OllamaConfig? config = null;
+        try
+        {
+            config = _ollamaConfigProvider();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingSession] Modellkonfiguration fuer Entscheidungsbeleg nicht lesbar: {ex.Message}");
+        }
+
+        foreach (var codingEvent in session.Events)
+        {
+            if (codingEvent.AiContext is null)
+                continue;
+
+            AiDecisionAuditMapper.CaptureCodingEvent(
+                codingEvent,
+                config?.VisionModel,
+                config?.TextModel,
+                QualityGateService.PolicyVersion);
+        }
     }
 
     /// <summary>

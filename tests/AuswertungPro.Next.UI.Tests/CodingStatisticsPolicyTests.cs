@@ -15,14 +15,15 @@ public sealed class CodingStatisticsPolicyTests
 
         Assert.Equal(0, summary.Total);
         Assert.Equal(0, summary.Open);
-        Assert.Equal(0, summary.AutoAccepted);
-        Assert.Equal(0, summary.Pending);
-        Assert.Equal(0, summary.ReviewRequired);
-        Assert.Equal("\u2013", summary.AverageConfidenceText);
+        Assert.Equal(0, summary.AiCriteriaMet);
+        Assert.Equal(0, summary.HumanAccepted);
+        Assert.Equal(0, summary.HumanCorrected);
+        Assert.Equal(0, summary.Rejected);
+        Assert.Equal("\u2013", summary.AverageAiConfidenceText);
     }
 
     [Fact]
-    public void Build_counts_only_ai_statuses_and_averages_ai_confidence()
+    public void Build_separates_ai_human_and_manual_statuses()
     {
         var events = new[]
         {
@@ -30,23 +31,34 @@ public sealed class CodingStatisticsPolicyTests
             AiEvent(0.95, CodingUserDecision.Ignored, gate: "Green", kbAgreement: true),
             AiEvent(0.70, CodingUserDecision.Ignored),
             AiEvent(0.30, CodingUserDecision.Ignored),
+            AiEvent(0.80, CodingUserDecision.Accepted),
             AiEvent(0.80, CodingUserDecision.AcceptedWithEdit),
-            AiEvent(0.80, CodingUserDecision.Rejected)
+            AiEvent(0.80, CodingUserDecision.Rejected),
+            ManualEvent(CodingUserDecision.Accepted),
+            ManualEvent(CodingUserDecision.AcceptedWithEdit),
+            ManualEvent(CodingUserDecision.Rejected)
         };
 
         var summary = CodingStatisticsPolicy.Build(
             events,
             CodingSessionViewModel.GetDefectStatus);
 
-        Assert.Equal(6, summary.Total);
+        Assert.Equal(10, summary.Total);
         Assert.Equal(2, summary.Open);
-        Assert.Equal(2, summary.AutoAccepted);
-        Assert.Equal(1, summary.Pending);
-        Assert.Equal(1, summary.ReviewRequired);
-        Assert.Equal("71%", summary.AverageConfidenceText);
+        Assert.Equal(1, summary.AiCriteriaMet);
+        Assert.Equal(2, summary.HumanAccepted);
+        Assert.Equal(2, summary.HumanCorrected);
+        Assert.Equal(2, summary.Rejected);
+        Assert.Equal("72%", summary.AverageAiConfidenceText);
     }
 
     private static CodingEvent EventWithoutAi() => new();
+
+    private static CodingEvent ManualEvent(CodingUserDecision decision)
+        => new()
+        {
+            ReviewContext = new CodingEventReviewContext { Decision = decision }
+        };
 
     private static CodingEvent AiEvent(
         double confidence,
@@ -65,4 +77,14 @@ public sealed class CodingStatisticsPolicyTests
                 Decision = decision
             }
         };
+
+    [Fact]
+    public void Build_ignores_invalid_ai_confidence_in_average()
+    {
+        var summary = CodingStatisticsPolicy.Build(
+            [AiEvent(double.NaN, CodingUserDecision.Rejected), AiEvent(0.8, CodingUserDecision.Accepted)],
+            CodingSessionViewModel.GetDefectStatus);
+
+        Assert.Equal("80%", summary.AverageAiConfidenceText);
+    }
 }

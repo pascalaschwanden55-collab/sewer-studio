@@ -34,18 +34,21 @@ public sealed class PlayerCodingSidePanelControllerInitializerTests
             controllers.Statistics.Apply(new CodingStatisticsSummary(
                 Total: 7,
                 Open: 2,
-                AutoAccepted: 3,
-                Pending: 1,
-                ReviewRequired: 1,
-                AverageConfidenceText: "82%"));
+                AiCriteriaMet: 3,
+                HumanAccepted: 2,
+                HumanCorrected: 1,
+                Rejected: 1,
+                AverageAiConfidenceText: "82%"));
 
             Assert.Same(items, sidePanel.LstCodingEvents.ItemsSource);
             Assert.Equal("7", sidePanel.RunCodingDefectCount.Text);
             Assert.Equal("2", sidePanel.RunCodingOpenCount.Text);
-            Assert.Equal("3", sidePanel.TxtCodingStatAutoAccepted.Text);
-            Assert.Equal("1", sidePanel.TxtCodingStatPending.Text);
-            Assert.Equal("1", sidePanel.TxtCodingStatReviewRequired.Text);
-            Assert.Equal("82%", sidePanel.TxtCodingStatAvgConfidence.Text);
+            Assert.Equal("3", sidePanel.TxtCodingStatAiCriteriaMet.Text);
+            Assert.Equal("2", sidePanel.TxtCodingStatHumanAccepted.Text);
+            Assert.Equal("1", sidePanel.TxtCodingStatHumanCorrected.Text);
+            Assert.Equal("1", sidePanel.TxtCodingStatRejected.Text);
+            Assert.Equal("2", sidePanel.TxtCodingStatOpen.Text);
+            Assert.Equal("82%", sidePanel.TxtCodingStatAvgAiConfidence.Text);
         });
     }
 

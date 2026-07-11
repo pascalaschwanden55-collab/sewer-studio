@@ -52,6 +52,8 @@ public static class SourceTypeNames
     public const string VideoLinear = "VideoLinear";
     public const string BatchImport = "BatchImport";
     public const string TeacherAnnotation = "TeacherAnnotation";
+    public const string ManualCoding = "ManualCoding";
+    public const string ImportedProtocol = "ImportedProtocol";
 }
 
 public sealed class TrainingSample

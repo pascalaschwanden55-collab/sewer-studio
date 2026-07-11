@@ -29,7 +29,9 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
         Beschreibung = "Riss laengs, 12 Uhr, Scheitel",
         MeterStart = 3.0, MeterEnd = 3.0,
         InspectionDate = new DateTime(2024, 5, 1),
-        TrainingEligible = true
+        TrainingEligible = true,
+        Status = TrainingSampleStatus.Approved,
+        HumanConfirmed = true
     };
 
     [Fact]
@@ -54,6 +56,22 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
         var s = BaseSample();
         s.TrainingEligible = false;
         Assert.True(KnowledgeBaseManager.IsIndexWorthy(s));
+    }
+
+    [Theory]
+    [InlineData(TrainingSampleStatus.New, null)]
+    [InlineData(TrainingSampleStatus.Approved, null)]
+    [InlineData(TrainingSampleStatus.Approved, false)]
+    [InlineData(TrainingSampleStatus.Rejected, true)]
+    public void IndexWorthy_False_WithoutConfirmedGold(
+        TrainingSampleStatus status,
+        bool? humanConfirmed)
+    {
+        var sample = BaseSample();
+        sample.Status = status;
+        sample.HumanConfirmed = humanConfirmed;
+
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(sample));
     }
 
     // Minimaler Inline-Katalog fuer diesen Test — nur "BAB" benoetigt.

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -108,6 +109,14 @@ public sealed class ProtocolEntryClonerTests
                 FinalCode = "BBA",
                 MeterSource = "LinearEstimate",
                 IsMeterEstimated = true,
+                CentralDecision = new AiDecisionAudit
+                {
+                    Outcome = "Review",
+                    ReasonCode = "KbMissing",
+                    PolicyVersion = "central-ai-release-v2",
+                    Signals = new AiDecisionSignalAudit { Confidence = 0.87 },
+                    QualityGateWeights = new Dictionary<string, double> { ["LlmCodeConf"] = 1.0 }
+                },
                 SuggestedAt = DateTimeOffset.UnixEpoch
             }
         };
@@ -124,6 +133,11 @@ public sealed class ProtocolEntryClonerTests
         Assert.Equal("LinearEstimate", clone.Ai.MeterSource);
         Assert.True(clone.Ai.IsMeterEstimated);
         Assert.Equal(DateTimeOffset.UnixEpoch, clone.Ai.SuggestedAt);
+        Assert.NotSame(source.Ai.CentralDecision, clone.Ai.CentralDecision);
+        Assert.Equal("KbMissing", clone.Ai.CentralDecision!.ReasonCode);
+        Assert.NotSame(
+            source.Ai.CentralDecision!.QualityGateWeights,
+            clone.Ai.CentralDecision.QualityGateWeights);
 
         // Tiefkopie der Flags-Liste
         Assert.NotSame(source.Ai.Flags, clone.Ai.Flags);

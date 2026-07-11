@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai;
@@ -12,6 +13,31 @@ namespace AuswertungPro.Next.Application.Ai;
 /// </summary>
 public static class AiProtocolAcceptancePolicy
 {
+    /// <summary>
+    /// Gemeinsame Uebernahme-Regel fuer den Codiermodus. Neue KI- sowie manuell
+    /// gepruefte Events brauchen eine ausdrueckliche Annahme. Bereits vorhandene
+    /// Import-/Protokolleintraege ohne Pruefkontext bleiben erhalten.
+    /// </summary>
+    public static bool CanApply(CodingEvent? codingEvent)
+    {
+        if (codingEvent is null || string.IsNullOrWhiteSpace(codingEvent.Entry.Code))
+            return false;
+
+        if (codingEvent.AiContext is not null)
+            return IsAccepted(codingEvent.AiContext.Decision);
+
+        if (codingEvent.ReviewContext is not null)
+            return IsAccepted(codingEvent.ReviewContext.Decision);
+
+        return true;
+    }
+
+    public static IReadOnlyList<CodingEvent> FilterCodingEvents(IEnumerable<CodingEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        return events.Where(CanApply).ToList();
+    }
+
     /// <summary>
     /// Filtert beide Revisionen (Original + Current) auf die ausgewaehlten EntryIds.
     /// Nicht ausgewaehlte KI-Eintraege werden verworfen (nicht als geloescht markiert —
@@ -47,4 +73,7 @@ public static class AiProtocolAcceptancePolicy
         revision.Changes.Clear();
         revision.Changes.AddRange(changes);
     }
+
+    private static bool IsAccepted(CodingUserDecision decision)
+        => decision is CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit;
 }

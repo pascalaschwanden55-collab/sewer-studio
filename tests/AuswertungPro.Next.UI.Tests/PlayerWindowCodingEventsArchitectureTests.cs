@@ -155,6 +155,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         Assert.Contains("new CodingEventCreationPostActions", sidePanelControllerSet);
         Assert.Contains("_codingSessionHost", accessors);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
-        Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
+        Assert.Contains("public static CodingEventReviewContext CreateUnconfirmedContext", factory);
     }
 }

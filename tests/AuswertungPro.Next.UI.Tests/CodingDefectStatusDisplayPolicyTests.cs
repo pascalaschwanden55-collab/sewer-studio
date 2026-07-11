@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingDefectStatusDisplayPolicyTests
 {
     [Theory]
-    [InlineData(DefectStatus.AutoAccepted, "Auto-Akzeptiert (Green Zone)", "\u2713")]
+    [InlineData(DefectStatus.AutoAccepted, "KI-Kriterien erfüllt", "\u2713")]
     [InlineData(DefectStatus.Pending, "Review empfohlen (Yellow Zone)", "\u23F3")]
     [InlineData(DefectStatus.ReviewRequired, "Manuell erforderlich (Red Zone)", "\u26A0")]
     [InlineData(DefectStatus.Accepted, "Akzeptiert", "\u2713")]
@@ -62,7 +62,7 @@ public sealed class CodingDefectStatusDisplayPolicyTests
         Assert.Equal("94%", state.ConfidenceText);
         Assert.Equal(0.94, state.Confidence);
         Assert.Equal(DefectStatus.AutoAccepted, state.Status);
-        Assert.Equal("Auto-Akzeptiert (Green Zone)", state.StatusText);
+        Assert.Equal("KI-Kriterien erfüllt", state.StatusText);
         Assert.True(state.CanAct);
     }
 

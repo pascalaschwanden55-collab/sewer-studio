@@ -493,40 +493,60 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="6"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="6"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Auto-Akzeptiert" FontSize="10"
+                                            <TextBlock Text="KI-Kriterien erfüllt" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock x:Name="TxtCodingStatAutoAccepted"
+                                            <TextBlock x:Name="TxtCodingStatAiCriteriaMet"
                                                        Text="0" FontSize="20" FontWeight="Bold"
                                                        Foreground="#22C55E"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Pending Review" FontSize="10"
+                                            <TextBlock Text="Menschlich bestätigt" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock x:Name="TxtCodingStatPending"
+                                            <TextBlock x:Name="TxtCodingStatHumanAccepted"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#F59E0B"/>
+                                                       Foreground="#2563EB"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Manuell erforderlich" FontSize="10"
+                                            <TextBlock Text="Korrigiert" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock x:Name="TxtCodingStatReviewRequired"
+                                            <TextBlock x:Name="TxtCodingStatHumanCorrected"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#EF4444"/>
+                                                       Foreground="#F59E0B"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Avg. Konfidenz" FontSize="10"
+                                            <TextBlock Text="Abgelehnt" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock x:Name="TxtCodingStatAvgConfidence"
+                                            <TextBlock x:Name="TxtCodingStatRejected"
+                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Foreground="#EF4444"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Row="4" Grid.Column="0" Style="{DynamicResource StatTile}">
+                                        <StackPanel>
+                                            <TextBlock Text="Offen" FontSize="10"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TxtCodingStatOpen"
+                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Foreground="#64748B"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Row="4" Grid.Column="2" Style="{DynamicResource StatTile}">
+                                        <StackPanel>
+                                            <TextBlock Text="Ø KI-Sicherheit" FontSize="10"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TxtCodingStatAvgAiConfidence"
                                                        Text="&#x2014;" FontSize="20" FontWeight="Bold"
                                                        Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>

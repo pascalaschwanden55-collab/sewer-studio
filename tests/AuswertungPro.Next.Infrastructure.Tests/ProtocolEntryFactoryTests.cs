@@ -424,6 +424,45 @@ public sealed class ProtocolEntryFactoryTests
     }
 
     [Fact]
+    public void BuildProtocolEntry_SpeichertVersioniertesZentralurteil()
+    {
+        var signals = new AiDecisionSignals(
+            0.95,
+            TrafficLight.Green,
+            KbAgreement: true,
+            EpistemicUncertainty: null);
+        var decision = StandardAiDecisionPolicy.Default.Decide(signals);
+        var mapped = MakeMapped(confidence: 0.95) with
+        {
+            Freigabe = decision,
+            VisionModel = "vision-test:1",
+            TextModel = "text-test:2",
+            QualityGateVersion = "gate-test-v3",
+            QualityGateResult = new QualityGateResult(
+                0.95,
+                TrafficLight.Green,
+                new Dictionary<string, double> { ["LlmCodeConf"] = 1.0 },
+                "Test-Gate")
+        };
+
+        var entry = ProtocolEntryFactory.BuildProtocolEntry(mapped);
+
+        var audit = Assert.IsType<AuswertungPro.Next.Domain.Models.AiDecisionAudit>(
+            entry.Ai!.CentralDecision);
+        Assert.Equal(AiDecisionOutcome.AutoAccept.ToString(), audit.Outcome);
+        Assert.Equal(AiDecisionReasonCode.EvidenceConfirmed.ToString(), audit.ReasonCode);
+        Assert.Equal(StandardAiDecisionPolicy.PolicyVersion, audit.PolicyVersion);
+        Assert.Equal(0.95, audit.Signals.Confidence, precision: 3);
+        Assert.True(audit.Signals.KbAgreement);
+        Assert.Null(audit.Signals.EpistemicUncertainty);
+        Assert.Equal(StandardAiDecisionPolicy.AutoAcceptConfidence, audit.Thresholds.AutoAcceptConfidence);
+        Assert.Equal("vision-test:1", audit.VisionModel);
+        Assert.Equal("text-test:2", audit.TextModel);
+        Assert.Equal("gate-test-v3", audit.QualityGateVersion);
+        Assert.Equal(1.0, audit.QualityGateWeights["LlmCodeConf"]);
+    }
+
+    [Fact]
     public void BuildProtocolEntry_EntryId_IstNeuGuid()
     {
         var mapped = MakeMapped();

@@ -182,26 +182,37 @@ public sealed class KnowledgeBaseManager(
         if (samples.Count == 0)
             return 0;
 
-        // Phase 1: Embeddings parallel erzeugen (VOR dem Loeschen)
+        // Phase 1: Nur menschlich bestaetigtes Gold vorbereiten. Nicht bestaetigte
+        // oder abgelehnte Samples duerfen auch bei einem Rebuild nie in die positive KB.
+        var eligibleIndices = new List<int>();
+        for (var i = 0; i < samples.Count; i++)
+        {
+            var evalBlocked = IsEvalContaminated(samples[i]);
+            if (IsIndexWorthy(samples[i]) && !evalBlocked)
+            {
+                eligibleIndices.Add(i);
+                continue;
+            }
+
+            if (evalBlocked)
+                Debug.WriteLine($"[KnowledgeBaseManager] Rebuild: Sample {samples[i].SampleId} BLOCKIERT (Eval-Kontamination).");
+            progress?.Report(i + 1);
+        }
+
+        if (eligibleIndices.Count == 0)
+            throw new InvalidOperationException(
+                "KB-Rebuild abgebrochen: Kein menschlich bestaetigtes Gold-Sample vorhanden. Bestehende KB bleibt erhalten.");
+
+        // Embeddings parallel erzeugen (VOR dem Loeschen)
         var embeddings = new ConcurrentDictionary<int, float[]>();
-        var done = 0;
+        var done = samples.Count - eligibleIndices.Count;
         var errors = 0;
 
         await Parallel.ForEachAsync(
-            Enumerable.Range(0, samples.Count),
+            eligibleIndices,
             new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, concurrency), CancellationToken = ct },
             async (i, token) =>
             {
-                var evalBlocked = IsEvalContaminated(samples[i]);
-                if (!IsIndexWorthy(samples[i]) || evalBlocked)
-                {
-                    if (evalBlocked)
-                        Debug.WriteLine($"[KnowledgeBaseManager] Rebuild: Sample {samples[i].SampleId} BLOCKIERT (Eval-Kontamination).");
-                    Interlocked.Increment(ref errors);
-                    var n2 = Interlocked.Increment(ref done);
-                    progress?.Report(n2);
-                    return;
-                }
                 var vec = await embedder.EmbedAsync(samples[i].Beschreibung, token).ConfigureAwait(false);
                 if (vec is not null)
                     embeddings[i] = vec;
@@ -213,12 +224,12 @@ public sealed class KnowledgeBaseManager(
 
         // Sicherheitspruefung: Wenn weniger als 50% der Embeddings erfolgreich,
         // ist vermutlich Ollama ausgefallen → KB NICHT loeschen!
-        var successRate = (double)embeddings.Count / samples.Count;
+        var successRate = (double)embeddings.Count / eligibleIndices.Count;
         if (embeddings.Count == 0)
         {
             Debug.WriteLine("[KnowledgeBaseManager] ABBRUCH: 0 Embeddings erzeugt, KB bleibt unveraendert");
             throw new InvalidOperationException(
-                $"KB-Rebuild abgebrochen: 0 von {samples.Count} Embeddings erzeugt. " +
+                $"KB-Rebuild abgebrochen: 0 von {eligibleIndices.Count} Gold-Embeddings erzeugt. " +
                 "Ollama vermutlich nicht erreichbar. Bestehende KB bleibt erhalten.");
         }
 
@@ -226,13 +237,13 @@ public sealed class KnowledgeBaseManager(
         {
             Debug.WriteLine($"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
             throw new InvalidOperationException(
-                $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {samples.Count} Embeddings erzeugt ({successRate:P0}). " +
+                $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {eligibleIndices.Count} Gold-Embeddings erzeugt ({successRate:P0}). " +
                 "Bestehende KB bleibt erhalten. Pruefe Ollama-Verbindung.");
         }
 
         if (errors > 0)
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {samples.Count} Samples");
+            Debug.WriteLine($"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {eligibleIndices.Count} Gold-Samples");
         }
 
         // Phase 2: Loeschen + Neuaufbau in einer Transaktion
@@ -411,6 +422,10 @@ public sealed class KnowledgeBaseManager(
     /// </summary>
     public static bool IsIndexWorthy(TrainingSample sample)
     {
+        // Positive Freigabe-KB: nur explizit bestaetigtes Gold. Status allein reicht
+        // nicht, weil alte/automatische Pfade Approved ohne menschliche Pruefung setzen konnten.
+        if (sample.Status != TrainingSampleStatus.Approved || sample.HumanConfirmed != true)
+            return false;
         if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Length < 10)
             return false;
         if (string.IsNullOrWhiteSpace(sample.Code))

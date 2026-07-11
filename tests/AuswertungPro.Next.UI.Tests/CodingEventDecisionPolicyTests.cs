@@ -55,7 +55,7 @@ public sealed class CodingEventDecisionPolicyTests
     }
 
     [Fact]
-    public void ApplyManualReviewDecision_creates_ai_context_for_manual_event()
+    public void ApplyManualReviewDecision_creates_review_context_for_manual_event()
     {
         var ev = MakeEventWithAiContext();
         ev.AiContext = null;
@@ -65,11 +65,10 @@ public sealed class CodingEventDecisionPolicyTests
             CodingUserDecision.AcceptedWithEdit,
             "Manuell bearbeitet");
 
-        Assert.NotNull(ev.AiContext);
-        Assert.Equal("BBA", ev.AiContext!.SuggestedCode);
-        Assert.Equal(1.0, ev.AiContext.Confidence);
-        Assert.Equal("Manuell bearbeitet", ev.AiContext.Reason);
-        Assert.Equal(CodingUserDecision.AcceptedWithEdit, ev.AiContext.Decision);
+        Assert.Null(ev.AiContext);
+        Assert.NotNull(ev.ReviewContext);
+        Assert.Equal("Manuell bearbeitet", ev.ReviewContext!.Reason);
+        Assert.Equal(CodingUserDecision.AcceptedWithEdit, ev.ReviewContext.Decision);
     }
 
     [Fact]
@@ -87,6 +86,7 @@ public sealed class CodingEventDecisionPolicyTests
         Assert.Equal("KI-Vorschlag", ev.AiContext.Reason);
         Assert.Equal(0.42, ev.AiContext.Confidence);
         Assert.Equal(CodingUserDecision.Rejected, ev.AiContext.Decision);
+        Assert.Null(ev.ReviewContext);
     }
 
     private static CodingEvent MakeEventWithAiContext()

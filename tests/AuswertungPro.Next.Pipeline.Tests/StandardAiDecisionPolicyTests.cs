@@ -57,8 +57,14 @@ public sealed class StandardAiDecisionPolicyTests
     [Fact] // Video-Fall: volle Belegkette -> AutoAccept.
     public void VideoVolleKette_AutoAccept()
     {
-        var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: 0.05));
+        var signals = new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: 0.05);
+        var d = Decide(signals);
+
         Assert.Equal(AiDecisionOutcome.AutoAccept, d.Outcome);
+        Assert.Equal(AiDecisionReasonCode.EvidenceConfirmed, d.ReasonCode);
+        Assert.Equal(StandardAiDecisionPolicy.PolicyVersion, d.PolicyVersion);
+        Assert.Equal(signals, d.Signals);
+        Assert.Equal(StandardAiDecisionPolicy.CurrentThresholds, d.Thresholds);
     }
 
     [Fact] // Video: vorhandener KB-Beleg widerspricht -> Review trotz hoher Sicherheit + gruener Ampel.
@@ -101,5 +107,43 @@ public sealed class StandardAiDecisionPolicyTests
     {
         var d = Decide(new AiDecisionSignals(0.95, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: uncertainty));
         Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
+        Assert.Equal(AiDecisionReasonCode.InvalidUncertainty, d.ReasonCode);
+    }
+
+    [Fact]
+    public void ExakteRejectGrenze_IstReviewNichtReject()
+    {
+        var d = Decide(new AiDecisionSignals(
+            StandardAiDecisionPolicy.RejectConfidence,
+            TrafficLight.Green,
+            KbAgreement: true));
+
+        Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
+        Assert.Equal(AiDecisionReasonCode.ConfidenceBelowAutoAccept, d.ReasonCode);
+    }
+
+    [Fact]
+    public void ExakteAutoAcceptGrenze_OhneUnsicherheit_IstAutoAccept()
+    {
+        var d = Decide(new AiDecisionSignals(
+            StandardAiDecisionPolicy.AutoAcceptConfidence,
+            TrafficLight.Green,
+            KbAgreement: true,
+            EpistemicUncertainty: null));
+
+        Assert.Equal(AiDecisionOutcome.AutoAccept, d.Outcome);
+    }
+
+    [Fact]
+    public void ExakteUnsicherheitsGrenze_IstReview()
+    {
+        var d = Decide(new AiDecisionSignals(
+            0.95,
+            TrafficLight.Green,
+            KbAgreement: true,
+            EpistemicUncertainty: StandardAiDecisionPolicy.MaxEpistemicUncertainty));
+
+        Assert.Equal(AiDecisionOutcome.Review, d.Outcome);
+        Assert.Equal(AiDecisionReasonCode.UncertaintyTooHigh, d.ReasonCode);
     }
 }

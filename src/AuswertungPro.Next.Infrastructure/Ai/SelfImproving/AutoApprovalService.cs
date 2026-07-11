@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
@@ -23,7 +24,13 @@ public sealed class AutoApprovalService
             Confidence: entry.Confidence,
             QualityGate: entry.QualityGateResult?.TrafficLight,
             KbAgreement: entry.Detection.Evidence?.KbCodeAgreement,
-            EpistemicUncertainty: entry.Uncertainty?.EpistemicUncertainty);
+            // Nur echte Mehrfachlaeufe sind ein zusaetzliches Unsicherheitssignal.
+            // SinglePass ist lediglich aus derselben Confidence berechnet.
+            EpistemicUncertainty: entry.Uncertainty?.Source is
+                UncertaintySource.MonteCarlo or
+                UncertaintySource.Ensemble
+                    ? entry.Uncertainty.EpistemicUncertainty
+                    : null);
 
         return _policy.Decide(signals);
     }
@@ -40,7 +47,7 @@ public sealed class AutoApprovalService
     public static string AlsHinweis(AiDecision decision)
         => decision.Outcome switch
         {
-            AiDecisionOutcome.AutoAccept => $"Zentrale Freigabe: verlaesslich — {decision.Reason}",
+            AiDecisionOutcome.AutoAccept => $"Zentrale Freigabe: KI-Kriterien erfuellt — {decision.Reason}",
             AiDecisionOutcome.Reject => $"Zentrale Freigabe: ablehnen — {decision.Reason}",
             _ => $"Zentrale Freigabe: pruefen — {decision.Reason}"
         };
@@ -52,7 +59,7 @@ public sealed class AutoApprovalService
     /// </summary>
     public static string AlsHinweis(AutoApprovalResult result)
         => result.IsApproved
-            ? $"Zentrale Freigabe: verlaesslich — {result.Reason}"
+            ? $"Zentrale Freigabe: KI-Kriterien erfuellt — {result.Reason}"
             : $"Zentrale Freigabe: pruefen — {result.Reason}";
 }
 

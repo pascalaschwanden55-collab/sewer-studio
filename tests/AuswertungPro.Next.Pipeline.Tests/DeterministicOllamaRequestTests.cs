@@ -62,7 +62,7 @@ public sealed class DeterministicOllamaRequestTests
             http,
             retrieval: new EmptyRetrievalService());
 
-        await service.GenerateFromDetectionsAsync(
+        var result = await service.GenerateFromDetectionsAsync(
             [new RawVideoDetection("Riss", 1.0, 1.2, "mid", "BAA")],
             new FullProtocolGenerationRequest(
                 HaltungId: "H-1",
@@ -70,6 +70,14 @@ public sealed class DeterministicOllamaRequestTests
                 AllowedCodes: ["BAA"]));
 
         AssertDeterministicOptions(CaptureOllamaHandler.LastRequestJson);
+        var mapped = Assert.Single(result.MappedEntries);
+        Assert.Null(mapped.Uncertainty);
+
+        var protocolEntry = Assert.Single(result.Document!.Current.Entries);
+        Assert.Equal("central-ai-release-v2", protocolEntry.Ai!.CentralDecision!.PolicyVersion);
+        Assert.Equal("qwen-vision", protocolEntry.Ai.CentralDecision.VisionModel);
+        Assert.Equal("qwen-text", protocolEntry.Ai.CentralDecision.TextModel);
+        Assert.Equal("quality-gate-v1", protocolEntry.Ai.CentralDecision.QualityGateVersion);
     }
 
     private static string AiSuggestionJson() => """

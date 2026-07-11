@@ -13,7 +13,8 @@ public sealed class AutoApprovalTests
         double confidence,
         TrafficLight light,
         bool? kbAgrees = null,
-        double epistemic = 0.05)
+        double epistemic = 0.05,
+        UncertaintySource uncertaintySource = UncertaintySource.MonteCarlo)
     {
         var evidence = new EvidenceVector(
             LlmCodeConf: confidence,
@@ -27,7 +28,7 @@ public sealed class AutoApprovalTests
             Warnings: System.Array.Empty<string>(),
             QualityGateResult: new QualityGateResult(confidence, light,
                 new System.Collections.Generic.Dictionary<string, double>(), "test"),
-            Uncertainty: new UncertaintyEstimate(confidence, epistemic, 0.05, confidence, UncertaintySource.SinglePass));
+            Uncertainty: new UncertaintyEstimate(confidence, epistemic, 0.05, confidence, uncertaintySource));
     }
 
     [Fact]
@@ -89,8 +90,25 @@ public sealed class AutoApprovalTests
         Assert.Contains("Unsicherheit", result.Reason);
     }
 
+    [Fact]
+    public void SinglePassPseudoUnsicherheit_WirdNichtAlsBelegVerwendet()
+    {
+        var svc = new AutoApprovalService();
+        var entry = CreateEntry(
+            0.95,
+            TrafficLight.Green,
+            kbAgrees: true,
+            epistemic: 0.30,
+            uncertaintySource: UncertaintySource.SinglePass);
+
+        var decision = svc.Decide(entry);
+
+        Assert.Equal(AiDecisionOutcome.AutoAccept, decision.Outcome);
+        Assert.Null(decision.Signals!.EpistemicUncertainty);
+    }
+
     [Theory] // Review 11.07., Empfehlung 2: Urteil + Grund als sichtbarer Hinweis fuer die Vollanalyse.
-    [InlineData(true, "Zentrale Freigabe: verlaesslich —")]
+    [InlineData(true, "Zentrale Freigabe: KI-Kriterien erfuellt —")]
     [InlineData(false, "Zentrale Freigabe: pruefen —")]
     public void AlsHinweis_FormatiertUrteilUndGrund(bool approved, string erwarteterPrefix)
     {

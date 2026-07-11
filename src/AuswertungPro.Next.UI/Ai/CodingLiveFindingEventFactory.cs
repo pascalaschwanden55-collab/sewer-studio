@@ -41,6 +41,10 @@ public static class CodingLiveFindingEventFactory
             // Audit Fix 3: Ampel schon beim Anlegen sichern, damit die Live-Anzeige
             // die zentrale Freigabe-Regel (zweiter Beleg) anwenden kann.
             QualityGateLevel = gateResult.TrafficLight.ToString(),
+            QualityGateWeights = new Dictionary<string, double>(
+                gateResult.WeightsUsed,
+                StringComparer.Ordinal),
+            QualityGateExplanation = gateResult.Explanation,
             Evidence = CodingEventEvidenceMapper.ToSnapshot(
                 CodingLiveFindingQualityGatePolicy.BuildEvidence(finding) with
                 {

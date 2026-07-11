@@ -126,6 +126,35 @@ public sealed class CodingEventToSampleMapperTests
     }
 
     [Fact]
+    public void ManuellerAccept_IstGoldAberKeinKiTreffer()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry
+            {
+                Code = "BCA",
+                Beschreibung = "Anschluss",
+                Source = ProtocolEntrySource.Manual
+            },
+            ReviewContext = new CodingEventReviewContext
+            {
+                Decision = CodingUserDecision.Accepted,
+                Reason = "Manuell bestaetigt"
+            },
+            MeterAtCapture = 1.2
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null);
+
+        Assert.Equal(TrainingSampleStatus.Approved, sample.Status);
+        Assert.Equal(true, sample.HumanConfirmed);
+        Assert.Null(sample.KiCode);
+        Assert.Null(sample.MatchLevel);
+        Assert.Null(sample.Corrected);
+        Assert.Equal(SourceTypeNames.ManualCoding, sample.SourceType);
+    }
+
+    [Fact]
     public void FromCodingEvent_TrenntRohbildUndMarkiertesBeweisbild()
     {
         var sample = CodingEventToSampleMapper.FromCodingEvent(

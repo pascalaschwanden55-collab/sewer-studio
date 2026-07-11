@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Domain.Protocol;
 
@@ -47,6 +48,7 @@ public sealed class ProtocolEntryAiMeta
     public string? FinalCode { get; set; }
     public string? MeterSource { get; set; }
     public bool IsMeterEstimated { get; set; }
+    public AiDecisionAudit? CentralDecision { get; set; }
     public DateTimeOffset SuggestedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 

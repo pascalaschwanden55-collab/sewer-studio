@@ -58,7 +58,9 @@ public sealed class RetrievalEvalFilterTests : IDisposable
         MeterEnd = 1.0,
         InspectionDate = new DateTime(2024, 6, 1),
         TrainingEligible = true,
-        QualityGateLevel = "Green"
+        QualityGateLevel = "Green",
+        Status = TrainingSampleStatus.Approved,
+        HumanConfirmed = true
     };
 
     [Fact]

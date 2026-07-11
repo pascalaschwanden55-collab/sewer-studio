@@ -7,34 +7,42 @@ public sealed class CodingStatisticsControls
 {
     private readonly Run _totalCount;
     private readonly Run _openCount;
-    private readonly TextBlock _autoAccepted;
-    private readonly TextBlock _pending;
-    private readonly TextBlock _reviewRequired;
-    private readonly TextBlock _averageConfidence;
+    private readonly TextBlock _aiCriteriaMet;
+    private readonly TextBlock _humanAccepted;
+    private readonly TextBlock _humanCorrected;
+    private readonly TextBlock _rejected;
+    private readonly TextBlock _open;
+    private readonly TextBlock _averageAiConfidence;
 
     public CodingStatisticsControls(
         Run totalCount,
         Run openCount,
-        TextBlock autoAccepted,
-        TextBlock pending,
-        TextBlock reviewRequired,
-        TextBlock averageConfidence)
+        TextBlock aiCriteriaMet,
+        TextBlock humanAccepted,
+        TextBlock humanCorrected,
+        TextBlock rejected,
+        TextBlock open,
+        TextBlock averageAiConfidence)
     {
         _totalCount = totalCount;
         _openCount = openCount;
-        _autoAccepted = autoAccepted;
-        _pending = pending;
-        _reviewRequired = reviewRequired;
-        _averageConfidence = averageConfidence;
+        _aiCriteriaMet = aiCriteriaMet;
+        _humanAccepted = humanAccepted;
+        _humanCorrected = humanCorrected;
+        _rejected = rejected;
+        _open = open;
+        _averageAiConfidence = averageAiConfidence;
     }
 
     public void Apply(CodingStatisticsSummary summary)
     {
         _totalCount.Text = summary.Total.ToString();
         _openCount.Text = summary.Open.ToString();
-        _autoAccepted.Text = summary.AutoAccepted.ToString();
-        _pending.Text = summary.Pending.ToString();
-        _reviewRequired.Text = summary.ReviewRequired.ToString();
-        _averageConfidence.Text = summary.AverageConfidenceText;
+        _aiCriteriaMet.Text = summary.AiCriteriaMet.ToString();
+        _humanAccepted.Text = summary.HumanAccepted.ToString();
+        _humanCorrected.Text = summary.HumanCorrected.ToString();
+        _rejected.Text = summary.Rejected.ToString();
+        _open.Text = summary.Open.ToString();
+        _averageAiConfidence.Text = summary.AverageAiConfidenceText;
     }
 }

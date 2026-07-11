@@ -25,13 +25,16 @@ public static class CodingEventDecisionPolicy
         CodingUserDecision decision,
         string createdContextReason)
     {
-        codingEvent.AiContext ??= new CodingEventAiContext
+        if (codingEvent.AiContext is not null)
         {
-            SuggestedCode = codingEvent.Entry.Code,
-            Confidence = 1.0,
+            codingEvent.AiContext.Decision = decision;
+            return;
+        }
+
+        codingEvent.ReviewContext ??= new CodingEventReviewContext
+        {
             Reason = createdContextReason
         };
-
-        codingEvent.AiContext.Decision = decision;
+        codingEvent.ReviewContext.Decision = decision;
     }
 }

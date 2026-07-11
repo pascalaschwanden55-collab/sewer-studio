@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Domain.Protocol;
 
@@ -50,6 +51,7 @@ public static class ProtocolEntryCloner
                     FinalCode = source.Ai.FinalCode,
                     MeterSource = source.Ai.MeterSource,
                     IsMeterEstimated = source.Ai.IsMeterEstimated,
+                    CentralDecision = AiDecisionAuditCloner.Clone(source.Ai.CentralDecision),
                     SuggestedAt = source.Ai.SuggestedAt
                 }
         };

@@ -26,17 +26,21 @@ public sealed class CodingEventsRefreshWorkflowTests
             var listControls = new CodingEventsListControls(listBox);
             var total = new Run();
             var open = new Run();
-            var autoAccepted = new TextBlock();
-            var pending = new TextBlock();
-            var reviewRequired = new TextBlock();
-            var averageConfidence = new TextBlock();
+            var aiCriteriaMet = new TextBlock();
+            var humanAccepted = new TextBlock();
+            var humanCorrected = new TextBlock();
+            var rejected = new TextBlock();
+            var openTile = new TextBlock();
+            var averageAiConfidence = new TextBlock();
             var statisticsControls = new CodingStatisticsControls(
                 total,
                 open,
-                autoAccepted,
-                pending,
-                reviewRequired,
-                averageConfidence);
+                aiCriteriaMet,
+                humanAccepted,
+                humanCorrected,
+                rejected,
+                openTile,
+                averageAiConfidence);
             var method = FindRefreshListAndStatisticsMethod();
             Assert.NotNull(method);
 
@@ -53,10 +57,12 @@ public sealed class CodingEventsRefreshWorkflowTests
             Assert.Same(late, listBox.SelectedItem);
             Assert.Equal("2", total.Text);
             Assert.Equal("1", open.Text);
-            Assert.Equal("0", autoAccepted.Text);
-            Assert.Equal("1", pending.Text);
-            Assert.Equal("0", reviewRequired.Text);
-            Assert.Equal("80%", averageConfidence.Text);
+            Assert.Equal("0", aiCriteriaMet.Text);
+            Assert.Equal("0", humanAccepted.Text);
+            Assert.Equal("0", humanCorrected.Text);
+            Assert.Equal("0", rejected.Text);
+            Assert.Equal("1", openTile.Text);
+            Assert.Equal("80%", averageAiConfidence.Text);
         });
     }
 
@@ -70,17 +76,21 @@ public sealed class CodingEventsRefreshWorkflowTests
             var events = new ObservableCollection<CodingEvent> { first, second };
             var total = new Run();
             var open = new Run();
-            var autoAccepted = new TextBlock();
-            var pending = new TextBlock();
-            var reviewRequired = new TextBlock();
-            var averageConfidence = new TextBlock();
+            var aiCriteriaMet = new TextBlock();
+            var humanAccepted = new TextBlock();
+            var humanCorrected = new TextBlock();
+            var rejected = new TextBlock();
+            var openTile = new TextBlock();
+            var averageAiConfidence = new TextBlock();
             var statisticsControls = new CodingStatisticsControls(
                 total,
                 open,
-                autoAccepted,
-                pending,
-                reviewRequired,
-                averageConfidence);
+                aiCriteriaMet,
+                humanAccepted,
+                humanCorrected,
+                rejected,
+                openTile,
+                averageAiConfidence);
             var method = FindRefreshStatisticsMethod();
             Assert.NotNull(method);
 
@@ -94,10 +104,12 @@ public sealed class CodingEventsRefreshWorkflowTests
             Assert.Equal(new[] { first, second }, events);
             Assert.Equal("2", total.Text);
             Assert.Equal("0", open.Text);
-            Assert.Equal("1", autoAccepted.Text);
-            Assert.Equal("0", pending.Text);
-            Assert.Equal("0", reviewRequired.Text);
-            Assert.Equal("75%", averageConfidence.Text);
+            Assert.Equal("1", aiCriteriaMet.Text);
+            Assert.Equal("0", humanAccepted.Text);
+            Assert.Equal("0", humanCorrected.Text);
+            Assert.Equal("0", rejected.Text);
+            Assert.Equal("0", openTile.Text);
+            Assert.Equal("75%", averageAiConfidence.Text);
         });
     }
 
@@ -138,7 +150,10 @@ public sealed class CodingEventsRefreshWorkflowTests
         };
 
     private static CodingStatisticsControls EmptyStatisticsControls()
-        => new(new Run(), new Run(), new TextBlock(), new TextBlock(), new TextBlock(), new TextBlock());
+        => new(
+            new Run(), new Run(),
+            new TextBlock(), new TextBlock(), new TextBlock(),
+            new TextBlock(), new TextBlock(), new TextBlock());
 
     private static Type? WorkflowType
         => typeof(CodingStatisticsPolicy).Assembly

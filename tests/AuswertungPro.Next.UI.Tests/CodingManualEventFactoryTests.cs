@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingManualEventFactoryTests
 {
     [Fact]
-    public void CreateUnconfirmed_builds_manual_protocol_entry_and_ai_context()
+    public void CreateUnconfirmed_builds_manual_protocol_entry_and_review_context()
     {
         var videoTime = TimeSpan.FromSeconds(12);
 
@@ -24,21 +24,17 @@ public sealed class CodingManualEventFactoryTests
         Assert.Equal(4.2, draft.Entry.MeterStart);
         Assert.Equal(videoTime, draft.Entry.Zeit);
         Assert.Null(draft.Entry.CodeMeta);
-        Assert.Equal("BCA", draft.AiContext.SuggestedCode);
-        Assert.Equal(1.0, draft.AiContext.Confidence);
-        Assert.Equal("Manuell codiert - bitte bestätigen", draft.AiContext.Reason);
-        Assert.Equal(CodingUserDecision.Ignored, draft.AiContext.Decision);
+        Assert.Equal("Manuell codiert - bitte bestätigen", draft.ReviewContext.Reason);
+        Assert.Equal(CodingUserDecision.Ignored, draft.ReviewContext.Decision);
     }
 
     [Fact]
-    public void CreateUnconfirmedContext_builds_manual_confirmation_context()
+    public void CreateUnconfirmedContext_builds_manual_review_without_fake_ai_values()
     {
-        var aiContext = CodingManualEventFactory.CreateUnconfirmedContext("BCA");
+        var reviewContext = CodingManualEventFactory.CreateUnconfirmedContext();
 
-        Assert.Equal("BCA", aiContext.SuggestedCode);
-        Assert.Equal(1.0, aiContext.Confidence);
-        Assert.Equal("Manuell codiert - bitte bestätigen", aiContext.Reason);
-        Assert.Equal(CodingUserDecision.Ignored, aiContext.Decision);
+        Assert.Equal("Manuell codiert - bitte bestätigen", reviewContext.Reason);
+        Assert.Equal(CodingUserDecision.Ignored, reviewContext.Decision);
     }
 
     [Fact]

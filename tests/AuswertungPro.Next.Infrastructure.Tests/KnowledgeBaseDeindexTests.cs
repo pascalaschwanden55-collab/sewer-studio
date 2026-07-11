@@ -60,7 +60,9 @@ public sealed class KnowledgeBaseDeindexTests : IDisposable
         MeterStart     = 5.0,
         MeterEnd       = 5.0,
         InspectionDate = new DateTime(2024, 6, 1),
-        TrainingEligible = true
+        TrainingEligible = true,
+        Status = TrainingSampleStatus.Approved,
+        HumanConfirmed = true
     };
 
     // ── Test ──────────────────────────────────────────────────────────────────

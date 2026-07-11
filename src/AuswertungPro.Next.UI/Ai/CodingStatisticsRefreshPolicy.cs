@@ -5,10 +5,12 @@ namespace AuswertungPro.Next.UI.Ai;
 public static class CodingStatisticsRefreshPolicy
 {
     public static bool ShouldRefresh(string? propertyName)
-        => propertyName is nameof(CodingSessionViewModel.StatAutoAccepted)
-            or nameof(CodingSessionViewModel.StatPending)
-            or nameof(CodingSessionViewModel.StatReviewRequired)
-            or nameof(CodingSessionViewModel.StatAverageConfidence)
+        => propertyName is nameof(CodingSessionViewModel.StatAiCriteriaMet)
+            or nameof(CodingSessionViewModel.StatHumanAccepted)
+            or nameof(CodingSessionViewModel.StatHumanCorrected)
+            or nameof(CodingSessionViewModel.StatRejected)
+            or nameof(CodingSessionViewModel.StatOpen)
+            or nameof(CodingSessionViewModel.StatAverageAiConfidenceText)
             or nameof(CodingSessionViewModel.EventCount)
             or null;
 }

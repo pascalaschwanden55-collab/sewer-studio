@@ -7,10 +7,12 @@ public sealed class CodingStatisticsRefreshPolicyTests
 {
     [Theory]
     [InlineData(null)]
-    [InlineData(nameof(CodingSessionViewModel.StatAutoAccepted))]
-    [InlineData(nameof(CodingSessionViewModel.StatPending))]
-    [InlineData(nameof(CodingSessionViewModel.StatReviewRequired))]
-    [InlineData(nameof(CodingSessionViewModel.StatAverageConfidence))]
+    [InlineData(nameof(CodingSessionViewModel.StatAiCriteriaMet))]
+    [InlineData(nameof(CodingSessionViewModel.StatHumanAccepted))]
+    [InlineData(nameof(CodingSessionViewModel.StatHumanCorrected))]
+    [InlineData(nameof(CodingSessionViewModel.StatRejected))]
+    [InlineData(nameof(CodingSessionViewModel.StatOpen))]
+    [InlineData(nameof(CodingSessionViewModel.StatAverageAiConfidenceText))]
     [InlineData(nameof(CodingSessionViewModel.EventCount))]
     public void ShouldRefresh_returns_true_for_statistics_properties(string? propertyName)
     {

@@ -43,7 +43,9 @@ public sealed class KnowledgeBaseQualityGateTests : IDisposable
                 SampleId = "qg1", CaseId = "H-01", Code = "BAB",
                 Beschreibung = "Laengsriss", MeterStart = 5.0, MeterEnd = 5.0,
                 InspectionDate = new DateTime(2024, 6, 1), TrainingEligible = true,
-                QualityGateLevel = "Green"
+                QualityGateLevel = "Green",
+                Status = TrainingSampleStatus.Approved,
+                HumanConfirmed = true
             };
             Assert.True(KnowledgeBaseManager.IsIndexWorthy(sample));
             Assert.True(await mgr.IndexSampleAsync(sample, CancellationToken.None));

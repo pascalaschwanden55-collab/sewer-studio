@@ -8,10 +8,11 @@ namespace AuswertungPro.Next.UI.Ai;
 public sealed record CodingStatisticsSummary(
     int Total,
     int Open,
-    int AutoAccepted,
-    int Pending,
-    int ReviewRequired,
-    string AverageConfidenceText);
+    int AiCriteriaMet,
+    int HumanAccepted,
+    int HumanCorrected,
+    int Rejected,
+    string AverageAiConfidenceText);
 
 public static class CodingStatisticsPolicy
 {
@@ -23,47 +24,60 @@ public static class CodingStatisticsPolicy
         ArgumentNullException.ThrowIfNull(statusResolver);
 
         var total = 0;
-        var aiEventCount = 0;
+        var validAiConfidenceCount = 0;
         var confidenceSum = 0.0;
-        var autoAccepted = 0;
-        var pending = 0;
-        var reviewRequired = 0;
+        var aiCriteriaMet = 0;
+        var humanAccepted = 0;
+        var humanCorrected = 0;
+        var rejected = 0;
+        var open = 0;
 
         foreach (var ev in events)
         {
             total++;
-            if (ev.AiContext is null)
-                continue;
+            if (ev.AiContext is { } ai
+                && double.IsFinite(ai.Confidence)
+                && ai.Confidence is >= 0.0 and <= 1.0)
+            {
+                validAiConfidenceCount++;
+                confidenceSum += ai.Confidence;
+            }
 
-            aiEventCount++;
-            confidenceSum += ev.AiContext.Confidence;
+            if (ev.AiContext is null && ev.ReviewContext is null)
+                continue; // bestehender Import ohne offene Pruefung
 
             switch (statusResolver(ev))
             {
                 case DefectStatus.AutoAccepted:
+                    aiCriteriaMet++;
+                    break;
                 case DefectStatus.Accepted:
+                    humanAccepted++;
+                    break;
                 case DefectStatus.AcceptedWithEdit:
-                    autoAccepted++;
+                    humanCorrected++;
                     break;
                 case DefectStatus.Pending:
-                    pending++;
-                    break;
                 case DefectStatus.ReviewRequired:
-                    reviewRequired++;
+                    open++;
+                    break;
+                case DefectStatus.Rejected:
+                    rejected++;
                     break;
             }
         }
 
-        var averageConfidenceText = aiEventCount > 0
-            ? $"{confidenceSum / aiEventCount * 100:F0}%"
+        var averageConfidenceText = validAiConfidenceCount > 0
+            ? $"{confidenceSum / validAiConfidenceCount * 100:F0}%"
             : "\u2013";
 
         return new CodingStatisticsSummary(
             total,
-            pending + reviewRequired,
-            autoAccepted,
-            pending,
-            reviewRequired,
+            open,
+            aiCriteriaMet,
+            humanAccepted,
+            humanCorrected,
+            rejected,
             averageConfidenceText);
     }
 }

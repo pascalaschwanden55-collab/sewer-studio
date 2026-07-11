@@ -127,7 +127,8 @@ public sealed class CodingSessionViewModelFeedbackTests
         vm.AcceptDefectCommand.Execute(null);
 
         Assert.Empty(recorder.Records);
-        Assert.Equal(CodingUserDecision.Accepted, vm.SelectedDefect!.AiContext!.Decision);
+        Assert.Null(vm.SelectedDefect!.AiContext);
+        Assert.Equal(CodingUserDecision.Accepted, vm.SelectedDefect.ReviewContext!.Decision);
     }
 
     [Fact]

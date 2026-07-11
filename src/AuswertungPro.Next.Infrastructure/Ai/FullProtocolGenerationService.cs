@@ -166,6 +166,9 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             Freigabe = urteil,
             EntryId = entry.EntryId == Guid.Empty ? Guid.NewGuid() : entry.EntryId,
+            VisionModel = entry.VisionModel ?? _cfg.VisionModel,
+            TextModel = entry.TextModel ?? _cfg.TextModel,
+            QualityGateVersion = entry.QualityGateVersion ?? QualityGateService.PolicyVersion,
             Warnings = entry.Warnings.Append(hinweis).ToArray()
         };
     }
@@ -300,8 +303,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             Confidence: compositeConfidence,
             Reason: reason,
             Warnings: warnings,
-            QualityGateResult: qgResult,
-            Uncertainty: UncertaintyEstimate.FromSinglePass(compositeConfidence)));
+            QualityGateResult: qgResult));
     }
 
     private static string BuildPrompt(

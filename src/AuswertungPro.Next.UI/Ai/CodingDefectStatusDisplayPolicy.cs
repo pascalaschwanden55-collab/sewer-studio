@@ -19,7 +19,7 @@ public static class CodingDefectStatusDisplayPolicy
     public static string DisplayText(DefectStatus status)
         => status switch
         {
-            DefectStatus.AutoAccepted => "Auto-Akzeptiert (Green Zone)",
+            DefectStatus.AutoAccepted => "KI-Kriterien erfüllt",
             DefectStatus.Pending => "Review empfohlen (Yellow Zone)",
             DefectStatus.ReviewRequired => "Manuell erforderlich (Red Zone)",
             DefectStatus.Accepted => "Akzeptiert",

@@ -3,6 +3,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -50,6 +51,78 @@ public sealed class CodingSessionServiceTests
                 Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task CompleteSessionAsync_uebernimmt_nur_freigegebene_neue_Events()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
+        var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", root);
+        KnowledgeBasePaths.InvalidateCache();
+
+        try
+        {
+            var configCalls = 0;
+            var modelConfig = new OllamaConfig(
+                new Uri("http://localhost:11434"),
+                "vision-test:1",
+                "text-test:2",
+                "embed-test:1",
+                TimeSpan.FromSeconds(5));
+            var service = new CodingSessionService(() =>
+                Interlocked.Increment(ref configCalls) == 1 ? modelConfig : null);
+            service.StartSession(CreateHaltung("22147-22151", "12.5"), videoPath: null);
+
+            var aiAccepted = service.AddEvent(Entry("BAB", ProtocolEntrySource.Ai));
+            aiAccepted.AiContext = new CodingEventAiContext
+            {
+                SuggestedCode = "BAB",
+                Confidence = 0.95,
+                QualityGateLevel = "Green",
+                Evidence = new CodingEventAiEvidence { KbCodeAgreement = true },
+                Decision = CodingUserDecision.Accepted
+            };
+
+            var aiRejected = service.AddEvent(Entry("BAF", ProtocolEntrySource.Ai));
+            aiRejected.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Rejected };
+
+            var manualOpen = service.AddEvent(Entry("BCA", ProtocolEntrySource.Manual));
+            manualOpen.ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Ignored };
+
+            var manualAccepted = service.AddEvent(Entry("BDD", ProtocolEntrySource.Manual));
+            manualAccepted.ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Accepted };
+
+            service.AddEvent(Entry("BDA", ProtocolEntrySource.Imported));
+
+            var document = await service.CompleteSessionAsync();
+            var codes = document.Current.Entries.Select(e => e.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Assert.Contains("BAB", codes);
+            Assert.Contains("BDD", codes);
+            Assert.Contains("BDA", codes);
+            Assert.DoesNotContain("BAF", codes);
+            Assert.DoesNotContain("BCA", codes);
+
+            var acceptedEntry = Assert.Single(document.Current.Entries, e => e.Code == "BAB");
+            var audit = acceptedEntry.Ai!.CentralDecision!;
+            Assert.Equal("EvidenceConfirmed", audit.ReasonCode);
+            Assert.Equal(StandardAiDecisionPolicy.PolicyVersion, audit.PolicyVersion);
+            Assert.Equal("vision-test:1", audit.VisionModel);
+            Assert.Equal("text-test:2", audit.TextModel);
+            Assert.Equal("quality-gate-v1", audit.QualityGateVersion);
+            Assert.NotNull(aiRejected.AiContext!.CentralDecision);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
+            KnowledgeBasePaths.InvalidateCache();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static ProtocolEntry Entry(string code, ProtocolEntrySource source)
+        => new() { Code = code, Beschreibung = code, Source = source, MeterStart = 1.0 };
 
     private static HaltungRecord CreateHaltung(string name, string length)
     {

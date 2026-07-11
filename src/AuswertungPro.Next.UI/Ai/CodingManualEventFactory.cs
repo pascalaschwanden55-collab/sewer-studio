@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public sealed record CodingManualEventDraft(
     ProtocolEntry Entry,
-    CodingEventAiContext AiContext);
+    CodingEventReviewContext ReviewContext);
 
 public static class CodingManualEventFactory
 {
@@ -27,14 +27,12 @@ public static class CodingManualEventFactory
 
         CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
 
-        return new CodingManualEventDraft(entry, CreateUnconfirmedContext(code));
+        return new CodingManualEventDraft(entry, CreateUnconfirmedContext());
     }
 
-    public static CodingEventAiContext CreateUnconfirmedContext(string code)
+    public static CodingEventReviewContext CreateUnconfirmedContext()
         => new()
         {
-            SuggestedCode = code,
-            Confidence = 1.0,
             Reason = "Manuell codiert - bitte bestätigen",
             Decision = CodingUserDecision.Ignored
         };

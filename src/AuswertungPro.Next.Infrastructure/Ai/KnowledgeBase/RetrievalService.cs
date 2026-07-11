@@ -31,6 +31,8 @@ public sealed class RetrievalService(
     private List<(string SampleId, float[] Vector, SampleRecord? Sample)>? _cache;
     private long _cacheRowCount = -1;
     private long _cacheMaxRowId = -1;
+    private long _cacheHumanConfirmedCount = -1;
+    private string _cacheMaxConfirmedAtUtc = string.Empty;
 
     /// <summary>Aktuelles Embedding-Modell in der DB (null = leer / unbekannt).</summary>
     public string? StoredEmbedModel { get; private set; }
@@ -93,6 +95,10 @@ public sealed class RetrievalService(
         foreach (var (id, vector, sample) in candidates)
         {
             if (sample is null)
+                continue;
+            // Defense-in-Depth: Auch historische oder ueber einen alten Schreibpfad
+            // vorhandene Samples zaehlen nur nach menschlicher Bestaetigung als KB-Beleg.
+            if (sample.HumanConfirmed != true)
                 continue;
             if (vector is null || vector.Length != queryVec.Length)
             {
@@ -215,13 +221,20 @@ public sealed class RetrievalService(
     {
         lock (_cacheLock)
         {
-            var (rowCount, maxRowId) = ReadEmbeddingsStamp();
-            if (_cache is not null && rowCount >= 0 && rowCount == _cacheRowCount && maxRowId == _cacheMaxRowId)
+            var (rowCount, maxRowId, humanConfirmedCount, maxConfirmedAtUtc) = ReadEmbeddingsStamp();
+            if (_cache is not null
+                && rowCount >= 0
+                && rowCount == _cacheRowCount
+                && maxRowId == _cacheMaxRowId
+                && humanConfirmedCount == _cacheHumanConfirmedCount
+                && string.Equals(maxConfirmedAtUtc, _cacheMaxConfirmedAtUtc, StringComparison.Ordinal))
                 return _cache;
 
             _cache = LoadAllEmbeddingsWithSamples();
             _cacheRowCount = rowCount;
             _cacheMaxRowId = maxRowId;
+            _cacheHumanConfirmedCount = humanConfirmedCount;
+            _cacheMaxConfirmedAtUtc = maxConfirmedAtUtc;
             return _cache;
         }
     }
@@ -230,21 +243,28 @@ public sealed class RetrievalService(
     /// Billige Kennzahl der Embeddings-Tabelle zur Cache-Invalidierung (Zeilenzahl + groesste rowid).
     /// Bei Fehler (-1,-1) -> Cache gilt als ungueltig und wird neu geladen (nie veraltete Daten).
     /// </summary>
-    private (long RowCount, long MaxRowId) ReadEmbeddingsStamp()
+    private (long RowCount, long MaxRowId, long HumanConfirmedCount, string MaxConfirmedAtUtc) ReadEmbeddingsStamp()
     {
         try
         {
             using var cmd = db.Connection.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM Embeddings";
+            cmd.CommandText = """
+                SELECT COUNT(*),
+                       COALESCE(MAX(e.rowid), 0),
+                       COALESCE(SUM(CASE WHEN s.HumanConfirmed = 1 THEN 1 ELSE 0 END), 0),
+                       COALESCE(MAX(s.ConfirmedAtUtc), '')
+                FROM Embeddings e
+                LEFT JOIN Samples s ON e.SampleId = s.SampleId
+                """;
             using var reader = cmd.ExecuteReader();
             if (reader.Read())
-                return (reader.GetInt64(0), reader.GetInt64(1));
+                return (reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetString(3));
         }
         catch
         {
             // Cache verwerfen -> erzwingt Neuladen.
         }
-        return (-1, -1);
+        return (-1, -1, -1, string.Empty);
     }
 
     /// <summary>

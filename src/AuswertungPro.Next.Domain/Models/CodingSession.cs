@@ -108,6 +108,10 @@ public sealed class CodingEvent
     // KI-Vorschlag der zu diesem Event gefuehrt hat (null = rein manuell)
     public CodingEventAiContext? AiContext { get; set; }
 
+    // Menschlicher Pruefstatus fuer manuelle/importierte Eintraege. Dieser Kontext
+    // enthaelt bewusst keine KI-Sicherheit und keinen KI-Vorschlag.
+    public CodingEventReviewContext? ReviewContext { get; set; }
+
     // Meter-Position im Video zum Zeitpunkt der Erfassung
     public double MeterAtCapture { get; set; }
 
@@ -143,10 +147,31 @@ public sealed class CodingEventAiContext
     /// </summary>
     public CodingEventAiEvidence? Evidence { get; set; }
 
+    /// <summary>
+    /// Versioniertes Urteil der zentralen KI-Regel. Wird spaetestens beim
+    /// Session-Abschluss gespeichert und bleibt von der Benutzerentscheidung getrennt.
+    /// </summary>
+    public AiDecisionAudit? CentralDecision { get; set; }
+
+    /// <summary>Beim QualityGate wirklich verwendete Gewichte, soweit verfuegbar.</summary>
+    public Dictionary<string, double> QualityGateWeights { get; set; } = new(StringComparer.Ordinal);
+
+    public string? QualityGateExplanation { get; set; }
+
     /// <summary>SAM-RLE-Maske fuer markierte Beweisbilder. Kein Trainingslabel, nur UI/Protokoll-Beleg.</summary>
     public string? SamMaskRle { get; set; }
     public int? SamMaskImageWidth { get; set; }
     public int? SamMaskImageHeight { get; set; }
+}
+
+/// <summary>
+/// Menschliche Pruefung eines manuellen oder importierten Codier-Ereignisses.
+/// Getrennt vom KI-Kontext, damit manuelle Eingaben nicht als perfekte KI-Treffer gelten.
+/// </summary>
+public sealed class CodingEventReviewContext
+{
+    public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
+    public string? Reason { get; set; }
 }
 
 /// <summary>

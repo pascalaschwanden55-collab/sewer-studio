@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingManualEventAppenderTests
 {
     [Fact]
-    public void Apply_adds_manual_draft_event_with_overlay_and_context()
+    public void Apply_adds_manual_draft_without_ai_context()
     {
         var service = new RecordingCodingSessionService();
         var overlay = new OverlayGeometry
@@ -27,7 +27,8 @@ public sealed class CodingManualEventAppenderTests
 
         Assert.Same(ev, Assert.Single(service.AddedEvents));
         Assert.Same(draft.Entry, ev.Entry);
-        Assert.Same(draft.AiContext, ev.AiContext);
+        Assert.Null(ev.AiContext);
+        Assert.Same(draft.ReviewContext, ev.ReviewContext);
         Assert.Same(overlay, ev.Overlay);
     }
 
@@ -47,8 +48,8 @@ public sealed class CodingManualEventAppenderTests
 
         Assert.Same(entry, ev.Entry);
         Assert.Same(overlay, ev.Overlay);
-        Assert.Equal("BDD", ev.AiContext!.SuggestedCode);
-        Assert.Equal(CodingUserDecision.Ignored, ev.AiContext.Decision);
+        Assert.Null(ev.AiContext);
+        Assert.Equal(CodingUserDecision.Ignored, ev.ReviewContext!.Decision);
     }
 
     private sealed class RecordingCodingSessionService : ICodingSessionService

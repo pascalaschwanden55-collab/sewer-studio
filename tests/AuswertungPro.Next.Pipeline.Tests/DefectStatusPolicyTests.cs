@@ -77,6 +77,25 @@ public sealed class DefectStatusPolicyTests
         Assert.Equal(DefectStatus.Rejected, DefectStatusPolicy.GetStatus(ev));
     }
 
+    [Theory]
+    [InlineData(CodingUserDecision.Accepted, DefectStatus.Accepted)]
+    [InlineData(CodingUserDecision.AcceptedWithEdit, DefectStatus.AcceptedWithEdit)]
+    [InlineData(CodingUserDecision.Rejected, DefectStatus.Rejected)]
+    [InlineData(CodingUserDecision.Ignored, DefectStatus.Pending)]
+    public void GetStatus_ManuellerReview_BrauchtKeinenKiKontext(
+        CodingUserDecision decision,
+        DefectStatus expected)
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BAB", Source = ProtocolEntrySource.Manual },
+            ReviewContext = new CodingEventReviewContext { Decision = decision }
+        };
+
+        Assert.Null(ev.AiContext);
+        Assert.Equal(expected, DefectStatusPolicy.GetStatus(ev));
+    }
+
     // --- CanAct ---
 
     [Fact]

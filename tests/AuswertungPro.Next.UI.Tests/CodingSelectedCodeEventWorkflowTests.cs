@@ -41,8 +41,9 @@ public sealed class CodingSelectedCodeEventWorkflowTests
         Assert.Same(ev, Assert.Single(service.AddedEvents));
         Assert.Same(overlay, ev.Overlay);
         Assert.Equal(["foto.png"], ev.Entry.FotoPaths);
-        Assert.Equal("BCA", ev.AiContext!.SuggestedCode);
-        Assert.Equal(CodingUserDecision.Ignored, ev.AiContext.Decision);
+        Assert.Null(ev.AiContext);
+        Assert.NotNull(ev.ReviewContext);
+        Assert.Equal(CodingUserDecision.Ignored, ev.ReviewContext!.Decision);
     }
 
     [Fact]

@@ -125,6 +125,15 @@ internal static class ProtocolEntryFactory
                 Flags = mapped.Warnings.ToList(),
                 MeterSource = det.MeterSource,
                 IsMeterEstimated = det.IsMeterEstimated,
+                CentralDecision = mapped.Freigabe is null
+                    ? null
+                    : AiDecisionAuditMapper.Create(
+                        mapped.Freigabe,
+                        mapped.VisionModel,
+                        mapped.TextModel,
+                        mapped.QualityGateVersion,
+                        mapped.QualityGateResult?.WeightsUsed,
+                        mapped.QualityGateResult?.Explanation),
                 SuggestedAt = DateTimeOffset.UtcNow
             }
         };

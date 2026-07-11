@@ -107,12 +107,12 @@ public sealed class DetectionItem
     // Urteil der zentralen Regel; null = kein Urteil (z.B. rohe Detection).
     public AiDecisionOutcome? Outcome { get; init; }
     public string OutcomeReason { get; init; } = "";
-    // Checkbox der Uebernahme: nur "verlaesslich" ist vorausgewaehlt; Pruefen/Ablehnen
+    // Checkbox der Uebernahme: nur erfuellte KI-Kriterien sind vorausgewaehlt; Pruefen/Ablehnen
     // gelangen NUR nach ausdruecklicher Auswahl ins Fachprotokoll.
     public bool IsSelected { get; set; }
     public string OutcomeLabel => Outcome switch
     {
-        AiDecisionOutcome.AutoAccept => "verlässlich",
+        AiDecisionOutcome.AutoAccept => "KI-Kriterien erfüllt",
         AiDecisionOutcome.Review => "prüfen",
         AiDecisionOutcome.Reject => "ablehnen",
         _ => ""
