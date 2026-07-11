@@ -1,6 +1,6 @@
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Tests;
+namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class CodingMeterResolverTests
 {

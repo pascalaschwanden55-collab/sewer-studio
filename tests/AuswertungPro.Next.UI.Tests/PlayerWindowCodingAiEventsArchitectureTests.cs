@@ -15,7 +15,7 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         var overlayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentOverlayRenderWorkflow.cs");
         var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingSessionAppender.cs");
         var confirmationTrackerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingConfirmationTracker.cs");
-        var addDecisionPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
+        var addDecisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Live/Qwen-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");

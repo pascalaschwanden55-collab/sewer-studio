@@ -1,6 +1,6 @@
-namespace AuswertungPro.Next.UI.Player;
+namespace AuswertungPro.Next.Application.Ai;
 
-public static class PlayerImportFallbackCodePolicy
+public static class CodingImportFallbackCodePolicy
 {
     public const double DefaultMeterWindowMeters = 2.0;
     public const double BendMeterWindowMeters = 0.25;

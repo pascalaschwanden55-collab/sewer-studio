@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -182,25 +182,7 @@ public static class VsaCodeResolver
     /// "3:00" → "3:00", "oben" → "12:00", "12 Uhr" → "12:00", null → null.
     /// </summary>
     public static string? NormalizeClock(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-
-        var text = raw.Trim().ToLowerInvariant();
-
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
-            return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
-            return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
-
-        var m = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
-        if (m.Success && int.TryParse(m.Groups[1].Value, NumberStyles.Integer,
-                CultureInfo.InvariantCulture, out var hour) && hour >= 1 && hour <= 12)
-            return $"{hour}:00";
-
-        return raw.Trim();
-    }
+        => ClockPositionNormalizer.Normalize(raw);
 
     // ── Sensor-Fusion: YOLO-cls + Meterstand + Import-Kontext ──
 

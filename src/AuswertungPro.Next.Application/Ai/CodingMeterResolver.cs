@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 public readonly record struct CodingMeterResolution(double Meter, bool IsOsd);
 

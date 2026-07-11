@@ -1,7 +1,6 @@
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai;
 
-namespace AuswertungPro.Next.UI.Tests;
+namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class CodingFindingDedupeKeyBuilderTests
 {

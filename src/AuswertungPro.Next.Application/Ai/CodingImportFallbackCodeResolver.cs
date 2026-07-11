@@ -1,7 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Player;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 public static class CodingImportFallbackCodeResolver
 {
@@ -37,7 +36,7 @@ public static class CodingImportFallbackCodeResolver
             })
             .Where(x =>
                 codePredicate(x.Code) &&
-                PlayerImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
+                CodingImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
             .OrderBy(x => x.Distance)
             .ThenByDescending(x => x.Code.Length)
             .FirstOrDefault()

@@ -1,8 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 public static class CodingFindingCodeResolver
 {

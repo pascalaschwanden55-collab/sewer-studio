@@ -1,8 +1,8 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai;
 
-namespace AuswertungPro.Next.UI.Tests;
+namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class CodingImportFallbackCodeResolverTests
 {

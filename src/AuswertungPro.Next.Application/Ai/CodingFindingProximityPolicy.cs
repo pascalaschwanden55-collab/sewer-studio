@@ -1,7 +1,6 @@
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 public static class CodingFindingProximityPolicy
 {

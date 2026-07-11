@@ -169,7 +169,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_defers_spatial_bogen_before_creating_protocol_event()
     {
         var coding = ReadCodingPartials();
-        var policy = ReadUiFile("Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
+        var policy = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs"));
         var workflow = ReadUiFile("Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var addBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
 

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;

@@ -1,7 +1,4 @@
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Infrastructure.Ai;
-
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 public static class CodingFindingDedupeKeyBuilder
 {
@@ -15,6 +12,6 @@ public static class CodingFindingDedupeKeyBuilder
             return $"{code}@{centerX:F1},{centerY:F1}";
         }
 
-        return $"{code}@{VsaCodeResolver.NormalizeClock(finding.PositionClock) ?? "?"}";
+        return $"{code}@{ClockPositionNormalizer.Normalize(finding.PositionClock) ?? "?"}";
     }
 }

@@ -29,7 +29,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
-        var addDecisionPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
+        var addDecisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(multiModelPath), "Multi-Model-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Multi-Model-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -83,7 +83,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
-        var decisionPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
+        var decisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         var events = File.ReadAllText(eventsPath);
         var workflow = File.ReadAllText(workflowPath);

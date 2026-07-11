@@ -66,7 +66,7 @@ public sealed class VsaKekManifestTruthTests
     // Quelle des Code-Raums:
     //  - Klassifikator-Klassen (vsa_cls_v5_nocrop): BAB BAF BAI BAJ BBA BBB BCD BCE BDA BDD
     //  - VsaCodeResolver.InferCodeFromLabel: BCA BCC BAC BAA BBC BDDC (+ obige)
-    //  - PlayerImportFallbackCodePolicy.AllowedPrefixes: BCD BCE BCA BCC BBC BDDC BAA BAB BAC BAF BAH BAI BAJ BBA BBB
+    //  - CodingImportFallbackCodePolicy.AllowedPrefixes: BCD BCE BCA BCC BBC BDDC BAA BAB BAC BAF BAH BAI BAJ BBA BBB
     // Faellt einer dieser Codes auf "Titel == Code" zurueck, zeigt die UI den rohen
     // (oft englischen) Modelltext statt deutschem Klartext -> dieser Test verhindert das.
     [Theory]
