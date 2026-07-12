@@ -79,7 +79,9 @@ public sealed class SystemMonitorProcessSafetyTests
         Assert.Contains("public string CpuTempStatusText", source);
         Assert.Contains("public string CpuTempSourceLabel", source);
         Assert.Contains("SetCpuTempReading(cpuTempC, \"LibreHardwareMonitor\")", source);
-        Assert.Contains("SetCpuTempReading(tempC, \"HWiNFO Shared Memory\")", source);
+        Assert.Contains("HwInfoSharedMemoryReader.Read()", source);
+        Assert.Contains("HwInfoSensorSelector.Select", source);
+        Assert.Contains("SetCpuTempReading(sensors.CpuTempC.Value, \"HWiNFO Shared Memory\")", source);
         Assert.Contains("SetCpuTempReading(celsius, \"Windows Thermal Zone\")", source);
         Assert.Contains("SetCpuTempUnavailable", source);
     }

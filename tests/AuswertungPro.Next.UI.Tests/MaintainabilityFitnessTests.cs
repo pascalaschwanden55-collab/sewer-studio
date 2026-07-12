@@ -15,7 +15,6 @@ public sealed class MaintainabilityFitnessTests
         "src/AuswertungPro.Next.Infrastructure/HoldingFolderDistributor.cs",
         "src/AuswertungPro.Next.UI/ViewModels/Windows/CostCalculatorViewModel.cs",
         "src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs",
-        "src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanDbImportService.cs",
         "src/AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs",
         "src/AuswertungPro.Next.Infrastructure/Import/Xtf/LegacyXtfImportService.cs",
         "src/AuswertungPro.Next.UI/Views/Windows/StartupSplashWindow.xaml.cs",
@@ -50,6 +49,25 @@ public sealed class MaintainabilityFitnessTests
             offenders.Length == 0,
             "Neue Grossdateien sind nicht erlaubt. Verantwortung zuerst in kleinere Klassen teilen:\n"
             + string.Join("\n", offenders));
+    }
+
+    [Fact]
+    public void Large_file_whitelist_contains_only_files_that_are_still_large()
+    {
+        var root = TestRepoPaths.FindRepoRoot();
+        var staleEntries = ExistingLargeFiles
+            .Where(relativePath =>
+            {
+                var path = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                return !File.Exists(path) || File.ReadLines(path).Count() <= 1000;
+            })
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.True(
+            staleEntries.Length == 0,
+            "Veraltete Eintraege aus der Grossdatei-Ausnahmeliste entfernen:\n"
+            + string.Join("\n", staleEntries));
     }
 
     [Fact]

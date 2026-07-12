@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -723,19 +722,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     // ── HWiNFO Shared Memory fallback (HVCI-kompatibel) ─────────────────
 
-    private const string HwInfoSensorsSm2 = "Global\\HWiNFO_SENS_SM2";
-
-    // HWiNFO Shared Memory reading types
-    private const int SENSOR_TYPE_NONE = 0;
-    private const int SENSOR_TYPE_TEMP = 1;
-    private const int SENSOR_TYPE_VOLT = 2;
-    private const int SENSOR_TYPE_FAN = 3;
-    private const int SENSOR_TYPE_CURRENT = 4;
-    private const int SENSOR_TYPE_POWER = 5;
-    private const int SENSOR_TYPE_CLOCK = 6;
-    private const int SENSOR_TYPE_USAGE = 7;
-    private const int SENSOR_TYPE_OTHER = 8;
-
     private void PollHwInfo()
     {
         // Only skip HWiNFO when LHM actually delivers temperature data.
@@ -757,27 +743,15 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         try
         {
             _hwInfoProvidesTemp = false;
-            using var mmf = MemoryMappedFile.OpenExisting(HwInfoSensorsSm2, MemoryMappedFileRights.Read);
-            using var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
-
-            // Read header (first 44 bytes)
-            // Offsets: 0=dwSignature(4), 4=dwVersion(4), 8=dwRevision(4), 12=pollTime(8),
-            // 20=dwOffsetOfSensorSection(4), 24=dwSizeOfSensorElement(4),
-            // 28=dwNumSensorElements(4), 32=dwOffsetOfReadingSection(4),
-            // 36=dwSizeOfReadingElement(4), 40=dwNumReadingElements(4)
-            uint signature = accessor.ReadUInt32(0);
-            if (signature != 0x53695748) // "HWiS" in little-endian
+            var result = HwInfoSharedMemoryReader.Read();
+            if (result.Status == HwInfoReadStatus.InvalidSignature)
             {
                 _hwInfoAvailable = false;
                 Log("HWiNFO: Shared Memory Signatur ungueltig");
                 return;
             }
 
-            uint offsetReadings = accessor.ReadUInt32(32);
-            uint sizeReading = accessor.ReadUInt32(36);
-            uint numReadings = accessor.ReadUInt32(40);
-
-            if (numReadings == 0 || sizeReading < 100)
+            if (result.Status == HwInfoReadStatus.NoData)
             {
                 if (!_hwInfoLogged) { Log("HWiNFO: Keine Sensordaten in Shared Memory"); _hwInfoLogged = true; }
                 return;
@@ -785,91 +759,44 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
             if (!_hwInfoLogged)
             {
-                Log($"HWiNFO: Shared Memory aktiv — {numReadings} Messwerte");
+                Log($"HWiNFO: Shared Memory aktiv — {result.TotalReadingCount} Messwerte");
                 _hwInfoLogged = true;
             }
 
-            bool cpuTempSet = false;
-            bool cpuClockSet = false;
-            bool gpuTempSet = false;
-            bool gpuClockSet = false;
-            bool ramClockSet = false;
-
-            var labelBytes = new byte[128];
-
-            for (uint i = 0; i < numReadings; i++)
+            var sensors = HwInfoSensorSelector.Select(result.Readings);
+            if (sensors.CpuTempC.HasValue)
             {
-                long pos = offsetReadings + (long)i * sizeReading;
-
-                // Reading struct: tReading(4), dwSensorIndex(4), dwReadingID(4),
-                // szLabelOrig(128), szLabelUser(128), szUnit(16), dValue(8), ...
-                int readingType = accessor.ReadInt32(pos);
-                // Skip non-temp, non-clock
-                if (readingType != SENSOR_TYPE_TEMP && readingType != SENSOR_TYPE_CLOCK)
-                    continue;
-
-                // Read label (128 bytes at offset 12)
-                accessor.ReadArray(pos + 12, labelBytes, 0, 128);
-                var label = Encoding.ASCII.GetString(labelBytes).TrimEnd('\0').ToLowerInvariant();
-
-                // Value is at offset 12 + 128 (labelOrig) + 128 (labelUser) + 16 (unit) = offset 284
-                double value = accessor.ReadDouble(pos + 284);
-
-                if (readingType == SENSOR_TYPE_TEMP)
-                {
-                    int tempC = (int)Math.Round(value);
-                    if (tempC <= 0 || tempC >= 150) continue;
-
-                    if (!cpuTempSet && (label.Contains("cpu") || label.Contains("package")
-                                        || label.Contains("core") || label.Contains("tctl")
-                                        || label.Contains("die")))
-                    {
-                        SetCpuTempReading(tempC, "HWiNFO Shared Memory");
-                        cpuTempSet = true;
-                    }
-                    else if (!gpuTempSet && (label.Contains("gpu") || label.Contains("graphics")))
-                    {
-                        GpuTempC = tempC;
-                        IsGpuTempAvailable = true;
-                        gpuTempSet = true;
-                    }
-                }
-                else if (readingType == SENSOR_TYPE_CLOCK)
-                {
-                    int clockMhz = (int)Math.Round(value);
-                    if (clockMhz <= 0) continue;
-
-                    if (!cpuClockSet && (label.Contains("cpu") || label.Contains("core")))
-                    {
-                        CpuClockMhz = clockMhz;
-                        IsCpuClockAvailable = true;
-                        cpuClockSet = true;
-                    }
-                    else if (!gpuClockSet && (label.Contains("gpu") || label.Contains("graphics")))
-                    {
-                        GpuClockMhz = clockMhz;
-                        IsGpuClockAvailable = true;
-                        gpuClockSet = true;
-                    }
-                    // RAM-Takt (DRAM): "Memory Clock" — GPU-Speichertakt ("GPU Memory Clock") ausschliessen.
-                    else if (!ramClockSet && !label.Contains("gpu")
-                             && (label.Contains("memory") || label.Contains("dram")))
-                    {
-                        RamClockMhz = clockMhz;
-                        IsRamClockAvailable = true;
-                        ramClockSet = true;
-                    }
-                }
+                SetCpuTempReading(sensors.CpuTempC.Value, "HWiNFO Shared Memory");
+            }
+            if (sensors.GpuTempC.HasValue)
+            {
+                GpuTempC = sensors.GpuTempC.Value;
+                IsGpuTempAvailable = true;
+            }
+            if (sensors.CpuClockMhz.HasValue)
+            {
+                CpuClockMhz = sensors.CpuClockMhz.Value;
+                IsCpuClockAvailable = true;
+            }
+            if (sensors.GpuClockMhz.HasValue)
+            {
+                GpuClockMhz = sensors.GpuClockMhz.Value;
+                IsGpuClockAvailable = true;
+            }
+            if (sensors.RamClockMhz.HasValue)
+            {
+                RamClockMhz = sensors.RamClockMhz.Value;
+                IsRamClockAvailable = true;
             }
 
             // Clear sensor-blocked state since HWiNFO is providing data
-            if (cpuTempSet || gpuTempSet)
+            if (sensors.CpuTempC.HasValue || sensors.GpuTempC.HasValue)
             {
                 IsSensorBlocked = false;
                 SensorBlockedReason = "";
             }
 
-            _hwInfoProvidesTemp = cpuTempSet;
+            _hwInfoProvidesTemp = sensors.CpuTempC.HasValue;
         }
         catch (FileNotFoundException)
         {

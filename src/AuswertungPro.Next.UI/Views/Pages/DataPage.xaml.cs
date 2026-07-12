@@ -765,74 +765,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        // Merkt sich, ob ein Sonderfeld-Block die Spalte bereits behandelt hat, damit der
-        // generische S3-Zweig sie nicht erneut setzt (keine zweite, synchron zu haltende Namensliste).
-        bool handled = false;
-
-        if (fieldName == "Sanieren_JaNein" && e.Row?.Item is HaltungRecord sanRecord)
-        {
-            handled = true;
-            var newValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? string.Empty;
-            var wasJa = string.Equals((sanRecord.GetFieldValue("Sanieren_JaNein") ?? "").Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
-            var isJa = string.Equals(newValue.Trim(), "Ja", StringComparison.OrdinalIgnoreCase);
-            var switchingOffRenovation = wasJa && !isJa;
-
-            // Ja -> Nein/leer: erst Rueckfrage. Bei Abbruch bleibt die Haltung auf 'Ja'.
-            if (switchingOffRenovation && !Dialogs.ConfirmWarn(
-                    "Diese Haltung auf 'nicht sanieren' setzen? Die berechneten Kostenwerte werden entfernt.",
-                    "Sanieren", defaultNo: true))
-            {
-                sanRecord.SetFieldValue("Sanieren_JaNein", "Ja", FieldSource.Manual, userEdited: true);
-                vm.EnsureOptionForField(fieldName, "Ja");
-            }
-            else
-            {
-                // Uebernehmen (bei Ja->Nein auch den leeren Wert), dann Kostenfelder nach Sanieren-Regel nachziehen.
-                if (!string.IsNullOrWhiteSpace(newValue) || switchingOffRenovation)
-                    sanRecord.SetFieldValue(fieldName, newValue, FieldSource.Manual, userEdited: true);
-                if (switchingOffRenovation)
-                    DataPageSanierungCostMapper.SyncRecord(sanRecord, cost: null); // Nein/leer -> alle 8 Kostenfelder leeren
-                vm.EnsureOptionForField(fieldName, newValue);
-            }
-        }
-
-        if (fieldName == "Eigentuemer" ||
-            fieldName == "Pruefungsresultat" || fieldName == "Referenzpruefung")
-        {
-            handled = true;
-            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement);
-            if (!string.IsNullOrWhiteSpace(value) && e.Row?.Item is HaltungRecord editedRecord)
-                editedRecord.SetFieldValue(fieldName, value ?? string.Empty, FieldSource.Manual, userEdited: true);
-            vm.EnsureOptionForField(fieldName, value);
-        }
-
-        if (fieldName == "Zustandsklasse" && e.Row?.Item is HaltungRecord record)
-        {
-            handled = true;
-            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? record.GetFieldValue(fieldName);
-            record.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
-        }
-
-        if (fieldName == "Haltungsname" && e.Row?.Item is HaltungRecord hRecord)
-        {
-            handled = true;
-            var oldValue = hRecord.GetFieldValue("Haltungsname");
-            var newValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? oldValue;
-            if (!ApplyHoldingNameChange(hRecord, oldValue, newValue, vm))
-                return;
-        }
-
-        // S3: Alle uebrigen (normalen) Textspalten ebenfalls als manuell editiert markieren.
-        // Die Sonderfelder oben setzen userEdited bereits selbst. Ohne diesen Zweig bliebe
-        // FieldMeta.UserEdited fuer normale Spalten (z.B. Bemerkungen) auf false, und ein
-        // spaeterer Re-Import koennte handeditierte Werte still ueberschreiben
-        // (HaltungRecord.SetFieldValue/MergeEngine schuetzen nur Felder mit UserEdited==true).
-        if (!handled && e.Row?.Item is HaltungRecord genericRecord)
-        {
-            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement);
-            if (value is not null)
-                genericRecord.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
-        }
+        var record = e.Row?.Item as HaltungRecord;
+        var editedValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement);
+        var shouldSave = DataPageCellEditController.Apply(
+            fieldName,
+            record,
+            editedValue,
+            (message, title) => Dialogs.ConfirmWarn(message, title, defaultNo: true),
+            vm.EnsureOptionForField,
+            (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm));
+        if (!shouldSave)
+            return;
 
         vm.ScheduleAutoSave();
     }

@@ -33,11 +33,6 @@ public static partial class HoldingFolderDistributor
         @"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private static readonly Regex FormEntryDateRx = new(
-        @"\b(?<d>" + SewerTextPatterns.GermanDateCore + @"|\d{4}[./-]\d{2}[./-]\d{2})\b",
-        RegexOptions.Compiled);
-
-
     private sealed record PageInfo(int PageNumber, string Text, string SourcePath);
 
     private sealed record PdfPageChunk(IReadOnlyList<int> Pages, ParsedPdf Parsed);
@@ -876,7 +871,7 @@ public static partial class HoldingFolderDistributor
             return null;
 
         // First pass: label-preserving synthetic text for existing parser rules.
-        var syntheticText = BuildSyntheticFormText(entries);
+        var syntheticText = ShaftPdfFormFieldParser.BuildSyntheticText(entries);
         var parsed = ParseSchachtPdfPage(syntheticText);
         if (parsed.Success)
         {
@@ -888,144 +883,12 @@ public static partial class HoldingFolderDistributor
         }
 
         // Second pass: value-only heuristics for generic field names.
-        var date = TryExtractDateFromFormEntries(entries);
-        var shaft = TryExtractSchachtNumberFromFormEntries(entries);
+        var date = ShaftPdfFormFieldParser.TryExtractDate(entries);
+        var shaft = ShaftPdfFormFieldParser.TryExtractShaftNumber(entries);
         if (string.IsNullOrWhiteSpace(shaft) || date is null)
             return null;
 
         return new ParsedShaftPdf(true, "aus PDF-Formular", date, shaft);
-    }
-
-
-    private static string BuildSyntheticFormText(IReadOnlyList<PdfFormFieldEntry> entries)
-    {
-        var lines = new List<string>(entries.Count * 2);
-        foreach (var entry in entries)
-        {
-            var labels = new[] { entry.PartialName, entry.AlternateName, entry.MappingName }
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (labels.Count == 0)
-            {
-                lines.Add(entry.Value);
-                continue;
-            }
-
-            foreach (var label in labels)
-                lines.Add($"{label}: {entry.Value}");
-        }
-
-        return string.Join("\n", lines);
-    }
-
-
-    private static DateTime? TryExtractDateFromFormEntries(IReadOnlyList<PdfFormFieldEntry> entries)
-    {
-        var dateRx = FormEntryDateRx;
-
-        // Prefer labeled date fields.
-        foreach (var entry in entries)
-        {
-            var label = BuildFormEntryLabel(entry);
-            if (!ContainsDateLabel(label))
-                continue;
-
-            var m = dateRx.Match(entry.Value);
-            if (m.Success && TryParseDateString(m.Groups["d"].Value, out var parsed))
-                return parsed;
-        }
-
-        // Fallback: first parseable date from any value.
-        foreach (var entry in entries)
-        {
-            var m = dateRx.Match(entry.Value);
-            if (m.Success && TryParseDateString(m.Groups["d"].Value, out var parsed))
-                return parsed;
-        }
-
-        return null;
-    }
-
-
-    private static string? TryExtractSchachtNumberFromFormEntries(IReadOnlyList<PdfFormFieldEntry> entries)
-    {
-        // Prefer explicit labels.
-        foreach (var entry in entries)
-        {
-            var label = BuildFormEntryLabel(entry);
-            if (!ContainsSchachtNumberLabel(label))
-                continue;
-
-            var candidate = ExtractShaftNumberToken(entry.Value);
-            if (!string.IsNullOrWhiteSpace(candidate))
-                return candidate;
-        }
-
-        // Fallback: strict numeric tokens only.
-        foreach (var entry in entries)
-        {
-            var candidate = ExtractShaftNumberToken(entry.Value);
-            if (!string.IsNullOrWhiteSpace(candidate))
-                return candidate;
-        }
-
-        return null;
-    }
-
-
-    private static string BuildFormEntryLabel(PdfFormFieldEntry entry)
-    {
-        return string.Join(" ",
-            new[] { entry.PartialName, entry.AlternateName, entry.MappingName }
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!.Trim()));
-    }
-
-
-    private static bool ContainsDateLabel(string? label)
-    {
-        if (string.IsNullOrWhiteSpace(label))
-            return false;
-
-        return label.Contains("datum", StringComparison.OrdinalIgnoreCase)
-               || label.Contains("date", StringComparison.OrdinalIgnoreCase);
-    }
-
-
-    private static bool ContainsSchachtNumberLabel(string? label)
-    {
-        if (string.IsNullOrWhiteSpace(label))
-            return false;
-
-        return label.Contains("schacht", StringComparison.OrdinalIgnoreCase)
-               || label.Contains("nummer", StringComparison.OrdinalIgnoreCase)
-               || Regex.IsMatch(label, @"\bnr\.?\b", RegexOptions.IgnoreCase);
-    }
-
-
-    private static string? ExtractShaftNumberToken(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        // Prefer standalone numeric values, common for Schachtnummer forms.
-        var direct = Regex.Match(value.Trim(), @"^(?<nr>\d{3,8})$");
-        if (direct.Success)
-            return direct.Groups["nr"].Value;
-
-        var any = Regex.Match(value, @"\b(?<nr>\d{3,8})\b");
-        if (!any.Success)
-            return null;
-
-        var token = any.Groups["nr"].Value;
-        // Avoid obvious date fragments (e.g. year values).
-        if (token.Length == 4 && int.TryParse(token, out var year) && year >= 1900 && year <= 2100)
-            return null;
-
-        return token;
     }
 
 
