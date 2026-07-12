@@ -57,8 +57,19 @@ Vierte Aufräumrunde erledigt am 2026-07-12:
 - Fehlerhafte alte Umlautkodierungen werden zentral und unabhängig von
   Groß-/Kleinschreibung normalisiert.
 
-Damit sank die feste Altliste in zwei Runden von 20 auf 18 Produktionsdateien
-mit mehr als 1.000 Zeilen. Die übrigen 18 Dateien bleiben bewusste, offene
+Fünfte Aufräumrunde erledigt am 2026-07-12:
+
+- Die WinCan-Beobachtungszuordnung des M150-Imports liegt gemeinsam für MDB und
+  XML in `WinCanObservationAttacher`. Der M150-Hauptbaustein sank auf 897 Zeilen.
+- Quantifizierung und Ergebnisabbildung der Mehrmodell-Analyse liegen in
+  `MultiModelFrameAnalysisMapper`. Der Hauptservice sank auf 965 Zeilen.
+- Projektwechsel, Karten-Auswahl und laufende Nummern der Datenseite liegen in
+  `DataPageProjectBindingController`. Das ViewModel sank auf 971 Zeilen.
+- Die öffentlichen Datenmodelle der EvalSet-Auswertung liegen getrennt von den
+  Berechnungen in `EvalSetBenchmarkModels`. Die Logikdatei sank auf 910 Zeilen.
+
+Damit sank die feste Altliste seit Beginn von 20 auf 14 Produktionsdateien mit
+mehr als 1.000 Zeilen. Die übrigen 14 Dateien bleiben bewusste, offene
 Wartbarkeitsschulden und werden einzeln weiter zerlegt.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann

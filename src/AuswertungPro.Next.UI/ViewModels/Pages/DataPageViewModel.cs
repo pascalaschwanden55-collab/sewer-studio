@@ -47,13 +47,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageRecordCollectionController _recordCollectionController;
     private readonly DataPageVideoAnalysisController _videoAnalysisController;
     private readonly DataPageSanierungWindowController _sanierungWindowController;
+    private readonly DataPageProjectBindingController _projectBindingController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
     private readonly DataPageProtocolDocumentController _protocolDocumentController = new();
     private readonly TrainingCaseIndex _trainingCaseIndex = new();
     private bool _disposed;
-    private bool _suppressBridgeEcho; // verhindert Rueckkopplung, wenn die Auswahl von der Karte kommt
 
     internal ServiceProvider Services => _sp;
 
@@ -172,9 +172,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => _shell.GetProjectFolder(),
             DataPageProtocolPathResolver.ResolveOriginalPdfPaths,
             DataPageOriginalPdfController.TryShellOpen);
-        _shell.PropertyChanged += ShellPropertyChanged;
-        HookRunningNumbers();
-
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
         LiveControl.LiveControlRetryBridge.Register(TryStartVideoAiPipelineByName);
@@ -368,43 +365,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         PrintDossierCommand = new RelayCommand<HaltungRecord?>(PrintDossierPdf);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
-        PropertyChanged += DataPageViewModel_PropertyChanged;
-        // Auswahl von der Karte uebernehmen: Klick auf eine Haltung waehlt sie auch in der Liste.
-        QgisBridge.QgisBridgeSelection.SelectionChanged += OnBridgeSelectionChanged;
-        // Beim Oeffnen der Liste die zuletzt (z.B. auf der Karte) gewaehlte Haltung uebernehmen.
-        OnBridgeSelectionChanged();
+        _projectBindingController = CreateProjectBindingController();
+        _projectBindingController.Start();
         UpdateLearningInfo();
         LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
     }
-
-    // Wird ausgeloest, wenn irgendwo (v.a. auf der Karte) eine Haltung gewaehlt wird -> gleiche
-    // Haltung in der Liste selektieren. Echo unterdruecken, damit keine Rueckkopplung entsteht.
-    private void OnBridgeSelectionChanged()
-    {
-        var name = QgisBridge.QgisBridgeSelection.CurrentFor(_shell.Project.Id);
-        if (string.IsNullOrWhiteSpace(name))
-            return;
-
-        System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
-        {
-            if (_disposed)
-                return;
-            var record = FindRecordByName(name);
-            if (record is null || ReferenceEquals(record, Selected))
-                return;
-
-            _suppressBridgeEcho = true;
-            try { Selected = record; }
-            finally { _suppressBridgeEcho = false; }
-        });
-    }
-
-    // Exakt zuerst, dann tolerant (umgekehrte Schacht-Reihenfolge / Teilstrecken-Suffix) —
-    // gleiche Regel wie die Karte, damit ein Kartenklick dieselbe Zeile trifft.
-    private HaltungRecord? FindRecordByName(string name)
-        => Records.FirstOrDefault(r => string.Equals(
-               r.GetFieldValue("Haltungsname"), name, StringComparison.OrdinalIgnoreCase))
-           ?? Records.FirstOrDefault(r => KarteHaltungNameMatcher.Matches(name, r.GetFieldValue("Haltungsname")));
 
     public void Dispose()
     {
@@ -412,49 +377,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             return;
 
         _disposed = true;
-        QgisBridge.QgisBridgeSelection.SelectionChanged -= OnBridgeSelectionChanged;
-        _shell.PropertyChanged -= ShellPropertyChanged;
-        if (_numberedRecords is not null)
-            _numberedRecords.CollectionChanged -= RecordsCollectionChangedForNumbers;
-        PropertyChanged -= DataPageViewModel_PropertyChanged;
+        _projectBindingController.Dispose();
         _timers.Stop();
         LiveControl.LiveControlRetryBridge.Reset();
     }
-
-    private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-        {
-            OnPropertyChanged(nameof(IsProjectReady));
-            OnPropertyChanged(nameof(IsDataGridReadOnly));
-        }
-        else if (e.PropertyName == nameof(ShellViewModel.Project))
-        {
-            OnPropertyChanged(nameof(Project));
-            OnPropertyChanged(nameof(Records));
-            UpdateSearchResultInfo(Records.Count);
-            HookRunningNumbers();
-        }
-    }
-
-    // Transiente Anzeige-Laufnummer (1..N): bei Projektwechsel neu abonnieren und durchzaehlen,
-    // danach bei jeder Reihenfolge-/Bestandsaenderung (Add/Remove/Move) automatisch aktualisieren.
-    private System.Collections.Specialized.INotifyCollectionChanged? _numberedRecords;
-
-    private void HookRunningNumbers()
-    {
-        if (_numberedRecords is not null)
-            _numberedRecords.CollectionChanged -= RecordsCollectionChangedForNumbers;
-
-        _numberedRecords = Records as System.Collections.Specialized.INotifyCollectionChanged;
-        if (_numberedRecords is not null)
-            _numberedRecords.CollectionChanged += RecordsCollectionChangedForNumbers;
-
-        AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(Records);
-    }
-
-    private void RecordsCollectionChangedForNumbers(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(Records);
 
     partial void OnGridMinRowHeightChanged(double value)
     {
@@ -487,61 +413,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     partial void OnSelectedChanged(HaltungRecord? value)
-    {
-        if (_suppressBridgeEcho)
-            return; // Auswahl kam von der Karte -> nicht zurueckmelden (keine Schleife)
-        QgisBridge.QgisBridgeSelection.Set(value?.GetFieldValue("Haltungsname"));
-    }
-
-    private void DataPageViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(Selected))
-            return;
-
-        DataPageSelectionChangedController.Handle(
-            Selected,
-            new IRelayCommand?[]
-            {
-                RemoveCommand,
-                MoveUpCommand,
-                MoveDownCommand,
-                OpenCostsCommand,
-                RestoreCostsCommand,
-                SuggestMeasuresCommand,
-                OptimizeSanierungKiCommand
-            },
-            NormalizeSelectedFindings,
-            SyncSelectedProtocolFromFindings,
-            RefreshSelectedProtocolEntries);
-    }
-
-    private void SyncSelectedProtocolFromFindings(HaltungRecord record)
-        => _selectedProtocolController.SyncFromFindings(
-            record,
-            _sp.Protocols,
-            ResolveCodeTitle,
-            RefreshRecordInGrid,
-            Selected?.Id == record.Id,
-            _sp.CodeCatalog);
-
-    private void RefreshSelectedProtocolEntries()
-        => _selectedProtocolController.Refresh(Selected, _sp.CodeCatalog);
-
-    private string? ResolveCodeTitle(string code)
-        => _sp.CodeCatalog.TryGet(code, out var codeDef) && !string.IsNullOrWhiteSpace(codeDef.Title)
-            ? codeDef.Title
-            : null;
-
-    private void NormalizeSelectedFindings(HaltungRecord record)
-    {
-        if (!VsaFindingNormalizer.Normalize(record))
-            return;
-
-        record.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        RefreshRecordInGrid(record);
-    }
+        => _projectBindingController.HandleSelectedChanged(value);
 
     private bool CanMoveUp()
         => _recordCollectionController.CanMoveUp();

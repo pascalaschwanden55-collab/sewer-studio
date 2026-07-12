@@ -609,7 +609,10 @@ public sealed class MultiModelAnalysisService
                     continue;
                 }
 
-                var bbox = GetNormalizedBbox(seg.Mask, samResult.ImageWidth, samResult.ImageHeight);
+                var bbox = MultiModelFrameAnalysisMapper.GetNormalizedBbox(
+                    seg.Mask,
+                    samResult.ImageWidth,
+                    samResult.ImageHeight);
                 findings.Add(new EnhancedFinding(
                     Label: q.Label,
                     VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
@@ -884,79 +887,9 @@ public sealed class MultiModelAnalysisService
     public static EnhancedFrameAnalysis ToEnhancedAnalysis(
         MultiModelFrameResult result,
         int pipeDiameterMm)
-    {
-        if (!result.IsRelevant)
-            return EnhancedFrameAnalysis.Empty();
-
-        var quantified = new List<MaskQuantificationService.QuantifiedMask>();
-        foreach (var mask in result.SamMasks)
-        {
-            quantified.Add(MaskQuantificationService.Quantify(
-                mask, result.ImageWidth, result.ImageHeight, pipeDiameterMm));
-        }
-
-        var findings = new List<EnhancedFinding>(quantified.Count);
-        for (var i = 0; i < quantified.Count; i++)
-        {
-            var q = quantified[i];
-            if (string.IsNullOrWhiteSpace(q.Label))
-                continue;
-
-            var bbox = i < result.SamMasks.Count ? GetNormalizedBbox(result.SamMasks[i], result.ImageWidth, result.ImageHeight) : default;
-            findings.Add(new EnhancedFinding(
-                Label: q.Label,
-                VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
-                Severity: QuantificationSeverityPolicy.Estimate(
-                    q.CrossSectionReductionPercent,
-                    q.IntrusionPercent,
-                    q.HeightMm,
-                    q.ExtentPercent),
-                PositionClock: NormalizeClockPosition(q.ClockPosition),
-                ExtentPercent: q.ExtentPercent,
-                HeightMm: q.HeightMm,
-                WidthMm: q.WidthMm,
-                IntrusionPercent: q.IntrusionPercent,
-                CrossSectionReductionPercent: q.CrossSectionReductionPercent,
-                DiameterReductionMm: null,
-                BboxX1: bbox.X1,
-                BboxY1: bbox.Y1,
-                BboxX2: bbox.X2,
-                BboxY2: bbox.Y2,
-                Notes: null
-            ));
-        }
-
-        return new EnhancedFrameAnalysis(
-            Meter: result.Meter,
-            PipeMaterial: "unbekannt",
-            PipeDiameterMm: pipeDiameterMm,
-            Findings: findings,
-            ImageQuality: "gut",
-            IsEmptyFrame: false,
-            Error: null,
-            Outcome: findings.Count == 0
-                ? AnalysisOutcome.NoFinding
-                : AnalysisOutcome.Ok);
-    }
+        => MultiModelFrameAnalysisMapper.Map(result, pipeDiameterMm);
 
     // ── Private helpers ────────────────────────────────────────────────
-
-    private static (double? X1, double? Y1, double? X2, double? Y2) GetNormalizedBbox(
-        SamMaskResult mask,
-        int imageWidth,
-        int imageHeight)
-    {
-        if (mask.Bbox == null || mask.Bbox.Count < 4 || imageWidth <= 0 || imageHeight <= 0)
-            return default;
-
-        return (
-            Clamp01(mask.Bbox[0] / imageWidth),
-            Clamp01(mask.Bbox[1] / imageHeight),
-            Clamp01(mask.Bbox[2] / imageWidth),
-            Clamp01(mask.Bbox[3] / imageHeight));
-    }
-
-    private static double Clamp01(double value) => Math.Clamp(value, 0.0, 1.0);
 
     /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
     public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
