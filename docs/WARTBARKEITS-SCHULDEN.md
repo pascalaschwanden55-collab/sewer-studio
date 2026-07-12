@@ -81,8 +81,19 @@ Sechste Aufräumrunde erledigt am 2026-07-12:
 - Der Import-Nachlauf arbeitet nun auf der neuen Projektkopie. Dadurch bleiben
   Metadaten und nachträglich zugeordnete Daten nach dem Projektwechsel erhalten.
 
-Damit sank die feste Altliste seit Beginn von 20 auf 10 Produktionsdateien mit
-mehr als 1.000 Zeilen. Die übrigen 10 Dateien bleiben bewusste, offene
+Siebte Aufräumrunde erledigt am 2026-07-12:
+
+- Seitenlesen und Zuordnung der Verteil-PDFs liegt in
+  `DistributionPdfAssignmentController`. Die PDF-Datei sank auf 976 Zeilen.
+- LibreHardwareMonitor-Initialisierung und Sensorauswahl liegt in
+  `LibreHardwareMonitorSensor`. Der Systemmonitor sank auf 920 Zeilen.
+- Maßnahmenblock, Kostenzeile und Auswahlmodelle liegen in eigenen Dateien. Der
+  Kostenrechner sank auf 550 Zeilen.
+- Aufbau der Schachtdetails und Schachtnummer-Umbenennung liegen in eigenen
+  Bausteinen. Die Schachtseite sank auf 999 Zeilen.
+
+Damit sank die feste Altliste seit Beginn von 20 auf 6 Produktionsdateien mit
+mehr als 1.000 Zeilen. Die übrigen 6 Dateien bleiben bewusste, offene
 Wartbarkeitsschulden und werden einzeln weiter zerlegt.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann

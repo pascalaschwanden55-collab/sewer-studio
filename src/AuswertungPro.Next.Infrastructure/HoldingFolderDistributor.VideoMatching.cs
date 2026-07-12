@@ -87,7 +87,7 @@ public static partial class HoldingFolderDistributor
         if (cdIndexVideoLinksByPhoto is null || cdIndexVideoLinksByPhoto.Count == 0)
             return new VideoFindResult(VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No CDIndex mapping");
 
-        var photos = ExtractPhotoHintsFromPdf(pdfPath);
+        var photos = HoldingDistribution.DistributionPdfAssignmentController.ExtractPhotoHints(pdfPath);
         if (photos.Count == 0)
             return new VideoFindResult(VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No photo hints in PDF");
 

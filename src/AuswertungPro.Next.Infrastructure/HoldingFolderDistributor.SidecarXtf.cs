@@ -555,7 +555,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static void PreWarmXtfCache(IReadOnlyList<PageInfo> pages)
+    private static void PreWarmXtfCache(IReadOnlyList<HoldingDistribution.DistributionPdfPage> pages)
     {
         var sourcePath = pages.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.SourcePath))?.SourcePath;
         if (string.IsNullOrWhiteSpace(sourcePath))

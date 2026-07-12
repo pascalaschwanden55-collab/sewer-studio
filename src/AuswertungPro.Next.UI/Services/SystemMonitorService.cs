@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
-using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -41,11 +40,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private int _gpuFailCount;
 
     // LibreHardwareMonitor
-    private volatile Computer? _computer;
-    private volatile bool _hwInitDone;
-    private volatile bool _hwRetried;
-    private int _hwMonitorSkip;
-    private volatile bool _lhmProvidesTemp; // true only when LHM actually delivers temperature data
+    private readonly LibreHardwareMonitorSensor _libreHardwareSensor;
 
     // WMI CPU temp fallback (via process)
     private bool _wmiTempAvailable = true;
@@ -57,10 +52,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private int _hwInfoSkip;
     private bool _hwInfoLogged;
     private volatile bool _hwInfoProvidesTemp; // true wenn HWiNFO aktuell eine CPU-Temp liefert (Live-Quelle)
-
-    // HVCI detection
-    private bool _hvciChecked;
-    private bool _isHvciEnabled;
 
     // Diagnostic log
     private readonly List<string> _diagLog = new();
@@ -77,6 +68,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     public SystemMonitorService(bool enableHardwareSensorInit = true)
     {
         _enableHardwareSensorInit = enableHardwareSensorInit;
+        _libreHardwareSensor = new LibreHardwareMonitorSensor(enableHardwareSensorInit);
         _dispatcher = Dispatcher.CurrentDispatcher;
         _timer = new DispatcherTimer(DispatcherPriority.Background, _dispatcher)
         {
@@ -286,125 +278,20 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         if (Volatile.Read(ref _disposed) != 0)
             return;
 
-        try
+        var result = _libreHardwareSensor.Initialize();
+        foreach (var message in result.Messages)
+            Log(message);
+
+        if (result.Succeeded || string.IsNullOrWhiteSpace(result.FailureReason))
+            return;
+
+        _dispatcher.BeginInvoke(() =>
         {
-            // Check HVCI once
-            if (!_hvciChecked)
-            {
-                _hvciChecked = true;
-                _isHvciEnabled = DetectHvci();
-                if (_isHvciEnabled)
-                    Log("HVCI: Memory Integrity ist AKTIV — Hardware-Sensortreiber blockiert");
-            }
-
-            Log("LHM: Initialisierung gestartet...");
-
-            var computer = new Computer
-            {
-                IsCpuEnabled = true,
-                IsGpuEnabled = true,
-                IsMemoryEnabled = true,
-                IsMotherboardEnabled = true,
-                IsStorageEnabled = false,
-                IsNetworkEnabled = false,
-                IsControllerEnabled = false,
-                IsBatteryEnabled = false,
-                IsPsuEnabled = false
-            };
-            computer.Open();
-            Log("LHM: computer.Open() erfolgreich");
-
-            // Update + enumerate all hardware to discover sensors
-            foreach (var root in computer.Hardware)
-                UpdateHardwareTree(root);
-
-            // Log all discovered hardware and sensors for diagnostics
-            int totalSensors = 0;
-            foreach (var hw in EnumerateHardwareTree(computer))
-            {
-                var sensorCount = hw.Sensors.Length;
-                totalSensors += sensorCount;
-
-                if (IsMonitoredHardwareType(hw.HardwareType))
-                {
-                    Log($"LHM: {hw.HardwareType} '{hw.Name}' — {sensorCount} Sensoren");
-
-                    foreach (var s in hw.Sensors)
-                    {
-                        if (s.SensorType == SensorType.Temperature || s.SensorType == SensorType.Clock)
-                        {
-                            Log($"  -> {s.SensorType}: {s.Name} = {s.Value?.ToString("F1") ?? "null"}");
-                        }
-                    }
-                }
-            }
-
-            bool hasAnySensors = EnumerateHardwareTree(computer)
-                .Any(hw => IsMonitoredHardwareType(hw.HardwareType) && hw.Sensors.Length > 0);
-
-            if (hasAnySensors)
-            {
-                if (Volatile.Read(ref _disposed) != 0)
-                {
-                    computer.Close();
-                    return;
-                }
-
-                _computer = computer;
-                Log($"LHM: OK — {totalSensors} Sensoren aktiv");
-            }
-            else
-            {
-                computer.Close();
-                _computer = null;
-
-                var reason = _isHvciEnabled
-                    ? "HVCI (Kernisolierung) blockiert Sensor-Treiber.\nOption 1: HWiNFO64 starten (Shared Memory aktivieren) — funktioniert mit HVCI.\nOption 2: Kernisolierung deaktivieren unter Windows-Sicherheit > Geraetesicherheit."
-                    : "Keine Sensoren gefunden (Admin-Rechte? Treiber?)";
-                Log($"LHM: FEHLGESCHLAGEN — {(reason.Replace('\n', ' '))}");
-
-                _dispatcher.BeginInvoke(() =>
-                {
-                    IsSensorBlocked = true;
-                    SensorBlockedReason = reason;
-                    SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Sensorzugriff blockiert oder kein Hardware-Sensor gefunden.");
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            _computer = null;
-            Log($"LHM: EXCEPTION — {ex.GetType().Name}: {ex.Message}");
-
-            var reason = _isHvciEnabled
-                ? "HVCI blockiert Sensor-Treiber"
-                : $"Sensor-Fehler: {ex.Message}";
-            _dispatcher.BeginInvoke(() =>
-            {
-                IsSensorBlocked = true;
-                SensorBlockedReason = reason;
-                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Sensorzugriff fehlgeschlagen.");
-            });
-        }
-        finally
-        {
-            _hwInitDone = true;
-        }
-    }
-
-    private static bool DetectHvci()
-    {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(
-                @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
-            return HvciDetector.IsEnabled(key?.GetValue("Enabled"));
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[SystemMonitor] HVCI-Status nicht lesbar: {ex.GetType().Name}");
-        }
-        return false;
+            IsSensorBlocked = true;
+            SensorBlockedReason = result.FailureReason;
+            SetCpuTempUnavailable(result.TemperatureUnavailableReason
+                                  ?? "CPU-Temperatur nicht verfügbar: Sensorzugriff fehlgeschlagen.");
+        });
     }
 
     // ── CPU clock via CallNtPowerInformation (kein Admin noetig) ─────────
@@ -454,269 +341,66 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void PollHardwareMonitor()
     {
-        if (!_enableHardwareSensorInit)
-            return;
-
-        if (_computer is null)
+        var result = _libreHardwareSensor.Poll();
+        if (result.RetryRequested)
         {
-            // If init finished but failed, retry once after ~30 seconds
-            if (_hwInitDone && !_hwRetried && _hwMonitorSkip++ > 15)
-            {
-                _hwRetried = true;
-                Log("LHM: Retry-Versuch...");
-                Task.Run(InitHardwareMonitor);
-            }
+            Log("LHM: Retry-Versuch...");
+            Task.Run(InitHardwareMonitor);
             return;
         }
 
-        if (_hwMonitorSkip++ % 2 != 0)
+        if (!string.IsNullOrWhiteSpace(result.Error))
+        {
+            Log(result.Error);
+            return;
+        }
+
+        var reading = result.Reading;
+        if (reading is null)
             return;
 
-        try
+        if (reading.CpuTempC is int cpuTempC && cpuTempC > 0 && cpuTempC < 150)
+            SetCpuTempReading(cpuTempC, "LibreHardwareMonitor");
+
+        if (reading.CpuClockMhz is int cpuClockMhz && cpuClockMhz > 0)
         {
-            int cpuTempC = 0;
-            int cpuClockMhz = 0;
-            bool cpuTempFound = false;
-            bool cpuClockFound = false;
-            int boardCpuTempC = 0;
-            bool boardCpuTempFound = false;
-
-            // RAM sensors
-            int ramClockMhz = 0;
-            int ramTempC = 0;
-            bool ramTempFound = false;
-            bool ramClockFound = false;
-            int boardRamTempC = 0;
-            bool boardRamTempFound = false;
-
-            // GPU sensors (fallback when nvidia-smi is unavailable or incomplete)
-            int gpuLoadPercent = 0;
-            int gpuClockMhz = 0;
-            int gpuTempC = 0;
-            bool gpuLoadFound = false;
-            bool gpuClockFound = false;
-            bool gpuTempFound = false;
-            string? gpuName = null;
-
-            // Update all roots + sub-hardware first, then read sensors.
-            foreach (var root in _computer.Hardware)
-                UpdateHardwareTree(root);
-
-            foreach (var hw in EnumerateHardwareTree(_computer))
-            {
-                if (hw.HardwareType == HardwareType.Cpu)
-                {
-                    foreach (var sensor in hw.Sensors)
-                    {
-                        if (!sensor.Value.HasValue)
-                            continue;
-
-                        if (sensor.SensorType == SensorType.Temperature)
-                        {
-                            var sensorName = sensor.Name ?? string.Empty;
-                            var temp = (int)Math.Round(sensor.Value.Value);
-
-                            // Prefer package temp, otherwise use the highest reasonable reading.
-                            if (!cpuTempFound
-                                || sensorName.Contains("Package", StringComparison.OrdinalIgnoreCase)
-                                || temp > cpuTempC)
-                            {
-                                cpuTempC = temp;
-                                cpuTempFound = true;
-                            }
-                        }
-
-                        if (sensor.SensorType == SensorType.Clock)
-                        {
-                            var sensorName = sensor.Name ?? string.Empty;
-                            if (sensorName.Contains("Core", StringComparison.OrdinalIgnoreCase)
-                                || sensorName.Contains("CPU", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var clock = (int)Math.Round(sensor.Value.Value);
-                                if (!cpuClockFound || clock > cpuClockMhz)
-                                {
-                                    cpuClockMhz = clock;
-                                    cpuClockFound = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                else if (hw.HardwareType == HardwareType.Memory)
-                {
-                    foreach (var sensor in hw.Sensors)
-                    {
-                        if (!sensor.Value.HasValue)
-                            continue;
-
-                        if (sensor.SensorType == SensorType.Clock
-                            && (int)sensor.Value.Value > ramClockMhz)
-                        {
-                            ramClockMhz = (int)Math.Round(sensor.Value.Value);
-                            ramClockFound = true;
-                        }
-
-                        if (sensor.SensorType == SensorType.Temperature)
-                        {
-                            ramTempC = (int)Math.Round(sensor.Value.Value);
-                            ramTempFound = true;
-                        }
-                    }
-                }
-                else if (IsGpuHardwareType(hw.HardwareType))
-                {
-                    if (string.IsNullOrWhiteSpace(gpuName) && !string.IsNullOrWhiteSpace(hw.Name))
-                        gpuName = hw.Name.Trim();
-
-                    foreach (var sensor in hw.Sensors)
-                    {
-                        if (!sensor.Value.HasValue)
-                            continue;
-
-                        if (sensor.SensorType == SensorType.Load)
-                        {
-                            var sensorName = sensor.Name ?? string.Empty;
-                            var load = (int)Math.Round(sensor.Value.Value);
-                            if (!gpuLoadFound
-                                || sensorName.Contains("Core", StringComparison.OrdinalIgnoreCase)
-                                || sensorName.Contains("GPU", StringComparison.OrdinalIgnoreCase)
-                                || sensorName.Contains("3D", StringComparison.OrdinalIgnoreCase)
-                                || load > gpuLoadPercent)
-                            {
-                                gpuLoadPercent = load;
-                                gpuLoadFound = true;
-                            }
-                        }
-
-                        if (sensor.SensorType == SensorType.Clock)
-                        {
-                            var sensorName = sensor.Name ?? string.Empty;
-                            var clock = (int)Math.Round(sensor.Value.Value);
-                            if (!gpuClockFound
-                                || sensorName.Contains("Core", StringComparison.OrdinalIgnoreCase)
-                                || sensorName.Contains("Graphics", StringComparison.OrdinalIgnoreCase)
-                                || sensorName.Contains("GPU", StringComparison.OrdinalIgnoreCase)
-                                || clock > gpuClockMhz)
-                            {
-                                gpuClockMhz = clock;
-                                gpuClockFound = true;
-                            }
-                        }
-
-                        if (sensor.SensorType == SensorType.Temperature)
-                        {
-                            var temp = (int)Math.Round(sensor.Value.Value);
-                            if (!gpuTempFound || temp > gpuTempC)
-                            {
-                                gpuTempC = temp;
-                                gpuTempFound = true;
-                            }
-                        }
-                    }
-                }
-                else if (hw.HardwareType == HardwareType.Motherboard
-                         || hw.HardwareType == HardwareType.SuperIO)
-                {
-                    foreach (var sensor in hw.Sensors)
-                    {
-                        if (!sensor.Value.HasValue || sensor.SensorType != SensorType.Temperature)
-                            continue;
-
-                        var name = sensor.Name ?? string.Empty;
-                        var temp = (int)Math.Round(sensor.Value.Value);
-                        if (temp <= 0 || temp >= 150)
-                            continue;
-
-                        if (name.Contains("CPU", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("Package", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("Tctl", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("Die", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (!boardCpuTempFound || temp > boardCpuTempC)
-                            {
-                                boardCpuTempC = temp;
-                                boardCpuTempFound = true;
-                            }
-                        }
-
-                        if (name.Contains("RAM", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("DRAM", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("DIMM", StringComparison.OrdinalIgnoreCase)
-                            || name.Contains("Memory", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (!boardRamTempFound || temp > boardRamTempC)
-                            {
-                                boardRamTempC = temp;
-                                boardRamTempFound = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!cpuTempFound && boardCpuTempFound)
-            {
-                cpuTempC = boardCpuTempC;
-                cpuTempFound = true;
-            }
-
-            if (cpuTempFound && cpuTempC > 0 && cpuTempC < 150)
-            {
-                SetCpuTempReading(cpuTempC, "LibreHardwareMonitor");
-                _lhmProvidesTemp = true;
-            }
-
-            // Prefer live sensor clock whenever available.
-            if (cpuClockFound && cpuClockMhz > 0)
-            {
-                CpuClockMhz = cpuClockMhz;
-                IsCpuClockAvailable = true;
-            }
-
-            if (ramClockFound && ramClockMhz > 0)
-            {
-                RamClockMhz = ramClockMhz;
-                IsRamClockAvailable = true;
-            }
-
-            if (!ramTempFound && boardRamTempFound)
-            {
-                ramTempC = boardRamTempC;
-                ramTempFound = true;
-            }
-
-            if (ramTempFound && ramTempC > 0 && ramTempC < 120)
-            {
-                RamTempC = ramTempC;
-                IsRamTempAvailable = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(gpuName))
-                GpuName = gpuName;
-
-            if (gpuLoadFound && gpuLoadPercent >= 0 && gpuLoadPercent <= 100)
-            {
-                GpuPercent = Math.Clamp(gpuLoadPercent, 0, 100);
-                IsGpuAvailable = true;
-            }
-
-            if (gpuClockFound && gpuClockMhz > 0)
-            {
-                GpuClockMhz = gpuClockMhz;
-                IsGpuClockAvailable = true;
-                IsGpuAvailable = true;
-            }
-
-            if (gpuTempFound && gpuTempC > 0 && gpuTempC < 150)
-            {
-                GpuTempC = gpuTempC;
-                IsGpuTempAvailable = true;
-                IsGpuAvailable = true;
-            }
+            CpuClockMhz = cpuClockMhz;
+            IsCpuClockAvailable = true;
         }
-        catch (Exception ex)
+
+        if (reading.RamClockMhz is int ramClockMhz && ramClockMhz > 0)
         {
-            Log($"LHM Poll: {ex.GetType().Name}: {ex.Message}");
+            RamClockMhz = ramClockMhz;
+            IsRamClockAvailable = true;
+        }
+
+        if (reading.RamTempC is int ramTempC && ramTempC > 0 && ramTempC < 120)
+        {
+            RamTempC = ramTempC;
+            IsRamTempAvailable = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reading.GpuName))
+            GpuName = reading.GpuName;
+
+        if (reading.GpuLoadPercent is int gpuLoadPercent && gpuLoadPercent is >= 0 and <= 100)
+        {
+            GpuPercent = Math.Clamp(gpuLoadPercent, 0, 100);
+            IsGpuAvailable = true;
+        }
+
+        if (reading.GpuClockMhz is int gpuClockMhz && gpuClockMhz > 0)
+        {
+            GpuClockMhz = gpuClockMhz;
+            IsGpuClockAvailable = true;
+            IsGpuAvailable = true;
+        }
+
+        if (reading.GpuTempC is int gpuTempC && gpuTempC > 0 && gpuTempC < 150)
+        {
+            GpuTempC = gpuTempC;
+            IsGpuTempAvailable = true;
+            IsGpuAvailable = true;
         }
     }
 
@@ -726,14 +410,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         // Only skip HWiNFO when LHM actually delivers temperature data.
         // LHM may have sensors (clock etc.) but no temps due to HVCI blocking ring0 driver.
-        if (_lhmProvidesTemp)
+        if (_libreHardwareSensor.ProvidesCpuTemperature)
             return;
 
         if (!_hwInfoAvailable)
             return;
 
         // Don't run until LHM init is done
-        if (!_hwInitDone)
+        if (!_libreHardwareSensor.InitializationDone)
             return;
 
         // Poll every ~4 seconds
@@ -837,11 +521,11 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         // Nur Fallback nutzen, wenn keine LIVE-Quelle (LHM/HWiNFO) die CPU-Temp liefert.
         // NICHT auf IsCpuTempAvailable pruefen - das setzt der Fallback selbst und wuerde
         // den Thermal-Zone-Wert nach der ersten Messung einfrieren (Bug-Fix).
-        if (_lhmProvidesTemp || _hwInfoProvidesTemp)
+        if (_libreHardwareSensor.ProvidesCpuTemperature || _hwInfoProvidesTemp)
             return;
 
         // Don't run until LHM init is complete (give LHM a chance first)
-        if (!_hwInitDone)
+        if (!_libreHardwareSensor.InitializationDone)
             return;
 
         // Only query every ~10 seconds (every 5th tick)
@@ -965,39 +649,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             }
         }
     }
-
-    private static IEnumerable<IHardware> EnumerateHardwareTree(Computer computer)
-    {
-        foreach (var hardware in computer.Hardware)
-        {
-            foreach (var item in EnumerateHardwareTree(hardware))
-                yield return item;
-        }
-    }
-
-    private static IEnumerable<IHardware> EnumerateHardwareTree(IHardware hardware)
-    {
-        yield return hardware;
-        foreach (var sub in hardware.SubHardware)
-        {
-            foreach (var item in EnumerateHardwareTree(sub))
-                yield return item;
-        }
-    }
-
-    private static void UpdateHardwareTree(IHardware hardware)
-    {
-        hardware.Update();
-        foreach (var sub in hardware.SubHardware)
-            UpdateHardwareTree(sub);
-    }
-
-    private static bool IsMonitoredHardwareType(HardwareType hardwareType)
-        => hardwareType == HardwareType.Cpu
-           || hardwareType == HardwareType.Memory
-           || hardwareType == HardwareType.Motherboard
-           || hardwareType == HardwareType.SuperIO
-           || IsGpuHardwareType(hardwareType);
 
     // ── CPU via GetSystemTimes ────────────────────────────────────────────
 
@@ -1156,11 +807,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         });
     }
 
-    private static bool IsGpuHardwareType(HardwareType hardwareType)
-        => hardwareType == HardwareType.GpuNvidia
-           || hardwareType == HardwareType.GpuAmd
-           || hardwareType == HardwareType.GpuIntel;
-
     private static string? FindNvidiaSmi()
     {
         // Check System32 first (modern NVIDIA drivers install here)
@@ -1269,7 +915,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
         _timer.Stop();
         _timer.Tick -= OnTick;
-        AuswertungPro.Next.Application.Common.BestEffort.Try(() => _computer?.Close(), "SystemMonitor: Hardware-Monitor schliessen");
-        _computer = null;
+        _libreHardwareSensor.Dispose();
     }
 }

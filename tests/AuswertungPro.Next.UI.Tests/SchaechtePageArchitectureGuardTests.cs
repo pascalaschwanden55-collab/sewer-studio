@@ -125,13 +125,22 @@ public sealed class SchaechtePageArchitectureGuardTests
             "Views",
             "Pages",
             "SchaechtePage.xaml.cs");
+        var controllerPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "DataPage",
+            "SchaechteShaftRenameController.cs");
 
         var page = File.ReadAllText(pagePath);
+        Assert.True(File.Exists(controllerPath), controllerPath);
+        var controller = File.ReadAllText(controllerPath);
 
         Assert.Contains("private bool ApplySchachtNumberChange(", page);
-        Assert.Contains("ShaftRenameService.Rename(", page);
-        Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", page);
-        Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", page);
+        Assert.Contains("SchaechteShaftRenameController.Apply(", page);
+        Assert.Contains("ShaftRenameService.Rename(", controller);
+        Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", controller);
+        Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", controller);
     }
 
     [Fact]
@@ -152,7 +161,6 @@ public sealed class SchaechtePageArchitectureGuardTests
             "Views",
             "Pages",
             "SchaechtePage.xaml.cs"));
-
         Assert.Contains("SchachtansichtView", pageXaml);
         Assert.Contains("SchachtansichtToggle_Changed", pageXaml);
         Assert.Contains("SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht", pageCode);
@@ -171,6 +179,14 @@ public sealed class SchaechtePageArchitectureGuardTests
             "Views",
             "Pages",
             "SchaechtePage.xaml.cs"));
+        var detailsBuilderPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "DataPage",
+            "SchaechteRecordDetailsBuilder.cs");
+        Assert.True(File.Exists(detailsBuilderPath), detailsBuilderPath);
+        var detailsBuilder = File.ReadAllText(detailsBuilderPath);
         var schachtansichtXaml = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -183,9 +199,10 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("private DataGridColumn CreateZustandsklasseColumn(", pageCode);
         Assert.Contains("DataGridComboBoxColumn", pageCode);
         Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", pageCode);
-        Assert.Contains("private RecordDetailItem CreateSchachtDetailItem(", pageCode);
-        Assert.Contains("isCombo: true", pageCode);
-        Assert.Contains("allowFreeText: false", pageCode);
+        Assert.Contains("SchaechteRecordDetailsBuilder", pageCode);
+        Assert.Contains("private RecordDetailItem CreateItem(", detailsBuilder);
+        Assert.Contains("isCombo: true", detailsBuilder);
+        Assert.Contains("allowFreeText: false", detailsBuilder);
 
         Assert.Contains("Zustand 0-4", schachtansichtXaml);
         Assert.Contains("ZustandsklasseValue_Click", schachtansichtXaml);

@@ -371,7 +371,7 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                var pages = ReadPdfPages(pdfPath);
+                var pages = HoldingDistribution.DistributionPdfAssignmentController.ReadPages(pdfPath);
                 var chunks = SplitPdfIntoHoldings(pages);
 
                 if (chunks.Count == 0)
@@ -440,7 +440,9 @@ public static partial class HoldingFolderDistributor
         // dem passenden Haltungsordner zuordnen und mit Originalnamen kopieren.
         foreach (var pdfPath in unmatchedPdfs)
         {
-            var holdingFolder = TryMatchPdfToHolding(pdfPath, distributedHoldings);
+            var holdingFolder = HoldingDistribution.DistributionPdfAssignmentController.MatchPdfToHolding(
+                pdfPath,
+                distributedHoldings);
             if (holdingFolder is not null)
             {
                 try
@@ -549,7 +551,7 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                var pages = ReadPdfPages(pdfPath);
+                var pages = HoldingDistribution.DistributionPdfAssignmentController.ReadPages(pdfPath);
                 var chunks = SplitPdfIntoShafts(pages);
 
                 if (chunks.Count == 0)
@@ -679,12 +681,16 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                var pages = ReadPdfPages(pdfPath);
+                var pages = HoldingDistribution.DistributionPdfAssignmentController.ReadPages(pdfPath);
 
                 // Multi-Seiten-Erkennung: Jede Seite einzeln auf Haltungspaar pruefen.
                 // KIT Bauinspekt PDFs haben pro Seite eine andere Haltung/Schacht.
                 // Kontrollinformations-Seiten (Messdaten) gehoeren zur vorherigen Pruefseite.
-                var pageResults = ExtractDichtheitPerPage(pages, project, destGemeindeFolder, cadastre);
+                var pageResults = HoldingDistribution.DistributionPdfAssignmentController.ExtractDichtheitPerPage(
+                    pages,
+                    project,
+                    destGemeindeFolder,
+                    cadastre);
 
                 // Multi-Split nur wenn VERSCHIEDENE Haltungen erkannt wurden.
                 // PDFs mit mehreren Seiten aber gleicher Haltung (z.B. Pruefbericht + Anhang)
@@ -711,7 +717,10 @@ public static partial class HoldingFolderDistributor
                         var haltung = SanitizePathSegment(NormalizeHaltungId(pr.HaltungId));
                         // Nicht im Kataster bekannte Haltungen in den Sammelordner "keine_Zuordnung"
                         // umlenken (reguläre Ablage-Logik, nur eine Ebene tiefer).
-                        var destRoot = ResolveDistributionRoot(destGemeindeFolder, pr.HaltungId, cadastre);
+                        var destRoot = HoldingDistribution.DistributionPdfAssignmentController.ResolveDistributionRoot(
+                            destGemeindeFolder,
+                            pr.HaltungId,
+                            cadastre);
                         var holdingFolder = Path.Combine(destRoot, haltung);
                         Directory.CreateDirectory(holdingFolder);
 
@@ -739,7 +748,11 @@ public static partial class HoldingFolderDistributor
                     {
                         var (shaftA, shaftB) = DichtheitShaftParser.TryExtractShafts(pdfText);
                         if (!string.IsNullOrWhiteSpace(shaftA) && !string.IsNullOrWhiteSpace(shaftB))
-                            haltungId = ResolveDichtheitHaltungOrder(shaftA, shaftB, project, destGemeindeFolder);
+                            haltungId = HoldingDistribution.DistributionPdfAssignmentController.ResolveHoldingOrder(
+                                shaftA,
+                                shaftB,
+                                project,
+                                destGemeindeFolder);
                     }
                     if (string.IsNullOrWhiteSpace(haltungId))
                     {
@@ -752,7 +765,9 @@ public static partial class HoldingFolderDistributor
 
                     // Letzter Rettungsanker: amtlicher Kataster-Abgleich (universell, formatunabhaengig).
                     if (string.IsNullOrWhiteSpace(haltungId) && cadastre is not null)
-                        haltungId = ResolveViaCadastre(pdfText, cadastre);
+                        haltungId = HoldingDistribution.DistributionPdfAssignmentController.ResolveViaCadastre(
+                            pdfText,
+                            cadastre);
 
                     if (string.IsNullOrWhiteSpace(haltungId))
                     {
@@ -768,7 +783,10 @@ public static partial class HoldingFolderDistributor
                     var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
                     // Nicht im Kataster bekannte Haltungen in den Sammelordner "keine_Zuordnung"
                     // umlenken (reguläre Ablage-Logik, nur eine Ebene tiefer).
-                    var destRoot = ResolveDistributionRoot(destGemeindeFolder, haltungId, cadastre);
+                    var destRoot = HoldingDistribution.DistributionPdfAssignmentController.ResolveDistributionRoot(
+                        destGemeindeFolder,
+                        haltungId,
+                        cadastre);
                     var holdingFolder = Path.Combine(destRoot, haltung);
                     Directory.CreateDirectory(holdingFolder);
 
@@ -1233,11 +1251,4 @@ public static partial class HoldingFolderDistributor
             }
         }
     }
-    private static readonly Regex PhotoAfterLabelRegex = new(
-        @"Foto\s*:\s*(?<name>\d{1,5}_\d{1,5}_\d{1,7}_[A-Za-z](?:\.(?:jpe?g|png|bmp|tif|tiff))?)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex PhotoTokenRegex = new(
-        @"(?<![A-Za-z0-9])(?<name>\d{1,5}_\d{1,5}_\d{1,7}_[A-Za-z](?:\.(?:jpe?g|png|bmp|tif|tiff))?)(?![A-Za-z])",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 }

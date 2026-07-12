@@ -46,6 +46,7 @@ public partial class SchaechtePage : UserControl
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly SchaechtePageSubscriptionController _subscriptionController;
+    private readonly SchaechteRecordDetailsBuilder _recordDetailsBuilder;
     private bool _isRestoringLayout;
 
     public SchaechtePage()
@@ -80,6 +81,11 @@ public partial class SchaechtePage : UserControl
             RebuildColumns,
             ApplySearchFilter,
             RecordPropertyChanged);
+        _recordDetailsBuilder = new SchaechteRecordDetailsBuilder(
+            ResolveOptions,
+            ResolveViewModelCommand,
+            CommitSchachtDetailKonsolidiert,
+            () => _vm is not null);
 
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
@@ -601,7 +607,7 @@ public partial class SchaechtePage : UserControl
             : $"Schacht {schacht}";
 
         var subtitle = "Komplette Zeile in Spaltenreihenfolge der Schacht-Ansicht.";
-        var groups = BuildRecordDetails(record);
+        var groups = _recordDetailsBuilder.Build(_vm?.Columns ?? [], record);
         var window = new RecordDetailsWindow(
             title: string.IsNullOrWhiteSpace(schacht) ? "Schachtdetails" : $"Schachtdetails - {schacht}",
             header: header,
@@ -614,7 +620,7 @@ public partial class SchaechtePage : UserControl
     }
 
     private List<RecordDetailGroup> BuildRecordDetailsForAnsicht(SchachtRecord record)
-        => BuildRecordDetails(record);
+        => _recordDetailsBuilder.Build(_vm?.Columns ?? [], record);
 
     private void SchachtansichtToggle_Changed(object sender, RoutedEventArgs e)
     {
@@ -666,122 +672,6 @@ public partial class SchaechtePage : UserControl
                 System.Diagnostics.Debug.Fail($"Unbekannter actionKey: {actionKey}");
                 break;
         }
-    }
-
-    private List<RecordDetailGroup> BuildRecordDetails(SchachtRecord record)
-    {
-        var groups = new List<RecordDetailGroup>();
-        var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
-        {
-            ["Stammdaten"] = new(),
-            ["Zustand und Inspektion"] = new(),
-            ["Sanierung und Kosten"] = new(),
-            ["Dokumente und Medien"] = new(),
-            ["Weitere Angaben"] = new()
-        };
-
-        // Encoding-Varianten desselben Feldes ("Ausführung"/"Ausfuehrung"/"AusfÃ¼hrung") werden zu
-        // EINEM Feld zusammengefuehrt (nicht-leerer Wert gewinnt) — analog zum festen FieldCatalog
-        // der Haltungen. Kein rohes Durchreichen aller record.Fields.Keys mehr.
-        var templateSpalten = _vm?.Columns ?? (IEnumerable<string>)Array.Empty<string>();
-        var konsolidiert = SchachtDetailFeldKonsolidierer.Konsolidiere(templateSpalten, record.Fields);
-
-        RecordDetailItem? sanierenSchalter = null;
-        var sanierungFolge = new List<RecordDetailItem>();
-
-        foreach (var feld in konsolidiert)
-        {
-            var groupName = ResolveSchachtDetailGroup(feld.AnzeigeName);
-            var item = CreateSchachtDetailItem(feld, record);
-            buckets[groupName].Add(item);
-
-            if (string.Equals(ResolveOptionField(feld.AnzeigeName), "Sanieren_JaNein", StringComparison.Ordinal))
-                sanierenSchalter = item;
-            else if (string.Equals(groupName, "Sanierung und Kosten", StringComparison.Ordinal))
-                sanierungFolge.Add(item);
-        }
-
-        // Sanieren = Nein -> Folgefelder der Sanierungs-Gruppe ausblenden (wie bei den Haltungen).
-        WireSchachtSanierungSichtbarkeit(sanierenSchalter, sanierungFolge);
-
-        AddSchachtGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.");
-        AddSchachtGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.");
-        AddSchachtGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.");
-        AddSchachtGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.");
-        AddSchachtGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
-
-        return groups;
-    }
-
-    // Blendet die Sanierungs-Folgefelder aus, solange "Sanieren = Nein" gewaehlt ist. Reagiert live.
-    private static void WireSchachtSanierungSichtbarkeit(RecordDetailItem? sanieren, IReadOnlyList<RecordDetailItem> folge)
-    {
-        if (sanieren is null || folge.Count == 0)
-            return;
-
-        void Apply()
-        {
-            var sichtbar = !string.Equals(sanieren.Value?.Trim(), "Nein", StringComparison.OrdinalIgnoreCase);
-            foreach (var item in folge)
-                item.IsVisible = sichtbar;
-        }
-
-        Apply();
-        sanieren.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(RecordDetailItem.Value))
-                Apply();
-        };
-    }
-
-    private RecordDetailItem CreateSchachtDetailItem(KonsolidiertesSchachtFeld feld, SchachtRecord record)
-    {
-        var label = GetDisplayHeader(feld.AnzeigeName);
-        var value = feld.Wert;
-        var specField = feld.AnzeigeName;
-        var highlightKind = RecordDetailHighlightPolicy.Resolve(specField);
-
-        void Commit(string? next) => CommitSchachtDetailKonsolidiert(record, feld, next);
-
-        if (_vm is not null && TryResolveDropdownColumnSpec(specField, out var spec))
-        {
-            var options = ResolveOptions(spec.ItemsSourcePath);
-            return new RecordDetailItem(
-                label,
-                value,
-                commitValue: Commit,
-                isCombo: true,
-                allowFreeText: spec.AllowFreeText,
-                options: options,
-                editOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.EditCommand) : null,
-                previewOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.PreviewCommand) : null,
-                resetOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.ResetCommand) : null,
-                addOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.AddCommand) : null,
-                removeOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.RemoveCommand) : null,
-                highlightKind: highlightKind);
-        }
-
-        var normalized = Normalize(specField);
-        var isMultiline = IsPrimaryDamagesColumn(specField)
-                          || normalized.Contains("bemerk", StringComparison.Ordinal);
-        if (IsZustandsklasseColumn(specField))
-        {
-            return new RecordDetailItem(
-                label,
-                value,
-                commitValue: Commit,
-                isCombo: true,
-                allowFreeText: false,
-                options: ZustandsklasseColorPalette.SelectionOptions,
-                highlightKind: highlightKind);
-        }
-
-        return new RecordDetailItem(
-            label,
-            value,
-            commitValue: Commit,
-            isMultiline: isMultiline,
-            highlightKind: highlightKind);
     }
 
     private IEnumerable<string> ResolveOptions(string itemsSourcePath)
@@ -864,74 +754,13 @@ public partial class SchaechtePage : UserControl
     }
 
     private bool ApplySchachtNumberChange(SchachtRecord record, string? oldValue, string? newValue)
-    {
-        var oldNumber = oldValue ?? string.Empty;
-        var newNumber = newValue ?? string.Empty;
-        if (string.Equals(oldNumber, newNumber, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        var projectPath = Services.Settings.LastProjectPath;
-        var renameResult = ShaftRenameService.Rename(record, oldNumber, newNumber, projectPath);
-        if (!renameResult.Success)
-        {
-            DialogHost.Current.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
-            return false;
-        }
-
-        record.SetFieldValue("Schachtnummer", newNumber);
-        PdfCorrectionMetadata.RegisterShaftRename(GetCurrentProject(), oldNumber, newNumber);
-
-        var pdfSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        void CollectPdf(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-                return;
-
-            foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var resolved = ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
-                if (!string.IsNullOrWhiteSpace(resolved)
-                    && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                {
-                    pdfSet.Add(resolved);
-                }
-            }
-        }
-
-        CollectPdf(record.GetFieldValue(FieldKeys.PdfPath));
-        CollectPdf(record.GetFieldValue(FieldKeys.PdfAll));
-        CollectPdf(record.GetFieldValue(FieldKeys.PdfEigen));
-        CollectPdf(record.GetFieldValue(FieldKeys.Link));
-
-        if (pdfSet.Count > 0)
-        {
-            var pdfRewrite = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
-                new List<string>(pdfSet),
-                oldNumber,
-                newNumber);
-            if (pdfRewrite.Failed > 0)
-            {
-                DialogHost.Current.Error(
-                    $"{pdfRewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                    "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
-                    "PDF nicht aktualisiert");
-            }
-        }
-
-        return true;
-    }
-
-    private static void AddSchachtGroup(
-        ICollection<RecordDetailGroup> groups,
-        IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
-        string title,
-        string description)
-    {
-        if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
-            return;
-
-        groups.Add(new RecordDetailGroup(title, description, items));
-    }
+        => SchaechteShaftRenameController.Apply(
+            record,
+            oldValue,
+            newValue,
+            Services.Settings.LastProjectPath,
+            GetCurrentProject(),
+            (message, title) => DialogHost.Current.Error(message, title));
 
     private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
     {
