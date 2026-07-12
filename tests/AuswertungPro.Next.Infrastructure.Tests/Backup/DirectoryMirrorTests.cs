@@ -462,6 +462,8 @@ public sealed class DirectoryMirrorTests : IDisposable
         Assert.False(File.Exists(targetDb + "-shm"));
         Assert.Equal(1, stats.DatabasesSnapshotted);
         Assert.Equal(1, stats.Verified);
+        Assert.Equal(1, stats.Copied);
+        Assert.Empty(stats.Errors);
 
         // Die Quelle bleibt geoeffnet und wird waehrend des App-Betriebs weiter beschrieben.
         Execute(writer, "INSERT INTO Items(Name) VALUES ('zwei');");

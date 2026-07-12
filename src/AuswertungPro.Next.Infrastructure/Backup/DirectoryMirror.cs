@@ -271,6 +271,10 @@ public sealed class DirectoryMirror
             var effectiveWriteTime = GetEffectiveSqliteWriteTimeUtc(sourceFile, sourceInfo.LastWriteTimeUtc);
             File.SetLastWriteTimeUtc(tempFile, effectiveWriteTime);
             var tempInfo = new FileInfo(tempFile);
+            // Laenge vor dem atomaren Verschieben merken. FileInfo zeigt danach noch
+            // auf den alten Temp-Pfad und wuerde sonst faelschlich FileNotFound werfen,
+            // obwohl die Datenbank bereits korrekt im Ziel liegt.
+            var tempLength = tempInfo.Length;
             stats.DatabasesSnapshotted++;
             stats.Verified++;
 
@@ -288,7 +292,7 @@ public sealed class DirectoryMirror
             TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
             File.Move(tempFile, targetFile, overwrite: true);
             stats.Copied++;
-            stats.BytesCopied += tempInfo.Length;
+            stats.BytesCopied += tempLength;
             onFileDone?.Invoke(sourceFile, sourceInfo.Length);
         }
         catch

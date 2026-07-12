@@ -51,6 +51,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvalSetV2Builder", "tools\E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AiQualityReport", "tools\AiQualityReport\AiQualityReport.csproj", "{0A3059E9-42E1-450B-A92A-2ADEA9217F29}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FullBackupSmoke", "tools\FullBackupSmoke\FullBackupSmoke.csproj", "{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -313,6 +315,18 @@ Global
 		{0A3059E9-42E1-450B-A92A-2ADEA9217F29}.Release|x64.Build.0 = Release|Any CPU
 		{0A3059E9-42E1-450B-A92A-2ADEA9217F29}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A3059E9-42E1-450B-A92A-2ADEA9217F29}.Release|x86.Build.0 = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|x64.Build.0 = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Debug|x86.Build.0 = Debug|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|x64.ActiveCfg = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|x64.Build.0 = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|x86.ActiveCfg = Release|Any CPU
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -339,6 +353,7 @@ Global
 		{7F642D41-6D71-4C95-8CA4-D5B8DAE3F47D} = {E6E5B4B5-2A4B-4E37-9E1B-9A8C3F1A9D8E}
 		{0EE3B71E-58DE-46C9-8812-CB55CF8722F8} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{0A3059E9-42E1-450B-A92A-2ADEA9217F29} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
+		{546F8CD7-FD34-47E4-A582-369FA0C8A9D0} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {54D8845E-5B57-4DBE-95FA-FFF3E6938256}
