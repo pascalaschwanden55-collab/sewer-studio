@@ -10,7 +10,7 @@ public sealed class DataPageOriginalPdfArchitectureTests
     public void DataPage_context_menus_can_reveal_haltung_folder()
     {
         var pageXaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml"));
-        var pageCode = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
+        var pageCode = ReadDataPageCode();
         var ansichtXaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml"));
         var ansichtCode = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml.cs"));
 
@@ -20,5 +20,15 @@ public sealed class DataPageOriginalPdfArchitectureTests
         Assert.Contains("CtxOpenFolder_Click", ansichtXaml, StringComparison.Ordinal);
         Assert.Contains("RaiseAction(\"openfolder\")", ansichtCode, StringComparison.Ordinal);
         Assert.Contains("case \"openfolder\": OpenContainingFolderMenu_Click(this, e); break;", pageCode, StringComparison.Ordinal);
+    }
+
+    private static string ReadDataPageCode()
+    {
+        var pagesRoot = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
+        return string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(pagesRoot, "DataPage*.cs")
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .Select(File.ReadAllText));
     }
 }

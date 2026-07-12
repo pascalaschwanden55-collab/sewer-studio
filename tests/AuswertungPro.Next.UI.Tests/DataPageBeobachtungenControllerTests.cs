@@ -115,6 +115,31 @@ public sealed class DataPageBeobachtungenControllerTests
     }
 
     [Fact]
+    public void VsaUpdateAction_ohne_Auswertungsergebnis_bleibt_still()
+    {
+        var record = new HaltungRecord();
+        var refreshed = 0;
+        var messages = new List<(string Message, string Title)>();
+        var controller = new DataPageBeobachtungenController(
+            (message, title) => messages.Add((message, title)),
+            (message, title) => messages.Add((message, title)),
+            _ => null);
+
+        var request = controller.BuildOpenRequest(
+            record,
+            new ObservableCollection<ProtocolEntry>(),
+            new TestCommand(),
+            _ => { },
+            () => refreshed++,
+            (_, _) => { });
+
+        request!.VsaUpdateAction();
+
+        Assert.Equal(0, refreshed);
+        Assert.Empty(messages);
+    }
+
+    [Fact]
     public void SyncHoldingFieldsAction_synchronisiert_mit_status()
     {
         var record = new HaltungRecord();

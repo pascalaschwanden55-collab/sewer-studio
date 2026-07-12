@@ -65,8 +65,8 @@
 | Absturz & Wiederanlauf | A− | A | Globale Handler, gebündeltes AutoSave, Import-Rollback, Single-Instance und überwachte Hintergrundaufgaben vorhanden | Praktische Prozess-Kill-Handtests fehlen | AP-70 |
 | Import/Export-Robustheit | A− | A | Result-Pattern, Fehler-Isolation, atomisches Rohdatenarchiv, idempotenter IBAK-Re-Import und Restore-Point vor jedem echten Import | Bedienprüfung nach Restore bleibt offen | AP-17 Rest |
 | Datenkonsistenz | B+ | A− | Schema-Check, unbekannte Felder erhalten, Import auf DeepCopy, UserEdited-Schutz | Duplikat-Namen noch nicht an allen Eingabestellen blockiert | AP-20 |
-| Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; Sidecar-Version im Hauptpfad geprüft | 2 Großdateien und doppelt gepflegter C#/Python-Vertrag | AP-34 |
-| Codequalität | B | B+ | Neue Großdateien werden verhindert; achtzehn frühere Großdateien sind inzwischen unter 1.000 Zeilen | Noch 2 Produktionsdateien >1.000 Zeilen | AP-34 |
+| Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; keine Produktionsdatei mehr über 1.000 Zeilen | Doppelt gepflegter C#/Python-Vertrag | P3 beobachten |
+| Codequalität | B+ | A− | Neue Großdateien werden verhindert; alle zwanzig früheren Großdateien sind inzwischen unter 1.000 Zeilen | Kleinere Verantwortungsgrenzen weiter beobachten | Fitness-Test halten |
 | Sicherheit | **A** | A | Sidecar-Token+Loopback, keine Secrets, ArgumentList, Sandbox | Nur P3-Randnotizen | keine (halten) |
 | Tests | B+ | A | Zuletzt 8.468 Tests vollständig grün bestätigt; Crash-/Schema-/Backup-Tests und pre-push-Gate | Kein zentraler CI-Lauf; Langzeit- und Abbruchabdeckung noch ergänzen | AP-41, AP-70 |
 | UI/Bedienbarkeit | B+ | A | Fehlerdialoge, Fortschritt, Abbruch und Dirty-Guard vorhanden | Synchrones Projektladen/-speichern kann bei großen Dateien blockieren | AP-50 |
@@ -131,7 +131,7 @@ Aktueller Stand: Alle vier Punkte dieser Tabelle sind inzwischen umgesetzt: Proj
 | P2-15 | SQLite-KB ohne Korruptions-/Recovery-Test; Cancellation mitten im Vorgang kaum getestet | Tests-Audit |
 | P2-16 ✅ | Versionsprüfung wird im Monitor und Haupt-Analysepfad erzwungen | AP-36 |
 | P2-17 ⚠️ | Neuer-PC-Anleitung vorhanden; externe Programme/Offline-Modelle bleiben einzurichten | AP-18, AP-61 |
-| P2-18 🔄 | God-Klassen werden schrittweise zerlegt; zusätzlich sind Haltungsverteiler, Builder, Fotomessung und Sanierungsmatrix unter 1.000 Zeilen. Die ausgelagerten Aufgaben sind getrennt testbar. | AP-34, Commit `6c656ef6` plus aktuelle Pakete |
+| P2-18 ✅ | Die feste Altliste ist vollständig zerlegt: Alle zwanzig früheren Großdateien liegen unter 1.000 Zeilen. Datenseite und Startfenster waren die letzten zwei Pakete; die ausgelagerten Aufgaben sind getrennt testbar. | AP-34 abgeschlossen; Fitness-Test bleibt aktiv |
 
 ### P3 — spätere Optimierung (Auswahl)
 
@@ -220,7 +220,7 @@ Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platt
 4. **ViewModels erzeugen Kosten-Stores selbst** (11 `new`-Stellen). → Beim nächsten Anfassen der jeweiligen Seite über ServiceProvider beziehen. Kein Sammel-Refactoring.
 5. **Application-Schicht enthält QuestPDF-Rendering + XML-Parsing** (je >1100 Zeilen). → Nur als bewusste Ausnahme dokumentieren (eine Zeile in CLAUDE.md).
 
-**Reihenfolge ab jetzt:** UI-Handtests des Proberestores, dann asynchrones Laden/Speichern (AP-50), Diagnosepaket (AP-55 Rest), Abbruchtests (AP-41) und danach weitere kleine God-Klassen-Pakete (AP-34). **Keine Neuentwicklung irgendeines Teils ist nötig.**
+**Reihenfolge ab jetzt:** UI-Handtests des Proberestores, dann asynchrones Laden/Speichern (AP-50), Diagnosepaket (AP-55 Rest) und Abbruchtests (AP-41). Die Großdatei-Altliste (AP-34) ist abgeschlossen; der Fitness-Test verhindert Rückfälle. **Keine Neuentwicklung irgendeines Teils ist nötig.**
 
 ---
 
@@ -271,7 +271,7 @@ Jedes Paket ist einzeln an Codex/Opus übergebbar (Prompts in Kapitel 11). Aufw�
 | AP-31 ✅ | Fitness-Test-Whitelist für die 4 statischen Fassaden | P3 | umgesetzt |
 | AP-32 | `UI/Ai` in themenbezogene Unterordner sortieren (nur verschieben) | P3 | 2–3h |
 | AP-33 | `GetService()` fail-fast statt still null | P3 | 0.5h |
-| AP-34 🔄 | Großklassen schrittweise nach Verantwortung zerlegen; Altliste im Fitness-Test verkleinern | P2 | fortlaufend; Altliste von 20 auf 2 Dateien gesenkt. Zuletzt wurden Haltungsverteiler, Builder, Fotomessung und Sanierungsmatrix getrennt. |
+| AP-34 ✅ | Großklassen schrittweise nach Verantwortung zerlegen; Altliste im Fitness-Test verkleinern | P2 | abgeschlossen 2026-07-12; Altliste von 20 auf 0 Dateien gesenkt. Zuletzt wurden Datenseite und Startfenster getrennt. |
 | AP-35 ✅ | Hintergrundaufgaben sichtbar beobachten; lokale Server begrenzen und beim Stoppen abwarten | P2/P3 | umgesetzt 2026-07-12; Tageslog, 8-Client-Grenze, geordnetes Stoppen |
 | AP-36 ✅ | Detaillierten Sidecar-Health-/Versionscheck im echten Analyse-Hauptpfad verwenden | P2 | umgesetzt 2026-07-12; 2 neue Entscheidungstests |
 

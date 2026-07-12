@@ -5,9 +5,8 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditDialogMigrationTests
 {
-    private static readonly string[] DialogHotspots =
+    private static readonly string[] OtherDialogHotspots =
     [
-        Path.Combine("Views", "Pages", "DataPage.xaml.cs"),
         Path.Combine("Views", "Windows", "TrainingCenterWindow.xaml.cs"),
         Path.Combine("Views", "ProtocolObservationsWindow.xaml.cs")
     ];
@@ -15,10 +14,12 @@ public sealed class DesignAuditDialogMigrationTests
     [Fact]
     public void Top_dialog_hotspots_use_dialog_service_instead_of_direct_message_boxes()
     {
-        foreach (var relativePath in DialogHotspots)
-        {
-            var code = ReadUiFile(relativePath);
+        var hotspotCode = OtherDialogHotspots
+            .Select(ReadUiFile)
+            .Prepend(ReadDataPageCode());
 
+        foreach (var code in hotspotCode)
+        {
             Assert.Contains(".Dialogs", code);
         }
     }
@@ -40,6 +41,16 @@ public sealed class DesignAuditDialogMigrationTests
     {
         var path = RepoFile("src", "AuswertungPro.Next.UI", relativePath);
         return File.ReadAllText(path);
+    }
+
+    private static string ReadDataPageCode()
+    {
+        var pagesRoot = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
+        return string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(pagesRoot, "DataPage*.cs")
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .Select(File.ReadAllText));
     }
 
 }

@@ -416,9 +416,7 @@ public sealed class ArchitectureFitnessTests
     [Fact]
     public void Top_dialog_hotspots_do_not_call_message_box_directly()
     {
-        var offenders = FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"),
-                "MessageBox.Show")
+        var offenders = FindDataPagePartialTokenOffenders("MessageBox.Show")
             .Concat(FindFileTokenOffenders(
                 RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingCenterWindow.xaml.cs"),
                 "MessageBox.Show"))
@@ -1627,6 +1625,14 @@ public sealed class ArchitectureFitnessTests
 
     private static string[] FindPlayerWindowPartialTokenOffenders(params string[] forbiddenTokens)
         => FindWindowTokenOffenders("PlayerWindow*.cs", forbiddenTokens);
+
+    private static string[] FindDataPagePartialTokenOffenders(params string[] forbiddenTokens)
+    {
+        var pagesRoot = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
+        return Directory.EnumerateFiles(pagesRoot, "DataPage*.cs")
+            .SelectMany(path => FindFileTokenOffenders(path, forbiddenTokens))
+            .ToArray();
+    }
 
     private static string[] FindFileTokenOffenders(string path, params string[] forbiddenTokens)
     {

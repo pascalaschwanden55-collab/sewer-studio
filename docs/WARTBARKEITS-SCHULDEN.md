@@ -6,10 +6,9 @@ Neue God-Klassen werden durch `MaintainabilityFitnessTests` verhindert: Eine neu
 Produktionsdatei darf nicht unbemerkt mehr als 1.000 Zeilen bekommen. Die vier
 bekannten statischen DI-Ausnahmen sind ebenfalls fest eingefroren.
 
-Das bedeutet nicht, dass der Altbestand bereits vollständig aufgeteilt ist. Offen
-sind noch zwei große WPF-Code-behind-Dateien: `DataPage.xaml.cs` und
-`StartupSplashWindow.xaml.cs`. Auch sie werden nur in kleinen, durch Tests
-geschützten Schritten zerlegt.
+Die beim Audit festgehaltene Altliste ist vollständig abgearbeitet. Keine
+Produktionsdatei liegt mehr über 1.000 Zeilen. Kleinere Verantwortungen werden
+trotzdem weiterhin nur in durch Tests geschützten Schritten verschoben.
 
 Erster Schritt erledigt am 2026-07-12: Dateikopien, eindeutige Zieldateinamen
 und Video-Konflikthinweise wurden aus `HoldingFolderDistributor` in
@@ -96,6 +95,19 @@ Achte Aufräumrunde erledigt am 2026-07-12:
 Damit sank die feste Altliste seit Beginn von 20 auf 2 Produktionsdateien mit
 mehr als 1.000 Zeilen. Diese beiden Dateien bleiben bewusste, offene
 Wartbarkeitsschulden und werden einzeln weiter zerlegt.
+
+Neunte Aufräumrunde erledigt am 2026-07-12:
+
+- Docking, Beobachtungsfenster, Filter und Datensatz-Menübefehle liegen in
+  `DataPage.RecordInteractions`. Die Datenseite sank von 1.328 auf 858 Zeilen;
+  ein Test prüft alle 43 eindeutigen XAML-Ereignisse über sämtliche Teildateien.
+- Netzaufbau, Rendering und Animationen liegen in
+  `StartupSplashWindow.Animation`. Reine Projektions- und Farbregeln sind separat
+  testbar; das Startfenster sank von 1.175 auf 487 Zeilen.
+
+Damit ist die feste Altliste von 20 auf 0 Produktionsdateien über 1.000 Zeilen
+gesunken. Die Ausnahmeliste ist leer; der Fitness-Test verhindert neue
+Großdateien weiterhin automatisch.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann
 eine Verantwortung verschieben, vollständige Tests ausführen und erst danach das
