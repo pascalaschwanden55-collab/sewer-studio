@@ -6,11 +6,7 @@ public sealed class MaintainabilityFitnessTests
 {
     private static readonly HashSet<string> ExistingLargeFiles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "src/AuswertungPro.Next.UI/ViewModels/Pages/BuilderPageViewModel.cs",
-        "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml.cs",
         "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml.cs",
-        "src/AuswertungPro.Next.Infrastructure/HoldingFolderDistributor.cs",
-        "src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs",
         "src/AuswertungPro.Next.UI/Views/Windows/StartupSplashWindow.xaml.cs",
     };
 

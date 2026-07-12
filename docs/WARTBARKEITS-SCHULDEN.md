@@ -6,20 +6,10 @@ Neue God-Klassen werden durch `MaintainabilityFitnessTests` verhindert: Eine neu
 Produktionsdatei darf nicht unbemerkt mehr als 1.000 Zeilen bekommen. Die vier
 bekannten statischen DI-Ausnahmen sind ebenfalls fest eingefroren.
 
-Das bedeutet nicht, dass der Altbestand bereits vollständig aufgeteilt ist. Die
-größten offenen Pakete sind:
-
-1. `HoldingFolderDistributor`: Die öffentliche Fassade beibehalten, intern aber
-   Haltung, Schacht, Dichtheit, PDF-Parsing, PDF-Umschreiben und Video-Matching in
-   eigenständige Dienste mit kleinen Schnittstellen trennen.
-2. Große WPF-Code-behind-Dateien (`DataPage`, `SchaechtePage`,
-   `PhotoMeasurementWindow`): Bedienlogik schrittweise in Controller verschieben.
-3. Große ViewModels (`BuilderPageViewModel`, `CostCalculatorViewModel`,
-   `SanierungsMatrixPageViewModel`): Laden, Berechnen, Exportieren und Dialoge
-   nicht in derselben Klasse halten.
-4. Große Importer: WinCan und `LegacyXtfImportService` liegen jetzt unter der
-   1.000-Zeilen-Grenze. Die nächsten Importer nur in kleinen, getesteten Schritten
-   anfassen.
+Das bedeutet nicht, dass der Altbestand bereits vollständig aufgeteilt ist. Offen
+sind noch zwei große WPF-Code-behind-Dateien: `DataPage.xaml.cs` und
+`StartupSplashWindow.xaml.cs`. Auch sie werden nur in kleinen, durch Tests
+geschützten Schritten zerlegt.
 
 Erster Schritt erledigt am 2026-07-12: Dateikopien, eindeutige Zieldateinamen
 und Video-Konflikthinweise wurden aus `HoldingFolderDistributor` in
@@ -92,8 +82,19 @@ Siebte Aufräumrunde erledigt am 2026-07-12:
 - Aufbau der Schachtdetails und Schachtnummer-Umbenennung liegen in eigenen
   Bausteinen. Die Schachtseite sank auf 999 Zeilen.
 
-Damit sank die feste Altliste seit Beginn von 20 auf 6 Produktionsdateien mit
-mehr als 1.000 Zeilen. Die übrigen 6 Dateien bleiben bewusste, offene
+Achte Aufräumrunde erledigt am 2026-07-12:
+
+- Die Verarbeitung eines bereits geparsten Haltungs-PDFs liegt in
+  `ParsedHoldingDistributionController`. Die Verteiler-Fassade sank auf 940 Zeilen.
+- LV-Aufbereitung und Ausgabeaufgaben liegen außerhalb des
+  `BuilderPageViewModel`. Das Haupt-ViewModel sank auf 918 Zeilen.
+- Darstellung und Bedienregeln der Fotomessung liegen in getrennten Bausteinen.
+  Das Fenster sank auf 787 Zeilen.
+- Navigation und Detailbearbeitung der Sanierungsmatrix liegen in eigenen
+  Modellen. Das Haupt-ViewModel sank auf 942 Zeilen.
+
+Damit sank die feste Altliste seit Beginn von 20 auf 2 Produktionsdateien mit
+mehr als 1.000 Zeilen. Diese beiden Dateien bleiben bewusste, offene
 Wartbarkeitsschulden und werden einzeln weiter zerlegt.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann

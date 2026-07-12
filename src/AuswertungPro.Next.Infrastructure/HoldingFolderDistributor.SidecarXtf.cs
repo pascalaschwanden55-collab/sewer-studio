@@ -463,7 +463,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static VideoFindResult TryFindVideoFromSidecarLinks(
+    internal static VideoFindResult TryFindVideoFromSidecarLinks(
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarVideoLinksByHolding,
         string haltung,
         string videoSourceFolder,

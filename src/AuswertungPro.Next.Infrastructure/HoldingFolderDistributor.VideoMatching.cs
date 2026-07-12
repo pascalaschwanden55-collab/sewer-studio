@@ -42,7 +42,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static VideoFindResult FindVideo(
+    internal static VideoFindResult FindVideo(
         string videoFileNameFromPdf,
         string videoSourceFolder,
         string haltung,
@@ -55,7 +55,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static VideoFindResult FindVideoByHaltungDate(
+    internal static VideoFindResult FindVideoByHaltungDate(
         string videoSourceFolder,
         string haltung,
         string dateStamp,
@@ -75,7 +75,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static VideoFindResult TryFindVideoFromCdIndexPhotoHints(
+    internal static VideoFindResult TryFindVideoFromCdIndexPhotoHints(
         IReadOnlyDictionary<string, IReadOnlyList<string>>? cdIndexVideoLinksByPhoto,
         string pdfPath,
         string haltung,
@@ -168,7 +168,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static string? TryResolveHoldingFromMatchedVideo(
+    internal static string? TryResolveHoldingFromMatchedVideo(
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarHoldingsByVideoLink,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarVideoLinksByHolding,
         string? videoPath,
@@ -212,7 +212,7 @@ public static partial class HoldingFolderDistributor
         return candidate;
     }
 
-    private static string? TryResolveHoldingFromMatchedVideoName(
+    internal static string? TryResolveHoldingFromMatchedVideoName(
         AuswertungPro.Next.Domain.Models.Project? project,
         string? videoPath,
         string parsedHolding)
@@ -238,7 +238,7 @@ public static partial class HoldingFolderDistributor
         => HoldingDistribution.HoldingKeyUtils.GetSuffixFromFirstUnderscore(fileName);
 
 
-    private static AuswertungPro.Next.Domain.Models.HaltungRecord? FindRecordByHolding(
+    internal static AuswertungPro.Next.Domain.Models.HaltungRecord? FindRecordByHolding(
         AuswertungPro.Next.Domain.Models.Project? project,
         string haltung)
     {
@@ -294,7 +294,7 @@ public static partial class HoldingFolderDistributor
     private static string ReverseHoldingId(string? haltung) => HoldingIdNormalizer.ReverseHoldingId(haltung);
 
 
-    private static VideoFindResult TryFindVideoFromRecordLink(
+    internal static VideoFindResult TryFindVideoFromRecordLink(
         AuswertungPro.Next.Domain.Models.Project? project,
         string haltung,
         string videoSourceFolder,
@@ -338,7 +338,7 @@ public static partial class HoldingFolderDistributor
     /// Gibt den Pfad zurueck wenn ja, sonst null.
     /// Verhindert Duplikate beim erneuten Verteilen.
     /// </summary>
-    private static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
+    internal static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
     {
         if (!Directory.Exists(holdingFolder) || !File.Exists(sourceVideoPath))
             return null;

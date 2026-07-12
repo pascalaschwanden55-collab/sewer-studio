@@ -115,7 +115,7 @@ public static partial class HoldingFolderDistributor
     /// Verhindert Duplikate beim erneuten Verteilen.
     /// </summary>
 
-    private static string MakeProjectRelativeLink(string mediaPath, string municipalityFolder)
+    internal static string MakeProjectRelativeLink(string mediaPath, string municipalityFolder)
     {
         var current = new DirectoryInfo(Path.GetFullPath(municipalityFolder));
         while (current is not null)

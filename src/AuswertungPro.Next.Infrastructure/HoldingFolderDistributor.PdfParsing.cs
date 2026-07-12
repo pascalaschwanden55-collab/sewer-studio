@@ -828,7 +828,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static IReadOnlyList<PdfTextReplacement> BuildRenameReplacements(string oldValue, string newValue)
+    internal static IReadOnlyList<PdfTextReplacement> BuildRenameReplacements(string oldValue, string newValue)
     {
         if (!PdfTextLayerRewriter.CanRewrite(oldValue, newValue))
             return Array.Empty<PdfTextReplacement>();
@@ -836,7 +836,7 @@ public static partial class HoldingFolderDistributor
         return new[] { new PdfTextReplacement(oldValue.Trim(), newValue.Trim()) };
     }
 
-    private static PdfCorrectionResult TryCorrectPdfTextLayer(
+    internal static PdfCorrectionResult TryCorrectPdfTextLayer(
         string sourcePdfPath,
         IReadOnlyList<PdfTextReplacement> replacements)
     {

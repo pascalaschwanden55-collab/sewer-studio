@@ -43,8 +43,8 @@ public static partial class HoldingFolderDistributor
         DateTime Date,
         string SectionText);
 
-    private sealed record PdfTextReplacement(string SearchText, string ReplacementText);
-    private sealed record PdfCorrectionResult(
+    internal sealed record PdfTextReplacement(string SearchText, string ReplacementText);
+    internal sealed record PdfCorrectionResult(
         bool Success,
         bool Corrected,
         string OutputPdfPath,
