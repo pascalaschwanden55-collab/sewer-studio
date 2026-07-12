@@ -1093,8 +1093,7 @@ public static partial class HoldingFolderDistributor
         }
         finally
         {
-            if (!moveInsteadOfCopy
-                && correctionResult.Corrected
+            if (correctionResult.Corrected
                 && !string.Equals(correctionResult.OutputPdfPath, pdfToStorePath, StringComparison.OrdinalIgnoreCase))
             {
                 try
@@ -1219,8 +1218,7 @@ public static partial class HoldingFolderDistributor
         }
         finally
         {
-            if (!moveInsteadOfCopy
-                && correctionResult.Corrected
+            if (correctionResult.Corrected
                 && !string.Equals(correctionResult.OutputPdfPath, pdfToStorePath, StringComparison.OrdinalIgnoreCase))
             {
                 try

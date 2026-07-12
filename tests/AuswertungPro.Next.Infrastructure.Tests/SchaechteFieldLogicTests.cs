@@ -21,6 +21,7 @@ public sealed class SchaechteFieldLogicTests
     [InlineData("Schächte", "schaechte")]
     [InlineData("Überprüfung", "ueberpruefung")]
     [InlineData("Straße", "strasse")]
+    [InlineData("EigentÃ¼mer", "eigentuemer")]
     [InlineData("SCHACHT_NR", "schacht_nr")]
     public void NormalizeKey_NormalisierUmlauteUndGrossKlein(string input, string expected)
         => Assert.Equal(expected, SchaechteFieldLogic.NormalizeKey(input));

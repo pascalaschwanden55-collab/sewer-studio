@@ -17,8 +17,9 @@ größten offenen Pakete sind:
 3. Große ViewModels (`BuilderPageViewModel`, `CostCalculatorViewModel`,
    `SanierungsMatrixPageViewModel`): Laden, Berechnen, Exportieren und Dialoge
    nicht in derselben Klasse halten.
-4. Große Importer: Bei WinCan ist das Datenbanklesen jetzt getrennt;
-   `LegacyXtfImportService` weiterhin in Lesen, Zuordnen und Schreiben teilen.
+4. Große Importer: WinCan und `LegacyXtfImportService` liegen jetzt unter der
+   1.000-Zeilen-Grenze. Die nächsten Importer nur in kleinen, getesteten Schritten
+   anfassen.
 
 Erster Schritt erledigt am 2026-07-12: Dateikopien, eindeutige Zieldateinamen
 und Video-Konflikthinweise wurden aus `HoldingFolderDistributor` in
@@ -42,6 +43,23 @@ Dritte Aufräumrunde erledigt am 2026-07-12:
 
 Der Fitness-Test prüft nun zusätzlich, dass keine bereits verkleinerte Datei
 unbemerkt in der Großdatei-Ausnahmeliste stehen bleibt.
+
+Vierte Aufräumrunde erledigt am 2026-07-12:
+
+- VSA-Protokollabgleich und VSA-Mediensuche liegen nicht mehr im
+  `LegacyXtfImportService`. Der Hauptservice sank auf 990 Zeilen und wurde aus
+  der Großdatei-Ausnahmeliste entfernt.
+- Die PDF-Textkorrektur des `HoldingFolderDistributor` ist in einen Umschreiber
+  und einen reinen Treffer-Ermittler getrennt. Schutztests verhindern Treffer
+  über getrennte Textblöcke und prüfen das erzeugte PDF.
+- Spaltennamen, Gruppen und Prioritäten der Schachtseite liegen in
+  `SchaechteColumnPolicy`. Die Regeln sind ohne gestartete Oberfläche testbar.
+- Fehlerhafte alte Umlautkodierungen werden zentral und unabhängig von
+  Groß-/Kleinschreibung normalisiert.
+
+Damit sank die feste Altliste in zwei Runden von 20 auf 18 Produktionsdateien
+mit mehr als 1.000 Zeilen. Die übrigen 18 Dateien bleiben bewusste, offene
+Wartbarkeitsschulden und werden einzeln weiter zerlegt.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann
 eine Verantwortung verschieben, vollständige Tests ausführen und erst danach das

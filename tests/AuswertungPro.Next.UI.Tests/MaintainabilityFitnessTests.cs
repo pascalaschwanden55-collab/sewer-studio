@@ -16,7 +16,6 @@ public sealed class MaintainabilityFitnessTests
         "src/AuswertungPro.Next.UI/ViewModels/Windows/CostCalculatorViewModel.cs",
         "src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs",
         "src/AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs",
-        "src/AuswertungPro.Next.Infrastructure/Import/Xtf/LegacyXtfImportService.cs",
         "src/AuswertungPro.Next.UI/Views/Windows/StartupSplashWindow.xaml.cs",
         "src/AuswertungPro.Next.Application/Protocol/XmlCodeCatalogProvider.cs",
         "src/AuswertungPro.Next.Infrastructure/Import/Xtf/M150MdbImportHelper.cs",

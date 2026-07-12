@@ -29,14 +29,16 @@ public static class SchaechteFieldLogic
             .Replace("ü", "ue", StringComparison.Ordinal)
             .Replace("ß", "ss", StringComparison.Ordinal)
             // Mojibake-Varianten (Latin-1 doppelt dekodiert)
-            .Replace("Ã¤", "ae", StringComparison.Ordinal)
-            .Replace("Ã¶", "oe", StringComparison.Ordinal)
-            .Replace("Ã¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃŸ", "ss", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¤", "ae", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¶", "oe", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃƒÅ¸", "ss", StringComparison.Ordinal);
+            // ToLowerInvariant laeuft davor; daher muessen auch Mojibake-Muster
+            // kleingeschrieben verglichen werden.
+            .Replace("ã¤", "ae", StringComparison.Ordinal)
+            .Replace("ã¶", "oe", StringComparison.Ordinal)
+            .Replace("ã¼", "ue", StringComparison.Ordinal)
+            .Replace("ãÿ", "ss", StringComparison.Ordinal)
+            .Replace("ãƒâ¤", "ae", StringComparison.Ordinal)
+            .Replace("ãƒâ¶", "oe", StringComparison.Ordinal)
+            .Replace("ãƒâ¼", "ue", StringComparison.Ordinal)
+            .Replace("ãƒå¸", "ss", StringComparison.Ordinal);
     }
 
     /// <summary>

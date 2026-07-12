@@ -2,13 +2,10 @@ using System.Text;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
-using System.Globalization;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
 using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
-using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
 
@@ -368,7 +365,7 @@ public sealed class LegacyXtfImportService
         if (source.VsaFindings is not null && source.VsaFindings.Count > 0)
         {
             target.VsaFindings = new List<VsaFinding>(source.VsaFindings);
-            SyncProtocolFromFindings(target, target.VsaFindings);
+            VsaFindingProtocolSynchronizer.Sync(target, target.VsaFindings);
         }
 
         foreach (var c in merge.ConflictDetails)
@@ -869,7 +866,7 @@ public sealed class LegacyXtfImportService
                                || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
                 if (istVideo)
                 {
-                    var videoPfad = ResolveVsaVideoPath(sourcePath, relativpfad, bezeichnung);
+                    var videoPfad = VsaMediaPathResolver.ResolveVideo(sourcePath, relativpfad, bezeichnung);
                     if (!string.IsNullOrWhiteSpace(videoPfad)
                         && !videoByUntersuchungTid.ContainsKey(objekt))
                     {
@@ -889,7 +886,7 @@ public sealed class LegacyXtfImportService
                      || findingsByTid.TryGetValue(objekt, out finding)))
                 continue;
 
-            var fotoPath = ResolveVsaPhotoPath(sourcePath, relativpfad, bezeichnung);
+            var fotoPath = VsaMediaPathResolver.ResolvePhoto(sourcePath, relativpfad, bezeichnung);
             if (string.IsNullOrWhiteSpace(fotoPath))
                 continue;
 
@@ -982,204 +979,6 @@ public sealed class LegacyXtfImportService
 
         return records;
     }
-
-    private static string ResolveVsaPhotoPath(string xtfPath, string? relativeFolder, string? fileName)
-        => ResolveVsaMediaPath(xtfPath, relativeFolder, fileName, new[] { "Foto", "Fotos", "Picture", "Pictures" });
-
-    /// <summary>
-    /// Loesung des Video-Pfads aus dem KEK.Datei-Element (Klasse=Untersuchung).
-    /// </summary>
-    private static string ResolveVsaVideoPath(string xtfPath, string? relativeFolder, string? fileName)
-        => ResolveVsaMediaPath(xtfPath, relativeFolder, fileName, new[] { "Film", "Video", "Videos" });
-
-    /// <summary>
-    /// Loest eine Medien-Datei aus einem KEK.Datei-Element auf. Sucht in baseDir (Verzeichnis der XTF)
-    /// UND dessen Eltern-Ebenen — bei IKAS liegt die XTF in &lt;Export&gt;\Dokumente\, die Medien-Ordner
-    /// (Foto/Film) aber im Export-Root eine Ebene hoeher. Prueft je Ebene: &lt;relativpfad&gt;\&lt;datei&gt;,
-    /// direkt daneben und die bekannten Medien-Unterordner. Gibt den ersten existierenden Pfad zurueck,
-    /// sonst den bevorzugten Kandidaten (wird beim Kopieren als fehlend gemeldet).
-    /// </summary>
-    private static string ResolveVsaMediaPath(string xtfPath, string? relativeFolder, string? fileName, string[] subfolders)
-    {
-        fileName = (fileName ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(fileName))
-            return string.Empty;
-
-        if (Path.IsPathRooted(fileName))
-            return fileName;
-
-        var rel = (relativeFolder ?? "").Trim()
-            .Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-
-        var candidates = new List<string>();
-        var dir = Path.GetDirectoryName(xtfPath) ?? "";
-        // baseDir + bis zu 2 Eltern-Ebenen (deckt <Export>\Dokumente\x.xtf mit Foto/Film im Export-Root ab).
-        for (var level = 0; level < 3 && !string.IsNullOrWhiteSpace(dir); level++)
-        {
-            if (!string.IsNullOrWhiteSpace(rel))
-                candidates.Add(Path.GetFullPath(Path.Combine(dir, rel, fileName)));
-            candidates.Add(Path.GetFullPath(Path.Combine(dir, fileName)));
-            foreach (var sub in subfolders)
-                candidates.Add(Path.GetFullPath(Path.Combine(dir, sub, fileName)));
-            dir = Path.GetDirectoryName(dir) ?? "";
-        }
-
-        foreach (var c in candidates)
-        {
-            if (File.Exists(c))
-                return c;
-        }
-
-        return candidates.Count > 0 ? candidates[0] : fileName;
-    }
-
-    private static void SyncProtocolFromFindings(HaltungRecord record, IReadOnlyList<VsaFinding> findings)
-    {
-        if (findings.Count == 0)
-            return;
-
-        var hasProtocol = record.Protocol is not null;
-        var hasEntries = hasProtocol
-                         && (((record.Protocol?.Current?.Entries.Count ?? 0) > 0)
-                             || ((record.Protocol?.Original?.Entries.Count ?? 0) > 0));
-
-        if (!hasEntries)
-        {
-            var entries = BuildImportedProtocolEntries(findings);
-            if (entries.Count > 0)
-                record.Protocol = new ProtocolService().EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        if (record.Protocol is null)
-            return;
-
-        SyncRevisionImportedEntries(record.Protocol.Original, findings);
-        SyncRevisionImportedEntries(record.Protocol.Current, findings);
-        foreach (var rev in record.Protocol.History)
-            SyncRevisionImportedEntries(rev, findings);
-    }
-
-    private static List<ProtocolEntry> BuildImportedProtocolEntries(IReadOnlyList<VsaFinding> findings)
-    {
-        var list = new List<ProtocolEntry>(findings.Count);
-        foreach (var f in findings)
-        {
-            if (string.IsNullOrWhiteSpace(f.KanalSchadencode))
-                continue;
-
-            var mStart = GetFindingMeterStart(f);
-            var mEnd = GetFindingMeterEnd(f);
-
-            var entry = new ProtocolEntry
-            {
-                Code = f.KanalSchadencode.Trim(),
-                Beschreibung = f.Raw?.Trim() ?? string.Empty,
-                MeterStart = mStart,
-                MeterEnd = mEnd,
-                IsStreckenschaden = mStart.HasValue && mEnd.HasValue && mEnd >= mStart,
-                Mpeg = f.MPEG,
-                Zeit = ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay),
-                Source = ProtocolEntrySource.Imported
-            };
-
-            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1)
-                || !string.IsNullOrWhiteSpace(f.Quantifizierung2)
-                || TryFormatClock(f.SchadenlageAnfang) is not null
-                || TryFormatClock(f.SchadenlageEnde) is not null)
-            {
-                var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
-                    ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
-                };
-
-                var uhrVon = TryFormatClock(f.SchadenlageAnfang);
-                var uhrBis = TryFormatClock(f.SchadenlageEnde);
-                if (!string.IsNullOrWhiteSpace(uhrVon))
-                    parameters["vsa.uhr.von"] = uhrVon;
-                if (!string.IsNullOrWhiteSpace(uhrBis))
-                    parameters["vsa.uhr.bis"] = uhrBis;
-
-                entry.CodeMeta = new ProtocolEntryCodeMeta
-                {
-                    Code = entry.Code,
-                    Parameters = parameters,
-                    UpdatedAt = DateTimeOffset.UtcNow
-                };
-            }
-
-            if (!string.IsNullOrWhiteSpace(f.FotoPath))
-                entry.FotoPaths.Add(f.FotoPath);
-
-            list.Add(entry);
-        }
-
-        return list;
-    }
-
-    private static string? TryFormatClock(double? value)
-        => value is > 0 and <= 12
-            ? value.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
-            : null;
-
-    private static void SyncRevisionImportedEntries(ProtocolRevision revision, IReadOnlyList<VsaFinding> findings)
-    {
-        if (revision?.Entries is null || revision.Entries.Count == 0)
-            return;
-
-        foreach (var entry in revision.Entries)
-        {
-            if (entry.IsDeleted || entry.Source != ProtocolEntrySource.Imported)
-                continue;
-
-            var match = FindBestFindingForEntry(entry, findings);
-            if (match is null)
-                continue;
-
-            if (!entry.MeterStart.HasValue)
-                entry.MeterStart = GetFindingMeterStart(match);
-            if (!entry.MeterEnd.HasValue)
-                entry.MeterEnd = GetFindingMeterEnd(match);
-            if (string.IsNullOrWhiteSpace(entry.Beschreibung) && !string.IsNullOrWhiteSpace(match.Raw))
-                entry.Beschreibung = match.Raw.Trim();
-            if (string.IsNullOrWhiteSpace(entry.Mpeg) && !string.IsNullOrWhiteSpace(match.MPEG))
-                entry.Mpeg = match.MPEG;
-            if (!entry.Zeit.HasValue)
-                entry.Zeit = ParseMpegTime(match.MPEG) ?? (match.Timestamp?.TimeOfDay);
-
-            if (string.IsNullOrWhiteSpace(match.FotoPath))
-                continue;
-
-            entry.FotoPaths ??= new List<string>();
-            if (!entry.FotoPaths.Any(p => string.Equals(p, match.FotoPath, StringComparison.OrdinalIgnoreCase)))
-                entry.FotoPaths.Add(match.FotoPath);
-        }
-    }
-
-    // Delegation: Logik liegt jetzt in FindingEntryMatcher
-    private static VsaFinding? FindBestFindingForEntry(ProtocolEntry entry, IReadOnlyList<VsaFinding> findings)
-        => FindingEntryMatcher.FindBestFindingForEntry(entry, findings);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeCode(string? code)
-        => XtfValueNormalizer.NormalizeCode(code);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static int GetCodeSimilarityRank(string left, string right)
-        => XtfValueNormalizer.GetCodeSimilarityRank(left, right);
-
-    // Delegation: Logik liegt jetzt in FindingEntryMatcher
-    private static double? GetFindingMeterStart(VsaFinding finding)
-        => FindingEntryMatcher.GetFindingMeterStart(finding);
-
-    // Delegation: Logik liegt jetzt in FindingEntryMatcher
-    private static double? GetFindingMeterEnd(VsaFinding finding)
-        => FindingEntryMatcher.GetFindingMeterEnd(finding);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static TimeSpan? ParseMpegTime(string? raw)
-        => XtfValueNormalizer.ParseMpegTime(raw);
 
     // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static bool TryParseDouble(string? s, out double value)

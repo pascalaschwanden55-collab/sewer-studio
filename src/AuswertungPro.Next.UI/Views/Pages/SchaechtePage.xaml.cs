@@ -18,6 +18,7 @@ using AuswertungPro.Next.UI.ViewModels.Pages;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using AuswertungPro.Next.UI.Views.Windows;
+using static AuswertungPro.Next.UI.DataPage.SchaechteColumnPolicy;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -476,67 +477,6 @@ public partial class SchaechtePage : UserControl
         return Grid.CurrentItem as SchachtRecord;
     }
 
-    private static bool TryResolveDropdownColumnSpec(string columnName, out GridDropdownFieldSpec spec)
-    {
-        var optionField = ResolveOptionField(columnName);
-        if (optionField is not null && GridDropdownFieldPolicy.TryResolve(optionField, out spec))
-            return true;
-
-        spec = null!;
-        return false;
-    }
-
-    private static string? ResolveOptionField(string columnName)
-    {
-        var normalized = Normalize(columnName);
-
-        if ((normalized.Contains("ausgefuehrt", StringComparison.Ordinal) || normalized.Contains("ausgefuhrt", StringComparison.Ordinal)) &&
-            normalized.Contains("durch", StringComparison.Ordinal))
-            return "Ausgefuehrt_durch";
-
-        if (normalized.Contains("eigentuemer", StringComparison.Ordinal) ||
-            normalized.Contains("eigentumer", StringComparison.Ordinal) ||
-            normalized.Contains("eigentum", StringComparison.Ordinal))
-            return "Eigentuemer";
-
-        if (normalized.Contains("referenz", StringComparison.Ordinal) && normalized.Contains("pruefung", StringComparison.Ordinal))
-            return "Referenzpruefung";
-
-        var compact = normalized
-            .Replace("/", " ", StringComparison.Ordinal)
-            .Replace("_", " ", StringComparison.Ordinal)
-            .Trim();
-        while (compact.Contains("  ", StringComparison.Ordinal))
-            compact = compact.Replace("  ", " ", StringComparison.Ordinal);
-        if (compact.Equals("ja nein", StringComparison.Ordinal))
-            return "Sanieren_JaNein";
-
-        if (normalized.Contains("sanieren", StringComparison.Ordinal) ||
-            (normalized.Contains("sanierung", StringComparison.Ordinal) && normalized.Contains("ja", StringComparison.Ordinal)))
-            return "Sanieren_JaNein";
-
-        if (normalized.Contains("pruefung", StringComparison.Ordinal) ||
-            normalized.Contains("dichtheit", StringComparison.Ordinal) ||
-            normalized.Contains("dichtigkeit", StringComparison.Ordinal))
-            return "Pruefungsresultat";
-
-        return null;
-    }
-
-    private static string GetDisplayHeader(string columnName)
-    {
-        var optionField = ResolveOptionField(columnName);
-        return string.Equals(optionField, "Sanieren_JaNein", StringComparison.Ordinal)
-            ? "Sanieren Ja/Nein"
-            : columnName;
-    }
-
-    private static bool IsCostColumn(string columnName)
-        => Normalize(columnName).Contains("kosten", StringComparison.Ordinal);
-
-    private static bool IsZustandsklasseColumn(string columnName)
-        => Normalize(columnName).Contains("zustandsklasse", StringComparison.Ordinal);
-
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
@@ -642,56 +582,6 @@ public partial class SchaechtePage : UserControl
 
     private static Project? GetCurrentProject()
         => ((ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
-
-    private static bool IsPrimaryDamagesColumn(string header)
-    {
-        var n = Normalize(header);
-        return n.Contains("primaere", StringComparison.Ordinal) && n.Contains("schaeden", StringComparison.Ordinal);
-    }
-
-    private static bool IsDetailsNameColumn(string header)
-    {
-        var normalized = Normalize(header);
-        return normalized.Contains("schacht", StringComparison.Ordinal)
-               && (normalized.Contains("name", StringComparison.Ordinal)
-                   || normalized.Contains("nummer", StringComparison.Ordinal));
-    }
-
-    private static string GetSchachtNumber(SchachtRecord record)
-    {
-        var byName = record.GetFieldValue("Schachtnummer");
-        if (!string.IsNullOrWhiteSpace(byName))
-            return byName.Trim();
-
-        var byNr = record.GetFieldValue("Nr.");
-        if (!string.IsNullOrWhiteSpace(byNr))
-            return byNr.Trim();
-
-        var byNR = record.GetFieldValue("NR.");
-        return byNR?.Trim() ?? "";
-    }
-
-    private static string Normalize(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        return value
-            .Trim()
-            .ToLowerInvariant()
-            .Replace("ä", "ae", StringComparison.Ordinal)
-            .Replace("ö", "oe", StringComparison.Ordinal)
-            .Replace("ü", "ue", StringComparison.Ordinal)
-            .Replace("ß", "ss", StringComparison.Ordinal)
-            .Replace("Ã¤", "ae", StringComparison.Ordinal)
-            .Replace("Ã¶", "oe", StringComparison.Ordinal)
-            .Replace("Ã¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃŸ", "ss", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¤", "ae", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¶", "oe", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃƒÅ¸", "ss", StringComparison.Ordinal);
-    }
 
     private void ShowTextPreview(string title, string content)
     {
@@ -1041,52 +931,6 @@ public partial class SchaechtePage : UserControl
             return;
 
         groups.Add(new RecordDetailGroup(title, description, items));
-    }
-
-    private static string ResolveSchachtDetailGroup(string columnName)
-    {
-        var normalized = Normalize(columnName);
-
-        if (normalized.Contains("kosten", StringComparison.Ordinal) ||
-            normalized.Contains("sanier", StringComparison.Ordinal) ||
-            normalized.Contains("renovierung", StringComparison.Ordinal) ||
-            normalized.Contains("reparatur", StringComparison.Ordinal) ||
-            normalized.Contains("erneuerung", StringComparison.Ordinal) ||
-            normalized.Contains("anschluss", StringComparison.Ordinal))
-            return "Sanierung und Kosten";
-
-        if (normalized.Contains("pdf", StringComparison.Ordinal) ||
-            normalized.Contains("link", StringComparison.Ordinal) ||
-            normalized.Contains("video", StringComparison.Ordinal) ||
-            normalized.Contains("film", StringComparison.Ordinal) ||
-            normalized.Contains("datei", StringComparison.Ordinal))
-            return "Dokumente und Medien";
-
-        if (normalized.Contains("zustand", StringComparison.Ordinal) ||
-            normalized.Contains("schaden", StringComparison.Ordinal) ||
-            normalized.Contains("pruefung", StringComparison.Ordinal) ||
-            normalized.Contains("dicht", StringComparison.Ordinal) ||
-            normalized.Contains("referenz", StringComparison.Ordinal) ||
-            normalized.Contains("gewaesser", StringComparison.Ordinal) ||
-            normalized.Contains("grundwasser", StringComparison.Ordinal))
-            return "Zustand und Inspektion";
-
-        if (normalized.Contains("schacht", StringComparison.Ordinal) ||
-            normalized.Contains("nummer", StringComparison.Ordinal) ||
-            normalized.Contains("name", StringComparison.Ordinal) ||
-            normalized.Contains("nr", StringComparison.Ordinal) ||
-            normalized.Contains("funktion", StringComparison.Ordinal) ||
-            normalized.Contains("strasse", StringComparison.Ordinal) ||
-            normalized.Contains("lage", StringComparison.Ordinal) ||
-            normalized.Contains("ort", StringComparison.Ordinal) ||
-            normalized.Contains("material", StringComparison.Ordinal) ||
-            normalized.Contains("dn", StringComparison.Ordinal) ||
-            normalized.Contains("durchmesser", StringComparison.Ordinal) ||
-            normalized.Contains("eigentuem", StringComparison.Ordinal) ||
-            normalized.Contains("eigentum", StringComparison.Ordinal))
-            return "Stammdaten";
-
-        return "Weitere Angaben";
     }
 
     private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject

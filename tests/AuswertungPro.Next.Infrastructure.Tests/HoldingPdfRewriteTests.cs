@@ -36,6 +36,7 @@ public sealed class HoldingPdfRewriteTests
             // In-place ersetzt + weiterhin ein gueltiges PDF.
             using var doc = PdfDocument.Open(pdf);
             Assert.True(doc.NumberOfPages >= 1);
+            Assert.Contains("06-999", doc.GetPage(1).Text, StringComparison.Ordinal);
 
             // Die vorherige Fassung bleibt als lesbare Sicherung erhalten.
             using var backup = PdfDocument.Open(pdf + ".bak");
@@ -107,6 +108,28 @@ public sealed class HoldingPdfRewriteTests
 
             using var backup = PdfDocument.Open(target + ".bak");
             Assert.Equal(1, backup.NumberOfPages);
+        }
+        finally { TryDelete(dir); }
+    }
+
+    [Fact]
+    public void RewriteHoldingInPdfFiles_UngueltigePdf_ZaehltAlsFehler()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfrw-invalid-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var pdf = Path.Combine(dir, "kaputt.pdf");
+        File.WriteAllText(pdf, "keine PDF");
+
+        try
+        {
+            var (rewritten, skipped, failed) = HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+                new List<string> { pdf },
+                "06-001",
+                "06-999");
+
+            Assert.Equal(0, rewritten);
+            Assert.Equal(0, skipped);
+            Assert.Equal(1, failed);
         }
         finally { TryDelete(dir); }
     }

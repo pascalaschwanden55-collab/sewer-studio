@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UglyToad.PdfPig.Core;
 
 namespace AuswertungPro.Next.Infrastructure;
 
@@ -45,16 +44,6 @@ public static partial class HoldingFolderDistributor
         string SectionText);
 
     private sealed record PdfTextReplacement(string SearchText, string ReplacementText);
-    private sealed record PdfTextReplacementMatch(
-        PdfTextReplacement Replacement,
-        int StartLetterIndex,
-        int EndLetterIndex,
-        double Left,
-        double Bottom,
-        double Right,
-        double Top,
-        PdfPoint StartBaseLine,
-        double FontSize);
     private sealed record PdfCorrectionResult(
         bool Success,
         bool Corrected,
