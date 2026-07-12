@@ -60,7 +60,7 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
         var handler = new CountingHandler(_ =>
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("""{"status":"ok","version":"1.0.0","gpu":null}""")
+                Content = new StringContent("""{"status":"ok","version":"1.2.0","gpu":null}""")
             });
         var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
 
@@ -78,7 +78,7 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("""
-                {"status":"degraded","version":"1.0.0","gpu":null,"models_present":{"dino":false,"sam":true}}
+                {"status":"degraded","version":"1.2.0","gpu":null,"models_present":{"dino":false,"sam":true}}
                 """)
             });
         var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
@@ -109,13 +109,49 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
     }
 
     [Fact]
+    public async Task ShouldUseMultiModelAsync_Auto_WhenSidecarVersionDiffers_FallsBackWithWarning()
+    {
+        var handler = new CountingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"status":"ok","version":"9.9.9","gpu":null}""")
+            });
+        var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
+
+        var decision = await service.ShouldUseMultiModelAsync(CancellationToken.None);
+
+        Assert.False(decision.UseMultiModel);
+        Assert.Contains("Version", decision.FallbackReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Ollama-Only", decision.FallbackReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task ShouldUseMultiModelAsync_MultiModel_WhenSidecarVersionDiffers_Throws()
+    {
+        var handler = new CountingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"status":"ok","version":"9.9.9","gpu":null}""")
+            });
+        var service = CreateService(PipelineMode.MultiModel, multiModelEnabled: true, handler);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ShouldUseMultiModelAsync(CancellationToken.None));
+
+        Assert.Contains("Version", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("PipelineMode=MultiModel", ex.Message);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
     public async Task ShouldUseMultiModelAsync_MultiModel_WhenSidecarMissingDinoOrSam_Throws()
     {
         var handler = new CountingHandler(_ =>
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("""
-                {"status":"degraded","version":"1.0.0","gpu":null,"models_present":{"dino":true,"sam":false}}
+                {"status":"degraded","version":"1.2.0","gpu":null,"models_present":{"dino":true,"sam":false}}
                 """)
             });
         var service = CreateService(PipelineMode.MultiModel, multiModelEnabled: false, handler);

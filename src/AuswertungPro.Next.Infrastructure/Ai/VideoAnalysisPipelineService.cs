@@ -213,23 +213,14 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!pipelineCfg.MultiModelEnabled && pipelineCfg.Mode != PipelineMode.MultiModel)
             return (false, pipelineCfg, null);
 
-        // Check sidecar health
+        // Detaillierten Check verwenden: Nur dieser unterscheidet Offline, Token-Fehler
+        // und eine unpassende Sidecar-Vertragsversion. Der einfache Health-Check darf
+        // den Multi-Model-Hauptpfad nicht freigeben.
         try
         {
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
-            var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
-
-            if (health is null)
-            {
-                if (pipelineCfg.Mode == PipelineMode.MultiModel)
-                    throw new InvalidOperationException(
-                        $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}), aber PipelineMode=MultiModel erzwungen.");
-                // Unerwarteter Fallback: Nutzer wollte Multi-Model, Sidecar ist aber tot.
-                return (false, pipelineCfg,
-                    $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
-            }
-
-            var notReadyReason = DescribeSidecarNotReady(health);
+            var healthCheck = await client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
+            var notReadyReason = DescribeSidecarNotReady(healthCheck, pipelineCfg.SidecarUrl);
             if (notReadyReason is not null)
             {
                 if (pipelineCfg.Mode == PipelineMode.MultiModel)
@@ -251,8 +242,18 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         }
     }
 
-    private static string? DescribeSidecarNotReady(SidecarHealthResponse health)
+    private static string? DescribeSidecarNotReady(PipelineHealthCheckResult check, Uri sidecarUrl)
     {
+        if (!check.IsReachable)
+            return $"Sidecar nicht erreichbar ({sidecarUrl})";
+        if (!check.IsAuthorized)
+            return $"Sidecar-Token ungueltig oder fehlt ({sidecarUrl})";
+        if (check.Health is null)
+            return $"Sidecar-Health fehlgeschlagen: {check.Error ?? "keine gueltige Antwort"}";
+        if (!string.IsNullOrWhiteSpace(check.Error))
+            return check.Error;
+
+        var health = check.Health;
         if (!health.HasRequiredModels)
             return $"Sidecar unvollstaendig: {health.MissingRequiredModelsText}-Gewichte fehlen";
 

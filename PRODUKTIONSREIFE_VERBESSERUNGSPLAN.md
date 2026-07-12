@@ -1,17 +1,17 @@
 # Produktionsreife: Bewertung und Verbesserungsfahrplan
 
-> Stand: 2026-07-12 · Branch: `feature/gis-karte` · Erstellt durch KI-Audit (16 Prüf-Agenten + unabhängige Gegenprüfung der kritischen Befunde)
-> **Status: 11 von 16 Prüfbereichen abgeschlossen.** Nicht geprüft (Modell-Limit erreicht): Nebenläufigkeit, Externe Dienste, Codequalität, Logging/Diagnose, Performance. Alle anderen Aussagen sind belastbar; die kritischen Befunde wurden von einem zweiten, skeptischen Agenten am Code gegengeprüft.
+> Stand: 2026-07-12 · Branch: `feature/gis-karte` · Erstellt durch KI-Audit und lokalen Code-/Test-Nachlauf
+> **Status: 16 von 16 Prüfbereichen abgeschlossen.** Die fünf zunächst fehlenden Bereiche Nebenläufigkeit, Externe Dienste, Codequalität, Logging/Diagnose und Performance wurden am aktuellen Code nachgeholt. Details: `docs/AUDIT-NACHLAUF-2026-07-12.md`.
 >
-> **Ergebnis der Gegenprüfung:** Alle geprüften Befunde wurden als real bestätigt (CONFIRMED, keiner widerlegt). Bei mehreren wurde die Datenverlust-Schärfe von P1 auf P2 gesenkt, weil ein tatsächlicher Verlust zusätzliche Umstände braucht (z.B. der Nutzer löscht selbst das Original). Die betroffenen Punkte bleiben trotzdem in Stufe 1 des Fahrplans, weil sie real sind und billig zu beheben.
+> **Ergebnis der ursprünglichen Gegenprüfung:** Alle damals als kritisch geprüften Befunde wurden als real bestätigt. Der spätere Fünf-Bereiche-Nachlauf hat zusätzliche pauschale Sorgen teilweise widerlegt, etwa fehlende Log-Aufbewahrung oder fehlende Tabellen-Virtualisierung; siehe Nachlauf-Dokument.
 
 ## Arbeitsstand
 
 | Kapitel | Status |
 |---|---|
 | 0. Bestandsaufnahme | ✅ |
-| 1. Kurzfazit | ✅ (vorläufige Gesamtnote, 5 Bereiche wegen Modell-Limit ungeprüft) |
-| 2. Bewertungsmatrix | ✅ 11/16 Bereiche |
+| 1. Kurzfazit | ✅ Gesamtnote nach vollständigem Nachlauf |
+| 2. Bewertungsmatrix | ✅ 16/16 Bereiche |
 | 3. Kritische Sofortmaßnahmen (P0–P3) | ✅ inkl. Gegenprüfungs-Verdikte |
 | 4. Sicherungs- und Wiederherstellungskonzept | ✅ |
 | 5. Architektur-Zielbild | ✅ |
@@ -21,15 +21,15 @@
 | 9. Risikoregister | ✅ |
 | 10. Definition „Note A" | ✅ |
 | 11. Übergabe-Prompts | ✅ |
-| Offene Prüfungen | ✅ (wird nach Nachlauf aktualisiert) |
+| Audit-Nachlauf | ✅ 5/5 fehlende Bereiche geprüft |
 
 ---
 
 ## 1. Kurzfazit
 
-**Gesamtnote: B** (vorläufig; 11 von 16 Bereichen geprüft — die fehlenden 5 ändern das Bild voraussichtlich nicht grundlegend, weil die kritischsten Bereiche geprüft sind).
+**Gesamtnote: B** (16 von 16 Bereichen geprüft). Der Nachlauf hat kein neues P0- oder P1-Problem gefunden. Er bestätigte fünf P2-Schwerpunkte; der Sidecar-Hauptpfad wurde direkt gehärtet. Offen bleiben vor allem synchrone Vollspeicherung, Debug-only-Logging, unbeobachtete Hintergrundaufgaben und der Großklassen-Bestand.
 
-**Das Wichtigste in einem Satz:** Kein einziger P0-Befund — es gibt keinen bekannten Weg, wie die App von sich aus Daten zerstört. Nach Gegenprüfung bleiben **6 echte P1-Lücken** plus 4 real bestätigte, aber entschärfte Befunde (von P1 auf P2 gesenkt). Fast alle betreffen dasselbe Muster: **Die Sicherheitsnetze existieren, aber sie greifen im Ernstfall nicht automatisch** (kaputtes Projekt, verlorene Env-Var, abgebrochener Import, zweite Instanz).
+**Das Wichtigste in einem Satz:** Kein einziger P0-Befund — es gibt keinen bekannten Weg, wie die App von sich aus Daten zerstört. Von den sechs ursprünglichen P1-Lücken sind vier vollständig geschlossen; bei Restore-Points aller Einzelimporte und der KB-Pfadquelle bleibt ein klar benannter Rest. Die früher fehlenden Sicherheitsnetze für kaputtes Projekt, abgebrochenen Import, zweite Instanz und PC-Ausfall greifen inzwischen praktisch oder testgestützt.
 
 ### Größte Stärken (am Code belegt)
 
@@ -43,15 +43,15 @@
 
 | # | Risiko | Warum kritisch |
 |---|---|---|
-| 1 | **Projekte und Videos sind NICHT im PC-Ausfallschutz** (`BackupPlanBuilder` sichert nur Programm/KI-Gehirn/Einstellungen/Logs) | Festplattenausfall auf D: = Totalverlust der eigentlichen Arbeitsergebnisse, trotz „Datensicherung" |
-| 2 | **Korrupte Projektdatei: Rettungskopien (.bak, __RESTORE_POINTS) existieren, aber die App bietet sie nicht an** — nur Fehlerzeile in der Statusleiste | Faktischer Datenverlust durch Nichtwissen; der Nutzer hält das Projekt für verloren |
-| 3 | **Restore-Point vor Import läuft bei neuen Projekten ins Leere** (sucht `projekt.json` im falschen Ordner) + kein Rollback bei abgebrochenem Import | Halbimportiertes Projekt wird per AutoSave dauerhaft; kein Weg zurück |
-| 4 | **Wiederherstellung ist ungeprüft:** kein kompletter Proberestore durchgeführt, keine Restore-Funktion in der App, Backup nur manuell ohne Erinnerung | Das klassische Backup-Restrisiko: Sicherung vorhanden, Rückweg unbewiesen |
-| 5 | **Kein Test-Gate/CI + keine Schema-Versionsprüfung der Projektdatei** | Regressionen akkumulieren unbemerkt; ältere App-Version verliert still Felder neuerer Projektdateien |
+| 1 | **Drei Bedienprüfungen des Proberestores sind noch offen:** PDF-Import, Video-Wiedergabe und KI-Lauf | Der technische Rückweg ist bewiesen, aber die komplette Nutzerkette noch nicht live abgenommen |
+| 2 | **Nicht jeder einzelne Importweg legt nachweislich vorab einen Restore-Point an** | Der Ein-Knopf-Import ist geschützt und arbeitet mit Rollback-Kopie; ältere Einzelwege müssen noch vereinheitlicht werden |
+| 3 | **KB-Pfadquelle bleibt die Benutzer-Umgebungsvariable**; die App warnt inzwischen bei Abweichung | Split-Brain wird sichtbar, aber die Einrichtung auf einem neuen Windows-Konto bleibt fehleranfällig |
+| 4 | **20 Produktionsdateien mit mehr als 1.000 Zeilen** | Änderungen in diesen Klassen sind langsamer zu verstehen und erhöhen das Nebenwirkungsrisiko |
+| 5 | **Synchrones Vollspeichern bei jeder Änderung plus Debug-only-Logging** | Große Projekte können kurz stocken; einzelne Fehler fehlen im normalen Tageslog |
 
 ### Soll das Programm bereits produktiv eingesetzt werden?
 
-**Ja, für den jetzigen Solo-Eigenbetrieb — mit zwei Sofort-Auflagen.** Die Kern-Speicherpfade sind solide (atomar, .bak, Restore-Points, Autosave). Aber: (1) Projekte müssen SOFORT zusätzlich manuell gesichert werden (bis AP-03 umgesetzt ist), (2) ein kompletter Proberestore muss einmal durchgespielt werden. Für einen Einsatz über den Eigenbetrieb hinaus (anderer PC, andere Person): erst alle P1-Punkte schließen.
+**Ja, für den jetzigen Solo-Eigenbetrieb.** Projekte sind inzwischen Bestandteil der Vollsicherung, der technische Proberestore ist bestanden und die wichtigsten Datenverlust-Pakete sind umgesetzt. Vor einer Freigabe für andere Personen bleiben die drei UI-Handtests des Proberestores sowie die restlichen Punkte der Note-A-Checkliste Pflicht.
 
 ---
 
@@ -59,22 +59,22 @@
 
 | Bereich | Note | Ziel | Wichtigste Begründung | Höchstes Risiko | Nötigste Maßnahme |
 |---|---|---|---|---|---|
-| Datenablage | B | A | Trennung Programm/Config/Nutzdaten sauber; zentrale Pfad-Resolver | XTF-Rohdaten landen in `bin\` (vom Backup ausgeschlossen); KB-Root hängt still an Env-Var | AP-05, AP-06 |
-| Atomares Speichern & Backup | B | A | Temp+Replace+.bak überall; Backup-Code vorbildlich | Projekte/Videos nicht im Backup; kein .bak-Angebot bei kaputtem Projekt | AP-01, AP-03 |
-| SQLite-Integrität | B | A | WAL, Transaktionen, Online-Backup-API, integrity_check im Backup | Fehlende/kaputte KB wird still als leer neu angelegt → Backup rotiert guten Stand weg | AP-11 |
-| Absturz & Wiederanlauf | B | A | Alle 3 globalen Handler, Autosave „bei jeder Änderung", Batch wiederaufnehmbar | Kein Single-Instance-Schutz → Last-Write-Wins zwischen zwei Instanzen | AP-04 |
-| Import/Export-Robustheit | B | A | Result-Pattern, Fehler-Isolation pro Datei/Haltung, InvariantCulture, Dry-Run | IBAK-Re-Import häuft VsaFindings an → verfälschte Zustandsnote | AP-13 |
-| Datenkonsistenz | C | B+ | UserEdited-Schutz doppelt; aber Restore-Point-Lücke, keine Schema-Migration, Duplikat-Namen möglich | Stiller Feldverlust zwischen App-Versionen; halbimportierte Projekte | AP-02, AP-08 |
-| Architektur | B | B+ | Schichten einbahnig, Fitness-Tests, Composition Root schlank | Sidecar-API-Drift schlägt still fehl (leere Erkennungen) | AP-16 |
-| Codequalität | ⏳ | B+ | *(Nachlauf läuft)* | | |
+| Datenablage | B+ | A | Trennung sauber; XTF-Archiv außerhalb `bin`; zentrale Pfad-Resolver | KB-Root bleibt von Benutzer-Env-Var abhängig, warnt aber sichtbar bei Abweichung | AP-06 Rest |
+| Atomares Speichern & Backup | A− | A | Projekte, Fotos, KB, Einstellungen und Programm gesichert; technischer Restore bestanden | Videos standardmäßig aus; drei UI-Restore-Handtests offen | AP-17 Rest |
+| SQLite-Integrität | A− | A | WAL, Transaktionen, `quick_check`, Online-Snapshot und echter Restore-Test | Langzeit-/Bit-Rot-Prüfung nur über erneuten Backup-Lauf | AP-70 |
+| Absturz & Wiederanlauf | B+ | A | Globale Handler, Autosave, Import-Rollback und Single-Instance vorhanden | Einzelne Hintergrundaufgaben nur global beobachtet | AP-35 |
+| Import/Export-Robustheit | B+ | A | Result-Pattern, Fehler-Isolation, atomisches Rohdatenarchiv und idempotenter IBAK-Re-Import | Restore-Point-Abdeckung älterer Einzelimporte vervollständigen | AP-02 Rest |
+| Datenkonsistenz | B+ | A− | Schema-Check, unbekannte Felder erhalten, Import auf DeepCopy, UserEdited-Schutz | Duplikat-Namen noch nicht an allen Eingabestellen blockiert | AP-20 |
+| Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; Sidecar-Version im Hauptpfad geprüft | 20 Großdateien und doppelt gepflegter C#/Python-Vertrag | AP-34 |
+| Codequalität | C+ | B+ | Neue Großdateien und neue statische DI-Umgehungen werden per Test verhindert; erste Verantwortung aus `HoldingFolderDistributor` extrahiert | Noch 20 Produktionsdateien >1.000 Zeilen | AP-34 |
 | Sicherheit | **A** | A | Sidecar-Token+Loopback, keine Secrets, ArgumentList, Sandbox | Nur P3-Randnotizen | keine (halten) |
-| Tests | B | A | 8000+ echte Verhaltenstests, offline, Architektur-Guards | Kein CI/Gate; wichtigster Speicherpfad (Projekt) ohne Crash-Tests | AP-09, AP-10 |
-| UI/Bedienbarkeit | B | A | Zentraler DialogService, Fortschritt+Abbruch überall, Dirty-Guard mehrschichtig | „Projekt entfernen" verwirft ungespeicherte Änderungen still | AP-12 |
-| Logging/Diagnose | ⏳ | B+ | *(Nachlauf läuft)* | | |
-| Performance | ⏳ | B | *(Nachlauf läuft)* | | |
-| Nebenläufigkeit | ⏳ | B+ | *(Nachlauf läuft)* | | |
-| Externe Dienste | ⏳ | B+ | *(Nachlauf läuft)* | | |
-| Installation/Update/Doku | B | A− | Publish-Skript reproduzierbar mit Checks+Manifest; Settings-Quarantäne | Frischer PC: pdftotext fehlt, DINO braucht Internet, keine Setup-Anleitung | AP-18 |
+| Tests | B+ | A | 8.413 aktuelle grüne Tests, Crash-/Schema-/Backup-Tests und pre-push-Gate | Kein zentraler CI-Lauf; Langzeit- und Abbruchabdeckung noch ergänzen | AP-41, AP-70 |
+| UI/Bedienbarkeit | B+ | A | Fehlerdialoge, Fortschritt, Abbruch und Dirty-Guard vorhanden | Synchrones Projektladen/-speichern kann bei großen Dateien blockieren | AP-50 |
+| Logging/Diagnose | B− | B+ | Tageslogs, Aufbewahrung und globale Ausnahmebehandlung vorhanden | 35 Dateien nutzen `Debug.WriteLine`; wichtige Fehler fehlen dadurch im normalen Log | AP-55 |
+| Performance | B | B+ | Tabellen-Virtualisierung, Hintergrundimporte und ffmpeg-Streaming vorhanden | Volles Projekt wird bei „jede Änderung“ synchron neu geschrieben | AP-50, AP-54 |
+| Nebenläufigkeit | B | B+ | Single-Instance, Locks, `Interlocked`, Cancellation und begrenzte KI-Parallelität vorhanden | Einzelne `Task.Run`-Aufgaben unbeobachtet; lokale Server ohne feste Anfragegrenze | AP-35, AP-41 |
+| Externe Dienste | A− | A | Timeouts, Retry, Token, Fallback und Versionscheck im Hauptpfad vorhanden | Voraussetzungen noch nicht in einem gemeinsamen UI-Check zusammengefasst | AP-18 Ergänzung |
+| Installation/Update/Doku | B+ | A− | Publish-Skript, Installation und Neuer-PC-Ablauf dokumentiert | Voraussetzungen werden noch nicht in einem gemeinsamen UI-Check geprüft | AP-18 Ergänzung, AP-60 |
 
 ---
 
@@ -86,9 +86,11 @@
 
 Jeder Befund unten wurde von einem zweiten Agenten am Code gegengeprüft. Spalte „Verdikt" zeigt das Ergebnis: **CONFIRMED** = selbst am Code bestätigt. Spalte „Prio (final)" ist die Einstufung nach Gegenprüfung. **Alle diese Punkte gehören in Stufe 1 des Fahrplans**, unabhängig vom Label — die P1/P2-Grenze markiert nur, ob ein Datenverlust unmittelbar oder erst mit Zusatzumständen droht.
 
-**Echte P1 (Datenverlust/Fehlfunktion realistisch, vor Produktivbetrieb beheben):**
+**Ursprüngliche P1 aus dem Ausgangsaudit:**
 
-| Nr | Befund | Beleg | Verdikt | Prio (final) |
+Aktueller Stand: P1-3 ist für den Ein-Knopf-Import behoben, P1-4 durch AP-08 behoben, P1-10 durch AP-15 behoben, P1-8 durch AP-10 behoben und P1-9 durch AP-09 behoben. Bei P1-7 ist die sichtbare Root-/Sample-Warnung umgesetzt; die Env-Variable bleibt bewusst die Pfadquelle. Die Tabelle bleibt als Begründung und Historie erhalten.
+
+| Nr | Befund im Ausgangsstand | Beleg | Verdikt | Prio (damals) |
 |---|---|---|---|---|
 | P1-7 | KB-Root hängt still an User-Env-Var `SEWERSTUDIO_KNOWLEDGE_ROOT` — ohne sie startet die App mit veraltetem/leerem „Gehirn", ohne Warnung. **Ist schon einmal passiert.** | `KnowledgeBasePaths.cs:83-87`; belegt durch `Start_SewerStudio.bat` + `docs/DATENSICHERUNG-UEBERGABE-CODEX.md:92` | **CONFIRMED** | **P1** (bleibt) |
 | P1-3 | Restore-Point vor Ein-Knopf-Import greift bei neuer Projektstruktur (`Projektdateien\projekt.json`) nicht — Sicherheitsnetz still wirkungslos | `ProjectImportOrchestrator.cs:106` vs. `ProjectFileLocator.cs:33-34` | nicht gegengeprüft (Limit); Beleg eindeutig | P1 |
@@ -98,6 +100,8 @@ Jeder Befund unten wurde von einem zweiten Agenten am Code gegengeprüft. Spalte
 | P1-9 | `JsonProjectRepository` (wichtigste Datei!) ohne Crash-/Korruptions-/Roundtrip-Tests; fehlt in `AtomicPersistenceArchitectureTests` | `JsonProjectRepository.cs:44-99`, `AtomicPersistenceArchitectureTests.cs:10-29` | nicht gegengeprüft (Limit); Beleg eindeutig | P1 |
 
 **Durch Gegenprüfung von P1 auf P2 gesenkt (real, aber Datenverlust nur mit Zusatzumständen) — trotzdem Stufe 1, weil billig:**
+
+Aktueller Stand: Alle vier Punkte dieser Tabelle sind inzwischen umgesetzt: Projekte im Backup (AP-03), Projekt-Rettungsdialog (AP-01), Single-Instance-Schutz (AP-04) und XTF-Archiv außerhalb des Programmordners (AP-05).
 
 | Nr | Befund | Verdikt | Warum herabgestuft |
 |---|---|---|---|
@@ -112,22 +116,22 @@ Jeder Befund unten wurde von einem zweiten Agenten am Code gegengeprüft. Spalte
 |---|---|---|
 | P2-1 | KB-Import-Remap überschreibt `training_samples.json` nicht atomar UND schluckt Schreibfehler (Import meldet Erfolg trotz kaputter JSON) — Gegenprüfung: von P1 herabgestuft, da Import-ZIP als Rettung existiert | `KnowledgeBackupService.cs:171,326,402,329-332` |
 | P2-2 | Produktivbetrieb direkt aus `bin\Debug` — Build ist gleichzeitig Installation | `Desktop\Start_SewerStudio.bat` |
-| P2-3 | Backup nur manuell, keine Erinnerung bei überfälliger Sicherung | `SettingsFullBackupWorkflow.cs:36-39`; `LastFullBackupUtc` wird nie ausgewertet |
-| P2-4 | Keine Restore-Funktion in der App; Restore nie komplett durchgespielt | nur `RESTORE-ANLEITUNG.txt`, `docs/PC-AUSFALLSCHUTZ-MANUELLER-TEST.md` |
-| P2-5 | Fehlende KnowledgeBase.db wird still als leere DB neu angelegt; Folge-Backups rotieren den guten Stand aus den Versionen | `KnowledgeBaseContext.cs:30-31` |
-| P2-6 | Keine Korruptions-Erkennung der KB beim Start (kein `PRAGMA quick_check`) | `ServiceProvider.cs:202-205` |
-| P2-7 | WinCan-DB3 + Legacy-Migration öffnen fremde DBs nicht ReadOnly | `WinCanDbImportService.cs:90` |
-| P2-8 | IBAK-Re-Import häuft VsaFindings an (append-only) → verfälschte VSA-Zustandsnote möglich | `IbakExportImportService.cs:170-198` |
+| P2-3 ✅ | Backup-Erinnerung und Zeitstempel nur bei Erfolg | umgesetzt über `FullBackupReminderPolicy` |
+| P2-4 ⚠️ | Technischer Restore bestanden; geführte Restore-Funktion und drei UI-Handtests fehlen | `docs/PROBERESTORE-PROTOKOLL.md` |
+| P2-5 ✅ | Fehlende/leere KB wird durch Root-/Sample-Guard sichtbar | `KnowledgeRootGuard` |
+| P2-6 ✅ | KB-Korruptions-Erkennung beim Start über `PRAGMA quick_check` | `KnowledgeBaseHealthChecker` |
+| P2-7 ✅ | WinCan/Legacy-SQLite ReadOnly | Architekturtest vorhanden |
+| P2-8 ✅ | IBAK-Re-Import ersetzt VsaFindings | Doppelimport-Test vorhanden |
 | P2-9 | Kein Duplikat-Check für Haltungsnamen; Re-Import merged in den ERSTEN Treffer | `DataPage.xaml.cs:583`, `Project.cs:159-180` |
-| P2-10 | Video-Link an 4 von 5 Schreibstellen absolut gespeichert → Projekt nicht portabel | `HoldingFolderDistributor.cs:269,1052` u.a. |
-| P2-11 | Abgebrochener Import kann korrupte halbe Archivdatei hinterlassen, die beim Re-Import „behalten" wird | `ImportSourceArchiver.cs:65-91` |
-| P2-12 | „Projekt aus Übersicht entfernen" setzt Dirty=false → verwirft ungespeicherte Änderungen still | `OverviewPageViewModel.cs:589` |
+| P2-10 ✅ | Video-Links portabel und beim Laden/Speichern normalisiert | AP-21 |
+| P2-11 ✅ | ImportSourceArchiver kopiert atomar und fängt Fehler je Datei | AP-23 |
+| P2-12 ✅ | Dirty-Schutz beim Entfernen aus der Übersicht | AP-12 |
 | P2-13 | Projekt Laden/Speichern synchron im UI-Thread ohne Fortschritt (Freeze bei großen Projekten) | `ShellViewModel.cs:463,550` |
-| P2-14 | Speicher-/Ladefehler nur als Statuszeile, kein Dialog | `ShellViewModel.cs:553,466,595` |
+| P2-14 ✅ | Save-/SaveAs-/Rettungsfehler als Dialog | AP-01, AP-51 |
 | P2-15 | SQLite-KB ohne Korruptions-/Recovery-Test; Cancellation mitten im Vorgang kaum getestet | Tests-Audit |
-| P2-16 | Sidecar-HTTP-Vertrag ohne Versionsprüfung — API-Drift liefert still leere Erkennungen | `main.py:58` vs. `VisionPipelineClient.cs` |
-| P2-17 | pdftotext.exe fehlt im Release; Grounding DINO braucht beim ersten Laden Internet (HF-Tokenizer); keine „Neuer PC"-Anleitung | Publish-Skript, `GroundingDINO_SwinB_cfg.py:34` |
-| P2-18 | God-Klasse `HoldingFolderDistributor` (3071 Zeilen, statisch, verschiebt Dateien) | `HoldingFolderDistributor.cs:23` + `.PdfParsing.cs` |
+| P2-16 ✅ | Versionsprüfung wird im Monitor und Haupt-Analysepfad erzwungen | AP-36 |
+| P2-17 ⚠️ | Neuer-PC-Anleitung vorhanden; externe Programme/Offline-Modelle bleiben einzurichten | AP-18, AP-61 |
+| P2-18 🔄 | God-Klasse wird schrittweise zerlegt; Dateiablage und Konflikthinweise extrahiert | AP-34, Commit `6c656ef6` |
 
 ### P3 — spätere Optimierung (Auswahl)
 
@@ -140,14 +144,14 @@ Hartkodierte Pfade in Defaults (`D:\QGIS_V4.03`, `basemap_tiles` mit Versionsnum
 ### 4.1 Ist-Zustand (belegt)
 
 **Vorhanden und gut:**
-- `FullBackupService` (PC-Ausfallschutz): sichert Programm-Repo, KI-Gehirn (C:\KI_BRAIN), Einstellungen (%LOCALAPPDATA%\SewerStudio + %APPDATA%), Logs, Extras — mit SHA256-Verify, SQLite-Online-Snapshot + integrity_check, Marker-Datei-Schutz, Platz-Prüfung, 10 datierten Versions-Ständen, generierter Restore-Anleitung. Manuell per Knopf in den Einstellungen.
+- `FullBackupService` (PC-Ausfallschutz): sichert Programm-Repo, Projekte und Fotos, KI-Gehirn (C:\KI_BRAIN), Einstellungen (%LOCALAPPDATA%\SewerStudio + %APPDATA%), Logs und Extras — mit SHA256-Verify, SQLite-Online-Snapshot + integrity_check, Marker-Datei-Schutz, Platz-Prüfung, 10 datierten Versions-Ständen und Restore-Anleitung. Videos sind bewusst optional und standardmäßig ausgeschlossen.
 - Lokale Sicherheitsnetze: `.bak`(-Generationen) neben jeder wichtigen Datei, bis zu 20 Restore-Points pro Projekt (`__RESTORE_POINTS`), 20 Settings-Restore-Points, Quarantäne korrupter Settings.
 - `docs/PC-AUSFALLSCHUTZ-MANUELLER-TEST.md` + `docs/RESTORE_KI_BRAIN.md` (Teil-Anleitungen).
 
-**Lücken (die drei entscheidenden):**
-1. **Projekte + Videos fehlen im Backup** — die eigentlichen Arbeitsergebnisse.
-2. **Kein Zeitplan, keine Erinnerung** — Sicherung schläft ein.
-3. **Restore nie komplett geprüft, keine Restore-Funktion** — Rückweg unbewiesen.
+**Verbleibende Lücken:**
+1. **Videos sind standardmäßig ausgeschlossen** — fachlich bewusst, muss pro Projekt entschieden werden.
+2. **Keine automatische Zeitplanung** — die App erinnert, der Nutzer startet die Sicherung weiterhin selbst.
+3. **Drei UI-Handtests des Restores offen** — technischer Rückweg, KB, Projekt und Build sind bewiesen.
 
 ### 4.2 Ziel: 3-2-1 für SewerStudio (einfach bedienbar)
 
@@ -156,7 +160,7 @@ Hartkodierte Pfade in Defaults (`D:\QGIS_V4.03`, `basemap_tiles` mit Versionsnum
 | Kopie | Was | Wo | Wie |
 |---|---|---|---|
 | 1 (Arbeitsdaten) | Alles | C: / D: (Arbeitsplatte) | die App selbst (atomar + .bak + Restore-Points) |
-| 2 (PC-Ausfallschutz) | Programm + KI-Gehirn + Einstellungen + Logs + **NEU: Projekte (ohne Videos optional)** | externe USB-Platte | `FullBackupService`, erweitert um Projekte-Komponente (AP-03) |
+| 2 (PC-Ausfallschutz) | Programm + KI-Gehirn + Einstellungen + Logs + Projekte (Videos optional) | externe USB-Platte | `FullBackupService` inkl. Projekte-Komponente |
 | 3 (außer Haus) | mindestens: Projekte + KI-Gehirn-Snapshot + Einstellungen | zweite Platte an anderem Ort ODER Cloud-Ordner | denselben Backup-Lauf auf zweites Ziel wiederholen (Backup-Dialog erlaubt freie Zielwahl bereits heute) |
 
 Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platte, einmalig + bei Zuwachs); für Kopie 3 reichen die Projekt-JSONs + Protokolle + Fotos, weil Videos aus den Original-Kanal-TV-Exporten wiederbeschaffbar sind. Diese Entscheidung ist im Backup-Dialog sichtbar zu machen („Videos eingeschlossen: ja/nein").
@@ -166,8 +170,8 @@ Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platt
 | Wann | Was | Auslöser |
 |---|---|---|
 | Bei jeder Änderung | Arbeitsdaten (Autosave + .bak) | automatisch (existiert) |
-| Vor jedem Import | Restore-Point der projekt.json | automatisch (existiert, **aber AP-02 nötig, damit er wieder greift**) |
-| Wöchentlich | Voll-Backup auf USB (inkl. Projekte) | Erinnerung beim App-Start, wenn `LastFullBackupUtc` > 7 Tage und Ziel erreichbar (AP-14) |
+| Vor jedem Import | Restore-Point der projekt.json | Ein-Knopf-Import geschützt; ältere Einzelwege noch prüfen |
+| Wöchentlich | Voll-Backup auf USB (inkl. Projekte) | Erinnerung beim App-Start über `LastFullBackupUtc` |
 | Monatlich | Zweites Voll-Backup auf Außer-Haus-Ziel | Erinnerung, wenn > 30 Tage |
 | Vor jedem Update (neuer Publish-Ordner) | Voll-Backup | Hinweis in INSTALLATION.txt (AP-18) |
 
@@ -175,12 +179,12 @@ Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platt
 
 **Prüfung der Sicherung:**
 - Beim Kopieren: existiert (SHA256-Vergleich im `DirectoryMirror`).
-- Neu (AP-15, optional P3): SHA256 pro Datei ins Manifest + Knopf „Sicherung prüfen", damit auch späteres Bit-Rot auf der USB-Platte auffällt.
-- Fehlgeschlagener DB-Snapshot muss als eigene Warnung erscheinen, nicht nur in SkippedFiles (Teil von AP-11).
+- Optional P3: SHA256 pro Datei zusätzlich dauerhaft ins Manifest schreiben + Knopf „Sicherung später erneut prüfen", damit auch Bit-Rot auf der USB-Platte auffällt.
+- DB-Snapshots werden als eigene Zahl ausgewiesen. Der echte zweite Sicherungslauf bestätigte 225 Snapshots und 0 übersprungene Dateien.
 
 **Wiederherstellung:**
 - Kurzfristig: die generierte `RESTORE-ANLEITUNG.txt` ist gut (echte Pfade, Env-Vars, Modellliste). Fallback-Pfad „4.4" korrigieren (15 min).
-- **Pflicht vor Freigabe: EIN kompletter Proberestore** auf ein sauberes Verzeichnis/Testkonto: Backup → Programm starten → Projekt öffnen → KB-Samplezahl prüfen → Einstellungen da? Ergebnis in `docs/` protokollieren (AP-17). Danach jährlich bzw. nach größeren Backup-Änderungen wiederholen.
+- **Technisch durchgeführt am 2026-07-12:** Backup → sauberes Ziel → Datei-Abgleich → Projekt 61 geladen → KB mit 17.149 Beispielen geprüft → wiederhergestelltes Programm gebaut. Protokoll: `docs/PROBERESTORE-PROTOKOLL.md`. Vor Freigabe fehlen noch PDF-, Video- und KI-Bedienprüfung.
 - Mittelfristig (P2): geführter Restore-Dialog in der App.
 
 **Verhalten bei Backup-Fehlern:** Heute meldet der Workflow übersprungene Dateien (gut). Zusätzlich: Fehlschlag des Gesamtlaufs muss `LastFullBackupUtc` NICHT setzen und beim nächsten Start erneut erinnern.
@@ -189,7 +193,7 @@ Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platt
 
 ### 4.4 Notfallhandbuch
 
-Eine Datei `docs/NEUER-PC-SETUP.md` (1–2 Seiten, AP-18) mit der kompletten Reihenfolge: .NET 10 SDK → Python + uv → `sidecar/setup.ps1` → Ollama + Modelle (`qwen3-vl:8b-q8`, `nomic-embed-text`) → ffmpeg → pdftotext nach `tools/` → Env-Vars (`SEWERSTUDIO_KNOWLEDGE_ROOT`!) → Backup zurückspielen nach RESTORE-ANLEITUNG → Proberestore-Checkliste. Großteils aus `RestoreAnleitungText.cs` übernehmbar.
+`docs/NEUER-PC-SETUP.md` und `INSTALLATION.txt` enthalten inzwischen die komplette Reihenfolge: .NET 10 SDK → Python + uv → Sidecar → Ollama + Modelle → ffmpeg → pdftotext → Env-Variablen → Backup zurückspielen → Proberestore-Checkliste. Als Komfortverbesserung fehlt nur noch ein gemeinsamer UI-Voraussetzungscheck.
 
 ### 4.5 Schutz vor Build-, Update- und Benutzerfehlern
 
@@ -210,13 +214,13 @@ Eine Datei `docs/NEUER-PC-SETUP.md` (1–2 Seiten, AP-18) mit der kompletten Rei
 - Die 433 Mikro-Klassen in `UI/Ai` sind testgetrieben und fachlich ok — nur Ordner-Struktur fehlt.
 
 **Problematische Abhängigkeiten (klein halten):**
-1. **C#↔Python-Vertrag ist implizit** (doppelt gepflegte DTOs, still-tolerante Deserialisierung). → Versionskonstante beidseitig + Health-Check-Vergleich (AP-16). Kein Schema-Generator nötig.
-2. **`HoldingFolderDistributor` (3071 Zeilen, statisch)** mischt PDF-Parsing mit Datei-VERSCHIEBEN. → Nur den Verteil-Teil (Move/Copy) hinter ein kleines Interface ziehen, beim nächsten ohnehin nötigen Eingriff. PDF-Parsing darf statisch bleiben.
+1. **C#↔Python-Vertrag ist doppelt gepflegt.** Der detaillierte Versionsvergleich wird inzwischen auch im Haupt-Analysepfad erzwungen (AP-36). Die Konstante bleibt dennoch beidseitig zu pflegen; kein Schema-Generator nötig.
+2. **`HoldingFolderDistributor` bleibt groß und statisch.** Dateiablage und Video-Konflikthinweise sind seit Commit `6c656ef6` getrennt. → Haltung, Schacht, Dichtheit und PDF-Parsing danach einzeln herauslösen; kein Komplett-Umbau.
 3. **Vier statische Fassaden** (`StatusColors.Current`, `CodeUsageTrackers.Current`, `DialogHost.Current`, `VsaCodeResolver`) neben dem DI. → Nicht umbauen; per Fitness-Test-Whitelist einfrieren, damit das Muster nicht wächst.
 4. **ViewModels erzeugen Kosten-Stores selbst** (11 `new`-Stellen). → Beim nächsten Anfassen der jeweiligen Seite über ServiceProvider beziehen. Kein Sammel-Refactoring.
 5. **Application-Schicht enthält QuestPDF-Rendering + XML-Parsing** (je >1100 Zeilen). → Nur als bewusste Ausnahme dokumentieren (eine Zeile in CLAUDE.md).
 
-**Reihenfolge:** Zuerst Datenverlust-Pakete (Stufe 1), dann Sidecar-Versionscheck (AP-16); alles andere opportunistisch. **Keine Neuentwicklung irgendeines Teils ist nötig.**
+**Reihenfolge ab jetzt:** UI-Handtests des Proberestores, dann Speichern/AutoSave (AP-50/AP-54), Logging (AP-55), Hintergrundaufgaben (AP-35) und danach weitere kleine God-Klassen-Pakete (AP-34). **Keine Neuentwicklung irgendeines Teils ist nötig.**
 
 ---
 
@@ -229,45 +233,47 @@ Jedes Paket ist einzeln an Codex/Opus übergebbar (Prompts in Kapitel 11). Aufw�
 | AP | Titel | Prio | Aufwand | Betroffene Dateien | Abnahme |
 |---|---|---|---|---|---|
 | **AP-01** ✅ | Projekt-Laden: .bak/Restore-Point-Fallback + Fehlerdialog | P1 | 2–4h | `ShellViewModel.TryOpenProject`, `JsonProjectRepository` | **UMGESETZT 2026-07-12:** Neue `ProjectRecovery` (Infrastructure, 4 Tests) lädt bei kaputter projekt.json aus `.bak`, dann Restore-Points (neueste zuerst), und quarantäniert die kaputte Datei als `projekt.corrupt-<ts>.json` (nie gelöscht; nur wenn eine Kopie wirklich lädt). Verdrahtet in `TryOpenProject`: Warn-Dialog bei Rettung (nennt Quelle + Quarantäne, markiert dirty → Neuspeicherung), Error-Dialog wenn nichts rettbar (Original unangetastet). Build grün, 32 Infra- + 75 Architektur-Tests grün. **Offener manueller Abnahmeschritt:** projekt.json mit Byte-Müll überschreiben → App bietet .bak an (Live, braucht laufende App). |
-| **AP-02** ✅ | Restore-Point vor Import reparieren (`ProjectFileLocator` nutzen) + vor JEDEM echten Import anlegen | P1 | 1–2h | `ProjectImportOrchestrator.cs:104-118` | **UMGESETZT 2026-07-12:** `ProjectFileLocator.Locate` findet projekt.json in Root UND Projektdateien\; fehlende Datei wird als Meldung sichtbar (nicht mehr still übersprungen). 3 neue Tests (`ProjectImportOrchestratorRestorePointTests`), 24/24 Orchestrator-Tests grün. **Offen:** „vor JEDEM echten Import" (auch XTF/PDF-Einzelimport) noch nicht umgesetzt — nur der Ein-Knopf-Import ist abgedeckt. |
-| **AP-03** | Backup-Komponente „Projekte" (Videos optional, Dialog zeigt Umfang) | P1 | 0.5–1 Tag | `BackupPlanBuilder`, `SettingsFullBackupWorkflow`, `RestoreAnleitungText` | Backup-Lauf enthält projekt.json+Fotos aller bekannten Projektwurzeln; Test grün |
-| **AP-04** | Single-Instance-Mutex mit Hinweis-Dialog | P1 | 1–2h | `App.xaml.cs OnStartup` | Zweiter Start zeigt Hinweis und beendet sich |
-| **AP-05** | XTF-Rohdaten-Archiv aus `bin\` in den Projektordner (bzw. LOCALAPPDATA); Bestandsdateien umziehen | P1 | 1–2h | `LegacyXtfImportService.cs:24`, `ProjectScanRoots.cs:19` | Kein Schreibpfad mehr unter AppContext.BaseDirectory (Architektur-Test erweitern) |
-| **AP-06** ✅ | KB-Root absichern: in settings.json persistieren (Env-Var nur Override) + Start-Warnung bei Wechsel/leerer KB | P1 | 2–4h | `KnowledgeBasePaths`, `AppSettings`, `ServiceProvider` | **UMGESETZT 2026-07-12 (Kern):** Neuer `KnowledgeRootGuard` (Infrastructure, 8 Tests) warnt bei Root-Wechsel / leerer-neuer DB / Sample-Einbruch >90%. Verdrahtet im ServiceProvider (Zustand vor KB-Init erfasst, Sample-Count danach, `settings.LastKnownKnowledgeRoot`+`...SampleCount` gemerkt) + Toast beim Start (MainWindow). Build grün, 30 Infra- + 17 Settings-Tests grün. **Bewusst NICHT umgesetzt:** settings.json als Pfad-*Quelle* (Teil 1) — müsste an ALLEN `KnowledgeBaseContext`-Aufrufern durchgereicht werden (Refactoring-Risiko, CLAUDE.md), sonst neuer Split-Brain; Env-Var bleibt die Pfad-Quelle, Settings nur für die Warnung. **Offener manueller Abnahmeschritt:** Env-Var entfernen → Start-Warnung live prüfen (braucht laufende App). |
-| **AP-07** | KnowledgeBackupService: atomar schreiben + Schreibfehler nicht schlucken | P2 | 1–2h | `KnowledgeBackupService.cs:171,326,402` | AtomicPersistenceArchitectureTests um Datei erweitert; Fehler → Import meldet Fehler |
-| **AP-08** | Schema-Versionscheck Projektdatei (Version>bekannt → Warnung/read-only; [JsonExtensionData] für Roundtrip) | P1 | 4h | `Project.cs`, `JsonProjectRepository` | Datei mit Version 99 → Warnung, kein stiller Feldverlust; Tests grün |
+| **AP-02** ⚠️ | Restore-Point vor Import reparieren (`ProjectFileLocator` nutzen) + vor JEDEM echten Import anlegen | P1 | 1–2h | `ProjectImportOrchestrator.cs:104-118` | **Kern umgesetzt 2026-07-12:** `ProjectFileLocator.Locate` findet projekt.json in Root UND Projektdateien\; fehlende Datei wird als Meldung sichtbar. **Offen:** XTF/PDF-Einzelimporte noch vereinheitlichen. |
+| **AP-03** ✅ | Backup-Komponente „Projekte" (Videos optional, Dialog zeigt Umfang) | P1 | 0.5–1 Tag | `BackupPlanBuilder`, `SettingsFullBackupWorkflow`, `RestoreAnleitungText` | Umgesetzt und durch echten Backup-/Restore-Lauf bestätigt |
+| **AP-04** ✅ | Single-Instance-Mutex mit Hinweis-Dialog | P1 | 1–2h | `App.xaml.cs OnStartup` | Umgesetzt; Unit-Tests grün |
+| **AP-05** ✅ | XTF-Rohdaten-Archiv aus `bin\` in LOCALAPPDATA; Bestandsdateien umziehen | P1 | 1–2h | `LegacyXtfImportService` | Umgesetzt; alter `bin`-Pfad dient nur noch als Migrationsquelle |
+| **AP-06** ⚠️ | KB-Root absichern: Settings + Start-Warnung bei Wechsel/leerer KB | P1 | 2–4h | `KnowledgeBasePaths`, `AppSettings`, `ServiceProvider` | **Sicherheitskern umgesetzt:** `KnowledgeRootGuard` warnt bei Root-Wechsel, neuer/leerer DB und Sample-Einbruch. **Bewusst offen:** Env-Var bleibt Pfadquelle; Settings speichert Vergleichswerte, nicht den aktiven Root als Quelle. |
+| **AP-07** ✅ | KnowledgeBackupService: atomar schreiben + Schreibfehler nicht schlucken | P2 | 1–2h | `KnowledgeBackupService` | Umgesetzt; atomare Schreibpfade und Fehlerrückgabe vorhanden |
+| **AP-08** ✅ | Schema-Versionscheck Projektdatei + `[JsonExtensionData]` | P1 | 4h | `Project.cs`, `JsonProjectRepository` | Umgesetzt; Version-99-, Migration- und Roundtrip-Tests grün |
 
 ### Stufe 2 — Absturzschutz und Fehlerbehandlung
 
 | AP | Titel | Prio | Aufwand | Abnahme |
 |---|---|---|---|---|
-| **AP-09** | Crash-/Korruptions-/Roundtrip-Tests für JsonProjectRepository (+ in AtomicPersistence-Prüfliste aufnehmen) | P1 | 0.5–1 Tag | 3–5 neue Tests grün: Fehlinjektion beim Save lässt alte Datei intakt; Load-Fail sauber |
-| **AP-10** | Test-Gate: pre-push-Hook `dotnet test` (Schnellgate Infrastructure+Pipeline) + optional GitHub-Actions | P1 | 1–2h | Push mit rotem Test wird lokal geblockt |
-| **AP-11** | KB-Start-Härtung: `PRAGMA quick_check`, Warnung bei neuer/leerer DB, DB-Snapshot-Fehlschlag als eigene Warnung | P2 | 3–5h | Byte-Müll als KnowledgeBase.db → klare Meldung + Restore-Hinweis statt stiller Neuanlage |
-| **AP-12** | Dirty-Schutz „Projekt entfernen" (`ConfirmDiscardUnsavedChanges` wiederverwenden) | P2 | <1h | Entfernen des aktiven dirty Projekts fragt nach |
-| **AP-13** | IBAK-Re-Import: VsaFindings ersetzen statt anhäufen (WinCan-Muster) | P2 | 2–4h | Test: zweimal importieren → VsaFindings.Count stabil |
-| **AP-14** | Backup-Erinnerung beim Start (>7/30 Tage) + Fehlschlag setzt LastFullBackupUtc nicht | P2 | 2–4h | Simulierter alter Zeitstempel → Toast erscheint |
-| **AP-15** | Import-Rollback: Import auf DeepCopy, atomarer Swap bei Erfolg (DryRun-Infrastruktur wiederverwenden) | P1 (=P1-10) | 0.5–1 Tag | Abbruch mitten im Import → Projekt unverändert |
+| **AP-09** ✅ | Crash-/Korruptions-/Roundtrip-Tests für JsonProjectRepository | P1 | 0.5–1 Tag | Umgesetzt; Robustheits- und Architekturtests vorhanden |
+| **AP-10** ✅ | Test-Gate: pre-push-Hook `dotnet test` | P1 | 1–2h | Versionierter Hook und Installationsskript vorhanden |
+| **AP-11** ✅ | KB-Start-Härtung mit `PRAGMA quick_check` | P2 | 3–5h | Umgesetzt; Health-Checker und Korruptionstests vorhanden |
+| **AP-12** ✅ | Dirty-Schutz „Projekt entfernen" | P2 | <1h | Umgesetzt und per Architekturtest geschützt |
+| **AP-13** ✅ | IBAK-Re-Import: VsaFindings ersetzen statt anhäufen | P2 | 2–4h | Umgesetzt; Doppelimport-Test vorhanden |
+| **AP-14** ✅ | Backup-Erinnerung beim Start + Zeitstempel nur bei Erfolg | P2 | 2–4h | Umgesetzt; Policy- und Workflowtests vorhanden |
+| **AP-15** ✅ | Import-Rollback über DeepCopy und Swap bei Erfolg | P1 | 0.5–1 Tag | Umgesetzt; Fehler- und Abbruchtests bestätigen unverändertes Original |
 
 ### Stufe 3 — Datenkonsistenz
 
 | AP | Titel | Prio | Aufwand |
 |---|---|---|---|
 | AP-20 | Duplikat-Check Haltungsnamen (Anlegen + Umbenennen + Plausibilitäts-Warnung) | P2 | 2–4h |
-| AP-21 | Video-Link relativ speichern (4 Schreibstellen, `MakeRelative`-Muster) + Load-Normalisierung | P2 | 2–4h |
-| AP-22 | WinCan/Legacy SQLite ReadOnly öffnen; WinCanValueNormalizer ohne CurrentCulture-Fallback | P2/P3 | 2h |
-| AP-23 | ImportSourceArchiver: atomare Kopie + per-Datei-Fangnetz | P2 | 2–4h |
-| AP-24 | user_version-Schutz KB (`current > SchemaVersion` → Fehler) | P3 | 1h |
+| AP-21 ✅ | Video-Links relativ speichern + Load-/Save-Normalisierung | P2 | umgesetzt 2026-07-12 |
+| AP-22 ✅ | WinCan/Legacy SQLite ReadOnly; Kultur-Fallback entfernt | P2/P3 | umgesetzt |
+| AP-23 ✅ | ImportSourceArchiver: atomare Kopie + per-Datei-Fangnetz | P2 | umgesetzt |
+| AP-24 ✅ | `user_version`-Schutz der KB | P3 | umgesetzt |
 
 ### Stufe 4 — Architektur und Codequalität
 
 | AP | Titel | Prio | Aufwand |
 |---|---|---|---|
-| AP-30 | Sidecar-Versionscheck im Health-Check (Konstante beidseitig) | P2 | 1–2h |
-| AP-31 | Fitness-Test-Whitelist für die 4 statischen Fassaden | P3 | 1–2h |
+| AP-30 ✅ | Sidecar-Versionscheck im detaillierten Health-Check | P2 | umgesetzt |
+| AP-31 ✅ | Fitness-Test-Whitelist für die 4 statischen Fassaden | P3 | umgesetzt |
 | AP-32 | `UI/Ai` in themenbezogene Unterordner sortieren (nur verschieben) | P3 | 2–3h |
 | AP-33 | `GetService()` fail-fast statt still null | P3 | 0.5h |
-| AP-34 | *(nach Codequalitäts-Nachlauf ergänzen)* | | |
+| AP-34 🔄 | Großklassen schrittweise nach Verantwortung zerlegen; Altliste im Fitness-Test verkleinern | P2 | fortlaufend; erste Extraktion Commit `6c656ef6` |
+| AP-35 | Hintergrundaufgaben sichtbar beobachten; lokale Server begrenzen und beim Stoppen abwarten | P2/P3 | 0.5–1 Tag |
+| AP-36 ✅ | Detaillierten Sidecar-Health-/Versionscheck im echten Analyse-Hauptpfad verwenden | P2 | umgesetzt 2026-07-12; 2 neue Entscheidungstests |
 
 ### Stufe 5 — Tests und automatische Qualitätsprüfung
 
@@ -282,17 +288,18 @@ Jedes Paket ist einzeln an Codex/Opus übergebbar (Prompts in Kapitel 11). Aufw�
 | AP | Titel | Prio | Aufwand |
 |---|---|---|---|
 | AP-50 | Projekt Laden/Speichern async + Busy-Overlay | P2 | 0.5 Tag |
-| AP-51 | Save/Load-Fehler als Dialog mit Handlungsanweisung (statt Statuszeile) | P2 | 1–2h |
+| AP-51 ✅ | Save-/SaveAs-Fehler als Dialog mit Handlungsanweisung | P2 | umgesetzt 2026-07-12; Load-Rettungsdialog über AP-01 |
 | AP-52 | ex.Message-Mapping für die 5–10 häufigsten Fehlerquellen | P3 | schrittweise |
 | AP-53 | Import: „Fehlgeschlagene erneut importieren" | P3 | 0.5 Tag |
-| AP-54 | *(nach Performance-Nachlauf ergänzen)* | | |
+| AP-54 | AutoSave „jede Änderung" kurz bündeln; nicht für jede Eingabe das komplette Projekt neu schreiben | P2 | 2–4h |
+| AP-55 | Wichtige `Debug.WriteLine`-Pfade in Tageslog übernehmen + Diagnosepaket erzeugen | P2 | 0.5–1 Tag |
 
 ### Stufe 7 — Installation, Update, Dokumentation
 
 | AP | Titel | Prio | Aufwand |
 |---|---|---|---|
-| **AP-17** | Kompletter Proberestore auf sauberes Verzeichnis + Protokoll in docs/ | P1-nah (P2) | 0.5 Tag |
-| **AP-18** | `docs/NEUER-PC-SETUP.md` + INSTALLATION.txt vervollständigen (pdftotext, ffmpeg, Ollama, Env-Vars, Update/Rollback) | P2 | 2–3h |
+| **AP-17** ⚠️ | Kompletter Proberestore auf sauberes Verzeichnis + Protokoll | P1-nah (P2) | technisch bestanden; PDF-/Video-/KI-UI-Handtests offen |
+| **AP-18** ✅ | `docs/NEUER-PC-SETUP.md` + INSTALLATION.txt | P2 | Dokumentation umgesetzt; gemeinsamer UI-Voraussetzungscheck bleibt Verbesserung |
 | AP-60 | Produktivstart auf Publish-Ordner umstellen (Start-Skript + Backup-Pfade) | P2 | 2–4h |
 | AP-61 | DINO/BERT offline-fähig (Tokenizer lokal) | P2 | 2–4h |
 | AP-62 | READMEs korrigieren (cu128!, Ist-Zustand), Publish-Version aus csproj lesen, Restore-Fallback „4.4"→AppIdentity | P3 | 2h |
@@ -311,28 +318,27 @@ AP-70: Freigabe-Checkliste gegen Kapitel 10 abarbeiten, Dauerlauf (einen komplet
 | 1 Datenverlust-Schutz | Kein Szenario mehr, in dem Arbeit unrettbar verloren geht | AP-01…AP-08 | ~3–4 Tage | Projekte im Backup; kaputtes Projekt per Dialog rettbar; Import mit wirksamem Restore-Point; 2. Instanz geblockt |
 | 2 Absturz & Fehler | Ernstfälle enden mit klarer Meldung + Rückweg | AP-09…AP-15 | ~3 Tage | Crash-Tests grün; Test-Gate aktiv; KB-Korruption wird erkannt |
 | 3 Datenkonsistenz | Re-Import/Umzug erzeugen keine stillen Widersprüche | AP-20…AP-24 | ~2 Tage | Doppelimport-Tests grün; Projekt portabel |
-| 4 Architektur/Codequalität | Drift-Schutz, Auffindbarkeit | AP-30…AP-34 | ~1–2 Tage | Sidecar-Versionscheck aktiv; Fitness-Tests erweitert |
+| 4 Architektur/Codequalität | Drift-Schutz, Auffindbarkeit | AP-30…AP-36 | ~2–3 Tage Rest | Hauptpfad prüft Sidecar-Version; Hintergrundaufgaben beobachtet; Großklassen werden kleiner |
 | 5 Tests | Geschäftskritische Abläufe abgesichert | AP-40…AP-42 | ~2 Tage | Korruptions-/Abbruch-Tests grün |
-| 6 Leistung/Bedienbarkeit | Keine Freezes, verständliche Fehler | AP-50…AP-54 | ~2 Tage | Projekt-Laden mit Busy-Anzeige; Fehlerdialoge |
-| 7 Installation/Doku | „Neuer PC in einem Nachmittag" | AP-17, AP-18, AP-60…62 | ~2 Tage | Proberestore-Protokoll; Setup-Doku vollständig |
+| 6 Leistung/Bedienbarkeit | Keine Freezes, verständliche Fehler | AP-50…AP-55 | ~2–3 Tage Rest | Projekt-Laden mit Busy-Anzeige; gebündeltes AutoSave; Diagnosepaket |
+| 7 Installation/Doku | „Neuer PC in einem Nachmittag" | AP-17, AP-18, AP-60…62 | ~1–2 Tage Rest | UI-Handtests des Restores; Setup-Doku vollständig |
 | 8 Freigabe | Note A bestätigen | AP-70 | 1 Tag | Checkliste Kapitel 10 vollständig erfüllt |
 
-Gesamt: grob 16–18 Arbeitstage netto, in kleinen unabhängigen Paketen.
+Vom ursprünglichen Fahrplan ist ein großer Teil bereits umgesetzt. Der aktuelle Restaufwand bis zur Note-A-Prüfung liegt grob bei **7–10 Arbeitstagen netto**, zuzüglich Nachtlauf und eines normalen Arbeitstags für AP-70.
 
 ---
 
 ## 8. Schnell umsetzbare Verbesserungen (je < 2h, sofort viel Sicherheit)
 
-1. **AP-02** Restore-Point-Pfad fixen (1 Zeile + Test) — größter Sicherheitsgewinn pro Minute.
-2. **AP-04** Single-Instance-Mutex.
-3. **AP-05** XTF-Archiv raus aus `bin\`.
-4. **AP-07** Zwei Schreibstellen auf AtomicTextFileWriter umstellen.
-5. **AP-10** pre-push-Hook mit dotnet test.
-6. **AP-12** Dirty-Guard beim Projekt-Entfernen (bestehende Methode wiederverwenden).
-7. Restore-Anleitung Fallback „4.4" → dynamisch (15 min).
-8. WinCan-DB3 ReadOnly öffnen (0.5h).
-9. `Desktop`-Handkopien (~1 GB .bak) nach `kb_backups/` verschieben (30 min, Backup schlanker).
-10. sidecar/README cu121→cu128 korrigieren (verhindert eine echte Falle beim Neuaufsetzen).
+1. **AP-17 Rest:** PDF-Import, Video und KI im wiederhergestellten Ordner live bedienen und protokollieren.
+2. **AP-54:** AutoSave bei schneller Eingabe um etwa 750 ms bündeln.
+3. **AP-35:** `KarteNetzVorladen` über den vorhandenen sicheren Fire-and-forget-Helfer starten und ins Tageslog schreiben.
+4. **AP-55:** Die zehn wichtigsten KI-/Speicherfehler von `Debug.WriteLine` auf `ILogger` umstellen.
+5. **AP-20:** Duplikatprüfung für Haltungsnamen an Anlegen und Umbenennen anschließen.
+6. **AP-41:** Je einen echten Abbruchtest für Analyse, Batch-Import und KB-Neuaufbau ergänzen.
+7. **AP-50:** Projektladen zunächst nur mit Busy-Anzeige aus dem UI-Thread nehmen.
+8. Diagnose-Schaltfläche für ffmpeg, pdftotext, Ollama und Sidecar als gemeinsame Liste ergänzen.
+9. Bei der nächsten Änderung an `HoldingFolderDistributor` genau einen weiteren Ablauf extrahieren und die Fitness-Test-Altliste verkleinern.
 
 ---
 
@@ -340,16 +346,16 @@ Gesamt: grob 16–18 Arbeitstage netto, in kleinen unabhängigen Paketen.
 
 | Risiko | Wahrsch. | Schaden | Erkennung | Vorbeugung | Wiederherstellung | Verantwortlicher Teil |
 |---|---|---|---|---|---|---|
-| D:-Platte fällt aus, Projekte weg | mittel | sehr hoch | erst im Ernstfall | AP-03 (Projekte ins Backup) + 3-2-1 | heute: keine; nach AP-03: Backup-Versionen | BackupPlanBuilder |
-| Projektdatei korrupt (Absturz, Bit-Fehler) | niedrig | hoch | Ladefehler | atomares Speichern (existiert) | .bak + __RESTORE_POINTS existieren, aber erst nach AP-01 nutzerfreundlich | JsonProjectRepository |
-| Falscher/abgebrochener Import zerstört Projektstand | mittel | hoch | Nutzer bemerkt fehlende/doppelte Haltungen | AP-02 + AP-15 | Restore-Point (nach Fix) | ProjectImportOrchestrator |
-| KB „leer" nach Env-Var-Verlust / Umzug | **bereits passiert** | mittel–hoch (stiller Split-Brain) | erst spät (schlechte KI-Vorschläge) | AP-06 (Persistenz + Warnung) | kb_backups + Backup-Versionen | KnowledgeBasePaths |
-| Backup vorhanden, Restore scheitert im Ernstfall | mittel | sehr hoch | nur durch Proberestore | AP-17 (Proberestore) + AP-15-Manifest-Hashes | zweites Backup-Ziel | FullBackupService |
-| Zwei App-Instanzen überschreiben sich | mittel | mittel | kaum (still) | AP-04 | .bak der Vorversion | App.xaml.cs |
-| Regression durch ungetesteten Commit | mittel | mittel | Tage später | AP-10 (Test-Gate) | git bisect (teuer) | Prozess |
-| Ältere App-Version öffnet neuere Projektdatei | mittel (mehrere Builds auf einem PC!) | mittel (stiller Feldverlust) | kaum | AP-08 | Restore-Points | Project/Repository |
-| Sidecar-API-Drift → leere Erkennungen | niedrig–mittel | mittel (falsche Ergebnisse) | erst in Ergebnissen | AP-30 Versionscheck | SidecarE2eSmoke | VisionPipelineClient |
-| VSA-Zustandsnote verfälscht durch IBAK-Doppel-Findings | niedrig | mittel (fachlich falsch!) | Vergleich mit Protokoll | AP-13 | Re-Import nach Fix | IbakExportImportService |
+| D:-Platte fällt aus | niedrig–mittel | hoch | Backup-Erinnerung und Manifest | Projekte im Vollbackup; Videos bewusst optional | Backup-Versionen; technischer Restore bewiesen | BackupPlanBuilder |
+| Projektdatei korrupt (Absturz, Bit-Fehler) | niedrig | mittel | Ladefehlerdialog | atomar + Schema-Check | automatische `.bak`-/Restore-Point-Rettung + Quarantäne | JsonProjectRepository |
+| Falscher/abgebrochener Import | niedrig–mittel | mittel | Importstatus und Log | Import auf DeepCopy; Swap nur bei Erfolg | Restore-Point; Original bleibt bei Fehler unverändert | ImportRunWorkflowController |
+| KB „leer" nach Env-Var-Verlust / Umzug | niedrig–mittel | mittel–hoch | Root-/Sample-Warnung beim Start | `KnowledgeRootGuard`; Setup-Doku | kb_backups + Backup-Versionen | KnowledgeBasePaths |
+| Backup vorhanden, UI-Funktion nach Restore scheitert | niedrig–mittel | hoch | offene PDF-/Video-/KI-Handtests | AP-17 vollständig abschließen | technischer Restore-Ordner und Backup bleiben erhalten | FullBackupService |
+| Zwei App-Instanzen überschreiben sich | niedrig | mittel | zweite Instanz zeigt Hinweis | Single-Instance-Mutex umgesetzt | `.bak` der Vorversion | App.xaml.cs |
+| Regression durch ungetesteten Commit | niedrig–mittel | mittel | pre-push-Testgate | versionierter Hook installiert | git revert/bisect | Prozess |
+| Ältere App-Version öffnet neuere Projektdatei | niedrig | mittel | APP-VERSION-Dialog | Schema-Versionscheck + unbekannte Felder erhalten | Restore-Points | Project/Repository |
+| Sidecar-API-Drift | niedrig | mittel | Versionscheck in Monitor und Hauptpfad | beidseitige Version `1.2.0` | Ollama-Fallback + SidecarE2eSmoke | VisionPipelineClient |
+| VSA-Zustandsnote durch IBAK-Doppel-Findings verfälscht | niedrig | mittel | Doppelimport-Test | Findings werden ersetzt | Re-Import nach Fix | IbakExportImportService |
 
 ---
 
@@ -357,19 +363,19 @@ Gesamt: grob 16–18 Arbeitstage netto, in kleinen unabhängigen Paketen.
 
 Das Programm ist produktionsreif (Note A), wenn ALLE Punkte erfüllt und dokumentiert sind:
 
-1. ☐ Keine offenen P0-Probleme (aktuell erfüllt) und keine unbewerteten P1-Probleme (aktuell: 10 offen).
-2. ☐ Alle P1-Pakete (AP-01…AP-10, AP-15) umgesetzt und ihre Abnahmetests grün.
+1. ☑ Keine offenen P0-Probleme und keine unbewerteten P1-Probleme.
+2. ◐ Die ursprünglichen P1-Kernpakete sind weitgehend umgesetzt; AP-02 bleibt für einzelne ältere Importwege zu vervollständigen.
 3. ☐ Kritischer Datenfluss testgeschützt: Projekt-Save/Load-Crashtests, Import-Idempotenz Ende-zu-Ende, KB-Korruptionstest, je 1 Abbruch-Test pro langem Vorgang.
-4. ☐ Backup enthält Projekte; **ein kompletter Proberestore wurde durchgeführt und protokolliert** (Datum, Dauer, Ergebnis in docs/).
+4. ◐ Backup enthält Projekte; technischer Proberestore ist protokolliert. PDF-/Video-/KI-Handtests in der Oberfläche sind offen.
 5. ☐ Simulierter Abbruch (Prozess-Kill während Speichern, während Import, während Backup) führt nachweislich zu keinem Datenverlust — je ein dokumentierter Handtest.
-6. ☐ Fehlerbehandlung: Save-/Load-/Import-Fehler erscheinen als Dialog mit Handlungsanweisung, nicht nur als Statuszeile.
+6. ☑ Save-/SaveAs-/Load-Rettungsfehler erscheinen als Dialog; Importfehler liefern klaren Status und unverändertes Original.
 7. ☐ Reproduzierbarer Build: `Publish-SewerStudio.ps1` läuft durch, Release-Manifest trägt korrekte Version aus csproj, Produktivstart zeigt auf Publish-Ordner (nicht bin\Debug).
-8. ☐ Installation dokumentiert: `docs/NEUER-PC-SETUP.md` vorhanden; INSTALLATION.txt nennt pdftotext/ffmpeg/Ollama/Env-Vars.
+8. ☑ Installation dokumentiert: `docs/NEUER-PC-SETUP.md` und `INSTALLATION.txt` vorhanden.
 9. ☐ Update + Rollback dokumentiert und einmal geprobt (neuer Ordner daneben, alter Ordner startet noch).
 10. ☐ Fehlende externe Dienste kontrolliert: App-Start ohne Ollama/Sidecar/ffmpeg zeigt verständliche Warnungen (kein Crash) — Handtest dokumentiert.
 11. ☐ Keine bekannten kritischen Sicherheitsprobleme (aktuell erfüllt, Note A halten).
 12. ☐ Dauer-/Belastungstest bestanden: ein kompletter Batch-Nachtlauf + ein voller Arbeitstag ohne kritische Logeinträge/Speicherwachstum.
-13. ☐ Test-Gate aktiv (pre-push oder CI) und `LastFullBackupUtc`-Erinnerung in Betrieb.
+13. ☑ Versioniertes pre-push-Testgate und `LastFullBackupUtc`-Erinnerung vorhanden.
 14. ☐ Freigabe-Checkliste (dieses Kapitel) abgehakt und mit Datum in docs/ abgelegt.
 
 ---
@@ -378,7 +384,7 @@ Das Programm ist produktionsreif (Note A), wenn ALLE Punkte erfüllt und dokumen
 
 Gemeinsame Sicherheitsregeln für ALLE Prompts (bei jeder Übergabe mitgeben):
 
-> **Sicherheitsregeln:** Arbeite im Repo c:\Sewer-Studio_KI_4.5. Prüfe zuerst `git status` — es existieren nicht committete Änderungen am Backup-System (src/**/Backup/*, SettingsFullBackupWorkflow.cs, zugehörige Tests): NICHT überschreiben, NICHT revertieren. Keine NuGet-Pakete ohne Rückfrage. Kommentare auf Deutsch. Bestehende Architektur-Muster wiederverwenden (AtomicTextFileWriter, Result-Pattern, DialogService). Nach der Änderung `dotnet build AuswertungPro.sln` und die genannten Tests ausführen. Kein Refactoring außerhalb des Auftrags.
+> **Sicherheitsregeln:** Arbeite im Repo `C:\Sewer-Studio_KI_4.5`. Prüfe zuerst `git status` und erhalte alle fremden lokalen Änderungen. Keine NuGet-Pakete ohne Rückfrage. Kommentare auf Deutsch. Bestehende Architektur-Muster wiederverwenden (`AtomicTextFileWriter`, Result-Pattern, `DialogService`). Nach der Änderung `dotnet build AuswertungPro.sln` und die genannten Tests ausführen. Kein Refactoring außerhalb des Auftrags.
 
 ### Prompt AP-01 — Projekt-Laden mit Rettungskopien-Fallback
 ```text
@@ -470,19 +476,16 @@ ABNAHME: Alle 3 Tests grün; manueller Abbruch-Test im Import-Dialog.
 
 ---
 
-## Offene Prüfungen
+## Audit-Nachlauf und verbleibende praktische Prüfungen
 
-**5 Bereiche nicht geprüft (Modell-Limit erreicht) — für die Vollständigkeit nachzuholen:**
-- **Nebenläufigkeit/async:** `.Result`/`.Wait()`-Deadlock-Kandidaten, `async void`, fire-and-forget ohne Fehlerbehandlung, geteilte Zustände ohne Lock, CancellationToken-Durchreichung. (Teil-Signal aus Absturz-Audit: Coding-Feedback ist fire-and-forget mit Lock-Kollisionsrisiko.)
-- **Externe Dienste:** konkretes Ausfallverhalten bei fehlendem Ollama/Sidecar/FFmpeg/VLC/GPU-OOM aus Nutzersicht (Dialog? Spinner? Crash?). (Teil-Signal aus Architektur-Audit: Sidecar-API-Drift schlägt still fehl → AP-30.)
-- **Codequalität** projektweit: leere catch-Blöcke außerhalb Import/Export, TODO/HACK-Inventar, Dopplung der 3 Analyse-Pfade, tote Wegwerf-Tools, Nullability, IDisposable/HttpClient-Streuung.
-- **Logging/Diagnose:** Log-Ziel/Rotation, ErrorCode-Korrelation, Vorgangs-IDs, ob Sidecar-Fehler in den App-Logs landen, Diagnosepaket.
-- **Performance/Ressourcen:** synchrone Startarbeit, Event-Handler-Leaks, LibVLC-MediaPlayer-Dispose, SQLite-N+1, UI-Virtualisierung großer Listen, Parallelitätsgrenzen im Batch, Langzeitbetrieb.
+**Die fünf zunächst fehlenden Code-Prüfungen sind abgeschlossen.** Das vollständige Ergebnis mit Belegen, Gegenurteilen und neuen Arbeitspaketen AP-34 bis AP-55 steht in `docs/AUDIT-NACHLAUF-2026-07-12.md`. Es kam kein neues P0- oder P1-Problem hinzu.
+
+Kurzurteil: Nebenläufigkeit B, externe Dienste B+, Codequalität C+, Logging/Diagnose B−, Performance B.
 
 **Weitere von den Auditoren selbst gemeldete Lücken:**
-- `dotnet test` NICHT ausgeführt (reines Code-Audit, keine Laufzeit-/Absturz-Simulation). Die Zahl „8075 Tests grün" stammt aus dem Projektstand 09.07., nicht aus einem neuen Lauf; gezählt wurden 6658 `[Fact]`/`[Theory]` in 1501 Dateien.
-- Restore praktisch nie komplett durchgespielt (→ AP-17 ist selbst eine offene Prüfung mit hoher Priorität).
-- tools/-CLI-Schreibpfade + `kb_audit`-Python-Skripte ungeprüft; QuestPDF-Verhalten bei korrupten Bildbytes nicht reproduziert; MAX_PATH (>260 Zeichen) ungeprüft; Detail-Korrektheit von `DirectoryMirror`/`SqliteSnapshotCopier`/`BackupDiskSpaceGuard` (Kopiermechanik) nur auf Plan-Ebene betrachtet.
+- Die vollständige Projektmappen-Suite wurde am 2026-07-12 auf dem Abschlussstand ausgeführt: **8.413 bestanden, 1 übersprungen, 0 fehlgeschlagen** (inkl. 62 ProjectModernizer-Tests). Darin enthalten: 2.413 Infrastruktur-, 1.795 Pipeline- und 4.143 UI-Tests.
+- Der technische Restore ist praktisch bestanden: Sicherung, saubere Rückkopie, Dateivergleich, KB-Integrität, Projektladen und Build. Offen sind die UI-Handtests PDF-Import, Video und KI.
+- Die übrigen tools/-CLI-Schreibpfade und `kb_audit`-Python-Skripte sind nicht vollständig geprüft; QuestPDF mit korrupten Bildbytes und MAX_PATH (>260 Zeichen) wurden nicht praktisch reproduziert. `DirectoryMirror`, SQLite-Snapshots und Platzprüfung wurden dagegen durch Tests und den echten 97-GB-Backup-/Restore-Lauf praktisch geprüft.
 - `BenchmarkSetStore` als Klasse nicht gefunden — Schreiber von `benchmark_set.json` unidentifiziert.
 
 **Gegenprüfungs-Abdeckung:** Von den ursprünglich 10 als P1 gemeldeten Befunden wurden 6 gegengeprüft (alle CONFIRMED, 4 davon P1→P2 gesenkt). Die 6 verbliebenen echten P1 sind teils gegengeprüft (P1-7), teils nur über eindeutige, direkt am Code belegte Fakten gestützt (fehlendes `.github/workflows`, fehlende Crash-Tests, hartkodierter Import-Restore-Pfad) — diese Belege sind so unmittelbar, dass eine Gegenprüfung wenig hinzufügt.
