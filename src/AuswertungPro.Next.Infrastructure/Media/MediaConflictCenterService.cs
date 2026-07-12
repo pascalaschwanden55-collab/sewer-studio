@@ -463,8 +463,30 @@ public sealed class MediaConflictCenterService
         if (record is null)
             return null;
 
-        record.SetFieldValue("Link", destVideoPath, FieldSource.Unknown, userEdited: setUserEdited);
+        var projectRoot = FindProjectRoot(conflict.HoldingFolder);
+        var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(destVideoPath, projectRoot);
+        record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: setUserEdited);
         return record.GetFieldValue("Haltungsname");
+    }
+
+    private static string? FindProjectRoot(string holdingFolder)
+    {
+        try
+        {
+            var current = new DirectoryInfo(Path.GetFullPath(holdingFolder));
+            while (current is not null)
+            {
+                if (current.Name is "Haltungen" or "Haltungen_Verteilt")
+                    return current.Parent?.FullName;
+                current = current.Parent;
+            }
+        }
+        catch
+        {
+            // Unbekannte Altstruktur: absoluten Pfad beibehalten.
+        }
+
+        return null;
     }
 
     private static HaltungRecord? FindRecord(Project project, MediaConflictCase conflict)

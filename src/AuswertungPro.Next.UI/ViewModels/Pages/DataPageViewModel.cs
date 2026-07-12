@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -876,7 +877,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private string SaveVideoLink(HaltungRecord record, string path, bool userEdited)
     {
-        record.SetFieldValue("Link", path, FieldSource.Unknown, userEdited: userEdited);
+        var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(path, _shell.GetProjectFolder());
+        record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: userEdited);
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
         return path;

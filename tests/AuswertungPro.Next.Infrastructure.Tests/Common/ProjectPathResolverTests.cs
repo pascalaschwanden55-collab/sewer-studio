@@ -34,6 +34,20 @@ public class ProjectPathResolverTests
         Assert.Equal(Path.GetFullPath(mediaFile), resolved);
     }
 
+    [Fact]
+    public void MakeRelativeIfInsideProject_ConvertsOnlyFilesInsideProject()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var inside = Path.Combine(projectFolder, "Haltungen", "06-1", "film.mp4");
+        var outside = Path.Combine(temp.CreateSubdir("outside"), "film.mp4");
+
+        Assert.Equal(
+            "Haltungen/06-1/film.mp4",
+            ProjectPathResolver.MakeRelativeIfInsideProject(inside, projectFolder));
+        Assert.Equal(outside, ProjectPathResolver.MakeRelativeIfInsideProject(outside, projectFolder));
+    }
+
     [Theory]
     [InlineData("Haltungen/06-1/Video/film.mp4", true)]
     [InlineData("..\\outside\\film.mp4", false)]

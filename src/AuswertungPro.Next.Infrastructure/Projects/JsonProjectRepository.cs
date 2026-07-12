@@ -40,6 +40,7 @@ public sealed class JsonProjectRepository : IProjectRepository
 
             project.EnsureMetadataDefaults();
             ProjectPhotoReferenceNormalizer.Normalize(project, path);
+            ProjectVideoReferenceNormalizer.Normalize(project, path);
             return Result<Project>.Success(project);
         }
         catch (Exception ex)
@@ -73,6 +74,7 @@ public sealed class JsonProjectRepository : IProjectRepository
                 return Result.Fail("APP-SAVE", "Speicherpfad ist leer.");
 
             ProjectPhotoReferenceNormalizer.Normalize(project, path);
+            ProjectVideoReferenceNormalizer.Normalize(project, path);
             project.ModifiedAtUtc = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(project, Opt);
 

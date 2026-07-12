@@ -108,6 +108,10 @@ public sealed class ShellSaveGuardTests
         // nie erzeugte neue Datei. Vor dem Fix waere LastProjectPath = blockierterPfad gewesen.
         Assert.Equal(fremdPath, settings.LastProjectPath);
         Assert.False(shell.HasPersistedProject);
+        var dialogs = Assert.IsType<SaveFileDialogFake>(services.Dialogs);
+        Assert.Single(dialogs.Errors);
+        Assert.Contains("nicht gespeichert", dialogs.Errors[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(blockierterPfad, dialogs.Errors[0], StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class SaveFileDialogFake : IDialogService
@@ -117,6 +121,8 @@ public sealed class ShellSaveGuardTests
         public SaveFileDialogFake(string saveFileResult)
             => _saveFileResult = saveFileResult;
 
+        public List<string> Errors { get; } = new();
+
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null)
             => _saveFileResult;
 
@@ -125,7 +131,7 @@ public sealed class ShellSaveGuardTests
         public string? SelectFolder(string title, string? initialPath = null) => null;
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
-        public void Error(string message, string title = "Fehler") { }
+        public void Error(string message, string title = "Fehler") => Errors.Add(message);
         public bool Confirm(string message, string title = "Bestaetigung") => false;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.No;

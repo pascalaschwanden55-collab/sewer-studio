@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.Services;
@@ -161,7 +162,9 @@ public partial class MediaSearchWindow : Window
             if (!string.IsNullOrWhiteSpace(row.VideoPath)
                 && row.Match.VideoStatus is MediaMatchStatus.Found or MediaMatchStatus.Ambiguous)
             {
-                row.Match.Record.SetFieldValue("Link", row.VideoPath, FieldSource.Unknown, userEdited: false);
+                var projectRoot = ProjectFileLocator.ProjectRootFromFile(_services.Settings.LastProjectPath);
+                var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(row.VideoPath, projectRoot);
+                row.Match.Record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: false);
                 videoCount++;
             }
 

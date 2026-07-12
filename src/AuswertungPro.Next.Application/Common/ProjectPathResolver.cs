@@ -109,6 +109,33 @@ public static class ProjectPathResolver
     }
 
     /// <summary>
+    /// Wandelt einen absoluten Pfad nur dann um, wenn er wirklich innerhalb des
+    /// Projektordners liegt. Externe Quelldateien bleiben absolut verknuepft.
+    /// </summary>
+    public static string MakeRelativeIfInsideProject(string? path, string? projectFolder)
+    {
+        var trimmed = path?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || string.IsNullOrWhiteSpace(projectFolder))
+            return trimmed ?? string.Empty;
+        if (!Path.IsPathRooted(trimmed))
+            return trimmed.Replace('\\', '/');
+
+        try
+        {
+            var fullPath = Path.GetFullPath(trimmed);
+            var normalizedRoot = NormalizeDirectoryForContainment(projectFolder);
+            if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+
+            return MakeRelative(fullPath, projectFolder);
+        }
+        catch
+        {
+            return trimmed;
+        }
+    }
+
+    /// <summary>
     /// Prueft, ob ein Pfad relativ ist (nicht gerootet).
     /// </summary>
     public static bool IsRelative(string? path)

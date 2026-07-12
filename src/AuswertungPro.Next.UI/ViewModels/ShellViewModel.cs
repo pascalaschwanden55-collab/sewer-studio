@@ -580,6 +580,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var res = _sp.Projects.Save(Project, path);
         if (!res.Ok)
         {
+            ShowProjectSaveError(path, res.ErrorMessage);
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
@@ -622,6 +623,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var res = _sp.Projects.Save(Project, path);
         if (!res.Ok)
         {
+            ShowProjectSaveError(path, res.ErrorMessage);
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
@@ -634,6 +636,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SetStatus($"Gespeichert: {Path.GetFileName(path)}");
         _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
         return true;
+    }
+
+    private void ShowProjectSaveError(string path, string? error)
+    {
+        _sp.Dialogs.Error(
+            "Das Projekt konnte nicht gespeichert werden. Die vorhandene Projektdatei wurde nicht geloescht.\n\n" +
+            $"Ziel: {path}\n" +
+            $"Fehler: {error}\n\n" +
+            "Bitte pruefe freien Speicherplatz, Schreibschutz und Zugriffsrechte. " +
+            "Versuche danach 'Speichern unter' in einem anderen Ordner.",
+            "Projekt nicht gespeichert");
     }
 
     private void OpenProjectWithDialog()
