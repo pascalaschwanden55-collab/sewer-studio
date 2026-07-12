@@ -137,6 +137,38 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
+    public void TryRecover_BevorzugtNeuerenRestorePointVorAelteremBak()
+    {
+        var dir = NeuerProjektOrdner();
+        var path = Path.Combine(dir, "projekt.json");
+        var repo = new JsonProjectRepository();
+        try
+        {
+            repo.Save(new Project { Name = "Altes Bak" }, path + ".bak");
+            File.SetLastWriteTimeUtc(
+                path + ".bak",
+                new DateTime(2026, 7, 12, 10, 0, 0, DateTimeKind.Utc));
+
+            var rpDir = Path.Combine(dir, ProjectStructure.RestorePoints, "projekt");
+            Directory.CreateDirectory(rpDir);
+            repo.Save(
+                new Project { Name = "Neuer Restore-Point" },
+                Path.Combine(rpDir, "20260712-130000000_projekt.json"));
+            File.WriteAllText(path, Muell);
+
+            var result = ProjectRecovery.TryRecover(path, repo);
+
+            Assert.True(result.Recovered);
+            Assert.Equal("Neuer Restore-Point", result.Project!.Name);
+            Assert.Contains("20260712-130000000_projekt.json", result.RecoveredFromPath);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void TryRecover_FlacherRestorePointAusSpeicherworkflow_WirdGefunden()
     {
         var dir = NeuerProjektOrdner();
@@ -156,6 +188,38 @@ public sealed class ProjectRecoveryTests
             Assert.True(result.Recovered);
             Assert.Equal("Rettung", result.Project!.Name);
             Assert.Contains("20260712-120000000_projekt.json", result.RecoveredFromPath);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void TryRecover_WaehltNeuestenStandUeberAltesUndNeuesFormatHinweg()
+    {
+        var dir = NeuerProjektOrdner();
+        var projectFiles = Path.Combine(dir, ProjectStructure.Projektdateien);
+        Directory.CreateDirectory(projectFiles);
+        var path = Path.Combine(projectFiles, "projekt.json");
+        var repo = new JsonProjectRepository();
+        try
+        {
+            var rpBase = Path.Combine(dir, ProjectStructure.RestorePoints, "projekt");
+            var oldFolder = Path.Combine(rpBase, "20260712_120000");
+            Directory.CreateDirectory(oldFolder);
+            repo.Save(new Project { Name = "Alt" }, Path.Combine(oldFolder, "projekt.json"));
+
+            Directory.CreateDirectory(rpBase);
+            repo.Save(
+                new Project { Name = "Neu" },
+                Path.Combine(rpBase, "20260712-130000000_projekt.json"));
+            File.WriteAllText(path, Muell);
+
+            var result = ProjectRecovery.TryRecover(path, repo);
+
+            Assert.True(result.Recovered);
+            Assert.Equal("Neu", result.Project!.Name);
         }
         finally
         {

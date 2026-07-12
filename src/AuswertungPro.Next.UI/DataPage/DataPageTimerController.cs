@@ -28,8 +28,7 @@ public sealed class DataPageTimerController
 
     public void ScheduleAutoSave(
         AutoSaveMode mode,
-        Action markDirty,
-        Action save)
+        Action markDirty)
     {
         DataPageAutoSaveController.Schedule(
             mode,
@@ -41,8 +40,7 @@ public sealed class DataPageTimerController
                     _autoSaveTimer.Interval = interval;
             },
             isTimerEnabled: () => _autoSaveTimer.IsEnabled,
-            startTimer: _autoSaveTimer.Start,
-            save);
+            startTimer: _autoSaveTimer.Start);
     }
 
     public void HandleAutoSaveTimerTick(

@@ -95,6 +95,7 @@ namespace AuswertungPro.Next.UI
                     b.AddProvider(new FileLoggerProvider(logPath));
                 });
                 var logger = loggerFactory.CreateLogger("App");
+                Helpers.TaskExtensions.ConfigureLogging(loggerFactory.CreateLogger("BackgroundTasks"));
                 // QGIS-Bridge-Verarbeitung: gemeinsam fuer Live-Control-Server (gleicher Port)
                 // und den eigenstaendigen Bridge-Host weiter unten.
                 var qgisBridgeProcessor = new QgisBridgeRequestProcessor(

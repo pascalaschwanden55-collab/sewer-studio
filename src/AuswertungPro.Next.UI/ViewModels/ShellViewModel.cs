@@ -683,8 +683,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (string.IsNullOrWhiteSpace(path) || !HasPersistedProject)
             return;
 
-        TryCreateProjectRestorePoint(path);
-        SetStatus($"{importLabel}: Restore-Point angelegt");
+        var result = TryCreateProjectRestorePoint(path);
+        SetStatus($"{importLabel}: {result.Message}");
     }
 
     private static string MakeSafeFileName(string? name)
@@ -713,15 +713,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             Directory.CreateDirectory(dir);
     }
 
-    private static void TryCreateProjectRestorePoint(string projectPath)
-    {
-        var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectPath);
-        if (string.IsNullOrWhiteSpace(projectRoot))
-            return;
-
-        var restoreRoot = Path.Combine(projectRoot, ProjectStructure.RestorePoints);
-        RestorePointService.TryCreate(projectPath, restoreRoot, "projekt");
-    }
+    private static ProjectRestorePointResult TryCreateProjectRestorePoint(string projectPath) =>
+        ProjectRestorePointService.TryCreateForProjectFile(projectPath);
 
     private void OpenPriceCatalog()
     {

@@ -7,6 +7,36 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ImportRunWorkflowControllerTests
 {
+    [Theory]
+    [InlineData("PDF")]
+    [InlineData("XTF")]
+    [InlineData("WinCan")]
+    [InlineData("IBAK")]
+    [InlineData("KINS")]
+    public async Task RunAsync_AllManualImportTypesCreateRestorePointBeforeImport(string label)
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            label,
+            "source",
+            (_, _, _) =>
+            {
+                calls.Add($"import:{label}");
+                return Result<ImportStats>.Success(
+                    new ImportStats(0, 0, 0, 0, 0, Array.Empty<string>()));
+            });
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            CancellationToken.None);
+
+        Assert.Equal($"restore:{label}", calls[0]);
+        Assert.Equal($"import:{label}", calls[1]);
+    }
+
     [Fact]
     public async Task RunAsync_commit_success_runs_post_processing_save_and_report()
     {

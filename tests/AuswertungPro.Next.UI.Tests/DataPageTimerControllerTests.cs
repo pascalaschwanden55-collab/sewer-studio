@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageTimerControllerTests
 {
     [Fact]
-    public void ScheduleAutoSave_on_each_change_marks_dirty_and_saves()
+    public void ScheduleAutoSave_on_each_change_marks_dirty_and_saves_on_timer_tick()
     {
         RunOnStaThread(() =>
         {
@@ -18,8 +18,14 @@ public sealed class DataPageTimerControllerTests
 
             controller.ScheduleAutoSave(
                 AutoSaveMode.OnEachChange,
-                markDirty: () => calls.Add("dirty"),
-                save: () => calls.Add("save"));
+                markDirty: () => calls.Add("dirty"));
+
+            Assert.Equal(new[] { "dirty" }, calls);
+
+            controller.HandleAutoSaveTimerTick(
+                AutoSaveMode.OnEachChange,
+                save: () => calls.Add("save"),
+                isProjectDirty: () => false);
 
             Assert.Equal(new[] { "dirty", "save" }, calls);
         });

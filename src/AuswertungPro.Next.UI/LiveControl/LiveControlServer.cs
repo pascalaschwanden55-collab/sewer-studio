@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.QgisBridge;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +18,7 @@ namespace AuswertungPro.Next.UI.LiveControl;
 
 public sealed class LiveControlServer : IDisposable
 {
+    private const int MaxConcurrentClients = 8;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -33,6 +35,7 @@ public sealed class LiveControlServer : IDisposable
     private readonly int _port;
     private readonly string? _token;
     private readonly QgisBridgeRequestProcessor? _qgisProcessor;
+    private readonly BoundedBackgroundTaskRunner _clientTasks;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
     private Task? _loopTask;
@@ -51,6 +54,7 @@ public sealed class LiveControlServer : IDisposable
         _port = port;
         _token = string.IsNullOrWhiteSpace(token) ? null : token;
         _qgisProcessor = qgisProcessor;
+        _clientTasks = new BoundedBackgroundTaskRunner(MaxConcurrentClients, logger);
     }
 
     // internal statt public: der optionale QGIS-Processor ist ein interner Typ,
@@ -133,7 +137,14 @@ public sealed class LiveControlServer : IDisposable
             try
             {
                 var client = await _listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
-                _ = Task.Run(() => HandleClientAsync(client, cancellationToken), cancellationToken);
+                if (!_clientTasks.TryRun(
+                        () => HandleClientAsync(client, cancellationToken),
+                        "Live-Control Request"))
+                {
+                    await LoopbackHttpServerSafety
+                        .RejectBusyAsync(client, cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -141,7 +152,7 @@ public sealed class LiveControlServer : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Live-Control Accept fehlgeschlagen.");
+                TryLogWarning(ex, "Live-Control Accept fehlgeschlagen.");
             }
         }
     }
@@ -152,16 +163,26 @@ public sealed class LiveControlServer : IDisposable
         try
         {
             using var stream = client.GetStream();
-            var request = await ReadRequestAsync(stream, cancellationToken).ConfigureAwait(false);
+            using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestTimeout.CancelAfter(LoopbackHttpServerSafety.RequestReadTimeout);
+            var request = await ReadRequestAsync(stream, requestTimeout.Token).ConfigureAwait(false);
             if (request is null)
                 return;
 
             var response = await DispatchAsync(request.Value).ConfigureAwait(false);
             await WriteResponseAsync(stream, response, cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Normales Beenden des Servers.
+        }
+        catch (OperationCanceledException)
+        {
+            TryLogWarning(null, "Live-Control Request wegen Zeitueberschreitung beendet.");
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Live-Control Request fehlgeschlagen.");
+            TryLogWarning(ex, "Live-Control Request fehlgeschlagen.");
         }
     }
 
@@ -420,7 +441,18 @@ public sealed class LiveControlServer : IDisposable
     {
         _cts.Cancel();
         try { _listener?.Stop(); } catch { }
+        try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
+        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); } catch { }
         _cts.Dispose();
+    }
+
+    private void TryLogWarning(Exception? exception, string message)
+    {
+        try { _logger.LogWarning(exception, "{Message}", message); }
+        catch
+        {
+            // Ein Logfehler darf weder Listener noch Client-Behandlung beenden.
+        }
     }
 
     private readonly record struct LiveHttpRequest(string Method, string Path, string Body, string? Token);

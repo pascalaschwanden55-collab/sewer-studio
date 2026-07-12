@@ -7,6 +7,7 @@ using System.Threading;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Hydraulik;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI;
@@ -130,7 +131,36 @@ public sealed class AppSettings : IAiStartupSettings
     // Ordner beim naechsten Start ab oder ist die DB ploetzlich leer, warnt die App (Split-Brain-Schutz).
     public string? LastKnownKnowledgeRoot { get; set; }
     public int? LastKnownKnowledgeSampleCount { get; set; }
+    // Dauerhaft gewaehlter Wissensordner. Die Umgebungsvariable darf ihn fuer einen
+    // Start uebersteuern, ersetzt diesen gespeicherten Wert aber nicht.
     public string? KnowledgeRootPath { get; set; }
+
+    internal bool MigrateLegacyKnowledgeRootPath()
+    {
+        if (!string.IsNullOrWhiteSpace(KnowledgeRootPath)
+            || string.IsNullOrWhiteSpace(LastKnownKnowledgeRoot))
+            return false;
+
+        // Aeltere settings.json kannten nur LastKnownKnowledgeRoot. Diesen Wert
+        // uebernehmen wir einmalig, damit ein verlorener Env-Override keine leere KB oeffnet.
+        KnowledgeRootPath = LastKnownKnowledgeRoot.Trim();
+        return true;
+    }
+
+    internal void RecordKnowledgeRootStart(
+        string activeRoot,
+        int? sampleCount,
+        KnowledgeBasePaths.RootSource source)
+    {
+        LastKnownKnowledgeRoot = activeRoot;
+        if (sampleCount.HasValue)
+            LastKnownKnowledgeSampleCount = sampleCount.Value;
+
+        // Der normale Fallback wird nach dem ersten Start dauerhaft festgehalten.
+        // Ein Env-Override bleibt dagegen absichtlich nur fuer diesen Start aktiv.
+        if (source == KnowledgeBasePaths.RootSource.DefaultFallback)
+            KnowledgeRootPath = activeRoot;
+    }
 
     // Amtlicher Abwasserkataster (SIA405-XTF) fuer die Haltungs-Zuordnung bei der Verteilung.
     // Schacht-Paar (auch vertauscht) wird hierueber der korrekten Haltung zugeordnet.
@@ -285,6 +315,7 @@ public sealed class AppSettings : IAiStartupSettings
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
+        settings.MigrateLegacyKnowledgeRootPath();
         settings.WindowStates ??= new Dictionary<string, WindowBounds>();
         settings.ViewCustomizations ??= new Dictionary<string, ViewCustomization>();
         settings.HydraulikPanel ??= new HydraulikPanelSettings();

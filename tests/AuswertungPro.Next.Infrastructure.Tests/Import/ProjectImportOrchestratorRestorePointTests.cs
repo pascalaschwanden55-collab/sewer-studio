@@ -25,7 +25,7 @@ public sealed class ProjectImportOrchestratorRestorePointTests
     {
         var restoreRoot = Path.Combine(projectDir, ProjectStructure.RestorePoints, "projekt");
         return Directory.Exists(restoreRoot)
-            ? Directory.GetFiles(restoreRoot, "projekt.json", SearchOption.AllDirectories)
+            ? Directory.GetFiles(restoreRoot, "*projekt.json", SearchOption.AllDirectories)
             : Array.Empty<string>();
     }
 

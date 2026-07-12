@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.UI.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.QgisBridge;
@@ -15,8 +16,10 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 /// </summary>
 internal sealed class QgisBridgeServer : IDisposable
 {
+    private const int MaxConcurrentClients = 8;
     private readonly QgisBridgeRequestProcessor _processor;
     private readonly ILogger _logger;
+    private readonly BoundedBackgroundTaskRunner _clientTasks;
     private readonly int _port;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
@@ -26,6 +29,7 @@ internal sealed class QgisBridgeServer : IDisposable
     {
         _processor = processor;
         _logger = logger;
+        _clientTasks = new BoundedBackgroundTaskRunner(MaxConcurrentClients, logger);
         _port = port;
     }
 
@@ -77,7 +81,14 @@ internal sealed class QgisBridgeServer : IDisposable
             try
             {
                 var client = await _listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
-                _ = Task.Run(() => HandleClientAsync(client, cancellationToken), cancellationToken);
+                if (!_clientTasks.TryRun(
+                        () => HandleClientAsync(client, cancellationToken),
+                        "QGIS-Bridge Request"))
+                {
+                    await LoopbackHttpServerSafety
+                        .RejectBusyAsync(client, cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -85,7 +96,7 @@ internal sealed class QgisBridgeServer : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "QGIS-Bridge Accept fehlgeschlagen.");
+                TryLogWarning(ex, "QGIS-Bridge Accept fehlgeschlagen.");
             }
         }
     }
@@ -96,7 +107,9 @@ internal sealed class QgisBridgeServer : IDisposable
         try
         {
             using var stream = client.GetStream();
-            var request = await ReadRequestAsync(stream, cancellationToken).ConfigureAwait(false);
+            using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestTimeout.CancelAfter(LoopbackHttpServerSafety.RequestReadTimeout);
+            var request = await ReadRequestAsync(stream, requestTimeout.Token).ConfigureAwait(false);
             if (request is null)
                 return;
 
@@ -117,9 +130,17 @@ internal sealed class QgisBridgeServer : IDisposable
             await WriteResponseAsync(stream, response, includeBody: method != "HEAD", cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Normales Beenden des Servers.
+        }
+        catch (OperationCanceledException)
+        {
+            TryLogWarning(null, "QGIS-Bridge Request wegen Zeitueberschreitung beendet.");
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "QGIS-Bridge Request fehlgeschlagen.");
+            TryLogWarning(ex, "QGIS-Bridge Request fehlgeschlagen.");
         }
     }
 
@@ -174,6 +195,7 @@ internal sealed class QgisBridgeServer : IDisposable
             200 => "OK",
             404 => "Not Found",
             405 => "Method Not Allowed",
+            503 => "Service Unavailable",
             500 => "Internal Server Error",
             _ => "OK"
         };
@@ -183,6 +205,16 @@ internal sealed class QgisBridgeServer : IDisposable
         _cts.Cancel();
         try { _listener?.Stop(); } catch { }
         try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
+        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); } catch { }
         _cts.Dispose();
+    }
+
+    private void TryLogWarning(Exception? exception, string message)
+    {
+        try { _logger.LogWarning(exception, "{Message}", message); }
+        catch
+        {
+            // Ein Logfehler darf weder Listener noch Client-Behandlung beenden.
+        }
     }
 }

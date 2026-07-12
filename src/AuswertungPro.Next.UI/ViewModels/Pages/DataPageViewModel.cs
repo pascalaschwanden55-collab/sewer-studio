@@ -601,8 +601,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         _timers.ScheduleAutoSave(
             _sp.Settings.DataAutoSaveMode,
-            markDirty: () => _shell.Project.Dirty = true,
-            save: AutoSave);
+            markDirty: () => _shell.Project.Dirty = true);
     }
 
     private void AutoSaveOnTimerTick()

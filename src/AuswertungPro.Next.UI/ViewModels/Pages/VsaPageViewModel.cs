@@ -40,6 +40,11 @@ public sealed partial class VsaPageViewModel : ObservableObject
         _shell.SetStatus("VSA-Bewertung läuft...");
         try
         {
+            // Run() liest gespeicherte XTF-/PDF-Quellen erneut ein und kann das Projekt veraendern.
+            // Deshalb gilt hier dasselbe Sicherheitsnetz wie bei den sichtbaren Importknoepfen.
+            if (HasStoredImportSources())
+                _shell.TryCreateImportRestorePoint("VSA-Daten");
+
             // Import/Bewertung sind synchron und potenziell langlaufend -> in den Hintergrund.
             // Run() mutiert Project.Data (ObservableCollection). Der Schreiber MUSS denselben Lock
             // halten, den EnableCollectionSynchronization fuer die UI-Lesezugriffe nutzt, sonst
@@ -64,6 +69,13 @@ public sealed partial class VsaPageViewModel : ObservableObject
             _shell.RefreshTitleAndDirty(); // SuggestMeasuresForAll kann Project.Dirty gesetzt haben
         }
     }
+
+    private bool HasStoredImportSources()
+        => HasStoredImportSource("XTF_StoredFiles") || HasStoredImportSource("PDF_StoredFiles");
+
+    private bool HasStoredImportSource(string key)
+        => _shell.Project.Metadata.TryGetValue(key, out var value)
+           && !string.IsNullOrWhiteSpace(value);
 
     private void Run()
     {

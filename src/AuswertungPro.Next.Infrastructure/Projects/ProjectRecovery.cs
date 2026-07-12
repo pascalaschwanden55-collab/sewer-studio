@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
@@ -18,7 +19,7 @@ public sealed record ProjectRecoveryResult(
 
 /// <summary>
 /// Rettet ein Projekt, dessen projekt.json nicht mehr ladbar ist, aus der naechstbesten
-/// Sicherungskopie (.bak, dann Restore-Points, neueste zuerst) und legt die beschaedigte
+/// Sicherungskopie (.bak und Restore-Points, gemeinsam neueste zuerst) und legt die beschaedigte
 /// Datei in Quarantaene (projekt.corrupt-&lt;Zeitstempel&gt;.json) — geloescht wird nie.
 /// Erst wenn eine Kopie erfolgreich laedt, wird die kaputte Datei angefasst.
 /// </summary>
@@ -51,38 +52,62 @@ public static class ProjectRecovery
         return new ProjectRecoveryResult(false, null, null, null);
     }
 
-    /// <summary>Sicherungskopien in Prioritaetsreihenfolge: .bak zuerst, dann Restore-Points (neueste zuerst).</summary>
+    /// <summary>Sicherungskopien aus .bak und Restore-Points, gemeinsam neueste zuerst.</summary>
     private static IEnumerable<string> Sicherungskopien(string projectFilePath)
     {
         var bak = projectFilePath + ".bak";
-        if (File.Exists(bak))
-            yield return bak;
-
         var root = ProjectFileLocator.ProjectRootFromFile(projectFilePath);
-        if (string.IsNullOrWhiteSpace(root))
-            yield break;
-
-        var rpBase = Path.Combine(root, ProjectStructure.RestorePoints, "projekt");
-        if (!Directory.Exists(rpBase))
-            yield break;
-
-        // Ordnernamen sind Zeitstempel (yyyyMMdd_HHmmss) — absteigend = neueste zuerst.
-        var staende = Directory.GetDirectories(rpBase)
-            .OrderByDescending(d => Path.GetFileName(d), StringComparer.Ordinal);
-
-        foreach (var stand in staende)
+        var restorePoints = Enumerable.Empty<string>();
+        if (!string.IsNullOrWhiteSpace(root))
         {
-            var rp = Path.Combine(stand, ProjectFileLocator.ProjectFileName);
-            if (File.Exists(rp))
-                yield return rp;
+            var rpBase = Path.Combine(root, ProjectStructure.RestorePoints, "projekt");
+            if (Directory.Exists(rpBase))
+            {
+                restorePoints = Directory
+                    .EnumerateFiles(rpBase, ProjectFileLocator.ProjectFileName, SearchOption.AllDirectories)
+                    .Concat(Directory.EnumerateFiles(rpBase, "*_projekt.json", SearchOption.TopDirectoryOnly));
+            }
         }
 
-        // RestorePointService (Speichern/Einzelimport) legt flache Zeitstempel-Dateien an.
-        foreach (var rp in Directory.EnumerateFiles(rpBase, "*_projekt.json", SearchOption.TopDirectoryOnly)
-                     .OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
+        // .bak und beide Restore-Point-Formate gemeinsam sortieren. Eine alte .bak
+        // darf einen neueren, bereits geprueften Import-Stand nicht verdecken.
+        return (File.Exists(bak) ? new[] { bak } : Array.Empty<string>())
+            .Concat(restorePoints)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(path => string.Equals(path, bak, StringComparison.OrdinalIgnoreCase)
+                ? File.GetLastWriteTimeUtc(path)
+                : GetRestorePointTimestamp(path))
+            .ThenByDescending(File.GetLastWriteTimeUtc);
+    }
+
+    private static DateTime GetRestorePointTimestamp(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        if (fileName.EndsWith("_projekt.json", StringComparison.OrdinalIgnoreCase))
         {
-            yield return rp;
+            var prefix = fileName[..^"_projekt.json".Length];
+            var separator = prefix.IndexOf('_');
+            if (separator > 0)
+                prefix = prefix[..separator];
+            if (DateTime.TryParseExact(
+                    prefix,
+                    "yyyyMMdd-HHmmssfff",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var flatTimestamp))
+                return flatTimestamp;
         }
+
+        var parentName = Path.GetFileName(Path.GetDirectoryName(path));
+        if (DateTime.TryParseExact(
+                parentName,
+                "yyyyMMdd_HHmmss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeLocal | DateTimeStyles.AdjustToUniversal,
+                out var folderTimestamp))
+            return folderTimestamp;
+
+        return File.GetCreationTimeUtc(path);
     }
 
     /// <summary>

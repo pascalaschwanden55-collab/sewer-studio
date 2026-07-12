@@ -65,6 +65,10 @@ namespace AuswertungPro.Next.UI
         // AP-06: Startwarnung zur Wissensdatenbank (anderer/leerer KB-Ordner). Gesetzt im Konstruktor,
         // angezeigt vom MainWindow, sobald der Toast-Host bereit ist. Null = keine Warnung.
         public string? KnowledgeRootStartupWarning { get; private set; }
+        // Einmal beim Start aufgeloest. Alle vom ServiceProvider erzeugten KB-Dienste
+        // erhalten genau diesen Ordner und koennen nicht versehentlich auseinanderlaufen.
+        public string KnowledgeRoot { get; }
+        public string KnowledgeDbPath { get; }
         // Zentrale Statusfarben (Ampel/Severity/Konfidenz) — eine Farbsprache fuer alle Fenster.
         public IStatusColorService StatusColors { get; } = new StatusColorService();
         // Nutzungszaehler fuer VSA-Codes (Favoriten-Chips im Code-Explorer).
@@ -142,9 +146,21 @@ namespace AuswertungPro.Next.UI
             Logger = logger;
             LoggerFactory = loggerFactory;
 
+            settings.MigrateLegacyKnowledgeRootPath();
+
             // Env-Var hat Vorrang. Fehlt sie, bleibt der zuletzt bestaetigte KB-Pfad
             // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
             KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
+            KnowledgeRoot = KnowledgeBasePaths.GetRoot();
+            var knowledgeResolution = KnowledgeBasePaths.GetResolution();
+            KnowledgeDbPath = Path.Combine(KnowledgeRoot, "KnowledgeBase.db");
+            var knowledgeConfigurationWarning = knowledgeResolution.HasEnvironmentSettingsMismatch
+                ? "Fuer diesen Start ist ein anderer Wissensordner ueber die Umgebungsvariable " +
+                  $"{KnowledgeBasePaths.EnvironmentVariableName} aktiv.\n" +
+                  $"Gespeichert: {knowledgeResolution.PersistedSettingsRoot}\n" +
+                  $"Jetzt aktiv: {KnowledgeRoot}\n" +
+                  "Der gespeicherte Pfad wird nicht ueberschrieben. Pruefe bitte, ob diese Abweichung gewollt ist."
+                : null;
 
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
             Theme.StatusColors.Current = StatusColors;
@@ -192,13 +208,12 @@ namespace AuswertungPro.Next.UI
             // AP-06: Zustand der Wissensdatenbank VOR der Init erfassen (existiert die DB-Datei,
             // bevor der Context sie ggf. neu/leer anlegt?). Schuetzt gegen stillen Split-Brain,
             // wenn die Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT verloren geht.
-            var knowledgeRoot = KnowledgeBasePaths.GetRoot();
-            var knowledgeDbPath = KnowledgeBasePaths.GetKnowledgeDbPath();
-            var knowledgeDbExisted = File.Exists(knowledgeDbPath);
+            var knowledgeDbExisted = File.Exists(KnowledgeDbPath);
             var knowledgeHealth = knowledgeDbExisted
-                ? KnowledgeBaseHealthChecker.Check(knowledgeDbPath)
+                ? KnowledgeBaseHealthChecker.Check(KnowledgeDbPath)
                 : KnowledgeBaseHealthResult.Ok;
             var knowledgeSampleCount = 0;
+            var knowledgeSampleCountRead = false;
 
             RetrievalService? retrieval = null;
             try
@@ -208,7 +223,7 @@ namespace AuswertungPro.Next.UI
 
                 var ollamaConfig = aiPlatform.ToOllamaConfig();
                 var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
-                var kbCtx = new KnowledgeBaseContext();
+                var kbCtx = new KnowledgeBaseContext(KnowledgeDbPath);
                 var embedder = new EmbeddingService(kbHttp, ollamaConfig);
                 // Audit Fix #6a: Eval-Haltungs-Sperrliste auch leseseitig anwenden (Defense-in-Depth,
                 // gleiche Quelle wie der Schreib-Guard) -> kontaminierte Samples kommen nie als Few-Shot.
@@ -222,7 +237,11 @@ namespace AuswertungPro.Next.UI
                         retrieval.StoredEmbedModel, ollamaConfig.EmbedModel);
 
                 // AP-06: aktuelle Sample-Zahl fuer die Abweichungs-Warnung (best-effort).
-                try { knowledgeSampleCount = new KnowledgeBaseDiagnosticsService(kbCtx).ReadSummary(topCodes: 1).SampleCount; }
+                try
+                {
+                    knowledgeSampleCount = new KnowledgeBaseDiagnosticsService(kbCtx).ReadSummary(topCodes: 1).SampleCount;
+                    knowledgeSampleCountRead = true;
+                }
                 catch { /* Sample-Zahl ist optional; 0 bleibt gueltig fuer die Pruefung. */ }
             }
             catch (Exception ex)
@@ -232,7 +251,7 @@ namespace AuswertungPro.Next.UI
 
             // AP-06: Warnen, wenn die App unbemerkt mit einer anderen oder leeren Wissensdatenbank laeuft.
             var knowledgeRootGuard = KnowledgeRootGuard.Evaluate(
-                knowledgeRoot,
+                KnowledgeRoot,
                 settings.LastKnownKnowledgeRoot,
                 knowledgeDbExisted,
                 knowledgeSampleCount,
@@ -241,7 +260,7 @@ namespace AuswertungPro.Next.UI
             {
                 KnowledgeRootStartupWarning =
                     "Die Wissensdatenbank ist beschaedigt oder nicht lesbar. Die App arbeitet vorerst ohne KB-Kontext.\n" +
-                    $"Datei: {knowledgeDbPath}\n" +
+                    $"Datei: {KnowledgeDbPath}\n" +
                     $"Fehler: {knowledgeHealth.Error}\n" +
                     "Bitte stelle die Datei aus einer Datensicherung wieder her.";
                 Logger.LogError("Wissensdatenbank-Integritaetspruefung fehlgeschlagen: {Error}", knowledgeHealth.Error);
@@ -252,13 +271,19 @@ namespace AuswertungPro.Next.UI
                 Logger.LogWarning("Wissensdatenbank-Startwarnung ({Art}): {Meldung}",
                     knowledgeRootGuard.Art, knowledgeRootGuard.Meldung);
             }
-            settings.LastKnownKnowledgeRoot = knowledgeRoot;
-            settings.LastKnownKnowledgeSampleCount = knowledgeSampleCount;
-            settings.KnowledgeRootPath = knowledgeRoot;
+            else if (knowledgeConfigurationWarning is not null)
+            {
+                KnowledgeRootStartupWarning = knowledgeConfigurationWarning;
+                Logger.LogWarning("Wissensdatenbank-Pfadabweichung: {Meldung}", knowledgeConfigurationWarning);
+            }
+            settings.RecordKnowledgeRootStart(
+                KnowledgeRoot,
+                knowledgeSampleCountRead ? knowledgeSampleCount : null,
+                knowledgeResolution.Source);
             settings.SaveImmediate();
 
             Retrieval = retrieval;
-            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner();
+            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner(KnowledgeDbPath);
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
@@ -289,8 +314,8 @@ namespace AuswertungPro.Next.UI
                 v2ManholesTablePath: v2ManholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                KnowledgeBasePaths.GetMeasuresLearningPath(),
-                KnowledgeBasePaths.GetMeasuresModelPath());
+                Path.Combine(KnowledgeRoot, "measures_learning.json"),
+                Path.Combine(KnowledgeRoot, "measures-model.zip"));
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(

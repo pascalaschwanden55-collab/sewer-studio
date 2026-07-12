@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
+using AuswertungPro.Next.UI.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Mapping;
 
@@ -26,11 +28,24 @@ public static class KarteNetzVorladen
 
         // invertiert=true entspricht der Karte (EZ-Skala) -> gleicher Cache-Key, echtes Reuse.
         // Danach die Schaechte (Kreise) warmladen — separat, damit ein Fehler das Netz nicht stoert.
-        _ = Task.Run(() =>
+        Task.Run(() =>
         {
             services.NetworkFeatures.EnsureBuilt(xtfPath, kondition, invertiert: true);
-            try { services.NetworkFeatures.EnsureManholesBuilt(xtfPath); }
-            catch { /* Schaechte optional */ }
-        });
+            try
+            {
+                services.NetworkFeatures.EnsureManholesBuilt(xtfPath);
+            }
+            catch (System.Exception ex)
+            {
+                // Das Kanalnetz bleibt nutzbar. Der fehlgeschlagene optionale Schacht-Cache
+                // muss aber im Tageslog sichtbar sein.
+                services.Logger.LogWarning(
+                    ex,
+                    "Kartennetz-Vorladen: Schacht-Cache konnte fuer {XtfPath} nicht erstellt werden.",
+                    xtfPath ?? "(kein XTF-Pfad)");
+            }
+        }).SafeFireAndForget(
+            "KarteNetzVorladen",
+            logger: services.Logger);
     }
 }

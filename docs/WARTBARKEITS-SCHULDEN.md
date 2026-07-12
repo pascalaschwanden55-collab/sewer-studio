@@ -26,6 +26,11 @@ und Video-Konflikthinweise wurden aus `HoldingFolderDistributor` in
 Charakterisierungstests schützen das Verhalten; der vollständige
 Infrastruktur-Testlauf blieb grün.
 
+Zweiter Schritt erledigt am 2026-07-12: Die Erweiterung einer Schacht-PDF-Auswahl
+auf zusammengehörige Dateien liegt nun in `ShaftPdfSelectionExpander` statt in
+`HoldingFolderDistributor`. Drei eigene Tests schützen Einzeldatei, mehrere
+Schächte und fehlende Dateien. Die öffentliche Fassade blieb unverändert.
+
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann
 eine Verantwortung verschieben, vollständige Tests ausführen und erst danach das
 nächste Teilstück beginnen. Kein Komplett-Umbau der gesamten Klasse in einem Zug.

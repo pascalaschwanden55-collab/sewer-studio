@@ -6,28 +6,63 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 public static class KnowledgeBasePaths
 {
-    private static string? _cachedRoot;
+    public const string EnvironmentVariableName = "SEWERSTUDIO_KNOWLEDGE_ROOT";
+
+    private static readonly object Sync = new();
+    private static RootResolution? _cachedResolution;
     private static string? _configuredSettingsRoot;
     private static bool _migrationDone;
 
+    public enum RootSource
+    {
+        EnvironmentOverride,
+        PersistedSettings,
+        DefaultFallback
+    }
+
+    public sealed record RootResolution(
+        string Root,
+        RootSource Source,
+        string? EnvironmentRoot,
+        string? PersistedSettingsRoot)
+    {
+        public bool HasEnvironmentSettingsMismatch =>
+            Source == RootSource.EnvironmentOverride
+            && !string.IsNullOrWhiteSpace(PersistedSettingsRoot)
+            && !PathsEqual(Root, PersistedSettingsRoot);
+    }
+
     public static string GetRoot(string? settingsOverride = null)
     {
-        if (_cachedRoot is not null && settingsOverride is null)
-            return _cachedRoot;
-
-        var root = ResolveRoot(settingsOverride);
-        Directory.CreateDirectory(root);
-
-        if (ShouldRunLegacyMigration(settingsOverride) && !_migrationDone)
+        lock (Sync)
         {
-            _migrationDone = true;
-            TryMigrateFromAppData(root);
+            if (_cachedResolution is not null && settingsOverride is null)
+                return _cachedResolution.Root;
+
+            var resolution = Resolve(settingsOverride);
+            Directory.CreateDirectory(resolution.Root);
+
+            if (resolution.Source == RootSource.DefaultFallback && !_migrationDone)
+            {
+                _migrationDone = true;
+                TryMigrateFromAppData(resolution.Root);
+            }
+
+            if (settingsOverride is null)
+                _cachedResolution = resolution;
+
+            return resolution.Root;
         }
+    }
 
-        if (settingsOverride is null)
-            _cachedRoot = root;
-
-        return root;
+    /// <summary>
+    /// Liefert Pfad und Herkunft nach derselben Reihenfolge wie GetRoot:
+    /// Umgebungsvariable, gespeicherte Einstellung, bisheriger AppData-Fallback.
+    /// </summary>
+    public static RootResolution GetResolution()
+    {
+        lock (Sync)
+            return _cachedResolution ?? Resolve(settingsOverride: null);
     }
 
     public static string GetKnowledgeDbPath(string? settingsOverride = null)
@@ -52,7 +87,11 @@ public static class KnowledgeBasePaths
     public static string GetMeasuresModelPath(string? settingsOverride = null)
         => Path.Combine(GetRoot(settingsOverride), "measures-model.zip");
 
-    public static void InvalidateCache() => _cachedRoot = null;
+    public static void InvalidateCache()
+    {
+        lock (Sync)
+            _cachedResolution = null;
+    }
 
     /// <summary>
     /// Setzt den dauerhaft gespeicherten KB-Pfad aus den App-Einstellungen.
@@ -60,10 +99,11 @@ public static class KnowledgeBasePaths
     /// </summary>
     public static void ConfigureSettingsRoot(string? settingsRoot)
     {
-        _configuredSettingsRoot = string.IsNullOrWhiteSpace(settingsRoot)
-            ? null
-            : settingsRoot.Trim();
-        InvalidateCache();
+        lock (Sync)
+        {
+            _configuredSettingsRoot = Clean(settingsRoot);
+            _cachedResolution = null;
+        }
     }
 
     public static string LegacyKnowledgeDbPath => Path.Combine(
@@ -88,28 +128,40 @@ public static class KnowledgeBasePaths
     public static string LegacyMeasuresModelPath => Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip");
 
-    private static string ResolveRoot(string? settingsOverride)
+    private static RootResolution Resolve(string? settingsOverride)
     {
-        var envRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")?.Trim();
+        var envRoot = Clean(Environment.GetEnvironmentVariable(EnvironmentVariableName));
+        var configured = Clean(settingsOverride) ?? _configuredSettingsRoot;
+
         if (!string.IsNullOrWhiteSpace(envRoot))
-            return envRoot;
+            return new RootResolution(envRoot, RootSource.EnvironmentOverride, envRoot, configured);
 
-        var configured = string.IsNullOrWhiteSpace(settingsOverride)
-            ? _configuredSettingsRoot
-            : settingsOverride.Trim();
         if (!string.IsNullOrWhiteSpace(configured))
-            return configured;
+            return new RootResolution(configured, RootSource.PersistedSettings, null, configured);
 
-        return Path.Combine(GetAppDataDir(), "Knowledge");
+        return new RootResolution(
+            Path.Combine(GetAppDataDir(), "Knowledge"),
+            RootSource.DefaultFallback,
+            null,
+            null);
     }
 
-    private static bool ShouldRunLegacyMigration(string? settingsOverride)
+    private static string? Clean(string? path)
+        => string.IsNullOrWhiteSpace(path) ? null : path.Trim();
+
+    private static bool PathsEqual(string left, string right)
     {
-        var envRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")?.Trim();
-        var configured = string.IsNullOrWhiteSpace(settingsOverride)
-            ? _configuredSettingsRoot
-            : settingsOverride.Trim();
-        return string.IsNullOrWhiteSpace(envRoot) && string.IsNullOrWhiteSpace(configured);
+        try
+        {
+            return string.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static void TryMigrateFromAppData(string knowledgeRoot)

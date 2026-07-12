@@ -19,6 +19,9 @@ public sealed class KnowledgeBasePathsTests
         try
         {
             Assert.Equal(settingsRoot, KnowledgeBasePaths.GetRoot());
+            var resolution = KnowledgeBasePaths.GetResolution();
+            Assert.Equal(KnowledgeBasePaths.RootSource.PersistedSettings, resolution.Source);
+            Assert.Equal(settingsRoot, resolution.PersistedSettingsRoot);
         }
         finally
         {
@@ -42,10 +45,65 @@ public sealed class KnowledgeBasePathsTests
         try
         {
             Assert.Equal(envRoot, KnowledgeBasePaths.GetRoot());
+            var resolution = KnowledgeBasePaths.GetResolution();
+            Assert.Equal(KnowledgeBasePaths.RootSource.EnvironmentOverride, resolution.Source);
+            Assert.True(resolution.HasEnvironmentSettingsMismatch);
         }
         finally
         {
             Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
+            if (Directory.Exists(baseRoot))
+                Directory.Delete(baseRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetResolution_does_not_report_mismatch_for_equivalent_paths()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName);
+        var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, root + Path.DirectorySeparatorChar);
+        KnowledgeBasePaths.ConfigureSettingsRoot(root);
+
+        try
+        {
+            var resolution = KnowledgeBasePaths.GetResolution();
+
+            Assert.Equal(KnowledgeBasePaths.RootSource.EnvironmentOverride, resolution.Source);
+            Assert.False(resolution.HasEnvironmentSettingsMismatch);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, previousRoot);
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Active_resolution_stays_stable_until_cache_is_explicitly_invalidated()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName);
+        var baseRoot = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        var firstRoot = Path.Combine(baseRoot, "First");
+        var changedRoot = Path.Combine(baseRoot, "ChangedAfterStartup");
+        Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, firstRoot);
+        KnowledgeBasePaths.ConfigureSettingsRoot(null);
+
+        try
+        {
+            Assert.Equal(firstRoot, KnowledgeBasePaths.GetRoot());
+
+            Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, changedRoot);
+
+            Assert.Equal(firstRoot, KnowledgeBasePaths.GetRoot());
+            Assert.Equal(firstRoot, KnowledgeBasePaths.GetResolution().Root);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, previousRoot);
             KnowledgeBasePaths.ConfigureSettingsRoot(null);
             if (Directory.Exists(baseRoot))
                 Directory.Delete(baseRoot, recursive: true);
@@ -61,13 +119,16 @@ public sealed class KnowledgeBasePathsTests
 
         Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", null);
         Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", appDataRoot);
-        KnowledgeBasePaths.InvalidateCache();
+        KnowledgeBasePaths.ConfigureSettingsRoot(null);
 
         try
         {
             var root = KnowledgeBasePaths.GetRoot();
 
             Assert.Equal(Path.Combine(appDataRoot, "Knowledge"), root);
+            Assert.Equal(
+                KnowledgeBasePaths.RootSource.DefaultFallback,
+                KnowledgeBasePaths.GetResolution().Source);
             Assert.False(
                 root.StartsWith(AppDomain.CurrentDomain.BaseDirectory, StringComparison.OrdinalIgnoreCase),
                 $"Knowledge root must not live under build output: {root}");
@@ -76,7 +137,7 @@ public sealed class KnowledgeBasePathsTests
         {
             Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
             Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", previousAppData);
-            KnowledgeBasePaths.InvalidateCache();
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
             if (Directory.Exists(appDataRoot))
                 Directory.Delete(appDataRoot, recursive: true);
         }

@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageAutoSaveControllerTests
 {
     [Fact]
-    public void Schedule_on_each_change_marks_dirty_stops_timer_and_saves()
+    public void Schedule_on_each_change_restarts_short_timer_without_saving_immediately()
     {
         var calls = new List<string>();
 
@@ -14,12 +14,11 @@ public sealed class DataPageAutoSaveControllerTests
             AutoSaveMode.OnEachChange,
             markDirty: () => calls.Add("dirty"),
             stopTimer: () => calls.Add("stop"),
-            setInterval: interval => calls.Add($"interval:{interval.TotalMinutes}"),
+            setInterval: interval => calls.Add($"interval:{interval.TotalMilliseconds}"),
             isTimerEnabled: () => true,
-            startTimer: () => calls.Add("start"),
-            save: () => calls.Add("save"));
+            startTimer: () => calls.Add("start"));
 
-        Assert.Equal(new[] { "dirty", "stop", "save" }, calls);
+        Assert.Equal(new[] { "dirty", "stop", "interval:750", "start" }, calls);
     }
 
     [Fact]
@@ -33,8 +32,7 @@ public sealed class DataPageAutoSaveControllerTests
             stopTimer: () => calls.Add("stop"),
             setInterval: interval => calls.Add($"interval:{interval.TotalMinutes}"),
             isTimerEnabled: () => false,
-            startTimer: () => calls.Add("start"),
-            save: () => calls.Add("save"));
+            startTimer: () => calls.Add("start"));
 
         Assert.Equal(new[] { "dirty", "interval:10", "start" }, calls);
     }
@@ -50,8 +48,7 @@ public sealed class DataPageAutoSaveControllerTests
             stopTimer: () => calls.Add("stop"),
             setInterval: interval => calls.Add($"interval:{interval.TotalMinutes}"),
             isTimerEnabled: () => true,
-            startTimer: () => calls.Add("start"),
-            save: () => calls.Add("save"));
+            startTimer: () => calls.Add("start"));
 
         Assert.Equal(new[] { "dirty", "interval:5" }, calls);
     }
@@ -67,8 +64,7 @@ public sealed class DataPageAutoSaveControllerTests
             stopTimer: () => calls.Add("stop"),
             setInterval: interval => calls.Add($"interval:{interval.TotalMinutes}"),
             isTimerEnabled: () => true,
-            startTimer: () => calls.Add("start"),
-            save: () => calls.Add("save"));
+            startTimer: () => calls.Add("start"));
 
         Assert.Equal(new[] { "dirty", "stop" }, calls);
     }
@@ -88,7 +84,7 @@ public sealed class DataPageAutoSaveControllerTests
     }
 
     [Fact]
-    public void Timer_tick_outside_interval_mode_stops_without_saving()
+    public void Timer_tick_in_on_each_change_mode_stops_and_saves_once()
     {
         var calls = new List<string>();
 
@@ -98,6 +94,6 @@ public sealed class DataPageAutoSaveControllerTests
             isProjectDirty: () => true,
             stopTimer: () => calls.Add("stop"));
 
-        Assert.Equal(new[] { "stop" }, calls);
+        Assert.Equal(new[] { "stop", "save" }, calls);
     }
 }

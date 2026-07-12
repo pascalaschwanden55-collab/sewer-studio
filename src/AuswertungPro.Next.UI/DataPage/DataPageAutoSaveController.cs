@@ -2,29 +2,32 @@ namespace AuswertungPro.Next.UI.DataPage;
 
 public static class DataPageAutoSaveController
 {
+    public static TimeSpan OnEachChangeDelay { get; } = TimeSpan.FromMilliseconds(750);
+
     public static void Schedule(
         AutoSaveMode mode,
         Action markDirty,
         Action stopTimer,
         Action<TimeSpan> setInterval,
         Func<bool> isTimerEnabled,
-        Action startTimer,
-        Action save)
+        Action startTimer)
     {
         ArgumentNullException.ThrowIfNull(markDirty);
         ArgumentNullException.ThrowIfNull(stopTimer);
         ArgumentNullException.ThrowIfNull(setInterval);
         ArgumentNullException.ThrowIfNull(isTimerEnabled);
         ArgumentNullException.ThrowIfNull(startTimer);
-        ArgumentNullException.ThrowIfNull(save);
 
         markDirty();
 
         var normalized = mode.Normalize();
         if (normalized == AutoSaveMode.OnEachChange)
         {
+            // Mehrere schnelle Eingaben zu genau einem Speicherlauf bündeln.
+            // Stop + Start setzt die Wartezeit bei jeder neuen Änderung zurück.
             stopTimer();
-            save();
+            setInterval(OnEachChangeDelay);
+            startTimer();
             return;
         }
 
@@ -50,7 +53,15 @@ public static class DataPageAutoSaveController
         ArgumentNullException.ThrowIfNull(isProjectDirty);
         ArgumentNullException.ThrowIfNull(stopTimer);
 
-        if (mode.Normalize().GetInterval() is null)
+        var normalized = mode.Normalize();
+        if (normalized == AutoSaveMode.OnEachChange)
+        {
+            stopTimer();
+            save();
+            return;
+        }
+
+        if (normalized.GetInterval() is null)
         {
             stopTimer();
             return;
