@@ -1,0 +1,22 @@
+SewerStudio 4.5 - Kurzinstallation
+
+Normale Nutzung:
+1. Einen fertigen Publish-Ordner verwenden, nicht bin\Debug.
+2. SewerStudio.exe starten. .NET ist im Publish-Paket enthalten.
+3. Vor Updates in der App eine Vollsicherung auf eine USB-Platte erstellen.
+4. Einen neuen Release-Ordner immer daneben kopieren, nie ueber den alten.
+
+Zusaetzlich fuer lokale KI und Videoanalyse:
+- Python 3.10 oder neuer und optional uv
+- sidecar\setup.ps1 einmal ausfuehren (CUDA 12.8/cu128 fuer RTX 5090)
+- Ollama: qwen3-vl:8b-q8 und nomic-embed-text laden
+- ffmpeg und ffprobe im PATH oder SEWERSTUDIO_FFMPEG setzen
+- pdftotext.exe nach tools\pdftotext.exe legen oder in den Einstellungen waehlen
+
+Wiederherstellung und neuer PC:
+Die vollstaendige Schrittfolge steht in docs\NEUER-PC-SETUP.md.
+
+Rueckweg nach einem fehlerhaften Update:
+Neue App schliessen und SewerStudio.exe aus dem vorherigen Release-Ordner starten.
+Projekte und KI-Daten liegen ausserhalb des Programmordners und duerfen bei einem
+Update nicht geloescht oder ueberschrieben werden.

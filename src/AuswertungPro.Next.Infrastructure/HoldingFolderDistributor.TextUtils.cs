@@ -116,6 +116,25 @@ public static partial class HoldingFolderDistributor
     /// Verhindert Duplikate beim erneuten Verteilen.
     /// </summary>
 
+    private static string MakeProjectRelativeLink(string mediaPath, string municipalityFolder)
+    {
+        var current = new DirectoryInfo(Path.GetFullPath(municipalityFolder));
+        while (current is not null)
+        {
+            if (string.Equals(current.Name, "Haltungen", StringComparison.OrdinalIgnoreCase)
+                && current.Parent is not null)
+            {
+                return ProjectPathResolver.MakeRelative(mediaPath, current.Parent.FullName);
+            }
+
+            current = current.Parent;
+        }
+
+        // Unbekannte Altstruktur: absoluten Pfad behalten, statt einen falsch aufgeloesten
+        // relativen Link zu erzeugen.
+        return mediaPath;
+    }
+
 
     private static string EnsureUniquePath(string path, bool overwrite)
     {

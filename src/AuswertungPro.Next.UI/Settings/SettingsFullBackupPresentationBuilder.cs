@@ -32,7 +32,9 @@ public static class SettingsFullBackupPresentationBuilder
         sb.AppendLine();
         sb.AppendLine("Hinweis: Ersetzte und entfallene Dateien wandern in den Unterordner");
         sb.AppendLine($"{BackupVersionRetention.VersionsFolderName} (die letzten {BackupVersionRetention.MaxStaende} Staende bleiben erhalten).");
-        sb.AppendLine("Projekte und Videos sind nicht enthalten.");
+        var projects = report.Components.FirstOrDefault(c => c.Name == "Projekte");
+        if (projects is not null)
+            sb.AppendLine($"Projekte enthalten: ja. {projects.Beschreibung}");
         sb.AppendLine("NTFS/exFAT-Ziel empfohlen (FAT32: 4-GB-Grenze).");
         return sb.ToString();
     }

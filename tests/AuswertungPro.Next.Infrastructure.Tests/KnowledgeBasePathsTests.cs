@@ -9,6 +9,50 @@ public sealed class EnvironmentVarsCollection;
 public sealed class KnowledgeBasePathsTests
 {
     [Fact]
+    public void GetRoot_uses_persisted_settings_when_environment_override_is_missing()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
+        var settingsRoot = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"), "SettingsKnowledge");
+        Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", null);
+        KnowledgeBasePaths.ConfigureSettingsRoot(settingsRoot);
+
+        try
+        {
+            Assert.Equal(settingsRoot, KnowledgeBasePaths.GetRoot());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
+            if (Directory.Exists(settingsRoot))
+                Directory.Delete(settingsRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetRoot_environment_override_wins_over_persisted_settings()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
+        var baseRoot = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        var envRoot = Path.Combine(baseRoot, "Environment");
+        var settingsRoot = Path.Combine(baseRoot, "Settings");
+        Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", envRoot);
+        KnowledgeBasePaths.ConfigureSettingsRoot(settingsRoot);
+
+        try
+        {
+            Assert.Equal(envRoot, KnowledgeBasePaths.GetRoot());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
+            if (Directory.Exists(baseRoot))
+                Directory.Delete(baseRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void GetRoot_defaults_to_local_appdata_knowledge_not_build_output()
     {
         var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");

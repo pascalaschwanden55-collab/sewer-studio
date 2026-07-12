@@ -212,6 +212,23 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task CheckHealthDetailedAsync_VersionMismatch_ReturnsClearError()
+    {
+        var handler = new CaptureHandler("""{"status":"ok","version":"0.9.0","gpu":null}""");
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler));
+
+        var result = await client.CheckHealthDetailedAsync();
+
+        Assert.True(result.IsReachable);
+        Assert.True(result.IsAuthorized);
+        Assert.NotNull(result.Health);
+        Assert.Contains("Version passt nicht", result.Error);
+        Assert.Contains(VisionPipelineClient.ExpectedSidecarVersion, result.Error);
+    }
+
+    [Fact]
     public void YoloRequest_SerializesCorrectly()
     {
         var request = new YoloRequest("base64data==", 0.3);

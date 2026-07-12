@@ -169,32 +169,9 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        record.VsaFindings ??= new List<VsaFinding>();
-
-        foreach (var entry in entries)
-        {
-            var existing = record.VsaFindings.FirstOrDefault(f =>
-                string.Equals(f.KanalSchadencode, entry.Code, StringComparison.OrdinalIgnoreCase)
-                && f.MeterStart.HasValue && entry.MeterStart.HasValue
-                && Math.Abs(f.MeterStart.Value - entry.MeterStart.Value) <= 0.01);
-
-            if (existing is null)
-            {
-                existing = new VsaFinding
-                {
-                    KanalSchadencode = entry.Code
-                };
-                record.VsaFindings.Add(existing);
-            }
-
-            if (string.IsNullOrWhiteSpace(existing.Raw))
-                existing.Raw = entry.Beschreibung;
-            existing.MeterStart = entry.MeterStart;
-            existing.MeterEnd = entry.MeterEnd;
-            existing.MPEG = entry.Mpeg;
-            if (entry.FotoPaths.Count > 0)
-                existing.FotoPath = entry.FotoPaths[0];
-        }
+        // Daten.txt gilt wie die WinCan-DB als aktueller Quellstand. Alte IBAK-Funde
+        // duerfen bei einem Re-Import nicht stehen bleiben oder doppelt gezaehlt werden.
+        record.VsaFindings = WinCan.WinCanFindingFactory.BuildFindings(entries);
     }
 
     private static void LinkVideo(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)

@@ -30,6 +30,8 @@ public static class ImportSourceArchiver
         { ".db3",  ProjectStructure.Datenbanken },
         { ".mdb",  ProjectStructure.Datenbanken },
         { ".xtf",  ProjectStructure.XtfDir },
+        { ".m150", ProjectStructure.XtfDir },
+        { ".xml",  ProjectStructure.XtfDir },
         { ".pdf",  ProjectStructure.PdfDir },
         { ".txt",  ProjectStructure.TxtDir },
     };
@@ -49,51 +51,71 @@ public static class ImportSourceArchiver
         // Alle Dateien rekursiv enumerieren; gesperrte Unterordner werden uebersprungen
         foreach (var sourcePath in SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*", recursive: true))
         {
-            var extension = Path.GetExtension(sourcePath);
-
-            // Nicht gemappte Endungen (Videos, Bilder usw.) ignorieren
-            if (!EndungsMapping.TryGetValue(extension, out var subKind))
-                continue;
-
-            // Zielordner sicherstellen
-            var targetDir = ProjectStructure.ImportdateienDir(projectFolder, subKind);
-            Directory.CreateDirectory(targetDir);
-
-            var fileName   = Path.GetFileName(sourcePath);
-            var targetPath = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(targetPath))
+            try
             {
-                // Groesse vergleichen fuer Idempotenz-Pruefung
-                var sourceSize = new FileInfo(sourcePath).Length;
-                var targetSize = new FileInfo(targetPath).Length;
-
-                if (sourceSize == targetSize)
-                {
-                    // Identisch: Reuse, kein erneutes Kopieren
-                    reused++;
-                }
-                else
-                {
-                    // Abweichende Groesse: kollisionssicheren Namen vergeben
-                    var safeName = BaueKollisionssicherenNamen(targetDir, fileName);
-                    var safePath = Path.Combine(targetDir, safeName);
-                    File.Copy(sourcePath, safePath, overwrite: false);
-                    copied++;
-                    messages.Add(
-                        $"Namenskollision: '{fileName}' im Ziel hat abweichende Groesse " +
-                        $"({targetSize} vs. {sourceSize} Bytes). Kopiert als '{safeName}'.");
-                }
+                ArchiveOne(sourcePath, projectFolder, ref copied, ref reused, messages);
             }
-            else
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException)
             {
-                // Neu kopieren
-                File.Copy(sourcePath, targetPath, overwrite: false);
-                copied++;
+                messages.Add($"Archivkopie fehlgeschlagen, weitere Dateien werden verarbeitet: {sourcePath} ({ex.Message})");
             }
         }
 
         return new ArchiveResult(copied, reused, messages);
+    }
+
+    private static void ArchiveOne(
+        string sourcePath,
+        string projectFolder,
+        ref int copied,
+        ref int reused,
+        List<string> messages)
+    {
+        var extension = Path.GetExtension(sourcePath);
+        if (!EndungsMapping.TryGetValue(extension, out var subKind))
+            return;
+
+        var targetDir = ProjectStructure.ImportdateienDir(projectFolder, subKind);
+        Directory.CreateDirectory(targetDir);
+
+        var fileName = Path.GetFileName(sourcePath);
+        var targetPath = Path.Combine(targetDir, fileName);
+        if (!File.Exists(targetPath))
+        {
+            CopyAtomically(sourcePath, targetPath);
+            copied++;
+            return;
+        }
+
+        var sourceSize = new FileInfo(sourcePath).Length;
+        var targetSize = new FileInfo(targetPath).Length;
+        if (sourceSize == targetSize)
+        {
+            reused++;
+            return;
+        }
+
+        var safeName = BaueKollisionssicherenNamen(targetDir, fileName);
+        CopyAtomically(sourcePath, Path.Combine(targetDir, safeName));
+        copied++;
+        messages.Add(
+            $"Namenskollision: '{fileName}' im Ziel hat abweichende Groesse " +
+            $"({targetSize} vs. {sourceSize} Bytes). Kopiert als '{safeName}'.");
+    }
+
+    private static void CopyAtomically(string sourcePath, string targetPath)
+    {
+        var directory = Path.GetDirectoryName(targetPath)!;
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(targetPath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.Copy(sourcePath, tempPath, overwrite: false);
+            File.Move(tempPath, targetPath, overwrite: false);
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* best effort */ }
+        }
     }
 
     /// <summary>

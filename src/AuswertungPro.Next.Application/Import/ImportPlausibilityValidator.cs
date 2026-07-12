@@ -21,6 +21,15 @@ public static class ImportPlausibilityValidator
         var warnings = new List<string>();
         foreach (var record in project.Data)
             warnings.AddRange(Validate(record));
+
+        var duplicates = project.Data
+            .Select(record => record.GetFieldValue("Haltungsname").Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1);
+        foreach (var duplicate in duplicates)
+            warnings.Add($"Haltungsname mehrfach vorhanden: {duplicate.Key} ({duplicate.Count()} Eintraege).");
+
         return warnings;
     }
 

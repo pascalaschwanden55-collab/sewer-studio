@@ -579,6 +579,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             // Nur ausblenden, NICHT loeschen: die Projektdatei und alle Daten bleiben auf der Platte.
             var wasActive = string.Equals(_sp.Settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
+            if (wasActive && !_shell.ConfirmDiscardUnsavedChanges())
+                return;
+
             _sp.Settings.HideProject(entry.Path);
             _sp.Settings.Save();
 

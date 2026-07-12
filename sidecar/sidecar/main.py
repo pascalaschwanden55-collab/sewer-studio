@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Sewer-Studio Vision Sidecar",
-    version="1.1.0",
+    version=health.VERSION,
     description="Multi-Model Vision Pipeline (YOLO / Grounding DINO / SAM)",
     lifespan=lifespan,
 )

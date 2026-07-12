@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -11,6 +12,10 @@ namespace AuswertungPro.Next.Application.Backup;
 /// </summary>
 public static class BackupExclusionRules
 {
+    private static readonly HashSet<string> ProjectVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mpg", ".mpeg", ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".m4v", ".ts", ".mts", ".m2ts"
+    };
     // Build-/Tool-Artefakte im Repo: aus Quellcode jederzeit neu erzeugbar.
     private static readonly string[] ProgramExcludedNames =
         { "bin", "obj", ".vs", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".pytest_tmp" };
@@ -60,6 +65,9 @@ public static class BackupExclusionRules
     public static bool IsRoamingAuswertungProDirExcluded(string relativeDirPath)
         => IsTopLevel(relativeDirPath)
            && NameMatches(relativeDirPath, RoamingAuswertungProTopLevelExcluded);
+
+    public static bool IsProjectVideoFileExcluded(string relativeFilePath)
+        => ProjectVideoExtensions.Contains(Path.GetExtension(relativeFilePath));
 
     private static bool IsTopLevel(string relativeDirPath)
         => !relativeDirPath.Contains(Path.DirectorySeparatorChar)

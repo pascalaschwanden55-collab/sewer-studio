@@ -16,6 +16,12 @@ public sealed class Project
     public string AppVersion { get; set; } = FieldCatalog.AppVersion;
 
     /// <summary>
+    /// Unbekannte Felder neuerer/anderer Programmstaende bleiben beim Laden und Speichern erhalten.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, System.Text.Json.JsonElement>? ExtensionData { get; set; }
+
+    /// <summary>
     /// Projekt-Metadaten wie in der PS-Version.
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new(StringComparer.Ordinal);
@@ -174,6 +180,10 @@ public sealed class Project
 
     public void AddRecord(HaltungRecord record)
     {
+        var name = record.GetFieldValue("Haltungsname");
+        if (!string.IsNullOrWhiteSpace(name) && HasDuplicateHoldingName(name, record.Id))
+            throw new InvalidOperationException($"Die Haltung '{name.Trim()}' existiert bereits im Projekt.");
+
         Data.Add(record);
         ModifiedAtUtc = DateTime.UtcNow;
         Dirty = true;
@@ -191,6 +201,20 @@ public sealed class Project
 
     public HaltungRecord? GetRecord(Guid recordId)
         => Data.FirstOrDefault(r => r.Id == recordId);
+
+    public bool HasDuplicateHoldingName(string? holdingName, Guid? exceptRecordId = null)
+    {
+        var normalized = holdingName?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return false;
+
+        return Data.Any(record =>
+            (!exceptRecordId.HasValue || record.Id != exceptRecordId.Value)
+            && string.Equals(
+                record.GetFieldValue("Haltungsname").Trim(),
+                normalized,
+                StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Delegiert an <see cref="AuswertungPro.Next.Domain.Protocol.ProtocolEntryCloner.CloneLegacyProtocolEntry"/>.

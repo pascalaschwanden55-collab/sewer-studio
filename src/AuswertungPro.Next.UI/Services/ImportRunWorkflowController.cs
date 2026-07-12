@@ -15,12 +15,14 @@ public sealed record ImportRunWorkflowRequest<TSource>(
 public sealed record ImportRunWorkflowActions(
     Func<Project> GetProject,
     Func<Project, Project> DeepCopyProject,
+    Action<Project> ReplaceProject,
+    Action<string> CreateRestorePoint,
     Func<string?> GetReportDir,
     Func<ImportRunLog, string, string> ExportReport,
     Func<ImportPreviewResult, string, bool> ShowPreview,
     Func<Project, IReadOnlyList<string>> ValidatePlausibility,
-    Action DeduplicateAllPrimaryDamages,
-    Func<string, Task> RunAfterImportAsync,
+    Action<Project> DeduplicateAllPrimaryDamages,
+    Func<Project, string, Task> RunAfterImportAsync,
     Action SaveProject,
     Action<string> SetStatus,
     Action<bool> SetCanCancel,
@@ -76,16 +78,19 @@ public static class ImportRunWorkflowController
 
         try
         {
-            var targetProject = request.DryRun
-                ? actions.DeepCopyProject(actions.GetProject())
-                : actions.GetProject();
+            if (!request.DryRun)
+                actions.CreateRestorePoint(request.Label);
+
+            // Vorschau UND echter Import arbeiten auf einer unabhaengigen Kopie.
+            // Erst nach einem vollstaendig erfolgreichen Lauf wird die Live-Referenz getauscht.
+            var targetProject = actions.DeepCopyProject(actions.GetProject());
 
             var result = await Task.Run(() => RunImport(request, targetProject, ctx));
 
             if (!result.Ok || result.Value is null)
             {
-                actions.SetSummaryText($"{request.Label} Import fehlgeschlagen: {result.ErrorMessage}");
-                actions.SetStatus($"{request.Label} Import fehlgeschlagen");
+                actions.SetSummaryText($"{request.Label} Import fehlgeschlagen - Projekt unveraendert: {result.ErrorMessage}");
+                actions.SetStatus($"{request.Label} Import fehlgeschlagen - Projekt unveraendert");
                 return;
             }
 
@@ -130,10 +135,10 @@ public static class ImportRunWorkflowController
                 }
             }
 
-            actions.DeduplicateAllPrimaryDamages();
-            await actions.RunAfterImportAsync(request.Label);
+            actions.DeduplicateAllPrimaryDamages(targetProject);
+            await actions.RunAfterImportAsync(targetProject, request.Label);
 
-            var plausibilityWarnings = actions.ValidatePlausibility(actions.GetProject());
+            var plausibilityWarnings = actions.ValidatePlausibility(targetProject);
             if (plausibilityWarnings.Count > 0)
             {
                 actions.SetSummaryText(actions.GetSummaryText()
@@ -151,6 +156,9 @@ public static class ImportRunWorkflowController
                 }
             }
 
+            targetProject.Dirty = true;
+            actions.ReplaceProject(targetProject);
+
             if (request.SaveProjectAfterCommit)
                 actions.SaveProject();
 
@@ -160,14 +168,14 @@ public static class ImportRunWorkflowController
         catch (OperationCanceledException)
         {
             runLog.WasCancelled = true;
-            actions.SetSummaryText($"{request.Label} Import abgebrochen.");
-            actions.SetStatus($"{request.Label} Import abgebrochen");
+            actions.SetSummaryText($"{request.Label} Import abgebrochen - Projekt unveraendert.");
+            actions.SetStatus($"{request.Label} Import abgebrochen - Projekt unveraendert");
         }
         catch (Exception ex)
         {
-            actions.SetSummaryText($"{request.Label} Import fehlgeschlagen: {ex.Message}");
+            actions.SetSummaryText($"{request.Label} Import fehlgeschlagen - Projekt unveraendert: {ex.Message}");
             actions.SetDetailsText(ex.ToString());
-            actions.SetStatus($"{request.Label} Import fehlgeschlagen");
+            actions.SetStatus($"{request.Label} Import fehlgeschlagen - Projekt unveraendert");
         }
         finally
         {

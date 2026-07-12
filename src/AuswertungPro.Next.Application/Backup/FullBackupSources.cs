@@ -23,4 +23,6 @@ public sealed record FullBackupSources(
     string RoamingAuswertungProDir,
     string DesktopDir,
     string AppVersion,
-    IReadOnlyDictionary<string, string> EnvironmentVariables);
+    IReadOnlyDictionary<string, string> EnvironmentVariables,
+    IReadOnlyList<string>? ProjectRoots = null,
+    bool IncludeProjectVideos = false);

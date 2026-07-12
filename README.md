@@ -1,16 +1,19 @@
-# AuswertungPro.Next (Skeleton)
+# SewerStudio 4.5
 
-Modernisierte, klarer strukturierte Windows-App (WPF) für:
+Windows-App (WPF) für:
 - Projektverwaltung (Neu/Öffnen/Speichern)
 - Import: PDF (via pdftotext.exe) und XTF (SIA405 / VSA_KEK Erkennung)
 - Export: Excel (Platzhalter-Interface, zum Anbinden eurer Template-Logik)
 - VSA-Zustandsklassifizierung & -Bewertung: Engine (Formeln + Randbedingungen), Mapping datengetrieben (JSON)
 - Diagnostik: Fehlercode-Generator + Log-Datei (per Schalter deaktivierbar)
 
-## Quickstart
-1. Öffne den Ordner in VS Code.
-2. `dotnet restore` (Windows)
-3. Starte `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj`
+## Nutzung und Entwicklung
+
+- Produktiv: `tools\Publish-SewerStudio.ps1` ausführen und danach
+  `SewerStudio.exe` aus dem erzeugten `artifacts\SewerStudio-...`-Ordner starten.
+- Entwicklung: `dotnet restore`, danach das Projekt
+  `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj` starten.
+- Neuer PC, Update und Wiederherstellung: `docs/NEUER-PC-SETUP.md`.
 
 ## pdftotext
 Lege `pdftotext.exe` unter `src/AuswertungPro.Next.UI/tools/pdftotext.exe` ab

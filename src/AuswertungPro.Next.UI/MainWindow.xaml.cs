@@ -26,6 +26,15 @@ public partial class MainWindow : Window
         var services = GetServiceProvider();
         // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
         services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
+        // AP-06: Startwarnung zur Wissensdatenbank anzeigen, sobald der Host bereit ist
+        // (anderer/leerer KB-Ordner, z.B. verlorene Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT).
+        if (!string.IsNullOrEmpty(services.KnowledgeRootStartupWarning))
+            services.Toasts.Warning(services.KnowledgeRootStartupWarning);
+        var backupReminder = Settings.FullBackupReminderPolicy.Evaluate(
+            services.Settings.LastFullBackupUtc,
+            DateTime.UtcNow);
+        if (backupReminder.ShouldRemind && !string.IsNullOrWhiteSpace(backupReminder.Message))
+            services.Toasts.Warning(backupReminder.Message);
         DataContext = new ShellViewModel(services);
     }
 

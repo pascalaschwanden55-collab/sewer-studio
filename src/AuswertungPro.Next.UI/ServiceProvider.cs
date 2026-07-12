@@ -62,6 +62,9 @@ namespace AuswertungPro.Next.UI
         // Setter nur fuer Tests (InternalsVisibleTo): echte Dialoge durch Fakes ersetzen.
         public IDialogService Dialogs { get; internal set; } = new DialogService();
         public ToastService Toasts { get; } = new ToastService();
+        // AP-06: Startwarnung zur Wissensdatenbank (anderer/leerer KB-Ordner). Gesetzt im Konstruktor,
+        // angezeigt vom MainWindow, sobald der Toast-Host bereit ist. Null = keine Warnung.
+        public string? KnowledgeRootStartupWarning { get; private set; }
         // Zentrale Statusfarben (Ampel/Severity/Konfidenz) — eine Farbsprache fuer alle Fenster.
         public IStatusColorService StatusColors { get; } = new StatusColorService();
         // Nutzungszaehler fuer VSA-Codes (Favoriten-Chips im Code-Explorer).
@@ -139,6 +142,10 @@ namespace AuswertungPro.Next.UI
             Logger = logger;
             LoggerFactory = loggerFactory;
 
+            // Env-Var hat Vorrang. Fehlt sie, bleibt der zuletzt bestaetigte KB-Pfad
+            // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
+            KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
+
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
             Theme.StatusColors.Current = StatusColors;
             CodeUsageTrackers.Current = CodeUsage;
@@ -161,7 +168,7 @@ namespace AuswertungPro.Next.UI
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             FullBackup = new FullBackupService(
-                FullBackupSourcesFactory.ErmittleAktuelleQuellen,
+                () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
                 ct => OllamaListAsync(ct));
 
@@ -181,9 +188,24 @@ namespace AuswertungPro.Next.UI
             CodeSelectionCatalog = new AuswertungPro.Next.Application.Protocol.VsaCodeTreeSelectionCatalog(
                 new CodeCatalogSelectionCatalog(CodeCatalog));
             VsaCodeResolver.ConfigureCatalog(CodeCatalog);
+
+            // AP-06: Zustand der Wissensdatenbank VOR der Init erfassen (existiert die DB-Datei,
+            // bevor der Context sie ggf. neu/leer anlegt?). Schuetzt gegen stillen Split-Brain,
+            // wenn die Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT verloren geht.
+            var knowledgeRoot = KnowledgeBasePaths.GetRoot();
+            var knowledgeDbPath = KnowledgeBasePaths.GetKnowledgeDbPath();
+            var knowledgeDbExisted = File.Exists(knowledgeDbPath);
+            var knowledgeHealth = knowledgeDbExisted
+                ? KnowledgeBaseHealthChecker.Check(knowledgeDbPath)
+                : KnowledgeBaseHealthResult.Ok;
+            var knowledgeSampleCount = 0;
+
             RetrievalService? retrieval = null;
             try
             {
+                if (!knowledgeHealth.IsHealthy)
+                    throw new InvalidDataException(knowledgeHealth.Error ?? "SQLite quick_check fehlgeschlagen.");
+
                 var ollamaConfig = aiPlatform.ToOllamaConfig();
                 var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var kbCtx = new KnowledgeBaseContext();
@@ -198,11 +220,42 @@ namespace AuswertungPro.Next.UI
                     Logger.LogWarning(
                         "KB-Embedding-Modell '{StoredModel}' stimmt nicht mit aktuellem Modell '{CurrentModel}' überein. KB-Rebuild empfohlen.",
                         retrieval.StoredEmbedModel, ollamaConfig.EmbedModel);
+
+                // AP-06: aktuelle Sample-Zahl fuer die Abweichungs-Warnung (best-effort).
+                try { knowledgeSampleCount = new KnowledgeBaseDiagnosticsService(kbCtx).ReadSummary(topCodes: 1).SampleCount; }
+                catch { /* Sample-Zahl ist optional; 0 bleibt gueltig fuer die Pruefung. */ }
             }
             catch (Exception ex)
             {
                 Logger.LogWarning(ex, "KnowledgeBase-Retrieval konnte nicht initialisiert werden. KI läuft ohne KB-Kontext.");
             }
+
+            // AP-06: Warnen, wenn die App unbemerkt mit einer anderen oder leeren Wissensdatenbank laeuft.
+            var knowledgeRootGuard = KnowledgeRootGuard.Evaluate(
+                knowledgeRoot,
+                settings.LastKnownKnowledgeRoot,
+                knowledgeDbExisted,
+                knowledgeSampleCount,
+                settings.LastKnownKnowledgeSampleCount);
+            if (!knowledgeHealth.IsHealthy)
+            {
+                KnowledgeRootStartupWarning =
+                    "Die Wissensdatenbank ist beschaedigt oder nicht lesbar. Die App arbeitet vorerst ohne KB-Kontext.\n" +
+                    $"Datei: {knowledgeDbPath}\n" +
+                    $"Fehler: {knowledgeHealth.Error}\n" +
+                    "Bitte stelle die Datei aus einer Datensicherung wieder her.";
+                Logger.LogError("Wissensdatenbank-Integritaetspruefung fehlgeschlagen: {Error}", knowledgeHealth.Error);
+            }
+            else if (knowledgeRootGuard.HatWarnung)
+            {
+                KnowledgeRootStartupWarning = knowledgeRootGuard.Meldung;
+                Logger.LogWarning("Wissensdatenbank-Startwarnung ({Art}): {Meldung}",
+                    knowledgeRootGuard.Art, knowledgeRootGuard.Meldung);
+            }
+            settings.LastKnownKnowledgeRoot = knowledgeRoot;
+            settings.LastKnownKnowledgeSampleCount = knowledgeSampleCount;
+            settings.KnowledgeRootPath = knowledgeRoot;
+            settings.SaveImmediate();
 
             Retrieval = retrieval;
             KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner();

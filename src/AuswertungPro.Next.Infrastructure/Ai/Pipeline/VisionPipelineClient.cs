@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class VisionPipelineClient : IVisionPipelineClient
 {
+    public const string ExpectedSidecarVersion = "1.2.0";
     private readonly HttpClient _http;
     private readonly Uri _baseUri;
     private readonly string? _sidecarToken;
@@ -91,6 +92,17 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
 
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var health = JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
+            if (health is null)
+                return new PipelineHealthCheckResult(true, true, code, null, "Health-Antwort war leer oder ungueltig");
+            if (!string.Equals(health.Version, ExpectedSidecarVersion, StringComparison.Ordinal))
+            {
+                return new PipelineHealthCheckResult(
+                    true,
+                    true,
+                    code,
+                    health,
+                    $"Sidecar-Version passt nicht: erwartet {ExpectedSidecarVersion}, erhalten {health.Version}");
+            }
             return new PipelineHealthCheckResult(true, true, code, health, null);
         }
         catch (OperationCanceledException) { throw; }

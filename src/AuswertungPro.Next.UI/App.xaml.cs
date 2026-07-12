@@ -40,6 +40,7 @@ namespace AuswertungPro.Next.UI
         private static System.Windows.Media.ImageSource? _appWindowIcon;
         private LiveControlServer? _liveControlServer;
         private QgisBridgeServer? _qgisBridgeServer;
+        private SingleInstanceGuard? _singleInstanceGuard;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
         private const int LogRetentionDays = 60;
@@ -54,6 +55,17 @@ namespace AuswertungPro.Next.UI
             try
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                _singleInstanceGuard = new SingleInstanceGuard();
+                if (!_singleInstanceGuard.TryAcquire())
+                {
+                    DialogHost.Current.Info(
+                        "SewerStudio laeuft bereits. Bitte verwende das geoeffnete Programmfenster.",
+                        "SewerStudio bereits gestartet");
+                    Shutdown(0);
+                    return;
+                }
+
                 ApplyTypographyDefaults();
                 RegisterWindowIconDefaults();
 
@@ -222,6 +234,8 @@ namespace AuswertungPro.Next.UI
                 _qgisBridgeServer?.Dispose();
                 _liveControlServer?.Dispose();
                 AppSettings.FlushPendingSave();
+                _singleInstanceGuard?.Dispose();
+                _singleInstanceGuard = null;
             }
             catch
             {

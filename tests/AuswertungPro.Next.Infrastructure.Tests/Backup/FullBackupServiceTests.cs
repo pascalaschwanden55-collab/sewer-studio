@@ -35,6 +35,9 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.True(result.Success, result.Error);
         Assert.Equal(1, walCalls);
         Assert.Equal(analyze.TotalBytes, result.TotalBytes);
+        Assert.Equal(result.FilesCopied, result.FilesVerified);
+        Assert.True(result.RequiredFreeBytes >= BackupDiskSpaceGuard.MinimumReserveBytes);
+        Assert.True(result.AvailableFreeBytes >= result.RequiredFreeBytes);
         Assert.True(File.Exists(Path.Combine(backupRoot, BackupPlanBuilder.MarkerFileName)));
         Assert.True(File.Exists(Path.Combine(backupRoot, "manifest.json")));
         Assert.True(File.Exists(Path.Combine(backupRoot, "Extras", "RESTORE-ANLEITUNG.txt")));
@@ -43,6 +46,9 @@ public sealed class FullBackupServiceTests : IDisposable
 
         Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", ".git", "HEAD")));
         Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "sidecar", "models", "active.json")));
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Projekte", "01_projects", "Projektdateien", "projekt.json")));
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Projekte", "01_projects", "Fotos", "foto.jpg")));
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Projekte", "01_projects", "Videos", "haltung.mp4")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "bin", "skip.dll")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "KI_BRAIN", "training_frames", "frame.png")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "KI_BRAIN", "yolo_vsa_dataset", "labels.txt")));
@@ -55,6 +61,12 @@ public sealed class FullBackupServiceTests : IDisposable
             Assert.Equal("4.4-test", manifest.RootElement.GetProperty("AppVersion").GetString());
             Assert.Equal("abc123", manifest.RootElement.GetProperty("GitCommit").GetString());
             Assert.True(manifest.RootElement.GetProperty("Totals").GetProperty("TotalBytes").GetInt64() > 0);
+            Assert.Equal(
+                result.RequiredFreeBytes,
+                manifest.RootElement.GetProperty("Speicherplatz").GetProperty("RequiredFreeBytes").GetInt64());
+            Assert.Equal(
+                result.FilesVerified,
+                manifest.RootElement.GetProperty("Totals").GetProperty("Verified").GetInt32());
         }
 
         File.WriteAllText(Path.Combine(backupRoot, "verwaist.txt"), "weg");
@@ -151,6 +163,44 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.Equal(1, brain.FileCount);
     }
 
+    [Fact]
+    public async Task RunAsync_ZuWenigFreierSpeicher_BlockiertVorDemKopieren()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target");
+        var service = new FullBackupService(
+            () => sources,
+            availableBytes: _ => BackupDiskSpaceGuard.MinimumReserveBytes - 1);
+
+        var result = await service.RunAsync(targetParent);
+
+        Assert.False(result.Success);
+        Assert.Contains("Zu wenig freier Speicherplatz", result.Error);
+        Assert.True(result.RequiredFreeBytes >= BackupDiskSpaceGuard.MinimumReserveBytes);
+        Assert.Equal(BackupDiskSpaceGuard.MinimumReserveBytes - 1, result.AvailableFreeBytes);
+        Assert.False(File.Exists(Path.Combine(
+            targetParent,
+            BackupPlanBuilder.TargetFolderName,
+            "Programm",
+            "src",
+            "app.cs")));
+    }
+
+    [Fact]
+    public async Task RunAsync_UnbekannterFreierSpeicher_BlockiertSicher()
+    {
+        var sources = CreateSourceTree();
+        var service = new FullBackupService(
+            () => sources,
+            availableBytes: _ => null);
+
+        var result = await service.RunAsync(Path.Combine(_root, "target"));
+
+        Assert.False(result.Success);
+        Assert.Contains("konnte nicht sicher ermittelt werden", result.Error);
+        Assert.Equal(0, result.FilesCopied);
+    }
+
     private FullBackupSources CreateSourceTree()
     {
         var repo = Path.Combine(_root, "repo");
@@ -159,6 +209,7 @@ public sealed class FullBackupServiceTests : IDisposable
         var roamingSewer = Path.Combine(_root, "roaming-sewer");
         var roamingAuswertung = Path.Combine(_root, "roaming-auswertung");
         var desktop = Path.Combine(_root, "desktop");
+        var projects = Path.Combine(_root, "projects");
 
         Write(Path.Combine(repo, "src", "app.cs"), "code");
         Write(Path.Combine(repo, "bin", "skip.dll"), "skip");
@@ -178,6 +229,9 @@ public sealed class FullBackupServiceTests : IDisposable
         Write(Path.Combine(roamingAuswertung, "catalog.json"), "{}");
         Write(Path.Combine(roamingAuswertung, "frames", "old.png"), "old");
         Write(Path.Combine(desktop, "Start_SewerStudio.bat"), "start");
+        Write(Path.Combine(projects, "Projektdateien", "projekt.json"), "{}");
+        Write(Path.Combine(projects, "Fotos", "foto.jpg"), "foto");
+        Write(Path.Combine(projects, "Videos", "haltung.mp4"), "video");
 
         return new FullBackupSources(
             RepoRoot: repo,
@@ -190,7 +244,9 @@ public sealed class FullBackupServiceTests : IDisposable
             EnvironmentVariables: new Dictionary<string, string>
             {
                 ["SEWERSTUDIO_KNOWLEDGE_ROOT"] = brain
-            });
+            },
+            ProjectRoots: [projects],
+            IncludeProjectVideos: false);
     }
 
     private static void Write(string path, string content)

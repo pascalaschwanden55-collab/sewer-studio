@@ -587,6 +587,12 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase))
             return true;
 
+        if (vm.Project.HasDuplicateHoldingName(newName, record.Id))
+        {
+            Dialogs.Warn($"Die Haltungsnummer '{newName.Trim()}' ist bereits vorhanden.", "Doppelte Haltungsnummer");
+            return false;
+        }
+
         var projectPath = Services?.Settings.LastProjectPath;
 
         // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen

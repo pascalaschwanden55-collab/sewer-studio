@@ -7,6 +7,21 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public class ImportPlausibilityValidatorTests
 {
+    [Fact]
+    public void Validate_Project_WarnsAboutDuplicateHoldingNames()
+    {
+        var project = new Project();
+        var first = Record("100-200");
+        var second = Record(" 100-200 ");
+        project.Data.Add(first);
+        project.Data.Add(second);
+
+        var warnings = ImportPlausibilityValidator.Validate(project);
+
+        Assert.Contains(warnings, warning => warning.Contains("mehrfach vorhanden", StringComparison.Ordinal));
+        Assert.True(project.HasDuplicateHoldingName("100-200", first.Id));
+    }
+
     private static HaltungRecord Record(string name, string? dn = null, string? laenge = null)
     {
         var r = new HaltungRecord();

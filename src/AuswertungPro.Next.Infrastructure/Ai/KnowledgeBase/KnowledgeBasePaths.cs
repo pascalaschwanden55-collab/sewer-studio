@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 public static class KnowledgeBasePaths
 {
     private static string? _cachedRoot;
+    private static string? _configuredSettingsRoot;
     private static bool _migrationDone;
 
     public static string GetRoot(string? settingsOverride = null)
@@ -53,6 +54,18 @@ public static class KnowledgeBasePaths
 
     public static void InvalidateCache() => _cachedRoot = null;
 
+    /// <summary>
+    /// Setzt den dauerhaft gespeicherten KB-Pfad aus den App-Einstellungen.
+    /// Eine gesetzte SEWERSTUDIO_KNOWLEDGE_ROOT-Variable bleibt der hoechste Override.
+    /// </summary>
+    public static void ConfigureSettingsRoot(string? settingsRoot)
+    {
+        _configuredSettingsRoot = string.IsNullOrWhiteSpace(settingsRoot)
+            ? null
+            : settingsRoot.Trim();
+        InvalidateCache();
+    }
+
     public static string LegacyKnowledgeDbPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "AuswertungPro", "KiVideoanalyse", "KnowledgeBase.db");
@@ -77,23 +90,26 @@ public static class KnowledgeBasePaths
 
     private static string ResolveRoot(string? settingsOverride)
     {
-        if (!string.IsNullOrWhiteSpace(settingsOverride))
-            return settingsOverride;
-
         var envRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")?.Trim();
         if (!string.IsNullOrWhiteSpace(envRoot))
             return envRoot;
+
+        var configured = string.IsNullOrWhiteSpace(settingsOverride)
+            ? _configuredSettingsRoot
+            : settingsOverride.Trim();
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
 
         return Path.Combine(GetAppDataDir(), "Knowledge");
     }
 
     private static bool ShouldRunLegacyMigration(string? settingsOverride)
     {
-        if (!string.IsNullOrWhiteSpace(settingsOverride))
-            return false;
-
         var envRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")?.Trim();
-        return string.IsNullOrWhiteSpace(envRoot);
+        var configured = string.IsNullOrWhiteSpace(settingsOverride)
+            ? _configuredSettingsRoot
+            : settingsOverride.Trim();
+        return string.IsNullOrWhiteSpace(envRoot) && string.IsNullOrWhiteSpace(configured);
     }
 
     private static void TryMigrateFromAppData(string knowledgeRoot)

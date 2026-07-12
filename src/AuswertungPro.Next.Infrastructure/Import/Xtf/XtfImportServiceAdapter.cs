@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 public sealed class XtfImportServiceAdapter : IXtfImportService
 {
-    private readonly LegacyXtfImportService _svc = new();
+    private readonly LegacyXtfImportService _svc = LegacyXtfImportService.CreateForApplication();
 
     public Result<AuswertungPro.Next.Application.Import.ImportStats> ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, AuswertungPro.Next.Application.Import.ImportRunContext? ctx = null)
     {

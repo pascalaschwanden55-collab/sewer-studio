@@ -26,15 +26,18 @@ public sealed class FullBackupService : IFullBackupService
     private readonly Func<FullBackupSources> _sourcesFactory;
     private readonly Action? _walCheckpoint;
     private readonly Func<CancellationToken, Task<string?>>? _ollamaList;
+    private readonly Func<string, long?> _availableBytes;
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
         Action? walCheckpoint = null,
-        Func<CancellationToken, Task<string?>>? ollamaListe = null)
+        Func<CancellationToken, Task<string?>>? ollamaListe = null,
+        Func<string, long?>? availableBytes = null)
     {
         _sourcesFactory = quellenFactory ?? throw new ArgumentNullException(nameof(quellenFactory));
         _walCheckpoint = walCheckpoint;
         _ollamaList = ollamaListe;
+        _availableBytes = availableBytes ?? BackupDiskSpaceGuard.GetAvailableBytes;
     }
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
@@ -70,6 +73,19 @@ public sealed class FullBackupService : IFullBackupService
             var mirror = new DirectoryMirror(BackupVersionRetention.BuildStandName(DateTime.Now));
 
             var sizeReport = Analyze(sources, progress: null, ct);
+            var bytesToWrite = await EstimateRequiredCopyBytesAsync(plan, backupRoot, ct)
+                .ConfigureAwait(false);
+            var requiredFreeBytes = checked(bytesToWrite + BackupDiskSpaceGuard.MinimumReserveBytes);
+            var availableFreeBytes = _availableBytes(backupRoot);
+            var spaceError = BackupDiskSpaceGuard.Validate(requiredFreeBytes, availableFreeBytes);
+            if (spaceError is not null)
+            {
+                return Failure(
+                    spaceError, backupRoot, started.Elapsed,
+                    requiredFreeBytes, availableFreeBytes ?? 0);
+            }
+            var confirmedAvailableBytes = availableFreeBytes.GetValueOrDefault();
+
             var stats = new DirectoryMirror.MirrorStats();
             var expectedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -117,7 +133,9 @@ public sealed class FullBackupService : IFullBackupService
             var versionStaende = RotateVersionStaende(backupRoot, stats);
 
             var skipped = stats.Errors.Take(200).ToArray();
-            var manifest = BuildManifest(sources, plan, sizeReport, stats, skipped, versionStaende);
+            var manifest = BuildManifest(
+                sources, plan, sizeReport, stats, skipped, versionStaende,
+                requiredFreeBytes, confirmedAvailableBytes);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
             await AtomicTextFileWriter.WriteAllTextAsync(
                 Path.Combine(backupRoot, "manifest.json"),
@@ -135,7 +153,11 @@ public sealed class FullBackupService : IFullBackupService
                 FilesUnchanged: stats.Unchanged,
                 FilesDeleted: stats.Deleted,
                 SkippedFiles: skipped,
-                Duration: started.Elapsed);
+                Duration: started.Elapsed,
+                FilesVerified: stats.Verified,
+                DatabasesSnapshotted: stats.DatabasesSnapshotted,
+                RequiredFreeBytes: requiredFreeBytes,
+                AvailableFreeBytes: confirmedAvailableBytes);
         }
         catch (OperationCanceledException)
         {
@@ -173,6 +195,9 @@ public sealed class FullBackupService : IFullBackupService
                 foreach (var file in EnumerateFiles(source.SourceRoot, source.IsDirExcluded))
                 {
                     ct.ThrowIfCancellationRequested();
+                    var relative = Path.GetRelativePath(source.SourceRoot, file);
+                    if (source.IsFileExcluded?.Invoke(relative) == true)
+                        continue;
                     TryAddFileSize(file, ref bytes, ref files);
                 }
             }
@@ -247,7 +272,10 @@ public sealed class FullBackupService : IFullBackupService
             }
 
             foreach (var file in files)
-                yield return file;
+            {
+                if (!SqliteSnapshotCopier.IsCompanionOfSqliteDatabase(file))
+                    yield return file;
+            }
 
             for (var i = children.Length - 1; i >= 0; i--)
             {
@@ -274,6 +302,62 @@ public sealed class FullBackupService : IFullBackupService
             await BuildUmgebungTextAsync(sources, ct).ConfigureAwait(false),
             Encoding.UTF8,
             ct).ConfigureAwait(false);
+    }
+
+    private static async Task<long> EstimateRequiredCopyBytesAsync(
+        IReadOnlyList<BackupComponent> plan,
+        string backupRoot,
+        CancellationToken ct)
+    {
+        long required = 0;
+
+        foreach (var component in plan)
+        {
+            foreach (var source in component.Sources)
+            {
+                foreach (var sourceFile in EnumerateFiles(source.SourceRoot, source.IsDirExcluded))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var relative = Path.GetRelativePath(source.SourceRoot, sourceFile);
+                    if (source.IsFileExcluded?.Invoke(relative) == true)
+                        continue;
+                    var targetFile = Path.Combine(backupRoot, source.TargetRelativeRoot, relative);
+                    required = checked(required + await EstimateFileBytesAsync(sourceFile, targetFile, ct)
+                        .ConfigureAwait(false));
+                }
+            }
+
+            if (component.Files is null)
+                continue;
+
+            foreach (var file in component.Files)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!File.Exists(file.SourcePath))
+                    continue;
+
+                var targetFile = Path.Combine(backupRoot, file.TargetRelativePath);
+                required = checked(required + await EstimateFileBytesAsync(file.SourcePath, targetFile, ct)
+                    .ConfigureAwait(false));
+            }
+        }
+
+        return required;
+    }
+
+    private static async Task<long> EstimateFileBytesAsync(
+        string sourceFile,
+        string targetFile,
+        CancellationToken ct)
+    {
+        if (SqliteSnapshotCopier.IsSqliteDatabase(sourceFile))
+            return SqliteSnapshotCopier.GetConservativeSnapshotBytes(sourceFile);
+
+        var sourceInfo = new FileInfo(sourceFile);
+        var targetInfo = new FileInfo(targetFile);
+        return await DirectoryMirror.IsUnchangedAsync(sourceInfo, targetInfo, ct).ConfigureAwait(false)
+            ? 0
+            : sourceInfo.Length;
     }
 
     private async Task<string> BuildUmgebungTextAsync(FullBackupSources sources, CancellationToken ct)
@@ -353,7 +437,9 @@ public sealed class FullBackupService : IFullBackupService
         FullBackupSizeReport sizeReport,
         DirectoryMirror.MirrorStats stats,
         IReadOnlyList<string> skipped,
-        int versionStaende)
+        int versionStaende,
+        long requiredFreeBytes,
+        long availableFreeBytes)
         => new
         {
             CreatedUtc = DateTimeOffset.UtcNow,
@@ -382,12 +468,20 @@ public sealed class FullBackupService : IFullBackupService
                 sizeReport.TotalFiles,
                 stats.Copied,
                 stats.Unchanged,
-                stats.Deleted
+                stats.Deleted,
+                stats.Verified,
+                stats.DatabasesSnapshotted
             },
             Versionen = new
             {
                 Staende = versionStaende,
                 BackupVersionRetention.MaxStaende
+            },
+            Speicherplatz = new
+            {
+                RequiredFreeBytes = requiredFreeBytes,
+                AvailableFreeBytes = availableFreeBytes,
+                ReserveBytes = BackupDiskSpaceGuard.MinimumReserveBytes
             },
             Plan = plan.Select(c => new
             {
@@ -417,7 +511,12 @@ public sealed class FullBackupService : IFullBackupService
         }
     }
 
-    private static FullBackupResult Failure(string error, string backupRoot, TimeSpan duration)
+    private static FullBackupResult Failure(
+        string error,
+        string backupRoot,
+        TimeSpan duration,
+        long requiredFreeBytes = 0,
+        long availableFreeBytes = 0)
         => new(
             Success: false,
             Error: error,
@@ -427,7 +526,11 @@ public sealed class FullBackupService : IFullBackupService
             FilesUnchanged: 0,
             FilesDeleted: 0,
             SkippedFiles: Array.Empty<string>(),
-            Duration: duration);
+            Duration: duration,
+            FilesVerified: 0,
+            DatabasesSnapshotted: 0,
+            RequiredFreeBytes: requiredFreeBytes,
+            AvailableFreeBytes: availableFreeBytes);
 
     private sealed class ProgressState(long bytesTotal, int filesTotal)
     {

@@ -7,6 +7,8 @@ using System.Linq;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Projects;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.DataPage;
@@ -461,10 +463,38 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
 
         var res = _sp.Projects.Load(path);
-        if (!res.Ok || res.Value is null)
+        Project loaded;
+        if (res.Ok && res.Value is not null)
         {
-            SetStatus($"Fehler: {res.ErrorMessage}");
-            return false;
+            loaded = res.Value;
+        }
+        else
+        {
+            // AP-01: Beschaedigte projekt.json nicht als verloren melden — aus .bak/Restore-Point retten.
+            var recovery = ProjectRecovery.TryRecover(path, _sp.Projects);
+            if (!recovery.Recovered || recovery.Project is null)
+            {
+                _sp.Dialogs.Error(
+                    "Das Projekt konnte nicht geoeffnet werden, und es wurde keine gueltige Sicherungskopie gefunden.\n\n" +
+                    $"Datei: {path}\n" +
+                    $"Fehler: {res.ErrorMessage}\n\n" +
+                    "Die Originaldatei wurde NICHT veraendert. Bitte pruefe eine Datensicherung.",
+                    "Projekt beschaedigt");
+                SetStatus($"Fehler: {res.ErrorMessage}");
+                return false;
+            }
+
+            _sp.Dialogs.Warn(
+                "Das Projekt war beschaedigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
+                $"Wiederhergestellt aus: {recovery.RecoveredFromPath}\n" +
+                (recovery.QuarantinedPath is null
+                    ? string.Empty
+                    : $"Beschaedigte Datei gesichert als: {recovery.QuarantinedPath}\n") +
+                "\nBitte pruefe das Projekt und speichere es.",
+                "Projekt wiederhergestellt");
+
+            loaded = recovery.Project;
+            loaded.Dirty = true; // erzwingt Neuspeicherung der guten Version an den Originalpfad
         }
 
         // Jedes erfolgreiche Oeffnen pflegt die Merkliste (setzt auch LastProjectPath) —
@@ -475,7 +505,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         MarkProjectReady();
         HasPersistedProject = true;
 
-        ReplaceProject(res.Value);
+        ReplaceProject(loaded);
         if (Project.Dirty && !TrySaveProject())
         {
             SetStatus($"Geladen mit ungespeicherter Reparatur: {Path.GetFileName(path)}");
@@ -498,7 +528,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// Fragt bei ungespeicherten Aenderungen nach (Speichern/Verwerfen/Abbrechen).
     /// Gibt false zurueck, wenn der Vorgang abgebrochen werden soll.
     /// </summary>
-    private bool ConfirmDiscardUnsavedChanges()
+    public bool ConfirmDiscardUnsavedChanges()
     {
         // Erst die aktive Seite fragen — die Sanierungs-Matrix haelt ihren Kosten-Stand
         // ausserhalb von Project.Dirty (costs.json), siehe Audit K1/W2.
@@ -631,6 +661,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         RefreshTitleAndDirty();
     }
 
+    public void TryCreateImportRestorePoint(string importLabel)
+    {
+        if (!_sp.Settings.EnableRestorePoints)
+            return;
+
+        var path = NormalizeProjectPath(_sp.Settings.LastProjectPath);
+        if (string.IsNullOrWhiteSpace(path) || !HasPersistedProject)
+            return;
+
+        TryCreateProjectRestorePoint(path);
+        SetStatus($"{importLabel}: Restore-Point angelegt");
+    }
+
     private static string MakeSafeFileName(string? name)
     {
         var baseName = string.IsNullOrWhiteSpace(name) ? "Projekt" : name.Trim();
@@ -659,13 +702,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     private static void TryCreateProjectRestorePoint(string projectPath)
     {
-        var projectDir = Path.GetDirectoryName(projectPath);
-        if (string.IsNullOrWhiteSpace(projectDir))
+        var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectPath);
+        if (string.IsNullOrWhiteSpace(projectRoot))
             return;
 
-        var restoreRoot = Path.Combine(projectDir, "__RESTORE_POINTS");
-        var scopeName = Path.GetFileNameWithoutExtension(projectPath);
-        RestorePointService.TryCreate(projectPath, restoreRoot, scopeName);
+        var restoreRoot = Path.Combine(projectRoot, ProjectStructure.RestorePoints);
+        RestorePointService.TryCreate(projectPath, restoreRoot, "projekt");
     }
 
     private void OpenPriceCatalog()

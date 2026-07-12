@@ -7,8 +7,8 @@ namespace AuswertungPro.Next.Application.Backup;
 
 /// <summary>
 /// Komplette Datensicherung fuer den PC-Ausfall-Schutz:
-/// spiegelt Programm, KI-Gehirn, Einstellungen und Logs inkrementell in einen Zielordner.
-/// Keine Projekte/Videos (sichert der Nutzer separat).
+/// spiegelt Programm, Projekte, KI-Gehirn, Einstellungen und Logs inkrementell in einen Zielordner.
+/// Projektvideos sind standardmaessig aus Platzgruenden ausgeschaltet.
 /// </summary>
 public interface IFullBackupService
 {
@@ -61,4 +61,8 @@ public sealed record FullBackupResult(
     int FilesUnchanged,
     int FilesDeleted,
     IReadOnlyList<string> SkippedFiles,
-    TimeSpan Duration);
+    TimeSpan Duration,
+    int FilesVerified = 0,
+    int DatabasesSnapshotted = 0,
+    long RequiredFreeBytes = 0,
+    long AvailableFreeBytes = 0);

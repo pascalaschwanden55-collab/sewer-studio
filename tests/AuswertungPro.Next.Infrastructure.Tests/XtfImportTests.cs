@@ -9,6 +9,59 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class XtfImportTests
 {
     [Fact]
+    public void Import_ArchiviertAusserhalbDesProgrammordners_UndMigriertAltbestand()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"xtf-archive-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var archiveDir = Path.Combine(root, "localappdata", "xtf_imports");
+        var legacyDir = Path.Combine(root, "bin", "Rohdaten", "xtf_imports");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(legacyDir);
+        var xtf = Path.Combine(sourceDir, "test.xml");
+        File.WriteAllText(xtf, "<root />");
+        File.WriteAllText(Path.Combine(legacyDir, "alt.xtf"), "alt");
+
+        try
+        {
+            var service = new LegacyXtfImportService(archiveDir, legacyDir);
+            service.ImportXtfFiles(new[] { xtf }, new Project());
+
+            Assert.True(File.Exists(Path.Combine(archiveDir, "test.xml")));
+            Assert.True(File.Exists(Path.Combine(archiveDir, "alt.xtf")));
+            Assert.False(File.Exists(Path.Combine(legacyDir, "alt.xtf")));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivFehler_VerhindertParsingNicht()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"xtf-archive-error-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var source = Path.Combine(root, "test.xtf");
+        var archiveAsFile = Path.Combine(root, "kein-ordner");
+        File.WriteAllText(source, "<root />");
+        File.WriteAllText(archiveAsFile, "blockiert");
+
+        try
+        {
+            var service = new LegacyXtfImportService(archiveAsFile);
+            var stats = service.ImportXtfFiles(new[] { source }, new Project());
+
+            Assert.Equal(0, stats.Errors);
+            Assert.Contains(stats.Messages, m => m.Level == "Warn" && m.Context == "XTF-ARCHIV");
+            Assert.Contains(stats.Messages, m => m.Message.Contains("Unbekanntes Schema", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void VsaKekImport_FindetFotoUndVideo_WennXtfInDokumenteUnterordner()
     {
         // Reales IKAS-Layout: XTF in <Export>\Dokumente\, Foto/Film aber im Export-Root eine Ebene hoeher.

@@ -18,8 +18,9 @@ public static class RestoreAnleitungText
         sb.AppendLine("================================================");
         sb.AppendLine();
         sb.AppendLine("Diese Sicherung enthaelt alles Unersetzliche: Programm (Quellcode inkl.");
-        sb.AppendLine("Git-Verlauf), KI-Gehirn, Einstellungen und Logdateien.");
-        sb.AppendLine("NICHT enthalten: Projekte/Videos (separat gesichert), Ollama-Modelle");
+        sb.AppendLine("Git-Verlauf), Projekte, KI-Gehirn, Einstellungen und Logdateien.");
+        sb.AppendLine($"Projektvideos enthalten: {(sources.IncludeProjectVideos ? "ja" : "nein")}.");
+        sb.AppendLine("NICHT enthalten: Ollama-Modelle");
         sb.AppendLine("(neu ladbar, Liste in umgebung.txt), Werkzeuge wie ffmpeg/Playwright/");
         sb.AppendLine("Tesseract (neu installierbar), TensorRT-Engines (werden neu gebaut).");
         sb.AppendLine();
@@ -29,7 +30,7 @@ public static class RestoreAnleitungText
         sb.AppendLine("nur hineinschauen, wenn eine aeltere Dateiversion gebraucht wird.");
         sb.AppendLine();
         sb.AppendLine("SCHRITT 1 — Programm zuruecklegen");
-        sb.AppendLine($"  Ordner \"Programm\" nach {sources.RepoRoot ?? "C:\\Sewer-Studio_KI_4.4"} kopieren.");
+        sb.AppendLine($"  Ordner \"Programm\" nach {sources.RepoRoot ?? $"C:\\Sewer-Studio_KI_{sources.AppVersion}"} kopieren.");
         sb.AppendLine("  Danach benoetigt: Visual Studio (oder .NET 10 SDK) und Python fuer den Sidecar.");
         sb.AppendLine("  Sidecar-Umgebung neu aufsetzen (venv + pip install, siehe sidecar\\README/Skripte).");
         sb.AppendLine();
@@ -40,15 +41,27 @@ public static class RestoreAnleitungText
         sb.AppendLine("  Ausgelassen wurden nur regenerierbare Trainings-Datensaetze (yolo_*_dataset*,");
         sb.AppendLine("  training_frames, kb_backups) — sie lassen sich aus der Wissensdatenbank neu bauen.");
         sb.AppendLine();
-        sb.AppendLine("SCHRITT 3 — Einstellungen zuruecklegen");
+        sb.AppendLine("SCHRITT 3 — Projekte zuruecklegen");
+        var projectSources = BackupPlanBuilder.Build(sources).Single(c => c.Name == "Projekte").Sources;
+        if (projectSources.Count == 0)
+        {
+            sb.AppendLine("  Keine bekannte Projektwurzel war beim Sicherungslauf konfiguriert.");
+        }
+        else
+        {
+            foreach (var projectSource in projectSources)
+                sb.AppendLine($"  \"{projectSource.TargetRelativeRoot}\" nach {projectSource.SourceRoot} kopieren.");
+        }
+        sb.AppendLine();
+        sb.AppendLine("SCHRITT 4 — Einstellungen zuruecklegen");
         sb.AppendLine($"  \"Einstellungen\\Local_SewerStudio\"    nach {sources.LocalSewerStudioDir}");
         sb.AppendLine($"  \"Einstellungen\\Roaming_SewerStudio\"  nach {sources.RoamingSewerStudioDir}");
         sb.AppendLine($"  \"Einstellungen\\Roaming_AuswertungPro\" nach {sources.RoamingAuswertungProDir}");
         sb.AppendLine();
-        sb.AppendLine("SCHRITT 4 — Logs (nur bei Bedarf fuer Diagnose)");
+        sb.AppendLine("SCHRITT 5 — Logs (nur bei Bedarf fuer Diagnose)");
         sb.AppendLine($"  \"Logs\\logs\" und \"Logs\\Telemetry\" nach {sources.LocalSewerStudioDir}");
         sb.AppendLine();
-        sb.AppendLine("SCHRITT 5 — Umgebung herstellen");
+        sb.AppendLine("SCHRITT 6 — Umgebung herstellen");
         sb.AppendLine("  a) Umgebungsvariablen laut Extras\\umgebung.txt setzen (System-Ebene).");
         sb.AppendLine("  b) Desktop-Skripte aus Extras\\ zurueck auf den Desktop legen.");
         sb.AppendLine("  c) Ollama installieren und Modelle laut Liste in umgebung.txt laden");

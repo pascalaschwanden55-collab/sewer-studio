@@ -14,6 +14,8 @@ public sealed class WinCanValueNormalizerTests
     [InlineData("300", "300")]
     [InlineData("300.0", "300")]
     [InlineData("12.5", "12.5")]
+    [InlineData("12,5", "12.5")]
+    [InlineData("1.234", "1.23")]
     [InlineData("  150  ", "150")]
     [InlineData("0", "0")]
     public void NormalizeNumber_GueltigeZahlen_KehrtKanonischeForm(string raw, string expected)

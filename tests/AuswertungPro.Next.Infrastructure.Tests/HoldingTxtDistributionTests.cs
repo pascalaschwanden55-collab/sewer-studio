@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -13,7 +14,8 @@ public sealed class HoldingTxtDistributionTests
         using var temp = new TempDir();
         var src = Path.Combine(temp.Path, "src");
         var videos = Path.Combine(temp.Path, "videos");
-        var dest = Path.Combine(temp.Path, "dest");
+        var projectRoot = Path.Combine(temp.Path, "Projekt");
+        var dest = Path.Combine(projectRoot, "Haltungen", "Gemeinde");
         Directory.CreateDirectory(src);
         Directory.CreateDirectory(videos);
         Directory.CreateDirectory(dest);
@@ -31,6 +33,11 @@ public sealed class HoldingTxtDistributionTests
             "  1.0m Rohrende  @Pos=0:00:05"
         }));
 
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Manual, false);
+        project.Data.Add(record);
+
         var results = HoldingFolderDistributor.DistributeTxtFiles(
             txtFiles: new[] { txtPath },
             videoSourceFolder: videos,
@@ -39,7 +46,7 @@ public sealed class HoldingTxtDistributionTests
             overwrite: false,
             recursiveVideoSearch: true,
             unmatchedFolderName: "__UNMATCHED",
-            project: null,
+            project: project,
             progress: null);
 
         var item = Assert.Single(results);
@@ -53,6 +60,10 @@ public sealed class HoldingTxtDistributionTests
         var dateStamp = new DateTime(2014, 12, 4).ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         Assert.Contains($"{dateStamp}_100-200", Path.GetFileName(item.DestPdfPath!), StringComparison.OrdinalIgnoreCase);
         Assert.Contains($"{dateStamp}_100-200", Path.GetFileName(item.DestVideoPath!), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            Path.GetRelativePath(projectRoot, item.DestVideoPath!).Replace('\\', '/'),
+            record.GetFieldValue("Link"));
+        Assert.False(Path.IsPathRooted(record.GetFieldValue("Link")));
     }
 
     private sealed class TempDir : IDisposable

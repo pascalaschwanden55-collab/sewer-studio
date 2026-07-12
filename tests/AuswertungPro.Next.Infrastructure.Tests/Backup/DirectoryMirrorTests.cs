@@ -1,5 +1,6 @@
 ﻿using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Infrastructure.Backup;
+using Microsoft.Data.Sqlite;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
 
@@ -39,6 +40,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         Assert.Equal("abc", File.ReadAllText(targetFile));
         Assert.Equal(timestamp, File.GetLastWriteTimeUtc(targetFile));
         Assert.Equal(1, firstStats.Copied);
+        Assert.Equal(1, firstStats.Verified);
         Assert.Equal(0, firstStats.Unchanged);
         Assert.Empty(firstStats.Errors);
 
@@ -396,5 +398,116 @@ public sealed class DirectoryMirrorTests : IDisposable
         Assert.True(File.Exists(Path.Combine(backupRoot, "Extras", "script.bat")));
         Assert.Single(expected);
         Assert.Equal(1, stats.Copied);
+    }
+
+    [Fact]
+    public async Task MirrorSourceAsync_BeschaedigteTempdatei_ErsetztGueltigesZielNicht()
+    {
+        var source = Path.Combine(_root, "source");
+        var backupRoot = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(source);
+        var sourceFile = Path.Combine(source, "a.txt");
+        var targetFile = Path.Combine(backupRoot, "Ziel", "a.txt");
+        File.WriteAllText(sourceFile, "neuer gueltiger Inhalt");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+        File.WriteAllText(targetFile, "alter gueltiger Inhalt");
+        File.SetLastWriteTimeUtc(sourceFile, DateTime.UtcNow.AddMinutes(5));
+
+        var stats = new DirectoryMirror.MirrorStats();
+        var mirror = new DirectoryMirror(null, temp => File.WriteAllText(temp, "beschaedigt"));
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Ziel"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.Equal("alter gueltiger Inhalt", File.ReadAllText(targetFile));
+        Assert.Equal(0, stats.Copied);
+        Assert.Equal(0, stats.Verified);
+        Assert.Contains(stats.Errors, e => e.Contains("Inhaltspruefung", StringComparison.OrdinalIgnoreCase));
+        Assert.False(File.Exists(targetFile + DirectoryMirror.TempSuffix));
+    }
+
+    [Fact]
+    public async Task MirrorSourceAsync_AktiveSqliteDatenbank_ErstelltKonsistentenSchnappschuss()
+    {
+        var source = Path.Combine(_root, "source");
+        var backupRoot = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(source);
+        var sourceDb = Path.Combine(source, "active.db");
+
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = sourceDb,
+            Pooling = false
+        }.ToString();
+
+        using var writer = new SqliteConnection(connectionString);
+        writer.Open();
+        Execute(writer, "PRAGMA journal_mode=WAL;");
+        Execute(writer, "CREATE TABLE Items(Id INTEGER PRIMARY KEY, Name TEXT NOT NULL);");
+        Execute(writer, "INSERT INTO Items(Name) VALUES ('eins');");
+
+        var stats = new DirectoryMirror.MirrorStats();
+        await new DirectoryMirror(null).MirrorSourceAsync(
+            new BackupSource(source, "Daten"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        var targetDb = Path.Combine(backupRoot, "Daten", "active.db");
+        Assert.Equal(1L, ReadCount(targetDb));
+        Assert.False(File.Exists(targetDb + "-wal"));
+        Assert.False(File.Exists(targetDb + "-shm"));
+        Assert.Equal(1, stats.DatabasesSnapshotted);
+        Assert.Equal(1, stats.Verified);
+
+        // Die Quelle bleibt geoeffnet und wird waehrend des App-Betriebs weiter beschrieben.
+        Execute(writer, "INSERT INTO Items(Name) VALUES ('zwei');");
+        var secondStats = new DirectoryMirror.MirrorStats();
+        await new DirectoryMirror(null).MirrorSourceAsync(
+            new BackupSource(source, "Daten"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            secondStats);
+
+        Assert.Equal(2L, ReadCount(targetDb));
+        Assert.Equal(1, secondStats.DatabasesSnapshotted);
+        Assert.Equal(1, secondStats.Verified);
+
+        // Ohne weitere Aenderung bleibt auch die Datenbank-Sicherung inkrementell.
+        var thirdStats = new DirectoryMirror.MirrorStats();
+        await new DirectoryMirror(null).MirrorSourceAsync(
+            new BackupSource(source, "Daten"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            thirdStats);
+
+        Assert.Equal(0, thirdStats.Copied);
+        Assert.Equal(1, thirdStats.Unchanged);
+        Assert.Equal(1, thirdStats.DatabasesSnapshotted);
+    }
+
+    private static void Execute(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    private static long ReadCount(string databasePath)
+    {
+        var builder = new SqliteConnectionStringBuilder
+        {
+            DataSource = databasePath,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false
+        };
+        using var connection = new SqliteConnection(builder.ToString());
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM Items;";
+        return Convert.ToInt64(command.ExecuteScalar());
     }
 }

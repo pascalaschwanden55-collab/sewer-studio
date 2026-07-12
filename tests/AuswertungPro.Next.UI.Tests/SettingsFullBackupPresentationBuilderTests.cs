@@ -11,7 +11,8 @@ public sealed class SettingsFullBackupPresentationBuilderTests
         var report = new FullBackupSizeReport(
             [
                 new ComponentSize("Programm", "Code", 1024, 2, SourceFound: true),
-                new ComponentSize("KI-Gehirn", "Lernen", 2048, 3, SourceFound: false)
+                new ComponentSize("KI-Gehirn", "Lernen", 2048, 3, SourceFound: false),
+                new ComponentSize("Projekte", "Projektdateien (Videos enthalten: nein)", 0, 0, SourceFound: true)
             ],
             TotalBytes: 3072,
             TotalFiles: 5);
@@ -26,7 +27,8 @@ public sealed class SettingsFullBackupPresentationBuilderTests
         Assert.Contains("5 Dateien", text);
         Assert.Contains(@"Ziel: D:\Backup\SewerStudio_Datensicherung", text);
         Assert.Contains("_Versionen", text);
-        Assert.Contains("Projekte und Videos sind nicht enthalten.", text);
+        Assert.Contains("Projekte enthalten: ja.", text);
+        Assert.Contains("Videos enthalten: nein", text);
     }
 
     [Fact]

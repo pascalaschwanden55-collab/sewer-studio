@@ -28,8 +28,16 @@ public sealed class KnowledgeBaseContext : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         _connection = new SqliteConnection($"Data Source={path}");
-        _connection.Open();
-        EnsureSchema();
+        try
+        {
+            _connection.Open();
+            EnsureSchema();
+        }
+        catch
+        {
+            _connection.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Gibt eine offene Verbindung zurück (für Kommandos).</summary>
@@ -46,6 +54,16 @@ public sealed class KnowledgeBaseContext : IDisposable
         // Konkurrierende Zugriffe (Rebuild im TrainingCenter vs. Retrieval bei der Protokollgenerierung)
         // nicht sofort mit "database is locked" abbrechen, sondern bis zu 3s warten.
         ExecuteNonQuery("PRAGMA busy_timeout=3000;");
+
+        // Vor jeder Schema-Aenderung pruefen: Eine neuere App koennte andere Tabellen
+        // erwarten. In diesem Fall niemals versuchen, die Datei rueckwaerts anzupassen.
+        var existingVersion = ReadUserVersion();
+        if (existingVersion > SchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"Die Wissensdatenbank stammt aus einer neueren Programmversion " +
+                $"(Schema {existingVersion}, unterstuetzt bis {SchemaVersion}). Sie wurde nicht veraendert.");
+        }
 
         ExecuteNonQuery("""
             CREATE TABLE IF NOT EXISTS Samples (
@@ -170,6 +188,12 @@ public sealed class KnowledgeBaseContext : IDisposable
     private void EnsureUserVersion()
     {
         var current = ReadUserVersion();
+        if (current > SchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"Die Wissensdatenbank stammt aus einer neueren Programmversion " +
+                $"(Schema {current}, unterstuetzt bis {SchemaVersion}). Sie wurde nicht veraendert.");
+        }
         if (current < SchemaVersion)
             ExecuteNonQuery($"PRAGMA user_version={SchemaVersion};");
     }

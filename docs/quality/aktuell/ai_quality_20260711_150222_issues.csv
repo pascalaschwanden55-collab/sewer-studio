@@ -1,0 +1,6 @@
+category;case_id;sample_id;meter_start;meter_end;expected_code;predicted_code;meter_needs_review;detail
+"wrong_code";"59876-58979";"59876-58979_st_001_191835";9.1;9.1;"BCE";"BAF";false;"Falsche VSA-Code-Familie."
+"wrong_code";"60865-60803";"5e4145d24662";5;5;"BCCAA";"BAF";false;"Falsche VSA-Code-Familie."
+"wrong_code";"60865-60803";"138f8b4220eb";7.4;7.4;"BCCAA";"BAF";false;"Falsche VSA-Code-Familie."
+"wrong_code";"60865-60803";"493b4657e561";18.1;18.1;"AECXC";"BAF";false;"Falsche VSA-Code-Familie."
+"wrong_code";"9866-9327";"9866-9327_st_005_182730";9.5;9.5;"BCCAY";"BAC";false;"Falsche VSA-Code-Familie."

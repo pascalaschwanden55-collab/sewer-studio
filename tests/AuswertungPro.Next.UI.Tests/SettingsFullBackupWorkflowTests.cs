@@ -24,7 +24,9 @@ public sealed class SettingsFullBackupWorkflowTests
                 FilesUnchanged: 3,
                 FilesDeleted: 1,
                 SkippedFiles: [@"C:\locked.txt"],
-                Duration: TimeSpan.FromSeconds(1))
+                Duration: TimeSpan.FromSeconds(1),
+                FilesVerified: 2,
+                DatabasesSnapshotted: 1)
         };
         var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
         var toasts = new ToastFake();
@@ -43,7 +45,9 @@ public sealed class SettingsFullBackupWorkflowTests
         Assert.Equal(["flush", "save"], calls);
         Assert.Equal(100, state.Percent);
         Assert.Equal("", state.CurrentFile);
-        Assert.Equal("Fertig: 2 kopiert, 3 unveraendert, 1 nach _Versionen verschoben.", state.StatusText);
+        Assert.Equal(
+            "Fertig: 2 kopiert, 2 vollstaendig geprueft, 1 Datenbank-Schnappschuss, 3 unveraendert, 1 nach _Versionen verschoben.",
+            state.StatusText);
         Assert.Contains(@"E:\Backup", state.LastBackupInfo);
         Assert.Equal(["success:Datensicherung abgeschlossen."], toasts.Messages);
         Assert.Single(dialogs.Warnings);

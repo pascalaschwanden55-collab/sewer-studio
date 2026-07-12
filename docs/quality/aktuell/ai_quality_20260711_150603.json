@@ -1,0 +1,120 @@
+{
+  "generated_at_utc": "2026-07-11T15:06:03.525247+00:00",
+  "detection": {
+    "holdings": 36,
+    "raw_ai_samples": 87,
+    "deduplicated_ai_findings": 71,
+    "reviewed_ai_findings": 21,
+    "exact_code_correct": 16,
+    "subtype_mismatch": 0,
+    "wrong_code_family": 5,
+    "rejected_false_positive": 0,
+    "quantification_corrections": 0,
+    "manual_damage_findings": 0,
+    "manual_findings_matched": 0,
+    "possible_misses": 0,
+    "possible_meter_mismatches": 0,
+    "exact_code_accuracy": 0.7619047619047619,
+    "detection_recall": 0
+  },
+  "green_release": {
+    "deduplicated_green_findings": 0,
+    "reviewed_green_findings": 0,
+    "correct_green_findings": 0,
+    "green_errors": 0,
+    "pending_review": 0,
+    "holdings": 0,
+    "error_rate": 0,
+    "error_rate_upper95": 1,
+    "release_criterion_met": false,
+    "criterion": "Mindestens 300 gepruefte, deduplizierte gruene Befunde aus 20 Haltungen; hoechstens 1 Fehler; obere 95%-Fehlergrenze unter 2%."
+  },
+  "coverage": {
+    "holdings": 36,
+    "dn_bands": {
+      "DN 201-400": 1,
+      "DN \u003C= 200": 4,
+      "unbekannt": 31
+    },
+    "materials": {
+      "Kunststoff Polyvinilchlorid": 3,
+      "Polyethylen": 1,
+      "unbekannt": 31,
+      "Zement": 1
+    },
+    "image_qualities": {
+      "A": 5,
+      "B": 21,
+      "unbekannt": 10
+    }
+  },
+  "shadow": {
+    "holdings": 160,
+    "comparable": 0,
+    "equal": 0,
+    "light_difference": 0,
+    "strong_difference": 0,
+    "no_comparison": 167,
+    "stale": 0,
+    "condition_class_differences": 0,
+    "measure_differences": 0,
+    "cost_differences": 0
+  },
+  "issues": [
+    {
+      "category": "wrong_code",
+      "case_id": "59876-58979",
+      "sample_id": "59876-58979_st_001_191835",
+      "meter_start": 9.1,
+      "meter_end": 9.1,
+      "expected_code": "BCE",
+      "predicted_code": "BAF",
+      "detail": "Falsche VSA-Code-Familie.",
+      "meter_needs_review": false
+    },
+    {
+      "category": "wrong_code",
+      "case_id": "60865-60803",
+      "sample_id": "5e4145d24662",
+      "meter_start": 5,
+      "meter_end": 5,
+      "expected_code": "BCCAA",
+      "predicted_code": "BAF",
+      "detail": "Falsche VSA-Code-Familie.",
+      "meter_needs_review": false
+    },
+    {
+      "category": "wrong_code",
+      "case_id": "60865-60803",
+      "sample_id": "138f8b4220eb",
+      "meter_start": 7.4,
+      "meter_end": 7.4,
+      "expected_code": "BCCAA",
+      "predicted_code": "BAF",
+      "detail": "Falsche VSA-Code-Familie.",
+      "meter_needs_review": false
+    },
+    {
+      "category": "wrong_code",
+      "case_id": "60865-60803",
+      "sample_id": "493b4657e561",
+      "meter_start": 18.1,
+      "meter_end": 18.1,
+      "expected_code": "AECXC",
+      "predicted_code": "BAF",
+      "detail": "Falsche VSA-Code-Familie.",
+      "meter_needs_review": false
+    },
+    {
+      "category": "wrong_code",
+      "case_id": "9866-9327",
+      "sample_id": "9866-9327_st_005_182730",
+      "meter_start": 9.5,
+      "meter_end": 9.5,
+      "expected_code": "BCCAY",
+      "predicted_code": "BAC",
+      "detail": "Falsche VSA-Code-Familie.",
+      "meter_needs_review": false
+    }
+  ]
+}

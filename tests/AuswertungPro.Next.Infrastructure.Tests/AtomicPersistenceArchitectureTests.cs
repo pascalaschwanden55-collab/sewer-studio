@@ -25,7 +25,8 @@ public sealed class AtomicPersistenceArchitectureTests
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "TrainingCenterImportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Teacher", "TrainingAnnotationExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Teacher", "VsaYoloClassMap.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "SelfImproving", "ReviewQueueService.cs")
+        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "SelfImproving", "ReviewQueueService.cs"),
+        Path.Combine("src", "AuswertungPro.Next.UI", "Services", "KnowledgeBackupService.cs")
     };
 
     [Theory]
@@ -45,6 +46,18 @@ public sealed class AtomicPersistenceArchitectureTests
             source.Contains("AtomicTextFileWriter.WriteAllText", System.StringComparison.Ordinal)
             || source.Contains("AtomicTextFileWriter.Write(", System.StringComparison.Ordinal),
             "Persistente Textausgaben muessen ueber AtomicTextFileWriter laufen.");
+    }
+
+    [Fact]
+    public void JsonProjectRepository_verwendetTempDateiUndAtomarenAustausch()
+    {
+        var source = File.ReadAllText(RepoFile(Path.Combine(
+            "src", "AuswertungPro.Next.Infrastructure", "Projects", "JsonProjectRepository.cs")));
+
+        Assert.Contains("Guid.NewGuid():N}.tmp", source, StringComparison.Ordinal);
+        Assert.Contains("File.Replace(tempPath, fullPath, backupPath", source, StringComparison.Ordinal);
+        Assert.Contains("File.Move(tempPath, fullPath", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.WriteAllText(fullPath", source, StringComparison.Ordinal);
     }
 
     private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)

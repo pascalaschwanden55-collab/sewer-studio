@@ -87,7 +87,12 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         var db3ImportFailed = false;
         try
         {
-            using var conn = new SqliteConnection($"Data Source={dbPath};");
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadOnly
+            }.ToString();
+            using var conn = new SqliteConnection(connectionString);
             conn.Open();
 
             var sections = LoadSections(conn);

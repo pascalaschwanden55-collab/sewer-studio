@@ -103,8 +103,11 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         try
         {
-            var projektJson = Path.Combine(projectFolder, "projekt.json");
-            if (File.Exists(projektJson))
+            // Bugfix AP-02: Neue Projekte legen projekt.json unter Projektdateien\ ab,
+            // Alt-Projekte direkt im Root. ProjectFileLocator findet beide Faelle — der
+            // frueher hartkodierte Root-Pfad uebersprang das Sicherheitsnetz bei neuen Projekten.
+            var projektJson = ProjectFileLocator.Locate(projectFolder);
+            if (projektJson is not null)
             {
                 var zeitstempel = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var restoreDir  = Path.Combine(
@@ -113,8 +116,14 @@ public sealed class ProjectImportOrchestrator
                     "projekt",
                     zeitstempel);
                 Directory.CreateDirectory(restoreDir);
-                File.Copy(projektJson, Path.Combine(restoreDir, "projekt.json"), overwrite: false);
+                File.Copy(projektJson, Path.Combine(restoreDir, ProjectFileLocator.ProjectFileName), overwrite: false);
                 messages.Add($"Restore-Point angelegt: {restoreDir}");
+            }
+            else
+            {
+                // Kein Sicherheitsnetz moeglich (noch nie gespeichertes Projekt) — sichtbar machen,
+                // statt still zu ueberspringen.
+                messages.Add("Restore-Point uebersprungen: keine projekt.json gefunden (neues/leeres Projekt).");
             }
         }
         catch (Exception ex)

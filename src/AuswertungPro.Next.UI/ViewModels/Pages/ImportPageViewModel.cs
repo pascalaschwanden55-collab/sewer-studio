@@ -163,6 +163,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             new Services.ImportRunWorkflowActions(
                 GetProject: () => _shell.Project,
                 DeepCopyProject: _sp.Projects.DeepCopy,
+                ReplaceProject: _shell.ReplaceProject,
+                CreateRestorePoint: _shell.TryCreateImportRestorePoint,
                 GetReportDir: GetReportDir,
                 ExportReport: ImportRunReportExporter.Export,
                 ShowPreview: ShowPreviewWindow,
@@ -719,15 +721,15 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
     }
 
-    private async Task RunVsaAfterImport(string sourceLabel)
+    private async Task RunVsaAfterImport(Project project, string sourceLabel)
     {
         ImportProgress = $"{sourceLabel}: VSA-Zustandsbewertung wird berechnet...";
 
-        var vsaResult = await Task.Run(() => _sp.Vsa.Evaluate(_shell.Project));
+        var vsaResult = await Task.Run(() => _sp.Vsa.Evaluate(project));
 
         if (vsaResult.Ok)
         {
-            SummaryText += $"\nVSA-Bewertung: {_shell.Project.Data.Count} Haltungen bewertet";
+            SummaryText += $"\nVSA-Bewertung: {project.Data.Count} Haltungen bewertet";
         }
         else
         {
@@ -1059,11 +1061,11 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// Nach jedem Import: Primaere_Schaeden aller Records deduplizieren.
     /// Entfernt doppelte Zeilen (gleicher Code + Meter) aus dem fertigen Text.
     /// </summary>
-    private void DeduplicateAllPrimaryDamages()
+    private static void DeduplicateAllPrimaryDamages(Project project)
     {
         try
         {
-            foreach (var rec in _shell.Project.Data)
+            foreach (var rec in project.Data)
             {
                 var raw = rec.GetFieldValue("Primaere_Schaeden");
                 if (string.IsNullOrWhiteSpace(raw))

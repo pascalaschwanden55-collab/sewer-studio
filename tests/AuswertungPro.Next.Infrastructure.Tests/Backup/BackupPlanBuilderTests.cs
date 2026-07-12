@@ -6,12 +6,15 @@ using AuswertungPro.Next.Application.Backup;
 namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 /// <summary>
-/// Sicherungsplan: 5 Komponenten mit korrekten Ziel-Relativpfaden.
+/// Sicherungsplan: 6 Komponenten mit korrekten Ziel-Relativpfaden.
 /// Arbeitet nur mit Fantasie-Pfaden — kein Dateisystemzugriff.
 /// </summary>
 public class BackupPlanBuilderTests
 {
-    private static FullBackupSources TestSources(string? repoRoot = @"X:\Repo") => new(
+    private static FullBackupSources TestSources(
+        string? repoRoot = @"X:\Repo",
+        IReadOnlyList<string>? projectRoots = null,
+        bool includeProjectVideos = false) => new(
         RepoRoot: repoRoot,
         KnowledgeRoot: @"X:\Brain",
         LocalSewerStudioDir: @"X:\Local\SewerStudio",
@@ -19,16 +22,18 @@ public class BackupPlanBuilderTests
         RoamingAuswertungProDir: @"X:\Roaming\AuswertungPro",
         DesktopDir: @"X:\Desktop",
         AppVersion: "4.4",
-        EnvironmentVariables: new Dictionary<string, string>());
+        EnvironmentVariables: new Dictionary<string, string>(),
+        ProjectRoots: projectRoots,
+        IncludeProjectVideos: includeProjectVideos);
 
     [Fact]
-    public void Build_LiefertFuenfKomponenten()
+    public void Build_LiefertSechsKomponenten()
     {
         var plan = BackupPlanBuilder.Build(TestSources());
 
-        Assert.Equal(5, plan.Count);
+        Assert.Equal(6, plan.Count);
         Assert.Equal(
-            new[] { "Programm", "KI-Gehirn", "Einstellungen", "Logs", "Extras" },
+            new[] { "Programm", "KI-Gehirn", "Projekte", "Einstellungen", "Logs", "Extras" },
             plan.Select(k => k.Name).ToArray());
     }
 
@@ -103,5 +108,38 @@ public class BackupPlanBuilderTests
 
         var logs = plan.Single(k => k.Name == "Logs");
         Assert.All(logs.Sources, s => Assert.Null(s.IsDirExcluded));
+    }
+
+    [Fact]
+    public void Build_Projekte_FasstDoppelteUndVerschachtelteWurzelnZusammen()
+    {
+        var plan = BackupPlanBuilder.Build(TestSources(projectRoots:
+        [
+            @"X:\Projekte",
+            @"X:\Projekte\ProjektA",
+            @"X:\Projekte",
+            @"Y:\Einzelprojekt"
+        ]));
+
+        var projects = plan.Single(k => k.Name == "Projekte");
+        Assert.Equal(2, projects.Sources.Count);
+        Assert.Contains(projects.Sources, s => s.SourceRoot == @"X:\Projekte");
+        Assert.Contains(projects.Sources, s => s.SourceRoot == @"Y:\Einzelprojekt");
+    }
+
+    [Fact]
+    public void Build_Projekte_VideosStandardmaessigAusgeschlossen_UndOptionalEnthalten()
+    {
+        var withoutVideos = BackupPlanBuilder.Build(TestSources(projectRoots: [@"X:\Projekte"]))
+            .Single(k => k.Name == "Projekte").Sources.Single();
+        Assert.NotNull(withoutVideos.IsFileExcluded);
+        Assert.True(withoutVideos.IsFileExcluded!("Haltungen\\film.mp4"));
+        Assert.False(withoutVideos.IsFileExcluded!("Projektdateien\\projekt.json"));
+
+        var withVideos = BackupPlanBuilder.Build(TestSources(
+                projectRoots: [@"X:\Projekte"],
+                includeProjectVideos: true))
+            .Single(k => k.Name == "Projekte").Sources.Single();
+        Assert.Null(withVideos.IsFileExcluded);
     }
 }

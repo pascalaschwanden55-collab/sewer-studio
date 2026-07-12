@@ -266,7 +266,11 @@ public static partial class HoldingFolderDistributor
                             var meta = record.FieldMeta.TryGetValue("Link", out var m) ? m : null;
                             if (meta == null || !meta.UserEdited)
                             {
-                                record.SetFieldValue("Link", destVideoPath, AuswertungPro.Next.Domain.Models.FieldSource.Unknown, userEdited: false);
+                                record.SetFieldValue(
+                                    "Link",
+                                    MakeProjectRelativeLink(destVideoPath, destGemeindeFolder),
+                                    AuswertungPro.Next.Domain.Models.FieldSource.Unknown,
+                                    userEdited: false);
                                 project.ModifiedAtUtc = DateTime.UtcNow;
                                 project.Dirty = true;
                             }
@@ -1049,7 +1053,11 @@ public static partial class HoldingFolderDistributor
                         var meta = record.FieldMeta.TryGetValue("Link", out var m) ? m : null;
                         if (meta == null || !meta.UserEdited)
                         {
-                            record.SetFieldValue("Link", destVideoPath, FieldSource.Unknown, userEdited: false);
+                            record.SetFieldValue(
+                                "Link",
+                                MakeProjectRelativeLink(destVideoPath, destGemeindeFolder),
+                                FieldSource.Unknown,
+                                userEdited: false);
                             project.ModifiedAtUtc = DateTime.UtcNow;
                             project.Dirty = true;
                         }

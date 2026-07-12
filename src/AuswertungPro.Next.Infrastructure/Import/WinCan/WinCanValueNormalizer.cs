@@ -20,8 +20,10 @@ internal static class WinCanValueNormalizer
             return null;
 
         var text = raw.Trim();
-        if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var val) ||
-            double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out val))
+        var canonical = text.Contains(',', StringComparison.Ordinal) && !text.Contains('.', StringComparison.Ordinal)
+            ? text.Replace(',', '.')
+            : text;
+        if (double.TryParse(canonical, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
         {
             if (Math.Abs(val - Math.Round(val)) < 0.01)
                 return ((int)Math.Round(val)).ToString(CultureInfo.InvariantCulture);

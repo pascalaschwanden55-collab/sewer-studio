@@ -53,6 +53,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private bool _isFullBackupRunning;
     [ObservableProperty] private string _fullBackupCurrentFile = string.Empty;
     [ObservableProperty] private string _lastFullBackupInfo = string.Empty;
+    [ObservableProperty] private bool _includeProjectVideosInFullBackup;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
     [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
     [ObservableProperty] private bool _isProgramCleanupRunning;
@@ -150,6 +151,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             _sp.Settings.LastFullBackupUtc,
             _sp.Settings.LastFullBackupPath,
             _sp.Settings.LastFullBackupSizeBytes);
+        IncludeProjectVideosInFullBackup = _sp.Settings.FullBackupIncludeProjectVideos;
 
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
         BrowseProjectPathCommand = new RelayCommand(BrowseProjectPath);
@@ -181,6 +183,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     {
         CreateFullBackupCommand?.NotifyCanExecuteChanged();
         CancelFullBackupCommand?.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIncludeProjectVideosInFullBackupChanged(bool value)
+    {
+        _sp.Settings.FullBackupIncludeProjectVideos = value;
+        _sp.Settings.SaveImmediate();
     }
 
     partial void OnIsProgramCleanupRunningChanged(bool value)

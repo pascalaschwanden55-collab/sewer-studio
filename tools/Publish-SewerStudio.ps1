@@ -8,10 +8,18 @@ $ErrorActionPreference = "Stop"
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $projectPath = Join-Path $repoRoot "src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj"
 $sidecarSource = Join-Path $repoRoot "sidecar"
+$projectXml = [xml](Get-Content -LiteralPath $projectPath -Raw)
+$appVersion = [string](
+    $projectXml.Project.PropertyGroup |
+        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_.Version) } |
+        Select-Object -First 1 -ExpandProperty Version)
+if ($appVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+    throw "Keine gueltige Version im UI-Projekt gefunden: '$appVersion'"
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $OutputDirectory = Join-Path $repoRoot "artifacts\SewerStudio-4.5.0-win-x64-$stamp"
+    $OutputDirectory = Join-Path $repoRoot "artifacts\SewerStudio-$appVersion-win-x64-$stamp"
 }
 
 $outputPath = [System.IO.Path]::GetFullPath($OutputDirectory)
@@ -175,15 +183,26 @@ if ($modelsIncluded) {
 
 Write-Host "[4/4] Schreibe Installationshinweise und Manifest ..."
 $installation = @"
-SewerStudio 4.5 - Installation
+SewerStudio $appVersion - Installation
 
 1. Fuer die normale App SewerStudio.exe starten. .NET ist im Paket enthalten.
-2. Fuer die lokale KI muss Python 3.10 oder neuer installiert sein.
-3. Einmal Install-Sidecar.ps1 ausfuehren. Das Skript erstellt sidecar\.venv
+2. Vor einem Update in SewerStudio eine Vollsicherung auf USB erstellen.
+3. Fuer die lokale KI muss Python 3.10 oder neuer installiert sein.
+4. Einmal Install-Sidecar.ps1 ausfuehren. Das Skript erstellt sidecar\.venv
    und installiert exakt die Versionen aus requirements-lock.txt.
-4. Danach SewerStudio erneut starten. Der Sidecar wird automatisch erkannt.
+5. Ollama installieren und diese Modelle laden:
+     ollama pull qwen3-vl:8b-q8
+     ollama pull nomic-embed-text
+6. ffmpeg/ffprobe im PATH bereitstellen oder SEWERSTUDIO_FFMPEG setzen.
+7. Fuer optimale PDF-Erkennung pdftotext.exe nach tools\pdftotext.exe kopieren.
+8. Danach SewerStudio erneut starten. Der Sidecar wird automatisch erkannt.
 
-Hinweis: Die Python-Installation benoetigt beim ersten Mal Internetzugang.
+Wichtig:
+- Die Python- und DINO-Einrichtung benoetigt derzeit beim ersten Mal Internetzugang.
+- Der KB-Pfad wird in settings.json gespeichert. SEWERSTUDIO_KNOWLEDGE_ROOT ist
+  nur ein bewusster Vorrang und muss nach einem PC-Wechsel kontrolliert werden.
+- Update: neuen Release-Ordner daneben entpacken, nicht ueber den alten kopieren.
+- Rueckweg: neue App schliessen und SewerStudio.exe aus dem alten Ordner starten.
 "@
 Write-Utf8NoBom (Join-Path $outputPath "INSTALLATION.txt") $installation
 
@@ -205,7 +224,7 @@ $untrackedBuildInputs = @(& git -C $repoRoot ls-files --others --exclude-standar
 $sourceDirty = $trackedWorktreeDirty -or $trackedIndexDirty -or $untrackedBuildInputs
 $manifest = [ordered]@{
     product = "SewerStudio"
-    version = "4.5.0"
+    version = $appVersion
     runtime = "win-x64"
     self_contained = $true
     sidecar_included = $true

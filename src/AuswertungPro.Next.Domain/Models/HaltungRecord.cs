@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace AuswertungPro.Next.Domain.Models;
 
 public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
@@ -22,6 +25,11 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Unbekannte Felder bleiben bei einem Speichern-Roundtrip erhalten.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
     public HaltungRecord()

@@ -45,10 +45,12 @@ public sealed class ImportRunWorkflowControllerTests
                 validatePlausibility: _ => new[] { "Warnung 1" }),
             CancellationToken.None);
 
-        Assert.Contains("import:source.pdf:True:False", calls);
+        Assert.Contains("import:source.pdf:False:False", calls);
+        Assert.Contains("restore:PDF", calls);
         Assert.Contains("post:False", calls);
         Assert.Contains("dedup", calls);
         Assert.Contains("after:PDF", calls);
+        Assert.Contains("replace", calls);
         Assert.Contains("save", calls);
         Assert.Contains("report:PDF:False", calls);
         Assert.Equal("report.txt", state.LastReportPath);
@@ -61,6 +63,8 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Contains("m1", state.Details);
         Assert.Contains("Warnung 1", state.Details);
         Assert.Equal("PDF importiert", state.Statuses[^1]);
+        Assert.NotNull(state.ReplacedProject);
+        Assert.True(state.ReplacedProject!.Dirty);
     }
 
     [Fact]
@@ -86,9 +90,10 @@ public sealed class ImportRunWorkflowControllerTests
             Actions(project, state, calls),
             CancellationToken.None);
 
-        Assert.Equal(["report:XTF:False"], calls);
-        Assert.Equal("XTF Import fehlgeschlagen: kaputt", state.Summary);
-        Assert.Equal("XTF Import fehlgeschlagen", state.Statuses[^1]);
+        Assert.Equal(["restore:XTF", "report:XTF:False"], calls);
+        Assert.Equal("XTF Import fehlgeschlagen - Projekt unveraendert: kaputt", state.Summary);
+        Assert.Equal("XTF Import fehlgeschlagen - Projekt unveraendert", state.Statuses[^1]);
+        Assert.Null(state.ReplacedProject);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
         Assert.Equal("", state.Phase);
@@ -141,10 +146,12 @@ public sealed class ImportRunWorkflowControllerTests
             [
                 "import:Preview:True",
                 "preview:WinCan",
-                "import:Live:False",
+                "restore:WinCan",
+                "import:Preview:False",
                 "post:False",
                 "dedup",
                 "after:WinCan",
+                "replace",
                 "save",
                 "report:WinCan:False",
                 "report:WinCan:True"
@@ -152,6 +159,58 @@ public sealed class ImportRunWorkflowControllerTests
             calls);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
+    }
+
+    [Fact]
+    public async Task RunAsync_cancel_after_mutation_keeps_live_project_unchanged()
+    {
+        var project = new Project { Name = "Live" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "PDF",
+            "source.pdf",
+            (_, target, _) =>
+            {
+                target.Data.Add(new HaltungRecord());
+                throw new OperationCanceledException();
+            });
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            CancellationToken.None);
+
+        Assert.Empty(project.Data);
+        Assert.Null(state.ReplacedProject);
+        Assert.DoesNotContain("replace", calls);
+        Assert.Contains("Projekt unveraendert", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_exception_after_mutation_keeps_live_project_unchanged()
+    {
+        var project = new Project { Name = "Live" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "XTF",
+            "source.xtf",
+            (_, target, _) =>
+            {
+                target.Data.Add(new HaltungRecord());
+                throw new InvalidOperationException("Testfehler");
+            });
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            CancellationToken.None);
+
+        Assert.Empty(project.Data);
+        Assert.Null(state.ReplacedProject);
+        Assert.DoesNotContain("replace", calls);
+        Assert.Contains("Projekt unveraendert", state.Summary);
     }
 
     private static ImportRunWorkflowActions Actions(
@@ -163,7 +222,13 @@ public sealed class ImportRunWorkflowControllerTests
         Func<Project, IReadOnlyList<string>>? validatePlausibility = null)
         => new(
             GetProject: () => project,
-            DeepCopyProject: deepCopyProject ?? (p => p),
+            DeepCopyProject: deepCopyProject ?? (p => new Project { Name = p.Name }),
+            ReplaceProject: replacement =>
+            {
+                state.ReplacedProject = replacement;
+                calls.Add("replace");
+            },
+            CreateRestorePoint: label => calls.Add($"restore:{label}"),
             GetReportDir: () => "reports",
             ExportReport: (log, _) =>
             {
@@ -172,8 +237,8 @@ public sealed class ImportRunWorkflowControllerTests
             },
             ShowPreview: showPreview ?? ((_, _) => false),
             ValidatePlausibility: validatePlausibility ?? (_ => Array.Empty<string>()),
-            DeduplicateAllPrimaryDamages: () => calls.Add("dedup"),
-            RunAfterImportAsync: label =>
+            DeduplicateAllPrimaryDamages: _ => calls.Add("dedup"),
+            RunAfterImportAsync: (_, label) =>
             {
                 calls.Add($"after:{label}");
                 return Task.CompletedTask;
@@ -202,6 +267,7 @@ public sealed class ImportRunWorkflowControllerTests
         public double ProgressPercent { get; set; }
         public bool CanCancel { get; set; }
         public bool IsImportInProgress { get; set; }
+        public Project? ReplacedProject { get; set; }
         public List<string> Statuses { get; } = new();
     }
 }

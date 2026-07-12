@@ -125,6 +125,13 @@ public sealed class AppSettings : IAiStartupSettings
     // Projektpfad, ueberschreibbar; fehlt der Pfad/das Manifest, ist der Schutz leer (kein Blocken).
     public string EvalSetRoot { get; set; } = @"C:\KI_BRAIN\eval_set";
 
+    // AP-06: Zuletzt beim Start tatsaechlich genutzter Wissensdatenbank-Ordner und dessen Sample-Zahl.
+    // Dienen NUR der Abweichungs-Warnung (KnowledgeRootGuard) — nicht der Pfad-Aufloesung. Weicht der
+    // Ordner beim naechsten Start ab oder ist die DB ploetzlich leer, warnt die App (Split-Brain-Schutz).
+    public string? LastKnownKnowledgeRoot { get; set; }
+    public int? LastKnownKnowledgeSampleCount { get; set; }
+    public string? KnowledgeRootPath { get; set; }
+
     // Amtlicher Abwasserkataster (SIA405-XTF) fuer die Haltungs-Zuordnung bei der Verteilung.
     // Schacht-Paar (auch vertauscht) wird hierueber der korrekten Haltung zugeordnet.
     // Fehlt die Datei, laeuft die Verteilung wie bisher (kein Kataster-Abgleich).
@@ -178,6 +185,7 @@ public sealed class AppSettings : IAiStartupSettings
     public DateTime? LastFullBackupUtc { get; set; }
     public string? LastFullBackupPath { get; set; }
     public long? LastFullBackupSizeBytes { get; set; }
+    public bool FullBackupIncludeProjectVideos { get; set; }
 
     public static string AppDataDir
         => AppDataPathResolver.Resolve(AppIdentity.ProductName);

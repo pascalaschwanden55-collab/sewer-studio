@@ -14,7 +14,8 @@ The sidecar requires Python 3.10 or higher.
     .\setup.ps1
     ```
     This will create a `.venv`, install all dependencies from `requirements-lock.txt`, and ensure the environment is deterministic.
-    The setup uses the PyTorch CUDA 12.1 package index for the pinned `torch` and `torchvision` wheels.
+    The setup uses the PyTorch CUDA 12.8 (`cu128`) nightly package index. This is
+    required for the RTX 5090 (`sm_120`); do not change it back to `cu121`.
 
 ## Usage
 

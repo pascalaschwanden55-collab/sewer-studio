@@ -23,8 +23,10 @@ public sealed class DirectoryMirror
     public const string TempSuffix = ".tmp_sewerbackup";
 
     private static readonly TimeSpan TimestampToleranz = TimeSpan.FromSeconds(2);
+    private const int MaxStableCopyAttempts = 3;
 
     private readonly string? _versionsStandName;
+    private readonly Action<string>? _afterTemporaryFileWritten;
 
     /// <param name="versionsStandName">
     /// Stand-Name dieses Laufs (aus <see cref="BackupVersionRetention.BuildStandName"/>):
@@ -32,7 +34,15 @@ public sealed class DirectoryMirror
     /// null = endgueltig loeschen/ueberschreiben (bewusste Entscheidung des Aufrufers).
     /// </param>
     public DirectoryMirror(string? versionsStandName)
-        => _versionsStandName = versionsStandName;
+        : this(versionsStandName, afterTemporaryFileWritten: null)
+    {
+    }
+
+    internal DirectoryMirror(string? versionsStandName, Action<string>? afterTemporaryFileWritten)
+    {
+        _versionsStandName = versionsStandName;
+        _afterTemporaryFileWritten = afterTemporaryFileWritten;
+    }
 
     /// <summary>Laufende Zaehler eines Spiegel-Laufs (ueber alle Quellen geteilt).</summary>
     public sealed class MirrorStats
@@ -41,6 +51,8 @@ public sealed class DirectoryMirror
         public int Copied;
         public int Unchanged;
         public int Deleted;
+        public int Verified;
+        public int DatabasesSnapshotted;
         /// <summary>Format "pfad: grund" — Fehler brechen den Lauf nicht ab.</summary>
         public List<string> Errors { get; } = new();
     }
@@ -66,6 +78,14 @@ public sealed class DirectoryMirror
             ct.ThrowIfCancellationRequested();
 
             var relToSource = Path.GetRelativePath(source.SourceRoot, file);
+            if (source.IsFileExcluded?.Invoke(relToSource) == true)
+                continue;
+
+            // Eine Online-Sicherung der Hauptdatenbank enthaelt bereits den konsistenten
+            // WAL-Stand. Live-WAL/SHM-Dateien duerfen nicht daneben kopiert werden.
+            if (SqliteSnapshotCopier.IsCompanionOfSqliteDatabase(file))
+                continue;
+
             var targetRel = Path.Combine(source.TargetRelativeRoot, relToSource);
             expectedTargets.Add(targetRel);
 
@@ -148,27 +168,16 @@ public sealed class DirectoryMirror
             var sourceInfo = new FileInfo(sourceFile);
             var targetInfo = new FileInfo(targetFile);
 
-            var sameLength = targetInfo.Exists && targetInfo.Length == sourceInfo.Length;
-            var timestampDifference = targetInfo.Exists
-                ? (targetInfo.LastWriteTimeUtc - sourceInfo.LastWriteTimeUtc).Duration()
-                : TimeSpan.MaxValue;
-            var unchanged = sameLength && timestampDifference == TimeSpan.Zero;
-
-            // FAT/exFAT runden Zeitstempel auf bis zu zwei Sekunden. Bei einem kleinen,
-            // aber echten Unterschied darf gleiche Dateigroesse allein nicht genuegen:
-            // SQLite-/JSON-Inhalte koennen sich ohne Groessenaenderung veraendern.
-            if (!unchanged
-                && sameLength
-                && timestampDifference <= TimestampToleranz)
+            if (SqliteSnapshotCopier.IsSqliteDatabase(sourceFile))
             {
-                unchanged = await FilesHaveSameContentAsync(
-                        sourceFile,
-                        targetFile,
-                        sourceInfo.Length,
-                        sourceInfo.LastWriteTimeUtc,
-                        ct)
+                await CopySqliteSnapshotAsync(
+                        sourceFile, sourceInfo, backupRoot, targetRel, targetFile,
+                        stats, onFileDone, ct)
                     .ConfigureAwait(false);
+                return;
             }
+
+            var unchanged = await IsUnchangedAsync(sourceInfo, targetInfo, ct).ConfigureAwait(false);
 
             if (unchanged)
             {
@@ -184,35 +193,185 @@ public sealed class DirectoryMirror
             var tempFile = targetFile + TempSuffix;
             try
             {
-                using (var src = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var dst = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await src.CopyToAsync(dst, ct).ConfigureAwait(false);
-                }
-
-                File.SetLastWriteTimeUtc(tempFile, sourceInfo.LastWriteTimeUtc);
+                var copiedInfo = await CopyNormalFileVerifiedAsync(sourceFile, tempFile, ct)
+                    .ConfigureAwait(false);
                 TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
                 File.Move(tempFile, targetFile, overwrite: true);
+
+                stats.Verified++;
+                stats.Copied++;
+                stats.BytesCopied += copiedInfo.Length;
+                onFileDone?.Invoke(sourceFile, copiedInfo.Length);
             }
             catch
             {
                 TryDeleteTemp(tempFile);
                 throw;
             }
-
-            stats.Copied++;
-            stats.BytesCopied += sourceInfo.Length;
-            onFileDone?.Invoke(sourceFile, sourceInfo.Length);
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException
+                                   or UnauthorizedAccessException
+                                   or PathTooLongException
+                                   or NotSupportedException
+                                   or Microsoft.Data.Sqlite.SqliteException)
         {
             stats.Errors.Add($"{sourceFile}: {ex.Message}");
         }
     }
+
+    internal static async Task<bool> IsUnchangedAsync(
+        FileInfo sourceInfo,
+        FileInfo targetInfo,
+        CancellationToken ct)
+    {
+        var sameLength = targetInfo.Exists && targetInfo.Length == sourceInfo.Length;
+        var timestampDifference = targetInfo.Exists
+            ? (targetInfo.LastWriteTimeUtc - sourceInfo.LastWriteTimeUtc).Duration()
+            : TimeSpan.MaxValue;
+        var unchanged = sameLength && timestampDifference == TimeSpan.Zero;
+
+        // FAT/exFAT runden Zeitstempel auf bis zu zwei Sekunden. Bei einem kleinen,
+        // aber echten Unterschied darf gleiche Dateigroesse allein nicht genuegen.
+        if (!unchanged && sameLength && timestampDifference <= TimestampToleranz)
+        {
+            unchanged = await FilesHaveSameContentAsync(
+                    sourceInfo.FullName,
+                    targetInfo.FullName,
+                    sourceInfo.Length,
+                    sourceInfo.LastWriteTimeUtc,
+                    ct)
+                .ConfigureAwait(false);
+        }
+
+        return unchanged;
+    }
+
+    private async Task CopySqliteSnapshotAsync(
+        string sourceFile,
+        FileInfo sourceInfo,
+        string backupRoot,
+        string targetRel,
+        string targetFile,
+        MirrorStats stats,
+        Action<string, long>? onFileDone,
+        CancellationToken ct)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+        var tempFile = targetFile + TempSuffix;
+        try
+        {
+            await SqliteSnapshotCopier.CreateVerifiedSnapshotAsync(
+                    sourceFile, tempFile, _afterTemporaryFileWritten, ct)
+                .ConfigureAwait(false);
+
+            var effectiveWriteTime = GetEffectiveSqliteWriteTimeUtc(sourceFile, sourceInfo.LastWriteTimeUtc);
+            File.SetLastWriteTimeUtc(tempFile, effectiveWriteTime);
+            var tempInfo = new FileInfo(tempFile);
+            stats.DatabasesSnapshotted++;
+            stats.Verified++;
+
+            if (File.Exists(targetFile)
+                && await FilesHaveSameContentAsync(
+                        tempFile, targetFile, tempInfo.Length, tempInfo.LastWriteTimeUtc, ct)
+                    .ConfigureAwait(false))
+            {
+                TryDeleteTemp(tempFile);
+                stats.Unchanged++;
+                onFileDone?.Invoke(sourceFile, sourceInfo.Length);
+                return;
+            }
+
+            TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
+            File.Move(tempFile, targetFile, overwrite: true);
+            stats.Copied++;
+            stats.BytesCopied += tempInfo.Length;
+            onFileDone?.Invoke(sourceFile, sourceInfo.Length);
+        }
+        catch
+        {
+            TryDeleteTemp(tempFile);
+            throw;
+        }
+    }
+
+    private async Task<VerifiedCopyInfo> CopyNormalFileVerifiedAsync(
+        string sourceFile,
+        string tempFile,
+        CancellationToken ct)
+    {
+        for (var attempt = 1; attempt <= MaxStableCopyAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var before = new FileInfo(sourceFile);
+            byte[] sourceHash;
+
+            using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
+            using (var src = new FileStream(
+                       sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
+                       bufferSize: 128 * 1024, useAsync: true))
+            using (var dst = new FileStream(
+                       tempFile, FileMode.Create, FileAccess.Write, FileShare.None,
+                       bufferSize: 128 * 1024, useAsync: true))
+            {
+                var buffer = new byte[128 * 1024];
+                int read;
+                while ((read = await src.ReadAsync(buffer.AsMemory(), ct).ConfigureAwait(false)) > 0)
+                {
+                    hash.AppendData(buffer, 0, read);
+                    await dst.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                }
+
+                await dst.FlushAsync(ct).ConfigureAwait(false);
+                dst.Flush(flushToDisk: true);
+                sourceHash = hash.GetHashAndReset();
+            }
+
+            _afterTemporaryFileWritten?.Invoke(tempFile);
+            var tempHash = await HashFileAsync(tempFile, FileShare.Read, ct).ConfigureAwait(false);
+            if (!sourceHash.AsSpan().SequenceEqual(tempHash))
+                throw new IOException("Vollstaendige Inhaltspruefung nach dem Kopieren fehlgeschlagen.");
+
+            var after = new FileInfo(sourceFile);
+            if (before.Length == after.Length && before.LastWriteTimeUtc == after.LastWriteTimeUtc)
+            {
+                File.SetLastWriteTimeUtc(tempFile, after.LastWriteTimeUtc);
+                return new VerifiedCopyInfo(after.Length);
+            }
+
+            TryDeleteTemp(tempFile);
+            if (attempt == MaxStableCopyAttempts)
+            {
+                throw new IOException(
+                    $"Datei wurde waehrend des Kopierens mehrfach geaendert ({MaxStableCopyAttempts} Versuche).");
+            }
+        }
+
+        throw new IOException("Datei konnte nicht stabil kopiert werden.");
+    }
+
+    private static DateTime GetEffectiveSqliteWriteTimeUtc(string databasePath, DateTime databaseWriteTimeUtc)
+    {
+        var walPath = databasePath + "-wal";
+        if (!File.Exists(walPath))
+            return databaseWriteTimeUtc;
+
+        var walWriteTime = File.GetLastWriteTimeUtc(walPath);
+        return walWriteTime > databaseWriteTimeUtc ? walWriteTime : databaseWriteTimeUtc;
+    }
+
+    private static async Task<byte[]> HashFileAsync(string path, FileShare share, CancellationToken ct)
+    {
+        await using var stream = new FileStream(
+            path, FileMode.Open, FileAccess.Read, share,
+            bufferSize: 128 * 1024, useAsync: true);
+        return await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false);
+    }
+
+    private sealed record VerifiedCopyInfo(long Length);
 
     private static async Task<bool> FilesHaveSameContentAsync(
         string sourceFile,

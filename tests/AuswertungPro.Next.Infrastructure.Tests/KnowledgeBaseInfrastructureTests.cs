@@ -51,7 +51,7 @@ public sealed class KnowledgeBaseInfrastructureTests
     }
 
     [Fact]
-    public void KnowledgeBaseContext_DoesNotDowngradeFutureUserVersion()
+    public void KnowledgeBaseContext_RejectsFutureUserVersion()
     {
         var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
         var dbPath = Path.Combine(root, "KnowledgeBase.db");
@@ -66,12 +66,8 @@ public sealed class KnowledgeBaseInfrastructureTests
                 setCmd.ExecuteNonQuery();
             }
 
-            using (var db = new KnowledgeBaseContext(dbPath))
-            using (var versionCmd = db.Connection.CreateCommand())
-            {
-                versionCmd.CommandText = "PRAGMA user_version;";
-                Assert.Equal(futureVersion, Convert.ToInt32(versionCmd.ExecuteScalar()));
-            }
+            var error = Assert.Throws<InvalidDataException>(() => new KnowledgeBaseContext(dbPath));
+            Assert.Contains("neueren Programmversion", error.Message);
         }
         finally
         {

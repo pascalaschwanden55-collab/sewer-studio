@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Backup;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
@@ -167,9 +168,7 @@ public static class KnowledgeBackupService
                     if (dir is not null)
                         Directory.CreateDirectory(dir);
 
-                    using var src = entry.Open();
-                    using var dest = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                    await src.CopyToAsync(dest, ct).ConfigureAwait(false);
+                    await CopyArchiveEntryAtomicallyAsync(entry, targetPath, ct).ConfigureAwait(false);
 
                     if (!existedBefore)
                         newlyCreatedFiles.Add(targetPath);
@@ -323,12 +322,12 @@ public static class KnowledgeBackupService
             {
                 var opts = new JsonSerializerOptions { WriteIndented = true };
                 var newJson = JsonSerializer.Serialize(samples, opts);
-                await File.WriteAllTextAsync(samplesPath, newJson, ct).ConfigureAwait(false);
+                await AtomicTextFileWriter.WriteAllTextAsync(samplesPath, newJson, ct).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] FramePath-Remap fehlgeschlagen: {ex.Message}");
+            throw new IOException("Frame-Pfade konnten nicht sicher gespeichert werden.", ex);
         }
     }
 
@@ -352,12 +351,12 @@ public static class KnowledgeBackupService
             var dir = Path.GetDirectoryName(targetPath);
             if (dir is not null) Directory.CreateDirectory(dir);
 
-            File.Copy(importedPath, targetPath, overwrite: true);
+            AtomicTextFileWriter.WriteAllText(targetPath, File.ReadAllText(importedPath));
             System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] training_center.json → {targetPath}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] training_center.json Sync fehlgeschlagen: {ex.Message}");
+            throw new IOException("Training-Center-Stand konnte nicht sicher gespeichert werden.", ex);
         }
     }
 
@@ -399,14 +398,50 @@ public static class KnowledgeBackupService
             if (changed)
             {
                 var newJson = JsonSerializer.Serialize(annotations, opts);
-                File.WriteAllText(annotationsPath, newJson);
+                AtomicTextFileWriter.WriteAllText(annotationsPath, newJson);
                 System.Diagnostics.Debug.WriteLine(
                     $"[KnowledgeBackup] Teacher-Annotationen remapped: {annotations.Count} Eintraege");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] Teacher-Remap fehlgeschlagen: {ex.Message}");
+            throw new IOException("Lehrer-Annotationen konnten nicht sicher gespeichert werden.", ex);
+        }
+    }
+
+    private static async Task CopyArchiveEntryAtomicallyAsync(
+        ZipArchiveEntry entry,
+        string targetPath,
+        CancellationToken ct)
+    {
+        var directory = Path.GetDirectoryName(targetPath)
+            ?? throw new InvalidOperationException($"Zielordner fehlt: {targetPath}");
+        Directory.CreateDirectory(directory);
+
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(targetPath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await using (var source = entry.Open())
+            await using (var destination = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                FileOptions.WriteThrough | FileOptions.Asynchronous))
+            {
+                await source.CopyToAsync(destination, ct).ConfigureAwait(false);
+                await destination.FlushAsync(ct).ConfigureAwait(false);
+            }
+
+            if (File.Exists(targetPath))
+                File.Replace(tempPath, targetPath, destinationBackupFileName: null, ignoreMetadataErrors: true);
+            else
+                File.Move(tempPath, targetPath);
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* best effort */ }
         }
     }
 

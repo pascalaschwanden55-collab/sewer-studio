@@ -10,6 +10,42 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class IbakExportImportServiceTests
 {
     [Fact]
+    public void ImportIbakExport_ReImportErsetztFindingsStattSieAnzuhaeufen()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-reimport-{Guid.NewGuid():N}");
+        var film = Path.Combine(root, "Film");
+        Directory.CreateDirectory(film);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var data = Path.Combine(film, "Daten.txt");
+        File.WriteAllText(data,
+            "100-200\n" +
+            "\t00:00:05    1.00 m  BCD     Schaden 1@!$ibak$!100-200$H\n" +
+            "\t00:00:10    2.00 m  BCE     Schaden 2@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+
+        try
+        {
+            var project = new Project();
+            var service = new IbakExportImportService();
+            Assert.True(service.ImportIbakExport(root, project).Ok);
+            Assert.Equal(2, Assert.Single(project.Data).VsaFindings.Count);
+
+            File.WriteAllText(data,
+                "100-200\n" +
+                "\t00:00:05    1.00 m  BCD     Schaden 1@!$ibak$!100-200$H\n",
+                Encoding.GetEncoding(1252));
+            Assert.True(service.ImportIbakExport(root, project).Ok);
+
+            var finding = Assert.Single(Assert.Single(project.Data).VsaFindings);
+            Assert.Equal("BCD", finding.KanalSchadencode);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void ImportIbakExport_NormalisiertSchachtSchachtHaltungUndFuehrtMitBestehendemRecordZusammen()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ibak-ss-{System.Guid.NewGuid():N}");

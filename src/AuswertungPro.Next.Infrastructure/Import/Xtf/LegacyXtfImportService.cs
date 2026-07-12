@@ -17,12 +17,39 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 public sealed class LegacyXtfImportService
 {
+    private readonly string? _archiveRoot;
+    private readonly string? _legacyArchiveRoot;
+
+    public LegacyXtfImportService()
+    {
+        // Direkte Parser-Nutzung (vor allem Tests) schreibt keine Dateien neben das Programm.
+        // Die App verwendet CreateForApplication() und bekommt den sicheren LocalAppData-Pfad.
+    }
+
+    public LegacyXtfImportService(string archiveRoot, string? legacyArchiveRoot = null)
+    {
+        _archiveRoot = string.IsNullOrWhiteSpace(archiveRoot)
+            ? throw new ArgumentException("Der XTF-Archivordner fehlt.", nameof(archiveRoot))
+            : Path.GetFullPath(archiveRoot);
+        _legacyArchiveRoot = string.IsNullOrWhiteSpace(legacyArchiveRoot)
+            ? null
+            : Path.GetFullPath(legacyArchiveRoot);
+    }
+
+    public static LegacyXtfImportService CreateForApplication()
+        => new(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio",
+                "Rohdaten",
+                "xtf_imports"),
+            Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports"));
+
     public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
     {
         var stats = new ImportStats();
 
-        var xtfTargetDir = Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports");
-        Directory.CreateDirectory(xtfTargetDir);
+        TryMigrateLegacyArchive(stats);
 
         var pathList = xtfPaths.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
         var fileIndex = 0;
@@ -44,10 +71,9 @@ public sealed class LegacyXtfImportService
 
                 var ext = Path.GetExtension(path).ToLowerInvariant();
 
-                // Kopiere Quelldatei ins Projektverzeichnis (Rohdaten/xtf_imports)
-                var xtfTargetPath = Path.Combine(xtfTargetDir, Path.GetFileName(path));
-                if (!File.Exists(xtfTargetPath))
-                    File.Copy(path, xtfTargetPath, overwrite: false);
+                // Rohdaten-Archiv ist nur ein Sicherheitsnetz. Ein Kopierfehler darf den
+                // fachlichen Import der Originaldatei nicht verhindern.
+                TryArchiveSource(path, stats);
 
                 if (ext == ".mdb")
                 {
@@ -85,6 +111,73 @@ public sealed class LegacyXtfImportService
         project.Dirty = true;
 
         return stats;
+    }
+
+    private void TryArchiveSource(string sourcePath, ImportStats stats)
+    {
+        if (string.IsNullOrWhiteSpace(_archiveRoot))
+            return;
+
+        try
+        {
+            Directory.CreateDirectory(_archiveRoot);
+            var targetPath = Path.Combine(_archiveRoot, Path.GetFileName(sourcePath));
+            if (!File.Exists(targetPath))
+                File.Copy(sourcePath, targetPath, overwrite: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException)
+        {
+            stats.Messages.Add(new ImportMessage
+            {
+                Level = "Warn",
+                Context = "XTF-ARCHIV",
+                Message = $"Rohdatenkopie fehlgeschlagen, Import laeuft weiter: {ex.Message}"
+            });
+        }
+    }
+
+    private void TryMigrateLegacyArchive(ImportStats stats)
+    {
+        if (string.IsNullOrWhiteSpace(_archiveRoot)
+            || string.IsNullOrWhiteSpace(_legacyArchiveRoot)
+            || !Directory.Exists(_legacyArchiveRoot)
+            || string.Equals(_archiveRoot, _legacyArchiveRoot, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        try
+        {
+            Directory.CreateDirectory(_archiveRoot);
+            foreach (var oldPath in Directory.EnumerateFiles(_legacyArchiveRoot))
+            {
+                var targetPath = BuildUniquePath(Path.Combine(_archiveRoot, Path.GetFileName(oldPath)));
+                File.Move(oldPath, targetPath);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException)
+        {
+            stats.Messages.Add(new ImportMessage
+            {
+                Level = "Warn",
+                Context = "XTF-ARCHIV",
+                Message = $"Altes XTF-Rohdatenarchiv konnte nicht vollstaendig verschoben werden: {ex.Message}"
+            });
+        }
+    }
+
+    private static string BuildUniquePath(string desiredPath)
+    {
+        if (!File.Exists(desiredPath))
+            return desiredPath;
+
+        var directory = Path.GetDirectoryName(desiredPath)!;
+        var name = Path.GetFileNameWithoutExtension(desiredPath);
+        var extension = Path.GetExtension(desiredPath);
+        for (var number = 1; ; number++)
+        {
+            var candidate = Path.Combine(directory, $"{name}_{number}{extension}");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
     }
 
     private static void ImportXtf(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)

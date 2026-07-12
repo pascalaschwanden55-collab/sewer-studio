@@ -7,6 +7,8 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 
 public sealed class JsonProjectRepository : IProjectRepository
 {
+    public const int CurrentVersion = 2;
+
     private static readonly JsonSerializerOptions Opt = new()
     {
         WriteIndented = true,
@@ -22,6 +24,20 @@ public sealed class JsonProjectRepository : IProjectRepository
 
             var json = File.ReadAllText(path);
             var project = JsonSerializer.Deserialize<Project>(json, Opt) ?? new Project();
+            if (project.Version > CurrentVersion)
+            {
+                return Result<Project>.Fail(
+                    "APP-VERSION",
+                    $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstuetzt bis {CurrentVersion}). " +
+                    "Bitte oeffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht veraendert.");
+            }
+
+            if (project.Version < CurrentVersion)
+            {
+                MigrateToCurrentVersion(project);
+                project.Dirty = true;
+            }
+
             project.EnsureMetadataDefaults();
             ProjectPhotoReferenceNormalizer.Normalize(project, path);
             return Result<Project>.Success(project);
@@ -30,6 +46,13 @@ public sealed class JsonProjectRepository : IProjectRepository
         {
             return Result<Project>.Fail("APP-LOAD", ex.Message);
         }
+    }
+
+    private static void MigrateToCurrentVersion(Project project)
+    {
+        // Version 1 -> 2 braucht keine Feldumbenennung. EnsureMetadataDefaults fuellt
+        // die hinzugekommenen Standardfelder nach dem Laden kontrolliert auf.
+        project.Version = CurrentVersion;
     }
 
     public Project DeepCopy(Project source)

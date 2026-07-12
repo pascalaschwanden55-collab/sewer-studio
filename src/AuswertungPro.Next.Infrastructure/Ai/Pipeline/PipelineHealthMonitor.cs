@@ -69,7 +69,9 @@ public sealed class PipelineHealthMonitor : IPipelineHealthMonitor
         else
         {
             var r = await _client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
-            bool healthy = r.Health is { Status: "ok" } health && health.HasRequiredModels;
+            bool healthy = r.Error is null
+                           && r.Health is { Status: "ok" } health
+                           && health.HasRequiredModels;
             var loaded = r.Health?.Gpu?.LoadedModels;
             bool Has(string k) => loaded != null
                 && loaded.Keys.Any(x => string.Equals(x, k, StringComparison.OrdinalIgnoreCase));
