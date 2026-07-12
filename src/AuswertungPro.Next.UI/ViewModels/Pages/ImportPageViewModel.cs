@@ -146,7 +146,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         TArg source,
         Func<TArg, Project, ImportRunContext, Result<ImportStats>> importFunc,
         bool dryRun = false,
-        Func<TArg, ImportRunContext, Task>? postImportAsync = null,
+        Func<TArg, Project, ImportRunContext, Task>? postImportAsync = null,
         bool saveProjectAfterCommit = false)
     {
         _importCts?.Dispose();
@@ -191,7 +191,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         string label,
         TArg source,
         Func<TArg, Project, ImportRunContext, Result<ImportStats>> importFunc,
-        Func<TArg, ImportRunContext, Task>? postImportAsync = null,
+        Func<TArg, Project, ImportRunContext, Task>? postImportAsync = null,
         bool saveProjectAfterCommit = false)
         => RunImportAsync(
             label,
@@ -291,13 +291,17 @@ public sealed partial class ImportPageViewModel : ObservableObject
         return Result<ImportStats>.Success(new ImportStats(totalFound, totalCreated, totalUpdated, totalErrors, totalUncertain, messages));
     }
 
-    private Task PostImportPdfAsync(string[] paths, ImportRunContext ctx)
+    private Task PostImportPdfAsync(string[] paths, Project project, ImportRunContext ctx)
     {
         if (!ctx.DryRun)
         {
-            StorePdfFiles(paths);
+            StorePdfFiles(paths, project);
             if (paths.Length > 0)
-                TrackImportSource(Path.GetDirectoryName(paths[0]) ?? paths[0], "PDF");
+                Services.ImportPostProcessingController.TrackImportSource(
+                    project,
+                    Path.GetDirectoryName(paths[0]) ?? paths[0],
+                    "PDF",
+                    DateTime.Now);
         }
 
         return Task.CompletedTask;
@@ -324,13 +328,17 @@ public sealed partial class ImportPageViewModel : ObservableObject
         return _sp.XtfImport.ImportXtfFiles(paths, project, ctx);
     }
 
-    private Task PostImportXtfAsync(string[] paths, ImportRunContext ctx)
+    private Task PostImportXtfAsync(string[] paths, Project project, ImportRunContext ctx)
     {
         if (!ctx.DryRun)
         {
-            StoreXtfFiles(paths);
+            StoreXtfFiles(paths, project);
             if (paths.Length > 0)
-                TrackImportSource(Path.GetDirectoryName(paths[0]) ?? paths[0], "XTF");
+                Services.ImportPostProcessingController.TrackImportSource(
+                    project,
+                    Path.GetDirectoryName(paths[0]) ?? paths[0],
+                    "XTF",
+                    DateTime.Now);
         }
 
         return Task.CompletedTask;
@@ -381,140 +389,30 @@ public sealed partial class ImportPageViewModel : ObservableObject
         return (folder, project, ctx) => svcImport(folder, project, ctx);
     }
 
-    private async Task PostImportFolderAsync(string folder, ImportRunContext ctx)
+    private async Task PostImportFolderAsync(string folder, Project project, ImportRunContext ctx)
     {
         if (ctx.DryRun) return;
 
-        // Import-Quelle im Projekt speichern (fuer Rueckverfolgbarkeit)
-        TrackImportSource(folder, ctx.Log.ImportType);
-
-        // PDFs im Quellordner lesen
-        await ImportPdfsFromSourceFolder(folder, ctx.Log.ImportType, ctx);
-
-        // Medien in Projektordner kopieren
-        await DistributeMediaToProjectFolder(ctx.Log.ImportType, ctx);
-    }
-
-    private void TrackImportSource(string sourcePath, string importType)
-    {
-        var project = _shell.Project;
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
-        var entry = $"{timestamp} | {importType} | {sourcePath}";
-
-        // Letzte Import-Quelle speichern
-        project.Metadata["ImportQuelle"] = sourcePath;
-        project.Metadata["ImportQuellTyp"] = importType;
-
-        // Import-Historie anfuegen (max. 20 Eintraege)
-        var historyKey = "ImportQuellenHistorie";
-        var existing = project.Metadata.TryGetValue(historyKey, out var h) ? h : "";
-        var lines = existing.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
-        lines.Add(entry);
-        if (lines.Count > 20)
-            lines = lines.Skip(lines.Count - 20).ToList();
-        project.Metadata[historyKey] = string.Join("\n", lines);
+        await Services.ImportPostProcessingController.RunAsync(
+            new Services.ImportPostProcessingRequest(
+                folder,
+                ctx.Log.ImportType,
+                project,
+                _shell.GetProjectFolder(),
+                _sp.PdfImport,
+                _sp.Diagnostics.ExplicitPdfToTextPath,
+                FillMissingOnly,
+                ctx,
+                _shell.CollectionLock),
+            new Services.ImportPostProcessingActions(
+                SetProgressText: value => ImportProgress = value,
+                SetProgressPercent: value => ImportProgressPercent = value,
+                AppendSummaryText: value => SummaryText += value,
+                AppendDetailsText: value => DetailsText += value,
+                SetStatus: _shell.SetStatus));
     }
 
     // ──── Post-Import Helpers ────
-
-    private async Task ImportPdfsFromSourceFolder(string sourceFolder, string sourceLabel, ImportRunContext? ctx = null)
-    {
-        ImportProgress = $"{sourceLabel}: PDF-Protokolle werden gelesen...";
-
-        var pdfResult = await Task.Run(() =>
-        {
-            var pdfFiles = EnumerateProjectFiles(sourceFolder, new[] { ".pdf" },
-                includeRoot: true,
-                includeDirs: new[] { "Report", "Reports", "PDF", "Dokumente" })
-                .ToArray();
-
-            if (pdfFiles.Length == 0)
-                return (0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden.");
-
-            var found = 0;
-            var updated = 0;
-            var errors = 0;
-
-            for (var i = 0; i < pdfFiles.Length; i++)
-            {
-                ctx?.CancellationToken.ThrowIfCancellationRequested();
-                var path = pdfFiles[i];
-                ctx?.Progress?.Report(new Application.Import.ImportProgress(
-                    "PDF-Scan", i + 1, pdfFiles.Length,
-                    $"PDF {i + 1}/{pdfFiles.Length}", Path.GetFileName(path)));
-                try
-                {
-                    var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
-                    if (res.Ok && res.Value is not null)
-                    {
-                        found += res.Value.Found;
-                        updated += res.Value.Updated;
-                    }
-                    else
-                    {
-                        errors++;
-                    }
-                }
-                catch (OperationCanceledException) { throw; }
-                catch
-                {
-                    errors++;
-                }
-            }
-
-            var msg = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler";
-            return (pdfFiles.Length, found, updated, msg);
-        });
-
-        SummaryText += $"\n{pdfResult.Item4}";
-        if (pdfResult.Item1 > 0)
-            DetailsText += $"\n\n{pdfResult.Item4}";
-    }
-
-    private async Task DistributeMediaToProjectFolder(string sourceLabel, ImportRunContext? ctx = null)
-    {
-        var projectFolder = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projectFolder))
-        {
-            DetailsText += "\nHinweis: Projekt bitte speichern, um Medien im Projektordner abzulegen.";
-            return;
-        }
-
-        var haltungCount = _shell.Project.Data.Count;
-        if (haltungCount == 0)
-        {
-            DetailsText += $"\n{sourceLabel}: Keine Haltungen im Projekt - Medienverteilung uebersprungen.";
-            return;
-        }
-
-        ImportProgress = $"{sourceLabel}: Fotos/PDFs von {haltungCount} Haltungen werden in Projektordner kopiert (Videos erst beim Verteilen)...";
-        var distService = new MediaDistributionService();
-        var distProgress = new Progress<MediaDistributionService.CopyProgress>(p =>
-        {
-            ImportProgress = $"Kopiere: {p.Processed}/{p.Total} ({p.CurrentFile})";
-            if (p.Total > 0)
-                ImportProgressPercent = (double)p.Processed / p.Total * 100.0;
-        });
-
-        var ct = ctx?.CancellationToken ?? CancellationToken.None;
-        var dryRun = ctx?.DryRun ?? false;
-        var distResult = await Task.Run(() =>
-            distService.DistributeImportedMedia(
-                projectFolder,
-                _shell.Project,
-                distProgress,
-                ct,
-                dryRun,
-                _shell.CollectionLock,
-                includeVideos: false));
-
-        var distSummary = $"\nMedien-Verteilung ({haltungCount} Haltungen):\n  {distResult.FilesCopied} Dateien kopiert\n  {distResult.FilesSkipped} uebersprungen\n  {distResult.Errors} Fehler";
-        SummaryText += distSummary;
-        if (distResult.Messages.Count > 0)
-            DetailsText += "\n\nMedien-Details:\n" + string.Join("\n", distResult.Messages.Take(50));
-
-        _shell.SetStatus($"{sourceLabel}-Projekt importiert und verteilt");
-    }
 
     /// <summary>
     /// Macht das aktuelle Projekt portabel: alle Medienpfade relativ auf die Projekt-Kopie,
@@ -800,149 +698,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
     }
 
-    // ──── Sidecar import (legacy, used internally) ────
-
-    private ImportSummary ImportProjectSidecars(string folder)
-    {
-        var summary = new ImportSummary();
-
-        var xtfFiles = EnumerateProjectFiles(folder, new[]
-            {
-                ".xtf", ".m150", ".mdb", ".xml"
-            },
-            includeRoot: true,
-            includeDirs: new[]
-            {
-                "XTF", "Data", "DB", "Import", "Imports"
-            })
-            .Where(p =>
-            {
-                var ext = Path.GetExtension(p);
-                return ext.Equals(".xtf", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".m150", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".mdb", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".xml", StringComparison.OrdinalIgnoreCase);
-            })
-            .ToArray();
-
-        summary.XtfFiles = xtfFiles.Length;
-        if (xtfFiles.Length > 0)
-        {
-            var res = _sp.XtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
-            if (!res.Ok || res.Value is null)
-            {
-                summary.XtfErrors++;
-                summary.Messages.Add($"XTF/M150/MDB/XML Import fehlgeschlagen: {res.ErrorMessage}");
-            }
-            else
-            {
-                summary.XtfFound += res.Value.Found;
-                summary.XtfUpdated += res.Value.Updated;
-                summary.XtfUncertain += res.Value.Uncertain;
-                summary.Messages.AddRange(res.Value.Messages.Take(20));
-            }
-
-            StoreXtfFiles(xtfFiles);
-        }
-        else
-        {
-            summary.Messages.Add("Keine XTF/M150/MDB/XML Dateien im Projektordner gefunden.");
-        }
-
-        var pdfFiles = EnumerateProjectFiles(folder, new[] { ".pdf" },
-            includeRoot: true,
-            includeDirs: new[]
-            {
-                "Report", "Reports", "PDF", "Dokumente"
-            })
-            .ToArray();
-        summary.PdfFiles = pdfFiles.Length;
-        if (pdfFiles.Length > 0)
-        {
-            foreach (var path in pdfFiles)
-            {
-                var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly);
-                if (!res.Ok || res.Value is null)
-                {
-                    summary.PdfErrors++;
-                    summary.Messages.Add($"PDF Import fehlgeschlagen: {Path.GetFileName(path)}: {res.ErrorMessage}");
-                }
-                else
-                {
-                    summary.PdfFound += res.Value.Found;
-                    summary.PdfUpdated += res.Value.Updated;
-                    summary.PdfUncertain += res.Value.Uncertain;
-                    summary.Messages.AddRange(res.Value.Messages.Take(5).Select(m => $"{Path.GetFileName(path)}: {m}"));
-                }
-            }
-
-            StorePdfFiles(pdfFiles);
-        }
-        else
-        {
-            summary.Messages.Add("Keine PDF Dateien im Projektordner gefunden.");
-        }
-
-        return summary;
-    }
-
-    // ──── Utilities ────
-
-    private static IEnumerable<string> EnumerateProjectFiles(
-        string root,
-        IReadOnlyCollection<string> extensions,
-        bool includeRoot,
-        IReadOnlyCollection<string> includeDirs)
-    {
-        var searched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (includeRoot && Directory.Exists(root))
-            searched.Add(root);
-
-        foreach (var dir in includeDirs)
-        {
-            var full = Path.Combine(root, dir);
-            if (Directory.Exists(full))
-                searched.Add(full);
-        }
-
-        if (searched.Count == 0)
-            searched.Add(root);
-
-        foreach (var baseDir in searched)
-        {
-            IEnumerable<string> files;
-            try
-            {
-                files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true);
-            }
-            catch
-            {
-                continue;
-            }
-
-            foreach (var file in files)
-            {
-                var ext = Path.GetExtension(file);
-                if (extensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
-                    yield return file;
-            }
-        }
-    }
-
-    private sealed class ImportSummary
-    {
-        public int XtfFiles { get; set; }
-        public int XtfFound { get; set; }
-        public int XtfUpdated { get; set; }
-        public int XtfUncertain { get; set; }
-        public int XtfErrors { get; set; }
-        public int PdfFiles { get; set; }
-        public int PdfFound { get; set; }
-        public int PdfUpdated { get; set; }
-        public int PdfUncertain { get; set; }
-        public int PdfErrors { get; set; }
-        public List<string> Messages { get; } = new();
-    }
+    // ──── Import report ────
 
     private void ExportImportSummary()
     {
@@ -1009,26 +765,21 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     // ──── File Storage ────
 
-    private void StoreXtfFiles(string[] paths)
+    private void StoreXtfFiles(string[] paths, Project project)
     {
-        StoreImportFiles(paths, "XTF", "XTF-Dateien");
+        StoreImportFiles(paths, project, "XTF", "XTF-Dateien");
     }
 
-    private void StorePdfFiles(string[] paths)
+    private void StorePdfFiles(string[] paths, Project project)
     {
-        StoreImportFiles(paths, "PDF", "PDF-Dateien");
+        StoreImportFiles(paths, project, "PDF", "PDF-Dateien");
     }
 
-    private void StoreTxtFiles(string[] paths)
-    {
-        StoreImportFiles(paths, "TXT", "TXT-Dateien");
-    }
-
-    private void StoreImportFiles(string[] paths, string importKind, string displayName)
+    private void StoreImportFiles(string[] paths, Project project, string importKind, string displayName)
     {
         var result = Services.StoredImportFileRegistry.Store(
             _sp.Settings.LastProjectPath,
-            _shell.Project.Metadata,
+            project.Metadata,
             importKind,
             paths);
 
@@ -1036,25 +787,6 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             LastResult += $"\nHinweis: Projekt bitte speichern, um {displayName} im Projekt abzulegen.";
         }
-    }
-
-    private static string BuildImportSummaryText(string sourceLabel, ImportStats source, ImportSummary sidecar)
-    {
-        var sb = new StringBuilder();
-        var importSource = source.Messages.FirstOrDefault(m =>
-            m.StartsWith("Importquelle:", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(importSource))
-            sb.AppendLine(importSource);
-
-        sb.AppendLine($"{sourceLabel}: Gefunden {source.Found}, Neu {source.Created}, Aktualisiert {source.Updated}, Unklar {source.Uncertain}, Fehler {source.Errors}");
-        sb.AppendLine($"XTF/M150/MDB/XML: Dateien {sidecar.XtfFiles}, Gefunden {sidecar.XtfFound}, Updates {sidecar.XtfUpdated}, Unklar {sidecar.XtfUncertain}, Fehler {sidecar.XtfErrors}");
-        sb.AppendLine($"PDF: Dateien {sidecar.PdfFiles}, Gefunden {sidecar.PdfFound}, Updates {sidecar.PdfUpdated}, Unklar {sidecar.PdfUncertain}, Fehler {sidecar.PdfErrors}");
-        return sb.ToString();
-    }
-
-    private static string BuildImportDetailsText(ImportSummary sidecar, ImportStats source)
-    {
-        return string.Join("\n", sidecar.Messages.Concat(source.Messages).Take(200));
     }
 
     /// <summary>

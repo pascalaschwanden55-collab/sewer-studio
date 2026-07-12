@@ -9,7 +9,7 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Manueller_Import_verwendet_MediaDistribution_ohne_Videokopie()
     {
-        var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "Services", "ImportPostProcessingController.cs");
 
         Assert.Contains("includeVideos: false", src);
         Assert.Contains("Fotos/PDFs", src);

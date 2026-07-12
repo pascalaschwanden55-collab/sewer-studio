@@ -44,7 +44,7 @@
 | # | Risiko | Warum kritisch |
 |---|---|---|
 | 1 | **Drei Bedienprüfungen des Proberestores sind noch offen:** PDF-Import, Video-Wiedergabe und KI-Lauf | Der technische Rückweg ist bewiesen, aber die komplette Nutzerkette noch nicht live abgenommen |
-| 2 | **14 Produktionsdateien mit mehr als 1.000 Zeilen** | Änderungen in diesen Klassen sind langsamer zu verstehen und erhöhen das Nebenwirkungsrisiko |
+| 2 | **10 Produktionsdateien mit mehr als 1.000 Zeilen** | Änderungen in diesen Klassen sind langsamer zu verstehen und erhöhen das Nebenwirkungsrisiko |
 | 3 | **Projektladen und das eigentliche Speichern laufen noch synchron** | Bei sehr großen Projekten kann die Oberfläche kurz stocken; schnelle Änderungen werden jetzt aber 750 ms gebündelt |
 | 4 | **Ein Diagnosepaket fehlt noch** | Wichtige Hintergrundfehler landen jetzt im Tageslog, aber die einfache Sammlung aller Diagnoseinformationen ist noch offen |
 | 5 | **Abbruch- und Langzeittests sind noch nicht vollständig** | Nachtlauf, voller Arbeitstag und einzelne Prozess-Kill-Szenarien müssen weiter praktisch geprüft werden |
@@ -65,8 +65,8 @@
 | Absturz & Wiederanlauf | A− | A | Globale Handler, gebündeltes AutoSave, Import-Rollback, Single-Instance und überwachte Hintergrundaufgaben vorhanden | Praktische Prozess-Kill-Handtests fehlen | AP-70 |
 | Import/Export-Robustheit | A− | A | Result-Pattern, Fehler-Isolation, atomisches Rohdatenarchiv, idempotenter IBAK-Re-Import und Restore-Point vor jedem echten Import | Bedienprüfung nach Restore bleibt offen | AP-17 Rest |
 | Datenkonsistenz | B+ | A− | Schema-Check, unbekannte Felder erhalten, Import auf DeepCopy, UserEdited-Schutz | Duplikat-Namen noch nicht an allen Eingabestellen blockiert | AP-20 |
-| Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; Sidecar-Version im Hauptpfad geprüft | 14 Großdateien und doppelt gepflegter C#/Python-Vertrag | AP-34 |
-| Codequalität | B | B+ | Neue Großdateien werden verhindert; sechs frühere Großdateien sind inzwischen unter 1.000 Zeilen | Noch 14 Produktionsdateien >1.000 Zeilen | AP-34 |
+| Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; Sidecar-Version im Hauptpfad geprüft | 10 Großdateien und doppelt gepflegter C#/Python-Vertrag | AP-34 |
+| Codequalität | B | B+ | Neue Großdateien werden verhindert; zehn frühere Großdateien sind inzwischen unter 1.000 Zeilen | Noch 10 Produktionsdateien >1.000 Zeilen | AP-34 |
 | Sicherheit | **A** | A | Sidecar-Token+Loopback, keine Secrets, ArgumentList, Sandbox | Nur P3-Randnotizen | keine (halten) |
 | Tests | B+ | A | Zuletzt 8.468 Tests vollständig grün bestätigt; Crash-/Schema-/Backup-Tests und pre-push-Gate | Kein zentraler CI-Lauf; Langzeit- und Abbruchabdeckung noch ergänzen | AP-41, AP-70 |
 | UI/Bedienbarkeit | B+ | A | Fehlerdialoge, Fortschritt, Abbruch und Dirty-Guard vorhanden | Synchrones Projektladen/-speichern kann bei großen Dateien blockieren | AP-50 |
@@ -131,7 +131,7 @@ Aktueller Stand: Alle vier Punkte dieser Tabelle sind inzwischen umgesetzt: Proj
 | P2-15 | SQLite-KB ohne Korruptions-/Recovery-Test; Cancellation mitten im Vorgang kaum getestet | Tests-Audit |
 | P2-16 ✅ | Versionsprüfung wird im Monitor und Haupt-Analysepfad erzwungen | AP-36 |
 | P2-17 ⚠️ | Neuer-PC-Anleitung vorhanden; externe Programme/Offline-Modelle bleiben einzurichten | AP-18, AP-61 |
-| P2-18 🔄 | God-Klassen werden schrittweise zerlegt; zusätzlich sind M150-Import, Mehrmodell-Analyse, DataPage-ViewModel und EvalSet-Auswertung unter 1.000 Zeilen. Die ausgelagerten Aufgaben sind getrennt testbar. | AP-34, Commit `6c656ef6` plus aktuelle Pakete |
+| P2-18 🔄 | God-Klassen werden schrittweise zerlegt; zusätzlich sind XML-Katalog, Importseite, Protokoll-PDF und Trainingszentrum unter 1.000 Zeilen. Die ausgelagerten Aufgaben sind getrennt testbar. | AP-34, Commit `6c656ef6` plus aktuelle Pakete |
 
 ### P3 — spätere Optimierung (Auswahl)
 
@@ -271,7 +271,7 @@ Jedes Paket ist einzeln an Codex/Opus übergebbar (Prompts in Kapitel 11). Aufw�
 | AP-31 ✅ | Fitness-Test-Whitelist für die 4 statischen Fassaden | P3 | umgesetzt |
 | AP-32 | `UI/Ai` in themenbezogene Unterordner sortieren (nur verschieben) | P3 | 2–3h |
 | AP-33 | `GetService()` fail-fast statt still null | P3 | 0.5h |
-| AP-34 🔄 | Großklassen schrittweise nach Verantwortung zerlegen; Altliste im Fitness-Test verkleinern | P2 | fortlaufend; Altliste von 20 auf 14 Dateien gesenkt. Zusätzlich sind M150-Import, Mehrmodell-Analyse, DataPage-ViewModel und EvalSet-Auswertung unter 1.000 Zeilen. |
+| AP-34 🔄 | Großklassen schrittweise nach Verantwortung zerlegen; Altliste im Fitness-Test verkleinern | P2 | fortlaufend; Altliste von 20 auf 10 Dateien gesenkt. Zusätzlich sind XML-Katalog, Importseite, Protokoll-PDF und Trainingszentrum unter 1.000 Zeilen. |
 | AP-35 ✅ | Hintergrundaufgaben sichtbar beobachten; lokale Server begrenzen und beim Stoppen abwarten | P2/P3 | umgesetzt 2026-07-12; Tageslog, 8-Client-Grenze, geordnetes Stoppen |
 | AP-36 ✅ | Detaillierten Sidecar-Health-/Versionscheck im echten Analyse-Hauptpfad verwenden | P2 | umgesetzt 2026-07-12; 2 neue Entscheidungstests |
 

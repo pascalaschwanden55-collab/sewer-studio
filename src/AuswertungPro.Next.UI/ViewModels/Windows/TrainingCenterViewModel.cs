@@ -36,6 +36,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private readonly TrainingCenterImportService _import;
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly IKnowledgeBaseDiagnosticsRunner _kbDiagnostics;
+    private readonly TrainingCenterKnowledgeBaseDashboardController _kbDashboard;
     private readonly AppSettings? _settings;
     private readonly IUiThread _uiThread;
 
@@ -264,62 +265,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             OnUi);
     }
 
-    private async Task RefreshKbStatusAsync()
-    {
-        await TrainingKnowledgeBaseStatusRefreshWorkflow.RunAsync(
-            TrainingKnowledgeBaseStatusRefreshRequestFactory.Create(
-                new TrainingKnowledgeBaseStatusRefreshRequestFactoryRequest(
-                    topCodes => _kbDiagnostics.ReadStatusAsync(topCodes),
-                    ApplyKbStatusPresentation,
-                    RefreshKbQualityAsync,
-                    OnUi)));
-    }
-
-    /// <summary>
-    /// Laedt KB-Qualitaetsmetriken: Coverage-Luecken, Accuracy, Stale Samples, Trend.
-    /// </summary>
-    private async Task RefreshKbQualityAsync()
-    {
-        await TrainingKnowledgeBaseQualityRefreshWorkflow.RunAsync(
-            TrainingKnowledgeBaseQualityRefreshRequestFactory.CreateWithDefaults(
-                new TrainingKnowledgeBaseQualityRefreshDefaultRequestFactoryRequest(
-                    () => _kbDiagnostics.ReadQualityAsync(),
-                    ApplyKbQualityPresentation,
-                    Log,
-                    OnUi)));
-    }
-
-    private void ApplyKbStatusPresentation(TrainingKnowledgeBaseStatusPresentation presentation)
-    {
-        TrainingKnowledgeBasePresentationController.ApplyStatus(
-            presentation,
-            new TrainingKnowledgeBaseStatusPresentationUi(
-                value => KbSampleCount = value,
-                value => KbErrorCount = value,
-                value => KbNewCount = value,
-                value => KbEmbeddingCount = value,
-                value => KbCodesCovered = value,
-                value => KbLastUpdate = value,
-                value => KbReadinessLabel = value,
-                value => KbReadinessBrush = value,
-                value => KbTopCodesText = value));
-    }
-
-    private void ApplyKbQualityPresentation(TrainingKnowledgeBaseQualityPresentation presentation)
-    {
-        TrainingKnowledgeBasePresentationController.ApplyQuality(
-            presentation,
-            new TrainingKnowledgeBaseQualityPresentationUi(
-                value => KbCoverageGapsText = value,
-                value => KbCoverageGapsCount = value,
-                value => KbAccuracyText = value,
-                value => KbStaleSampleCount = value,
-                value => KbTrendText = value,
-                value => KbTrendDirection = value));
-
-        // Sparkline-Daten laufen additiv neben dem bestehenden Controller-Fluss.
-        KbTrendSeries = presentation.TrendExactSeries ?? [];
-    }
+    private Task RefreshKbStatusAsync() => _kbDashboard.RefreshStatusAsync();
 
     public TrainingCenterViewModel(
         TrainingCenterStore store,
@@ -335,6 +281,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         _kbDiagnostics = kbDiagnostics;
         _settings = settings;
         _uiThread = uiThread ?? UiThreadDispatcher.Instance;
+        _kbDashboard = CreateKnowledgeBaseDashboard(kbDiagnostics);
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────

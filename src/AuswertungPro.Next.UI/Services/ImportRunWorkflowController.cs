@@ -9,7 +9,7 @@ public sealed record ImportRunWorkflowRequest<TSource>(
     TSource Source,
     Func<TSource, Project, ImportRunContext, Result<ImportStats>> Import,
     bool DryRun = false,
-    Func<TSource, ImportRunContext, Task>? PostImportAsync = null,
+    Func<TSource, Project, ImportRunContext, Task>? PostImportAsync = null,
     bool SaveProjectAfterCommit = false);
 
 public sealed record ImportRunWorkflowActions(
@@ -119,7 +119,7 @@ public static class ImportRunWorkflowController
             {
                 try
                 {
-                    await request.PostImportAsync(request.Source, ctx);
+                    await request.PostImportAsync(request.Source, targetProject, ctx);
                 }
                 catch (OperationCanceledException)
                 {

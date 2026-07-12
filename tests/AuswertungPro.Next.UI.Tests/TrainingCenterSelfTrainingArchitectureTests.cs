@@ -1163,8 +1163,17 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Windows",
             "TrainingCenterViewModel.cs"));
         var viewModelSource = source;
-        var refreshStatusSource = ExtractMethodBody(source, "private async Task RefreshKbStatusAsync()");
-        var refreshQualitySource = ExtractMethodBody(source, "private async Task RefreshKbQualityAsync()");
+        var dashboardPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingCenterKnowledgeBaseDashboardController.cs");
+        Assert.True(File.Exists(dashboardPath), dashboardPath);
+        var dashboardSource = File.ReadAllText(dashboardPath);
+        var refreshStatusSource = ExtractMethodBody(dashboardSource, "internal Task RefreshStatusAsync()");
+        var refreshQualitySource = ExtractMethodBody(dashboardSource, "internal Task RefreshQualityAsync()");
         var statusWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1200,9 +1209,10 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "TrainingKnowledgeBasePresentationController.cs");
-        var statusApplySource = ExtractMethodBody(source, "private void ApplyKbStatusPresentation(");
-        var qualityApplySource = ExtractMethodBody(source, "private void ApplyKbQualityPresentation(");
+        var statusApplySource = ExtractMethodBody(dashboardSource, "internal void ApplyStatus(");
+        var qualityApplySource = ExtractMethodBody(dashboardSource, "internal void ApplyQuality(");
 
+        Assert.Contains("_kbDashboard.RefreshStatusAsync()", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseStatusRefreshWorkflow.RunAsync(", refreshStatusSource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseStatusRefreshRequestFactory.Create(", refreshStatusSource, StringComparison.Ordinal);
         Assert.Contains("new TrainingKnowledgeBaseStatusRefreshWorkflowRequest(", statusFactorySource, StringComparison.Ordinal);

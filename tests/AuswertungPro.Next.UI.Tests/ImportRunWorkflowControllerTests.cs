@@ -59,9 +59,10 @@ public sealed class ImportRunWorkflowControllerTests
                     Uncertain: 0,
                     Messages: new[] { "m1", "m2" }));
             },
-            PostImportAsync: (_, ctx) =>
+            PostImportAsync: (_, target, ctx) =>
             {
-                calls.Add($"post:{ctx.DryRun}");
+                calls.Add($"post:{ctx.DryRun}:{ReferenceEquals(project, target)}");
+                target.Metadata["PostImport"] = "behalten";
                 return Task.CompletedTask;
             },
             SaveProjectAfterCommit: true);
@@ -77,7 +78,7 @@ public sealed class ImportRunWorkflowControllerTests
 
         Assert.Contains("import:source.pdf:False:False", calls);
         Assert.Contains("restore:PDF", calls);
-        Assert.Contains("post:False", calls);
+        Assert.Contains("post:False:False", calls);
         Assert.Contains("dedup", calls);
         Assert.Contains("after:PDF", calls);
         Assert.Contains("replace", calls);
@@ -95,6 +96,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Equal("PDF importiert", state.Statuses[^1]);
         Assert.NotNull(state.ReplacedProject);
         Assert.True(state.ReplacedProject!.Dirty);
+        Assert.Equal("behalten", state.ReplacedProject.Metadata["PostImport"]);
     }
 
     [Fact]
@@ -108,7 +110,7 @@ public sealed class ImportRunWorkflowControllerTests
             Label: "XTF",
             Source: "broken.xtf",
             Import: (_, _, _) => Result<ImportStats>.Fail("X", "kaputt"),
-            PostImportAsync: (_, _) =>
+            PostImportAsync: (_, _, _) =>
             {
                 calls.Add("post");
                 return Task.CompletedTask;
@@ -151,7 +153,7 @@ public sealed class ImportRunWorkflowControllerTests
                 return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, Array.Empty<string>()));
             },
             DryRun: true,
-            PostImportAsync: (_, ctx) =>
+            PostImportAsync: (_, _, ctx) =>
             {
                 calls.Add($"post:{ctx.DryRun}");
                 return Task.CompletedTask;

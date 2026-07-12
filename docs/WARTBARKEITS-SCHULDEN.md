@@ -68,8 +68,21 @@ Fünfte Aufräumrunde erledigt am 2026-07-12:
 - Die öffentlichen Datenmodelle der EvalSet-Auswertung liegen getrennt von den
   Berechnungen in `EvalSetBenchmarkModels`. Die Logikdatei sank auf 910 Zeilen.
 
-Damit sank die feste Altliste seit Beginn von 20 auf 14 Produktionsdateien mit
-mehr als 1.000 Zeilen. Die übrigen 14 Dateien bleiben bewusste, offene
+Sechste Aufräumrunde erledigt am 2026-07-12:
+
+- Das WinCan-Kataloglesen liegt in `WinCanCatalogXmlParser`. Der öffentliche
+  `XmlCodeCatalogProvider` sank auf 821 Zeilen.
+- Sammeln, Nummerieren und Zeichnen der Protokollfotos liegt in
+  `ProtocolPdfPhotoSection`. Der PDF-Hauptbaustein sank auf 950 Zeilen.
+- Importhistorie, PDF-Nachlauf und Medienverteilung liegen in
+  `ImportPostProcessingController`. Das Import-ViewModel sank auf 827 Zeilen.
+- Die Wissensdatenbank-Anzeige des Trainingszentrums liegt in einem eigenen
+  Dashboard-Controller. Das ViewModel sank auf 984 Zeilen.
+- Der Import-Nachlauf arbeitet nun auf der neuen Projektkopie. Dadurch bleiben
+  Metadaten und nachträglich zugeordnete Daten nach dem Projektwechsel erhalten.
+
+Damit sank die feste Altliste seit Beginn von 20 auf 10 Produktionsdateien mit
+mehr als 1.000 Zeilen. Die übrigen 10 Dateien bleiben bewusste, offene
 Wartbarkeitsschulden und werden einzeln weiter zerlegt.
 
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann
