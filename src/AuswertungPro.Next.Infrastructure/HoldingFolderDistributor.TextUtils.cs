@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -136,21 +135,4 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static string EnsureUniquePath(string path, bool overwrite)
-    {
-        if (overwrite || !File.Exists(path))
-            return path;
-
-        var dir = Path.GetDirectoryName(path) ?? "";
-        var name = Path.GetFileNameWithoutExtension(path);
-        var ext = Path.GetExtension(path);
-        for (var i = 1; i < 1000; i++)
-        {
-            var candidate = Path.Combine(dir, $"{name}_{i.ToString("00", CultureInfo.InvariantCulture)}{ext}");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
-
-        throw new IOException($"Unable to find free filename for {path}");
-    }
 }
