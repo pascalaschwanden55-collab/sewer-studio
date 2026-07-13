@@ -12,7 +12,7 @@ except ImportError:
     from qgis.PyQt.QtWidgets import QAction
 
 from qgis.PyQt.QtCore import QRectF, QSettings, QTimer, Qt
-from qgis.PyQt.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap
+from qgis.PyQt.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QDockWidget,
@@ -32,9 +32,13 @@ from qgis.core import (
     Qgis,
     QgsCoordinateTransform,
     QgsMessageLog,
+    QgsPalLayerSettings,
     QgsProject,
     QgsRectangle,
+    QgsTextBufferSettings,
+    QgsTextFormat,
     QgsVectorLayer,
+    QgsVectorLayerSimpleLabeling,
 )
 
 
@@ -507,6 +511,7 @@ class SewerStudioBridgeDock(QDockWidget):
                     updated += 1
 
             if layer is not None:
+                self._ensure_schacht_nr_labels(layer_key, layer)
                 loaded += 1
                 # Zoomen bei jedem Auswahl-Klick in SewerStudio (neuer Stempel) oder
                 # bei Wechsel — aber nie einfach bei jedem Poll. Haltung und Schacht
@@ -616,6 +621,63 @@ class SewerStudioBridgeDock(QDockWidget):
 
         QgsProject.instance().addMapLayer(layer)
         return layer
+
+    def _ensure_schacht_nr_labels(self, layer_key, layer):
+        """Zeigt die Sewer-Studio-Zeilennummer am Schacht-Punkt an.
+
+        Eine bereits vorhandene QGIS-Beschriftung bleibt unveraendert. Die Markierung
+        am Layer verhindert zudem, dass ein Nutzer-Deaktivieren beim naechsten Poll
+        sofort wieder rueckgaengig gemacht wird.
+        """
+        if layer_key != "schacht_sanierungstyp":
+            return
+
+        marker = "sewerstudio/schacht_nr_labels_initialized"
+        initialized = layer.customProperty(marker, False)
+        if initialized in (True, 1, "1", "true", "True"):
+            return
+
+        if not any(field.name().lower() == "nr" for field in layer.fields()):
+            return
+
+        if layer.labelsEnabled():
+            layer.setCustomProperty(marker, True)
+            return
+
+        try:
+            settings = QgsPalLayerSettings()
+            settings.fieldName = "nr"
+            settings.isExpression = False
+            settings.dist = 2.0
+
+            # QGIS 3 und 4 benennen die Platzierungs-Konstante unterschiedlich.
+            label_placement = getattr(getattr(Qgis, "LabelPlacement", None), "AroundPoint", None)
+            if label_placement is None:
+                label_placement = QgsPalLayerSettings.AroundPoint
+            settings.placement = label_placement
+
+            font = QFont("Arial")
+            font.setBold(True)
+            text_format = QgsTextFormat()
+            text_format.setFont(font)
+            text_format.setSize(10)
+            text_format.setColor(QColor("#202020"))
+
+            # Weisser Rand wie bei den Haltungsnummern: auch auf Luftbild und
+            # farbigen Leitungen gut lesbar.
+            buffer_settings = QgsTextBufferSettings()
+            buffer_settings.setEnabled(True)
+            buffer_settings.setSize(1.2)
+            buffer_settings.setColor(QColor("#FFFFFF"))
+            text_format.setBuffer(buffer_settings)
+
+            settings.setFormat(text_format)
+            layer.setLabeling(QgsVectorLayerSimpleLabeling(settings))
+            layer.setLabelsEnabled(True)
+            layer.setCustomProperty(marker, True)
+            layer.triggerRepaint()
+        except Exception as ex:
+            self._log_warning(f"Schacht-Nr.-Beschriftung konnte nicht gesetzt werden: {ex}")
 
     @staticmethod
     def _find_layer_named(layer_name):

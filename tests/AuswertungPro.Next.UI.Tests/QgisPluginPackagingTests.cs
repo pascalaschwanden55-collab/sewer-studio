@@ -132,6 +132,20 @@ public sealed class QgisPluginPackagingTests
     }
 
     [Fact]
+    public void Plugin_beschriftet_schacht_live_layer_mit_sewerstudio_zeilennummer()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        Assert.Contains("_ensure_schacht_nr_labels", source);
+        Assert.Contains("layer_key != \"schacht_sanierungstyp\"", source);
+        Assert.Contains("settings.fieldName = \"nr\"", source);
+        Assert.Contains("QgsVectorLayerSimpleLabeling", source);
+        Assert.Contains("QgsTextBufferSettings", source);
+        Assert.Contains("layer.labelsEnabled()", source);
+        Assert.Contains("schacht_nr_labels_initialized", source);
+    }
+
+    [Fact]
     public void Plugin_haelt_zoom_ziel_layer_robust_gegen_leer_erstladung()
     {
         var source = ReadPluginFile("sewerstudio_bridge.py");
