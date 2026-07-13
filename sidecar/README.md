@@ -25,6 +25,14 @@ Start the sidecar with:
 ```
 The sidecar will start on `http://127.0.0.1:8100`. Sewer-Studio automatically detects and connects to it if it is running.
 
+## Security boundary
+
+Every request requires the secret `X-Sidecar-Token`. This token is the actual access control.
+The additional trusted-host check only protects local browser sessions against DNS rebinding;
+a `Host` header is client-controlled and must never be treated as authentication. Even when
+`SEWER_SIDECAR_TRUSTED_HOSTS=*` is configured for diagnostics, requests without the correct
+token remain blocked.
+
 ## TensorRT Engine
 
 To rebuild the local YOLO TensorRT engine on the target GPU machine:

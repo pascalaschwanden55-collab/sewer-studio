@@ -30,3 +30,19 @@ def test_auth_token_rejects_missing_or_wrong_token(monkeypatch):
     assert missing.status_code == 401
     assert wrong.status_code == 401
     assert ok.status_code == 200
+
+
+def test_trusted_host_allow_all_does_not_bypass_auth_token(monkeypatch):
+    from sidecar.config import settings
+    from sidecar.main import app
+
+    monkeypatch.setattr(settings, "trusted_hosts", "*", raising=False)
+    monkeypatch.setattr(settings, "auth_token", "secret-token", raising=False)
+
+    client = TestClient(app, base_url="http://attacker-controlled.example")
+
+    missing = client.get("/health")
+    correct = client.get("/health", headers={"X-Sidecar-Token": "secret-token"})
+
+    assert missing.status_code == 401
+    assert correct.status_code == 200

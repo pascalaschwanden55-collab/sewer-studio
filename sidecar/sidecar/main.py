@@ -105,6 +105,11 @@ def _normalize_host(host_header: str | None) -> str:
 
 
 def _trusted_hosts() -> set[str]:
+    """Hosts fuer den DNS-Rebinding-Schutz, nicht fuer die Anmeldung.
+
+    Der Host-Header kommt vom Client und ist deshalb keine verlaessliche Identitaet.
+    Den Zugriff schuetzt ausschliesslich das verpflichtende Sidecar-Token.
+    """
     raw = settings.trusted_hosts or ""
     return {
         item.strip().lower()
@@ -135,6 +140,8 @@ def _auth_token() -> str:
 
 @app.middleware("http")
 async def enforce_loopback_security(request: Request, call_next):
+    # Erste Schranke gegen Browser-DNS-Rebinding. Das ist bewusst keine Authentifizierung:
+    # Auch ein erlaubter oder manipulierter Host muss danach das geheime Token vorweisen.
     trusted = _trusted_hosts()
     host = _normalize_host(request.headers.get("host"))
     if "*" not in trusted and host not in trusted:
