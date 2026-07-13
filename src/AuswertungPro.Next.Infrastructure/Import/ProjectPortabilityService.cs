@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -17,7 +18,7 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// - Absolute Pfade INNERHALB des Projekts: einfach relativ machen.
 /// Danach loest beim Öffnen alles relativ zum Projektordner auf, egal auf welchem PC/Laufwerk.
 /// </summary>
-public sealed class ProjectPortabilityService
+public sealed class ProjectPortabilityService : IProjectPortabilityService
 {
     public sealed record Result(int RelinkedPaths, int FotosCopied, int Unresolved, IReadOnlyList<string> Messages);
 
@@ -87,6 +88,19 @@ public sealed class ProjectPortabilityService
             project.Dirty = true;
 
         return new Result(relinked, fotosCopied, unresolved, messages);
+    }
+
+    ProjectPortabilityResult IProjectPortabilityService.MakePortable(
+        string projectFolder,
+        Project project,
+        bool dryRun)
+    {
+        var result = MakePortable(projectFolder, project, dryRun);
+        return new ProjectPortabilityResult(
+            result.RelinkedPaths,
+            result.FotosCopied,
+            result.Unresolved,
+            result.Messages);
     }
 
     private static string? ResolveHoldingFolder(string projectFolder, string san)

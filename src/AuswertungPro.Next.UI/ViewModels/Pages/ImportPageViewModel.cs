@@ -435,8 +435,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
 
         ImportProgress = "Projekt portabel machen: Medienpfade relativ verlinken, Fotos einsammeln...";
-        var svc = new ProjectPortabilityService();
-        var result = await Task.Run(() => svc.MakePortable(projectFolder!, _shell.Project));
+        var result = await Task.Run(() => _sp.ProjectPortability.MakePortable(projectFolder!, _shell.Project));
         ImportProgress = "";
 
         _ = _shell.TrySaveProject();
