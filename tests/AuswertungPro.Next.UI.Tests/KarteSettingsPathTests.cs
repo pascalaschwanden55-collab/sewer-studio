@@ -1,8 +1,7 @@
-using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -10,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class KarteSettingsPathTests
 {
     [Fact]
-    public void KarteViewModel_NutztSettingsPfadeAusServiceProvider()
+    public void KarteViewModel_Nutzt_uebergebene_Einstellungspfade()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         var explicitFile = Path.Combine(dir, "netz.xtf");
@@ -18,18 +17,16 @@ public sealed class KarteSettingsPathTests
         File.WriteAllText(explicitFile, "<TRANSFER />");
         Directory.CreateDirectory(tileDir);
 
-        using var loggerFactory = LoggerFactory.Create(_ => { });
         var settings = new AppSettings
         {
             AbwasserkatasterXtfPath = explicitFile,
             OfflineBasemapPath = tileDir
         };
-        var services = new ServiceProvider(
+        var viewModel = new KarteViewModel(
+            shell: null!,
             settings,
-            new DiagnosticsOptions(),
-            loggerFactory.CreateLogger("test"),
-            loggerFactory);
-        var viewModel = new KarteViewModel(shell: null!, services);
+            new NetworkFeatureCache(),
+            playVideo: (_, _) => { });
 
         Assert.Equal(settings.AbwasserkatasterXtfPath, ReadPrivateStringProperty(viewModel, "XtfPath"));
         Assert.Equal(settings.OfflineBasemapPath, ReadPrivateStringProperty(viewModel, "OfflineBasemapPath"));
@@ -44,18 +41,16 @@ public sealed class KarteSettingsPathTests
         var expected = Path.Combine(dir.Path, "Abwasserkataster_Uri_korrigiert.xtf");
         File.WriteAllText(expected, "<TRANSFER />");
 
-        using var loggerFactory = LoggerFactory.Create(_ => { });
         var settings = new AppSettings
         {
             AbwasserkatasterXtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf",
             KantonUriXtfDirectory = dir.Path
         };
-        var services = new ServiceProvider(
+        var viewModel = new KarteViewModel(
+            shell: null!,
             settings,
-            new DiagnosticsOptions(),
-            loggerFactory.CreateLogger("test"),
-            loggerFactory);
-        var viewModel = new KarteViewModel(shell: null!, services);
+            new NetworkFeatureCache(),
+            playVideo: (_, _) => { });
 
         Assert.Equal(expected, ReadPrivateStringProperty(viewModel, "XtfPath"));
     }
@@ -67,6 +62,17 @@ public sealed class KarteSettingsPathTests
 
         Assert.False(string.IsNullOrWhiteSpace(settings.QgisTilesPath));
         Assert.Contains("tiles_test", settings.QgisTilesPath, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void KarteViewModel_speichert_keinen_ServiceProvider_als_Feld()
+    {
+        var fields = typeof(KarteViewModel).GetFields(
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public);
+
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
     }
 
     private static string? ReadPrivateStringProperty(object instance, string name)

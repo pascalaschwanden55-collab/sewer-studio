@@ -5,7 +5,7 @@ using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
-using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Services;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Layers;
@@ -24,14 +24,16 @@ public sealed partial class KarteViewModel : ObservableObject
     private const int MaxRenderFeatures = 8000;
 
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _services;
+    private readonly AppSettings _settings;
+    private readonly NetworkFeatureCache _networkFeatures;
+    private readonly Action<string, HaltungRecord> _playVideo;
 
-    private string XtfPath => KatasterXtfPathResolver.Resolve(_services.Settings);
+    private string XtfPath => KatasterXtfPathResolver.Resolve(_settings);
 
     // Offline-Hintergrundkarten (Satellit/AV im Programmordner). Resolver toleriert einen
     // veralteten gespeicherten Pfad (z.B. "...\basemap_tiles\uri") und nimmt dann den
     // Elternordner, der die Unterordner satellit/av enthaelt.
-    private string? OfflineBasemapPath => OfflineBasemapBaseResolver.Resolve(_services.Settings.OfflineBasemapPath);
+    private string? OfflineBasemapPath => OfflineBasemapBaseResolver.Resolve(_settings.OfflineBasemapPath);
 
     // Skalierung: false = VSA-Skala (0=gut); true = EZ-Skala (0=schlecht/4=gut)
     private bool _invertiert = true;
@@ -86,9 +88,24 @@ public sealed partial class KarteViewModel : ObservableObject
     public IRelayCommand SchliesseInfoCommand { get; }
 
     public KarteViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(
+            shell,
+            settings: services.Settings,
+            networkFeatures: services.NetworkFeatures,
+            playVideo: KarteVideoLauncher.Create(services))
+    {
+    }
+
+    public KarteViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        NetworkFeatureCache networkFeatures,
+        Action<string, HaltungRecord> playVideo)
     {
         _shell = shell;
-        _services = services;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _networkFeatures = networkFeatures ?? throw new ArgumentNullException(nameof(networkFeatures));
+        _playVideo = playVideo ?? throw new ArgumentNullException(nameof(playVideo));
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
         SchliesseInfoCommand = new RelayCommand(() =>
@@ -128,8 +145,8 @@ public sealed partial class KarteViewModel : ObservableObject
         {
             _kondition = HaltungConditionProvider.Build(_shell.Project.Data);
             _dnByName = HaltungDnProvider.Build(_shell.Project.Data);
-            await Task.Run(() => _services.NetworkFeatures.EnsureBuilt(XtfPath, _kondition, _invertiert, _dnByName));
-            HasNetworkGeometry = _services.NetworkFeatures.HasGeometry;
+            await Task.Run(() => _networkFeatures.EnsureBuilt(XtfPath, _kondition, _invertiert, _dnByName));
+            HasNetworkGeometry = _networkFeatures.HasGeometry;
 
             _netzLayer = new MemoryLayer("Netz") { Features = Array.Empty<GeometryFeature>(), Style = null };
             map.Layers.Add(_netzLayer);
@@ -156,7 +173,7 @@ public sealed partial class KarteViewModel : ObservableObject
             map.Layers.Add(_highlightLayer);
 
             StatusText = HasNetworkGeometry
-                ? $"{_services.NetworkFeatures.Count} Haltungen geladen"
+                ? $"{_networkFeatures.Count} Haltungen geladen"
                 : $"Netz-Datei nicht gefunden: {XtfPath}";
         }
         catch (Exception ex)
@@ -226,7 +243,7 @@ public sealed partial class KarteViewModel : ObservableObject
         var xtfForManholes = XtfPath;
         _ = Task.Run(() =>
         {
-            try { _services.NetworkFeatures.EnsureManholesBuilt(xtfForManholes); }
+            try { _networkFeatures.EnsureManholesBuilt(xtfForManholes); }
             catch { /* Schaechte optional — Karte laeuft unabhaengig weiter */ }
             System.Windows.Application.Current?.Dispatcher.InvokeAsync(() => RefreshVisibleNetworkLayer(force: true));
         });
@@ -279,7 +296,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
     public void ZoomToNetworkAndRefresh()
     {
-        if (_map is null || _services.NetworkFeatures.NetworkBounds is not { } nb)
+        if (_map is null || _networkFeatures.NetworkBounds is not { } nb)
         {
             CenterOnUriAndRefresh();
             return;
@@ -293,7 +310,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
     public void RefreshVisibleNetworkLayer(bool force)
     {
-        if (_map is null || !_services.NetworkFeatures.HasGeometry)
+        if (_map is null || !_networkFeatures.HasGeometry)
             return;
 
         var viewport = TryGetViewportBounds(_map);
@@ -401,7 +418,7 @@ public sealed partial class KarteViewModel : ObservableObject
                                     welt.X + fangradius, welt.Y + fangradius);
 
             var beste = double.PositiveInfinity;
-            foreach (var kandidat in _services.NetworkFeatures.QueryVisible(box))
+            foreach (var kandidat in _networkFeatures.QueryVisible(box))
             {
                 if (kandidat.Geometry is not LineString linie)
                     continue;
@@ -451,7 +468,7 @@ public sealed partial class KarteViewModel : ObservableObject
             && _loadedResolution == resolution)
             return false;
 
-        var alle = _services.NetworkFeatures.QueryVisible(paddedViewport);
+        var alle = _networkFeatures.QueryVisible(paddedViewport);
         var (features, ausgeduennt) = NetzLevelOfDetail.Thin(alle, MaxRenderFeatures);
         _netzLayer.Features = features;
         _netzLayer.DataHasChanged();
@@ -460,7 +477,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
         StatusText = ausgeduennt
             ? $"Übersicht vereinfacht: {features.Count} von {alle.Count} Haltungen gezeigt — zum Detail reinzoomen"
-            : $"{features.Count} von {_services.NetworkFeatures.Count} Haltungen im sichtbaren Ausschnitt";
+            : $"{features.Count} von {_networkFeatures.Count} Haltungen im sichtbaren Ausschnitt";
         return true;
     }
 
@@ -481,7 +498,7 @@ public sealed partial class KarteViewModel : ObservableObject
             return true;
         }
 
-        var schaechte = _services.NetworkFeatures.QueryVisibleManholes(paddedViewport);
+        var schaechte = _networkFeatures.QueryVisibleManholes(paddedViewport);
         _schachtLayer.Features = schaechte;
         _schachtLayer.DataHasChanged();
         return true;
@@ -528,7 +545,7 @@ public sealed partial class KarteViewModel : ObservableObject
         if (_map is null || string.IsNullOrWhiteSpace(name))
             return;
 
-        if (_services.NetworkFeatures.TryGetBounds(name) is not { } b)
+        if (_networkFeatures.TryGetBounds(name) is not { } b)
             return;
 
         // Auswahl spiegeln (ohne Rueckmeldung -> keine Schleife) + Infopanel fuellen.
@@ -543,13 +560,13 @@ public sealed partial class KarteViewModel : ObservableObject
         // Auch bei Auswahl anderswo (Liste/QGIS-Bridge): die Haltung auf der Karte aufblinken lassen.
         PulseHaltung(name);
         // Und ihre Schadenspunkte zeigen (Geometrie aus dem Cache).
-        ZeigeSchaedenFuerHaltung(name, _services.NetworkFeatures.TryGetGeometry(name));
+        ZeigeSchaedenFuerHaltung(name, _networkFeatures.TryGetGeometry(name));
         _map.RefreshGraphics();
     }
 
     /// <summary>Sucht die Geometrie der Haltung im Cache und laesst sie pulsierend aufblinken.</summary>
     private void PulseHaltung(string? haltungsname)
-        => PulseGeometry(_services.NetworkFeatures.TryGetGeometry(haltungsname));
+        => PulseGeometry(_networkFeatures.TryGetGeometry(haltungsname));
 
     // Startet die Puls-Animation auf dem Hervorhebungs-Layer fuer die gegebene Geometrie.
     private void PulseGeometry(Geometry? geometry)
@@ -665,18 +682,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
         try
         {
-            var options = PlayerWindowOptions.FromSettings(_services.Settings);
-
-            var window = new Views.Windows.PlayerWindow(
-                resolved,
-                options,
-                serviceProvider: _services,
-                haltungId: record.Id.ToString(),
-                haltungRecord: record)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow
-            };
-            window.Show();
+            _playVideo(resolved, record);
         }
         catch (Exception ex)
         {
@@ -688,5 +694,5 @@ public sealed partial class KarteViewModel : ObservableObject
     // Video-Pfad aufloesen: absolut ODER relativ zum Projektordner — wiederverwendeter
     // Resolver der Datenseite statt eigener File.Exists-Logik hier (behebt relative Links).
     private string? ResolveExistingPath(string? path)
-        => DataPage.DataPageProtocolPathResolver.ResolveExistingPath(path, _services.Settings.LastProjectPath);
+        => DataPage.DataPageProtocolPathResolver.ResolveExistingPath(path, _settings.LastProjectPath);
 }

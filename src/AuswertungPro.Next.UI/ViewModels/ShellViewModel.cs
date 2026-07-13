@@ -133,7 +133,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 costFieldSync: _sp.CostFieldSync), canOpenWithoutProject: true),
             new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
             {
-                DataContext = new Pages.KarteViewModel(this, _sp)
+                DataContext = new Pages.KarteViewModel(
+                    this,
+                    settings: _sp.Settings,
+                    networkFeatures: _sp.NetworkFeatures,
+                    playVideo: KarteVideoLauncher.Create(_sp))
             }),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
                 getProject: () => Project,

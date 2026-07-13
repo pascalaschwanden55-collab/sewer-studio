@@ -52,7 +52,8 @@ public sealed class KarteDockingTests
             "src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs"));
 
         Assert.Contains("new AuswertungPro.Next.UI.Views.Pages.KartePage", source);
-        Assert.Contains("DataContext = new Pages.KarteViewModel(this, _sp)", source);
+        Assert.Contains("DataContext = new Pages.KarteViewModel(", source);
+        Assert.Contains("networkFeatures: _sp.NetworkFeatures", source);
     }
 
     private static int CountOccurrences(string source, string token)
