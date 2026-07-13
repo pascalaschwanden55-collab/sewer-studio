@@ -20,7 +20,9 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class MediaSearchWindow : Window
 {
     private readonly IReadOnlyList<HaltungRecord> _records;
-    private readonly ServiceProvider _services;
+    private readonly IDialogService _dialogs;
+    private readonly AppSettings _settings;
+    private readonly BatchMediaSearchService _mediaSearch;
     private readonly string? _initialFolder;
     private CancellationTokenSource? _cts;
     private List<MediaMatchRow>? _rows;
@@ -38,11 +40,23 @@ public partial class MediaSearchWindow : Window
     public int AppliedFotoCount { get; private set; }
 
     public MediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initialFolder, ServiceProvider services)
+        : this(records, initialFolder, services.Dialogs, services.Settings, services.BatchMediaSearch)
+    {
+    }
+
+    public MediaSearchWindow(
+        IReadOnlyList<HaltungRecord> records,
+        string? initialFolder,
+        IDialogService dialogs,
+        AppSettings settings,
+        BatchMediaSearchService mediaSearch)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
-        _records = records;
-        _services = services;
+        _records = records ?? throw new ArgumentNullException(nameof(records));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _mediaSearch = mediaSearch ?? throw new ArgumentNullException(nameof(mediaSearch));
         _initialFolder = initialFolder;
 
         // Hover-Foto-Vorschau: Treffer liefern absolute Foto-Pfade (kein Projekt-Root noetig).
@@ -58,7 +72,7 @@ public partial class MediaSearchWindow : Window
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var folder = _services.Dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
+        var folder = _dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
         if (!string.IsNullOrWhiteSpace(folder))
             FolderBox.Text = folder;
     }
@@ -68,7 +82,7 @@ public partial class MediaSearchWindow : Window
         var folder = FolderBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
         {
-            DialogHost.Current.Warn("Bitte einen gültigen Ordner wählen.", "Medien-Suche");
+            _dialogs.Warn("Bitte einen gültigen Ordner wählen.", "Medien-Suche");
             return;
         }
 
@@ -111,8 +125,7 @@ public partial class MediaSearchWindow : Window
 
         try
         {
-            var service = new BatchMediaSearchService();
-            var results = await Task.Run(() => service.Search(_records, options, progress, ct), ct);
+            var results = await Task.Run(() => _mediaSearch.Search(_records, options, progress, ct), ct);
 
             _rows = results.Select(r => new MediaMatchRow(r)).ToList();
             ResultGrid.ItemsSource = _rows;
@@ -134,7 +147,8 @@ public partial class MediaSearchWindow : Window
         }
         catch (Exception ex)
         {
-            DialogHost.Current.Error($"Fehler bei der Suche:\n{ex.Message}", "Medien-Suche");
+            BestEffort.ReportWarning($"[Medien-Suche] Suche fehlgeschlagen: {ex}");
+            _dialogs.Error("Die Medien-Suche ist fehlgeschlagen. Details stehen im Tageslog.", "Medien-Suche");
         }
         finally
         {
@@ -162,7 +176,7 @@ public partial class MediaSearchWindow : Window
             if (!string.IsNullOrWhiteSpace(row.VideoPath)
                 && row.Match.VideoStatus is MediaMatchStatus.Found or MediaMatchStatus.Ambiguous)
             {
-                var projectRoot = ProjectFileLocator.ProjectRootFromFile(_services.Settings.LastProjectPath);
+                var projectRoot = ProjectFileLocator.ProjectRootFromFile(_settings.LastProjectPath);
                 var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(row.VideoPath, projectRoot);
                 row.Match.Record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: false);
                 videoCount++;
@@ -266,8 +280,8 @@ public partial class MediaSearchWindow : Window
         Applied = videoCount > 0 || pdfCount > 0 || fotoCount > 0;
 
         // Persist last folder
-        _services.Settings.LastVideoSourceFolder = FolderBox.Text.Trim();
-        _services.Settings.Save();
+        _settings.LastVideoSourceFolder = FolderBox.Text.Trim();
+        _settings.Save();
 
         DialogResult = true;
         Close();

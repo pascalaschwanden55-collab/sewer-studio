@@ -762,7 +762,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private DataPageMediaSearchResult? ShowMediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initial)
     {
-        var win = new MediaSearchWindow(records.ToList(), initial, _sp);
+        var win = new MediaSearchWindow(
+            records.ToList(),
+            initial,
+            _sp.Dialogs,
+            _sp.Settings,
+            _sp.BatchMediaSearch);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
         return win.ShowDialog() == true

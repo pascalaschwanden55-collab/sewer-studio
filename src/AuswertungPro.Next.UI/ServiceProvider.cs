@@ -100,6 +100,7 @@ namespace AuswertungPro.Next.UI
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
         public IPhotoImportService PhotoImport { get; }
+        public AuswertungPro.Next.Infrastructure.Media.BatchMediaSearchService BatchMediaSearch { get; } = new();
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
