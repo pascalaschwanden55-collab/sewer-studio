@@ -4,10 +4,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Windows;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
-using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Views.Windows;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -101,9 +100,14 @@ public sealed partial class MediaConflictRowViewModel : ObservableObject
 
 public sealed partial class MediaConflictsPageViewModel : ObservableObject
 {
-    private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
-    private readonly MediaConflictCenterService _service = new();
+    private readonly Func<Project> _getProject;
+    private readonly Func<string?> _getProjectFolder;
+    private readonly Func<string?> _getLastVideoSourceFolder;
+    private readonly Action<string> _saveVideoSourceFolder;
+    private readonly IDialogService _dialogs;
+    private readonly MediaConflictCenterService _service;
+    private readonly Action<string> _setStatus;
+    private readonly Action<string> _playVideo;
 
     [ObservableProperty] private MediaConflictRowViewModel? _selectedConflict;
     [ObservableProperty] private string _summaryText = "";
@@ -130,9 +134,41 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     public IRelayCommand PlaySuggestedSourceCommand { get; }
 
     public MediaConflictsPageViewModel(ShellViewModel shell, ServiceProvider sp)
+        : this(
+            getProject: () => shell.Project,
+            getProjectFolder: shell.GetProjectFolder,
+            getLastVideoSourceFolder: () => sp.Settings.LastVideoSourceFolder,
+            saveVideoSourceFolder: folder =>
+            {
+                sp.Settings.LastVideoSourceFolder = folder;
+                sp.Settings.LastVideoFolder = folder;
+                sp.Settings.Save();
+            },
+            dialogs: sp.Dialogs,
+            service: sp.MediaConflictCenter,
+            setStatus: shell.SetStatus,
+            playVideo: MediaConflictVideoLauncher.Create(sp))
     {
-        _shell = shell;
-        _sp = sp;
+    }
+
+    public MediaConflictsPageViewModel(
+        Func<Project> getProject,
+        Func<string?> getProjectFolder,
+        Func<string?> getLastVideoSourceFolder,
+        Action<string> saveVideoSourceFolder,
+        IDialogService dialogs,
+        MediaConflictCenterService service,
+        Action<string> setStatus,
+        Action<string> playVideo)
+    {
+        _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
+        _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
+        _getLastVideoSourceFolder = getLastVideoSourceFolder ?? throw new ArgumentNullException(nameof(getLastVideoSourceFolder));
+        _saveVideoSourceFolder = saveVideoSourceFolder ?? throw new ArgumentNullException(nameof(saveVideoSourceFolder));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _service = service ?? throw new ArgumentNullException(nameof(service));
+        _setStatus = setStatus ?? throw new ArgumentNullException(nameof(setStatus));
+        _playVideo = playVideo ?? throw new ArgumentNullException(nameof(playVideo));
 
         RefreshCommand = new RelayCommand(Refresh);
         ResolveFromCandidateCommand = new RelayCommand(ResolveFromCandidate);
@@ -156,14 +192,15 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         Conflicts.Clear();
         SelectedConflict = null;
 
-        var projectFolder = _shell.GetProjectFolder();
+        var project = _getProject();
+        var projectFolder = _getProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder) || !Directory.Exists(projectFolder))
         {
             OpenConflictCount = 0;
             MissingConflictCount = 0;
             AmbiguousConflictCount = 0;
             SummaryText = "Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.";
-            LearnedMappingCount = _service.GetMappingCount(_shell.Project);
+            LearnedMappingCount = _service.GetMappingCount(project);
             LastResult = "";
             return;
         }
@@ -174,16 +211,16 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             var row = new MediaConflictRowViewModel(conflict)
             {
                 SuggestedSourcePath = _service.TryResolveLearnedSourcePath(
-                    _shell.Project,
+                    project,
                     conflict,
-                    _sp.Settings.LastVideoSourceFolder)
+                    _getLastVideoSourceFolder())
             };
 
             Conflicts.Add(row);
         }
 
         SelectedConflict = Conflicts.FirstOrDefault();
-        LearnedMappingCount = _service.GetMappingCount(_shell.Project);
+        LearnedMappingCount = _service.GetMappingCount(project);
         UpdateSummary();
         LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Faelle";
     }
@@ -196,7 +233,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var source = SelectedConflict.SelectedCandidatePath;
         if (string.IsNullOrWhiteSpace(source))
         {
-            _sp.Dialogs.Info("Bitte zuerst einen Kandidaten auswaehlen.", "Konfliktcenter");
+            _dialogs.Info("Bitte zuerst einen Kandidaten auswaehlen.", "Konfliktcenter");
             return;
         }
 
@@ -208,11 +245,12 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         if (SelectedConflict is null)
             return;
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
+        var lastVideoSourceFolder = _getLastVideoSourceFolder();
+        var initial = !string.IsNullOrWhiteSpace(lastVideoSourceFolder)
+            ? lastVideoSourceFolder
             : SelectedConflict.Conflict.HoldingFolder;
 
-        var source = _sp.Dialogs.OpenFile(
+        var source = _dialogs.OpenFile(
             "Video fuer Konflikt auswaehlen",
             MediaFileTypes.VideoDialogFilter,
             initial);
@@ -223,9 +261,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var selectedDir = Path.GetDirectoryName(source);
         if (!string.IsNullOrWhiteSpace(selectedDir))
         {
-            _sp.Settings.LastVideoSourceFolder = selectedDir;
-            _sp.Settings.LastVideoFolder = selectedDir;
-            _sp.Settings.Save();
+            _saveVideoSourceFolder(selectedDir);
         }
 
         ResolveSelected(source, setUserEdited: true);
@@ -238,7 +274,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(SelectedConflict.SuggestedSourcePath))
         {
-            _sp.Dialogs.Info("Keine gelernte Quelle fuer diese Position vorhanden.", "Konfliktcenter");
+            _dialogs.Info("Keine gelernte Quelle fuer diese Position vorhanden.", "Konfliktcenter");
             return;
         }
 
@@ -250,11 +286,12 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         if (SelectedConflict is null)
             return;
 
-        var result = _service.ResolveConflict(_shell.Project, SelectedConflict.Conflict, sourcePath, setUserEdited);
+        var project = _getProject();
+        var result = _service.ResolveConflict(project, SelectedConflict.Conflict, sourcePath, setUserEdited);
         if (!result.Success)
         {
             LastResult = $"Fehler: {result.Message}";
-            _sp.Dialogs.Warn(result.Message, "Konfliktcenter");
+            _dialogs.Warn(result.Message, "Konfliktcenter");
             return;
         }
 
@@ -270,24 +307,24 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
         Conflicts.Remove(resolvedConflict);
         SelectedConflict = Conflicts.FirstOrDefault();
-        LearnedMappingCount = _service.GetMappingCount(_shell.Project);
+        LearnedMappingCount = _service.GetMappingCount(project);
         UpdateSummary();
-        _shell.SetStatus("Medienkonflikt aufgelöst");
+        _setStatus("Medienkonflikt aufgelöst");
     }
 
     private void AutoResolveLearned()
     {
-        var projectFolder = _shell.GetProjectFolder();
+        var projectFolder = _getProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder) || !Directory.Exists(projectFolder))
         {
-            _sp.Dialogs.Warn("Projektordner nicht verfuegbar.", "Konfliktcenter");
+            _dialogs.Warn("Projektordner nicht verfuegbar.", "Konfliktcenter");
             return;
         }
 
         var result = _service.AutoResolveLearned(
-            _shell.Project,
+            _getProject(),
             projectFolder,
-            _sp.Settings.LastVideoSourceFolder,
+            _getLastVideoSourceFolder(),
             setUserEdited: false);
 
         Refresh();
@@ -296,7 +333,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
     private void ClearLearnedMappings()
     {
-        var count = _service.ClearMappings(_shell.Project);
+        var count = _service.ClearMappings(_getProject());
         Refresh();
         LastResult = count > 0
             ? $"Gelernte Mappings geloescht: {count}"
@@ -373,23 +410,17 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
-            _sp.Dialogs.Warn("Video nicht gefunden.", "Konfliktcenter");
+            _dialogs.Warn("Video nicht gefunden.", "Konfliktcenter");
             return;
         }
 
         try
         {
-            var options = PlayerWindowOptions.FromSettings(_sp.Settings);
-
-            var window = new PlayerWindow(path, options, serviceProvider: _sp)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow
-            };
-            window.Show();
+            _playVideo(path);
         }
         catch (Exception ex)
         {
-            _sp.Dialogs.Error($"Video konnte nicht gestartet werden:\n{ex.Message}", "Konfliktcenter");
+            _dialogs.Error($"Video konnte nicht gestartet werden:\n{ex.Message}", "Konfliktcenter");
         }
     }
 

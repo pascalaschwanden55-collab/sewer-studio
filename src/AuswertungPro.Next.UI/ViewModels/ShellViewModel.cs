@@ -129,7 +129,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             {
                 DataContext = new Pages.KarteViewModel(this, _sp)
             }),
-            new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
+            new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
+                getProject: () => Project,
+                getProjectFolder: GetProjectFolder,
+                getLastVideoSourceFolder: () => _sp.Settings.LastVideoSourceFolder,
+                saveVideoSourceFolder: folder =>
+                {
+                    _sp.Settings.LastVideoSourceFolder = folder;
+                    _sp.Settings.LastVideoFolder = folder;
+                    _sp.Settings.Save();
+                },
+                dialogs: _sp.Dialogs,
+                service: _sp.MediaConflictCenter,
+                setStatus: SetStatus,
+                playVideo: MediaConflictVideoLauncher.Create(_sp))),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
