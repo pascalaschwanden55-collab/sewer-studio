@@ -90,14 +90,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _previewRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _previewRefreshTimer.Tick += PreviewRefreshTimerTick;
 
-            LastProjectPath = _sp.Settings.LastProjectPath;
-            ProjectStatus = BuildProjectStatus();
-            IsProjectListCollapsed = _sp.Settings.OverviewProjectListCollapsed;
-
             NewCommand = new RelayCommand(NewProject);
-            OpenCommand = new RelayCommand(OpenProject);
-            OpenSelectedCommand = new RelayCommand(OpenSelectedProject, () => SelectedProjectEntry is not null);
-            ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
+            OpenCommand = new AsyncRelayCommand(OpenProjectAsync);
+            OpenSelectedCommand = new AsyncRelayCommand(OpenSelectedProjectAsync, () => SelectedProjectEntry is not null);
+            ContinueCommand = new AsyncRelayCommand(OpenLastProjectAsync, () => HasLastProject);
             RefreshCommand = new RelayCommand(LoadAllProjects);
             PrintPreviewPdfCommand = new AsyncRelayCommand(PrintPreviewPdfAsync, CanPrintPreviewPdf);
             ClearFilterCommand = new RelayCommand(ClearFilter);
@@ -107,6 +103,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             NavigateDamageCommand = new RelayCommand<object?>(NavigateDamage);
             NavigateDnCommand = new RelayCommand<object?>(NavigateDn);
             ToggleProjectListCommand = new RelayCommand(ToggleProjectList);
+
+            // ObservableProperty-Hooks benachrichtigen die Commands. Darum erst setzen,
+            // nachdem alle Commands vollstaendig erzeugt wurden.
+            LastProjectPath = _sp.Settings.LastProjectPath;
+            ProjectStatus = BuildProjectStatus();
+            IsProjectListCollapsed = _sp.Settings.OverviewProjectListCollapsed;
 
             LoadAllProjects();
 
@@ -523,43 +525,49 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _shell.StartNewProjectDraft();
     }
 
-    private void OpenProject()
+    private async Task OpenProjectAsync()
     {
-        if (!_shell.TryOpenProjectWithDialog())
+        if (!await _shell.TryOpenProjectWithDialogAsync())
             return;
-        LastProjectPath = _sp.Settings.LastProjectPath;
-        ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
-        _shell.EnterWorkspaceOn("Uebersicht");
+        AfterProjectOpened();
     }
 
-    private void OpenSelectedProject()
+    private async Task OpenSelectedProjectAsync()
     {
         var path = SelectedProjectEntry?.Path;
         if (string.IsNullOrWhiteSpace(path))
             return;
-        OpenProjectFile(path);
+        await OpenProjectFileAsync(path);
     }
 
     public bool OpenProjectFromPath(string path)
     {
+        // Drag&Drop bleibt synchron (seltener Pfad, bool-Rueckgabe fuer den Drop-Handler).
         var projectFile = ProjectDropPathResolver.ResolveProjectFile(path);
         if (string.IsNullOrWhiteSpace(projectFile))
             return false;
 
-        return OpenProjectFile(projectFile);
+        if (!_shell.TryOpenProject(projectFile))
+            return false;
+        AfterProjectOpened();
+        return true;
     }
 
-    private bool OpenProjectFile(string path)
+    private async Task<bool> OpenProjectFileAsync(string path)
     {
-        if (!_shell.TryOpenProject(path))
+        if (!await _shell.TryOpenProjectAsync(path))
             return false;
-        // Merkliste pflegt TryOpenProject selbst.
+        AfterProjectOpened();
+        return true;
+    }
+
+    /// <summary>Gemeinsamer Abschluss nach erfolgreichem Oeffnen (Merkliste pflegt die Shell selbst).</summary>
+    private void AfterProjectOpened()
+    {
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
         _shell.EnterWorkspaceOn("Uebersicht");
-        return true;
     }
 
     private void DeleteSelectedProject()
@@ -602,22 +610,20 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
     }
 
-    private void OpenLastProject()
+    private async Task OpenLastProjectAsync()
     {
         if (!HasLastProject || LastProjectPath is null)
             return;
-        if (!_shell.TryOpenProject(LastProjectPath))
+        if (!await _shell.TryOpenProjectAsync(LastProjectPath))
             return;
-        LastProjectPath = _sp.Settings.LastProjectPath;
-        ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
-        _shell.EnterWorkspaceOn("Uebersicht");
+        AfterProjectOpened();
     }
 
     partial void OnSelectedProjectEntryChanged(ProjectOverviewEntry? value)
     {
-        (OpenSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        (DeleteSelectedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        // Direkt ueber IRelayCommand — 'as RelayCommand' waere fuer AsyncRelayCommand null (stiller No-Op).
+        OpenSelectedCommand.NotifyCanExecuteChanged();
+        DeleteSelectedCommand.NotifyCanExecuteChanged();
         if (!_suppressPreviewRebuild)
             BuildPreview(value);
     }
@@ -793,7 +799,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
     partial void OnLastProjectPathChanged(string? value)
     {
-        (ContinueCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        ContinueCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasLastProject));
     }
 

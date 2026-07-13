@@ -15,6 +15,11 @@ public sealed class JsonProjectRepository : IProjectRepository
         PropertyNameCaseInsensitive = true
     };
 
+    // AP-50 Save-Schutz: serialisiert ALLE Speichervorgaenge prozessweit. Sobald Speichern
+    // in den Hintergrund wandert, koennen manuelles Speichern, AutoSave und Restore-Point-Kopien
+    // sonst gleichzeitig dieselbe projekt.json (und deren .bak) schreiben -> File.Replace-Kollision.
+    private static readonly object SaveLock = new();
+
     public Result<Project> Load(string path)
     {
         try
@@ -66,6 +71,16 @@ public sealed class JsonProjectRepository : IProjectRepository
     }
 
     public Result Save(Project project, string path)
+    {
+        // Serialisierung + atomarer Dateitausch laufen unter dem gemeinsamen Lock, damit sich
+        // parallele Speichervorgaenge nie ueberlappen (siehe SaveLock).
+        lock (SaveLock)
+        {
+            return SaveInternal(project, path);
+        }
+    }
+
+    private static Result SaveInternal(Project project, string path)
     {
         string? tempPath = null;
         try

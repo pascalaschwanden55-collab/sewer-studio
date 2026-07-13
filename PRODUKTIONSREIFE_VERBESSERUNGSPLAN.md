@@ -27,7 +27,7 @@
 
 ## 1. Kurzfazit
 
-**Gesamtnote: B+** (16 von 16 Bereichen geprüft). Der Nachlauf hat kein neues P0- oder P1-Problem gefunden. Restore-Points aller echten Importwege, ein gespeicherter KB-Pfad, gebündeltes AutoSave und überwachte Hintergrundaufgaben sind inzwischen umgesetzt. Offen bleiben vor allem asynchrones Laden/Speichern, das Diagnosepaket und der Großklassen-Bestand.
+**Gesamtnote: B+** (16 von 16 Bereichen geprüft). Der Nachlauf hat kein neues P0- oder P1-Problem gefunden. Restore-Points aller echten Importwege, ein gespeicherter KB-Pfad, gebündeltes AutoSave, asynchrones Projektladen und überwachte Hintergrundaufgaben sind inzwischen umgesetzt. Offen bleiben vor allem das eigentliche asynchrone Speichern, das Diagnosepaket und Langzeittests.
 
 **Das Wichtigste in einem Satz:** Kein einziger P0-Befund — es gibt keinen bekannten Weg, wie die App von sich aus Daten zerstört. Die ursprünglichen P1-Lücken sind im Code geschlossen; offen sind vor allem die drei Bedienprüfungen des Proberestores und längerfristige Qualitätsarbeit.
 
@@ -44,8 +44,8 @@
 | # | Risiko | Warum kritisch |
 |---|---|---|
 | 1 | **Drei Bedienprüfungen des Proberestores sind noch offen:** PDF-Import, Video-Wiedergabe und KI-Lauf | Der technische Rückweg ist bewiesen, aber die komplette Nutzerkette noch nicht live abgenommen |
-| 2 | **6 Produktionsdateien mit mehr als 1.000 Zeilen** | Änderungen in diesen Klassen sind langsamer zu verstehen und erhöhen das Nebenwirkungsrisiko |
-| 3 | **Projektladen und das eigentliche Speichern laufen noch synchron** | Bei sehr großen Projekten kann die Oberfläche kurz stocken; schnelle Änderungen werden jetzt aber 750 ms gebündelt |
+| 2 | **Große UI-Fassaden bestehen weiterhin aus klar benannten Teildateien** | Keine Produktionsdatei liegt mehr über 1.000 Zeilen; Änderungen an zusammengehörigen Teildateien brauchen trotzdem Disziplin |
+| 3 | **Das eigentliche Speichern läuft noch synchron** | Bei sehr großen Projekten kann die Oberfläche während des Schreibens kurz stocken; parallele Schreibvorgänge sind inzwischen gesperrt |
 | 4 | **Ein Diagnosepaket fehlt noch** | Wichtige Hintergrundfehler landen jetzt im Tageslog, aber die einfache Sammlung aller Diagnoseinformationen ist noch offen |
 | 5 | **Abbruch- und Langzeittests sind noch nicht vollständig** | Nachtlauf, voller Arbeitstag und einzelne Prozess-Kill-Szenarien müssen weiter praktisch geprüft werden |
 
@@ -68,10 +68,10 @@
 | Architektur | B+ | A− | Schichten einbahnig, Fitness-Tests, Composition Root schlank; keine Produktionsdatei mehr über 1.000 Zeilen | Doppelt gepflegter C#/Python-Vertrag | P3 beobachten |
 | Codequalität | B+ | A− | Neue Großdateien werden verhindert; alle zwanzig früheren Großdateien sind inzwischen unter 1.000 Zeilen | Kleinere Verantwortungsgrenzen weiter beobachten | Fitness-Test halten |
 | Sicherheit | **A** | A | Sidecar-Token+Loopback, keine Secrets, ArgumentList, Sandbox | Nur P3-Randnotizen | keine (halten) |
-| Tests | B+ | A | Zuletzt 8.468 Tests vollständig grün bestätigt; Crash-/Schema-/Backup-Tests und pre-push-Gate | Kein zentraler CI-Lauf; Langzeit- und Abbruchabdeckung noch ergänzen | AP-41, AP-70 |
-| UI/Bedienbarkeit | B+ | A | Fehlerdialoge, Fortschritt, Abbruch und Dirty-Guard vorhanden | Synchrones Projektladen/-speichern kann bei großen Dateien blockieren | AP-50 |
+| Tests | B+ | A | 8.586 Tests vollständig grün bestätigt; Crash-/Schema-/Backup-Tests und pre-push-Gate | Kein zentraler CI-Lauf; Langzeit- und Abbruchabdeckung noch ergänzen | AP-41, AP-70 |
+| UI/Bedienbarkeit | B+ | A | Projektladen läuft mit Busy-Anzeige im Hintergrund; Fehlerdialoge, Fortschritt, Abbruch und Dirty-Guard vorhanden | Synchrones Speichern kann bei großen Dateien kurz blockieren | AP-50 Rest |
 | Logging/Diagnose | B | B+ | Tageslogs, Aufbewahrung, globale Ausnahmebehandlung und wichtige Hintergrundfehler im normalen Log | Diagnosepaket und weitere Debug-only-Randpfade fehlen | AP-55 Rest |
-| Performance | B+ | B+ | Tabellen-Virtualisierung, Hintergrundimporte, ffmpeg-Streaming und 750-ms-AutoSave-Bündelung vorhanden | Projektladen und eigentlicher Schreibvorgang bleiben synchron | AP-50 |
+| Performance | B+ | B+ | Projektladen, Importe und ffmpeg laufen im Hintergrund; 750-ms-AutoSave-Bündelung vorhanden | Der eigentliche Schreibvorgang bleibt synchron | AP-50 Rest |
 | Nebenläufigkeit | B+ | B+ | Hintergrundfehler werden beobachtet; LiveControl/QGIS sind auf acht gleichzeitige Clients begrenzt und warten beim Stoppen | Abbruchtests der langen Kernvorgänge fehlen teilweise | AP-41 |
 | Externe Dienste | A− | A | Timeouts, Retry, Token, Fallback und Versionscheck im Hauptpfad vorhanden | Voraussetzungen noch nicht in einem gemeinsamen UI-Check zusammengefasst | AP-18 Ergänzung |
 | Installation/Update/Doku | B+ | A− | Publish-Skript, Installation und Neuer-PC-Ablauf dokumentiert | Voraussetzungen werden noch nicht in einem gemeinsamen UI-Check geprüft | AP-18 Ergänzung, AP-60 |
@@ -126,7 +126,7 @@ Aktueller Stand: Alle vier Punkte dieser Tabelle sind inzwischen umgesetzt: Proj
 | P2-10 ✅ | Video-Links portabel und beim Laden/Speichern normalisiert | AP-21 |
 | P2-11 ✅ | ImportSourceArchiver kopiert atomar und fängt Fehler je Datei | AP-23 |
 | P2-12 ✅ | Dirty-Schutz beim Entfernen aus der Übersicht | AP-12 |
-| P2-13 | Projekt Laden/Speichern synchron im UI-Thread ohne Fortschritt (Freeze bei großen Projekten) | `ShellViewModel.cs:463,550` |
+| P2-13 ⚠️ | Projektladen läuft im Hintergrund mit Busy-Anzeige; das eigentliche Speichern bleibt synchron | `ShellViewModel.TryOpenProjectAsync`, `JsonProjectRepository.Save` |
 | P2-14 ✅ | Save-/SaveAs-/Rettungsfehler als Dialog | AP-01, AP-51 |
 | P2-15 | SQLite-KB ohne Korruptions-/Recovery-Test; Cancellation mitten im Vorgang kaum getestet | Tests-Audit |
 | P2-16 ✅ | Versionsprüfung wird im Monitor und Haupt-Analysepfad erzwungen | AP-36 |
@@ -135,7 +135,7 @@ Aktueller Stand: Alle vier Punkte dieser Tabelle sind inzwischen umgesetzt: Proj
 
 ### P3 — spätere Optimierung (Auswahl)
 
-Hartkodierte Pfade in Defaults (`D:\QGIS_V4.03`, `basemap_tiles` mit Versionsnummer im Pfad); Restore-Anleitung nennt Fallback „4.4"; Legacy-Ordner `%APPDATA%\AuswertungPro` weiter aktiv beschrieben; Excel-Export nicht atomar; Protokoll-PDF scheitert komplett an einem korrupten Foto; `UNBEKANNT_`-Duplikate beim PDF-Re-Import; WinCan-Zahlparser mit CurrentCulture-Fallback (`1.234`-Mehrdeutigkeit); Meter-Formatierung ohne explizite Culture; verwaister Sidecar hält VRAM nach App-Ende; kein Not-Speichern im Crash-Handler; zweite Exception im Guard komplett verschluckt; statische Fassaden neben DI unbewacht; 433 Dateien flach in `UI/Ai/`; `GetService()` unvollständig (liefert still null); FFmpeg-Aufruf per String-Konkatenation; Ollama-URL ohne Loopback-Warnung; Test-Env-Var-Manipulation (Flakiness); veraltete READMEs (cu121!); Publish-Version doppelt gepflegt; ~1 GB Hand-`.bak`-Dateien im KI_BRAIN-Root.
+Hartkodierte Pfade in Defaults (`D:\QGIS_V4.03`, `basemap_tiles` mit Versionsnummer im Pfad); Restore-Anleitung nennt Fallback „4.4"; Legacy-Ordner `%APPDATA%\AuswertungPro` weiter aktiv beschrieben; Excel-Export nicht atomar; `UNBEKANNT_`-Duplikate beim PDF-Re-Import; WinCan-Zahlparser mit CurrentCulture-Fallback (`1.234`-Mehrdeutigkeit); Meter-Formatierung ohne explizite Culture; verwaister Sidecar hält VRAM nach App-Ende; kein Not-Speichern im Crash-Handler; zweite Exception im Guard komplett verschluckt; statische Fassaden neben DI unbewacht; 433 Dateien flach in `UI/Ai/`; `GetService()` unvollständig (liefert still null); FFmpeg-Aufruf per String-Konkatenation; Ollama-URL ohne Loopback-Warnung; Test-Env-Var-Manipulation (Flakiness); veraltete READMEs (cu121!); Publish-Version doppelt gepflegt; ~1 GB Hand-`.bak`-Dateien im KI_BRAIN-Root.
 
 ---
 
@@ -220,7 +220,7 @@ Videos sind groß (~3000 Stück): Sie gehören mindestens auf Kopie 2 (USB-Platt
 4. **ViewModels erzeugen Kosten-Stores selbst** (11 `new`-Stellen). → Beim nächsten Anfassen der jeweiligen Seite über ServiceProvider beziehen. Kein Sammel-Refactoring.
 5. **Application-Schicht enthält QuestPDF-Rendering + XML-Parsing** (je >1100 Zeilen). → Nur als bewusste Ausnahme dokumentieren (eine Zeile in CLAUDE.md).
 
-**Reihenfolge ab jetzt:** UI-Handtests des Proberestores, dann asynchrones Laden/Speichern (AP-50), Diagnosepaket (AP-55 Rest) und Abbruchtests (AP-41). Die Großdatei-Altliste (AP-34) ist abgeschlossen; der Fitness-Test verhindert Rückfälle. **Keine Neuentwicklung irgendeines Teils ist nötig.**
+**Reihenfolge ab jetzt:** UI-Handtests des Proberestores, dann asynchrones Speichern (AP-50 Rest), Diagnosepaket (AP-55 Rest) und Abbruchtests (AP-41). Die Großdatei-Altliste (AP-34) ist abgeschlossen; der Fitness-Test verhindert Rückfälle. **Keine Neuentwicklung irgendeines Teils ist nötig.**
 
 ---
 
@@ -287,7 +287,7 @@ Jedes Paket ist einzeln an Codex/Opus übergebbar (Prompts in Kapitel 11). Aufw�
 
 | AP | Titel | Prio | Aufwand |
 |---|---|---|---|
-| AP-50 | Projekt Laden/Speichern async + Busy-Overlay | P2 | 0.5 Tag |
+| AP-50 🔄 | Projekt Laden/Speichern async + Busy-Overlay | P2 | Laden + Busy-Overlay und Save-Sperre umgesetzt; eigentlichen Schreibvorgang noch aus UI-Thread nehmen |
 | AP-51 ✅ | Save-/SaveAs-Fehler als Dialog mit Handlungsanweisung | P2 | umgesetzt 2026-07-12; Load-Rettungsdialog über AP-01 |
 | AP-52 | ex.Message-Mapping für die 5–10 häufigsten Fehlerquellen | P3 | schrittweise |
 | AP-53 | Import: „Fehlgeschlagene erneut importieren" | P3 | 0.5 Tag |
@@ -334,7 +334,7 @@ Vom ursprünglichen Fahrplan ist ein großer Teil bereits umgesetzt. Der aktuell
 2. **AP-55 Rest:** Diagnosepaket ergänzen und weitere wichtige Debug-only-Randpfade ins Tageslog übernehmen.
 3. **AP-20:** Duplikatprüfung für Haltungsnamen an Anlegen und Umbenennen anschließen.
 4. **AP-41:** Je einen echten Abbruchtest für Analyse, Batch-Import und KB-Neuaufbau ergänzen.
-5. **AP-50:** Projektladen zunächst nur mit Busy-Anzeige aus dem UI-Thread nehmen.
+5. **AP-50:** Projektladen mit Busy-Anzeige ist umgesetzt; als Rest den eigentlichen Schreibvorgang aus dem UI-Thread nehmen.
 6. Diagnose-Schaltfläche für ffmpeg, pdftotext, Ollama und Sidecar als gemeinsame Liste ergänzen.
 7. Als nächste kleine Aufräumung PDF-Textkorrektur, DataPage-Umbenennung oder Legacy-XTF-Lesen getrennt herauslösen.
 
@@ -481,7 +481,7 @@ ABNAHME: Alle 3 Tests grün; manueller Abbruch-Test im Import-Dialog.
 Kurzurteil: Nebenläufigkeit B, externe Dienste B+, Codequalität C+, Logging/Diagnose B−, Performance B.
 
 **Weitere von den Auditoren selbst gemeldete Lücken:**
-- Die vollständige Projektmappen-Suite wurde am 2026-07-12 auf dem Abschlussstand ausgeführt: **8.468 bestanden, 1 übersprungen, 0 fehlgeschlagen** (inkl. 62 ProjectModernizer-Tests). Darin enthalten: 2.434 Infrastruktur-, 1.795 Pipeline- und 4.177 UI-Tests.
+- Die vollständige Projektmappen-Suite wurde am 2026-07-12 auf dem Abschlussstand ausgeführt: **8.586 bestanden, 1 übersprungen, 0 fehlgeschlagen**. Darin enthalten: 2.466 Infrastruktur-, 1.806 Pipeline-, 4.252 UI- und 62 ProjectModernizer-Tests.
 - Der technische Restore ist praktisch bestanden: Sicherung, saubere Rückkopie, Dateivergleich, KB-Integrität, Projektladen und Build. Offen sind die UI-Handtests PDF-Import, Video und KI.
 - Die übrigen tools/-CLI-Schreibpfade und `kb_audit`-Python-Skripte sind nicht vollständig geprüft; QuestPDF mit korrupten Bildbytes und MAX_PATH (>260 Zeichen) wurden nicht praktisch reproduziert. `DirectoryMirror`, SQLite-Snapshots und Platzprüfung wurden dagegen durch Tests und den echten 97-GB-Backup-/Restore-Lauf praktisch geprüft.
 - `BenchmarkSetStore` als Klasse nicht gefunden — Schreiber von `benchmark_set.json` unidentifiziert.

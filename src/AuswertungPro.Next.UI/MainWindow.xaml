@@ -458,6 +458,9 @@
     </Grid>
     </DockPanel>
 
+    <!-- AP-50: Modale Lade-/Speicheranzeige ueber dem gesamten Fensterinhalt (unter den Toasts) -->
+    <ctrl:BusyOverlay IsActive="{Binding Busy.IsActive}" Message="{Binding Busy.Message}"/>
+
     <!-- Toast-Overlay: nicht-blockierende Erfolgsmeldungen unten rechts, ueber allem -->
     <ctrl:ToastHost x:Name="ToastHostControl"/>
     </Grid>

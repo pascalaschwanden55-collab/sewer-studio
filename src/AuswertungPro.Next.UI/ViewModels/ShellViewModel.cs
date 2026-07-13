@@ -43,6 +43,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// <summary>System resource monitor (CPU, RAM, GPU) — polls every 2s.</summary>
     public SystemMonitorService Monitor { get; }
 
+    /// <summary>AP-50: Modale Lade-/Speicheranzeige. Gebunden an das BusyOverlay im MainWindow.</summary>
+    public BusyState Busy { get; } = new();
+
     public Project Project => _project;
     private Project _project = new();
 
@@ -137,7 +140,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SaveCommand = new RelayCommand(SaveProject, () => CurrentMode == ShellMode.Workspace);
         NewProjectCommand = new RelayCommand(StartNewProjectDraft);
         SwitchProjectCommand = new RelayCommand(SwitchProject);
-        OpenProjectCommand = new RelayCommand(OpenProjectWithDialog);
+        OpenProjectCommand = new AsyncRelayCommand(OpenProjectWithDialogAsync);
         SaveAsProjectCommand = new RelayCommand(SaveProjectAs);
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
@@ -451,7 +454,37 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public string? GetProjectFolder()
         => ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath);
 
+    /// <summary>Synchrones Oeffnen (Drag&amp;Drop, Tests). UI blockiert waehrend des Ladens.</summary>
     public bool TryOpenProject(string path)
+    {
+        if (!TryBeginOpen(path))
+            return false;
+
+        var (res, recovery) = LoadOrRecover(path);
+        return ApplyLoadOutcome(path, res, recovery);
+    }
+
+    /// <summary>
+    /// AP-50: Async Oeffnen fuer die UI-Commands — der schwere Lade-/Rettungsteil laeuft im
+    /// Hintergrund mit modaler Ladeanzeige, das Fenster friert nicht mehr ein. Uebernahme
+    /// (Dialoge, ReplaceProject) laeuft nach dem await wieder auf dem UI-Thread.
+    /// </summary>
+    public async Task<bool> TryOpenProjectAsync(string path)
+    {
+        if (!TryBeginOpen(path))
+            return false;
+
+        (Result<Project> res, ProjectRecoveryResult? recovery) outcome;
+        using (Busy.Enter("Projekt wird geladen …"))
+        {
+            outcome = await Task.Run(() => LoadOrRecover(path));
+        }
+
+        return ApplyLoadOutcome(path, outcome.res, outcome.recovery);
+    }
+
+    /// <summary>Vorab-Pruefungen + Dirty-Guard (schnell, UI-Thread). false = abbrechen.</summary>
+    private bool TryBeginOpen(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
@@ -459,31 +492,30 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
         }
 
-        if (!ConfirmDiscardUnsavedChanges())
-            return false;
+        return ConfirmDiscardUnsavedChanges();
+    }
 
+    /// <summary>Reines Laden inkl. AP-01-Rettung — hintergrundtauglich, kein UI-Zugriff.</summary>
+    private (Result<Project> res, ProjectRecoveryResult? recovery) LoadOrRecover(string path)
+    {
         var res = _sp.Projects.Load(path);
+        if (res.Ok && res.Value is not null)
+            return (res, null);
+
+        // AP-01: Beschaedigte projekt.json aus .bak/Restore-Point retten (nur Daten, Dialog folgt spaeter).
+        return (res, ProjectRecovery.TryRecover(path, _sp.Projects));
+    }
+
+    /// <summary>Uebernahme des Ladeergebnisses (UI-Thread): Dialoge, Merkliste, ReplaceProject.</summary>
+    private bool ApplyLoadOutcome(string path, Result<Project> res, ProjectRecoveryResult? recovery)
+    {
         Project loaded;
         if (res.Ok && res.Value is not null)
         {
             loaded = res.Value;
         }
-        else
+        else if (recovery is { Recovered: true, Project: not null })
         {
-            // AP-01: Beschaedigte projekt.json nicht als verloren melden — aus .bak/Restore-Point retten.
-            var recovery = ProjectRecovery.TryRecover(path, _sp.Projects);
-            if (!recovery.Recovered || recovery.Project is null)
-            {
-                _sp.Dialogs.Error(
-                    "Das Projekt konnte nicht geoeffnet werden, und es wurde keine gueltige Sicherungskopie gefunden.\n\n" +
-                    $"Datei: {path}\n" +
-                    $"Fehler: {res.ErrorMessage}\n\n" +
-                    "Die Originaldatei wurde NICHT veraendert. Bitte pruefe eine Datensicherung.",
-                    "Projekt beschaedigt");
-                SetStatus($"Fehler: {res.ErrorMessage}");
-                return false;
-            }
-
             _sp.Dialogs.Warn(
                 "Das Projekt war beschaedigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
                 $"Wiederhergestellt aus: {recovery.RecoveredFromPath}\n" +
@@ -495,6 +527,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
             loaded = recovery.Project;
             loaded.Dirty = true; // erzwingt Neuspeicherung der guten Version an den Originalpfad
+        }
+        else
+        {
+            _sp.Dialogs.Error(
+                "Das Projekt konnte nicht geoeffnet werden, und es wurde keine gueltige Sicherungskopie gefunden.\n\n" +
+                $"Datei: {path}\n" +
+                $"Fehler: {res.ErrorMessage}\n\n" +
+                "Die Originaldatei wurde NICHT veraendert. Bitte pruefe eine Datensicherung.",
+                "Projekt beschaedigt");
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return false;
         }
 
         // Jedes erfolgreiche Oeffnen pflegt die Merkliste (setzt auch LastProjectPath) —
@@ -522,6 +565,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (path is null)
             return false;
         return TryOpenProject(path);
+    }
+
+    /// <summary>AP-50: Async-Variante fuer die Menue-/Command-Nutzung mit Ladeanzeige.</summary>
+    public async Task<bool> TryOpenProjectWithDialogAsync()
+    {
+        var path = _sp.Dialogs.OpenFile("Projekt öffnen", "Projekt (*.json)|*.json");
+        if (path is null)
+            return false;
+        return await TryOpenProjectAsync(path);
     }
 
     /// <summary>
@@ -649,9 +701,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             "Projekt nicht gespeichert");
     }
 
-    private void OpenProjectWithDialog()
+    private async Task OpenProjectWithDialogAsync()
     {
-        if (TryOpenProjectWithDialog())
+        if (await TryOpenProjectWithDialogAsync())
             EnterWorkspaceOn("Uebersicht");
     }
 
