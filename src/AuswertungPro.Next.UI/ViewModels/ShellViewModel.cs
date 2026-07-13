@@ -169,7 +169,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 createImportRestorePoint: TryCreateImportRestorePoint,
                 refreshTitleAndDirty: RefreshTitleAndDirty)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp.LogTailReader)),
-            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
+            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(
+                settings: _sp.Settings,
+                diagnostics: _sp.Diagnostics,
+                dialogs: _sp.Dialogs,
+                fullBackup: _sp.FullBackup,
+                toasts: _sp.Toasts,
+                fullBackupOperation: _sp.FullBackupOperation,
+                programCleanup: _sp.ProgramCleanup), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 

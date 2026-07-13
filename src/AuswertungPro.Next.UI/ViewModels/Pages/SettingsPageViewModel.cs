@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Settings;
@@ -19,8 +21,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private const double DefaultDinoBoxThreshold = 0.25d;
     private const double DefaultDinoTextThreshold = 0.20d;
 
-    private readonly ServiceProvider _sp;
-    private readonly ProgramCleanupService _programCleanup = new();
+    private readonly AppSettings _settings;
+    private readonly DiagnosticsOptions _diagnostics;
+    private readonly IDialogService _dialogs;
+    private readonly IFullBackupService _fullBackup;
+    private readonly ToastService _toasts;
+    private readonly FullBackupOperationState _fullBackupOperation;
+    private readonly ProgramCleanupService _programCleanup;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -110,32 +117,58 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public AsyncRelayCommand CreateFullBackupCommand { get; }
     public IRelayCommand CancelFullBackupCommand { get; }
     public AsyncRelayCommand CleanProgramDataCommand { get; }
-    public FullBackupOperationState FullBackupOperation => _sp.FullBackupOperation;
+    public FullBackupOperationState FullBackupOperation => _fullBackupOperation;
 
     public SettingsPageViewModel(ServiceProvider sp)
+        : this(
+            settings: sp.Settings,
+            diagnostics: sp.Diagnostics,
+            dialogs: sp.Dialogs,
+            fullBackup: sp.FullBackup,
+            toasts: sp.Toasts,
+            fullBackupOperation: sp.FullBackupOperation,
+            programCleanup: sp.ProgramCleanup)
     {
-        _sp = sp;
-        EnableDiagnostics = _sp.Settings.EnableDiagnostics;
-        PdfToTextPath = _sp.Settings.PdfToTextPath;
-        ProjectPath = _sp.Settings.LastProjectPath;
-        ProjectsRootDirectory = _sp.Settings.ProjectsRootDirectory;
-        AbwasserkatasterXtfPath = _sp.Settings.AbwasserkatasterXtfPath;
-        VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
-        KantonUriXtfDirectory = _sp.Settings.KantonUriXtfDirectory;
-        DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
-        EnableRestorePoints = _sp.Settings.EnableRestorePoints;
-        VideoHwDecoding = _sp.Settings.VideoHwDecoding;
-        VideoDropLateFrames = _sp.Settings.VideoDropLateFrames;
-        VideoSkipFrames = _sp.Settings.VideoSkipFrames;
-        VideoFileCachingMs = SettingsSaveWorkflow.ClampCaching(_sp.Settings.VideoFileCachingMs);
-        VideoNetworkCachingMs = SettingsSaveWorkflow.ClampCaching(_sp.Settings.VideoNetworkCachingMs);
-        VideoCodecThreads = SettingsSaveWorkflow.ClampCodecThreads(_sp.Settings.VideoCodecThreads);
-        VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_sp.Settings.VideoOutput);
-        UiTheme = ThemeManager.NormalizeTheme(_sp.Settings.UiTheme);
+    }
+
+    public SettingsPageViewModel(
+        AppSettings settings,
+        DiagnosticsOptions diagnostics,
+        IDialogService dialogs,
+        IFullBackupService fullBackup,
+        ToastService toasts,
+        FullBackupOperationState fullBackupOperation,
+        ProgramCleanupService programCleanup)
+    {
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _fullBackup = fullBackup ?? throw new ArgumentNullException(nameof(fullBackup));
+        _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
+        _fullBackupOperation = fullBackupOperation ?? throw new ArgumentNullException(nameof(fullBackupOperation));
+        _programCleanup = programCleanup ?? throw new ArgumentNullException(nameof(programCleanup));
+
+        EnableDiagnostics = _settings.EnableDiagnostics;
+        PdfToTextPath = _settings.PdfToTextPath;
+        ProjectPath = _settings.LastProjectPath;
+        ProjectsRootDirectory = _settings.ProjectsRootDirectory;
+        AbwasserkatasterXtfPath = _settings.AbwasserkatasterXtfPath;
+        VideoFolder = _settings.LastVideoSourceFolder ?? _settings.LastVideoFolder;
+        KantonUriXtfDirectory = _settings.KantonUriXtfDirectory;
+        DataAutoSaveMode = _settings.DataAutoSaveMode.Normalize();
+        EnableRestorePoints = _settings.EnableRestorePoints;
+        VideoHwDecoding = _settings.VideoHwDecoding;
+        VideoDropLateFrames = _settings.VideoDropLateFrames;
+        VideoSkipFrames = _settings.VideoSkipFrames;
+        VideoFileCachingMs = SettingsSaveWorkflow.ClampCaching(_settings.VideoFileCachingMs);
+        VideoNetworkCachingMs = SettingsSaveWorkflow.ClampCaching(_settings.VideoNetworkCachingMs);
+        VideoCodecThreads = SettingsSaveWorkflow.ClampCodecThreads(_settings.VideoCodecThreads);
+        VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_settings.VideoOutput);
+        UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
-        StartAiOnProgramStart = _sp.Settings.AiStartOnProgramStart;
+        StartAiOnProgramStart = _settings.AiStartOnProgramStart;
         var pipelineConfig = AiSettingsFactory
-            .Load(AppSettingsAiSettingsProvider.ToSource(_sp.Settings))
+            .Load(AppSettingsAiSettingsProvider.ToSource(_settings))
             .ToPipelineConfig();
         PipelineYoloConfidence = SettingsSaveWorkflow.ClampThreshold(pipelineConfig.YoloConfidence);
         PipelineDinoBoxThreshold = SettingsSaveWorkflow.ClampThreshold(pipelineConfig.DinoBoxThreshold);
@@ -144,7 +177,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         DataFolderPath = AppSettings.AppDataDir;
         LogsFolderPath = Path.Combine(AppSettings.AppDataDir, "logs");
         RestorePointsFolderPath = RestorePointService.SettingsRestoreRoot;
-        IncludeProjectVideosInFullBackup = _sp.Settings.FullBackupIncludeProjectVideos;
+        IncludeProjectVideosInFullBackup = _settings.FullBackupIncludeProjectVideos;
 
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
         BrowseProjectPathCommand = new RelayCommand(BrowseProjectPath);
@@ -189,8 +222,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     partial void OnIncludeProjectVideosInFullBackupChanged(bool value)
     {
-        _sp.Settings.FullBackupIncludeProjectVideos = value;
-        _sp.Settings.SaveImmediate();
+        _settings.FullBackupIncludeProjectVideos = value;
+        _settings.SaveImmediate();
     }
 
     partial void OnIsProgramCleanupRunningChanged(bool value)
@@ -213,18 +246,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private void OpenLogsFolder() => OpenFolder(LogsFolderPath);
     private void OpenRestorePointsFolder() => OpenFolder(RestorePointsFolderPath);
 
-    private void OpenFolder(string path) => SettingsPathWorkflow.OpenFolder(path, _sp.Dialogs);
+    private void OpenFolder(string path) => SettingsPathWorkflow.OpenFolder(path, _dialogs);
 
     private void BrowsePdfToText()
     {
-        var p = SettingsPathWorkflow.SelectPdfToText(_sp.Dialogs);
+        var p = SettingsPathWorkflow.SelectPdfToText(_dialogs);
         if (p is null) return;
         PdfToTextPath = p;
     }
 
     private void BrowseProjectPath()
     {
-        var p = SettingsPathWorkflow.SelectProjectPath(_sp.Dialogs, ProjectPath);
+        var p = SettingsPathWorkflow.SelectProjectPath(_dialogs, ProjectPath);
         if (p is null)
             return;
 
@@ -233,28 +266,28 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     private void BrowseVideoFolder()
     {
-        var p = SettingsPathWorkflow.SelectVideoFolder(_sp.Dialogs, VideoFolder);
+        var p = SettingsPathWorkflow.SelectVideoFolder(_dialogs, VideoFolder);
         if (p is null) return;
         VideoFolder = p;
     }
 
     private void BrowseProjectsRoot()
     {
-        var p = SettingsPathWorkflow.SelectProjectsRoot(_sp.Dialogs, ProjectsRootDirectory);
+        var p = SettingsPathWorkflow.SelectProjectsRoot(_dialogs, ProjectsRootDirectory);
         if (p is null) return;
         ProjectsRootDirectory = p;
     }
 
     private void BrowseAbwasserkatasterXtfPath()
     {
-        var p = SettingsPathWorkflow.SelectAbwasserkatasterXtfPath(_sp.Dialogs, AbwasserkatasterXtfPath);
+        var p = SettingsPathWorkflow.SelectAbwasserkatasterXtfPath(_dialogs, AbwasserkatasterXtfPath);
         if (p is null) return;
         AbwasserkatasterXtfPath = p;
     }
 
     private void BrowseKantonUriXtfDirectory()
     {
-        var p = SettingsPathWorkflow.SelectKantonUriXtfDirectory(_sp.Dialogs, KantonUriXtfDirectory);
+        var p = SettingsPathWorkflow.SelectKantonUriXtfDirectory(_dialogs, KantonUriXtfDirectory);
         if (p is null) return;
         KantonUriXtfDirectory = p;
     }
@@ -262,8 +295,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private void Save()
     {
         SettingsSaveWorkflow.Save(new SettingsSaveWorkflowRequest(
-            _sp.Settings,
-            _sp.Diagnostics,
+            _settings,
+            _diagnostics,
             new SettingsSaveValues(
                 EnableDiagnostics,
                 PdfToTextPath,
@@ -286,24 +319,24 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 PipelineYoloConfidence,
                 PipelineDinoBoxThreshold,
                 PipelineDinoTextThreshold),
-            _sp.Settings.Save));
+            _settings.Save));
     }
 
     private async Task StartAiAsync()
     {
         await SettingsAiStartupWorkflow.RunAsync(
-            _sp.Settings,
-            _sp.Dialogs,
+            _settings,
+            _dialogs,
             new SettingsAiStartupWorkflowUi(
                 () => IsAiStarting,
                 value => IsAiStarting = value,
                 value => AiStartupStatusText = value),
-            _sp.Settings.SaveImmediate).ConfigureAwait(true);
+            _settings.SaveImmediate).ConfigureAwait(true);
     }
 
     private void ApplyTheme()
     {
-        SettingsThemeWorkflow.ApplyTheme(_sp.Settings, UiTheme, _sp.Settings.SaveImmediate);
+        SettingsThemeWorkflow.ApplyTheme(_settings, UiTheme, _settings.SaveImmediate);
     }
 
     private SettingsThemeWorkflowUi ThemeUi()
@@ -318,7 +351,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private async Task ExportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ExportAsync(
-            _sp.Dialogs,
+            _dialogs,
             value => BackupStatusText = value,
             () => DateTime.Now).ConfigureAwait(true);
     }
@@ -326,7 +359,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private async Task ImportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ImportAsync(
-            _sp.Dialogs,
+            _dialogs,
             value => BackupStatusText = value,
             () => DateTime.Now).ConfigureAwait(true);
     }
@@ -335,13 +368,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         await SettingsFullBackupWorkflow.RunAsync(
             new SettingsFullBackupWorkflowRequest(
-                _sp.Settings,
-                _sp.FullBackup,
-                _sp.Dialogs,
-                _sp.Toasts,
+                _settings,
+                _fullBackup,
+                _dialogs,
+                _toasts,
                 FullBackupOperation,
                 AppSettings.FlushPendingSave,
-                _sp.Settings.SaveImmediate,
+                _settings.SaveImmediate,
                 () => DateTime.UtcNow),
             ct).ConfigureAwait(true);
     }
@@ -350,10 +383,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         await SettingsProgramCleanupWorkflow.RunAsync(
             new SettingsProgramCleanupWorkflowRequest(
-                SettingsProgramCleanupRequestFactory.Create(_sp.Settings, DateTime.UtcNow),
+                SettingsProgramCleanupRequestFactory.Create(_settings, DateTime.UtcNow),
                 _programCleanup,
-                _sp.Dialogs,
-                _sp.Toasts,
+                _dialogs,
+                _toasts,
                 new SettingsProgramCleanupWorkflowUi(
                     value => IsProgramCleanupRunning = value,
                     value => ProgramCleanupStatusText = value))).ConfigureAwait(true);

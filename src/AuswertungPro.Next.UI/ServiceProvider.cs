@@ -26,6 +26,7 @@ using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -87,6 +88,7 @@ namespace AuswertungPro.Next.UI
         public ILogTailReader LogTailReader { get; }
         public IFullBackupService FullBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
+        public ProgramCleanupService ProgramCleanup { get; } = new();
         #endregion
 
         #region Persistenz
