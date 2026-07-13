@@ -47,9 +47,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Datenseiten-Suchtimer gestoppt (A2-06 erledigt):** Beim Verlassen der Datenseite werden Such- und Layout-Verzögerungstimer gemeinsam gestoppt. Ein Lebensdauer-Guard verhindert verspätete Suchläufe auf der entladenen Ansicht.
 - **Backup-Geheimnisse redigiert (A3-01 erledigt):** `umgebung.txt` und `RESTORE-ANLEITUNG.txt` schreiben Werte von Variablen mit `TOKEN`, `SECRET`, `KEY` oder `AUTH` nur noch als `***redigiert***`. Normale Wiederherstellungspfade bleiben lesbar; ein Integrationstest prüft beide Dateien.
 - **Backup-Inhalte mit SHA-256 prüfbar (A3-02 erledigt):** `manifest.json` enthält für jede aktuelle Sicherungsdatei Pfad, Länge und SHA‑256. Der Proberestore prüft diese Nachweise vor Datenbank und Projekt; fehlende, zusätzliche oder veränderte Dateien werden gemeldet. Tests bestätigen eine gleich große beschädigte Datei und blockieren Manifest-Pfade außerhalb der Sicherung.
+- **Sidecar-Token geschützt (A3-03 erledigt):** Nur `PipelineSidecarToken` wird in `settings.json` per Windows-DPAPI an das aktuelle Benutzerkonto gebunden. Alte Klartextwerte werden weiter gelesen und beim nächsten Speichern automatisch geschützt; ein beschädigter oder nach einem PC-Wechsel nicht mehr lesbarer Token verwirft nicht die übrigen Einstellungen. Drei Tests schützen Verschlüsselung, Migration und den sicheren Fehlerfall.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.707 Tests bestanden (2.494 Infrastruktur, 1.813 Pipeline, 4.338 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.710 Tests bestanden (2.494 Infrastruktur, 1.813 Pipeline, 4.341 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -146,7 +147,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 |---|---|---|---|
 | A3-01 | Mittel → **erledigt** | `FullBackupSourcesFactory.cs:53-70` — alle `SEWER*`-Env-Vars inkl. Tokens im Klartext in `umgebung.txt`/`RESTORE-ANLEITUNG.txt` | Gemeinsamer Redaktor schwärzt Werte von `*TOKEN*/*SECRET*/*KEY*/*AUTH*` in beiden Ausgabedateien; normale Werte bleiben wiederherstellbar |
 | A3-02 | Mittel → **erledigt** | `FullBackupService.cs:434-493` — Manifest ohne Pro-Datei-Hashes; `DirectoryMirror` erkennt Änderung nur über Größe+Zeit | Manifest enthält Pfad, Länge und SHA-256 jeder aktuellen Datei; `FullBackupSmoke --verify-restore` prüft fehlende, zusätzliche und inhaltlich abweichende Dateien vor dem fachlichen Restore-Test |
-| A3-03 | Niedrig | `JsonProjectRepository.cs:94-104` / `AppSettings.cs:192` — Klartext-JSON inkl. `PipelineSidecarToken` | Nur den Token per DPAPI (`ProtectedData`, CurrentUser) schützen; projekt.json vorerst Klartext |
+| A3-03 | Niedrig → **erledigt** | `JsonProjectRepository.cs:94-104` / `AppSettings.cs:192` — Klartext-JSON inkl. `PipelineSidecarToken` | Token ist per DPAPI (`ProtectedData`, CurrentUser) geschützt; `projekt.json` bleibt wie vorgesehen Klartext |
 | A3-04 | Niedrig | `KnowledgeBasePaths.cs:131-147` — `SEWERSTUDIO_KNOWLEDGE_ROOT` ungeprüft als Wurzel | Leere/relative Werte verwerfen, Override beim Start loggen |
 | A3-05 | Niedrig | `SafeShellOpen.cs:8-13` — `.html/.htm` in Whitelist, kein Pfad-Containment | `.html/.htm` entfernen oder Pfad gegen Projektordner prüfen |
 

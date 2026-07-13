@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
@@ -189,6 +190,7 @@ public sealed class AppSettings : IAiStartupSettings
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }
+    [JsonConverter(typeof(DpapiProtectedStringJsonConverter))]
     public string? PipelineSidecarToken { get; set; }
     public string? PipelineMode { get; set; }
     public double? PipelineYoloConfidence { get; set; }
