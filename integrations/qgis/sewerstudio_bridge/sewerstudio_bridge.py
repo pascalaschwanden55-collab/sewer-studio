@@ -32,6 +32,7 @@ from qgis.core import (
     Qgis,
     QgsCategorizedSymbolRenderer,
     QgsCoordinateTransform,
+    QgsLineSymbol,
     QgsMarkerSymbol,
     QgsMessageLog,
     QgsPalLayerSettings,
@@ -514,8 +515,8 @@ class SewerStudioBridgeDock(QDockWidget):
                     updated += 1
 
             if layer is not None:
-                self._ensure_schacht_ausgefuehrt_durch_style(layer_key, layer)
-                self._ensure_schacht_nr_labels(layer_key, layer)
+                self._ensure_ausgefuehrt_durch_style(layer_key, layer)
+                self._ensure_nr_labels(layer_key, layer)
                 loaded += 1
                 # Zoomen bei jedem Auswahl-Klick in SewerStudio (neuer Stempel) oder
                 # bei Wechsel — aber nie einfach bei jedem Poll. Haltung und Schacht
@@ -626,17 +627,17 @@ class SewerStudioBridgeDock(QDockWidget):
         QgsProject.instance().addMapLayer(layer)
         return layer
 
-    def _ensure_schacht_ausgefuehrt_durch_style(self, layer_key, layer):
-        """Unterscheidet Schacht-Punkte nach dem Feld ``ausgefuehrt_durch``.
+    def _ensure_ausgefuehrt_durch_style(self, layer_key, layer):
+        """Unterscheidet Haltungen und Schaechte nach ``ausgefuehrt_durch``.
 
-        Die Farben entsprechen dem Haltungs-Layer: Baumeister blau, Sanierer
-        ocker und Gartenbauer gruen. Eine bereits kategorisierte oder regelbasierte
-        Nutzer-Darstellung bleibt erhalten.
+        Haltungen erhalten farbige Linien, Schaechte farbige Kreise. Die Kategorien
+        sind identisch: Baumeister blau, Sanierer ocker und Gartenbauer gruen.
+        Eine bereits kategorisierte oder regelbasierte Nutzer-Darstellung bleibt erhalten.
         """
-        if layer_key != "schacht_sanierungstyp":
+        if layer_key not in ("sanierungstyp", "schacht_sanierungstyp"):
             return
 
-        marker = "sewerstudio/schacht_ausgefuehrt_renderer_initialized"
+        marker = f"sewerstudio/{layer_key}_ausgefuehrt_renderer_initialized"
         initialized = layer.customProperty(marker, False)
         if initialized in (True, 1, "1", "true", "True"):
             return
@@ -656,32 +657,40 @@ class SewerStudioBridgeDock(QDockWidget):
                 ("Sanierer", "Sanierer", "#BF8F00"),
                 ("Gartenbauer", "Gartenbauer", "#00B050"),
             ):
-                symbol = QgsMarkerSymbol.createSimple({
-                    "name": "circle",
-                    "color": color,
-                    "outline_color": "#FFFFFF",
-                    "outline_width": "0.8",
-                    "size": "5.0",
-                })
+                if layer_key == "schacht_sanierungstyp":
+                    symbol = QgsMarkerSymbol.createSimple({
+                        "name": "circle",
+                        "color": color,
+                        "outline_color": "#FFFFFF",
+                        "outline_width": "0.8",
+                        "size": "5.0",
+                    })
+                else:
+                    symbol = QgsLineSymbol.createSimple({
+                        "color": color,
+                        "width": "2.8",
+                        "capstyle": "round",
+                        "joinstyle": "round",
+                    })
                 categories.append(QgsRendererCategory(value, symbol, label))
 
             layer.setRenderer(QgsCategorizedSymbolRenderer("ausgefuehrt_durch", categories))
             layer.setCustomProperty(marker, True)
             layer.triggerRepaint()
         except Exception as ex:
-            self._log_warning(f"Schacht-Darstellung nach 'Ausgefuehrt durch' fehlgeschlagen: {ex}")
+            self._log_warning(f"Darstellung nach 'Ausgefuehrt durch' fehlgeschlagen: {ex}")
 
-    def _ensure_schacht_nr_labels(self, layer_key, layer):
-        """Zeigt die Sewer-Studio-Zeilennummer am Schacht-Punkt an.
+    def _ensure_nr_labels(self, layer_key, layer):
+        """Zeigt die Sewer-Studio-Zeilennummer an Haltung oder Schacht an.
 
         Eine bereits vorhandene QGIS-Beschriftung bleibt unveraendert. Die Markierung
         am Layer verhindert zudem, dass ein Nutzer-Deaktivieren beim naechsten Poll
         sofort wieder rueckgaengig gemacht wird.
         """
-        if layer_key != "schacht_sanierungstyp":
+        if layer_key not in ("sanierungstyp", "schacht_sanierungstyp"):
             return
 
-        marker = "sewerstudio/schacht_nr_labels_initialized"
+        marker = f"sewerstudio/{layer_key}_nr_labels_initialized"
         initialized = layer.customProperty(marker, False)
         if initialized in (True, 1, "1", "true", "True"):
             return
@@ -699,10 +708,11 @@ class SewerStudioBridgeDock(QDockWidget):
             settings.isExpression = False
             settings.dist = 2.0
 
-            # QGIS 3 und 4 benennen die Platzierungs-Konstante unterschiedlich.
-            label_placement = getattr(getattr(Qgis, "LabelPlacement", None), "AroundPoint", None)
+            # Schacht-Nummer neben dem Punkt, Haltungs-Nummer waagrecht an der Linie.
+            placement_name = "AroundPoint" if layer_key == "schacht_sanierungstyp" else "Horizontal"
+            label_placement = getattr(getattr(Qgis, "LabelPlacement", None), placement_name, None)
             if label_placement is None:
-                label_placement = QgsPalLayerSettings.AroundPoint
+                label_placement = getattr(QgsPalLayerSettings, placement_name)
             settings.placement = label_placement
 
             font = QFont("Arial")
@@ -726,7 +736,7 @@ class SewerStudioBridgeDock(QDockWidget):
             layer.setCustomProperty(marker, True)
             layer.triggerRepaint()
         except Exception as ex:
-            self._log_warning(f"Schacht-Nr.-Beschriftung konnte nicht gesetzt werden: {ex}")
+            self._log_warning(f"Nr.-Beschriftung konnte nicht gesetzt werden: {ex}")
 
     @staticmethod
     def _find_layer_named(layer_name):

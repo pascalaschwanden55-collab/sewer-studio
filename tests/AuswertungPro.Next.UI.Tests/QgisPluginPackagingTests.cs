@@ -132,28 +132,32 @@ public sealed class QgisPluginPackagingTests
     }
 
     [Fact]
-    public void Plugin_beschriftet_schacht_live_layer_mit_sewerstudio_zeilennummer()
+    public void Plugin_beschriftet_haltungen_und_schaechte_mit_sewerstudio_zeilennummer()
     {
         var source = ReadPluginFile("sewerstudio_bridge.py");
 
-        Assert.Contains("_ensure_schacht_nr_labels", source);
-        Assert.Contains("layer_key != \"schacht_sanierungstyp\"", source);
+        Assert.Contains("_ensure_nr_labels", source);
+        Assert.Contains("(\"sanierungstyp\", \"schacht_sanierungstyp\")", source);
         Assert.Contains("settings.fieldName = \"nr\"", source);
         Assert.Contains("QgsVectorLayerSimpleLabeling", source);
         Assert.Contains("QgsTextBufferSettings", source);
         Assert.Contains("layer.labelsEnabled()", source);
-        Assert.Contains("schacht_nr_labels_initialized", source);
+        Assert.Contains("{layer_key}_nr_labels_initialized", source);
+        Assert.Contains("AroundPoint", source);
+        Assert.Contains("Horizontal", source);
     }
 
     [Fact]
-    public void Plugin_unterscheidet_schaechte_nach_ausgefuehrt_durch()
+    public void Plugin_unterscheidet_haltungen_und_schaechte_nach_ausgefuehrt_durch()
     {
         var source = ReadPluginFile("sewerstudio_bridge.py");
 
-        Assert.Contains("_ensure_schacht_ausgefuehrt_durch_style", source);
+        Assert.Contains("_ensure_ausgefuehrt_durch_style", source);
         Assert.Contains("QgsCategorizedSymbolRenderer", source);
         Assert.Contains("QgsRendererCategory", source);
         Assert.Contains("QgsMarkerSymbol", source);
+        Assert.Contains("QgsLineSymbol", source);
+        Assert.Contains("\"name\": \"circle\"", source);
         Assert.Contains("QgsCategorizedSymbolRenderer(\"ausgefuehrt_durch\"", source);
         Assert.Contains("#00B0F0", source); // Baumeister wie bei den Haltungen
         Assert.Contains("#BF8F00", source); // Sanierer
