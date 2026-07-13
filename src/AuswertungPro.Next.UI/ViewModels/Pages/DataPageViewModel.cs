@@ -405,6 +405,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _projectBindingController.Dispose();
+        _videoAnalysisController.Dispose();
         _timers.Stop();
         LiveControl.LiveControlRetryBridge.Reset();
     }

@@ -7,8 +7,10 @@ using AuswertungPro.Next.UI.LiveControl;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
-public sealed class DataPageVideoAnalysisController
+public sealed class DataPageVideoAnalysisController : IDisposable
 {
+    private readonly object _httpClientsGate = new();
+    private readonly Dictionary<TimeSpan, HttpClient> _httpClients = new();
     private readonly IDialogService _dialogs;
     private readonly Func<IReadOnlyList<HaltungRecord>> _getRecords;
     private readonly Func<HaltungRecord, string?> _ensureVideoPath;
@@ -22,6 +24,7 @@ public sealed class DataPageVideoAnalysisController
     private readonly Action _refreshSelectedProtocolEntries;
     private readonly Action _scheduleAutoSave;
     private readonly Action<Action> _beginInvoke;
+    private bool _disposed;
 
     public DataPageVideoAnalysisController(
         IDialogService dialogs,
@@ -79,7 +82,7 @@ public sealed class DataPageVideoAnalysisController
         var timeout = cfg.OllamaRequestTimeout > TimeSpan.Zero
             ? cfg.OllamaRequestTimeout
             : TimeSpan.FromMinutes(30);
-        using var http = new HttpClient { Timeout = timeout };
+        var http = GetOrCreateHttpClient(timeout);
         var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
         var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var pipeline = _createPipeline(cfg, plausibility, http);
@@ -133,6 +136,34 @@ public sealed class DataPageVideoAnalysisController
         return new LiveControlRetryResult(
             true,
             $"KI-Videoanalyse fuer '{name}' gestartet.");
+    }
+
+    public void Dispose()
+    {
+        lock (_httpClientsGate)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            foreach (var httpClient in _httpClients.Values)
+                httpClient.Dispose();
+            _httpClients.Clear();
+        }
+    }
+
+    private HttpClient GetOrCreateHttpClient(TimeSpan timeout)
+    {
+        lock (_httpClientsGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_httpClients.TryGetValue(timeout, out var existing))
+                return existing;
+
+            var created = new HttpClient { Timeout = timeout };
+            _httpClients.Add(timeout, created);
+            return created;
+        }
     }
 
     private static PipelineRequest BuildRequest(

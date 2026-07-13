@@ -71,6 +71,46 @@ public sealed class DataPageVideoAnalysisControllerTests
     }
 
     [Fact]
+    public void Open_verwendet_http_client_fuer_weitere_analysen_wieder()
+    {
+        var clients = new List<HttpClient>();
+        using var controller = CreateController(
+            new CapturingDialogService(),
+            createPipeline: (_, _, http) =>
+            {
+                clients.Add(http);
+                return new NoopPipeline();
+            });
+
+        controller.Open(new HaltungRecord());
+        controller.Open(new HaltungRecord());
+
+        Assert.Equal(2, clients.Count);
+        Assert.Same(clients[0], clients[1]);
+    }
+
+    [Fact]
+    public async Task Dispose_gibt_http_client_frei_und_ist_wiederholbar()
+    {
+        HttpClient? client = null;
+        var controller = CreateController(
+            new CapturingDialogService(),
+            createPipeline: (_, _, http) =>
+            {
+                client = http;
+                return new NoopPipeline();
+            });
+        controller.Open(new HaltungRecord());
+
+        controller.Dispose();
+        controller.Dispose();
+
+        Assert.NotNull(client);
+        await Assert.ThrowsAsync<ObjectDisposedException>(
+            async () => await client!.GetAsync("http://127.0.0.1:1"));
+    }
+
+    [Fact]
     public void Open_baut_pipeline_request_und_uebernimmt_erfolgreiches_protokoll()
     {
         var dialogs = new CapturingDialogService();
