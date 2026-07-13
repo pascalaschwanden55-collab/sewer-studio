@@ -18,6 +18,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _sp;
+    private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -55,6 +56,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         _shell = shell;
         _sp = sp;
+        _projectPortabilityController = new Services.ImportProjectPortabilityController(
+            _sp.Dialogs,
+            _sp.ProjectPortability);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -418,40 +422,15 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// Macht das aktuelle Projekt portabel: alle Medienpfade relativ auf die Projekt-Kopie,
     /// Fotos aus der Quelle ins Projekt holen. Danach 1:1 auf einen anderen PC kopierbar.
     /// </summary>
-    private async Task MakeProjectPortableAsync()
-    {
-        var projectFolder = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projectFolder))
-        {
-            _sp.Dialogs.Info("Projekt bitte zuerst speichern, dann kann es portabel gemacht werden.", "Projekt portabel machen");
-            return;
-        }
-
-        var count = _shell.Project.Data.Count;
-        if (count == 0)
-        {
-            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Projekt portabel machen");
-            return;
-        }
-
-        ImportProgress = "Projekt portabel machen: Medienpfade relativ verlinken, Fotos einsammeln...";
-        var result = await Task.Run(() => _sp.ProjectPortability.MakePortable(projectFolder!, _shell.Project));
-        ImportProgress = "";
-
-        _ = _shell.TrySaveProject();
-
-        var summary = $"Projekt portabel gemacht ({count} Haltungen):"
-            + $"\n  {result.RelinkedPaths} Pfade relativ verlinkt"
-            + $"\n  {result.FotosCopied} Fotos ins Projekt kopiert"
-            + $"\n  {result.Unresolved} nicht aufloesbar";
-        SummaryText += "\n" + summary;
-        if (result.Messages.Count > 0)
-            DetailsText += "\n\nPortabilitaet-Details:\n" + string.Join("\n", result.Messages.Take(50));
-
-        _sp.Dialogs.Info(
-            summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden.",
-            "Projekt portabel machen");
-    }
+    private Task MakeProjectPortableAsync()
+        => _projectPortabilityController.ExecuteAsync(
+            new Services.ImportProjectPortabilityActions(
+                GetProjectFolder: _shell.GetProjectFolder,
+                GetProject: () => _shell.Project,
+                SaveProject: _shell.TrySaveProject,
+                SetProgress: value => ImportProgress = value,
+                AppendSummary: value => SummaryText += value,
+                AppendDetails: value => DetailsText += value));
 
     /// <summary>
     /// Erzeugt am Ende der Bearbeitung je Haltung das programm-EIGENE Protokoll (mit Fotos, Suffix _E)

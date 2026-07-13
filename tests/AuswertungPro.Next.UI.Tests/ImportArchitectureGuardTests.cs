@@ -49,9 +49,13 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs"));
         var provider = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+        var portabilityController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportProjectPortabilityController.cs"));
 
         Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
-        Assert.Contains("_sp.ProjectPortability.MakePortable", viewModel);
+        Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
+        Assert.Contains("_service.MakePortable", portabilityController);
+        Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
         Assert.DoesNotContain("new ProjectPortabilityService", viewModel);
         Assert.Contains("_sp.ProjectPhotoAssignment.AssignFromFolder", viewModel);
         Assert.DoesNotContain("new ProjectPhotoAssignmentService", viewModel);
