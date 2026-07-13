@@ -110,13 +110,23 @@ public static class DichtheitImportDistributor
         return new Result(verteilt, nichtZugeordnet, uebersprungen, messages);
     }
 
-    /// <summary>KI-Aufruf synchron mit hartem Timeout — Ollama-Ausfall stoppt den Import nie.</summary>
+    /// <summary>
+    /// Kapselt den asynchronen KI-Aufruf auf einem freien Thread mit hartem Timeout.
+    /// Dadurch kann ein aufrufender UI-Kontext nicht durch eine dort eingeplante
+    /// Fortsetzung blockiert werden; Ollama-Ausfaelle stoppen den Import nie.
+    /// </summary>
     private static PdfKiKlassifikation? FrageKi(PdfKiSchiedsrichter ki, string pdfPath)
     {
         try
         {
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
-            return ki.KlassifiziereAsync(pdfPath, cts.Token).GetAwaiter().GetResult();
+            return System.Threading.Tasks.Task.Run(
+                    async () => await ki.KlassifiziereAsync(pdfPath, cts.Token)
+                        .WaitAsync(cts.Token)
+                        .ConfigureAwait(false),
+                    cts.Token)
+                .GetAwaiter()
+                .GetResult();
         }
         catch
         {
