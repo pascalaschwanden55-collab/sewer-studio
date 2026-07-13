@@ -91,6 +91,44 @@ public sealed class FullBackupServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_Schwaerzt_sensible_Umgebungswerte_in_beiden_Anleitungen()
+    {
+        var sources = CreateSourceTree() with
+        {
+            EnvironmentVariables = new Dictionary<string, string>
+            {
+                ["SEWERSTUDIO_KNOWLEDGE_ROOT"] = "C:\\Wissen",
+                ["SEWER_SIDECAR_TOKEN"] = "token-klartext",
+                ["SEWERSTUDIO_API_SECRET"] = "secret-klartext",
+                ["SEWERSTUDIO_LICENSE_KEY"] = "key-klartext",
+                ["SEWERSTUDIO_AUTH_HEADER"] = "auth-klartext"
+            }
+        };
+        var targetParent = Path.Combine(_root, "target-redaction");
+        var result = await new FullBackupService(() => sources).RunAsync(targetParent);
+        Assert.True(result.Success, result.Error);
+
+        var extras = Path.Combine(targetParent, BackupPlanBuilder.TargetFolderName, "Extras");
+        var files = new[]
+        {
+            File.ReadAllText(Path.Combine(extras, "umgebung.txt")),
+            File.ReadAllText(Path.Combine(extras, "RESTORE-ANLEITUNG.txt"))
+        };
+
+        foreach (var text in files)
+        {
+            Assert.Contains("SEWERSTUDIO_KNOWLEDGE_ROOT", text);
+            Assert.Contains("C:\\Wissen", text);
+            Assert.Contains("SEWER_SIDECAR_TOKEN", text);
+            Assert.Contains("***redigiert***", text);
+            Assert.DoesNotContain("token-klartext", text);
+            Assert.DoesNotContain("secret-klartext", text);
+            Assert.DoesNotContain("key-klartext", text);
+            Assert.DoesNotContain("auth-klartext", text);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_RotiertAlteVersionsStaende()
     {
         var sources = CreateSourceTree();

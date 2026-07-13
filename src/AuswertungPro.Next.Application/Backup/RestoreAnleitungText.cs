@@ -37,7 +37,7 @@ public static class RestoreAnleitungText
         sb.AppendLine("SCHRITT 2 — KI-Gehirn zuruecklegen");
         sb.AppendLine($"  Ordner \"KI_BRAIN\" nach {sources.KnowledgeRoot} kopieren.");
         sb.AppendLine("  WICHTIG: Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT auf diesen Pfad setzen");
-        sb.AppendLine("  (Werte aller Variablen stehen in Extras\\umgebung.txt).");
+        sb.AppendLine("  (nicht sensible Werte stehen in Extras\\umgebung.txt; Token/Schluessel sind redigiert).");
         sb.AppendLine("  Ausgelassen wurden nur regenerierbare Trainings-Datensaetze (yolo_*_dataset*,");
         sb.AppendLine("  training_frames, kb_backups) — sie lassen sich aus der Wissensdatenbank neu bauen.");
         sb.AppendLine();
@@ -63,6 +63,7 @@ public static class RestoreAnleitungText
         sb.AppendLine();
         sb.AppendLine("SCHRITT 6 — Umgebung herstellen");
         sb.AppendLine("  a) Umgebungsvariablen laut Extras\\umgebung.txt setzen (System-Ebene).");
+        sb.AppendLine("     Redigierte Token/Schluessel aus Sicherheitsgruenden neu erzeugen.");
         sb.AppendLine("  b) Desktop-Skripte aus Extras\\ zurueck auf den Desktop legen.");
         sb.AppendLine("  c) Ollama installieren und Modelle laut Liste in umgebung.txt laden");
         sb.AppendLine("     (z. B. \"ollama pull qwen3-vl:8b-q8\").");
@@ -79,7 +80,7 @@ public static class RestoreAnleitungText
         else
         {
             foreach (var kv in sources.EnvironmentVariables.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
-                sb.AppendLine($"  {kv.Key} = {kv.Value}");
+                sb.AppendLine($"  {kv.Key} = {BackupEnvironmentVariableRedactor.RedactValue(kv.Key, kv.Value)}");
         }
 
         return sb.ToString();

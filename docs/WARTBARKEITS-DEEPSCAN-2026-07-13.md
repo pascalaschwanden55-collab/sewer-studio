@@ -45,9 +45,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Videoanalyse-Verbindungen wiederverwendet (A2-04 erledigt):** Die Datenseite hält je Zeitlimit einen langlebigen `HttpClient`, statt bei jeder Analyse eine neue Verbindung aufzubauen. Beim Schließen werden alle Clients wiederholbar freigegeben. Zwei Tests schützen Wiederverwendung und Aufräumen.
 - **Videoanalyse-Abbruchquelle freigegeben (A2-05 erledigt):** Beim Schließen des Pipeline-Fensters wird die laufende Analyse zuerst abgebrochen und die Token-Quelle danach freigegeben. Ein Lebensdauer-Guard schützt die Reihenfolge.
 - **Datenseiten-Suchtimer gestoppt (A2-06 erledigt):** Beim Verlassen der Datenseite werden Such- und Layout-Verzögerungstimer gemeinsam gestoppt. Ein Lebensdauer-Guard verhindert verspätete Suchläufe auf der entladenen Ansicht.
+- **Backup-Geheimnisse redigiert (A3-01 erledigt):** `umgebung.txt` und `RESTORE-ANLEITUNG.txt` schreiben Werte von Variablen mit `TOKEN`, `SECRET`, `KEY` oder `AUTH` nur noch als `***redigiert***`. Normale Wiederherstellungspfade bleiben lesbar; ein Integrationstest prüft beide Dateien.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.704 Tests bestanden (2.491 Infrastruktur, 1.813 Pipeline, 4.338 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.705 Tests bestanden (2.492 Infrastruktur, 1.813 Pipeline, 4.338 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -142,7 +143,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A3-01 | Mittel | `FullBackupSourcesFactory.cs:53-70` — alle `SEWER*`-Env-Vars inkl. Tokens im Klartext in `umgebung.txt`/`RESTORE-ANLEITUNG.txt` | Werte von `*TOKEN*/*SECRET*/*KEY*/*AUTH*` durch `***redigiert***` ersetzen |
+| A3-01 | Mittel → **erledigt** | `FullBackupSourcesFactory.cs:53-70` — alle `SEWER*`-Env-Vars inkl. Tokens im Klartext in `umgebung.txt`/`RESTORE-ANLEITUNG.txt` | Gemeinsamer Redaktor schwärzt Werte von `*TOKEN*/*SECRET*/*KEY*/*AUTH*` in beiden Ausgabedateien; normale Werte bleiben wiederherstellbar |
 | A3-02 | Mittel | `FullBackupService.cs:434-493` — Manifest ohne Pro-Datei-Hashes; `DirectoryMirror` erkennt Änderung nur über Größe+Zeit | SHA256 je Datei ins Manifest; `FullBackupSmoke` um Verify-Modus erweitern |
 | A3-03 | Niedrig | `JsonProjectRepository.cs:94-104` / `AppSettings.cs:192` — Klartext-JSON inkl. `PipelineSidecarToken` | Nur den Token per DPAPI (`ProtectedData`, CurrentUser) schützen; projekt.json vorerst Klartext |
 | A3-04 | Niedrig | `KnowledgeBasePaths.cs:131-147` — `SEWERSTUDIO_KNOWLEDGE_ROOT` ungeprüft als Wurzel | Leere/relative Werte verwerfen, Override beim Start loggen |

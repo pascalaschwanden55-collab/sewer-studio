@@ -384,7 +384,7 @@ public sealed class FullBackupService : IFullBackupService
         else
         {
             foreach (var kv in sources.EnvironmentVariables.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
-                sb.AppendLine($"  {kv.Key}={kv.Value}");
+                sb.AppendLine($"  {kv.Key}={BackupEnvironmentVariableRedactor.RedactValue(kv.Key, kv.Value)}");
         }
 
         sb.AppendLine();
