@@ -26,4 +26,15 @@ public sealed class SchachtSanierungPflichtfeldValidatorTests
 
         Assert.Empty(missing);
     }
+
+    [Fact]
+    public void MissingFields_sanieren_nein_erfordert_kein_ausgefuehrt_durch()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Sanieren", "Nein");
+
+        var missing = SchachtSanierungPflichtfeldValidator.MissingFields(record);
+
+        Assert.Empty(missing);
+    }
 }

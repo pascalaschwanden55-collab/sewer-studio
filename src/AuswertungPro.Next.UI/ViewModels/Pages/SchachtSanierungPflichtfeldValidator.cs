@@ -29,8 +29,16 @@ internal static class SchachtSanierungPflichtfeldValidator
             return Array.Empty<string>();
 
         var missing = new List<string>();
-        if (string.IsNullOrWhiteSpace(ResolveValue(record, SanierenAliases)))
+        var sanieren = ResolveValue(record, SanierenAliases);
+        if (string.IsNullOrWhiteSpace(sanieren))
+        {
             missing.Add("Sanieren Ja/Nein");
+        }
+        else if (string.Equals(sanieren.Trim(), "Nein", StringComparison.OrdinalIgnoreCase))
+        {
+            return missing;
+        }
+
         if (string.IsNullOrWhiteSpace(ResolveValue(record, AusgefuehrtDurchAliases)))
             missing.Add("Ausgefuehrt durch");
 

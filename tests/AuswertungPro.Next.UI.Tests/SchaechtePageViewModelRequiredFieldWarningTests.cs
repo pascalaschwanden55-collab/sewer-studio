@@ -47,6 +47,22 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
         Assert.Equal(0, dialogs.WarnCalls);
     }
 
+    [Fact]
+    public void Selected_wechsel_warnt_nicht_bei_sanieren_nein()
+    {
+        var dialogs = new DialogFake();
+        var (_, vm) = CreateVm(dialogs);
+        var first = Record("80441", sanieren: "Nein");
+        var second = Record("S-2", sanieren: "Ja", ausgefuehrtDurch: "Sanierer");
+        vm.Records.Add(first);
+        vm.Records.Add(second);
+
+        vm.Selected = first;
+        vm.Selected = second;
+
+        Assert.Equal(0, dialogs.WarnCalls);
+    }
+
     private (ShellViewModel Shell, SchaechtePageViewModel Vm) CreateVm(DialogFake dialogs)
     {
         var settings = new AppSettings();
