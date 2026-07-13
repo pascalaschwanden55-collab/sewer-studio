@@ -320,6 +320,20 @@ class SewerStudioBridgeDock(QDockWidget):
         self.auto_zoom_check = QCheckBox("Aktuelle Haltung automatisch zoomen")
         self.auto_zoom_check.setChecked(True)
 
+        # Groesse des farbigen Schacht-Kreises und der Schachtnummer frei einstellbar,
+        # damit auch mehrstellige Nummern (z.B. "80601") gut lesbar bleiben. Eine
+        # Aenderung wird sofort auf den bereits geladenen Schacht-Layer angewandt.
+        self.schacht_circle_size = QSpinBox()
+        self.schacht_circle_size.setRange(3, 30)
+        self.schacht_circle_size.setValue(6)
+        self.schacht_circle_size.setSuffix(" mm")
+        self.schacht_font_size = QSpinBox()
+        self.schacht_font_size.setRange(5, 40)
+        self.schacht_font_size.setValue(9)
+        self.schacht_font_size.setSuffix(" pt")
+        self.schacht_circle_size.valueChanged.connect(self._on_schacht_style_changed)
+        self.schacht_font_size.valueChanged.connect(self._on_schacht_style_changed)
+
         data_root_row = QWidget(root)
         data_root_layout = QHBoxLayout(data_root_row)
         data_root_layout.setContentsMargins(0, 0, 0, 0)
@@ -342,6 +356,8 @@ class SewerStudioBridgeDock(QDockWidget):
         form.addRow("Datenordner", data_root_row)
         form.addRow("Layer-Ordner (feste Dateien)", layer_dir_row)
         form.addRow("Intervall (s)", self.poll_seconds)
+        form.addRow("Schacht-Kreis", self.schacht_circle_size)
+        form.addRow("Schacht-Nr. Schrift", self.schacht_font_size)
         form.addRow("", self.auto_zoom_check)
         layout.addLayout(form)
 
@@ -370,6 +386,15 @@ class SewerStudioBridgeDock(QDockWidget):
         self.poll_seconds.setValue(int(self.settings.value(f"{SETTINGS_PREFIX}/pollSeconds", 3)))
         auto_zoom = self.settings.value(f"{SETTINGS_PREFIX}/autoZoomCurrent", "true")
         self.auto_zoom_check.setChecked(str(auto_zoom).lower() in ("1", "true", "yes"))
+        # Beim Laden die Aenderungs-Signale kurz stumm schalten, damit das Setzen der
+        # gespeicherten Werte nicht sofort einen Style-Refresh ausloest (Layer ist da
+        # noch nicht geladen).
+        self.schacht_circle_size.blockSignals(True)
+        self.schacht_font_size.blockSignals(True)
+        self.schacht_circle_size.setValue(int(self.settings.value(f"{SETTINGS_PREFIX}/schachtCircleSize", 6)))
+        self.schacht_font_size.setValue(int(self.settings.value(f"{SETTINGS_PREFIX}/schachtFontSize", 9)))
+        self.schacht_circle_size.blockSignals(False)
+        self.schacht_font_size.blockSignals(False)
 
     def _save_settings(self):
         self.settings.setValue(f"{SETTINGS_PREFIX}/bridgeUrl", self.url_edit.text().strip())
@@ -377,6 +402,8 @@ class SewerStudioBridgeDock(QDockWidget):
         self.settings.setValue(f"{SETTINGS_PREFIX}/layerDir", self.layer_dir_edit.text().strip())
         self.settings.setValue(f"{SETTINGS_PREFIX}/pollSeconds", self.poll_seconds.value())
         self.settings.setValue(f"{SETTINGS_PREFIX}/autoZoomCurrent", self.auto_zoom_check.isChecked())
+        self.settings.setValue(f"{SETTINGS_PREFIX}/schachtCircleSize", self.schacht_circle_size.value())
+        self.settings.setValue(f"{SETTINGS_PREFIX}/schachtFontSize", self.schacht_font_size.value())
 
     def _browse_data_root(self):
         selected = QFileDialog.getExistingDirectory(
@@ -627,6 +654,35 @@ class SewerStudioBridgeDock(QDockWidget):
         QgsProject.instance().addMapLayer(layer)
         return layer
 
+    def _schacht_circle_size(self):
+        # Kreisdurchmesser in mm; faellt defensiv auf 6 zurueck, falls das Widget
+        # (theoretisch) noch nicht existiert.
+        widget = getattr(self, "schacht_circle_size", None)
+        return int(widget.value()) if widget is not None else 6
+
+    def _schacht_font_size(self):
+        widget = getattr(self, "schacht_font_size", None)
+        return int(widget.value()) if widget is not None else 9
+
+    def _on_schacht_style_changed(self, _value=None):
+        # Regler-Aenderung sofort auf den bereits geladenen Schacht-Layer anwenden.
+        # Die Versionsmarke enthaelt die Groessen, daher greifen die _ensure_-Methoden
+        # neu, sobald sich ein Wert unterscheidet.
+        self._save_settings()
+        layer_name = next(
+            (name for key, name, _ in REMOTE_LAYERS if key == "schacht_sanierungstyp"),
+            None,
+        )
+        if layer_name is None:
+            return
+        layer = (
+            self._find_layer_by_source(self._layer_target("schacht_sanierungstyp"))
+            or self._find_layer_named(layer_name)
+        )
+        if layer is not None:
+            self._ensure_ausgefuehrt_durch_style("schacht_sanierungstyp", layer)
+            self._ensure_nr_labels("schacht_sanierungstyp", layer)
+
     def _ensure_ausgefuehrt_durch_style(self, layer_key, layer):
         """Unterscheidet Haltungen und Schaechte nach ``ausgefuehrt_durch``.
 
@@ -640,7 +696,12 @@ class SewerStudioBridgeDock(QDockWidget):
             return
 
         marker = f"sewerstudio/{layer_key}_ausgefuehrt_renderer_version"
-        style_version = "3" if layer_key == "schacht_sanierungstyp" else "1"
+        # Die Kreisgroesse steckt in der Versionsmarke: aendert der Nutzer den Regler,
+        # unterscheidet sich die Marke und der Stil wird neu aufgebaut.
+        if layer_key == "schacht_sanierungstyp":
+            style_version = f"3-c{self._schacht_circle_size()}"
+        else:
+            style_version = "1"
         initialized = str(layer.customProperty(marker, ""))
         if initialized == style_version:
             return
@@ -670,7 +731,7 @@ class SewerStudioBridgeDock(QDockWidget):
                         "color": color,
                         "outline_color": "#FF0000",
                         "outline_width": "0.6",
-                        "size": "6.0",
+                        "size": str(self._schacht_circle_size()),
                         # Fest nach oben rechts versetzt. So bleibt der eigentliche
                         # Schachtpunkt darunter sichtbar und wird nicht ueberdeckt.
                         "offset": "5,-5",
@@ -702,7 +763,11 @@ class SewerStudioBridgeDock(QDockWidget):
             return
 
         marker = f"sewerstudio/{layer_key}_nr_labels_style_version"
-        style_version = "3" if layer_key == "schacht_sanierungstyp" else "1"
+        # Schriftgroesse in der Versionsmarke -> Regler-Aenderung erzwingt Neuaufbau.
+        if layer_key == "schacht_sanierungstyp":
+            style_version = f"3-f{self._schacht_font_size()}"
+        else:
+            style_version = "1"
         initialized = str(layer.customProperty(marker, ""))
         if initialized == style_version:
             return
@@ -739,7 +804,7 @@ class SewerStudioBridgeDock(QDockWidget):
             font.setBold(True)
             text_format = QgsTextFormat()
             text_format.setFont(font)
-            text_format.setSize(9 if is_schacht else 10)
+            text_format.setSize(self._schacht_font_size() if is_schacht else 10)
             text_format.setColor(QColor("#202020"))
 
             # Nur Haltungsnummern brauchen den weissen Rand. Beim Schacht wuerde

@@ -176,6 +176,27 @@ public sealed class QgisPluginPackagingTests
     }
 
     [Fact]
+    public void Plugin_macht_schacht_kreis_und_nummer_groesse_einstellbar()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        // Zwei Regler im Dock: Kreisgroesse (mm) und Schriftgroesse (pt) der Schachtnummer.
+        Assert.Contains("self.schacht_circle_size", source);
+        Assert.Contains("self.schacht_font_size", source);
+        // Werte werden persistiert (QSettings) und beim Start wieder geladen.
+        Assert.Contains("schachtCircleSize", source);
+        Assert.Contains("schachtFontSize", source);
+        // Aenderung wird sofort auf den geladenen Schacht-Layer angewandt.
+        Assert.Contains("_on_schacht_style_changed", source);
+        // Kreisgroesse fliesst in das Symbol UND in die Versionsmarke (erzwingt Neuaufbau).
+        Assert.Contains("\"size\": str(self._schacht_circle_size())", source);
+        Assert.Contains("f\"3-c{self._schacht_circle_size()}\"", source);
+        // Schriftgroesse fliesst in die Beschriftung UND in ihre Versionsmarke.
+        Assert.Contains("self._schacht_font_size() if is_schacht else 10", source);
+        Assert.Contains("f\"3-f{self._schacht_font_size()}\"", source);
+    }
+
+    [Fact]
     public void Plugin_haelt_zoom_ziel_layer_robust_gegen_leer_erstladung()
     {
         var source = ReadPluginFile("sewerstudio_bridge.py");
