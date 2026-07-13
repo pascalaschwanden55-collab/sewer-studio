@@ -53,17 +53,7 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
     {
         try
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = request.FileName,
-                Arguments = request.Arguments,
-                UseShellExecute = false,
-                CreateNoWindow = request.Hidden,
-                WindowStyle = request.Hidden ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
-            };
-
-            if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
-                startInfo.WorkingDirectory = request.WorkingDirectory;
+            var startInfo = CreateStartInfo(request);
 
             using var process = Process.Start(startInfo);
             if (process is null)
@@ -98,6 +88,31 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
             error = ex.Message;
             return false;
         }
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(AiStartupProcessRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = request.FileName,
+            Arguments = request.Arguments,
+            UseShellExecute = false,
+            CreateNoWindow = request.Hidden,
+            WindowStyle = request.Hidden ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
+            startInfo.WorkingDirectory = request.WorkingDirectory;
+
+        if (request.EnvironmentVariables is not null)
+        {
+            foreach (var pair in request.EnvironmentVariables)
+                startInfo.Environment[pair.Key] = pair.Value;
+        }
+
+        return startInfo;
     }
 
     public async Task<AiStartupModelPreloadResult> PreloadOllamaModelAsync(

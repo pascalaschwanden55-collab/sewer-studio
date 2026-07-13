@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,6 +60,14 @@ public static class AiStartupOrchestrator
             messages.Add("KI aktiviert: Ollama, Multi-Model und Sidecar-Konfiguration wurden eingeschaltet.");
 
         // ------------------------------------------------------------------ Ollama
+        var ollamaIsLoopback = IsLoopback(input.OllamaBaseUri);
+        if (!ollamaIsLoopback)
+        {
+            warnings.Add(
+                "Ollama-Adresse ist nicht lokal. Ollama besitzt keine eingebaute Anmeldung; " +
+                "Sewer Studio startet deshalb keinen eigenen Ollama-Prozess fuer diese Adresse.");
+        }
+
         Report("Pruefe Ollama...");
         var ollamaReachable = await launcher
             .IsReachableAsync(input.OllamaBaseUri, "/api/tags", headers: null, ct)
@@ -70,7 +79,7 @@ public static class AiStartupOrchestrator
         {
             messages.Add("Ollama ist erreichbar.");
         }
-        else
+        else if (ollamaIsLoopback)
         {
             ollamaAttempted = true;
             ollamaStarted = launcher.TryStart(
@@ -78,7 +87,13 @@ public static class AiStartupOrchestrator
                     FileName: "ollama",
                     Arguments: "serve",
                     WorkingDirectory: null,
-                    Hidden: true),
+                    Hidden: true)
+                {
+                    EnvironmentVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["OLLAMA_HOST"] = $"127.0.0.1:{input.OllamaBaseUri.Port}"
+                    }
+                },
                 out var error);
 
             if (ollamaStarted)
@@ -263,6 +278,14 @@ public static class AiStartupOrchestrator
 
     private static string Quote(string value)
         => "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+
+    private static bool IsLoopback(Uri uri)
+    {
+        if (uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return IPAddress.TryParse(uri.Host, out var address) && IPAddress.IsLoopback(address);
+    }
 }
 
 /// <summary>

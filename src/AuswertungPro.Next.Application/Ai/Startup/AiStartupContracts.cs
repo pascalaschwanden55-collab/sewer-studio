@@ -23,7 +23,14 @@ public sealed record AiStartupProcessRequest(
     string FileName,
     string Arguments,
     string? WorkingDirectory,
-    bool Hidden);
+    bool Hidden)
+{
+    /// <summary>
+    /// Gezielte Umgebung nur fuer den neuen Prozess. Der bestehende Konstruktor bleibt
+    /// unveraendert; Aufrufer setzen Werte bei Bedarf per Objektinitialisierer.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? EnvironmentVariables { get; init; }
+}
 
 public sealed record AiStartupModelPreloadRequest(
     string ModelName,

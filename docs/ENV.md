@@ -45,6 +45,11 @@ Die C#-Seite loest das Token in dieser Reihenfolge auf:
 
 Fuer `SEWERSTUDIO_*` akzeptiert `AiSettingsFactory` weiterhin alte `AUSWERTUNGPRO_*` Aliase. Neue Konfiguration bitte mit `SEWERSTUDIO_*` schreiben.
 
+Startet SewerStudio Ollama selbst, setzt es fuer diesen Prozess immer
+`OLLAMA_HOST=127.0.0.1:<Port aus SEWERSTUDIO_OLLAMA_URL>`. Eine nichtlokale
+`SEWERSTUDIO_OLLAMA_URL` wird deutlich gemeldet und niemals durch SewerStudio
+als eigener Ollama-Prozess gestartet.
+
 ## Modellwahl
 
 `SEWERSTUDIO_AI_VISION_MODEL=auto` oder ein leerer Wert nutzt die GPU-Erkennung:

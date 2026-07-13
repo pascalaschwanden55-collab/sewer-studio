@@ -65,12 +65,56 @@ public sealed class AiStartupServiceTests
             Assert.True(result.SidecarStartAttempted);
             Assert.Contains(launcher.StartedProcesses, p =>
                 string.Equals(p.FileName, "ollama", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(p.Arguments, "serve", StringComparison.Ordinal));
+                && string.Equals(p.Arguments, "serve", StringComparison.Ordinal)
+                && p.EnvironmentVariables is not null
+                && p.EnvironmentVariables.TryGetValue("OLLAMA_HOST", out var host)
+                && string.Equals(host, "127.0.0.1:11434", StringComparison.Ordinal));
             Assert.Contains(launcher.StartedProcesses, p =>
                 p.Arguments.Contains("start_sidecar.ps1", StringComparison.OrdinalIgnoreCase)
                 && p.Hidden);
             Assert.Contains(result.Messages, m => m.Contains("KI aktiviert", StringComparison.OrdinalIgnoreCase));
             Assert.Contains("Modelle geladen", status.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task StartAsync_warns_and_does_not_start_ollama_for_non_loopback_url()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = false,
+                SidecarReachable = true
+            };
+            var settings = new AppSettings
+            {
+                AiEnabled = true,
+                PipelineMultiModelEnabled = true,
+                PipelineMode = "multimodel",
+                AiOllamaUrl = "http://192.168.1.20:11434",
+                PipelineSidecarUrl = "http://localhost:8100"
+            };
+
+            var result = await AiStartupService.StartAsync(
+                settings,
+                launcher,
+                sidecarScriptPath: temp.ScriptPath,
+                ct: CancellationToken.None);
+
+            Assert.False(result.OllamaStartAttempted);
+            Assert.DoesNotContain(
+                launcher.StartedProcesses,
+                p => string.Equals(p.FileName, "ollama", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.Warnings,
+                warning => warning.Contains("nicht lokal", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
