@@ -165,7 +165,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 setStatus: SetStatus,
                 playVideo: MediaConflictVideoLauncher.Create(_sp))),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
-            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
+            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(
+                this,
+                settings: _sp.Settings,
+                dialogs: _sp.Dialogs,
+                costFieldSync: _sp.CostFieldSync,
+                dashboardRefresh: _sp.DashboardRefresh,
+                holding: null,
+                singleHoldingMode: false)),
             new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
                 getProject: () => Project,
                 getProjectPath: () => _sp.Settings.LastProjectPath,
@@ -404,7 +411,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             SelectedNavItem = null;
             _suppressLeaveGuard = false;
             _navItemBeforeChange = null;
-            SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(this, _sp, holding, singleHoldingMode: true, targetRecord));
+            SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(
+                this,
+                settings: _sp.Settings,
+                dialogs: _sp.Dialogs,
+                costFieldSync: _sp.CostFieldSync,
+                dashboardRefresh: _sp.DashboardRefresh,
+                holding: holding,
+                singleHoldingMode: true,
+                targetRecord: targetRecord));
             return;
         }
 
