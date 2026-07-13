@@ -139,7 +139,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 store: _sp.SchattenStore,
                 createService: _sp.CreateSchattenAuswertung,
                 getProjectPath: () => _sp.Settings.LastProjectPath)),
-            new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
+            new("\uE128", "VSA", () => new Pages.VsaPageViewModel(
+                getProject: () => Project,
+                collectionLock: CollectionLock,
+                getProjectPath: () => _sp.Settings.LastProjectPath,
+                getExplicitPdfToTextPath: () => _sp.Diagnostics.ExplicitPdfToTextPath,
+                xtfImport: _sp.XtfImport,
+                pdfImport: _sp.PdfImport,
+                vsaEvaluation: _sp.Vsa,
+                measureRecommendation: _sp.MeasureRecommendation,
+                setStatus: SetStatus,
+                createImportRestorePoint: TryCreateImportRestorePoint,
+                refreshTitleAndDirty: RefreshTitleAndDirty)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp.LogTailReader)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
         };

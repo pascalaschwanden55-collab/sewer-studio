@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Vsa;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,8 +15,17 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class VsaPageViewModel : ObservableObject
 {
-    private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly Func<Project> _getProject;
+    private readonly object _collectionLock;
+    private readonly Func<string?> _getProjectPath;
+    private readonly Func<string?> _getExplicitPdfToTextPath;
+    private readonly IXtfImportService _xtfImport;
+    private readonly IPdfImportService _pdfImport;
+    private readonly IVsaEvaluationService _vsaEvaluation;
+    private readonly IMeasureRecommendationService _measureRecommendation;
+    private readonly Action<string> _setStatus;
+    private readonly Action<string> _createImportRestorePoint;
+    private readonly Action _refreshTitleAndDirty;
 
     [ObservableProperty] private string _summary = "Noch keine Berechnung.";
 
@@ -24,9 +35,45 @@ public sealed partial class VsaPageViewModel : ObservableObject
     public IAsyncRelayCommand RunCommand { get; }
 
     public VsaPageViewModel(ShellViewModel shell, ServiceProvider sp)
+        : this(
+            getProject: () => shell.Project,
+            collectionLock: shell.CollectionLock,
+            getProjectPath: () => sp.Settings.LastProjectPath,
+            getExplicitPdfToTextPath: () => sp.Diagnostics.ExplicitPdfToTextPath,
+            xtfImport: sp.XtfImport,
+            pdfImport: sp.PdfImport,
+            vsaEvaluation: sp.Vsa,
+            measureRecommendation: sp.MeasureRecommendation,
+            setStatus: shell.SetStatus,
+            createImportRestorePoint: shell.TryCreateImportRestorePoint,
+            refreshTitleAndDirty: shell.RefreshTitleAndDirty)
     {
-        _shell = shell;
-        _sp = sp;
+    }
+
+    public VsaPageViewModel(
+        Func<Project> getProject,
+        object collectionLock,
+        Func<string?> getProjectPath,
+        Func<string?> getExplicitPdfToTextPath,
+        IXtfImportService xtfImport,
+        IPdfImportService pdfImport,
+        IVsaEvaluationService vsaEvaluation,
+        IMeasureRecommendationService measureRecommendation,
+        Action<string> setStatus,
+        Action<string> createImportRestorePoint,
+        Action refreshTitleAndDirty)
+    {
+        _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
+        _collectionLock = collectionLock ?? throw new ArgumentNullException(nameof(collectionLock));
+        _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
+        _getExplicitPdfToTextPath = getExplicitPdfToTextPath ?? throw new ArgumentNullException(nameof(getExplicitPdfToTextPath));
+        _xtfImport = xtfImport ?? throw new ArgumentNullException(nameof(xtfImport));
+        _pdfImport = pdfImport ?? throw new ArgumentNullException(nameof(pdfImport));
+        _vsaEvaluation = vsaEvaluation ?? throw new ArgumentNullException(nameof(vsaEvaluation));
+        _measureRecommendation = measureRecommendation ?? throw new ArgumentNullException(nameof(measureRecommendation));
+        _setStatus = setStatus ?? throw new ArgumentNullException(nameof(setStatus));
+        _createImportRestorePoint = createImportRestorePoint ?? throw new ArgumentNullException(nameof(createImportRestorePoint));
+        _refreshTitleAndDirty = refreshTitleAndDirty ?? throw new ArgumentNullException(nameof(refreshTitleAndDirty));
         // S10: AsyncRelayCommand sperrt Mehrfachstarts automatisch und verlagert die
         // Bewertung in den Hintergrund, damit die App nicht einfriert.
         RunCommand = new AsyncRelayCommand(RunAsync);
@@ -37,13 +84,13 @@ public sealed partial class VsaPageViewModel : ObservableObject
         // AsyncRelayCommand sperrt Mehrfachstarts bereits selbst (CanExecute waehrend des Laufs).
         IsBusy = true;
         Summary = "VSA-Bewertung laeuft, bitte warten...";
-        _shell.SetStatus("VSA-Bewertung läuft...");
+        _setStatus("VSA-Bewertung läuft...");
         try
         {
             // Run() liest gespeicherte XTF-/PDF-Quellen erneut ein und kann das Projekt veraendern.
             // Deshalb gilt hier dasselbe Sicherheitsnetz wie bei den sichtbaren Importknoepfen.
             if (HasStoredImportSources())
-                _shell.TryCreateImportRestorePoint("VSA-Daten");
+                _createImportRestorePoint("VSA-Daten");
 
             // Import/Bewertung sind synchron und potenziell langlaufend -> in den Hintergrund.
             // Run() mutiert Project.Data (ObservableCollection). Der Schreiber MUSS denselben Lock
@@ -52,7 +99,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
             // marshallt WPFs Binding-Engine selbst auf den UI-Thread.
             await System.Threading.Tasks.Task.Run(() =>
             {
-                lock (_shell.CollectionLock)
+                lock (_collectionLock)
                 {
                     Run();
                 }
@@ -61,12 +108,12 @@ public sealed partial class VsaPageViewModel : ObservableObject
         catch (Exception ex)
         {
             Summary = $"Fehler: {ex.Message}";
-            _shell.SetStatus("VSA fehlgeschlagen");
+            _setStatus("VSA fehlgeschlagen");
         }
         finally
         {
             IsBusy = false;
-            _shell.RefreshTitleAndDirty(); // SuggestMeasuresForAll kann Project.Dirty gesetzt haben
+            _refreshTitleAndDirty(); // SuggestMeasuresForAll kann Project.Dirty gesetzt haben
         }
     }
 
@@ -74,13 +121,14 @@ public sealed partial class VsaPageViewModel : ObservableObject
         => HasStoredImportSource("XTF_StoredFiles") || HasStoredImportSource("PDF_StoredFiles");
 
     private bool HasStoredImportSource(string key)
-        => _shell.Project.Metadata.TryGetValue(key, out var value)
+        => _getProject().Metadata.TryGetValue(key, out var value)
            && !string.IsNullOrWhiteSpace(value);
 
     private void Run()
     {
+        var project = _getProject();
         // Import-Reihenfolge: XTF/M150/MDB primaer, PDF sekundaer
-        var xtfFiles = LoadStoredXtfFiles(_sp.Settings.LastProjectPath);
+        var xtfFiles = LoadStoredXtfFiles(project, _getProjectPath());
         var importSb = new StringBuilder();
         importSb.AppendLine($"Import-Quellen: XTF/M150/MDB={xtfFiles.Count}");
 
@@ -92,11 +140,11 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
         if (xtfFiles.Count > 0)
         {
-            var resImport = _sp.XtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
+            var resImport = _xtfImport.ImportXtfFiles(xtfFiles, project);
             if (!resImport.Ok || resImport.Value is null)
             {
                 Summary = $"Fehler: {resImport.ErrorMessage}";
-                _shell.SetStatus("VSA fehlgeschlagen");
+                _setStatus("VSA fehlgeschlagen");
                 return;
             }
 
@@ -107,7 +155,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
             xtfErrors += resImport.Value.Errors;
         }
 
-        var pdfFiles = LoadStoredPdfFiles(_sp.Settings.LastProjectPath);
+        var pdfFiles = LoadStoredPdfFiles(project, _getProjectPath());
         importSb.AppendLine($"Import-Quellen: PDF={pdfFiles.Count}");
 
         var pdfFound = 0;
@@ -120,11 +168,11 @@ public sealed partial class VsaPageViewModel : ObservableObject
         {
             foreach (var pdf in pdfFiles)
             {
-                var resPdf = _sp.PdfImport.ImportPdf(pdf, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, fillMissingOnly: true);
+                var resPdf = _pdfImport.ImportPdf(pdf, project, _getExplicitPdfToTextPath(), fillMissingOnly: true);
                 if (!resPdf.Ok || resPdf.Value is null)
                 {
                     Summary = $"Fehler: {resPdf.ErrorMessage}";
-                    _shell.SetStatus("VSA fehlgeschlagen");
+                    _setStatus("VSA fehlgeschlagen");
                     return;
                 }
 
@@ -141,24 +189,24 @@ public sealed partial class VsaPageViewModel : ObservableObject
         if (pdfFiles.Count > 0)
             importSb.AppendLine($"PDF Stats: Found={pdfFound}, Created={pdfCreated}, Updated={pdfUpdated}, Uncertain={pdfUncertain}, Errors={pdfErrors}");
 
-        var res = _sp.Vsa.Evaluate(_shell.Project);
+        var res = _vsaEvaluation.Evaluate(project);
         if (!res.Ok || res.Value is null)
         {
             Summary = importSb.ToString() + $"\nFehler: {res.ErrorMessage}";
-            _shell.SetStatus("VSA fehlgeschlagen");
+            _setStatus("VSA fehlgeschlagen");
             return;
         }
 
         // Summarize
-        var count = _shell.Project.Data.Count;
-        var avgD = _shell.Project.Data
+        var count = project.Data.Count;
+        var avgD = project.Data
             .Select(r => double.TryParse(r.GetFieldValue("VSA_Zustandsnote_D").Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (double?)null)
             .Where(d => d is not null).Select(d => d!.Value).DefaultIfEmpty(4.0).Average();
 
         // Nach VSA-Bewertung: automatisch Sanierungsmassnahmen fuer betroffene Haltungen vorschlagen
         var measureResult = SuggestMeasuresForAll();
 
-        var diag = _shell.Project.Metadata.TryGetValue("VSA_Diag", out var d) ? d : "";
+        var diag = project.Metadata.TryGetValue("VSA_Diag", out var d) ? d : "";
         var measureInfo = measureResult.Filled > 0
             ? $"\nSanierungsmassnahmen: {measureResult.Filled} Haltungen befuellt, {measureResult.Skipped} uebersprungen."
             : "";
@@ -167,12 +215,12 @@ public sealed partial class VsaPageViewModel : ObservableObject
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
                   measureInfo +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
-        _shell.SetStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Maßnahmen" : ""));
+        _setStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Maßnahmen" : ""));
     }
 
-    private List<string> LoadStoredXtfFiles(string? projectPath)
+    private static List<string> LoadStoredXtfFiles(Project project, string? projectPath)
     {
-        if (!_shell.Project.Metadata.TryGetValue("XTF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
+        if (!project.Metadata.TryGetValue("XTF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
             return new List<string>();
 
         List<string>? list = null;
@@ -199,9 +247,9 @@ public sealed partial class VsaPageViewModel : ObservableObject
         return resolved;
     }
 
-    private List<string> LoadStoredPdfFiles(string? projectPath)
+    private static List<string> LoadStoredPdfFiles(Project project, string? projectPath)
     {
-        if (!_shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
+        if (!project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
             return new List<string>();
 
         List<string>? list = null;
@@ -232,12 +280,12 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
     private MeasureBatchResult SuggestMeasuresForAll()
     {
-        var service = _sp.MeasureRecommendation;
+        var project = _getProject();
         var filled = 0;
         var skipped = 0;
         var noSuggestion = 0;
 
-        foreach (var record in _shell.Project.Data)
+        foreach (var record in project.Data)
         {
             var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
             var existing = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
@@ -264,7 +312,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
                 continue;
             }
 
-            var rec = service.Recommend(record, maxSuggestions: 5);
+            var rec = _measureRecommendation.Recommend(record, maxSuggestions: 5);
             if (rec.Measures.Count == 0)
             {
                 noSuggestion++;
@@ -292,8 +340,8 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
         if (filled > 0)
         {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
+            project.ModifiedAtUtc = DateTime.UtcNow;
+            project.Dirty = true;
         }
 
         return new MeasureBatchResult(filled, skipped, noSuggestion);
