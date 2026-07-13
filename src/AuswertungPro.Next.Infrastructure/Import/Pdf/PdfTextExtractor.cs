@@ -72,6 +72,10 @@ public static class PdfTextExtractor
         {
             return ExtractPagesWithPdfToText(pdfPath, explicitPdfToTextPath);
         }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
         catch
         {
             // Fallback ohne externe Abhängigkeit, damit PDF-Import auch ohne pdftotext funktioniert.
@@ -82,6 +86,7 @@ public static class PdfTextExtractor
     private static PdfTextExtraction ExtractPagesWithPdfToText(string pdfPath, string? explicitPdfToTextPath)
     {
         var pdftotext = FindPdfToTextPath(explicitPdfToTextPath);
+        PdfPageBudgetValidator.ThrowIfExceeded(pdfPath);
         var tempOut = Path.Combine(Path.GetTempPath(), $"pdf_extract_{Guid.NewGuid():N}.txt");
 
         try
@@ -96,7 +101,7 @@ public static class PdfTextExtractor
             if (!result.Success)
                 throw new InvalidOperationException($"pdftotext fehlgeschlagen. {result.Message}".Trim());
 
-            var content = File.ReadAllText(tempOut, Encoding.UTF8);
+            var content = PdfExtractedTextBudget.ReadUtf8AtMost(tempOut);
             content = (content ?? "").Replace("\r\n", "\n");
             if (string.IsNullOrWhiteSpace(content))
                 return new PdfTextExtraction(Array.Empty<string>(), "");
@@ -119,12 +124,17 @@ public static class PdfTextExtractor
         using var doc = PdfDocument.Open(pdfPath);
         PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
         var pages = new List<string>();
+        var remainingCharacters = PdfExtractedTextBudget.MaxCharacters;
 
         foreach (var page in doc.GetPages())
         {
             var text = ExtractPageWithLayout(page);
-            if (!string.IsNullOrWhiteSpace(text))
-                pages.Add(text);
+            var limitedText = PdfExtractedTextBudget.TakeAtMost(text, remainingCharacters);
+            remainingCharacters -= limitedText.Length;
+            if (!string.IsNullOrWhiteSpace(limitedText))
+                pages.Add(limitedText);
+            if (remainingCharacters == 0)
+                break;
         }
 
         var fullText = string.Join("\f", pages);
