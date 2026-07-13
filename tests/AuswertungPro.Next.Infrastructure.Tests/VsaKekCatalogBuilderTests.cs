@@ -10,6 +10,7 @@ public sealed class VsaKekCatalogBuilderTests
         @"D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426\Erstfeld_Jagdmatt_38454_0426_Export\Erstfeld_Jagdmatt_38454_0426.xtf";
 
     [Fact(Skip = "Benoetigt lokale VSA-KEK-Export-Fixture unter D:\\Videoprojekte; nicht Teil des Repositorys.")]
+    [Trait("Category", "Integration")]
     public void BuildFromVsaKekArchive_ProducesExpectedManifestRules()
     {
         var manifest = BuildManifestFromVsaKekExport();
