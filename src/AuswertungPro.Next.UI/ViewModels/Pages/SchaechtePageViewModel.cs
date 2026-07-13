@@ -134,6 +134,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         SaveCommand = new RelayCommand(Save);
         RefreshProtocolCommand = new RelayCommand(RefreshProtocol, CanRefreshProtocol);
         ImportProtocolCommand = new RelayCommand(ImportProtocol);
+        ErgaenzeStammdatenAusPdfsCommand = new AsyncRelayCommand(
+            ErgaenzeStammdatenAusPdfsAsync,
+            CanErgaenzeStammdatenAusPdfs);
+        CancelStammdatenErgaenzungCommand = new RelayCommand(
+            CancelStammdatenErgaenzung,
+            () => IsStammdatenErgaenzungInProgress);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(

@@ -79,6 +79,13 @@
                             <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <Button Command="{Binding ErgaenzeStammdatenAusPdfsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Fehlende Schachtform, Dimension und Schachttiefe aus vorhandenen PDFs erg&#x00E4;nzen">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="PDF-Daten" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
@@ -301,9 +308,39 @@
             </uc:EmptyStateControl.Style>
         </uc:EmptyStateControl>
 
-        <TextBlock Grid.Row="2"
-                   Text="{Binding LastResult}"
-                   Margin="0,10,0,0"
-                   Foreground="{DynamicResource MutedBrush}"/>
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="{Binding LastResult}"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource MutedBrush}"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsStammdatenErgaenzungInProgress}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Text="{Binding StammdatenErgaenzungText}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="12,0,8,0"/>
+                <ProgressBar Width="220" Height="10"
+                             Minimum="0" Maximum="100"
+                             Value="{Binding StammdatenErgaenzungProgress}"/>
+                <Button Content="Abbrechen"
+                        Command="{Binding CancelStammdatenErgaenzungCommand}"
+                        Style="{StaticResource ToolbarButton}"
+                        Margin="8,0,0,0"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

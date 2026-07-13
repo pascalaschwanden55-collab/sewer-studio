@@ -30,20 +30,24 @@ internal static class SchachtStammdatenParser
             return match.Success ? match.Groups["v"].Value.Trim() : null;
         }
 
-        var schachtform = NormalizeSchachtform(GetFirst(
-            @"\b(?:Schacht\s*form|Form(?:\s+des\s+Schachts?)?)\s*[:\-]?\s*" +
-            @"(?<v>rund(?:schacht)?|kreisf(?:ö|oe)rmig|oval|quadratisch|rechteckig)\b"));
-
-        const string measurement = @"\d{1,6}(?:[.,]\d{1,3})?\s*(?:mm|cm|m)?";
+        // Zwischen Zahl und Einheit keine Zeilenumbrueche zulassen. Sonst wird z.B.
+        // das M der naechsten Zeile "Medium" faelschlich als Meter-Einheit gelesen.
+        const string measurement = @"\d{1,6}(?:[.,]\d{1,3})?[ \t]*(?:mm|cm|m)?";
         var dimensionRaw = GetFirst(
-            @"\b(?:Schacht\s*dimension|Schacht\s*abmessung|Dimension(?:en)?|Abmessung(?:en)?|Durchmesser|DN)" +
-            @"\s*(?:\[\s*(?:mm|cm|m)\s*\]|\(\s*(?:mm|cm|m)\s*\))?\s*[:\-]?\s*" +
+            @"\b(?:Schacht\s*dimension|Schacht\s*abmessung|Schacht\s*DN|Dimension(?:en)?|Abmessung(?:en)?|Durchmesser)" +
+            @"\s*(?:\[\s*(?:mm|cm|m)\s*\]|\(\s*(?:mm|cm|m)\s*\)|(?:mm|cm|m)\b)?\s*[:\-]?\s*" +
             @"(?<v>(?:[Øø]\s*)?" + measurement + @"(?:\s*(?:x|×|/)\s*" + measurement + @")?)");
 
         var schachttiefeRaw = GetFirst(
             @"\b(?:Schacht\s*tiefe|Tiefe(?:\s+des\s+Schachts?)?)" +
-            @"\s*(?:\[\s*(?:mm|cm|m)\s*\]|\(\s*(?:mm|cm|m)\s*\))?\s*[:\-]?\s*" +
+            @"\s*(?:\(\s*Abstich\s*\))?\s*" +
+            @"(?:\[\s*(?:mm|cm|m)\s*\]|\(\s*(?:mm|cm|m)\s*\)|(?:mm|cm|m)\b)?\s*[:\-]?\s*" +
             @"(?<v>" + measurement + @")");
+
+        var schachtform = NormalizeSchachtform(GetFirst(
+            @"\b(?:Schacht\s*form|Form(?:\s+des\s+Schachts?)?)\s*[:\-]?\s*" +
+            @"(?<v>rund(?:schacht)?|kreisf(?:ö|oe)rmig|oval|quadratisch|rechteckig)\b"))
+            ?? InferSchachtformFromDimension(dimensionRaw);
 
         return new ParsedSchachtStammdaten(
             schachtform,
@@ -69,6 +73,25 @@ internal static class SchachtStammdatenParser
         return null;
     }
 
+    private static string? InferSchachtformFromDimension(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var matches = Regex.Matches(
+            raw,
+            @"(?<n>\d{1,6}(?:[.,]\d{1,3})?)",
+            RegexOptions.CultureInvariant);
+        if (matches.Count == 1)
+            return "Rund";
+        if (matches.Count != 2
+            || !TryParseDecimal(matches[0].Groups["n"].Value, out var first)
+            || !TryParseDecimal(matches[1].Groups["n"].Value, out var second))
+            return null;
+
+        return first == second ? "Quadratisch" : "Rechteckig";
+    }
+
     private static string? NormalizeDimension(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -76,7 +99,7 @@ internal static class SchachtStammdatenParser
 
         var matches = Regex.Matches(
             raw,
-            @"(?<n>\d{1,6}(?:[.,]\d{1,3})?)\s*(?<u>mm|cm|m)?",
+            @"(?<n>\d{1,6}(?:[.,]\d{1,3})?)[ \t]*(?<u>mm|cm|m)?",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (matches.Count is < 1 or > 2)
             return null;
@@ -106,7 +129,7 @@ internal static class SchachtStammdatenParser
 
         var match = Regex.Match(
             raw,
-            @"(?<n>\d{1,6}(?:[.,]\d{1,3})?)\s*(?<u>mm|cm|m)?",
+            @"(?<n>\d{1,6}(?:[.,]\d{1,3})?)[ \t]*(?<u>mm|cm|m)?",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (!match.Success || !TryParseDecimal(match.Groups["n"].Value, out var value))
             return null;

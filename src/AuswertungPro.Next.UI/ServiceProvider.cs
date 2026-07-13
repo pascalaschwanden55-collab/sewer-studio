@@ -102,6 +102,8 @@ namespace AuswertungPro.Next.UI
         public IPhotoImportService PhotoImport { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
+        // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
+        public ISchachtStammdatenErgaenzungsService SchachtStammdatenErgaenzung { get; }
         #endregion
 
         #region Export / Protokoll
@@ -187,6 +189,8 @@ namespace AuswertungPro.Next.UI
             Protocols = new ProtocolService();
             PhotoImport = new PhotoImportService();
             SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService();
+            SchachtStammdatenErgaenzung = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtStammdatenErgaenzungsService(
+                SchachtProtocolImport);
             ProtocolPdfExporter = new ProtocolPdfExporter();
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
@@ -459,6 +463,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
+            if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
