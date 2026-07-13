@@ -193,6 +193,13 @@ namespace AuswertungPro.Next.UI
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
             var knowledgeResolution = KnowledgeBasePaths.GetResolution();
             KnowledgeDbPath = Path.Combine(KnowledgeRoot, "KnowledgeBase.db");
+            if (knowledgeResolution.Source == KnowledgeBasePaths.RootSource.EnvironmentOverride)
+            {
+                Logger.LogInformation(
+                    "Wissensdatenbank-Override {EnvironmentVariable} ist fuer diesen Start aktiv: {KnowledgeRoot}",
+                    KnowledgeBasePaths.EnvironmentVariableName,
+                    KnowledgeRoot);
+            }
             var knowledgeConfigurationWarning = knowledgeResolution.HasEnvironmentSettingsMismatch
                 ? "Fuer diesen Start ist ein anderer Wissensordner ueber die Umgebungsvariable " +
                   $"{KnowledgeBasePaths.EnvironmentVariableName} aktiv.\n" +

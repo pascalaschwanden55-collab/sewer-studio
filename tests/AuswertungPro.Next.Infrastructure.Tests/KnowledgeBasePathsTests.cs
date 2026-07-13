@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -55,6 +56,45 @@ public sealed class KnowledgeBasePathsTests
             KnowledgeBasePaths.ConfigureSettingsRoot(null);
             if (Directory.Exists(baseRoot))
                 Directory.Delete(baseRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetRoot_ignores_relative_environment_override_and_reports_warning()
+    {
+        var previousRoot = Environment.GetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName);
+        var settingsRoot = Path.Combine(
+            Path.GetTempPath(),
+            "AuswertungPro.Next.Tests",
+            Guid.NewGuid().ToString("N"),
+            "SettingsKnowledge");
+        var relativeRoot = Path.Combine("relative-knowledge", Guid.NewGuid().ToString("N"));
+        var accidentallyCreatedRoot = Path.GetFullPath(relativeRoot);
+        var warnings = new List<string>();
+        Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, relativeRoot);
+        KnowledgeBasePaths.ConfigureSettingsRoot(settingsRoot);
+        BestEffort.ConfigureDefaultErrorSink(warnings.Add);
+
+        try
+        {
+            Assert.Equal(settingsRoot, KnowledgeBasePaths.GetRoot());
+            Assert.Equal(
+                KnowledgeBasePaths.RootSource.PersistedSettings,
+                KnowledgeBasePaths.GetResolution().Source);
+            Assert.Contains(
+                warnings,
+                warning => warning.Contains(KnowledgeBasePaths.EnvironmentVariableName, StringComparison.Ordinal)
+                           && warning.Contains("ignoriert", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+            Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, previousRoot);
+            KnowledgeBasePaths.ConfigureSettingsRoot(null);
+            if (Directory.Exists(settingsRoot))
+                Directory.Delete(settingsRoot, recursive: true);
+            if (Directory.Exists(accidentallyCreatedRoot))
+                Directory.Delete(accidentallyCreatedRoot, recursive: true);
         }
     }
 

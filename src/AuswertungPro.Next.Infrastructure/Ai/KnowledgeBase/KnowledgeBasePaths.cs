@@ -101,7 +101,9 @@ public static class KnowledgeBasePaths
     {
         lock (Sync)
         {
-            _configuredSettingsRoot = Clean(settingsRoot);
+            _configuredSettingsRoot = CleanAbsoluteRoot(
+                settingsRoot,
+                "Der gespeicherte Wissensdatenbank-Pfad");
             _cachedResolution = null;
         }
     }
@@ -130,8 +132,12 @@ public static class KnowledgeBasePaths
 
     private static RootResolution Resolve(string? settingsOverride)
     {
-        var envRoot = Clean(Environment.GetEnvironmentVariable(EnvironmentVariableName));
-        var configured = Clean(settingsOverride) ?? _configuredSettingsRoot;
+        var envRoot = CleanAbsoluteRoot(
+            Environment.GetEnvironmentVariable(EnvironmentVariableName),
+            $"Die Umgebungsvariable {EnvironmentVariableName}");
+        var configured = CleanAbsoluteRoot(
+            settingsOverride,
+            "Der angegebene Wissensdatenbank-Pfad") ?? _configuredSettingsRoot;
 
         if (!string.IsNullOrWhiteSpace(envRoot))
             return new RootResolution(envRoot, RootSource.EnvironmentOverride, envRoot, configured);
@@ -148,6 +154,30 @@ public static class KnowledgeBasePaths
 
     private static string? Clean(string? path)
         => string.IsNullOrWhiteSpace(path) ? null : path.Trim();
+
+    private static string? CleanAbsoluteRoot(string? path, string sourceDescription)
+    {
+        var cleaned = Clean(path);
+        if (cleaned is null)
+            return null;
+
+        try
+        {
+            if (Path.IsPathFullyQualified(cleaned))
+                return Path.TrimEndingDirectorySeparator(Path.GetFullPath(cleaned));
+        }
+        catch (Exception ex) when (ex is ArgumentException
+                                   or NotSupportedException
+                                   or PathTooLongException)
+        {
+            // Die gemeinsame Warnung unten reicht aus und enthaelt absichtlich
+            // nicht den moeglicherweise manipulierten Rohwert.
+        }
+
+        BestEffort.ReportWarning(
+            $"[KnowledgeBase] {sourceDescription} wurde ignoriert, weil er kein gueltiger absoluter Pfad ist.");
+        return null;
+    }
 
     private static bool PathsEqual(string left, string right)
     {
