@@ -14,8 +14,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 {
-    private readonly PositionTemplateStore _store = new();
-    private readonly CostCatalogStore _catalogStore = new();
+    private readonly PositionTemplateStore _store;
+    private readonly CostCatalogStore _catalogStore;
     private readonly string? _projectPath;
     private readonly Window _window;
     private readonly IDialogService _dialogs;
@@ -41,11 +41,18 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     public IRelayCommand MoveToStorageCommand { get; }
     public IRelayCommand RestoreFromStorageCommand { get; }
 
-    public PositionTemplateEditorViewModel(string? projectPath, Window window, IDialogService? dialogs = null)
+    public PositionTemplateEditorViewModel(
+        string? projectPath,
+        Window window,
+        IDialogService? dialogs = null,
+        PositionTemplateStore? store = null,
+        CostCatalogStore? catalogStore = null)
     {
         _projectPath = projectPath;
         _window = window;
         _dialogs = dialogs ?? new DialogService();
+        _store = store ?? new PositionTemplateStore();
+        _catalogStore = catalogStore ?? new CostCatalogStore();
 
         // Load data
         _originalCatalog = _store.LoadMerged(projectPath);

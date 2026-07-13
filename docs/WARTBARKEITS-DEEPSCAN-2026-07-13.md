@@ -69,10 +69,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Codekatalog-Speichern direkt geprüft (A6-01, Teilpaket):** Das Editor-ViewModel läuft auf einem echten STA-Dialogthread. Zwei Tests belegen, dass ungültige Kataloge mit verständlicher Meldung offen bleiben und nicht gespeichert werden, während gültige Änderungen gespeichert und bestätigt werden. Ein gemeinsamer STA-Testläufer begrenzt modale UI-Tests auf 15 Sekunden.
 - **Kostenkatalog gegen Überschreiben geschützt (A6-01, Teilpaket):** Der Editor kann seinen konkreten Speicher für Tests gezielt erhalten; bestehende Aufrufer bleiben unverändert. Zwei echte Temp-Dateitests belegen erfolgreiches, atomares Speichern und dass ein beschädigter Benutzerkatalog weder überschrieben noch als Erfolg bestätigt wird.
 - **Maßnahmenvorlagen direkt geprüft (A6-01, Teilpaket):** Der Vorlagen-Editor wird vollständig gegen isolierte Temp-Speicher ausgeführt. Zwei Tests schützen ID-Normalisierung, Dezimalmengen, Positionszuordnung und den Verlustschutz: Eine beschädigte Vorlagendatei bleibt unverändert und erzeugt eine klare Fehlermeldung.
+- **Positionsvorlagen direkt geprüft (A6-01, Teilpaket):** Der Editor erhält seine beiden Dateispeicher optional und damit testbar; bestehende Aufrufer bleiben unverändert. Zwei Temp-Dateitests schützen Reihenfolge, Wartebox, Rückholen per Tiefkopie, Kataloganzeige, Speichern sowie den Überschreibschutz bei einer beschädigten Datei.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.754 Tests bestanden (2.513 Infrastruktur, 1.813 Pipeline, 4.366 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.756 Tests bestanden (2.513 Infrastruktur, 1.813 Pipeline, 4.368 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -204,7 +205,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A6-01 | Hoch → **teilweise erledigt** | Die Bestandsaufnahme zeigt 133 STA-Testdateien und weiterhin viele Quelltext-Guards; zwei einfache Fenster besitzen inzwischen einen echten Öffnen-/Schließen-Smoke | Neun weitere ViewModels werden mit 17 Verhaltenstests direkt ausgeführt; weitere ViewModels sowie Smokes der Haupt- und Fachfenster bleiben offen |
+| A6-01 | Hoch → **teilweise erledigt** | Die Bestandsaufnahme zeigt 133 STA-Testdateien und weiterhin viele Quelltext-Guards; zwei einfache Fenster besitzen inzwischen einen echten Öffnen-/Schließen-Smoke | Elf weitere ViewModels werden mit 19 Verhaltenstests direkt ausgeführt; weitere ViewModels sowie Smokes der Haupt- und Fachfenster bleiben offen |
 | A6-02 | Hoch → **erledigt** | `tools/SidecarE2eSmoke` + `SidecarRealVideoIntegrationTests` | Echter Sidecar, reales Video, YOLO/DINO/SAM, Quantifizierung und Golden-Vertrag sind umgesetzt und auf der Zielmaschine grün |
 | A6-03 | Hoch | Repo-weit kein `[Trait]`, keine Dauer-/Leak-Testlogik | Trait-Kategorien (Unit/Integration/Endurance) + `NightlySoakRunner` |
 | A6-04 | Mittel | `integrations/qgis/sewerstudio_bridge/` — keine Tests | Python-Smoke für Bridge-Endpunkte (TestClient) + C#-Vertragstest |
