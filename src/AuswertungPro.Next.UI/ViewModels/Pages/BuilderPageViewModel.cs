@@ -11,6 +11,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
@@ -30,7 +32,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly ProtocolPdfExporter _protocolPdfExporter;
+    private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -117,9 +122,27 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     public string ExportStateText => BuildExportStateText();
 
     public BuilderPageViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(
+            shell,
+            settings: services.Settings,
+            dialogs: services.Dialogs,
+            protocolPdfExporter: services.ProtocolPdfExporter,
+            costFieldSync: services.CostFieldSync)
     {
-        _shell = shell;
-        _sp = services;
+    }
+
+    public BuilderPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        ProtocolPdfExporter protocolPdfExporter,
+        IDerivedCostFieldSynchronizer costFieldSync)
+    {
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _protocolPdfExporter = protocolPdfExporter ?? throw new ArgumentNullException(nameof(protocolPdfExporter));
+        _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         _refreshDebounceTimer.Tick += RefreshDebounceTimerTick;
@@ -308,7 +331,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private void RefreshData()
     {
-        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var projectPath = _settings.LastProjectPath ?? "";
         if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
             ClearLastExport();
 
@@ -337,7 +360,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (oldRates.Count == 0)
             return true;
 
-        var decision = _sp.Dialogs.ConfirmCancel(
+        var decision = _dialogs.ConfirmCancel(
             BuildVatRecomputePrompt(oldRates, _vatRate),
             "Druckcenter");
         if (decision == DialogConfirm.Cancel)
@@ -350,17 +373,17 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private bool RecomputeStoredCostsWithCurrentCatalog()
     {
-        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var projectPath = _settings.LastProjectPath ?? "";
         if (string.IsNullOrWhiteSpace(projectPath))
         {
-            _sp.Dialogs.Info("Projekt bitte zuerst speichern, um Kosten neu zu berechnen.", "Druckcenter");
+            _dialogs.Info("Projekt bitte zuerst speichern, um Kosten neu zu berechnen.", "Druckcenter");
             return false;
         }
 
         var store = _costRepo.Load(projectPath, out var loadError);
         if (!string.IsNullOrWhiteSpace(loadError))
         {
-            _sp.Dialogs.Error(
+            _dialogs.Error(
                 $"Kosten konnten nicht neu berechnet werden, weil costs.json nicht sauber geladen werden konnte:\n{loadError}",
                 "Druckcenter");
             return false;
@@ -375,14 +398,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         if (changedHoldings.Count > 0 && !_costRepo.Save(projectPath, store, out var saveError))
         {
-            _sp.Dialogs.Error($"Kosten konnten nicht gespeichert werden:\n{saveError}", "Druckcenter");
+            _dialogs.Error($"Kosten konnten nicht gespeichert werden:\n{saveError}", "Druckcenter");
             return false;
         }
 
         _vatRate = vatRate;
         _costStore = store;
         // Abgeleitete Kostenfelder aller Haltungen nach der Sanieren-Regel nachziehen.
-        _sp.CostFieldSync.Sync(_shell.Project, store);
+        _costFieldSync.Sync(_shell.Project, store);
         RefreshData();
 
         LastResult = changedHoldings.Count == 0

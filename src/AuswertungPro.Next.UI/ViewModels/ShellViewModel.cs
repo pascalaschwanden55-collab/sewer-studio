@@ -164,7 +164,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 service: _sp.MediaConflictCenter,
                 setStatus: SetStatus,
                 playVideo: MediaConflictVideoLauncher.Create(_sp))),
-            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
+            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(
+                this,
+                settings: _sp.Settings,
+                dialogs: _sp.Dialogs,
+                protocolPdfExporter: _sp.ProtocolPdfExporter,
+                costFieldSync: _sp.CostFieldSync)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(
                 this,
                 settings: _sp.Settings,

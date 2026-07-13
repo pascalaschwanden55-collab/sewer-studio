@@ -26,7 +26,7 @@ public sealed partial class BuilderPageViewModel
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 "Keine Daten fuer den aktuellen Filter gefunden.",
                 "Druckcenter");
             return;
@@ -39,7 +39,7 @@ public sealed partial class BuilderPageViewModel
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"Druckcenter_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "Druckcenter PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -65,13 +65,13 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Druckcenter");
+            _dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Druckcenter");
             return;
         }
 
         var safeHolding = SanitizeFilePart(row.Holding);
         var defaultName = $"Kostenblatt_{safeHolding}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "Kostenblatt (Haltung) speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -97,7 +97,7 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Dossier");
+            _dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Dossier");
             return;
         }
 
@@ -165,11 +165,11 @@ public sealed partial class BuilderPageViewModel
             LastExportedAt = DateTimeOffset.Now;
             LastExportScopeSummary = BuildExportScopeSummary(rows);
             IsLastExportCurrent = true;
-            _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
+            _lastExportProjectPath = _settings.LastProjectPath ?? "";
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 $"Druckcenter-PDF wurde erstellt:\n{output}",
                 "Druckcenter");
         }
@@ -177,7 +177,7 @@ public sealed partial class BuilderPageViewModel
         {
             LastResult = $"Fehler: {ex.Message}";
             PdfExportProgress = "PDF-Erstellung fehlgeschlagen.";
-            _sp.Dialogs.Error(
+            _dialogs.Error(
                 $"PDF konnte nicht erstellt werden:\n{ex.Message}",
                 "Druckcenter");
         }
@@ -190,20 +190,20 @@ public sealed partial class BuilderPageViewModel
     /// <summary>Dossier-Druckcontroller lazy aufbauen (gleiche Provider wie die Datenseite).</summary>
     private DataPagePrintController EnsurePrintController()
         => _printController ??= new DataPagePrintController(
-            _sp.Dialogs,
-            _sp.ProtocolPdfExporter,
+            _dialogs,
+            _protocolPdfExporter,
             () => _shell.GetProjectFolder(),
             record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings.HydraulikPanel,
-                saveSettings: _sp.Settings.Save),
-            getLastProjectPath: () => _sp.Settings.LastProjectPath,
+                _settings.HydraulikPanel,
+                saveSettings: _settings.Save),
+            getLastProjectPath: () => _settings.LastProjectPath,
             findSchachtByNummer: FindSchachtByNummer,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings.HydraulikPanel,
+                _settings.HydraulikPanel,
                 dn,
-                saveSettings: _sp.Settings.Save));
+                saveSettings: _settings.Save));
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
     {
@@ -229,7 +229,7 @@ public sealed partial class BuilderPageViewModel
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"NPK-Leistungsverzeichnis_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "NPK-Leistungsverzeichnis speichern",
             "CSV (*.csv)|*.csv",
             defaultExt: "csv",
@@ -248,7 +248,7 @@ public sealed partial class BuilderPageViewModel
             File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{prep.Positions.Count} Positionen — " +
                 $"nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
                 "Druckcenter");
@@ -256,7 +256,7 @@ public sealed partial class BuilderPageViewModel
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
-            _sp.Dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+            _dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
         }
     }
 
@@ -274,7 +274,7 @@ public sealed partial class BuilderPageViewModel
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"NPK-Leistungsverzeichnis_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.xlsx";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "NPK-Leistungsverzeichnis (Excel) speichern",
             "Excel (*.xlsx)|*.xlsx",
             defaultExt: "xlsx",
@@ -294,7 +294,7 @@ public sealed partial class BuilderPageViewModel
             File.WriteAllBytes(output, bytes);
             LastResult = $"Leistungsverzeichnis (Excel) erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis (Excel) erstellt");
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 $"Excel-Leistungsverzeichnis wurde erstellt:\n{output}\n\n" +
                 $"Reiter 'Zum Ausfüllen' (leere Preise für die Firma) + 'Kalkulation (intern)'.\n" +
                 $"{prep.Positions.Count} Positionen — nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
@@ -303,7 +303,7 @@ public sealed partial class BuilderPageViewModel
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
-            _sp.Dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+            _dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
         }
     }
 
@@ -314,7 +314,7 @@ public sealed partial class BuilderPageViewModel
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            _sp.Dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "Druckcenter");
+            _dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "Druckcenter");
             return null;
         }
 
@@ -323,13 +323,13 @@ public sealed partial class BuilderPageViewModel
 
         filteredRows = Rows.ToList();
         var holdingSelection = BuilderPageLvPreparationService.SelectAwuHoldings(filteredRows, _vatRate);
-        var includePauschalen = holdingSelection.FallbackHoldings.Count > 0 && _sp.Dialogs.ConfirmWarn(
+        var includePauschalen = holdingSelection.FallbackHoldings.Count > 0 && _dialogs.ConfirmWarn(
             "Pauschalen ohne echte NPK-Position im Leistungsverzeichnis ausweisen?\n\n" +
             "Ja = als uebrige Positionen aufnehmen.\nNein = im LV weglassen und unten als nicht enthaltene Pauschalkosten ausweisen.",
             "NPK-Leistungsverzeichnis",
             defaultNo: true);
 
-        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var projectPath = _settings.LastProjectPath ?? "";
         var catalog = _catalogStore.LoadMerged(projectPath);
         var catalogDict = BuildCatalogMap(catalog);
 
@@ -337,7 +337,7 @@ public sealed partial class BuilderPageViewModel
         // blockiert das Haltungs-LV nicht, wird aber als Warnung gemeldet (Schaechte fehlen dann).
         var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
         if (schachtLoadError is not null)
-            _sp.Dialogs.Warn(
+            _dialogs.Warn(
                 $"Schacht-Kosten konnten nicht geladen werden und fehlen im Leistungsverzeichnis:\n{schachtLoadError}",
                 "Druckcenter");
         // Schacht-Positionen (NPK Kap. 700) nur fuer Schaechte im Eigentum AWU.
@@ -349,7 +349,7 @@ public sealed partial class BuilderPageViewModel
             catalogDict);
         if (prep.Positions.Count == 0 && prep.ExcludedTotal <= 0m)
         {
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 "Keine AWU-Positionen gefunden. Es gibt keine Haltungen/Schaechte im Eigentum von Abwasser Uri (AWU) " +
                 "mit Massnahmen-Positionen. Private werden separat/einzeln abgehandelt.",
                 "Druckcenter");
@@ -405,7 +405,7 @@ public sealed partial class BuilderPageViewModel
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            _sp.Dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "NPK-Offerte");
+            _dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "NPK-Offerte");
             return;
         }
 
@@ -427,12 +427,12 @@ public sealed partial class BuilderPageViewModel
             .ToList();
         var excludedPauschaleTotal = pauschaleHoldings.Sum(h => h.Total);
 
-        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var projectPath = _settings.LastProjectPath ?? "";
         var catalog = _catalogStore.LoadMerged(projectPath);
         // Schacht-Kosten (NPK Kap. 700) auch in die NPK-Offerte aufnehmen.
         var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
         if (schachtLoadError is not null)
-            _sp.Dialogs.Warn(
+            _dialogs.Warn(
                 $"Schacht-Kosten konnten nicht geladen werden und fehlen in der Offerte:\n{schachtLoadError}",
                 "NPK-Offerte");
         // Schacht-Positionen (NPK Kap. 700) nur fuer Schaechte im Eigentum AWU.
@@ -447,7 +447,7 @@ public sealed partial class BuilderPageViewModel
             var pauschaleHint = excludedPauschaleTotal > 0m
                 ? "\n\nEs gibt nur Pauschalkosten ohne NPK-Position; diese koennen nicht als echte NPK-135-Offerte ausgegeben werden."
                 : "";
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 "Keine AWU-Positionen gefunden. Es gibt keine Haltungen/Schaechte im Eigentum AWU mit Massnahmen-Positionen " +
                 "(Private werden separat abgehandelt)." + pauschaleHint,
                 "NPK-Offerte");
@@ -456,7 +456,7 @@ public sealed partial class BuilderPageViewModel
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"NPK-Offerte_AWU_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "NPK-Offerte als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -502,17 +502,17 @@ public sealed partial class BuilderPageViewModel
             LastExportedAt = DateTimeOffset.Now;
             LastExportScopeSummary = BuildExportScopeSummary(filteredRows);
             IsLastExportCurrent = true;
-            _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
+            _lastExportProjectPath = _settings.LastProjectPath ?? "";
             LastResult = $"NPK-Offerte erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("NPK-Offerte erstellt");
             PdfExportProgress = "NPK-Offerte fertig.";
-            _sp.Dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
+            _dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
         }
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
             PdfExportProgress = "NPK-Offerte fehlgeschlagen.";
-            _sp.Dialogs.Error($"NPK-Offerte konnte nicht erstellt werden:\n{ex.Message}", "NPK-Offerte");
+            _dialogs.Error($"NPK-Offerte konnte nicht erstellt werden:\n{ex.Message}", "NPK-Offerte");
         }
         finally
         {
@@ -533,7 +533,7 @@ public sealed partial class BuilderPageViewModel
             }
             else
             {
-                var decision = _sp.Dialogs.ConfirmCancel(
+                var decision = _dialogs.ConfirmCancel(
                     "Der Druckstand hat sich seit dem letzten Export geaendert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswaehlen\nAbbrechen = nichts tun",
                     "Druckcenter");
 
@@ -545,7 +545,7 @@ public sealed partial class BuilderPageViewModel
             }
         }
 
-        pdfPath ??= _sp.Dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
+        pdfPath ??= _dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
 
         if (string.IsNullOrWhiteSpace(pdfPath))
             return;
@@ -565,7 +565,7 @@ public sealed partial class BuilderPageViewModel
         catch (Exception ex)
         {
             LastResult = $"Fehler beim Drucken: {ex.Message}";
-            _sp.Dialogs.Error(
+            _dialogs.Error(
                 $"PDF konnte nicht gedruckt werden:\n{ex.Message}",
                 "Druckcenter");
         }
@@ -577,7 +577,7 @@ public sealed partial class BuilderPageViewModel
         if (!HasLastExportedPdf())
         {
             ClearLastExport("Die zuletzt exportierte PDF-Datei wurde nicht gefunden.");
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 "Die zuletzt exportierte PDF-Datei wurde nicht gefunden.",
                 "Druckcenter");
             return;
@@ -590,7 +590,7 @@ public sealed partial class BuilderPageViewModel
         }
 
         LastResult = $"Fehler beim Oeffnen: {error}";
-        _sp.Dialogs.Error(
+        _dialogs.Error(
             $"PDF konnte nicht geoeffnet werden:\n{error}",
             "Druckcenter");
     }

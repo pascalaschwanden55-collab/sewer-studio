@@ -14,6 +14,17 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class BuilderPageViewModelThreadingTests
 {
     [Fact]
+    public void ViewModel_speichert_keinen_ServiceProvider_als_Feld()
+    {
+        var fields = typeof(BuilderPageViewModel).GetFields(
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public);
+
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+    }
+
+    [Fact]
     public void RecordPropertyChanged_FromBackgroundThread_RefreshesRowsOnUiDispatcher()
     {
         RunOnStaThread(() =>
