@@ -28,6 +28,8 @@ The sidecar will start on `http://127.0.0.1:8100`. Sewer-Studio automatically de
 ## Security boundary
 
 Every request requires the secret `X-Sidecar-Token`. This token is the actual access control.
+If no server token is initialized, the sidecar rejects every request with HTTP 503; an empty
+token never disables authentication.
 The additional trusted-host check only protects local browser sessions against DNS rebinding;
 a `Host` header is client-controlled and must never be treated as authentication. Even when
 `SEWER_SIDECAR_TRUSTED_HOSTS=*` is configured for diagnostics, requests without the correct

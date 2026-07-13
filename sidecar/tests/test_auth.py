@@ -24,12 +24,18 @@ def test_health_401_without_or_wrong_token(app, monkeypatch):
     assert client.get("/health", headers={"X-Sidecar-Token": "secret-123"}).status_code == 200  # korrekt
 
 
-def test_no_enforcement_when_token_empty(app, monkeypatch):
-    # Leerer Token (Test-/Dev-Escape via conftest) -> Middleware blockt nicht.
+def test_empty_server_token_fails_closed(app, monkeypatch):
     from sidecar.config import settings
     monkeypatch.setattr(settings, "auth_token", "", raising=False)
     client = TestClient(app)
-    assert client.get("/health").status_code == 200
+
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Sidecar authentication is not initialized.",
+        "code": "auth_unavailable",
+    }
 
 
 def test_resolve_creates_token_when_missing(monkeypatch, tmp_path):

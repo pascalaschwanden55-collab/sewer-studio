@@ -187,14 +187,23 @@ async def enforce_loopback_security(request: Request, call_next):
         )
 
     token = _auth_token()
-    if token:
-        provided = request.headers.get("X-Sidecar-Token") or ""
-        # Konstante-Zeit-Vergleich gegen Timing-Angriffe; fehlender/falscher Token -> 401.
-        if not hmac.compare_digest(provided, token):
-            return JSONResponse(
-                {"detail": "Invalid or missing sidecar token."},
-                status_code=401,
-            )
+    if not token:
+        logger.error("Sidecar-Anfrage abgewiesen: Auth-Token ist nicht initialisiert.")
+        return JSONResponse(
+            {
+                "detail": "Sidecar authentication is not initialized.",
+                "code": "auth_unavailable",
+            },
+            status_code=503,
+        )
+
+    provided = request.headers.get("X-Sidecar-Token") or ""
+    # Konstante-Zeit-Vergleich gegen Timing-Angriffe; fehlender/falscher Token -> 401.
+    if not hmac.compare_digest(provided, token):
+        return JSONResponse(
+            {"detail": "Invalid or missing sidecar token."},
+            status_code=401,
+        )
 
     return await call_next(request)
 
