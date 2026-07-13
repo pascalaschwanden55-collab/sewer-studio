@@ -61,6 +61,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         Closed += (_, __) =>
         {
             _cts.Cancel();
+            _cts.Dispose();
             Vm.Detections.CollectionChanged -= OnDetectionsChanged;
             CloseLiveFrameWindow();
         };

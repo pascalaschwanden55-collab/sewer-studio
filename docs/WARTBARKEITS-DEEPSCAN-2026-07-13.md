@@ -43,9 +43,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Training-Center-Abbruch gehärtet (A2-02 erledigt):** Das Fenster besitzt einen eigenen Lebensdauer-Abbruchschutz. Beim Schließen werden SAM-Segmentierung sowie laufende Generierungs- und Batch-Aufgaben abgebrochen und die Token-Quellen freigegeben. Zwei Tests schützen Weitergabe und wiederholbares Aufräumen.
 - **Dichtheitsimport gegen KI-Blockade gehärtet (A2-03 erledigt):** Der asynchrone KI-Aufruf ist vom aufrufenden Synchronisationskontext getrennt, verwendet `ConfigureAwait(false)` und endet auch bei einem nicht kooperierenden KI-Aufruf nach 25 Sekunden. Ein Regressionstest bildet einen blockierten Oberflächen-Kontext nach.
 - **Videoanalyse-Verbindungen wiederverwendet (A2-04 erledigt):** Die Datenseite hält je Zeitlimit einen langlebigen `HttpClient`, statt bei jeder Analyse eine neue Verbindung aufzubauen. Beim Schließen werden alle Clients wiederholbar freigegeben. Zwei Tests schützen Wiederverwendung und Aufräumen.
+- **Videoanalyse-Abbruchquelle freigegeben (A2-05 erledigt):** Beim Schließen des Pipeline-Fensters wird die laufende Analyse zuerst abgebrochen und die Token-Quelle danach freigegeben. Ein Lebensdauer-Guard schützt die Reihenfolge.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.702 Tests bestanden (2.491 Infrastruktur, 1.813 Pipeline, 4.336 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.703 Tests bestanden (2.491 Infrastruktur, 1.813 Pipeline, 4.337 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -131,7 +132,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A2-02 | Mittel → **erledigt** | `TrainingCenterWindow.xaml.cs` — keine CTS, SAM-Segmentierung ohne Token | Fenster-Lebensdauer-Token wird an SAM durchgereicht; Closing bricht Fenster- und ViewModel-Arbeit ab und gibt die Token-Quellen wiederholbar frei |
 | A2-03 | Mittel → **erledigt** | `DichtheitImportDistributor.cs:112-134` — asynchroner KI-Aufruf konnte im Synchronisationskontext blockieren | KI-Aufruf läuft isoliert über `Task.Run`, wartet intern mit `ConfigureAwait(false)` und besitzt einen unabhängig wirksamen 25-Sekunden-Abbruch; Regressionstest mit blockiertem Oberflächen-Kontext ist grün |
 | A2-04 | Mittel → **erledigt** | `DataPageVideoAnalysisController.cs:82` u.a. — `new HttpClient` pro Aufruf | Controller verwendet je konfiguriertem Zeitlimit einen langlebigen Client; `DataPageViewModel.Dispose()` gibt den Cache sicher und wiederholbar frei |
-| A2-05 | Niedrig | `VideoAnalysisPipelineWindow.xaml.cs:61-66` — CTS nie disposed | Nach `Cancel()` auch `Dispose()` |
+| A2-05 | Niedrig → **erledigt** | `VideoAnalysisPipelineWindow.xaml.cs:61-66` — CTS nie disposed | Fenster-Closing ruft erst `Cancel()` und anschließend `Dispose()` auf; Architekturtest schützt Reihenfolge |
 | A2-06 | Niedrig | `DataPage.xaml.cs` — Such-Debounce-Timer bei Unloaded nicht gestoppt | `_searchDebounceTimer.Stop()` im Unloaded ergänzen |
 
 *Positiv bestätigt: SafeFireAndForget/BoundedBackgroundTaskRunner breit genutzt; PlayerWindow-LibVLC-Cleanup sauber; ShellViewModel meldet statische Events in Dispose ab; kein SkiaSharp-Bitmap-Leak (kommt im Code nicht vor).*
