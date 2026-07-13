@@ -65,7 +65,29 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
             if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
                 startInfo.WorkingDirectory = request.WorkingDirectory;
 
-            Process.Start(startInfo);
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                error = "Prozess konnte nicht gestartet werden.";
+                return false;
+            }
+
+            if (!AiStartedProcessLifetime.TryTrack(process, out var trackingError))
+            {
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Der aussagekraeftige Tracking-Fehler wird unten zurueckgegeben.
+                }
+
+                error = trackingError ?? "Gestarteter KI-Prozess konnte nicht sicher verfolgt werden.";
+                return false;
+            }
+
             error = null;
             return true;
         }

@@ -21,6 +21,7 @@ using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
+using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
@@ -234,6 +235,7 @@ namespace AuswertungPro.Next.UI
 
         protected override void OnExit(ExitEventArgs e)
         {
+            AiStartedProcessLifetime.StopAllStartedProcesses();
             try
             {
                 _qgisBridgeServer?.Dispose();

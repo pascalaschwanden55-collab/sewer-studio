@@ -56,9 +56,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **PDF-Textextraktion begrenzt (A4-04 erledigt):** Vor `pdftotext` wird die Seitenzahl gegen das vorhandene Budget geprüft. Externe und interne Extraktion laden insgesamt höchstens 16 Millionen Zeichen in den Speicher; die externe Textdatei wird dabei stückweise statt vollständig gelesen. Zwei Verhaltenstests und der vorhandene Nutzungs-Guard schützen beide Grenzen.
 - **Browser-PDF-Export zeitlich begrenzt (A4-05 erledigt):** Angebot, Druckcenter und NPK-PDF besitzen ein hartes Gesamtlimit von zwei Minuten. Browserstart, HTML-Laden, PDF-Erzeugung und Chromium-Installation beachten den Abbruch; Installationsprozesse werden bei Ablauf samt Unterprozessen beendet, Seite und Browser begrenzt aufgeräumt. Zwei Tests unterscheiden Zeitablauf und Benutzerabbruch.
 - **Firebird-Serverzugang fail-closed (A4-06 erledigt):** Die bekannten IBAK-Standarddaten bleiben ausschließlich für lokale Embedded-Dateien erlaubt. Server-, Netzwerk- und IPv6-Pfade erfordern ausdrücklich `IBAK_FDB_USER` und `IBAK_FDB_PASSWORD`; ohne beide Werte wird vor dem Verbindungsaufbau abgebrochen. Sieben neue Testfälle schützen Zugangspflicht und Pfaderkennung.
+- **Selbst gestartete KI-Prozesse aufgeräumt (A5-01 erledigt):** Nur Ollama- und Sidecar-Prozesse, die Sewer Studio selbst startet, werden registriert. Beim Beenden der App schließt ein Windows-Job-Objekt diese Prozesse samt Unterprozessen; eine Prüfung von Prozess-ID und Startzeit schützt den Rückfallpfad vor Verwechslungen. Bereits vorher laufende KI-Dienste bleiben unangetastet. Zwei Tests schützen Prozessende und App-Verdrahtung.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.731 Tests bestanden (2.511 Infrastruktur, 1.813 Pipeline, 4.345 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.733 Tests bestanden (2.512 Infrastruktur, 1.813 Pipeline, 4.346 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -176,7 +177,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A5-01 | Mittel | `DefaultAiStartupLauncher.cs:68` / `App.xaml.cs:231` — Sidecar/Ollama bei App-Ende nicht beendet (~21 GB VRAM bleiben) | Kind-Prozesse via Job-Object verfolgen, in OnExit optional beenden; „KI stoppen"-Knopf |
+| A5-01 | Mittel → **erledigt** | `DefaultAiStartupLauncher.cs:68` / `App.xaml.cs:231` — Sidecar/Ollama bei App-Ende nicht beendet (~21 GB VRAM bleiben) | Von Sewer Studio gestartete KI-Prozesse werden per Windows-Job-Objekt verfolgt und beim App-Ende samt Unterprozessen beendet; bereits laufende Fremdprozesse bleiben unangetastet |
 | A5-02 | Mittel | `sidecar/main.py:92-144` — Trusted-Host-Check per Host-Header trivial umgehbar | Klarstellen: Host-Check = Anti-DNS-Rebinding, **nur der Token** ist die Sperre |
 | A5-03 | Mittel | `sidecar/config.py:9` + `start_sidecar.ps1:66` — `SEWER_SIDECAR_HOST` ungeprüft an uvicorn | Bei Nicht-Loopback ablehnen/warnen |
 | A5-04 | Mittel | `sidecar/main.py:77-89` + `VisionPipelineClient.cs:186-197` — CUDA-Fehler (kein OOM) → generischer 500, Client wrappt nicht | CUDA-Fehler serverseitig als 503 mit Klartext; oder 500 clientseitig typisiert wrappen |
@@ -234,7 +235,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 2. **Grossdatei-Guard reparieren und ins Gate nehmen (`A1-09`, `A1-02`, Push-Hook):** Guard auf „Zeilen je Typ" erweitern (schließt das Partial-Schlupfloch), `SchaechtePage` unter die Grenze bringen, und die UI-Tests in den pre-push-Hook aufnehmen — sonst laufen Architektur-Guards nie automatisch.
 3. **Echte God-Classes zerlegen statt weiter fragmentieren (`A1-01`, `A1-03`, `A1-04`):** PlayerWindow-Partials und die Fachlogik in SchaechtePage/ProtocolEntryEditorDialog schrittweise in Services/Controller mit Interface überführen — testgeschützt, kein Big-Bang.
 4. **DI-Hygiene (`A1-05`, `A1-07`, `A1-10`):** ViewModels nur die benötigten Interfaces geben statt des ganzen `ServiceProvider`; per-`new`-Streuung in Fenstern beenden. Das macht Kernabläufe unit-testbar.
-5. **KI-Prozess-Lebenszyklus (`A5-01`, `A5-04`):** Sidecar/Ollama über ein Job-Object verfolgen und beim Beenden kontrolliert stoppen (oder VRAM-Zustand + „KI stoppen"-Knopf); CUDA-Fehler in klare, freundliche Meldungen übersetzen.
+5. **KI-Prozess-Lebenszyklus (`A5-01`, `A5-04`):** ✔ Selbst gestartete Sidecar-/Ollama-Prozesse werden beim App-Ende kontrolliert gestoppt. Offen bleibt, CUDA-Fehler in klare, freundliche Meldungen zu übersetzen.
 6. **Fremd-DB schützen (`A4-01`):** IBAK-`.fdb` nur über eine Temp-Kopie/read-only anfassen — schützt Kunden-Originaldaten.
 
 ---
@@ -275,7 +276,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) erledigt; offen bleiben NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
-- **KI-Resilienz:** Prozess-Lebenszyklus + CUDA-Fehler-Klassifizierung (`A5-01`, `A5-04`); IBAK-`.fdb` read-only (`A4-01`).
+- **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt; offen bleibt die CUDA-Fehler-Klassifizierung (`A5-04`).
 - **Ergebnis:** Der 8-Stunden-Nachtlauf ist fahrbar, die größten Wartungsbremsen sind entschärft, das KI-Subsystem verhält sich bei Ausfällen berechenbar.
 
 ---
