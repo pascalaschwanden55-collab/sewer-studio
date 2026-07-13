@@ -110,6 +110,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.Infrastructure.Media.MediaConflictCenterService MediaConflictCenter { get; } = new();
         public IProjectPortabilityService ProjectPortability { get; }
         public IProjectPhotoAssignmentService ProjectPhotoAssignment { get; }
+        public IProtocolRegenerationService ProtocolRegeneration { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
@@ -207,6 +208,7 @@ namespace AuswertungPro.Next.UI
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
+            ProtocolRegeneration = new ProtocolRegenerationAdapter();
             ExcelExport = new ExcelTemplateExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 

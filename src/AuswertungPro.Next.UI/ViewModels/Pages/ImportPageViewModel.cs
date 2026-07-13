@@ -20,6 +20,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly ServiceProvider _sp;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
     private readonly Services.ImportProjectPhotoAssignmentController _projectPhotoAssignmentController;
+    private readonly Services.ImportProtocolDistributionController _protocolDistributionController;
+    private readonly Services.ImportProtocolRegenerationController _protocolRegenerationController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -63,6 +65,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _projectPhotoAssignmentController = new Services.ImportProjectPhotoAssignmentController(
             _sp.Dialogs,
             _sp.ProjectPhotoAssignment);
+        _protocolDistributionController = new Services.ImportProtocolDistributionController(
+            _sp.Dialogs,
+            _sp.NameBasedProtocolDistributor,
+            _sp.Logger);
+        _protocolRegenerationController = new Services.ImportProtocolRegenerationController(
+            _sp.Dialogs,
+            _sp.ProtocolRegeneration,
+            _sp.CodeCatalog);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -234,33 +244,13 @@ public sealed partial class ImportPageViewModel : ObservableObject
             saveProjectAfterCommit: true);
     }
 
-    private async Task ImportSchachtPdfsFolderAsync()
-    {
-        var projectFolder = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projectFolder))
-        {
-            _sp.Dialogs.Info("Kein Projekt geöffnet.", "Protokolle verteilen");
-            return;
-        }
-
-        var folder = _sp.Dialogs.SelectFolder("Verteil-Ordner mit Protokollen wählen", projectFolder);
-        if (string.IsNullOrWhiteSpace(folder))
-            return;
-
-        // CollectionLock mitgeben: Distribute laeuft im Hintergrund-Thread und legt ggf. neue
-        // Schaechte in der UI-gebundenen SchaechteData an (EnableCollectionSynchronization).
-        var report = await Task.Run(() =>
-            _sp.NameBasedProtocolDistributor.Distribute(_shell.Project, projectFolder, folder, _shell.CollectionLock));
-
-        _shell.Project.Dirty = true;
-        _shell.SaveCommand.Execute(null);
-
-        var text = $"Verteilt: {report.HaltungProtokolle} Haltungs-Protokolle, {report.SchachtProtokolle} Schacht-Protokolle" +
-                   $" ({report.SchaechteAngelegt} Schächte neu angelegt).";
-        if (report.NichtZugeordnet.Count > 0)
-            text += $"\n\nNicht zugeordnet ({report.NichtZugeordnet.Count}):\n" + string.Join("\n", report.NichtZugeordnet.Take(30));
-        _sp.Dialogs.Info(text, "Protokolle verteilen");
-    }
+    private Task ImportSchachtPdfsFolderAsync()
+        => _protocolDistributionController.ExecuteAsync(
+            new Services.ImportProtocolDistributionActions(
+                GetProjectFolder: _shell.GetProjectFolder,
+                GetProject: () => _shell.Project,
+                CollectionLock: _shell.CollectionLock,
+                SaveProject: () => _shell.SaveCommand.Execute(null)));
 
     private Result<ImportStats> ImportPdfCore(string[] paths, Project project, ImportRunContext ctx)
     {
@@ -441,45 +431,16 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// in die Verteilung (Haltungen_Verteilt) und verlinkt es relativ als „Eigenes Protokoll" (PDF_Eigen).
     /// Das ORIGINAL-Protokoll (PDF_Path) bleibt unberuehrt. Immer aktuell (Haltungsnummer, DN, Befunde).
     /// </summary>
-    private async Task ProtokollNeuGenerierenAsync()
-    {
-        var projectFolder = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projectFolder))
-        {
-            _sp.Dialogs.Info(
-                "Projekt bitte zuerst speichern, dann koennen die eigenen Protokolle erzeugt werden.",
-                "Protokoll neu generieren");
-            return;
-        }
-
-        var count = _shell.Project.Data.Count;
-        if (count == 0)
-        {
-            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Protokoll neu generieren");
-            return;
-        }
-
-        ImportProgress = "Eigene Protokolle (_E, mit Fotos) werden fuer die Verteilung erzeugt...";
-        var result = await Task.Run(() =>
-            AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateAll(
-                _shell.Project, projectFolder!, _sp.CodeCatalog));
-        ImportProgress = "";
-
-        _ = _shell.TrySaveProject();
-
-        var summary = $"Eigene Protokolle neu generiert ({count} Haltungen):"
-            + $"\n  {result.Generated} Protokolle erzeugt (_E, in die Verteilung)"
-            + $"\n  {result.Errors} Fehler";
-        SummaryText += "\n" + summary;
-        if (result.Messages.Count > 0)
-            DetailsText += "\n\nProtokoll-Details:\n" + string.Join("\n", result.Messages.Take(50));
-
-        _shell.SetStatus("Eigene Protokolle neu generiert");
-        _sp.Dialogs.Info(
-            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind ueber "
-            + "das Feld „Eigenes Protokoll“ (PDF_Eigen) verlinkt.",
-            "Protokoll neu generieren");
-    }
+    private Task ProtokollNeuGenerierenAsync()
+        => _protocolRegenerationController.ExecuteAsync(
+            new Services.ImportProtocolRegenerationActions(
+                GetProjectFolder: _shell.GetProjectFolder,
+                GetProject: () => _shell.Project,
+                SaveProject: _shell.TrySaveProject,
+                SetProgress: value => ImportProgress = value,
+                AppendSummary: value => SummaryText += value,
+                AppendDetails: value => DetailsText += value,
+                SetStatus: _shell.SetStatus));
 
     /// <summary>
     /// Ordnet Fotos aus einem gewaehlten Quellordner den Haltungen/Beobachtungen zu (per Dateiname,

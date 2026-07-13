@@ -53,6 +53,10 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportProjectPortabilityController.cs"));
         var photoAssignmentController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportProjectPhotoAssignmentController.cs"));
+        var protocolController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportProtocolRegenerationController.cs"));
+        var distributionController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportProtocolDistributionController.cs"));
 
         Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
@@ -63,12 +67,19 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("_service.AssignFromFolder", photoAssignmentController);
         Assert.DoesNotContain("_sp.ProjectPhotoAssignment.AssignFromFolder", viewModel);
         Assert.DoesNotContain("new ProjectPhotoAssignmentService", viewModel);
+        Assert.Contains("_protocolRegenerationController.ExecuteAsync", viewModel);
+        Assert.Contains("_service.RegenerateAll", protocolController);
+        Assert.DoesNotContain("ProtocolRegenerationService.RegenerateAll", viewModel);
+        Assert.Contains("_protocolDistributionController.ExecuteAsync", viewModel);
+        Assert.Contains("_distributor.Distribute", distributionController);
+        Assert.DoesNotContain("_sp.NameBasedProtocolDistributor.Distribute", viewModel);
         Assert.DoesNotContain("new XtfImportServiceAdapter", viewModel);
         Assert.DoesNotContain("new WinCanDbImportService", viewModel);
         Assert.DoesNotContain("new System.Net.Http.HttpClient", viewModel);
         Assert.Contains("CreateProjectImportOrchestrator", provider);
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
+        Assert.Contains("ProtocolRegeneration = new ProtocolRegenerationAdapter()", provider);
         Assert.Contains("_importAiHttp", provider);
     }
 }
