@@ -25,7 +25,8 @@ public partial class SchaechtePage : UserControl
 {
     private SchaechtePageViewModel Vm => DataContext as SchaechtePageViewModel
         ?? throw new InvalidOperationException("SchaechtePage benoetigt SchaechtePageViewModel als DataContext.");
-    private ServiceProvider Services => Vm.Services;
+    private AppSettings Settings => Vm.Settings;
+    private IDialogService Dialogs => Vm.Dialogs;
 
     private sealed class ComboBindingTag
     {
@@ -123,11 +124,11 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
-        SchachtansichtView.Settings = _vm.Services.Settings;
+        SchachtansichtView.Settings = _vm.Settings;
         _massnahmenController = new SchachtMassnahmenDialogController(
-            _vm.Services.Settings,
-            _vm.Services.Dialogs,
-            _vm.Services.SchachtMassnahmenKatalog,
+            _vm.Settings,
+            _vm.Dialogs,
+            _vm.SchachtMassnahmenKatalog,
             this,
             MarkProjectDirty,
             ApplySearchFilter);
@@ -316,8 +317,7 @@ public partial class SchaechtePage : UserControl
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = Services;
-        var layout = sp.Settings.SchaechtePageLayout;
+        var layout = Settings.SchaechtePageLayout;
 
         _isRestoringLayout = true;
         try
@@ -345,17 +345,16 @@ public partial class SchaechtePage : UserControl
     private void SaveLayoutToSettings()
     {
         // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
-        // null sein. Dann nichts speichern - kein Zugriff auf Vm/Services erzwingen.
+        // null sein. Dann nichts speichern - kein Zugriff auf Vm/Settings erzwingen.
         if (_isRestoringLayout || _columnLayoutController.IsRestoring ||
             Grid.Columns.Count == 0 || DataContext is not SchaechtePageViewModel)
             return;
 
-        var sp = Services;
-        var layout = sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+        var layout = Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.Columns = _columnLayoutController.Capture(Grid.Columns).Columns;
 
-        sp.Settings.SchaechtePageLayout = layout;
-        sp.Settings.Save();
+        Settings.SchaechtePageLayout = layout;
+        Settings.Save();
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -383,7 +382,7 @@ public partial class SchaechtePage : UserControl
         DataPageRowNavigationController.TryMoveToPosition(
             MoveToPositionBox.Text,
             vm.MoveToPosition,
-            Services.Dialogs.Info);
+            Dialogs.Info);
     }
 
     private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
@@ -403,7 +402,7 @@ public partial class SchaechtePage : UserControl
         if (DataPageRowNavigationController.TryResolveRowIndex(
             GoToRowBox.Text,
             vm.Records.Count,
-            Services.Dialogs.Info,
+            Dialogs.Info,
             out var rowIndex))
         {
             vm.Selected = vm.Records[rowIndex];
@@ -767,7 +766,7 @@ public partial class SchaechtePage : UserControl
             record,
             oldValue,
             newValue,
-            Services.Settings.LastProjectPath,
+            Settings.LastProjectPath,
             GetCurrentProject(),
             (message, title) => DialogHost.Current.Error(message, title));
 
@@ -925,8 +924,8 @@ public partial class SchaechtePage : UserControl
         => _massnahmenController?.Open(record);
 
     private string? ResolvePdfPath(SchachtRecord record)
-        => SchachtFileTargetResolver.ResolvePdfPath(record, Services.Settings.LastProjectPath);
+        => SchachtFileTargetResolver.ResolvePdfPath(record, Settings.LastProjectPath);
 
     private string? ResolveExplorerTarget(SchachtRecord record)
-        => SchachtFileTargetResolver.ResolveExplorerTarget(record, Services.Settings.LastProjectPath);
+        => SchachtFileTargetResolver.ResolveExplorerTarget(record, Settings.LastProjectPath);
 }

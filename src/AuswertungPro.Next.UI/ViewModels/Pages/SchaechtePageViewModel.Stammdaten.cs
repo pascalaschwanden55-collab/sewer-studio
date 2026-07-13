@@ -42,11 +42,11 @@ public sealed partial class SchaechtePageViewModel
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _sp.Dialogs.Info("Kein Projekt geoeffnet.", "PDF-Stammdaten ergaenzen");
+            _dialogs.Info("Kein Projekt geoeffnet.", "PDF-Stammdaten ergaenzen");
             return;
         }
 
-        if (!_sp.Dialogs.ConfirmWarn(
+        if (!_dialogs.ConfirmWarn(
                 "Fehlende Schachtform, Dimension und Schachttiefe werden aus den bereits vorhandenen PDFs ergaenzt.\n\n" +
                 "Vorhandene Eintraege bleiben unveraendert. Der Vorgang kann bei vielen PDFs einige Minuten dauern.",
                 "PDF-Stammdaten ergaenzen"))
@@ -85,7 +85,7 @@ public sealed partial class SchaechtePageViewModel
         try
         {
             var result = await Task.Run(
-                () => _sp.SchachtStammdatenErgaenzung.Ermitteln(
+                () => _schachtStammdatenErgaenzung.Ermitteln(
                     projektOrdner,
                     quellen,
                     progress,
@@ -118,7 +118,7 @@ public sealed partial class SchaechtePageViewModel
                 _shell.MarkProjectDirty();
                 if (!_shell.TrySaveProject())
                 {
-                    _sp.Dialogs.Warn(
+                    _dialogs.Warn(
                         "Die Werte wurden in der geoeffneten Ansicht ergaenzt, konnten aber noch nicht gespeichert werden. Bitte erneut speichern.",
                         "PDF-Stammdaten ergaenzen");
                 }
@@ -138,7 +138,7 @@ public sealed partial class SchaechtePageViewModel
             if (result.Meldungen.Count > 12)
                 details += $"\n... und {result.Meldungen.Count - 12} weitere Hinweise.";
 
-            _sp.Dialogs.Info(summary + details, "PDF-Stammdaten ergaenzen");
+            _dialogs.Info(summary + details, "PDF-Stammdaten ergaenzen");
         }
         catch (OperationCanceledException)
         {
@@ -149,7 +149,7 @@ public sealed partial class SchaechtePageViewModel
         {
             LastResult = $"PDF-Stammdaten konnten nicht ergaenzt werden: {ex.Message}";
             StammdatenErgaenzungText = LastResult;
-            _sp.Dialogs.Warn(LastResult, "PDF-Stammdaten ergaenzen");
+            _dialogs.Warn(LastResult, "PDF-Stammdaten ergaenzen");
         }
         finally
         {

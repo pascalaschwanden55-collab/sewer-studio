@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI;
@@ -15,7 +17,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SchaechtePageViewModel : ObservableObject
 {
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly ISchachtProtocolImportService _schachtProtocolImport;
+    private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
+    private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
     private readonly ShellViewModel _shell;
     private readonly DropdownOptionGroupController _sanierenDropdownOptions;
     private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
@@ -27,7 +33,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly DropdownCommandGroup _referenzpruefungDropdownCommands;
     private bool _suppressRequiredFieldWarning;
 
-    internal ServiceProvider Services => _sp;
+    internal AppSettings Settings => _settings;
+    internal IDialogService Dialogs => _dialogs;
+    internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
     public ObservableCollection<string> Columns { get; } = new();
@@ -81,11 +89,32 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Remove;
 
     public SchaechtePageViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(
+            shell,
+            settings: services.Settings,
+            dialogs: services.Dialogs,
+            schachtProtocolImport: services.SchachtProtocolImport,
+            schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
+            schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog)
     {
-        _shell = shell;
-        _sp = services;
+    }
 
-        var uiLayout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+    public SchaechtePageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        ISchachtProtocolImportService schachtProtocolImport,
+        ISchachtStammdatenErgaenzungsService schachtStammdatenErgaenzung,
+        ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog)
+    {
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
+        _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
+        _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
+
+        var uiLayout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
             : 38d;
@@ -196,7 +225,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         if (missing.Count == 0)
             return;
 
-        _sp.Dialogs.Warn(
+        _dialogs.Warn(
             $"Beim Schacht {ResolveSchachtNummer(oldValue)} fehlen:\n- {string.Join("\n- ", missing)}",
             "Schacht-Felder fehlen");
     }
@@ -259,7 +288,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             new DropdownOptionGroupSettings(previewTitle, resetItems, lockedToResetItems),
             new DropdownOptionGroupActions(
                 OptionsEditorDialogService.Show,
-                _sp.Dialogs.Info,
+                _dialogs.Info,
                 SaveDropdownOptions));
 
     private void LoadColumnsFromTemplate()
@@ -454,11 +483,11 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _sp.Dialogs.Info("Kein Projekt geoeffnet.", "Aktualisieren");
+            _dialogs.Info("Kein Projekt geoeffnet.", "Aktualisieren");
             return;
         }
 
-        if (!_sp.Dialogs.ConfirmWarn(
+        if (!_dialogs.ConfirmWarn(
                 "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
                 "Aktualisieren"))
             return;
@@ -466,19 +495,19 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var absPath = ProjectPathResolver.ResolveFilePathFromProjectFolder(relPath, projektOrdner);
         if (absPath is null)
         {
-            _sp.Dialogs.Warn("Die verknuepfte Protokoll-Datei wurde nicht gefunden.", "Aktualisieren");
+            _dialogs.Warn("Die verknuepfte Protokoll-Datei wurde nicht gefunden.", "Aktualisieren");
             return;
         }
 
-        var ergebnis = _sp.SchachtProtocolImport.Parse(absPath);
+        var ergebnis = _schachtProtocolImport.Parse(absPath);
         if (!ergebnis.IstSchachtprotokoll || string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
         {
-            _sp.Dialogs.Warn("Das verknuepfte PDF ist kein lesbares Schachtprotokoll.", "Aktualisieren");
+            _dialogs.Warn("Das verknuepfte PDF ist kein lesbares Schachtprotokoll.", "Aktualisieren");
             return;
         }
 
         // Relativen Pfad behalten (Datei liegt bereits im Projekt).
-        _sp.SchachtProtocolImport.Apply(schacht, ergebnis, relPath);
+        _schachtProtocolImport.Apply(schacht, ergebnis, relPath);
 
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
@@ -492,31 +521,31 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _sp.Dialogs.Info("Kein Projekt geoeffnet.", "Protokoll importieren");
+            _dialogs.Info("Kein Projekt geoeffnet.", "Protokoll importieren");
             return;
         }
 
-        var pdfPfad = _sp.Dialogs.OpenFile("Protokoll importieren", "PDF (*.pdf)|*.pdf");
+        var pdfPfad = _dialogs.OpenFile("Protokoll importieren", "PDF (*.pdf)|*.pdf");
         if (string.IsNullOrWhiteSpace(pdfPfad))
             return;
 
-        var ergebnis = _sp.SchachtProtocolImport.Parse(pdfPfad);
+        var ergebnis = _schachtProtocolImport.Parse(pdfPfad);
         if (!ergebnis.IstSchachtprotokoll)
         {
-            _sp.Dialogs.Warn("Das gewaehlte PDF ist kein Schachtprotokoll.", "Protokoll importieren");
+            _dialogs.Warn("Das gewaehlte PDF ist kein Schachtprotokoll.", "Protokoll importieren");
             return;
         }
         if (string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
         {
-            _sp.Dialogs.Warn("Im Protokoll wurde keine Schachtnummer gefunden.", "Protokoll importieren");
+            _dialogs.Warn("Im Protokoll wurde keine Schachtnummer gefunden.", "Protokoll importieren");
             return;
         }
 
-        var vorhanden = _sp.SchachtProtocolImport.FindSchacht(_shell.Project, ergebnis.Schachtnummer);
+        var vorhanden = _schachtProtocolImport.FindSchacht(_shell.Project, ergebnis.Schachtnummer);
         SchachtRecord ziel;
         if (vorhanden is not null)
         {
-            var wahl = _sp.Dialogs.ConfirmCancel(
+            var wahl = _dialogs.ConfirmCancel(
                 $"Schacht {ergebnis.Schachtnummer} ist bereits vorhanden.\n\n" +
                 "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
                 "Protokoll importieren");
@@ -545,8 +574,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             }
         }
 
-        var relPath = _sp.SchachtProtocolImport.DistributePdf(projektOrdner, ergebnis.Schachtnummer, pdfPfad);
-        _sp.SchachtProtocolImport.Apply(ziel, ergebnis, relPath);
+        var relPath = _schachtProtocolImport.DistributePdf(projektOrdner, ergebnis.Schachtnummer, pdfPfad);
+        _schachtProtocolImport.Apply(ziel, ergebnis, relPath);
         Selected = ziel;
 
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -596,12 +625,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void PersistSchaechtePageBasicUiSettings()
     {
-        var layout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+        var layout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.GridMinRowHeight = GridMinRowHeight;
         layout.GridZoom = GridZoom;
         layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
-        _sp.Settings.SchaechtePageLayout = layout;
-        _sp.Settings.Save();
+        _settings.SchaechtePageLayout = layout;
+        _settings.Save();
     }
 
     private void EnforceEigentuemerOptionsExact()

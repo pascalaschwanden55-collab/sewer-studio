@@ -13,6 +13,17 @@ public sealed class SchaechtePageViewModelProtocolCommandTests : IDisposable
     private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
 
     [Fact]
+    public void ViewModel_speichert_keinen_ServiceProvider_als_Feld()
+    {
+        var fields = typeof(SchaechtePageViewModel).GetFields(
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public);
+
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+    }
+
+    [Fact]
     public void RefreshProtocolCommand_IstNurMitAusgewaehltemPdfPfadAktiv()
     {
         var vm = CreateVm();

@@ -126,7 +126,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 projects: _sp.Projects), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
-            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
+            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(
+                this,
+                settings: _sp.Settings,
+                dialogs: _sp.Dialogs,
+                schachtProtocolImport: _sp.SchachtProtocolImport,
+                schachtStammdatenErgaenzung: _sp.SchachtStammdatenErgaenzung,
+                schachtMassnahmenKatalog: _sp.SchachtMassnahmenKatalog)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(
