@@ -38,18 +38,13 @@ public static class VideoFrameExtractor
 
         try
         {
-            using var p = Process.Start(psi);
-            if (p == null)
+            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            if (output is null)
                 return null;
 
-            // stdout/stderr asynchron leeren, BEVOR/WAEHREND auf Exit gewartet wird — sonst kann
-            // ein volllaufender Pipe-Puffer ffmpeg blockieren (Deadlock). (Audit)
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-
-            if (p.ExitCode != 0)
+            // Der gemeinsame Leser leert stdout/stderr waehrend des Laufs und beendet bei
+            // Abbruch den gesamten Prozessbaum.
+            if (output.ExitCode != 0)
                 return null;
 
             if (!File.Exists(outPng))

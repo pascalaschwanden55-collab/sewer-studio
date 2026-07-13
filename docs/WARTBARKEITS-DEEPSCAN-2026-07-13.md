@@ -39,9 +39,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Datenseiten-Fachdienste entkoppelt (A1-05, Teilpaket):** PDF-Ausgabe, Kostenabgleich, Cockpit-Aktualisierung, Mediensuche, Protokollzugriff und Maßnahmenempfehlung werden als klar benannte Abhängigkeiten gehalten. Nur die zwei Erzeugungsfunktionen für Videoanalyse und Sanierungs-KI verbleiben bis zum nächsten Teilpaket am Container.
 - **Datenseite vom God-Container getrennt (A1-05 erledigt):** Auch Videoanalyse und Sanierungs-KI werden über zwei kleine, getestete Fabriken erzeugt. Die Datenseite und sämtliche ihrer Teildateien speichern den `ServiceProvider` nicht mehr. Ein schmaler Fensterstarter kapselt nur noch die Verträglichkeit zu den bestehenden Player- und Protokollfenstern. Der Architekturtest prüft die gesamte Teilklasse statt nur die Hauptdatei.
 - **Protokoll-PDF abstrahiert (A1-06, Teilpaket):** `IProtocolPdfExporter` bildet den stabilen Exportvertrag. Datenseite, Druckcenter und der aktive Player-/Protokollpfad verwenden die Schnittstelle; bisherige öffentliche Eigenschaften und Konstruktoren mit `ProtocolPdfExporter` bleiben als Verträglichkeitsfassade erhalten. Zwei Tests schützen den Vertrag und den Player-Pfad. Der Umzug der QuestPDF-Implementierung nach Infrastructure bleibt offen.
+- **FFmpeg-Abbruch gehärtet (A2-01 erledigt):** Die Einzelbild-Extraktion nutzt den gemeinsamen Prozessleser. Bei Abbruch oder Fehler wird der gesamte FFmpeg-Prozessbaum beendet; ein echter Prozess-Test prüft, dass kein Hintergrundprozess weiterläuft.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.696 Tests bestanden (2.489 Infrastruktur, 1.813 Pipeline, 4.332 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.697 Tests bestanden (2.490 Infrastruktur, 1.813 Pipeline, 4.332 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -123,7 +124,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A2-01 | Mittel | `VideoFrameExtractor.cs:41-63` — ffmpeg-Prozess wird bei Abbruch nicht getötet | Im catch/finally `p.Kill(entireProcessTree:true)` (wie `ExternalProcessRunner`) |
+| A2-01 | Mittel → **erledigt** | `VideoFrameExtractor.cs:41-63` — ffmpeg-Prozess wird bei Abbruch nicht getötet | Einzelbild-Extraktion läuft über `ProcessOutputReader`; dieser beendet bei Abbruch/Fehler den gesamten Prozessbaum. Ein echter Abbruchtest schützt das Verhalten |
 | A2-02 | Mittel | `TrainingCenterWindow.xaml.cs` — keine CTS, SAM-Segmentierung ohne Token | Fenster-CTS einführen, im Closing `Cancel()+Dispose()`, Token durchreichen |
 | A2-03 | Mittel | `DichtheitImportDistributor.cs:112-124` — `GetAwaiter().GetResult()` auf async KI-Aufruf | Kette async machen oder `Task.Run`-Kapselung + `ConfigureAwait(false)` |
 | A2-04 | Mittel | `DataPageVideoAnalysisController.cs:82` u.a. — `new HttpClient` pro Aufruf | Langlebigen geteilten Client nutzen (Vorbild: `GetCachedHttpClient`) |

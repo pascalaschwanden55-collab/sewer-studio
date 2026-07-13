@@ -6,17 +6,20 @@ internal sealed record ProcessOutput(int ExitCode, string StandardOutput, string
 
 internal static class ProcessOutputReader
 {
-    public static async Task<ProcessOutput?> ReadToExitAsync(ProcessStartInfo startInfo, CancellationToken ct)
+    public static async Task<ProcessOutput?> ReadToExitAsync(
+        ProcessStartInfo startInfo,
+        CancellationToken ct,
+        Action<int>? onStarted = null)
     {
         using var process = Process.Start(startInfo);
         if (process is null)
             return null;
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
-        var stderrTask = process.StandardError.ReadToEndAsync(ct);
-
         try
         {
+            onStarted?.Invoke(process.Id);
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
+            var stderrTask = process.StandardError.ReadToEndAsync(ct);
             await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
             var stdout = await stdoutTask.ConfigureAwait(false);
