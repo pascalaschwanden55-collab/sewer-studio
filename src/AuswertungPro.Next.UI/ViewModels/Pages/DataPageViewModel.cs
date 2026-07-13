@@ -12,6 +12,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using System.Windows;
@@ -38,6 +40,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
+    private readonly ProtocolPdfExporter _protocolPdfExporter;
+    private readonly IDerivedCostFieldSynchronizer _costFieldSynchronizer;
+    private readonly DashboardRefreshNotifier _dashboardRefresh;
+    private readonly BatchMediaSearchService _batchMediaSearch;
+    private readonly IProtocolService _protocols;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -156,15 +163,20 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _settings = services.Settings;
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
+        _protocolPdfExporter = services.ProtocolPdfExporter;
+        _costFieldSynchronizer = services.CostFieldSync;
+        _dashboardRefresh = services.DashboardRefresh;
+        _batchMediaSearch = services.BatchMediaSearch;
+        _protocols = services.Protocols;
         StartFilter = startFilter;
-        _measureRecommendationService = _sp.MeasureRecommendation;
+        _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,
             AutoSaveOnTimerTick);
         _printController = new DataPagePrintController(
             _dialogs,
-            _sp.ProtocolPdfExporter,
+            _protocolPdfExporter,
             () => _shell.GetProjectFolder(),
             record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
@@ -708,8 +720,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             var syncStore = new ProjectCostStoreRepository().Load(syncProjectPath, out var syncLoadError);
             if (syncLoadError is null)
             {
-                _sp.CostFieldSync.Sync(_shell.Project, syncStore);
-                _sp.DashboardRefresh.NotifyCostsChanged();
+                _costFieldSynchronizer.Sync(_shell.Project, syncStore);
+                _dashboardRefresh.NotifyCostsChanged();
             }
         };
 
@@ -778,7 +790,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             initial,
             _dialogs,
             _settings,
-            _sp.BatchMediaSearch);
+            _batchMediaSearch);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
         return win.ShowDialog() == true
@@ -811,7 +823,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private ProtocolDocument EnsureProtocolDocumentForPdf(HaltungRecord record)
-        => _protocolDocumentController.EnsureForPdf(record, _sp.Protocols, ResolveCodeTitle);
+        => _protocolDocumentController.EnsureForPdf(record, _protocols, ResolveCodeTitle);
 
     private void PrintHydraulikPdf(HaltungRecord? record)
         => PrintHydraulikPdfAsync(record).SafeFireAndForget("PrintHydraulikPdf");

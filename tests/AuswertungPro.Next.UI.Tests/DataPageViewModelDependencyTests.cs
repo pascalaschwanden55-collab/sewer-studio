@@ -13,8 +13,19 @@ public sealed class DataPageViewModelDependencyTests
 
         Assert.Contains("private readonly IDialogService _dialogs;", source);
         Assert.Contains("private readonly AppSettings _settings;", source);
+        Assert.Contains("private readonly ProtocolPdfExporter _protocolPdfExporter;", source);
+        Assert.Contains("private readonly IDerivedCostFieldSynchronizer _costFieldSynchronizer;", source);
+        Assert.Contains("private readonly DashboardRefreshNotifier _dashboardRefresh;", source);
+        Assert.Contains("private readonly BatchMediaSearchService _batchMediaSearch;", source);
+        Assert.Contains("private readonly IProtocolService _protocols;", source);
         Assert.DoesNotContain("_sp.Dialogs", source);
         Assert.DoesNotContain("_sp.Settings", source);
+        Assert.DoesNotContain("_sp.MeasureRecommendation", source);
+        Assert.DoesNotContain("_sp.ProtocolPdfExporter", source);
+        Assert.DoesNotContain("_sp.CostFieldSync", source);
+        Assert.DoesNotContain("_sp.DashboardRefresh", source);
+        Assert.DoesNotContain("_sp.BatchMediaSearch", source);
+        Assert.DoesNotContain("_sp.Protocols", source);
 
         var pageDirectory = RepoFile(
             "src",
