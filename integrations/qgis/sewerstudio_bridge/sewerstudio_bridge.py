@@ -30,11 +30,14 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.core import (
     Qgis,
+    QgsCategorizedSymbolRenderer,
     QgsCoordinateTransform,
+    QgsMarkerSymbol,
     QgsMessageLog,
     QgsPalLayerSettings,
     QgsProject,
     QgsRectangle,
+    QgsRendererCategory,
     QgsTextBufferSettings,
     QgsTextFormat,
     QgsVectorLayer,
@@ -511,6 +514,7 @@ class SewerStudioBridgeDock(QDockWidget):
                     updated += 1
 
             if layer is not None:
+                self._ensure_schacht_ausgefuehrt_durch_style(layer_key, layer)
                 self._ensure_schacht_nr_labels(layer_key, layer)
                 loaded += 1
                 # Zoomen bei jedem Auswahl-Klick in SewerStudio (neuer Stempel) oder
@@ -621,6 +625,51 @@ class SewerStudioBridgeDock(QDockWidget):
 
         QgsProject.instance().addMapLayer(layer)
         return layer
+
+    def _ensure_schacht_ausgefuehrt_durch_style(self, layer_key, layer):
+        """Unterscheidet Schacht-Punkte nach dem Feld ``ausgefuehrt_durch``.
+
+        Die Farben entsprechen dem Haltungs-Layer: Baumeister blau, Sanierer
+        ocker und Gartenbauer gruen. Eine bereits kategorisierte oder regelbasierte
+        Nutzer-Darstellung bleibt erhalten.
+        """
+        if layer_key != "schacht_sanierungstyp":
+            return
+
+        marker = "sewerstudio/schacht_ausgefuehrt_renderer_initialized"
+        initialized = layer.customProperty(marker, False)
+        if initialized in (True, 1, "1", "true", "True"):
+            return
+
+        if not any(field.name().lower() == "ausgefuehrt_durch" for field in layer.fields()):
+            return
+
+        renderer = layer.renderer()
+        if renderer is not None and renderer.type() != "singleSymbol":
+            layer.setCustomProperty(marker, True)
+            return
+
+        try:
+            categories = []
+            for value, label, color in (
+                ("Baumeister", "Baumeister", "#00B0F0"),
+                ("Sanierer", "Sanierer", "#BF8F00"),
+                ("Gartenbauer", "Gartenbauer", "#00B050"),
+            ):
+                symbol = QgsMarkerSymbol.createSimple({
+                    "name": "circle",
+                    "color": color,
+                    "outline_color": "#FFFFFF",
+                    "outline_width": "0.8",
+                    "size": "5.0",
+                })
+                categories.append(QgsRendererCategory(value, symbol, label))
+
+            layer.setRenderer(QgsCategorizedSymbolRenderer("ausgefuehrt_durch", categories))
+            layer.setCustomProperty(marker, True)
+            layer.triggerRepaint()
+        except Exception as ex:
+            self._log_warning(f"Schacht-Darstellung nach 'Ausgefuehrt durch' fehlgeschlagen: {ex}")
 
     def _ensure_schacht_nr_labels(self, layer_key, layer):
         """Zeigt die Sewer-Studio-Zeilennummer am Schacht-Punkt an.

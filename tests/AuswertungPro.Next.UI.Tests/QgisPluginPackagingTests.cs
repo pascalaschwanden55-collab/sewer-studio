@@ -146,6 +146,22 @@ public sealed class QgisPluginPackagingTests
     }
 
     [Fact]
+    public void Plugin_unterscheidet_schaechte_nach_ausgefuehrt_durch()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        Assert.Contains("_ensure_schacht_ausgefuehrt_durch_style", source);
+        Assert.Contains("QgsCategorizedSymbolRenderer", source);
+        Assert.Contains("QgsRendererCategory", source);
+        Assert.Contains("QgsMarkerSymbol", source);
+        Assert.Contains("QgsCategorizedSymbolRenderer(\"ausgefuehrt_durch\"", source);
+        Assert.Contains("#00B0F0", source); // Baumeister wie bei den Haltungen
+        Assert.Contains("#BF8F00", source); // Sanierer
+        Assert.Contains("#00B050", source); // Gartenbauer
+        Assert.Contains("renderer.type() != \"singleSymbol\"", source);
+    }
+
+    [Fact]
     public void Plugin_haelt_zoom_ziel_layer_robust_gegen_leer_erstladung()
     {
         var source = ReadPluginFile("sewerstudio_bridge.py");
