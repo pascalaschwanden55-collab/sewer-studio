@@ -9,7 +9,8 @@ public sealed record SidecarHealthResponse(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("version")] string Version,
     [property: JsonPropertyName("gpu")] GpuStatus? Gpu,
-    [property: JsonPropertyName("models_present")] SidecarModelsPresent? ModelsPresent = null
+    [property: JsonPropertyName("models_present")] SidecarModelsPresent? ModelsPresent = null,
+    [property: JsonPropertyName("process_id")] int? ProcessId = null
 )
 {
     [JsonIgnore]

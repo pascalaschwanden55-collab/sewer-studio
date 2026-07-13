@@ -79,7 +79,8 @@ public sealed class SidecarSmokeRunner
             health.Health?.Version,
             health.Health?.Gpu?.VramAllocatedGb,
             health.Health?.Gpu?.VramTotalGb,
-            health.Health?.Gpu?.LoadedModels?.Keys.OrderBy(key => key).ToArray() ?? []);
+            health.Health?.Gpu?.LoadedModels?.Keys.OrderBy(key => key).ToArray() ?? [],
+            health.Health?.ProcessId);
 
         report.AddCheck(
             "health",

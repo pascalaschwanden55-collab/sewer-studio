@@ -1,5 +1,6 @@
 """Health check endpoint."""
 
+import os
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -35,6 +36,7 @@ async def health():
     return {
         "status": "ok" if all(models_present.values()) else "degraded",
         "version": VERSION,
+        "process_id": os.getpid(),
         "gpu": gpu_status,
         "yolo": yolo_wrapper.get_runtime_status(),
         "classifier": yolo_wrapper.get_classifier_status(),

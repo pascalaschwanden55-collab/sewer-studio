@@ -25,7 +25,8 @@ public sealed record HealthReport(
     string? Version,
     double? VramAllocatedGb,
     double? VramTotalGb,
-    IReadOnlyList<string> LoadedModels);
+    IReadOnlyList<string> LoadedModels,
+    int? ProcessId = null);
 
 public sealed record SmokeCheckReport(string Name, bool Passed, string Detail);
 

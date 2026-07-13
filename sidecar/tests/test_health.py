@@ -1,3 +1,5 @@
+import os
+
 from fastapi.testclient import TestClient
 
 
@@ -17,6 +19,7 @@ def test_health_degraded_when_dino_or_sam_weights_missing(tmp_path, monkeypatch)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "degraded"
+    assert data["process_id"] == os.getpid()
     assert data["models_present"] == {"dino": False, "sam": False}
 
 
