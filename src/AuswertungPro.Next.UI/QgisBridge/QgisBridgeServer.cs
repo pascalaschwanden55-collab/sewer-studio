@@ -13,6 +13,9 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 /// Wird nur gestartet, wenn Live-Control den Port nicht bereits haelt —
 /// in dem Fall liefert der LiveControlServer die /qgis-Endpunkte selbst aus.
 /// Die eigentliche Verarbeitung liegt im <see cref="QgisBridgeRequestProcessor"/>.
+/// Bewusste Einzelplatz-Grenze: nur IPv4-Loopback und nur GET/HEAD. Die reine
+/// Lese-Bridge verwendet kein Token; fuer Mehrbenutzer-Systeme muss sie deaktiviert
+/// oder vor dem Einsatz um eine gemeinsame Authentifizierung erweitert werden.
 /// </summary>
 internal sealed class QgisBridgeServer : IDisposable
 {

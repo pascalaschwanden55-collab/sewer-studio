@@ -69,6 +69,17 @@ Hinweise zum Bridge-Server:
 - Die "aktuelle Haltung" folgt der Auswahl auf der Haltungen-Seite und in der Karte
   (auch im separaten Kartenfenster) und bleibt beim Seitenwechsel erhalten.
 
+### Sicherheitsgrenze
+
+Die Live-Bridge ist bewusst fuer einen Windows-Einzelplatz ausgelegt. Sie bindet nur an
+`127.0.0.1`, akzeptiert ausschliesslich `GET`/`HEAD` und liefert nur Projekt- und
+Geometriedaten zum Lesen. Sie besitzt deshalb kein Token; ein Prozess auf demselben PC
+koennte die Daten ebenfalls lesen, aber weder das Projekt noch die App damit veraendern.
+
+Auf einem Mehrbenutzer- oder Terminalserver gilt diese Annahme nicht. Dort die Bridge mit
+`SEWERSTUDIO_QGIS_BRIDGE=0` deaktivieren. Vor einer spaeteren Freigabe fuer solche Systeme
+muss ein gemeinsamer Token fuer SewerStudio und das QGIS-Plugin eingefuehrt werden.
+
 Bestehende Shapefile-Exporte werden ebenfalls erkannt. Das Plugin sucht im
 Datenordner den neuesten Unterordner mit `*.shp` und laedt u. a. `Haltungen*`,
 `Schaechte*` und `Schaeden*`.
