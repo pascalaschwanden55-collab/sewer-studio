@@ -632,22 +632,29 @@ class SewerStudioBridgeDock(QDockWidget):
 
         Haltungen erhalten farbige Linien, Schaechte farbige Kreise. Die Kategorien
         sind identisch: Baumeister blau, Sanierer ocker und Gartenbauer gruen.
-        Eine bereits kategorisierte oder regelbasierte Nutzer-Darstellung bleibt erhalten.
+        Eine bereits kategorisierte oder regelbasierte Haltungs-Darstellung bleibt
+        erhalten. Beim eigenen Schacht-Layer wird der von SewerStudio verwaltete Stil
+        versioniert aktualisiert, damit alte weisse Punktsymbole sicher verschwinden.
         """
         if layer_key not in ("sanierungstyp", "schacht_sanierungstyp"):
             return
 
-        marker = f"sewerstudio/{layer_key}_ausgefuehrt_renderer_initialized"
-        initialized = layer.customProperty(marker, False)
-        if initialized in (True, 1, "1", "true", "True"):
+        marker = f"sewerstudio/{layer_key}_ausgefuehrt_renderer_version"
+        style_version = "2" if layer_key == "schacht_sanierungstyp" else "1"
+        initialized = str(layer.customProperty(marker, ""))
+        if initialized == style_version:
             return
 
         if not any(field.name().lower() == "ausgefuehrt_durch" for field in layer.fields()):
             return
 
         renderer = layer.renderer()
-        if renderer is not None and renderer.type() != "singleSymbol":
-            layer.setCustomProperty(marker, True)
+        if (
+            layer_key != "schacht_sanierungstyp"
+            and renderer is not None
+            and renderer.type() != "singleSymbol"
+        ):
+            layer.setCustomProperty(marker, style_version)
             return
 
         try:
@@ -661,9 +668,9 @@ class SewerStudioBridgeDock(QDockWidget):
                     symbol = QgsMarkerSymbol.createSimple({
                         "name": "circle",
                         "color": color,
-                        "outline_color": "#FFFFFF",
-                        "outline_width": "0.8",
-                        "size": "5.0",
+                        "outline_color": "#FF0000",
+                        "outline_width": "0.6",
+                        "size": "6.0",
                     })
                 else:
                     symbol = QgsLineSymbol.createSimple({
@@ -675,7 +682,7 @@ class SewerStudioBridgeDock(QDockWidget):
                 categories.append(QgsRendererCategory(value, symbol, label))
 
             layer.setRenderer(QgsCategorizedSymbolRenderer("ausgefuehrt_durch", categories))
-            layer.setCustomProperty(marker, True)
+            layer.setCustomProperty(marker, style_version)
             layer.triggerRepaint()
         except Exception as ex:
             self._log_warning(f"Darstellung nach 'Ausgefuehrt durch' fehlgeschlagen: {ex}")
@@ -683,33 +690,36 @@ class SewerStudioBridgeDock(QDockWidget):
     def _ensure_nr_labels(self, layer_key, layer):
         """Zeigt die Sewer-Studio-Zeilennummer an Haltung oder Schacht an.
 
-        Eine bereits vorhandene QGIS-Beschriftung bleibt unveraendert. Die Markierung
-        am Layer verhindert zudem, dass ein Nutzer-Deaktivieren beim naechsten Poll
-        sofort wieder rueckgaengig gemacht wird.
+        Bei Haltungen bleibt eine vorhandene QGIS-Beschriftung unveraendert. Beim
+        Schacht-Layer wird die Nummer mittig in den farbigen Kreis gesetzt. Die
+        Versionsmarkierung sorgt dafuer, dass ein alter weisser Stil einmalig ersetzt
+        und danach nicht bei jedem Poll neu aufgebaut wird.
         """
         if layer_key not in ("sanierungstyp", "schacht_sanierungstyp"):
             return
 
-        marker = f"sewerstudio/{layer_key}_nr_labels_initialized"
-        initialized = layer.customProperty(marker, False)
-        if initialized in (True, 1, "1", "true", "True"):
+        marker = f"sewerstudio/{layer_key}_nr_labels_style_version"
+        style_version = "2" if layer_key == "schacht_sanierungstyp" else "1"
+        initialized = str(layer.customProperty(marker, ""))
+        if initialized == style_version:
             return
 
         if not any(field.name().lower() == "nr" for field in layer.fields()):
             return
 
-        if layer.labelsEnabled():
-            layer.setCustomProperty(marker, True)
+        if layer_key != "schacht_sanierungstyp" and layer.labelsEnabled():
+            layer.setCustomProperty(marker, style_version)
             return
 
         try:
             settings = QgsPalLayerSettings()
             settings.fieldName = "nr"
             settings.isExpression = False
-            settings.dist = 2.0
+            is_schacht = layer_key == "schacht_sanierungstyp"
+            settings.dist = 0.0 if is_schacht else 2.0
 
-            # Schacht-Nummer neben dem Punkt, Haltungs-Nummer waagrecht an der Linie.
-            placement_name = "AroundPoint" if layer_key == "schacht_sanierungstyp" else "Horizontal"
+            # Schacht-Nummer mittig im Kreis, Haltungs-Nummer waagrecht an der Linie.
+            placement_name = "OverPoint" if is_schacht else "Horizontal"
             label_placement = getattr(getattr(Qgis, "LabelPlacement", None), placement_name, None)
             if label_placement is None:
                 label_placement = getattr(QgsPalLayerSettings, placement_name)
@@ -719,13 +729,13 @@ class SewerStudioBridgeDock(QDockWidget):
             font.setBold(True)
             text_format = QgsTextFormat()
             text_format.setFont(font)
-            text_format.setSize(10)
+            text_format.setSize(9 if is_schacht else 10)
             text_format.setColor(QColor("#202020"))
 
-            # Weisser Rand wie bei den Haltungsnummern: auch auf Luftbild und
-            # farbigen Leitungen gut lesbar.
+            # Nur Haltungsnummern brauchen den weissen Rand. Beim Schacht wuerde
+            # dieser den farbigen Kreis wieder wie ein weisses Symbol aussehen lassen.
             buffer_settings = QgsTextBufferSettings()
-            buffer_settings.setEnabled(True)
+            buffer_settings.setEnabled(not is_schacht)
             buffer_settings.setSize(1.2)
             buffer_settings.setColor(QColor("#FFFFFF"))
             text_format.setBuffer(buffer_settings)
@@ -733,7 +743,7 @@ class SewerStudioBridgeDock(QDockWidget):
             settings.setFormat(text_format)
             layer.setLabeling(QgsVectorLayerSimpleLabeling(settings))
             layer.setLabelsEnabled(True)
-            layer.setCustomProperty(marker, True)
+            layer.setCustomProperty(marker, style_version)
             layer.triggerRepaint()
         except Exception as ex:
             self._log_warning(f"Nr.-Beschriftung konnte nicht gesetzt werden: {ex}")

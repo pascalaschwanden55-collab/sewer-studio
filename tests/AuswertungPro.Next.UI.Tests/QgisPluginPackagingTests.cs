@@ -142,9 +142,11 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("QgsVectorLayerSimpleLabeling", source);
         Assert.Contains("QgsTextBufferSettings", source);
         Assert.Contains("layer.labelsEnabled()", source);
-        Assert.Contains("{layer_key}_nr_labels_initialized", source);
-        Assert.Contains("AroundPoint", source);
+        Assert.Contains("{layer_key}_nr_labels_style_version", source);
+        Assert.Contains("OverPoint", source);
         Assert.Contains("Horizontal", source);
+        Assert.Contains("settings.dist = 0.0 if is_schacht else 2.0", source);
+        Assert.Contains("buffer_settings.setEnabled(not is_schacht)", source);
     }
 
     [Fact]
@@ -162,7 +164,10 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("#00B0F0", source); // Baumeister wie bei den Haltungen
         Assert.Contains("#BF8F00", source); // Sanierer
         Assert.Contains("#00B050", source); // Gartenbauer
+        Assert.Contains("\"outline_color\": \"#FF0000\"", source); // roter Kreisrand wie in QGIS
         Assert.Contains("renderer.type() != \"singleSymbol\"", source);
+        Assert.Contains("{layer_key}_ausgefuehrt_renderer_version", source);
+        Assert.Contains("layer_key != \"schacht_sanierungstyp\"", source);
     }
 
     [Fact]
