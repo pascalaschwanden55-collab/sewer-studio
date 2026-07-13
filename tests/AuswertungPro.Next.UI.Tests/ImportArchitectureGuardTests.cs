@@ -63,6 +63,8 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportReportNavigationController.cs"));
         var summaryExportController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportSummaryExportController.cs"));
+        var catalogController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportCatalogController.cs"));
 
         Assert.Contains("_oneClickProjectController.ExecuteAsync", viewModel);
         Assert.Contains("_createImporter().Import", oneClickController);
@@ -76,6 +78,10 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("_exporter.Export", summaryExportController);
         Assert.DoesNotContain("File.WriteAllText(path", viewModel);
         Assert.DoesNotContain("private static string Escape", viewModel);
+        Assert.Contains("_catalogController.Reload", viewModel);
+        Assert.Contains("switch (_catalog)", catalogController);
+        Assert.DoesNotContain("private void UpdateCatalogStatus", viewModel);
+        Assert.DoesNotContain("case AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);

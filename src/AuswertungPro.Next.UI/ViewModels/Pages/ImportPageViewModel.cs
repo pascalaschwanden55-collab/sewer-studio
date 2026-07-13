@@ -22,6 +22,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly Services.ImportOneClickProjectController _oneClickProjectController;
     private readonly Services.ImportReportNavigationController _reportNavigationController;
     private readonly Services.ImportSummaryExportController _summaryExportController;
+    private readonly Services.ImportCatalogController _catalogController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -84,6 +85,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
             _sp.Dialogs,
             _sp.ImportSummaryExporter,
             _sp.Logger);
+        _catalogController = new Services.ImportCatalogController(
+            () => _sp.Settings.VsaCatalogSecXmlPath,
+            () => _sp.Settings.VsaCatalogNodXmlPath,
+            () => _sp.VsaCatalogResolvedPath,
+            _sp.CodeCatalog,
+            _sp.Logger);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -101,7 +108,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportKanalProjektCommand = new AsyncRelayCommand(ImportKanalProjektAsync, CanStartImport);
         ProtokollNeuGenerierenCommand = new AsyncRelayCommand(ProtokollNeuGenerierenAsync);
 
-        UpdateCatalogStatus();
+        ApplyCatalogStatus(_catalogController.GetStatus());
     }
 
     private bool CanStartImport()
@@ -468,65 +475,18 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     // ──── Catalog ────
 
-    private void UpdateCatalogStatus()
+    private void ApplyCatalogStatus(Services.ImportCatalogStatus status)
     {
-        var configured = _sp.Settings.VsaCatalogSecXmlPath;
-        var configuredNod = _sp.Settings.VsaCatalogNodXmlPath;
-        var resolved = _sp.VsaCatalogResolvedPath;
-
-        if (!string.IsNullOrWhiteSpace(resolved))
-        {
-            var label = resolved.Contains(" | ", StringComparison.Ordinal)
-                ? "SEC+NOD"
-                : (resolved.Contains("_NOD", StringComparison.OrdinalIgnoreCase) ? "NOD" : "SEC");
-            CatalogStatus = $"VSA-2019-Katalog ({label}): {resolved}";
-            IsCatalogOk = true;
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(configuredNod))
-        {
-            CatalogStatus = $"VSA-Katalog (NOD): {configuredNod} (nicht gefunden)";
-            IsCatalogOk = false;
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            CatalogStatus = $"VSA-Katalog (SEC): {configured} (nicht gefunden)";
-            IsCatalogOk = false;
-            return;
-        }
-
-        CatalogStatus = "VSA-Katalog (SEC/NOD): nicht konfiguriert";
-        IsCatalogOk = false;
+        CatalogStatus = status.Text;
+        IsCatalogOk = status.IsOk;
     }
 
     private void ReloadCatalog()
     {
-        try
-        {
-            switch (_sp.CodeCatalog)
-            {
-                case AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider xml:
-                    xml.Reload();
-                    break;
-                case AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider json:
-                    json.Reload();
-                    break;
-                case AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider composite:
-                    composite.Reload();
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            DetailsText = ex.ToString();
-        }
-        finally
-        {
-            UpdateCatalogStatus();
-        }
+        var result = _catalogController.Reload();
+        if (!string.IsNullOrWhiteSpace(result.UserError))
+            DetailsText = result.UserError;
+        ApplyCatalogStatus(result.Status);
     }
 
     // ──── Import report ────

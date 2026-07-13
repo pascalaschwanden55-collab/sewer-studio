@@ -177,6 +177,26 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public void Katalogstatus_wird_beim_Start_verstaendlich_gesetzt()
+    {
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory);
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        Assert.StartsWith("VSA-", viewModel.CatalogStatus, StringComparison.Ordinal);
+        Assert.Equal(
+            viewModel.CatalogStatus.StartsWith("VSA-2019-Katalog", StringComparison.Ordinal),
+            viewModel.IsCatalogOk);
+    }
+
+    [Fact]
     public async Task Portabilitaets_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
     {
         var dialogs = new DialogFake();
@@ -453,6 +473,39 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains("Tageslog", dialogs.LastErrorMessage);
         Assert.DoesNotContain("Geheimer", dialogs.LastErrorMessage);
         Assert.Contains(logger.Messages, message => message.Contains("Geheimer Dateipfad", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Katalog_Controller_erkennt_gemeinsam_aufgeloesten_SEC_NOD_Katalog()
+    {
+        var controller = new ImportCatalogController(
+            getConfiguredSecPath: () => null,
+            getConfiguredNodPath: () => null,
+            getResolvedPath: () => @"C:\SEC.xml | C:\NOD.xml",
+            new CodeCatalogFake(),
+            new CapturingLogger());
+
+        var status = controller.GetStatus();
+
+        Assert.True(status.IsOk);
+        Assert.Contains("SEC+NOD", status.Text);
+    }
+
+    [Fact]
+    public void Katalog_Controller_meldet_fehlenden_NOD_Katalog()
+    {
+        var controller = new ImportCatalogController(
+            getConfiguredSecPath: () => null,
+            getConfiguredNodPath: () => @"C:\fehlt_NOD.xml",
+            getResolvedPath: () => null,
+            new CodeCatalogFake(),
+            new CapturingLogger());
+
+        var status = controller.GetStatus();
+
+        Assert.False(status.IsOk);
+        Assert.Contains("NOD", status.Text);
+        Assert.Contains("nicht gefunden", status.Text);
     }
 
     public void Dispose() => _loggerFactory.Dispose();
