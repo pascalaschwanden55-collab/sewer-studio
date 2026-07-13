@@ -8,11 +8,32 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
 using Scriban;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 
 public sealed class OfferHtmlToPdfRenderer
 {
+    private static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan CleanupTimeout = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan _totalTimeout;
+    private readonly Func<string, string, CancellationToken, Task> _renderPdfAsync;
+
+    public OfferHtmlToPdfRenderer()
+        : this(DefaultTotalTimeout, RenderPdfWithPlaywrightAsync)
+    {
+    }
+
+    internal OfferHtmlToPdfRenderer(
+        TimeSpan totalTimeout,
+        Func<string, string, CancellationToken, Task> renderPdfAsync)
+    {
+        if (totalTimeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(totalTimeout));
+        _totalTimeout = totalTimeout;
+        _renderPdfAsync = renderPdfAsync ?? throw new ArgumentNullException(nameof(renderPdfAsync));
+    }
+
     public async Task RenderAsync(
         OfferPdfModel model,
         string templatePath,
@@ -51,9 +72,32 @@ public sealed class OfferHtmlToPdfRenderer
 
         var html = template.Render(model, memberRenamer: m => m.Name);
 
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(_totalTimeout);
         try
         {
-            await RenderPdfWithPlaywrightAsync(html, outputPdfPath, ct);
+            await RenderWithBrowserRecoveryAsync(html, outputPdfPath, timeoutCts.Token)
+                .WaitAsync(timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+        {
+            var timeoutText = _totalTimeout.TotalSeconds >= 1
+                ? $"{_totalTimeout.TotalSeconds:0} Sekunden"
+                : $"{_totalTimeout.TotalMilliseconds:0} Millisekunden";
+            throw new System.TimeoutException(
+                $"PDF-Export wurde nach {timeoutText} beendet. " +
+                "Chromium oder die PDF-Erzeugung hat nicht rechtzeitig geantwortet.");
+        }
+    }
+
+    private async Task RenderWithBrowserRecoveryAsync(
+        string html,
+        string outputPdfPath,
+        CancellationToken ct)
+    {
+        try
+        {
+            await _renderPdfAsync(html, outputPdfPath, ct).WaitAsync(ct);
         }
         catch (PlaywrightException ex) when (IsMissingBrowserException(ex))
         {
@@ -62,7 +106,7 @@ public sealed class OfferHtmlToPdfRenderer
             {
                 try
                 {
-                    await RenderPdfWithPlaywrightAsync(html, outputPdfPath, ct);
+                    await _renderPdfAsync(html, outputPdfPath, ct).WaitAsync(ct);
                     return;
                 }
                 catch (PlaywrightException retryEx)
@@ -88,27 +132,31 @@ public sealed class OfferHtmlToPdfRenderer
     {
         ct.ThrowIfCancellationRequested();
 
-        using var playwright = await Playwright.CreateAsync();
-        var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true
-        });
+        using var playwright = await Playwright.CreateAsync().WaitAsync(ct);
+        IBrowser? browser = null;
+        IPage? page = null;
 
         try
         {
-            var page = await browser.NewPageAsync(new BrowserNewPageOptions
+            browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true,
+                Timeout = 60_000
+            }).WaitAsync(ct);
+
+            page = await browser.NewPageAsync(new BrowserNewPageOptions
             {
                 ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
-            });
+            }).WaitAsync(ct);
+            page.SetDefaultTimeout(60_000);
 
-            try
+            await page.SetContentAsync(html, new PageSetContentOptions
             {
-                await page.SetContentAsync(html, new PageSetContentOptions
-                {
-                    WaitUntil = WaitUntilState.Load
-                });
+                WaitUntil = WaitUntilState.Load,
+                Timeout = 60_000
+            }).WaitAsync(ct);
 
-                var footer = @"
+            var footer = @"
 <div style='width:100%; font-family:Arial; font-size:9px; color:#666; padding:0 12mm;'>
   <div style='display:flex; justify-content:space-between;'>
     <span>Abwasser Uri | Zentrale Dienste | Giessenstrasse 46 | 6460 Altdorf | info@abwasser-uri.ch | T 041 875 00 90</span>
@@ -116,31 +164,43 @@ public sealed class OfferHtmlToPdfRenderer
   </div>
 </div>";
 
-                await page.PdfAsync(new PagePdfOptions
-                {
-                    Path = outputPdfPath,
-                    Format = "A4",
-                    PrintBackground = true,
-                    DisplayHeaderFooter = true,
-                    HeaderTemplate = "<div></div>",
-                    FooterTemplate = footer,
-                    Margin = new Margin
-                    {
-                        Top = "16mm",
-                        Bottom = "18mm",
-                        Left = "14mm",
-                        Right = "14mm"
-                    }
-                });
-            }
-            finally
+            await page.PdfAsync(new PagePdfOptions
             {
-                await page.CloseAsync();
-            }
+                Path = outputPdfPath,
+                Format = "A4",
+                PrintBackground = true,
+                DisplayHeaderFooter = true,
+                HeaderTemplate = "<div></div>",
+                FooterTemplate = footer,
+                Margin = new Margin
+                {
+                    Top = "16mm",
+                    Bottom = "18mm",
+                    Left = "14mm",
+                    Right = "14mm"
+                }
+            }).WaitAsync(ct);
         }
         finally
         {
-            await browser.CloseAsync();
+            if (page is not null)
+                await TryCloseAsync(() => page.CloseAsync(), "Playwright-Seite");
+            if (browser is not null)
+                await TryCloseAsync(() => browser.CloseAsync(), "Playwright-Browser");
+        }
+    }
+
+    private static async Task TryCloseAsync(Func<Task> closeAsync, string resourceName)
+    {
+        try
+        {
+            await closeAsync().WaitAsync(CleanupTimeout);
+        }
+        catch (Exception ex)
+        {
+            BestEffort.ReportWarning(
+                $"[PDF-Export] {resourceName} konnte nicht sauber beendet werden: " +
+                $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 
@@ -226,28 +286,31 @@ public sealed class OfferHtmlToPdfRenderer
             psi.ArgumentList.Add("install");
             psi.ArgumentList.Add("chromium");
 
-            using var process = new Process { StartInfo = psi };
-            process.Start();
+            var result = await ExternalProcessRunner.RunAsync(
+                psi,
+                DefaultTotalTimeout,
+                ct);
+            var stdOut = result.StdOut.Trim();
+            var stdErr = result.StdErr.Trim();
 
-            var stdOutTask = process.StandardOutput.ReadToEndAsync();
-            var stdErrTask = process.StandardError.ReadToEndAsync();
-
-            await process.WaitForExitAsync(ct);
-
-            var stdOut = (await stdOutTask).Trim();
-            var stdErr = (await stdErrTask).Trim();
-
-            var details = $"Installer: {shellExe}, ExitCode={process.ExitCode}";
+            var details = $"Installer: {shellExe}, ExitCode={result.ExitCode?.ToString() ?? "unbekannt"}";
             if (!string.IsNullOrWhiteSpace(stdErr))
                 details += Environment.NewLine + "stderr: " + Shrink(stdErr);
             if (!string.IsNullOrWhiteSpace(stdOut))
                 details += Environment.NewLine + "stdout: " + Shrink(stdOut);
 
-            return new InstallAttemptResult(process.ExitCode == 0, details);
+            if (result.TimedOut)
+                details += Environment.NewLine + "Installer-Zeitlimit erreicht.";
+
+            return new InstallAttemptResult(result.Success, details);
         }
         catch (Exception ex) when (ex is Win32Exception || ex is FileNotFoundException)
         {
             return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
