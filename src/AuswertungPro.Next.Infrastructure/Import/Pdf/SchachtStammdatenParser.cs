@@ -42,7 +42,10 @@ internal static class SchachtStammdatenParser
             @"\b(?:Schacht\s*tiefe|Tiefe(?:\s+des\s+Schachts?)?)" +
             @"\s*(?:\(\s*Abstich\s*\))?\s*" +
             @"(?:\[\s*(?:mm|cm|m)\s*\]|\(\s*(?:mm|cm|m)\s*\)|(?:mm|cm|m)\b)?\s*[:\-]?\s*" +
-            @"(?<v>" + measurement + @")");
+            @"(?<v>" + measurement + @")")
+            // Alte ITS-PDF-Schrift: "Tiefe (Abstich)" wird beim Textauslesen als
+            // "7LHIH $EVWLFK" geliefert. Der Wert am Ende der Zeile bleibt korrekt.
+            ?? GetFirst(@"\b7LHIH\b[^\n\r]{0,80}?(?<v>\d{1,6}(?:[.,]\d{1,3})?)[ \t]*(?:m)?[ \t]*$");
 
         var schachtform = NormalizeSchachtform(GetFirst(
             @"\b(?:Schacht\s*form|Form(?:\s+des\s+Schachts?)?)\s*[:\-]?\s*" +

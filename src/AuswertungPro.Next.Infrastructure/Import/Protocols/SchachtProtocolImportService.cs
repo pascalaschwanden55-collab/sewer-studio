@@ -21,8 +21,7 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
     /// <summary>Reine Text-zu-Ergebnis-Logik, damit sie ohne echtes PDF testbar ist.</summary>
     internal static SchachtProtocolParseResult ParseFromText(string fullText)
     {
-        var istSchacht = !string.IsNullOrWhiteSpace(fullText)
-            && fullText.Contains("Schachtprotokoll", StringComparison.OrdinalIgnoreCase);
+        var istSchacht = SchachtProtocolDetector.IsSchachtProtocol(fullText);
         if (!istSchacht)
         {
             return new SchachtProtocolParseResult(

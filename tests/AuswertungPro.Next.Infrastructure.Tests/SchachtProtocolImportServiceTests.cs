@@ -42,6 +42,50 @@ public sealed class SchachtProtocolImportServiceTests
     }
 
     [Fact]
+    public void ParseFromText_ZustandsaufnahmeSchachtMitSteuerzeichen_LiefertFelder()
+    {
+        var text = string.Join("\n", new[]
+        {
+            "GEP Bürglen Zone 5.01",
+            "Zustandsaufnahme Schacht Nr\u0011 80454",
+            "Schachttyp Kontrollschacht",
+            "Dimension 1100/900",
+            "7LHIH\u0003 $EVWLFK \u0003P 2.12",
+            "Schachtdeckel defekt klemmt",
+            "Deckelrahmen lose ausgebrochen",
+            "Schachthals",
+            "■",
+            "gerissen schlecht verputzt ausgebrochen",
+            "Bankett",
+            "■",
+            "ausgebrochen Ablagerungen",
+            "20/09/2024",
+            "Datum Joel Gerber"
+        });
+
+        var result = SchachtProtocolImportService.ParseFromText(text);
+
+        Assert.True(result.IstSchachtprotokoll);
+        Assert.Equal("80454", result.Schachtnummer);
+        Assert.Equal("Kontrollschacht", result.Funktion);
+        Assert.Equal("Rechteckig", result.Schachtform);
+        Assert.Equal("1100 x 900 mm", result.Dimension);
+        Assert.Equal("2.12", result.Schachttiefe);
+        Assert.Equal("20.09.2024", result.Datum);
+        Assert.Contains(result.Schaeden, damage => damage == ("Schachthals", "gerissen"));
+        Assert.Contains(result.Schaeden, damage => damage == ("Bankett", "ausgebrochen"));
+    }
+
+    [Fact]
+    public void ParseFromText_HaltungsprotokollMitSchachtwoertern_BleibtFalse()
+    {
+        var result = SchachtProtocolImportService.ParseFromText(
+            "Haltungsinspektion 80454-80455\nOberer Schacht 80454\nUnterer Schacht 80455");
+
+        Assert.False(result.IstSchachtprotokoll);
+    }
+
+    [Fact]
     public void FindSchacht_FindetPerSchachtnummer()
     {
         var project = new Project();

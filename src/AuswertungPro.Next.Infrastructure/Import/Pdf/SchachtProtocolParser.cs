@@ -48,7 +48,10 @@ internal static class SchachtProtocolParser
                             ?? GetFirst(@"\bSchachtnummer\s*[:\-]?\s*(?<v>\d{1,10}(?:\.\d{1,10})*)\b")
                             ?? GetFirst(@"\bNr\.?\s*[:\-]?\s*(?<v>\d{3,}(?:\.\d{1,10})*)\b");
 
-        var dateRaw = GetFirst(@"\bDatum\s*[:\-]?\s*(?<v>" + SewerTextPatterns.GermanDateCore + @")\b");
+        var dateRaw = GetFirst(@"\bDatum\s*[:\-]?\s*(?<v>" + SewerTextPatterns.GermanDateCore + @")\b")
+                      // Bei einzelnen PDF-Schriften wird der eingetragene Wert wegen
+                      // seiner Position vor der Beschriftung "Datum" ausgegeben.
+                      ?? GetFirst(@"(?<v>" + SewerTextPatterns.GermanDateCore + @")[ \t]*\n[^\n\r]{0,80}\bDatum\b");
         var datum = NormalizeDate(dateRaw);
 
         var funktion = GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
@@ -137,6 +140,14 @@ internal static class SchachtProtocolParser
         var entries = new List<(string Component, string Damage, int EncounterIndex)>();
         var encounterIndex = 0;
         var inConditionSection = false;
+        string? continuationComponent = null;
+        string? pendingMarker = null;
+
+        void AddDamages(string component, IReadOnlyList<string> damages)
+        {
+            foreach (var damage in damages)
+                entries.Add((component, damage, encounterIndex++));
+        }
 
         foreach (var rawLine in lines)
         {
@@ -154,7 +165,33 @@ internal static class SchachtProtocolParser
                 inConditionSection = false;
 
             if (!TryExtractComponentTail(line!, out var component, out var tail))
+            {
+                // Einige ITS-PDFs setzen das ausgefuellte Kaestchen und dessen Text
+                // auf eigene Zeilen. Komponente -> "■" -> "gerissen" muss deshalb
+                // wieder als eine zusammengehoerige Tabellenzeile gelesen werden.
+                if (continuationComponent is null)
+                    continue;
+
+                if (ContainsDamageMarker(line!))
+                {
+                    var continuedDamages = ParseMarkedDamageTexts(continuationComponent, line!);
+                    AddDamages(continuationComponent, continuedDamages);
+                    pendingMarker = continuedDamages.Count == 0 ? line : null;
+                    continue;
+                }
+
+                if (pendingMarker is not null)
+                {
+                    AddDamages(
+                        continuationComponent,
+                        ParseMarkedDamageTexts(continuationComponent, $"{pendingMarker} {line}"));
+                    pendingMarker = null;
+                }
                 continue;
+            }
+
+            continuationComponent = component;
+            pendingMarker = null;
 
             if (!inConditionSection && !ContainsDamageMarker(tail))
                 continue;
@@ -163,10 +200,9 @@ internal static class SchachtProtocolParser
                 ? ParseDamageTexts(component, tail, allowFreeText: true)
                 : ParseMarkedDamageTexts(component, tail);
 
-            foreach (var damage in damages)
-            {
-                entries.Add((component, damage, encounterIndex++));
-            }
+            AddDamages(component, damages);
+            if (damages.Count == 0 && ContainsDamageMarker(tail))
+                pendingMarker = tail;
         }
 
         if (entries.Count == 0)
@@ -209,11 +245,23 @@ internal static class SchachtProtocolParser
     /// </summary>
     internal static string NormalizePdfText(string text)
     {
-        return (text ?? string.Empty)
+        var normalized = (text ?? string.Empty)
             .Replace("\r\n", "\n")
             .Replace('\r', '\n')
             .Replace("\uFB01", "fi", StringComparison.Ordinal)
             .Replace("\uFB02", "fl", StringComparison.Ordinal);
+
+        // Manche PDF-Schriften liefern unsichtbare Steuerzeichen mitten in Woertern,
+        // z.B. "Nr<0x11> 80454". Als Leerzeichen bleiben Wortgrenzen erhalten und
+        // Nummern sowie Feldnamen koennen wieder sicher erkannt werden.
+        var chars = normalized.ToCharArray();
+        for (var i = 0; i < chars.Length; i++)
+        {
+            if (chars[i] is not '\n' and not '\t' && char.IsControl(chars[i]))
+                chars[i] = ' ';
+        }
+
+        return new string(chars);
     }
 
     /// <summary>
