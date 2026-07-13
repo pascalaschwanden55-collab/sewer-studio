@@ -51,13 +51,17 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
         var portabilityController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportProjectPortabilityController.cs"));
+        var photoAssignmentController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportProjectPhotoAssignmentController.cs"));
 
         Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
         Assert.DoesNotContain("new ProjectPortabilityService", viewModel);
-        Assert.Contains("_sp.ProjectPhotoAssignment.AssignFromFolder", viewModel);
+        Assert.Contains("_projectPhotoAssignmentController.ExecuteAsync", viewModel);
+        Assert.Contains("_service.AssignFromFolder", photoAssignmentController);
+        Assert.DoesNotContain("_sp.ProjectPhotoAssignment.AssignFromFolder", viewModel);
         Assert.DoesNotContain("new ProjectPhotoAssignmentService", viewModel);
         Assert.DoesNotContain("new XtfImportServiceAdapter", viewModel);
         Assert.DoesNotContain("new WinCanDbImportService", viewModel);

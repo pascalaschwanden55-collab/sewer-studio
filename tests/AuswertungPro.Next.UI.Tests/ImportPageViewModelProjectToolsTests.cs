@@ -37,6 +37,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Fotos_zuordnen_ohne_gespeichertes_Projekt_zeigt_Hinweis()
+    {
+        var dialogs = new DialogFake();
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        await viewModel.AssignPhotosFromFolderCommand.ExecuteAsync(null);
+
+        Assert.Contains("zuerst speichern", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Fotos zuordnen", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
     public async Task Portabilitaets_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
     {
         var dialogs = new DialogFake();
@@ -69,6 +92,39 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains("1:1", dialogs.LastInfoMessage);
     }
 
+    [Fact]
+    public async Task Fotozuordnungs_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Fotos" };
+        var service = new PhotoAssignmentFake();
+        var controller = new ImportProjectPhotoAssignmentController(dialogs, service);
+        var project = new Project();
+        project.Data.Add(new HaltungRecord());
+        var progress = string.Empty;
+        var summary = string.Empty;
+        var details = string.Empty;
+        var saveCalls = 0;
+
+        await controller.ExecuteAsync(new ImportProjectPhotoAssignmentActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: value => progress = value,
+            AppendSummary: value => summary += value,
+            AppendDetails: value => details += value));
+
+        Assert.Equal(1, service.Calls);
+        Assert.Equal(1, saveCalls);
+        Assert.Equal(string.Empty, progress);
+        Assert.Contains("2 Haltungen", summary);
+        Assert.Contains("Foto B", details);
+        Assert.Equal("Fotos zuordnen", dialogs.LastInfoTitle);
+    }
+
     public void Dispose() => _loggerFactory.Dispose();
 
     private sealed class PortabilityFake : IProjectPortabilityService
@@ -86,15 +142,35 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         }
     }
 
+    private sealed class PhotoAssignmentFake : IProjectPhotoAssignmentService
+    {
+        public int Calls { get; private set; }
+
+        public ProjectPhotoAssignmentResult AssignFromFolder(
+            string projectFolder,
+            string sourceFolder,
+            Project project)
+        {
+            Calls++;
+            return new ProjectPhotoAssignmentResult(
+                HoldingsMatched: 2,
+                PhotosAssigned: 3,
+                PhotosCopied: 4,
+                UnmatchedFiles: 1,
+                Messages: new[] { "Foto B" });
+        }
+    }
+
     private sealed class DialogFake : IDialogService
     {
+        public string? SelectedFolder { get; init; }
         public string LastInfoMessage { get; private set; } = string.Empty;
         public string LastInfoTitle { get; private set; } = string.Empty;
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
         public string[] OpenFiles(string title, string filter) => Array.Empty<string>();
-        public string? SelectFolder(string title, string? initialPath = null) => null;
+        public string? SelectFolder(string title, string? initialPath = null) => SelectedFolder;
         public void Info(string message, string title = "Hinweis")
         {
             LastInfoMessage = message;

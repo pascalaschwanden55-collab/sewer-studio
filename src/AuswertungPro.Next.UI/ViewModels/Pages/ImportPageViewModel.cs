@@ -19,6 +19,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _sp;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
+    private readonly Services.ImportProjectPhotoAssignmentController _projectPhotoAssignmentController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -59,6 +60,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _projectPortabilityController = new Services.ImportProjectPortabilityController(
             _sp.Dialogs,
             _sp.ProjectPortability);
+        _projectPhotoAssignmentController = new Services.ImportProjectPhotoAssignmentController(
+            _sp.Dialogs,
+            _sp.ProjectPhotoAssignment);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -482,42 +486,15 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// IKAS wie WinCan), kopiert sie ins Projekt und verlinkt relativ. Fuer haltungs-benannte Fotos;
     /// GUID-benannte (nur ueber die DB zuordenbar) bleiben offen.
     /// </summary>
-    private async Task AssignPhotosFromFolderAsync()
-    {
-        var projectFolder = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projectFolder))
-        {
-            _sp.Dialogs.Info("Projekt bitte zuerst speichern.", "Fotos zuordnen");
-            return;
-        }
-        if (_shell.Project.Data.Count == 0)
-        {
-            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Fotos zuordnen");
-            return;
-        }
-
-        var src = _sp.Dialogs.SelectFolder(
-            "Quellordner mit den Fotos waehlen (z.B. der Foto-/Picture-Ordner des Exports)", null);
-        if (string.IsNullOrWhiteSpace(src))
-            return;
-
-        ImportProgress = "Fotos zuordnen: nach Haltung matchen, ins Projekt kopieren, verlinken...";
-        var result = await Task.Run(() =>
-            _sp.ProjectPhotoAssignment.AssignFromFolder(projectFolder!, src!, _shell.Project));
-        ImportProgress = "";
-
-        _ = _shell.TrySaveProject();
-
-        var summary = $"Fotos zugeordnet:"
-            + $"\n  {result.HoldingsMatched} Haltungen mit Fotos"
-            + $"\n  {result.PhotosAssigned} Fotos an Beobachtungen gehaengt"
-            + $"\n  {result.PhotosCopied} ins Projekt kopiert"
-            + $"\n  {result.UnmatchedFiles} nicht zuordenbar (z.B. GUID-benannt -> braucht DB-Import)";
-        SummaryText += "\n" + summary;
-        if (result.Messages.Count > 0)
-            DetailsText += "\n\nFoto-Zuordnung:\n" + string.Join("\n", result.Messages.Take(50));
-        _sp.Dialogs.Info(summary, "Fotos zuordnen");
-    }
+    private Task AssignPhotosFromFolderAsync()
+        => _projectPhotoAssignmentController.ExecuteAsync(
+            new Services.ImportProjectPhotoAssignmentActions(
+                GetProjectFolder: _shell.GetProjectFolder,
+                GetProject: () => _shell.Project,
+                SaveProject: _shell.TrySaveProject,
+                SetProgress: value => ImportProgress = value,
+                AppendSummary: value => SummaryText += value,
+                AppendDetails: value => DetailsText += value));
 
     /// <summary>
     /// Ein-Knopf-Import: Quellordner der Kanalfernsehdaten waehlen → Format erkennen (WinCan/IKAS/KINS) →
