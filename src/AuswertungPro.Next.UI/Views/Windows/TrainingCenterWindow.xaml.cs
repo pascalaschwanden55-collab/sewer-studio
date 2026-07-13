@@ -37,6 +37,7 @@ public partial class TrainingCenterWindow : Window
 
     private readonly ServiceProvider? _services;
     private readonly IDialogService _dialogs;
+    private readonly TrainingCenterLazyServices _trainingServices;
 
     private IVsaCodeSelectionCatalog? CodeSelectionCatalog
         => _services?.CodeSelectionCatalog;
@@ -47,22 +48,20 @@ public partial class TrainingCenterWindow : Window
     private Ellipse[] _pipelineDots = Array.Empty<Ellipse>();
     private Border[] _serviceDots = Array.Empty<Border>();
 
-    // Review-Services (lazy, erst bei erster Review-Aktion)
-    private InfraSelfImproving.ReviewQueueService? _reviewQueueService;
-
     // ── Box-Zeichnen auf Review-Karte (B5) ──────────────────────────────
     private Rectangle? _boxPreview;
     private Point _boxStart;
     private bool _drawing;
-    private TrainingReviewSamSegmentationService? _reviewSamService;
-
     public TrainingCenterWindow()
         : this(
             services: null,
             TrainingCenterWindowFallbackDependencies.Dialogs,
             TrainingCenterWindowFallbackDependencies.Store,
             TrainingCenterWindowFallbackDependencies.Import,
-            TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics)
+            TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics,
+            () => TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
+            TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam,
+            TrainingCenterWindowFallbackDependencies.CreateFewShotStore)
     {
     }
 
@@ -72,7 +71,10 @@ public partial class TrainingCenterWindow : Window
             services?.Dialogs ?? TrainingCenterWindowFallbackDependencies.Dialogs,
             services?.TrainingCenterStore ?? TrainingCenterWindowFallbackDependencies.Store,
             services?.TrainingCenterImport ?? TrainingCenterWindowFallbackDependencies.Import,
-            services?.KnowledgeBaseDiagnostics ?? TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics)
+            services?.KnowledgeBaseDiagnostics ?? TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics,
+            () => services?.TrainingReviewQueue ?? TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
+            () => services?.CreateTrainingReviewSam() ?? TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam(),
+            () => services?.CreateFewShotStore() ?? TrainingCenterWindowFallbackDependencies.CreateFewShotStore())
     {
     }
 
@@ -82,12 +84,37 @@ public partial class TrainingCenterWindow : Window
         TrainingCenterStore store,
         TrainingCenterImportService import,
         IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics)
+        : this(
+            services,
+            dialogs,
+            store,
+            import,
+            knowledgeBaseDiagnostics,
+            () => services?.TrainingReviewQueue ?? TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
+            () => services?.CreateTrainingReviewSam() ?? TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam(),
+            () => services?.CreateFewShotStore() ?? TrainingCenterWindowFallbackDependencies.CreateFewShotStore())
+    {
+    }
+
+    public TrainingCenterWindow(
+        ServiceProvider? services,
+        IDialogService dialogs,
+        TrainingCenterStore store,
+        TrainingCenterImportService import,
+        IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics,
+        Func<InfraSelfImproving.ReviewQueueService> createReviewQueue,
+        Func<TrainingReviewSamSegmentationService> createReviewSam,
+        Func<FewShotExampleStore> createFewShotStore)
     {
         _services = services;
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(import);
         ArgumentNullException.ThrowIfNull(knowledgeBaseDiagnostics);
+        _trainingServices = new TrainingCenterLazyServices(
+            createReviewQueue,
+            createReviewSam,
+            createFewShotStore);
 
         InitializeComponent();
         WindowStateManager.Track(this);
@@ -117,9 +144,9 @@ public partial class TrainingCenterWindow : Window
             SetupAutoScroll();
 
             // Review-Queue laden (falls KB vorhanden) - persistent, ueberlebt Neustart
-            _reviewQueueService = InfraSelfImproving.ReviewQueueService.CreatePersistent();
-            Vm.ReviewQueueServiceRef = _reviewQueueService;
-            Vm.LoadReviewQueue(_reviewQueueService);
+            var reviewQueue = _trainingServices.GetReviewQueue();
+            Vm.ReviewQueueServiceRef = reviewQueue;
+            Vm.LoadReviewQueue(reviewQueue);
 
             // Lehrer-Annotationen laden
             await LoadTeacherAnnotationsAsync();
@@ -319,8 +346,7 @@ public partial class TrainingCenterWindow : Window
             SamMaskRenderer.ClearMasks(BoxCanvas);
             Vm.PendingSamMask = null;
 
-            _reviewSamService ??= CreateReviewSamService();
-            var result = await _reviewSamService.SegmentFrameFileAsync(
+            var result = await _trainingServices.GetReviewSam().SegmentFrameFileAsync(
                 card.FramePath,
                 box,
                 card.ProtocolCode,
@@ -348,16 +374,6 @@ public partial class TrainingCenterWindow : Window
         {
             BtnReviewSegmentSam.IsEnabled = true;
         }
-    }
-
-    private TrainingReviewSamSegmentationService CreateReviewSamService()
-    {
-        var pipelineCfg = _services is not null
-            ? _services.PipelineCfg
-            : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
-
-        return new TrainingReviewSamSegmentationService(
-            new VisionPipelineTrainingReviewSamClient(pipelineCfg));
     }
 
     private static TrainingSegmentationMask? CreateTrainingSegmentationMask(SamResponse response)
@@ -673,7 +689,7 @@ public partial class TrainingCenterWindow : Window
 
         try
         {
-            var store = new FewShotExampleStore();
+            var store = _trainingServices.CreateFewShotStore();
             await store.LoadAsync();
 
             var imageBytes = await File.ReadAllBytesAsync(imagePath);

@@ -33,6 +33,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
+using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
@@ -53,6 +54,7 @@ namespace AuswertungPro.Next.UI
         // Ein langlebiger Client fuer den optionalen Import-Schiedsrichter. HttpClient ist
         // thread-sicher und soll nicht bei jedem Import neu erzeugt werden.
         private readonly HttpClient _importAiHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
+        private readonly Lazy<ReviewQueueService> _trainingReviewQueue;
 
         #region Infrastruktur / Querschnitt
         // Basis-Einstellungen, Logging und Fehlercode-Generator
@@ -140,6 +142,13 @@ namespace AuswertungPro.Next.UI
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
         public TrainingCenterImportService TrainingCenterImport { get; } = new();
+        public ReviewQueueService TrainingReviewQueue => _trainingReviewQueue.Value;
+
+        public TrainingReviewSamSegmentationService CreateTrainingReviewSam()
+            => new(new VisionPipelineTrainingReviewSamClient(PipelineCfg));
+
+        public FewShotExampleStore CreateFewShotStore()
+            => new(message => Logger.LogWarning("{Message}", message));
 
         // Globale, selbst gepflegte Schacht-Massnahmen-Liste (einfacher Weg ohne NPK):
         // Name + manueller Preis, projektuebergreifend unter %AppData%.
@@ -167,6 +176,9 @@ namespace AuswertungPro.Next.UI
             // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
             KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
             KnowledgeRoot = KnowledgeBasePaths.GetRoot();
+            _trainingReviewQueue = new Lazy<ReviewQueueService>(
+                ReviewQueueService.CreatePersistent,
+                System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
             var knowledgeResolution = KnowledgeBasePaths.GetResolution();
             KnowledgeDbPath = Path.Combine(KnowledgeRoot, "KnowledgeBase.db");
             var knowledgeConfigurationWarning = knowledgeResolution.HasEnvironmentSettingsMismatch
