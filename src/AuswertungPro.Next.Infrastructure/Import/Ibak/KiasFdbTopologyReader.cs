@@ -54,10 +54,10 @@ public static class KiasFdbTopologyReader
         if (string.IsNullOrWhiteSpace(fdb))
             return result;
 
-        var connStr = IbakFdbConnectionOptions.CreateEmbedded(fdb).ToString();
-
         try
         {
+            using var workingCopy = IbakFdbWorkingCopy.Create(fdb);
+            var connStr = IbakFdbConnectionOptions.CreateEmbedded(workingCopy.DatabasePath).ToString();
             using var conn = new FbConnection(connStr);
             conn.Open();
 
@@ -123,10 +123,10 @@ public static class KiasFdbTopologyReader
         if (string.IsNullOrWhiteSpace(fdb))
             return result;
 
-        var connStr = IbakFdbConnectionOptions.CreateEmbedded(fdb).ToString();
-
         try
         {
+            using var workingCopy = IbakFdbWorkingCopy.Create(fdb);
+            var connStr = IbakFdbConnectionOptions.CreateEmbedded(workingCopy.DatabasePath).ToString();
             using var conn = new FbConnection(connStr);
             conn.Open();
 

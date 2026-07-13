@@ -463,7 +463,10 @@ public sealed class IbakExportImportService : IIbakImportService
 
         try
         {
-            var cs = IbakFdbConnectionOptions.CreatePhotoMap(fdbPath, TryFindFbClient(exportRoot));
+            using var workingCopy = IbakFdbWorkingCopy.Create(fdbPath);
+            var cs = IbakFdbConnectionOptions.CreatePhotoMap(
+                workingCopy.DatabasePath,
+                TryFindFbClient(exportRoot));
 
             using var conn = new FbConnection(cs.ToString());
             conn.Open();
