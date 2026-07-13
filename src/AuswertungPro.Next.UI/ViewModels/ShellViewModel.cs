@@ -136,7 +136,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
             new("\uE8AA", "Schattenauswertung", () => new Pages.SchattenauswertungPageViewModel(this, _sp)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
-            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
+            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp.LogTailReader)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();

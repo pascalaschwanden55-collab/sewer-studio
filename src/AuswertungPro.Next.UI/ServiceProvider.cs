@@ -17,6 +17,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Vsa;
 
 using AuswertungPro.Next.Infrastructure.Backup;
+using AuswertungPro.Next.Infrastructure.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -81,6 +82,7 @@ namespace AuswertungPro.Next.UI
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
+        public ILogTailReader LogTailReader { get; }
         public IFullBackupService FullBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         #endregion
@@ -152,6 +154,7 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
+            LogTailReader = new DailyLogTailReader(Path.Combine(AppSettings.AppDataDir, "logs"));
             FullBackupOperation.SetLastBackupInfo(
                 SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
                     settings.LastFullBackupUtc,
