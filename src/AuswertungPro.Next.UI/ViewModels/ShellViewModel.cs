@@ -118,7 +118,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         NavItems = new List<NavItem>
         {
-            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(
+                this,
+                settings: _sp.Settings,
+                dashboardRefresh: _sp.DashboardRefresh,
+                dialogs: _sp.Dialogs,
+                projects: _sp.Projects), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
@@ -412,7 +417,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _navItemBeforeChange = null;
         CurrentMode = ShellMode.Launcher;
         ResetProjectReady();
-        SetCurrentPage(new Pages.OverviewPageViewModel(this, _sp));
+        SetCurrentPage(new Pages.OverviewPageViewModel(
+            this,
+            settings: _sp.Settings,
+            dashboardRefresh: _sp.DashboardRefresh,
+            dialogs: _sp.Dialogs,
+            projects: _sp.Projects));
     }
 
     /// <summary>„Neues Projekt": leeres Projekt + Infoblatt im Draft-Modus.</summary>

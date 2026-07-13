@@ -12,7 +12,7 @@ public sealed class OverviewRemoveDirtyGuardArchitectureTests
         var source = File.ReadAllText(path);
 
         var guard = source.IndexOf("_shell.ConfirmDiscardUnsavedChanges()", StringComparison.Ordinal);
-        var hide = source.IndexOf("_sp.Settings.HideProject(entry.Path)", StringComparison.Ordinal);
+        var hide = source.IndexOf("_settings.HideProject(entry.Path)", StringComparison.Ordinal);
         Assert.True(guard >= 0 && hide > guard, "Dirty-Pruefung muss vor dem Ausblenden des Projekts stehen.");
     }
 }

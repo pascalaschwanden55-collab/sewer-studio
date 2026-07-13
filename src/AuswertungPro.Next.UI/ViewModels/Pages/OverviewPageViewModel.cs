@@ -10,7 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using AuswertungPro.Next.Application.Dashboard;
+using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI.Services;
 using System.Windows.Threading;
 using AuswertungPro.Next.UI.DataPage;
 using System.Threading;
@@ -30,7 +32,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         // Pfad des zuletzt geladenen Vorschau-Projekts: gleiche Auswahl -> nicht erneut laden.
         private string? _previewedPath;
         private readonly ShellViewModel _shell;
-        private readonly ServiceProvider _sp;
+        private readonly AppSettings _settings;
+        private readonly DashboardRefreshNotifier _dashboardRefresh;
+        private readonly IDialogService _dialogs;
+        private readonly IProjectRepository _projects;
         private readonly DispatcherTimer _dashboardRefreshTimer;
         private readonly DispatcherTimer _previewRefreshTimer;
         private readonly ProjectCostStoreRepository _haltungCostRepo = new();
@@ -82,9 +87,22 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
         public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
+            : this(shell, sp.Settings, sp.DashboardRefresh, sp.Dialogs, sp.Projects)
         {
-            _shell = shell;
-            _sp = sp;
+        }
+
+        public OverviewPageViewModel(
+            ShellViewModel shell,
+            AppSettings settings,
+            DashboardRefreshNotifier dashboardRefresh,
+            IDialogService dialogs,
+            IProjectRepository projects)
+        {
+            _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
+            _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+            _projects = projects ?? throw new ArgumentNullException(nameof(projects));
             _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
             _previewRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -106,14 +124,14 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             // ObservableProperty-Hooks benachrichtigen die Commands. Darum erst setzen,
             // nachdem alle Commands vollstaendig erzeugt wurden.
-            LastProjectPath = _sp.Settings.LastProjectPath;
+            LastProjectPath = _settings.LastProjectPath;
             ProjectStatus = BuildProjectStatus();
-            IsProjectListCollapsed = _sp.Settings.OverviewProjectListCollapsed;
+            IsProjectListCollapsed = _settings.OverviewProjectListCollapsed;
 
             LoadAllProjects();
 
             _shell.PropertyChanged += ShellPropertyChanged;
-            _sp.DashboardRefresh.CostsChanged += DashboardCostsChanged;
+            _dashboardRefresh.CostsChanged += DashboardCostsChanged;
             SubscribeProject(_shell.Project);
             RefreshDashboard();
         }
@@ -125,7 +143,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             _disposed = true;
             _shell.PropertyChanged -= ShellPropertyChanged;
-            _sp.DashboardRefresh.CostsChanged -= DashboardCostsChanged;
+            _dashboardRefresh.CostsChanged -= DashboardCostsChanged;
             UnsubscribeProject();
             _dashboardRefreshTimer.Stop();
             _dashboardRefreshTimer.Tick -= DashboardRefreshTimerTick;
@@ -150,7 +168,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 ScheduleDashboardRefresh();
                 UpdateDashboardPresentation();
                 ProjectStatus = BuildProjectStatus();
-                LastProjectPath = _sp.Settings.LastProjectPath;
+                LastProjectPath = _settings.LastProjectPath;
                 if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
                     LoadAllProjects();
             }
@@ -170,8 +188,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         partial void OnIsProjectListCollapsedChanged(bool value)
         {
-            _sp.Settings.OverviewProjectListCollapsed = value;
-            _sp.Settings.Save();
+            _settings.OverviewProjectListCollapsed = value;
+            _settings.Save();
         }
 
         private void SubscribeProject(Project? project)
@@ -232,7 +250,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 return;
 
             Dashboard = _shell.IsProjectReady
-                ? BuildStatsFor(_shell.Project, _sp.Settings.LastProjectPath, out _)
+                ? BuildStatsFor(_shell.Project, _settings.LastProjectPath, out _)
                 : null;
         }
 
@@ -283,11 +301,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             var preview = BuildPrintablePreview();
             if (preview is null)
             {
-                _sp.Dialogs.Info("Keine Projektvorschau zum Drucken vorhanden.", "Projektvorschau");
+                _dialogs.Info("Keine Projektvorschau zum Drucken vorhanden.", "Projektvorschau");
                 return;
             }
 
-            var output = _sp.Dialogs.SaveFile(
+            var output = _dialogs.SaveFile(
                 "Projektvorschau PDF speichern",
                 "PDF (*.pdf)|*.pdf",
                 defaultExt: "pdf",
@@ -305,11 +323,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
                 var pdf = await Task.Run(() => ProjectPreviewPdfBuilder.Build(preview));
                 await File.WriteAllBytesAsync(target, pdf);
-                _sp.Dialogs.Info($"PDF erstellt:\n{target}", "Projektvorschau");
+                _dialogs.Info($"PDF erstellt:\n{target}", "Projektvorschau");
             }
             catch (Exception ex)
             {
-                _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Projektvorschau");
+                _dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Projektvorschau");
             }
             finally
             {
@@ -322,7 +340,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (!ShowFullDashboard)
                 return SelectedPreview;
 
-            var projectPath = _sp.Settings.LastProjectPath ?? string.Empty;
+            var projectPath = _settings.LastProjectPath ?? string.Empty;
             var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out _);
             var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out _);
             return ProjectPreviewFactory.FromProject(Project, projectPath, hCosts, sCosts);
@@ -437,7 +455,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             if (string.IsNullOrWhiteSpace(file) || !File.Exists(file)) return;
             // Aus der Uebersicht ausgeblendete Projekte nicht anzeigen (Dateien bleiben erhalten).
-            if (_sp.Settings.HiddenProjectPaths.Any(p => string.Equals(p, file, StringComparison.OrdinalIgnoreCase))) return;
+            if (_settings.HiddenProjectPaths.Any(p => string.Equals(p, file, StringComparison.OrdinalIgnoreCase))) return;
             if (!seen.Add(file)) return;
 
             try
@@ -491,7 +509,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             AddEntry(LastProjectPath, true);
 
         // 2. Alle RecentProjectPaths
-        foreach (var recentPath in _sp.Settings.RecentProjectPaths)
+        foreach (var recentPath in _settings.RecentProjectPaths)
             AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
 
         // 3. Dateisystem-Scan als Wahrheitsquelle: gelernte Wurzeln (letztes Projekt,
@@ -500,9 +518,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         //    auch wenn die Settings-Merkliste verloren ging.
         var baseDirs = ProjectScanRoots.ResolveAll(
             Directory.GetCurrentDirectory(),
-            _sp.Settings.ProjectsRootDirectory,
-            _sp.Settings.LastProjectPath,
-            _sp.Settings.RecentProjectPaths);
+            _settings.ProjectsRootDirectory,
+            _settings.LastProjectPath,
+            _settings.RecentProjectPaths);
 
         foreach (var file in ProjectFileDiscovery.FindProjectFiles(baseDirs))
             AddEntry(file, false);
@@ -564,7 +582,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     /// <summary>Gemeinsamer Abschluss nach erfolgreichem Oeffnen (Merkliste pflegt die Shell selbst).</summary>
     private void AfterProjectOpened()
     {
-        LastProjectPath = _sp.Settings.LastProjectPath;
+        LastProjectPath = _settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
         _shell.EnterWorkspaceOn("Uebersicht");
@@ -576,7 +594,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         if (entry is null || string.IsNullOrWhiteSpace(entry.Path))
             return;
 
-        var confirmed = _sp.Dialogs.Confirm(
+        var confirmed = _dialogs.Confirm(
             $"Projekt aus der Übersicht entfernen?\n\n{entry.Name}\n{entry.Path}\n\n" +
             "Die Daten im Projektordner bleiben erhalten — beim erneuten Öffnen erscheint das Projekt wieder.",
             "Aus Übersicht entfernen");
@@ -586,12 +604,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         try
         {
             // Nur ausblenden, NICHT loeschen: die Projektdatei und alle Daten bleiben auf der Platte.
-            var wasActive = string.Equals(_sp.Settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
+            var wasActive = string.Equals(_settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
             if (wasActive && !_shell.ConfirmDiscardUnsavedChanges())
                 return;
 
-            _sp.Settings.HideProject(entry.Path);
-            _sp.Settings.Save();
+            _settings.HideProject(entry.Path);
+            _settings.Save();
 
             if (wasActive)
             {
@@ -606,7 +624,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            _sp.Dialogs.Error($"Entfernen fehlgeschlagen: {ex.Message}", "Fehler");
+            _dialogs.Error($"Entfernen fehlgeschlagen: {ex.Message}", "Fehler");
         }
     }
 
@@ -710,7 +728,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         try
         {
-            var res = _sp.Projects.Load(entry.Path);
+            var res = _projects.Load(entry.Path);
             ct.ThrowIfCancellationRequested();
             if (res.Ok && res.Value is not null)
             {

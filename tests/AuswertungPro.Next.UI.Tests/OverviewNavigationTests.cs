@@ -11,6 +11,17 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class OverviewNavigationTests
 {
     [Fact]
+    public void OverviewViewModel_speichert_keinen_ServiceProvider_als_Feld()
+    {
+        var fields = typeof(OverviewPageViewModel).GetFields(
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public);
+
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+    }
+
+    [Fact]
     public void NavigateConditionCommand_oeffnet_haltungen_auch_fuer_ohne_zustand()
     {
         using var scope = CreateOverview();
