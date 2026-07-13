@@ -63,9 +63,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Leerer Sidecar-Token sperrt sicher (A5-05 erledigt):** Ein nicht initialisierter oder leerer Server-Token deaktiviert die Anmeldung nicht mehr. Jede Anfrage wird mit einem bereinigten 503 und `auth_unavailable` abgewiesen; normale Routentests verwenden nun ebenfalls einen ausdrücklichen Test-Token. Alle 95 GPU-freien Sidecar-Tests sind grün.
 - **QGIS-Lesebrücke bewusst begrenzt (A5-06 erledigt):** Für den Einzelplatz bleibt die QGIS-Brücke kompatibel ohne Token, ist aber ausschließlich an IPv4-Loopback gebunden und akzeptiert nur `GET`/`HEAD`. Die Betriebsdokumentation nennt das lokale Leserisko und verlangt auf Mehrbenutzer-/Terminalservern die Deaktivierung. Ein Architekturtest schützt Code und Sicherheitsgrenze.
 - **Ollama-Autostart lokal erzwungen (A5-07 erledigt):** Ein von Sewer Studio gestartetes Ollama erhält prozessbezogen `OLLAMA_HOST=127.0.0.1:<Port>` und kann keinen geerbten Netzwerk-Listener übernehmen. Bei einer nichtlokalen Ollama-URL erscheint eine klare Warnung; Sewer Studio startet dafür keinen eigenen Prozess. Zwei Tests schützen Startentscheidung und Prozessumgebung.
+- **UI-Verhalten direkt geprüft (A6-01, Teilpaket):** Die Sanierungsoptimierung und die Parameterprüfung werden als echte ViewModels erzeugt und über ihre Befehle beziehungsweise Eingaben ausgeführt. Sechs neue Tests schützen Request-Zuordnung, Doppelstart-Sperre, KI-Fehler, Abbruch, Pflicht-/Auswahleingaben und Uhrpositionen. Noch offen sind weitere ViewModels und echte Fenster-Smoke-Tests.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.736 Tests bestanden (2.513 Infrastruktur, 1.813 Pipeline, 4.348 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.742 Tests bestanden (2.513 Infrastruktur, 1.813 Pipeline, 4.354 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -197,7 +198,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A6-01 | Hoch | `ArchitectureFitnessTests.cs` u.a. — 137 UI-Testdateien lesen `.cs` als Text; keine UI-Automation | ~46 ViewModels per `new + Command` testen (Quick Win); StaFact-Fenster-Smoke mittelfristig |
+| A6-01 | Hoch → **teilweise erledigt** | Die Bestandsaufnahme zeigt 133 STA-Testdateien, aber weiterhin viele Quelltext-Guards und keine echten Fenster-Smokes | Zwei weitere ViewModels werden mit sechs Verhaltenstests direkt ausgeführt; weitere ViewModels sowie Öffnen/Schließen-Smokes der Hauptfenster bleiben offen |
 | A6-02 | Hoch → **erledigt** | `tools/SidecarE2eSmoke` + `SidecarRealVideoIntegrationTests` | Echter Sidecar, reales Video, YOLO/DINO/SAM, Quantifizierung und Golden-Vertrag sind umgesetzt und auf der Zielmaschine grün |
 | A6-03 | Hoch | Repo-weit kein `[Trait]`, keine Dauer-/Leak-Testlogik | Trait-Kategorien (Unit/Integration/Endurance) + `NightlySoakRunner` |
 | A6-04 | Mittel | `integrations/qgis/sewerstudio_bridge/` — keine Tests | Python-Smoke für Bridge-Endpunkte (TestClient) + C#-Vertragstest |
