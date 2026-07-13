@@ -23,12 +23,23 @@ public sealed class CostCalculationService
     private readonly string _userTemplatesPath;
 
     public CostCalculationService(string projectRoot)
+        : this(projectRoot, userDataDir: null)
+    {
+    }
+
+    /// <summary>
+    /// Erlaubt Werkzeugen und Tests einen isolierten Benutzerordner. Ohne Übergabe bleibt
+    /// der bisherige Roaming-AppData-Pfad unverändert.
+    /// </summary>
+    public CostCalculationService(string projectRoot, string? userDataDir)
     {
         _seedDataDir = Path.Combine(projectRoot, "Data");
-        _userDataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AuswertungPro",
-            "legacy_costs");
+        _userDataDir = string.IsNullOrWhiteSpace(userDataDir)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "AuswertungPro",
+                "legacy_costs")
+            : Path.GetFullPath(userDataDir);
         _seedCatalogPath = Path.Combine(_seedDataDir, "seed_price_catalog.json");
         _legacyUserCatalogPath = Path.Combine(_seedDataDir, "user_catalog.json");
         _userCatalogPath = Path.Combine(_userDataDir, "user_catalog.json");
