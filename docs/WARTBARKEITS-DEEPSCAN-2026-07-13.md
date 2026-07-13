@@ -49,9 +49,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Backup-Inhalte mit SHA-256 prüfbar (A3-02 erledigt):** `manifest.json` enthält für jede aktuelle Sicherungsdatei Pfad, Länge und SHA‑256. Der Proberestore prüft diese Nachweise vor Datenbank und Projekt; fehlende, zusätzliche oder veränderte Dateien werden gemeldet. Tests bestätigen eine gleich große beschädigte Datei und blockieren Manifest-Pfade außerhalb der Sicherung.
 - **Sidecar-Token geschützt (A3-03 erledigt):** Nur `PipelineSidecarToken` wird in `settings.json` per Windows-DPAPI an das aktuelle Benutzerkonto gebunden. Alte Klartextwerte werden weiter gelesen und beim nächsten Speichern automatisch geschützt; ein beschädigter oder nach einem PC-Wechsel nicht mehr lesbarer Token verwirft nicht die übrigen Einstellungen. Drei Tests schützen Verschlüsselung, Migration und den sicheren Fehlerfall.
 - **Wissensdatenbank-Pfad validiert (A3-04 erledigt):** Relative oder ungültige Pfade aus `SEWERSTUDIO_KNOWLEDGE_ROOT` werden nicht mehr als Datenbankordner verwendet; stattdessen bleibt der gespeicherte absolute Pfad oder der sichere Standard aktiv. Abweisungen und jeder gültige Umgebungs-Override werden im Release-tauglichen Tageslog festgehalten.
+- **Lokales HTML nicht mehr direkt geöffnet (A3-05 erledigt):** `SafeShellOpen` erlaubt keine `.html`- oder `.htm`-Dateien mehr. Die tatsächlich benötigten PDF-, Bild-, Video-, Tabellen-, Text- und Ordnerpfade bleiben unverändert; zwei Tests schützen beide gesperrten Endungen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.711 Tests bestanden (2.495 Infrastruktur, 1.813 Pipeline, 4.341 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.713 Tests bestanden (2.495 Infrastruktur, 1.813 Pipeline, 4.343 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -150,7 +151,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A3-02 | Mittel → **erledigt** | `FullBackupService.cs:434-493` — Manifest ohne Pro-Datei-Hashes; `DirectoryMirror` erkennt Änderung nur über Größe+Zeit | Manifest enthält Pfad, Länge und SHA-256 jeder aktuellen Datei; `FullBackupSmoke --verify-restore` prüft fehlende, zusätzliche und inhaltlich abweichende Dateien vor dem fachlichen Restore-Test |
 | A3-03 | Niedrig → **erledigt** | `JsonProjectRepository.cs:94-104` / `AppSettings.cs:192` — Klartext-JSON inkl. `PipelineSidecarToken` | Token ist per DPAPI (`ProtectedData`, CurrentUser) geschützt; `projekt.json` bleibt wie vorgesehen Klartext |
 | A3-04 | Niedrig → **erledigt** | `KnowledgeBasePaths.cs:131-147` — `SEWERSTUDIO_KNOWLEDGE_ROOT` ungeprüft als Wurzel | Leere, relative und ungültige Werte werden verworfen; gültige Overrides und Abweisungen landen im Tageslog |
-| A3-05 | Niedrig | `SafeShellOpen.cs:8-13` — `.html/.htm` in Whitelist, kein Pfad-Containment | `.html/.htm` entfernen oder Pfad gegen Projektordner prüfen |
+| A3-05 | Niedrig → **erledigt** | `SafeShellOpen.cs:8-13` — `.html/.htm` in Whitelist, kein Pfad-Containment | `.html/.htm` sind aus der Freigabeliste entfernt; vorhandene Aufrufer benötigen diese Typen nicht |
 
 ### Schwerpunkt 5 — PDF-, Datenbank- & QGIS-Schnittstellen
 

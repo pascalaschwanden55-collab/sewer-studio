@@ -9,7 +9,7 @@ public static class SafeShellOpen
     {
         ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff",
         ".mp4", ".mpg", ".mpeg", ".avi", ".mov", ".mkv",
-        ".xlsx", ".csv", ".txt", ".json", ".html", ".htm"
+        ".xlsx", ".csv", ".txt", ".json"
     };
 
     public static bool TryOpen(string? path, out string? error)
