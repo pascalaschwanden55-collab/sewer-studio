@@ -124,7 +124,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
-            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
+            new("\uE898", "Export", () => new Pages.ExportPageViewModel(
+                this,
+                settings: _sp.Settings,
+                dialogs: _sp.Dialogs,
+                excelExport: _sp.ExcelExport,
+                toasts: _sp.Toasts,
+                costFieldSync: _sp.CostFieldSync), canOpenWithoutProject: true),
             new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
             {
                 DataContext = new Pages.KarteViewModel(this, _sp)

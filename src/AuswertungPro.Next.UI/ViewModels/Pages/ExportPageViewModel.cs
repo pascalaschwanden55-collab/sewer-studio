@@ -5,12 +5,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Mapping;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -19,7 +21,11 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class ExportPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly IExcelExportService _excelExport;
+    private readonly IToastService _toasts;
+    private readonly IDerivedCostFieldSynchronizer _costFieldSync;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -38,9 +44,30 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
 
     public ExportPageViewModel(ShellViewModel shell, ServiceProvider sp)
+        : this(
+            shell,
+            settings: sp.Settings,
+            dialogs: sp.Dialogs,
+            excelExport: sp.ExcelExport,
+            toasts: sp.Toasts,
+            costFieldSync: sp.CostFieldSync)
     {
-        _shell = shell;
-        _sp = sp;
+    }
+
+    public ExportPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        IExcelExportService excelExport,
+        IToastService toasts,
+        IDerivedCostFieldSynchronizer costFieldSync)
+    {
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _excelExport = excelExport ?? throw new ArgumentNullException(nameof(excelExport));
+        _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
+        _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
@@ -77,7 +104,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportAsync()
     {
-        var outPath = _sp.Dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        var outPath = _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
@@ -89,21 +116,21 @@ public sealed partial class ExportPageViewModel : ObservableObject
             // Vor dem Export die abgeleiteten Kostenfelder auf den aktuellen Stand ziehen
             // (Sanieren=Nein/leer -> geleert, damit nur echte Sanierungen exportiert werden).
             // Gesperrte costs.json (loadError) -> NICHT syncen, um keinen leeren Stand zu schreiben.
-            var projectPath = _sp.Settings.LastProjectPath ?? "";
+            var projectPath = _settings.LastProjectPath ?? "";
             if (!string.IsNullOrWhiteSpace(projectPath))
             {
                 var store = new AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository()
                     .Load(projectPath, out var syncLoadError);
                 if (syncLoadError is null)
-                    _sp.CostFieldSync.Sync(_shell.Project, store);
+                    _costFieldSync.Sync(_shell.Project, store);
             }
 
             var res = await Task.Run(() =>
-                _sp.ExcelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
+                _excelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
-                _sp.Toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
+                _toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
         }
         finally
         {
@@ -113,7 +140,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportSchaechteAsync()
     {
-        var outPath = _sp.Dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        var outPath = _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
@@ -129,11 +156,11 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IsPageBusy = true;
             using var busy = Busy.Enter("Schächte werden exportiert …");
             var res = await Task.Run(() =>
-                _sp.ExcelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
+                _excelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
-                _sp.Toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
+                _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
         }
         finally
         {
@@ -145,7 +172,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeHoldingsAsync()
     {
-        var sourceMode = _sp.Dialogs.ConfirmCancel(
+        var sourceMode = _dialogs.ConfirmCancel(
             "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
             "Haltungen verteilen");
         if (sourceMode == DialogConfirm.Cancel)
@@ -160,7 +187,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
         if (!useTxtImport)
         {
-            var mode = _sp.Dialogs.ConfirmCancel(
+            var mode = _dialogs.ConfirmCancel(
                 "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
                 "Haltungen verteilen (PDF)");
             if (mode == DialogConfirm.Cancel)
@@ -168,20 +195,20 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
             if (mode == DialogConfirm.Yes)
             {
-                selectedPdfFiles = _sp.Dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
+                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
                 if (selectedPdfFiles.Length == 0)
                     return;
             }
             else
             {
-                pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
+                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
                 if (string.IsNullOrWhiteSpace(pdfFolder))
                     return;
             }
         }
         else
         {
-            var mode = _sp.Dialogs.ConfirmCancel(
+            var mode = _dialogs.ConfirmCancel(
                 "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
                 "Haltungen verteilen (TXT)");
             if (mode == DialogConfirm.Cancel)
@@ -189,19 +216,19 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
             if (mode == DialogConfirm.Yes)
             {
-                selectedTxtFiles = _sp.Dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
+                selectedTxtFiles = _dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
                 if (selectedTxtFiles.Length == 0)
                     return;
             }
             else
             {
-                txtFolder = _sp.Dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
+                txtFolder = _dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
                 if (string.IsNullOrWhiteSpace(txtFolder))
                     return;
             }
         }
 
-        var videoFolder = _sp.Dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
+        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
         var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
@@ -288,10 +315,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
             if (useTxtImport && selectedTxtFiles.Length > 0)
                 StoreTxtFiles(selectedTxtFiles);
 
-            _sp.Settings.LastVideoSourceFolder = videoFolder;
-            _sp.Settings.LastDistributionTargetFolder = destFolder;
-            _sp.Settings.LastVideoFolder = videoFolder;
-            _sp.Settings.Save();
+            _settings.LastVideoSourceFolder = videoFolder;
+            _settings.LastDistributionTargetFolder = destFolder;
+            _settings.LastVideoFolder = videoFolder;
+            _settings.Save();
         }
         finally
         {
@@ -307,7 +334,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeShaftsAsync()
     {
-        var mode = _sp.Dialogs.ConfirmCancel(
+        var mode = _dialogs.ConfirmCancel(
             "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
             "Schaechte verteilen");
         if (mode == DialogConfirm.Cancel)
@@ -317,13 +344,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == DialogConfirm.Yes)
         {
-            selectedPdfFiles = _sp.Dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
@@ -396,7 +423,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeDichtheitAsync()
     {
-        var mode = _sp.Dialogs.ConfirmCancel(
+        var mode = _dialogs.ConfirmCancel(
             "PDF-Auswahl:\nJa = einzelne DP-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
             "Dichtheitsprüfung verteilen");
         if (mode == DialogConfirm.Cancel)
@@ -406,13 +433,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == DialogConfirm.Yes)
         {
-            selectedPdfFiles = _sp.Dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
@@ -443,7 +470,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IHaltungCadastreResolver? cadastre = null;
             try
             {
-                var katasterPfad = KatasterXtfPathResolver.Resolve(_sp.Settings);
+                var katasterPfad = KatasterXtfPathResolver.Resolve(_settings);
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
                     cadastre = await Task.Run(() => HaltungCadastreIndex.EnsureAndLoad(katasterPfad));
             }
@@ -534,7 +561,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         // im Projekt landen. Ohne gespeichertes Projekt bleibt der Ordnerdialog als Rueckfall.
         return Services.DistributionTargetFolderPolicy.Resolve(
             _shell.GetProjectFolder(),
-            () => _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
+            () => _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
     }
 
     // Zielordner + strukturierter Unterordner (Haltungen_Verteilt\ / Schächte_Verteilt\), damit manuelle
@@ -547,7 +574,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private void StorePdfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
             return;
 
@@ -597,7 +624,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private void StoreTxtFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
             return;
 
