@@ -103,6 +103,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         };
         Unloaded += (_, __) =>
         {
+            _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
             // Wenn die Seite gewechselt wird, Grid zurueck docken
