@@ -19,3 +19,7 @@ Wiederhergestellten Testordner pruefen:
 dotnet run --project tools/FullBackupSmoke -- `
   --verify-restore "C:\SewerStudio-Proberestore-20260712"
 ```
+
+Der Prueflauf vergleicht zuerst jede aktuelle Sicherungsdatei mit Laenge und
+SHA-256 aus `manifest.json`. Erst danach werden Wissensdatenbank und Projektinhalt
+fachlich geprueft. Alte Sicherungen ohne Datei-Hashes werden bewusst abgelehnt.

@@ -67,6 +67,13 @@ public sealed class FullBackupServiceTests : IDisposable
             Assert.Equal(
                 result.FilesVerified,
                 manifest.RootElement.GetProperty("Totals").GetProperty("Verified").GetInt32());
+            var programEntry = manifest.RootElement.GetProperty("Files")
+                .EnumerateArray()
+                .Single(entry => entry.GetProperty("Path").GetString() == "Programm/src/app.cs");
+            Assert.Equal(4, programEntry.GetProperty("Length").GetInt64());
+            Assert.Equal(
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData("code"u8.ToArray())),
+                programEntry.GetProperty("Sha256").GetString());
         }
 
         File.WriteAllText(Path.Combine(backupRoot, "verwaist.txt"), "weg");
@@ -126,6 +133,50 @@ public sealed class FullBackupServiceTests : IDisposable
             Assert.DoesNotContain("key-klartext", text);
             Assert.DoesNotContain("auth-klartext", text);
         }
+    }
+
+    [Fact]
+    public async Task ManifestPruefung_erkennt_nachtraeglich_beschaedigte_Datei()
+    {
+        var targetParent = Path.Combine(_root, "target-integrity");
+        var result = await new FullBackupService(CreateSourceTree).RunAsync(targetParent);
+        Assert.True(result.Success, result.Error);
+
+        var backupRoot = Path.Combine(targetParent, BackupPlanBuilder.TargetFolderName);
+        var initial = await BackupManifestIntegrity.VerifyAsync(backupRoot);
+        Assert.True(initial.IsValid, string.Join(Environment.NewLine, initial.Issues));
+        Assert.True(initial.CheckedFiles > 0);
+
+        var programFile = Path.Combine(backupRoot, "Programm", "src", "app.cs");
+        File.WriteAllText(programFile, "evil");
+        var damaged = await BackupManifestIntegrity.VerifyAsync(backupRoot);
+
+        Assert.False(damaged.IsValid);
+        Assert.Contains(damaged.Issues, issue =>
+            issue.Path == "Programm/src/app.cs"
+            && issue.Message.Contains("SHA-256", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ManifestPruefung_verwirft_Pfade_ausserhalb_der_Sicherung()
+    {
+        var backupRoot = Path.Combine(_root, "unsafe-manifest");
+        Directory.CreateDirectory(backupRoot);
+        File.WriteAllText(Path.Combine(_root, "outside.txt"), "geheim");
+        File.WriteAllText(Path.Combine(backupRoot, "manifest.json"), """
+            {
+              "Files": [
+                { "Path": "../outside.txt", "Length": 6, "Sha256": "00" }
+              ]
+            }
+            """);
+
+        var report = await BackupManifestIntegrity.VerifyAsync(backupRoot);
+
+        Assert.False(report.IsValid);
+        Assert.Contains(report.Issues, issue =>
+            issue.Path == "../outside.txt"
+            && issue.Message.Contains("Unsicherer", StringComparison.Ordinal));
     }
 
     [Fact]

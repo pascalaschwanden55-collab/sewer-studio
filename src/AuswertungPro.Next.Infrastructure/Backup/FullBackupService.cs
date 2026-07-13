@@ -133,9 +133,29 @@ public sealed class FullBackupService : IFullBackupService
             var versionStaende = RotateVersionStaende(backupRoot, stats);
 
             var skipped = stats.Errors.Take(200).ToArray();
+            var hashProgressThrottle = Stopwatch.StartNew();
+            var manifestFiles = await BackupManifestIntegrity.CreateEntriesAsync(
+                    backupRoot,
+                    file =>
+                    {
+                        if (progress is null || hashProgressThrottle.ElapsedMilliseconds < 250)
+                            return;
+
+                        hashProgressThrottle.Restart();
+                        progress.Report(new FullBackupProgress(
+                            "Pruefe Sicherung",
+                            Path.GetRelativePath(backupRoot, file),
+                            sizeReport.TotalBytes,
+                            sizeReport.TotalBytes,
+                            sizeReport.TotalFiles,
+                            sizeReport.TotalFiles));
+                    },
+                    ct)
+                .ConfigureAwait(false);
+            progressState.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
             var manifest = BuildManifest(
                 sources, plan, sizeReport, stats, skipped, versionStaende,
-                requiredFreeBytes, confirmedAvailableBytes);
+                requiredFreeBytes, confirmedAvailableBytes, manifestFiles);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
             await AtomicTextFileWriter.WriteAllTextAsync(
                 Path.Combine(backupRoot, "manifest.json"),
@@ -439,7 +459,8 @@ public sealed class FullBackupService : IFullBackupService
         IReadOnlyList<string> skipped,
         int versionStaende,
         long requiredFreeBytes,
-        long availableFreeBytes)
+        long availableFreeBytes,
+        IReadOnlyList<BackupManifestFileEntry> files)
         => new
         {
             CreatedUtc = DateTimeOffset.UtcNow,
@@ -489,6 +510,7 @@ public sealed class FullBackupService : IFullBackupService
                 Sources = c.Sources.Select(s => new { s.SourceRoot, s.TargetRelativeRoot }).ToArray(),
                 Files = c.Files?.Select(f => new { f.SourcePath, f.TargetRelativePath }).ToArray()
             }).ToArray(),
+            Files = files,
             SkippedFiles = skipped
         };
 

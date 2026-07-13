@@ -5,7 +5,7 @@ using AuswertungPro.Next.Infrastructure.Projects;
 using Microsoft.Data.Sqlite;
 
 if (args.Length == 2 && string.Equals(args[0], "--verify-restore", StringComparison.OrdinalIgnoreCase))
-    return VerifyRestore(Path.GetFullPath(args[1]));
+    return await VerifyRestoreAsync(Path.GetFullPath(args[1]));
 
 if (args.Length < 2)
 {
@@ -85,7 +85,7 @@ if (result.SkippedFiles.Count > 0)
 
 return 0;
 
-static int VerifyRestore(string restoreRoot)
+static async Task<int> VerifyRestoreAsync(string restoreRoot)
 {
     var manifest = Path.Combine(restoreRoot, "manifest.json");
     var programSolution = Path.Combine(restoreRoot, "Programm", "AuswertungPro.sln");
@@ -109,6 +109,16 @@ static int VerifyRestore(string restoreRoot)
             Console.Error.WriteLine("Fehlt: mindestens eine wiederhergestellte projekt.json");
         return 4;
     }
+
+    var integrity = await BackupManifestIntegrity.VerifyAsync(restoreRoot);
+    if (!integrity.IsValid)
+    {
+        Console.Error.WriteLine("Inhaltspruefung der Sicherung fehlgeschlagen:");
+        foreach (var issue in integrity.Issues.Take(50))
+            Console.Error.WriteLine($"  {issue.Path}: {issue.Message}");
+        return 7;
+    }
+    Console.WriteLine($"SHA-256 geprueft: {integrity.CheckedFiles:N0} Dateien");
 
     var health = KnowledgeBaseHealthChecker.Check(knowledgeDb);
     if (!health.IsHealthy)
