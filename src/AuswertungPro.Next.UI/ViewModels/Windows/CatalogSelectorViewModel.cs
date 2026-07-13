@@ -12,7 +12,7 @@ public sealed partial class CatalogSelectorViewModel : ObservableObject
     private const string AllFilter = "Alle";
 
     private readonly Window _window;
-    private readonly WinCanCatalogDiscoveryService _discovery = new();
+    private readonly WinCanCatalogDiscoveryService _discovery;
     private readonly List<WinCanCatalogInfo> _allCatalogs = new();
 
     public ObservableCollection<WinCanCatalogInfo> FilteredCatalogs { get; } = new();
@@ -39,9 +39,16 @@ public sealed partial class CatalogSelectorViewModel : ObservableObject
     public IRelayCommand ApplyCommand { get; }
     public IRelayCommand CancelCommand { get; }
 
-    public CatalogSelectorViewModel(Window window, string? currentCatalogPath, string? winCanCatalogDir, string? lastProjectPath)
+    public CatalogSelectorViewModel(
+        Window window,
+        string? currentCatalogPath,
+        string? winCanCatalogDir,
+        string? lastProjectPath,
+        WinCanCatalogDiscoveryService? discovery = null,
+        IReadOnlyList<string>? initialDirectories = null)
     {
         _window = window;
+        _discovery = discovery ?? new WinCanCatalogDiscoveryService();
 
         BrowseDirectoryCommand = new RelayCommand(BrowseDirectory);
         ScanCommand = new RelayCommand(ScanCatalogs);
@@ -52,7 +59,8 @@ public sealed partial class CatalogSelectorViewModel : ObservableObject
             CurrentCatalogInfo = $"Aktuell: {Path.GetFileName(currentCatalogPath)}";
 
         // Auto-discover directories
-        var defaultDirs = WinCanCatalogDiscoveryService.GetDefaultSearchDirectories(winCanCatalogDir, lastProjectPath);
+        var defaultDirs = initialDirectories
+            ?? WinCanCatalogDiscoveryService.GetDefaultSearchDirectories(winCanCatalogDir, lastProjectPath);
         if (defaultDirs.Count > 0)
         {
             CatalogDirectory = defaultDirs[0];
