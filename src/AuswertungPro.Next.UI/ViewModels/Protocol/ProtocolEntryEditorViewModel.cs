@@ -36,6 +36,9 @@ public class ProtocolEntryEditorViewModel : INotifyPropertyChanged
         _catalog = catalog;
     }
 
+    public bool IsKnownCode(string code)
+        => !string.IsNullOrWhiteSpace(code) && _catalog.TryGet(code, out _);
+
     private void UpdateDefinition()
     {
         Definition = _catalog.TryGet(Code, out var def) ? def : null;

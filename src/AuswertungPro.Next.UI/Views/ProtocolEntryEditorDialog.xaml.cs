@@ -7,7 +7,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
@@ -21,9 +20,11 @@ public partial class ProtocolEntryEditorDialog : Window
     private readonly ServiceProvider? _sp;
     private readonly ProtocolEntryVM _entryVm;
     private readonly ProtocolEntryEditorViewModel? _paramVm;
+    private readonly ProtocolEntryEditorKiViewModel? _kiVm;
     private readonly string? _haltungId;
     private readonly string? _videoPath;
     private readonly string? _projectFolder;
+    private CancellationTokenSource? _kiSuggestionCts;
     private bool _isKiBusy;
     private bool _isNormalizingCode;
 
@@ -49,6 +50,9 @@ public partial class ProtocolEntryEditorDialog : Window
         _projectFolder = projectFolder;
 
         _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
+        _kiVm = _paramVm is null || _sp is null
+            ? null
+            : new ProtocolEntryEditorKiViewModel(_paramVm, _sp.ProtocolAi, _entryVm);
 
         LoadFromEntry();
 
@@ -80,7 +84,7 @@ public partial class ProtocolEntryEditorDialog : Window
         HookVsaValidationEvents();
         PreviewKeyDown += OnDialogPreviewKeyDown;
         _entryVm.PropertyChanged += EntryVm_PropertyChanged;
-        Closed += (_, _) => _entryVm.PropertyChanged -= EntryVm_PropertyChanged;
+        Closed += OnDialogClosed;
 
         HookParameterValidationEvents();
         ApplyLiveValidation();
@@ -542,106 +546,71 @@ public partial class ProtocolEntryEditorDialog : Window
         if (_isKiBusy)
             return;
 
-        if (_sp is null || _sp.CodeCatalog is null)
+        if (_kiVm is null)
         {
             ValidationStatus.Text = "KI nicht verfügbar: Service fehlt.";
             return;
         }
 
-        if (_sp.ProtocolAi is NoopProtocolAiService)
-        {
-            ValidationStatus.Text = "KI ist deaktiviert. Setze SEWERSTUDIO_AI_ENABLED=1 und starte neu.";
-            return;
-        }
-
-        var allowedCodes = _sp.CodeCatalog.AllowedCodes();
-        if (allowedCodes.Count == 0)
-        {
-            ValidationStatus.Text = "KI nicht möglich: Code-Katalog ist leer.";
-            return;
-        }
-
-        if (!TryParseOptionalDouble(MeterStartTextBox.Text, out var meterStart))
-        {
-            ValidationStatus.Text = "MeterStart ist ungültig.";
-            return;
-        }
-
-        if (!TryParseOptionalDouble(MeterEndTextBox.Text, out var meterEnd))
-        {
-            ValidationStatus.Text = "MeterEnd ist ungültig.";
-            return;
-        }
-
-        if (!TryParseOptionalTimeSpan(ZeitTextBox.Text, out var zeit))
-        {
-            ValidationStatus.Text = "Zeit ist ungültig.";
-            return;
-        }
-
-        var preferredMeter = meterStart ?? meterEnd;
-        var code = (CodeTextBox.Text ?? string.Empty).Trim();
-        var description = (BeschreibungTextBox.Text ?? string.Empty).Trim();
-
-        var videoPath = ResolveExistingPath(_videoPath);
-        var imagePaths = ResolveImagePaths(_entryVm.Model.FotoPaths);
-        var projectFolder = ResolveProjectFolder();
+        var request = new ProtocolEntryKiSuggestionRequest(
+            ProjectFolderAbs: ResolveProjectFolder(),
+            HaltungId: _haltungId,
+            MeterStartText: MeterStartTextBox.Text ?? string.Empty,
+            MeterEndText: MeterEndTextBox.Text ?? string.Empty,
+            ZeitText: ZeitTextBox.Text ?? string.Empty,
+            ExistingCode: CodeTextBox.Text ?? string.Empty,
+            ExistingText: BeschreibungTextBox.Text ?? string.Empty,
+            VideoPathAbs: ResolveExistingPath(_videoPath),
+            ImagePathsAbs: ResolveImagePaths(_entryVm.Model.FotoPaths));
 
         _isKiBusy = true;
         KiSuggestButton.IsEnabled = false;
         AiStatusText.Text = "KI-Vorschlag wird geladen...";
         ValidationStatus.Text = string.Empty;
 
+        var cancellation = new CancellationTokenSource();
+        _kiSuggestionCts = cancellation;
+        ProtocolEntryKiSuggestionResult? result = null;
         using var _aiToken = Services.AiActivityTracker.Begin("KI-Codevorschlag");
         try
         {
-            var input = new AiInput(
-                ProjectFolderAbs: projectFolder,
-                HaltungId: string.IsNullOrWhiteSpace(_haltungId) ? null : _haltungId,
-                Meter: preferredMeter,
-                ExistingCode: string.IsNullOrWhiteSpace(code) ? null : code,
-                ExistingText: string.IsNullOrWhiteSpace(description) ? null : description,
-                AllowedCodes: allowedCodes,
-                VideoPathAbs: videoPath,
-                Zeit: zeit,
-                ImagePathsAbs: imagePaths.Count == 0 ? null : imagePaths);
-
-            var suggestion = await _sp.ProtocolAi.SuggestAsync(input);
-            if (suggestion is null)
-            {
-                AiStatusText.Text = "Kein KI-Vorschlag erhalten.";
-                return;
-            }
-
-            _entryVm.ApplyAiSuggestionToModelAndVm(suggestion);
-
-            if (string.IsNullOrWhiteSpace(suggestion.SuggestedCode))
-            {
-                AiStatusText.Text = $"KI-Vorschlag ohne Code ({suggestion.Confidence:P0}).";
-            }
-            else if (_sp.CodeCatalog.TryGet(suggestion.SuggestedCode, out _))
-            {
-                CodeTextBox.Text = suggestion.SuggestedCode.Trim().ToUpperInvariant();
-                AiStatusText.Text = $"KI-Vorschlag übernommen: {suggestion.SuggestedCode} ({suggestion.Confidence:P0}).";
-            }
-            else
-            {
-                AiStatusText.Text = $"KI-Code '{suggestion.SuggestedCode}' ist nicht im Katalog.";
-            }
-
-            if (!string.IsNullOrWhiteSpace(suggestion.ReasonShort))
-                ValidationStatus.Text = "KI-Hinweis: " + Truncate(suggestion.ReasonShort, 180);
-        }
-        catch (Exception ex)
-        {
-            ValidationStatus.Text = $"KI-Fehler: {ex.Message}";
+            result = await _kiVm.SuggestAsync(request, cancellation.Token);
         }
         finally
         {
+            if (ReferenceEquals(_kiSuggestionCts, cancellation))
+                _kiSuggestionCts = null;
+            cancellation.Dispose();
             _isKiBusy = false;
-            KiSuggestButton.IsEnabled = true;
-            ApplyLiveValidation();
+
+            if (IsLoaded)
+            {
+                KiSuggestButton.IsEnabled = true;
+                ApplyLiveValidation();
+                ApplyKiSuggestionResult(result);
+            }
         }
+    }
+
+    private void ApplyKiSuggestionResult(ProtocolEntryKiSuggestionResult? result)
+    {
+        if (result is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(result.StatusText))
+            AiStatusText.Text = result.StatusText;
+
+        if (!string.IsNullOrWhiteSpace(result.AcceptedCode))
+            CodeTextBox.Text = result.AcceptedCode;
+
+        if (!string.IsNullOrWhiteSpace(result.ValidationText))
+            ValidationStatus.Text = result.ValidationText;
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        _entryVm.PropertyChanged -= EntryVm_PropertyChanged;
+        _kiSuggestionCts?.Cancel();
     }
 
     private void OpenCodePicker()
@@ -871,13 +840,6 @@ public partial class ProtocolEntryEditorDialog : Window
         }
 
         return result;
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
-            return value;
-        return value.Substring(0, maxLength) + "...";
     }
 
     // Delegation an ProtocolEntryInputNormalizer (Application-Schicht)
