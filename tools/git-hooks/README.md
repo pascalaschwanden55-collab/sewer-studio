@@ -1,7 +1,10 @@
 # Git-Testschutz
 
-Der Pre-Push-Hook startet vor jedem Push die schnellen Infrastructure- und Pipeline-Tests.
+Der Pre-Push-Hook startet vor jedem Push die Infrastructure-, Pipeline- und UI-Tests.
 Bei einem Fehler wird der Push abgebrochen.
+
+Damit prueft der Schutz auch die Oberflaechen-Regeln. Dazu gehoert zum Beispiel die
+maximale Groesse wichtiger UI-Dateien.
 
 Installation:
 

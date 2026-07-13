@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -38,15 +39,13 @@ public sealed class TrainingCenterStore
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[TrainingCenterStore] Ladefehler: {ex.Message}");
+            BestEffort.ReportWarning($"[TrainingCenterStore] Ladefehler: {ex.Message}");
 
             // Backup der korrupten Datei (timestamped, nicht ueberschreiben)
-            try
-            {
-                var badPath = StoreFilePath + ".bad_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-                File.Copy(StoreFilePath, badPath);
-            }
-            catch { /* best-effort */ }
+            var badPath = StoreFilePath + ".bad_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+            BestEffort.Try(
+                () => File.Copy(StoreFilePath, badPath),
+                $"Training-Center: korrupte Datei nach {badPath} sichern");
 
             // Fallback auf .bak (juengstes Save-Backup)
             var bakPath = StoreFilePath + ".bak";
@@ -58,14 +57,19 @@ public sealed class TrainingCenterStore
                     var bakState = await JsonSerializer.DeserializeAsync<TrainingCenterState>(bakFs, JsonOptions);
                     if (bakState is not null)
                     {
-                        Debug.WriteLine("[TrainingCenterStore] Backup .bak geladen");
+                        Trace.WriteLine("[TrainingCenterStore] Backup .bak geladen");
                         return bakState;
                     }
                 }
-                catch { /* Backup auch korrupt */ }
+                catch (Exception backupError)
+                {
+                    BestEffort.ReportWarning(
+                        $"[TrainingCenterStore] Backup ebenfalls unlesbar: {backupError.Message}");
+                }
             }
 
-            Debug.WriteLine("[TrainingCenterStore] WARNUNG: Kein lesbares Backup, starte mit leerem State");
+            BestEffort.ReportWarning(
+                "[TrainingCenterStore] WARNUNG: Kein lesbares Backup, starte mit leerem State");
             return new TrainingCenterState();
         }
     }
@@ -96,8 +100,9 @@ public sealed class TrainingCenterStore
         // Backup vor dem Schreiben
         if (File.Exists(StoreFilePath))
         {
-            try { File.Copy(StoreFilePath, StoreFilePath + ".bak", overwrite: true); }
-            catch { /* best-effort */ }
+            BestEffort.Try(
+                () => File.Copy(StoreFilePath, StoreFilePath + ".bak", overwrite: true),
+                "Training-Center: Sicherheitsbackup erstellen");
         }
 
         // In temp-Datei schreiben, dann atomar umbenennen
@@ -122,8 +127,9 @@ public sealed class TrainingCenterStore
         }
         catch
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-            catch { /* best-effort */ }
+            BestEffort.Try(
+                () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
+                "Training-Center: Temp-Datei nach Speicherfehler loeschen");
             throw;
         }
     }

@@ -375,7 +375,7 @@ internal sealed class LibreHardwareMonitorSensor : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
+            System.Diagnostics.Trace.WriteLine(
                 $"[SystemMonitor] HVCI-Status nicht lesbar: {ex.GetType().Name}");
             return false;
         }

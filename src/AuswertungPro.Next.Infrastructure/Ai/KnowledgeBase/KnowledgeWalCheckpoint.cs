@@ -1,6 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -22,7 +22,7 @@ public static class KnowledgeWalCheckpoint
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[FullBackup] WAL-Checkpoint fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[FullBackup] WAL-Checkpoint fehlgeschlagen: {ex.Message}");
         }
     }
 }

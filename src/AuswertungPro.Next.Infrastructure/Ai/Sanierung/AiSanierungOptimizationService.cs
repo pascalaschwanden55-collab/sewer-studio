@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
@@ -98,7 +99,7 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         catch (Exception ex1)
         {
             firstError = ex1.Message;
-            System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] Erster Versuch fehlgeschlagen: {ex1.Message}");
+            BestEffort.ReportWarning($"[Sanierung-KI] Erster Versuch fehlgeschlagen: {ex1.Message}");
 
             // Kurze Pause vor Retry (Backoff)
             await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
@@ -120,7 +121,7 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
             catch (OperationCanceledException) { throw; }
             catch (Exception ex2)
             {
-                System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] Zweiter Versuch fehlgeschlagen: {ex2.Message}");
+                BestEffort.ReportWarning($"[Sanierung-KI] Zweiter Versuch fehlgeschlagen: {ex2.Message}");
                 return BuildFallbackResult(req, constraints,
                     $"KI nicht erreichbar (1: {firstError} | 2: {ex2.Message})");
             }

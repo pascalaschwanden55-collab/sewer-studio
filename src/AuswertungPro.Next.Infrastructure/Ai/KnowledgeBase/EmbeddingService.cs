@@ -1,12 +1,12 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -51,7 +51,8 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
             using var resp = await http.SendAsync(request, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
-                Debug.WriteLine($"[EmbeddingService] HTTP {(int)resp.StatusCode} von Ollama fuer Text '{text[..Math.Min(50, text.Length)]}...'");
+                BestEffort.ReportWarning(
+                    $"[EmbeddingService] HTTP {(int)resp.StatusCode} von Ollama fuer Text '{text[..Math.Min(50, text.Length)]}...'");
                 return null;
             }
 
@@ -74,7 +75,8 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[EmbeddingService] Embedding-Fehler: {ex.GetType().Name}: {ex.Message}");
+            BestEffort.ReportWarning(
+                $"[EmbeddingService] Embedding-Fehler: {ex.GetType().Name}: {ex.Message}");
             return null;
         }
     }

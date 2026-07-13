@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -59,7 +59,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
             new CodingTrainingFrameStore(),
             new CodingTrainingSamplePersister(sessionProvider),
             new CodingTrainingSampleEvalProtector(settings),
-            message => Debug.WriteLine(message));
+            message => BestEffort.ReportWarning(message));
 
     public async Task PersistSingleEventAsync(CodingEvent codingEvent, CodingTrainingSamplePersistenceRequest request)
     {

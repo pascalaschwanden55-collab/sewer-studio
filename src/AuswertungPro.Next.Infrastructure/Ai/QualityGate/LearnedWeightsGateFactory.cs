@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
@@ -42,7 +43,7 @@ public static class LearnedWeightsGateFactory
         {
             // Gelernte Gewichte sind eine Optimierung, kein Muss: bei Fehler bleibt das
             // Default-Verhalten erhalten (kein Absturz der Pipeline wegen DB-Problem).
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[LearnedWeightsGateFactory] Gewichte nicht geladen, nutze Default: {ex.Message}");
         }
     }

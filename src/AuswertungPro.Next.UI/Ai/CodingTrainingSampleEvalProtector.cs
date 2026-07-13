@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 
@@ -16,7 +16,7 @@ public sealed class CodingTrainingSampleEvalProtector
     public CodingTrainingSampleEvalProtector(AppSettings? settings)
         : this(
             () => EvalContaminationSetProvider.Load(settings),
-            message => Debug.WriteLine(message))
+            message => BestEffort.ReportWarning(message))
     {
     }
 

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 
@@ -61,7 +62,7 @@ public sealed class RetrievalService(
 
         if (mismatchCount > 0 && Interlocked.CompareExchange(ref _dimensionMismatchWarned, 1, 0) == 0)
         {
-            Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[RetrievalService] WARNUNG: {mismatchCount} Embeddings mit falscher Dimension " +
                 $"(erwartet {queryVec.Length}, DB enthält andere). KB-Rebuild empfohlen!");
         }
@@ -194,7 +195,7 @@ public sealed class RetrievalService(
 
             if (HasModelMismatch)
             {
-                Debug.WriteLine(
+                BestEffort.ReportWarning(
                     $"[RetrievalService] MODELL-MISMATCH: KB enthält '{StoredEmbedModel}', " +
                     $"aktuell konfiguriert: '{embedder.ModelName}'. KB-Rebuild empfohlen!");
             }
@@ -203,7 +204,7 @@ public sealed class RetrievalService(
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[RetrievalService] Modell-Check fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[RetrievalService] Modell-Check fehlgeschlagen: {ex.Message}");
             return true;
         }
     }

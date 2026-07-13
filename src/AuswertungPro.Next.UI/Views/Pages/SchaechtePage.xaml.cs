@@ -15,7 +15,6 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using AuswertungPro.Next.UI.Views.Windows;
 using static AuswertungPro.Next.UI.DataPage.SchaechteColumnPolicy;
@@ -47,6 +46,7 @@ public partial class SchaechtePage : UserControl
     private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly SchaechtePageSubscriptionController _subscriptionController;
     private readonly SchaechteRecordDetailsBuilder _recordDetailsBuilder;
+    private SchachtMassnahmenDialogController? _massnahmenController;
     private bool _isRestoringLayout;
 
     public SchaechtePage()
@@ -118,11 +118,17 @@ public partial class SchaechtePage : UserControl
         if (_vm is null)
         {
             _subscriptionController.Detach();
+            _massnahmenController = null;
             SchachtansichtView.Settings = null;
             return;
         }
 
         SchachtansichtView.Settings = _vm.Services.Settings;
+        _massnahmenController = new SchachtMassnahmenDialogController(
+            _vm.Services,
+            this,
+            MarkProjectDirty,
+            ApplySearchFilter);
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
 
@@ -913,85 +919,8 @@ public partial class SchaechtePage : UserControl
         OpenSchachtMassnahmen(record);
     }
 
-    /// <summary>
-    /// Oeffnet das einfache Schacht-Sanierungsmassnahmen-Fenster (klickbare Liste, manuelle Preise,
-    /// ohne NPK). Die Auswahl wird pro Schacht in schacht_empfehlungen.json abgelegt und als
-    /// "Massnahmen"/"Kosten" in den Record geschrieben (-> Schaechte-Excel-Export).
-    /// </summary>
     private void OpenSchachtMassnahmen(SchachtRecord record)
-    {
-        if (_vm is null)
-            return;
-
-        var schachtNummer = GetSchachtNumber(record);
-        var projectPath = Services.Settings.LastProjectPath;
-
-        var repo = new AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository("schacht_empfehlungen.json");
-        var store = repo.Load(projectPath, out var loadError);
-        if (loadError is not null)
-        {
-            Services.Dialogs.Warn(
-                $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\nDu kannst neu erfassen; Speichern legt die Datei neu an.",
-                "Sanierungsmassnahmen");
-        }
-
-        HoldingCost? bestehend = null;
-        if (!string.IsNullOrWhiteSpace(schachtNummer))
-            store.ByHolding.TryGetValue(schachtNummer, out bestehend);
-
-        var katalog = Services.SchachtMassnahmenKatalog.Load();
-
-        var vm = new SchachtMassnahmenViewModel(
-            record,
-            katalog,
-            bestehend,
-            onUebernehmen: cost => PersistSchachtEmpfehlung(repo, store, schachtNummer, cost, projectPath),
-            onListeBearbeiten: EditSchachtMassnahmenListe);
-
-        var win = new SchachtMassnahmenWindow(vm) { Owner = Window.GetWindow(this) };
-        win.ShowDialog();
-    }
-
-    private void PersistSchachtEmpfehlung(
-        AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository repo,
-        ProjectCostStore store,
-        string schachtNummer,
-        HoldingCost cost,
-        string? projectPath)
-    {
-        if (!string.IsNullOrWhiteSpace(schachtNummer))
-        {
-            var hatAuswahl = cost.Measures.Any(m => m.Lines.Any(l => l.Selected));
-            if (hatAuswahl)
-                store.ByHolding[schachtNummer] = cost;
-            else
-                store.ByHolding.Remove(schachtNummer);
-
-            if (string.IsNullOrWhiteSpace(projectPath))
-                Services.Dialogs.Info("Projekt bitte zuerst speichern, damit die Auswahl dauerhaft abgelegt wird.", "Sanierungsmassnahmen");
-            else if (!repo.Save(projectPath, store, out var error))
-                Services.Dialogs.Error($"Speichern der Schacht-Empfehlungen fehlgeschlagen:\n{error}", "Sanierungsmassnahmen");
-        }
-
-        // Die Felder "Massnahmen"/"Kosten" hat das ViewModel bereits in den Record geschrieben.
-        MarkProjectDirty();
-        ApplySearchFilter();
-    }
-
-    private IReadOnlyList<SchachtMassnahmeKatalogEintrag>? EditSchachtMassnahmenListe()
-    {
-        var editorVm = new SchachtMassnahmenKatalogEditorViewModel(Services.SchachtMassnahmenKatalog.Load());
-        var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-                    ?? Window.GetWindow(this);
-        var win = new SchachtMassnahmenKatalogEditorWindow(editorVm) { Owner = owner };
-        if (win.ShowDialog() == true)
-        {
-            Services.SchachtMassnahmenKatalog.Save(editorVm.Ergebnis);
-            return editorVm.Ergebnis;
-        }
-
-        return null;
-    }
+        => _massnahmenController?.Open(record);
 
     private string? ResolvePdfPath(SchachtRecord record)
         => SchachtFileTargetResolver.ResolvePdfPath(record, Services.Settings.LastProjectPath);

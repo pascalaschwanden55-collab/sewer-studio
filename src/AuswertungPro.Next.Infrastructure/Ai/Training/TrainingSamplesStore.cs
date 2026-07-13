@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -169,7 +170,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                     continue;
                 }
 
-                Debug.WriteLine(
+                BestEffort.ReportWarning(
                     $"[TrainingSamplesStore] Sample {sample.SampleId} blockiert: {classification}.");
             }
 
@@ -207,7 +208,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                 }
                 if (migrated)
                 {
-                    Debug.WriteLine("[TrainingSamplesStore] Signatur-Migration: 3-teilig → 4-teilig durchgefuehrt");
+                    Trace.WriteLine("[TrainingSamplesStore] Signatur-Migration: 3-teilig → 4-teilig durchgefuehrt");
                     await SaveInternalAsync(samples).ConfigureAwait(false);
                 }
 
@@ -219,10 +220,12 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                 // falls mehrere Korruptionen passieren, bleibt das erste Backup erhalten.
                 var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
                 var backup = path + $".bad_{timestamp}";
-                try { File.Copy(path, backup); }
-                catch { /* best-effort Backup */ }
+                BestEffort.Try(
+                    () => File.Copy(path, backup),
+                    $"Trainingsdaten: korrupte Datei nach {backup} sichern");
 
-                Debug.WriteLine($"[TrainingSamplesStore] WARNUNG: JSON korrupt, Backup unter {backup}: {ex.Message}");
+                BestEffort.ReportWarning(
+                    $"[TrainingSamplesStore] WARNUNG: JSON korrupt, Backup unter {backup}: {ex.Message}");
 
                 // Versuche Backup-Dateien zu laden: .bak (juengstes Save-Backup) zuerst, dann .bad_* (Korruptions-Backups)
                 var dir = Path.GetDirectoryName(path)!;
@@ -244,14 +247,15 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                         var bakSamples = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(bakStream).ConfigureAwait(false);
                         if (bakSamples is { Count: > 0 })
                         {
-                            Debug.WriteLine($"[TrainingSamplesStore] Backup {Path.GetFileName(bak)} geladen: {bakSamples.Count} Samples");
+                            Trace.WriteLine($"[TrainingSamplesStore] Backup {Path.GetFileName(bak)} geladen: {bakSamples.Count} Samples");
                             return bakSamples;
                         }
                     }
                     catch { /* naechstes Backup versuchen */ }
                 }
 
-                Debug.WriteLine("[TrainingSamplesStore] KRITISCH: Kein lesbares Backup gefunden, starte mit leerer Liste");
+                BestEffort.ReportWarning(
+                    "[TrainingSamplesStore] KRITISCH: Kein lesbares Backup gefunden, starte mit leerer Liste");
                 return new List<TrainingSample>();
             }
         }
@@ -279,7 +283,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                     if (File.Exists(bak1)) AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.Copy(bak1, bak2, true), "Trainingsdaten-Backup-Rotation .bak->.bak.2");
                     File.Copy(path, bak1, overwrite: true);
                 }
-                catch { /* best-effort */ }
+                catch (Exception ex)
+                {
+                    BestEffort.ReportWarning(
+                        $"[TrainingSamplesStore] Trainingsdaten-Backups konnten nicht rotiert werden: {ex.Message}");
+                }
             }
 
             // In temp-Datei schreiben (gleicher Ordner fuer atomares Rename)
@@ -310,8 +318,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             catch
             {
                 // temp-Datei aufraeumen bei Fehler, Originaldatei bleibt unberuehrt
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-                catch { /* best-effort */ }
+                BestEffort.Try(
+                    () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
+                    "Trainingsdaten: Temp-Datei nach Speicherfehler loeschen");
                 throw; // Fehler weiterreichen damit der Aufrufer weiss dass Save fehlgeschlagen ist
             }
         }
@@ -333,14 +342,19 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                 // Nur die letzten 3 behalten
                 for (int i = 3; i < badFiles.Length; i++)
                 {
-                    try { File.Delete(badFiles[i]); }
-                    catch { /* best-effort */ }
+                    BestEffort.Try(
+                        () => File.Delete(badFiles[i]),
+                        $"Trainingsdaten: altes Korruptionsbackup {Path.GetFileName(badFiles[i])} loeschen");
                 }
 
                 if (badFiles.Length > 3)
-                    Debug.WriteLine($"[TrainingSamplesStore] {badFiles.Length - 3} alte .bad Dateien aufgeraeumt");
+                    Trace.WriteLine($"[TrainingSamplesStore] {badFiles.Length - 3} alte .bad Dateien aufgeraeumt");
             }
-            catch { /* Aufraeumen ist optional */ }
+            catch (Exception ex)
+            {
+                BestEffort.ReportWarning(
+                    $"[TrainingSamplesStore] Alte Korruptionsbackups konnten nicht aufgeraeumt werden: {ex.Message}");
+            }
         }
     }
 }

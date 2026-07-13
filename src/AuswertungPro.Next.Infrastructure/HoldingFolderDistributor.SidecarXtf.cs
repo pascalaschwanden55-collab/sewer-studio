@@ -158,7 +158,8 @@ public static partial class HoldingFolderDistributor
             catch (Exception ex)
             {
                 // Best effort: defekte/gesperrte Unterordner duerfen den Import nicht abbrechen.
-                System.Diagnostics.Debug.WriteLine($"[HoldingDistributor] Sidecar-Suche uebersprungen ({pattern}) in {folder}: {ex.Message}");
+                AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                    $"[HoldingDistributor] Sidecar-Suche uebersprungen ({pattern}) in {folder}: {ex.Message}");
             }
         }
 

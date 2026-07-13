@@ -77,7 +77,8 @@ internal static class PdfOcrExtractor
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PdfOcr] Temp-Cleanup uebersprungen: {ex.GetType().Name}: {ex.Message}");
+                AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                    $"[PdfOcr] Temp-Cleanup uebersprungen: {ex.GetType().Name}: {ex.Message}");
             }
         }
     }

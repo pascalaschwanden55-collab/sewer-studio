@@ -1,9 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -71,7 +71,7 @@ public static class WindowClipboardCaptureService
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[Screen] " + ex.Message);
+            BestEffort.ReportWarning("[Screen] Fensteraufnahme fehlgeschlagen: " + ex.Message);
             return false;
         }
         finally

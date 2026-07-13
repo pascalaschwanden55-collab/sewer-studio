@@ -20,4 +20,9 @@ dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.
   exit 1
 }
 
+dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -v minimal --no-restore || {
+  printf >&2 "\nPush abgebrochen: UI-Tests sind rot.\n"
+  exit 1
+}
+
 printf "\nSewerStudio Schnelltest bestanden.\n"

@@ -14,6 +14,7 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
@@ -744,7 +745,7 @@ public sealed class FileToImageConverter : IValueConverter
 
         if (!System.IO.File.Exists(path))
         {
-            System.Diagnostics.Debug.WriteLine($"[FileToImage] Datei nicht gefunden: {path}");
+            BestEffort.ReportWarning($"[FileToImage] Datei nicht gefunden: {path}");
             return null;
         }
 
@@ -762,7 +763,7 @@ public sealed class FileToImageConverter : IValueConverter
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FileToImage] Fehler beim Laden: {path} → {ex.Message}");
+            BestEffort.ReportWarning($"[FileToImage] Fehler beim Laden: {path} → {ex.Message}");
             return null;
         }
     }

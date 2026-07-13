@@ -2,12 +2,12 @@
 // Atomares Speichern: temp-Datei → Validierung → File.Move (wie TrainingSamplesStore)
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -53,14 +53,12 @@ public static class SelfTrainingHistoryStore
         catch (Exception ex)
         {
             // Korrupte Datei sichern, nicht loeschen
-            Debug.WriteLine($"[SelfTrainingHistoryStore] WARNUNG: JSON korrupt: {ex.Message}");
-            try
-            {
-                var backup = path + $".corrupt_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-                File.Copy(path, backup, overwrite: true);
-                Debug.WriteLine($"[SelfTrainingHistoryStore] Backup unter: {backup}");
-            }
-            catch { /* best-effort */ }
+            BestEffort.ReportWarning(
+                $"[SelfTrainingHistoryStore] WARNUNG: JSON korrupt: {ex.Message}");
+            var backup = path + $".corrupt_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+            BestEffort.Try(
+                () => File.Copy(path, backup, overwrite: true),
+                $"Selbsttraining-Verlauf: korrupte Datei nach {backup} sichern");
 
             return new List<SelfTrainingRunSnapshot>();
         }
@@ -76,11 +74,9 @@ public static class SelfTrainingHistoryStore
         // Sicherheits-Backup vor Schreiben
         if (File.Exists(path))
         {
-            try
-            {
-                File.Copy(path, path + ".bak", overwrite: true);
-            }
-            catch { /* best-effort */ }
+            BestEffort.Try(
+                () => File.Copy(path, path + ".bak", overwrite: true),
+                "Selbsttraining-Verlauf: Sicherheitsbackup erstellen");
         }
 
         // In temp-Datei schreiben
@@ -109,8 +105,9 @@ public static class SelfTrainingHistoryStore
         }
         catch
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-            catch { /* best-effort */ }
+            BestEffort.Try(
+                () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
+                "Selbsttraining-Verlauf: Temp-Datei nach Speicherfehler loeschen");
             throw;
         }
     }

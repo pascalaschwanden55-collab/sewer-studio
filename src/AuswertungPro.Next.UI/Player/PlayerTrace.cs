@@ -12,6 +12,6 @@ public static class PlayerTrace
             return;
         }
 
-        Debug.WriteLine(message);
+        Trace.WriteLine(message);
     }
 }

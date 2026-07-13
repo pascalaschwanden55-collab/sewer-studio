@@ -85,6 +85,8 @@ public static class KnowledgeBackupService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            BestEffort.ReportWarning(
+                $"[KnowledgeBackup] Export fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
             return new BackupResult(false, ex.Message, 0, 0);
         }
     }
@@ -201,11 +203,15 @@ public static class KnowledgeBackupService
                 progress?.Report("Fehler beim Import — stelle vorherigen Zustand wieder her...");
                 foreach (var (original, backup) in backedUpFiles)
                 {
-                    try { File.Copy(backup, original, overwrite: true); } catch { /* best-effort */ }
+                    BestEffort.Try(
+                        () => File.Copy(backup, original, overwrite: true),
+                        $"Knowledge-Import-Rollback: {original} wiederherstellen");
                 }
                 foreach (var newFile in newlyCreatedFiles)
                 {
-                    try { File.Delete(newFile); } catch { /* best-effort */ }
+                    BestEffort.Try(
+                        () => File.Delete(newFile),
+                        $"Knowledge-Import-Rollback: neue Datei {newFile} loeschen");
                 }
                 SafeDeleteBackupDir(backupDir);
                 throw;
@@ -214,6 +220,8 @@ public static class KnowledgeBackupService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            BestEffort.ReportWarning(
+                $"[KnowledgeBackup] Import fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
             return new BackupResult(false, ex.Message, 0, 0);
         }
     }
@@ -239,7 +247,7 @@ public static class KnowledgeBackupService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] WAL-Checkpoint fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[KnowledgeBackup] WAL-Checkpoint fehlgeschlagen: {ex.Message}");
             // Export fortsetzen — WAL/SHM werden mitgenommen als Fallback
         }
     }
@@ -256,17 +264,18 @@ public static class KnowledgeBackupService
         {
             if (!InfraBackup.SafePathGuard.IsSafeToDelete(dirPath))
             {
-                System.Diagnostics.Debug.WriteLine(
+                BestEffort.ReportWarning(
                     $"[KnowledgeBackup] Verzeichnis-Loeschung abgelehnt: {dirPath}");
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] Loesche Backup-Verzeichnis: {dirPath}");
+            System.Diagnostics.Trace.WriteLine($"[KnowledgeBackup] Loesche Backup-Verzeichnis: {dirPath}");
             Directory.Delete(dirPath, recursive: true);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] Fehler beim Loeschen von {dirPath}: {ex.Message}");
+            BestEffort.ReportWarning(
+                $"[KnowledgeBackup] Fehler beim Loeschen von {dirPath}: {ex.Message}");
         }
     }
 
@@ -352,7 +361,7 @@ public static class KnowledgeBackupService
             if (dir is not null) Directory.CreateDirectory(dir);
 
             AtomicTextFileWriter.WriteAllText(targetPath, File.ReadAllText(importedPath));
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] training_center.json → {targetPath}");
+            System.Diagnostics.Trace.WriteLine($"[KnowledgeBackup] training_center.json → {targetPath}");
         }
         catch (Exception ex)
         {
@@ -399,7 +408,7 @@ public static class KnowledgeBackupService
             {
                 var newJson = JsonSerializer.Serialize(annotations, opts);
                 AtomicTextFileWriter.WriteAllText(annotationsPath, newJson);
-                System.Diagnostics.Debug.WriteLine(
+                System.Diagnostics.Trace.WriteLine(
                     $"[KnowledgeBackup] Teacher-Annotationen remapped: {annotations.Count} Eintraege");
             }
         }
@@ -441,7 +450,9 @@ public static class KnowledgeBackupService
         }
         finally
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* best effort */ }
+            BestEffort.Try(
+                () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
+                $"Knowledge-Import: Temp-Datei {tempPath} loeschen");
         }
     }
 

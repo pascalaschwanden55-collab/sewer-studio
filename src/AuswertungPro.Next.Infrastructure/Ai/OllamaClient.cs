@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
@@ -60,7 +61,7 @@ public sealed class OllamaClient : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[OllamaClient] ListModelNames fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[OllamaClient] ListModelNames fehlgeschlagen: {ex.Message}");
             return Array.Empty<string>();
         }
     }

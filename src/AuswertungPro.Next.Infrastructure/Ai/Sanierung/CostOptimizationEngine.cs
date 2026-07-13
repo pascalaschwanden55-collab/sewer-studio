@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
@@ -135,7 +136,7 @@ public sealed class CostOptimizationEngine
             m.Contains("Roboter", StringComparison.OrdinalIgnoreCase))
             return (550m, false);
 
-        System.Diagnostics.Debug.WriteLine(
+        BestEffort.ReportWarning(
             $"[CostEngine] Unbekannte Massnahme '{measure}' – verwende generischen Fallback 300 CHF/m");
 
         // Konservativer Fallback (Mittelwert statt Minimum)

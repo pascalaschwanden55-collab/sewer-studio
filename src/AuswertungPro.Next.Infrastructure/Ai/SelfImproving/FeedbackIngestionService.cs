@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -81,7 +82,7 @@ public sealed class FeedbackIngestionService
 
             if (!hasFrame && !hasHaltungId)
             {
-                System.Diagnostics.Debug.WriteLine(
+                BestEffort.ReportWarning(
                     $"[FeedbackIngestion] Sample {sample.SampleId} NICHT indexiert: kein Frame-/Haltungsbezug " +
                     "(Eval-Guard waere blind, Embedding inhaltsleer).");
             }
@@ -95,7 +96,7 @@ public sealed class FeedbackIngestionService
                 {
                     // Frueher stilles catch{} — jetzt sichtbar (Audit): KB-Indexierung nicht kritisch,
                     // der Fehler darf aber nicht spurlos verschwinden.
-                    System.Diagnostics.Debug.WriteLine(
+                    BestEffort.ReportWarning(
                         $"[FeedbackIngestion] KB-Indexierung fehlgeschlagen: {ex.Message}");
                 }
             }
@@ -118,7 +119,7 @@ public sealed class FeedbackIngestionService
             catch (Exception ex)
             {
                 // Weight learning failure is non-critical.
-                System.Diagnostics.Debug.WriteLine(
+                BestEffort.ReportWarning(
                     $"[FeedbackIngestion] Weight-Learning fehlgeschlagen: {ex.Message}");
             }
         }

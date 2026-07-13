@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -60,13 +61,14 @@ public sealed class KnowledgeBaseManager(
         // in die KB. Hart blockieren + klarer Log-Eintrag (kein stilles Ueberspringen).
         if (IsEvalContaminated(sample))
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination): Frame inhaltsgleich zu Eval-Set – nicht indexiert.");
+            BestEffort.ReportWarning(
+                $"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination): Frame inhaltsgleich zu Eval-Set – nicht indexiert.");
             return false;
         }
 
         if (!IsIndexWorthy(sample))
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} uebersprungen: Qualitaet ungenuegend ({sample.Code}, Beschreibung={sample.Beschreibung?.Length ?? 0} Zeichen)");
+            Trace.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} uebersprungen: Qualitaet ungenuegend ({sample.Code}, Beschreibung={sample.Beschreibung?.Length ?? 0} Zeichen)");
             return false;
         }
 
@@ -109,7 +111,8 @@ public sealed class KnowledgeBaseManager(
             ct.ThrowIfCancellationRequested();
             if (IsEvalContaminated(sample))
             {
-                Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination) – nicht indexiert.");
+                BestEffort.ReportWarning(
+                    $"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination) – nicht indexiert.");
                 continue;
             }
             if (!IsIndexWorthy(sample)) continue;
@@ -195,7 +198,8 @@ public sealed class KnowledgeBaseManager(
             }
 
             if (evalBlocked)
-                Debug.WriteLine($"[KnowledgeBaseManager] Rebuild: Sample {samples[i].SampleId} BLOCKIERT (Eval-Kontamination).");
+                BestEffort.ReportWarning(
+                    $"[KnowledgeBaseManager] Rebuild: Sample {samples[i].SampleId} BLOCKIERT (Eval-Kontamination).");
             progress?.Report(i + 1);
         }
 
@@ -227,7 +231,8 @@ public sealed class KnowledgeBaseManager(
         var successRate = (double)embeddings.Count / eligibleIndices.Count;
         if (embeddings.Count == 0)
         {
-            Debug.WriteLine("[KnowledgeBaseManager] ABBRUCH: 0 Embeddings erzeugt, KB bleibt unveraendert");
+            BestEffort.ReportWarning(
+                "[KnowledgeBaseManager] ABBRUCH: 0 Embeddings erzeugt, KB bleibt unveraendert");
             throw new InvalidOperationException(
                 $"KB-Rebuild abgebrochen: 0 von {eligibleIndices.Count} Gold-Embeddings erzeugt. " +
                 "Ollama vermutlich nicht erreichbar. Bestehende KB bleibt erhalten.");
@@ -235,7 +240,8 @@ public sealed class KnowledgeBaseManager(
 
         if (successRate < 0.5)
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
+            BestEffort.ReportWarning(
+                $"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
             throw new InvalidOperationException(
                 $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {eligibleIndices.Count} Gold-Embeddings erzeugt ({successRate:P0}). " +
                 "Bestehende KB bleibt erhalten. Pruefe Ollama-Verbindung.");
@@ -243,7 +249,8 @@ public sealed class KnowledgeBaseManager(
 
         if (errors > 0)
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {eligibleIndices.Count} Gold-Samples");
+            BestEffort.ReportWarning(
+                $"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {eligibleIndices.Count} Gold-Samples");
         }
 
         // Phase 2: Loeschen + Neuaufbau in einer Transaktion
@@ -268,7 +275,7 @@ public sealed class KnowledgeBaseManager(
             FinalizeCurrentVersion(indexed, tx);
             tx.Commit();
 
-            Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
+            Trace.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
             return indexed;
         }
         catch
@@ -442,7 +449,7 @@ public sealed class KnowledgeBaseManager(
         // D7: nur fachlich plausible Befunde lernen (kein Muell in die KB).
         if (!TrainingSamplePlausibility.IsFachlichPlausibel(sample, out var reason))
         {
-            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} fachlich implausibel: {reason}");
+            Trace.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} fachlich implausibel: {reason}");
             return false;
         }
         return true;

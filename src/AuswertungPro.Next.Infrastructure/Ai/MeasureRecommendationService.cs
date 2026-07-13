@@ -313,7 +313,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MeasureRecommendationService] Fehler beim Laden: {ex.Message}");
+            BestEffort.ReportWarning($"[MeasureRecommendationService] Fehler beim Laden: {ex.Message}");
             _store = new MeasureLearningStore();
         }
     }
@@ -385,7 +385,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MeasureRecommendationService] Modell-Laden fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[MeasureRecommendationService] Modell-Laden fehlgeschlagen: {ex.Message}");
             _model = null;
             _modelLastWriteUtc = null;
             return false;

@@ -27,7 +27,7 @@ public static class AiSettingsFactory
             {
                 vision = gpuProfile.ResolvedModel;
                 numCtxDefault = gpuProfile.ResolvedNumCtx;
-                Debug.WriteLine($"[AiSettingsFactory] GPU Auto-Select: {gpuProfile.Reason}");
+                Trace.WriteLine($"[AiSettingsFactory] GPU Auto-Select: {gpuProfile.Reason}");
             }
             else
             {

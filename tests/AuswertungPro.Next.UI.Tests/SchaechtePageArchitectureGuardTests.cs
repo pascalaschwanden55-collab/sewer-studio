@@ -252,6 +252,43 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("case \"openfolder\":", pageCode, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SchaechtePage_massnahmen_dialog_and_persistence_live_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var pagePath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs");
+        var controllerPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "Schachtansicht",
+            "SchachtMassnahmenDialogController.cs");
+
+        Assert.True(File.Exists(controllerPath), controllerPath);
+        var page = File.ReadAllText(pagePath);
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.Contains("_massnahmenController?.Open(record)", page);
+        AssertNoForbiddenTokens(
+            page,
+            "ProjectCostStoreRepository",
+            "new SchachtMassnahmenWindow",
+            "new SchachtMassnahmenKatalogEditorWindow");
+
+        Assert.Contains("new ProjectCostStoreRepository", controller);
+        Assert.Contains("store.ByHolding[schachtNummer] = cost", controller);
+        Assert.Contains("new SchachtMassnahmenWindow", controller);
+        Assert.Contains("new SchachtMassnahmenKatalogEditorWindow", controller);
+    }
+
     private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
     {
         var hits = forbiddenTokens

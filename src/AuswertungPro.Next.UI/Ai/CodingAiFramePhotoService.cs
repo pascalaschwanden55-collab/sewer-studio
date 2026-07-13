@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -35,7 +35,8 @@ public static class CodingAiFramePhotoService
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is NotSupportedException || ex is ArgumentException)
         {
-            Debug.WriteLine($"[CodingAiFramePhoto] Frame konnte nicht gespeichert werden: {ex.Message}");
+            BestEffort.ReportWarning(
+                $"[CodingAiFramePhoto] Frame konnte nicht gespeichert werden: {ex.Message}");
             return null;
         }
     }

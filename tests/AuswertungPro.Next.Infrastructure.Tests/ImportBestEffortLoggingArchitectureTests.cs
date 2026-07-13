@@ -12,7 +12,7 @@ public sealed class ImportBestEffortLoggingArchitectureTests
 
         Assert.DoesNotContain("catch { }", source);
         Assert.Contains("Sidecar-Suche uebersprungen", source);
-        Assert.Contains("Debug.WriteLine", source);
+        Assert.Contains("BestEffort.ReportWarning", source);
     }
 
     [Fact]
@@ -23,6 +23,6 @@ public sealed class ImportBestEffortLoggingArchitectureTests
         Assert.DoesNotContain("catch {", source);
         Assert.Contains("Kandidat uebersprungen", source);
         Assert.Contains("Vorhandene DP-Groessen konnten nicht gelesen werden", source);
-        Assert.Contains("Debug.WriteLine", source);
+        Assert.Contains("BestEffort.ReportWarning", source);
     }
 }

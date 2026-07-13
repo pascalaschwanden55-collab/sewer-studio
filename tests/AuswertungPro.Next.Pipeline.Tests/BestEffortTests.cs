@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Collection("BestEffort global sink")]
 public sealed class BestEffortTests
 {
     [Fact]
@@ -30,9 +31,61 @@ public sealed class BestEffortTests
     [Fact]
     public void Try_OhneSink_VerschlucktNichtMehrStill_WirftAberAuchNicht()
     {
-        // Kein Sink -> Default (Debug). Darf NICHT werfen.
+        // Kein Sink -> Release-tauglicher Trace-Rueckfall. Darf NICHT werfen.
         var ex = Record.Exception(() => BestEffort.Try(() => throw new Exception("x"), "ctx"));
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Try_OhneAufrufSink_NutztKonfiguriertenTageslogSink()
+    {
+        string? captured = null;
+        BestEffort.ConfigureDefaultErrorSink(message => captured = message);
+        try
+        {
+            BestEffort.Try(() => throw new IOException("Datei gesperrt"), "Backup aufraeumen");
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
+
+        Assert.NotNull(captured);
+        Assert.Contains("Backup aufraeumen", captured);
+        Assert.Contains("IOException", captured);
+    }
+
+    [Fact]
+    public void ReportWarning_NutztKonfiguriertenTageslogSink()
+    {
+        string? captured = null;
+        BestEffort.ConfigureDefaultErrorSink(message => captured = message);
+        try
+        {
+            BestEffort.ReportWarning("Trainingsdaten korrupt");
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
+
+        Assert.Equal("Trainingsdaten korrupt", captured);
+    }
+
+    [Fact]
+    public void FehlerImTageslogSink_BrichtHauptablaufNichtAb()
+    {
+        BestEffort.ConfigureDefaultErrorSink(_ => throw new IOException("Log gesperrt"));
+        try
+        {
+            var ex = Record.Exception(() =>
+                BestEffort.Try(() => throw new InvalidOperationException("Cleanup"), "Test"));
+            Assert.Null(ex);
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
     }
 
     [Fact]
@@ -54,3 +107,6 @@ public sealed class BestEffortTests
         Assert.Null(captured);
     }
 }
+
+[CollectionDefinition("BestEffort global sink", DisableParallelization = true)]
+public sealed class BestEffortGlobalSinkCollection;

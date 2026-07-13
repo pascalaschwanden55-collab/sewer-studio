@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Protocol;
@@ -75,7 +76,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[FullProtocolGen] KB-Init fehlgeschlagen: {ex.Message}");
+                BestEffort.ReportWarning($"[FullProtocolGen] KB-Init fehlgeschlagen: {ex.Message}");
                 _retrieval = null;
             }
         }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
@@ -344,7 +345,8 @@ public sealed class TrainingSampleGenerator
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] JSON-Parse fehlgeschlagen für {path}: {ex.Message}");
+                BestEffort.ReportWarning(
+                    $"[TrainingSampleGenerator] JSON-Parse fehlgeschlagen für {path}: {ex.Message}");
             }
         }
 
@@ -369,7 +371,8 @@ public sealed class TrainingSampleGenerator
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] PDF-Extraktion fehlgeschlagen für {path}: {ex.Message}");
+                BestEffort.ReportWarning(
+                    $"[TrainingSampleGenerator] PDF-Extraktion fehlgeschlagen für {path}: {ex.Message}");
             }
         }
 
@@ -416,7 +419,7 @@ public sealed class TrainingSampleGenerator
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffprobe fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning($"[TrainingSampleGenerator] ffprobe fehlgeschlagen: {ex.Message}");
         }
 
         // ffmpeg fallback: Duration aus stderr parsen
@@ -444,7 +447,8 @@ public sealed class TrainingSampleGenerator
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffmpeg Duration-Parse fehlgeschlagen: {ex.Message}");
+            BestEffort.ReportWarning(
+                $"[TrainingSampleGenerator] ffmpeg Duration-Parse fehlgeschlagen: {ex.Message}");
         }
 
         return (0, "Videodauer konnte nicht ermittelt werden.");

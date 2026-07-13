@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Backup;
 
@@ -71,7 +72,7 @@ public static class KnowledgeBackupPathMapper
         if (!fullResolved.StartsWith(fullBase + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(fullResolved, fullBase, StringComparison.OrdinalIgnoreCase))
         {
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[KnowledgeBackupPathMapper] Path-Traversal blockiert: {entryName} → {fullResolved}");
             return null;
         }

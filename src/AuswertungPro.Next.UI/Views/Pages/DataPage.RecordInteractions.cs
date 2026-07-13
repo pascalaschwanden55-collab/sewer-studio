@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -86,7 +87,7 @@ public partial class DataPage : UserControl
         catch (Exception ex)
         {
             // Bei Fehler: alles zuruecksetzen
-            System.Diagnostics.Debug.WriteLine($"Undock error: {ex}");
+            BestEffort.ReportWarning($"[DataPage] Abdocken fehlgeschlagen: {ex}");
             Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
 
             // Abgedockte Ansicht zuruecksetzen falls sie schon entfernt wurde

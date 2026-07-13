@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -22,12 +23,14 @@ public sealed class ToastService : IToastService
 
     private void Post(string message, ToastSeverity severity)
     {
+        if (severity is ToastSeverity.Warning or ToastSeverity.Error)
+            BestEffort.ReportWarning($"[Toast/{severity}] {message}");
+        else
+            Trace.WriteLine($"[Toast/{severity}] {message}");
+
         var sink = _sink;
         if (sink is null)
-        {
-            Debug.WriteLine($"[Toast/{severity}] {message}");
             return;
-        }
 
         sink(message, severity);
     }

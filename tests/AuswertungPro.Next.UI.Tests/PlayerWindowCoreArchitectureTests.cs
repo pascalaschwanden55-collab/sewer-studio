@@ -181,7 +181,7 @@ public sealed class PlayerWindowCoreArchitectureTests
             playerWindowText,
             "Debug.WriteLine",
             "System.Diagnostics.Debug.WriteLine");
-        Assert.Contains("Debug.WriteLine", trace);
+        Assert.Contains("Trace.WriteLine", trace);
     }
 
     [Fact]

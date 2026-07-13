@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Projects;
@@ -95,6 +96,9 @@ namespace AuswertungPro.Next.UI
                     b.AddProvider(new FileLoggerProvider(logPath));
                 });
                 var logger = loggerFactory.CreateLogger("App");
+                var bestEffortLogger = loggerFactory.CreateLogger("BestEffort");
+                BestEffort.ConfigureDefaultErrorSink(
+                    message => bestEffortLogger.LogWarning("{Message}", message));
                 Helpers.TaskExtensions.ConfigureLogging(loggerFactory.CreateLogger("BackgroundTasks"));
                 // QGIS-Bridge-Verarbeitung: gemeinsam fuer Live-Control-Server (gleicher Port)
                 // und den eigenstaendigen Bridge-Host weiter unten.
@@ -243,6 +247,7 @@ namespace AuswertungPro.Next.UI
                 // best effort flush during shutdown
             }
 
+            BestEffort.ConfigureDefaultErrorSink(null);
             base.OnExit(e);
         }
 

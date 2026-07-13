@@ -22,7 +22,7 @@ public static class TaskExtensions
 
     /// <summary>
     /// Fuehrt eine Task aus ohne auf das Ergebnis zu warten.
-    /// Exceptions werden im Tageslog und zusaetzlich per Debug.WriteLine gemeldet (kein Crash).
+    /// Exceptions werden im Tageslog und zusaetzlich im Entwickler-Trace gemeldet (kein Crash).
     /// </summary>
     /// <param name="task">Die auszufuehrende Task.</param>
     /// <param name="context">Kontext-Info fuer Log (z.B. "LiveDetection").</param>
@@ -43,10 +43,10 @@ public static class TaskExtensions
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(
+            Trace.WriteLine(
                 $"[FireAndForget] {context ?? "?"}: {ex.GetType().Name}: {ex.Message}");
 
-            // Der normale Tageslog ist die verlaessliche Fehlerquelle. Debug.WriteLine ist nur
+            // Der normale Tageslog ist die verlaessliche Fehlerquelle. Trace.WriteLine ist nur
             // eine zusaetzliche Hilfe fuer Entwickler und in der installierten App unsichtbar.
             TryLog(logger ?? Volatile.Read(ref _logger), ex, context);
 
@@ -58,7 +58,7 @@ public static class TaskExtensions
                 }
                 catch (Exception callbackException)
                 {
-                    Debug.WriteLine(
+                    Trace.WriteLine(
                         $"[FireAndForget] Fehlerbehandlung {context ?? "?"}: " +
                         $"{callbackException.GetType().Name}: {callbackException.Message}");
                     TryLog(logger ?? Volatile.Read(ref _logger), callbackException, $"{context ?? "?"}.Fehlerbehandlung");
@@ -82,7 +82,7 @@ public static class TaskExtensions
         catch (Exception loggingException)
         {
             // Auch ein voruebergehend nicht beschreibbarer Log darf die App nicht beenden.
-            Debug.WriteLine(
+            Trace.WriteLine(
                 $"[FireAndForget] Tageslog nicht beschreibbar: " +
                 $"{loggingException.GetType().Name}: {loggingException.Message}");
         }

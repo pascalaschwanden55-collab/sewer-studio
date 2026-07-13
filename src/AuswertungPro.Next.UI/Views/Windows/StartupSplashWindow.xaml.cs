@@ -9,6 +9,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -229,7 +230,10 @@ public partial class StartupSplashWindow : Window
             _progressDone.TrySetResult(true);
             _minimumDisplayDone.TrySetResult(true);
             try { _statusTimer.Stop(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                BestEffort.ReportWarning($"[Splash.Closed] StatusTimer konnte nicht gestoppt werden: {ex.Message}");
+            }
             StopRenderLoop();
         };
     }

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
@@ -232,7 +233,7 @@ public sealed class CodingSessionService : ICodingSessionService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[CodingSession] Modellkonfiguration fuer Entscheidungsbeleg nicht lesbar: {ex.Message}");
         }
 
@@ -284,7 +285,7 @@ public sealed class CodingSessionService : ICodingSessionService
         catch (Exception ex)
         {
             // Stilles Fehlschlagen — Session-Abschluss darf nie scheitern wegen Training-Persistierung
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[CodingSession] Training-Persistierung fehlgeschlagen: {ex.Message}");
         }
     }
@@ -350,11 +351,11 @@ public sealed class CodingSessionService : ICodingSessionService
                 }
                 catch (Exception ex) when (IsTransientOllamaFailure(ex))
                 {
-                    // Ollama offline/Timeout: KB-Embedding wird uebersprungen. Erwartet -> nur Debug.
+                    // Ollama offline/Timeout: KB-Embedding wird uebersprungen und protokolliert.
                     // Pending markieren, damit "Gold in KB nachholen" im TrainingCenter es spaeter aufgreift.
                     sample.KbIndexState = KbIndexState.Pending;
                     touched.Add(sample);
-                    System.Diagnostics.Debug.WriteLine(
+                    BestEffort.ReportWarning(
                         $"[CodingSession] KB-Index uebersprungen (Ollama offline/Timeout): {sample.Code} @ {sample.CaseId}");
                 }
                 catch (Exception ex)
@@ -364,7 +365,7 @@ public sealed class CodingSessionService : ICodingSessionService
                     // Befund liege in der KB. Ein fehlerhaftes Sample blockiert die uebrigen nicht.
                     sample.KbIndexState = KbIndexState.Error;
                     touched.Add(sample);
-                    System.Diagnostics.Debug.WriteLine(
+                    BestEffort.ReportWarning(
                         $"[CodingSession] KB-SCHREIBFEHLER (NICHT offline) fuer {sample.Code} @ {sample.CaseId}: {ex.GetType().Name}: {ex.Message}");
                 }
             }
@@ -375,7 +376,7 @@ public sealed class CodingSessionService : ICodingSessionService
                 try { await TrainingSamplesStore.MergeOrUpdateAsync(touched); }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine(
+                    BestEffort.ReportWarning(
                         $"[CodingSession] KbIndexState-Rueckschreibung fehlgeschlagen: {ex.Message}");
                 }
             }
@@ -383,14 +384,14 @@ public sealed class CodingSessionService : ICodingSessionService
         catch (OperationCanceledException) { /* Abbruch ist ok — Sample bleibt fuer Nachhol-Lauf */ }
         catch (Exception ex) when (IsTransientOllamaFailure(ex))
         {
-            // Aufbau (HttpClient/KB-Context/Embedder) scheiterte transient -> erwartet, nur Debug.
-            System.Diagnostics.Debug.WriteLine(
+            // Aufbau (HttpClient/KB-Context/Embedder) scheiterte transient und wird protokolliert.
+            BestEffort.ReportWarning(
                 $"[CodingSession] KB-Update uebersprungen (Ollama offline/Timeout): {ex.Message}");
         }
         catch (Exception ex)
         {
             // Nicht-transienter Aufbaufehler -> sichtbar markieren, nicht als "offline" verschleiern.
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[CodingSession] KB-Update fehlgeschlagen (NICHT offline): {ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -469,7 +470,7 @@ public sealed class CodingSessionService : ICodingSessionService
         {
             // Event nicht in Session — z.B. aus anderem Code-Pfad erzeugt.
             // Statt Crash: neues Event anlegen und in Session einfuegen.
-            System.Diagnostics.Debug.WriteLine(
+            BestEffort.ReportWarning(
                 $"[CodingSession] UpdateEvent: Event {eventId} nicht in Session, wird nachgetragen.");
             ev = new CodingEvent { Entry = entry, Overlay = overlay };
             _session.Events.Add(ev);

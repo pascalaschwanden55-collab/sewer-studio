@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
@@ -16,7 +17,7 @@ public sealed class CodingFrameExtractionService
         : this(
             FfmpegLocator.ResolveFfmpeg,
             VideoFrameExtractor.TryExtractFramePngAsync,
-            message => System.Diagnostics.Debug.WriteLine(message))
+            message => BestEffort.ReportWarning(message))
     {
     }
 
