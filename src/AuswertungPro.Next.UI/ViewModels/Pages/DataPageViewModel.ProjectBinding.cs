@@ -51,17 +51,17 @@ public sealed partial class DataPageViewModel
     private void SyncSelectedProtocolFromFindings(HaltungRecord record)
         => _selectedProtocolController.SyncFromFindings(
             record,
-            _sp.Protocols,
+            _protocols,
             ResolveCodeTitle,
             RefreshRecordInGrid,
             Selected?.Id == record.Id,
-            _sp.CodeCatalog);
+            _codeCatalog);
 
     private void RefreshSelectedProtocolEntries()
-        => _selectedProtocolController.Refresh(Selected, _sp.CodeCatalog);
+        => _selectedProtocolController.Refresh(Selected, _codeCatalog);
 
     private string? ResolveCodeTitle(string code)
-        => _sp.CodeCatalog.TryGet(code, out var codeDef) && !string.IsNullOrWhiteSpace(codeDef.Title)
+        => _codeCatalog.TryGet(code, out var codeDef) && !string.IsNullOrWhiteSpace(codeDef.Title)
             ? codeDef.Title
             : null;
 

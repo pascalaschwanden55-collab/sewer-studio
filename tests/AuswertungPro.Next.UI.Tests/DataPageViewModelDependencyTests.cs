@@ -6,10 +6,13 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageViewModelDependencyTests
 {
     [Fact]
-    public void DataPage_haelt_Dialoge_und_Einstellungen_gezielt()
+    public void DataPage_haelt_Abhaengigkeiten_gezielt()
     {
-        var source = File.ReadAllText(RepoFile(
-            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "DataPageViewModel.cs"));
+        var viewModelDirectory = RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(viewModelDirectory, "DataPageViewModel*.cs").Select(File.ReadAllText));
 
         Assert.Contains("private readonly IDialogService _dialogs;", source);
         Assert.Contains("private readonly AppSettings _settings;", source);
@@ -18,6 +21,11 @@ public sealed class DataPageViewModelDependencyTests
         Assert.Contains("private readonly DashboardRefreshNotifier _dashboardRefresh;", source);
         Assert.Contains("private readonly BatchMediaSearchService _batchMediaSearch;", source);
         Assert.Contains("private readonly IProtocolService _protocols;", source);
+        Assert.Contains("private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;", source);
+        Assert.Contains("private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;", source);
+        Assert.Contains("private readonly IDataPageWindowLauncher _windows;", source);
+        Assert.DoesNotContain("private readonly ServiceProvider _sp;", source);
+        Assert.DoesNotContain("_sp.", source);
         Assert.DoesNotContain("_sp.Dialogs", source);
         Assert.DoesNotContain("_sp.Settings", source);
         Assert.DoesNotContain("_sp.MeasureRecommendation", source);

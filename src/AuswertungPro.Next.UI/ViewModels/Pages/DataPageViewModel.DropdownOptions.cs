@@ -47,7 +47,7 @@ public sealed partial class DataPageViewModel
         try
         {
             var store = new MeasureTemplateStore();
-            var catalog = store.LoadMerged(_sp.Settings.LastProjectPath);
+            var catalog = store.LoadMerged(_settings.LastProjectPath);
             foreach (var measure in catalog.Measures)
             {
                 if (measure.Disabled)
@@ -80,7 +80,7 @@ public sealed partial class DataPageViewModel
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        _sp.Dialogs.Info(items, "Sanieren-Liste");
+        _dialogs.Info(items, "Sanieren-Liste");
     }
 
     private void ResetSanierenOptions()
@@ -109,7 +109,7 @@ public sealed partial class DataPageViewModel
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        _sp.Dialogs.Info(items, "Eigentuemer-Liste");
+        _dialogs.Info(items, "Eigentuemer-Liste");
     }
 
     private void ResetEigentuemerOptions()
@@ -138,7 +138,7 @@ public sealed partial class DataPageViewModel
     private void PreviewPruefungsresultatOptions()
     {
         var items = string.Join("\n", PruefungsresultatOptions);
-        _sp.Dialogs.Info(items, "Pruefungsresultat-Liste");
+        _dialogs.Info(items, "Pruefungsresultat-Liste");
     }
 
     private void ResetPruefungsresultatOptions()
@@ -175,7 +175,7 @@ public sealed partial class DataPageViewModel
     private void PreviewReferenzpruefungOptions()
     {
         var items = string.Join("\n", ReferenzpruefungOptions);
-        _sp.Dialogs.Info(items, "Referenzpruefung-Liste");
+        _dialogs.Info(items, "Referenzpruefung-Liste");
     }
 
     private void ResetReferenzpruefungOptions()
@@ -204,7 +204,7 @@ public sealed partial class DataPageViewModel
     private void PreviewEmpfohleneSanierungsmassnahmenOptions()
     {
         var items = string.Join("\n", EmpfohleneSanierungsmassnahmenOptions);
-        _sp.Dialogs.Info(items, "Sanierungsmassnahmen-Liste");
+        _dialogs.Info(items, "Sanierungsmassnahmen-Liste");
     }
 
     private void ResetEmpfohleneSanierungsmassnahmenOptions()

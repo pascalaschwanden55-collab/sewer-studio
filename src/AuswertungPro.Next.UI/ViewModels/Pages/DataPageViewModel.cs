@@ -34,7 +34,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     public event Action? RecordsOrderChanged;
 
-    private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
     private readonly AppSettings _settings;
@@ -45,6 +44,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly BatchMediaSearchService _batchMediaSearch;
     private readonly IProtocolService _protocols;
+    private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;
+    private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;
+    private readonly IDataPageWindowLauncher _windows;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -158,7 +160,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public DataPageViewModel(ShellViewModel shell, ServiceProvider services, DataPageStartFilter? startFilter = null)
     {
         _shell = shell;
-        _sp = services;
         _dialogs = services.Dialogs;
         _settings = services.Settings;
         _vsa = services.Vsa;
@@ -168,6 +169,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _dashboardRefresh = services.DashboardRefresh;
         _batchMediaSearch = services.BatchMediaSearch;
         _protocols = services.Protocols;
+        _videoAnalysisPipelineFactory = services.VideoAnalysisPipelines;
+        _sanierungOptimizationFactory = services.SanierungOptimizations;
+        _windows = services.DataPageWindows;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -249,7 +253,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             EnsureVideoPath,
             () => PlayerWindowOptions.FromSettings(_settings),
             DataPageVideoOverlayBuilder.Build,
-            ShowPlayerWindow,
+            _windows.ShowPlayer,
             (ex, path) => DataPageVideoStartErrorLogWriter.TryWrite(ex, path));
         _mediaSearchController = new DataPageMediaSearchController(
             () => Records,
@@ -278,7 +282,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => _shell.Project,
             () => _settings.LastProjectPath,
             ResolveExistingPath,
-            ShowProtocolWindow,
+            _windows.ShowProtocol,
             () =>
             {
                 _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -304,7 +308,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             EnsureVideoPath,
             () => _codeCatalog.AllowedCodes(),
             () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
-            (cfg, plausibility, http) => _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http),
+            _videoAnalysisPipelineFactory.Create,
             ShowVideoAnalysisPipelineWindow,
             record => Selected?.Id == record.Id,
             _shell.MarkProjectDirty,
@@ -539,37 +543,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _videoPlaybackController.PlayResolved(record, path);
     }
 
-    private void ShowPlayerWindow(DataPageVideoPlaybackRequest request)
-    {
-        var window = new PlayerWindow(
-            request.Path,
-            request.Options,
-            damageOverlay: request.DamageOverlay,
-            serviceProvider: _sp,
-            haltungId: request.Record.Id.ToString(),
-            haltungRecord: request.Record)
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-        window.Show();
-    }
-
     private void OpenProtocol(HaltungRecord? record)
     {
         _protocolWindowController.Open(record);
-    }
-
-    private void ShowProtocolWindow(DataPageProtocolWindowRequest request)
-    {
-        var dlg = new AuswertungPro.Next.UI.Views.ProtocolObservationsWindow(
-            request.Record,
-            request.Project,
-            _sp,
-            request.ResolvedVideoPath,
-            request.ProjectFolder,
-            request.MarkDirty);
-        dlg.Owner = System.Windows.Application.Current?.MainWindow;
-        dlg.ShowDialog();
     }
 
     public void SyncObservationsToHoldingFields(HaltungRecord? record, bool showStatus = false)
@@ -728,7 +704,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         SanierungOptimizationViewModel? optimizationVm = null;
         if (request.RuntimeSettings is not null)
         {
-            var aiService = _sp.CreateSanierungOptimization(request.RuntimeSettings);
+            var aiService = _sanierungOptimizationFactory.Create(request.RuntimeSettings);
             optimizationVm = new SanierungOptimizationViewModel(request.Record, aiService, request.RuleRecommendation);
             optimizationVm.TransferredToPrimary += _ => request.OnOptimizationTransferred();
         }

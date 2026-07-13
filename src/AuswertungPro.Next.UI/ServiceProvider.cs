@@ -148,6 +148,9 @@ namespace AuswertungPro.Next.UI
         public IRetrievalService? Retrieval { get; }
         public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
         public IMeasureRecommendationService MeasureRecommendation { get; }
+        public IVideoAnalysisPipelineFactory VideoAnalysisPipelines { get; }
+        public IAiSanierungOptimizationFactory SanierungOptimizations { get; }
+        internal DataPage.IDataPageWindowLauncher DataPageWindows { get; }
         public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
         public TrainingCenterImportService TrainingCenterImport { get; } = new();
         public ReviewQueueService TrainingReviewQueue => _trainingReviewQueue.Value;
@@ -241,6 +244,11 @@ namespace AuswertungPro.Next.UI
             var catalogPaths = VsaCatalogPathResolver.Resolve(settings);
             VsaCatalogResolvedPath = catalogPaths.DisplayPath;
             CodeCatalog = CreateCodeCatalog(settings, catalogPaths.KekManifestPath, catalogPaths.XmlCatalogPaths);
+            VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
+                () => AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
+                CodeCatalog,
+                LoggerFactory);
+            SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
             CodeSelectionCatalog = new AuswertungPro.Next.Application.Protocol.VsaCodeTreeSelectionCatalog(
@@ -358,6 +366,7 @@ namespace AuswertungPro.Next.UI
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 Path.Combine(KnowledgeRoot, "measures_learning.json"),
                 Path.Combine(KnowledgeRoot, "measures-model.zip"));
+            DataPageWindows = new DataPage.DataPageWindowLauncher(this);
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
@@ -365,14 +374,14 @@ namespace AuswertungPro.Next.UI
             IAiSuggestionPlausibilityService plausibility,
             HttpClient http)
         {
-            return new VideoAnalysisPipelineService(cfg, PipelineCfg, plausibility, http, CodeCatalog, LoggerFactory);
+            return VideoAnalysisPipelines.Create(cfg, plausibility, http);
         }
 
         public IAiSanierungOptimizationService CreateSanierungOptimization(
             AiRuntimeSettings cfg,
             HttpClient? http = null)
         {
-            return new AiSanierungOptimizationService(cfg, http);
+            return SanierungOptimizations.Create(cfg, http);
         }
 
         // ── Schattenauswertung: eigenstaendige Parallel-Auswertung (nur lesend) ──
