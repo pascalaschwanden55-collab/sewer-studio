@@ -51,9 +51,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Wissensdatenbank-Pfad validiert (A3-04 erledigt):** Relative oder ungültige Pfade aus `SEWERSTUDIO_KNOWLEDGE_ROOT` werden nicht mehr als Datenbankordner verwendet; stattdessen bleibt der gespeicherte absolute Pfad oder der sichere Standard aktiv. Abweisungen und jeder gültige Umgebungs-Override werden im Release-tauglichen Tageslog festgehalten.
 - **Lokales HTML nicht mehr direkt geöffnet (A3-05 erledigt):** `SafeShellOpen` erlaubt keine `.html`- oder `.htm`-Dateien mehr. Die tatsächlich benötigten PDF-, Bild-, Video-, Tabellen-, Text- und Ordnerpfade bleiben unverändert; zwei Tests schützen beide gesperrten Endungen.
 - **IBAK-Originaldatenbank geschützt (A4-01 erledigt):** Firebird öffnet die Kunden-`.fdb` nicht mehr direkt, sondern ausschließlich eine eindeutige, schreibbare Temp-Kopie. Die Kopie wird nach dem Lesen wieder entfernt; zwei Tests sichern Inhaltsisolation, Schreibschutz des Originals und Aufräumen.
+- **NPK-Export blockiert die Oberfläche nicht mehr (A4-02 erledigt):** CSV- und Excel-Leistungsverzeichnis erzeugen und schreiben ihre Dateien im Hintergrund. Ein gemeinsamer Laufstatus verhindert Doppelstarts; CSV wird zusätzlich atomar geschrieben. Zwei Tests schützen den Hintergrundlauf und die unveränderten Schaltflächen-Befehle.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.715 Tests bestanden (2.497 Infrastruktur, 1.813 Pipeline, 4.343 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.717 Tests bestanden (2.497 Infrastruktur, 1.813 Pipeline, 4.345 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -159,7 +160,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
 | A4-01 | Mittel → **erledigt** | `IbakFdbConnectionOptions.cs:25-42` — IBAK-`.fdb` wird read-**write** (Embedded) geöffnet | Alle aktiven Firebird-Lesepfade arbeiten auf einer eindeutigen Temp-Kopie; das Original bleibt unangetastet |
-| A4-02 | Niedrig | `BuilderPageViewModel.Output.cs:269/224` — NPK-Export blockiert UI-Thread | Auf `async Task` + `Task.Run` umstellen (wie Haupt-Export) |
+| A4-02 | Niedrig → **erledigt** | `BuilderPageViewModel.Output.cs:269/224` — NPK-Export blockiert UI-Thread | CSV- und Excel-LV laufen als `async Task` über einen kleinen Hintergrund-Runner; Befehlsnamen bleiben kompatibel |
 | A4-03 | Niedrig | `ExcelTemplateExportService.cs` — ClosedXML hält gesamtes Workbook im RAM | Zeilen-/Record-Limit mit Meldung, oder streamender Writer bei Massenfall |
 | A4-04 | Niedrig | `PdfTextExtractor.cs:70/99` — Seiten-Budget nur im PdfPig-Fallback, nicht bei pdftotext | Seitenzahl vorab prüfen; Text bei Obergrenze abschneiden statt voll kopieren |
 | A4-05 | Niedrig | `OfferHtmlToPdfRenderer.cs:84-145` — Playwright ohne hartes Gesamt-Timeout | `CancellationTokenSource(CancelAfter)` durchreichen |

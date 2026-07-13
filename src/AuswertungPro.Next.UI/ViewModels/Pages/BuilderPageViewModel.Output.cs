@@ -2,12 +2,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -221,8 +223,11 @@ public sealed partial class BuilderPageViewModel
     /// </summary>
 
     [RelayCommand]
-    private void ExportNpkLeistungsverzeichnis()
+    private async Task ExportNpkLeistungsverzeichnisAsync()
     {
+        if (IsPdfExportInProgress)
+            return;
+
         var prep = PrepareLvPositions();
         if (prep is null)
             return;
@@ -237,26 +242,45 @@ public sealed partial class BuilderPageViewModel
         if (string.IsNullOrWhiteSpace(output))
             return;
 
+        var positions = prep.Positions.ToList();
+        var projectName = _shell.Project.Name;
+        var standHinweis = BuildLvStandHinweis();
+        IsPdfExportInProgress = true;
+        PdfExportProgress = "NPK-CSV wird erstellt...";
+
         try
         {
-            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(
-                prep.Positions,
-                "CHF",
-                prep.ExcludedTotal,
-                prep.ExcludedCount,
-                projectName: _shell.Project.Name);
-            File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-            LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
+            await BackgroundFileExportRunner.RunAsync(() =>
+            {
+                var csv = NpkLeistungsverzeichnisExporter.BuildCsv(
+                    positions,
+                    "CHF",
+                    prep.ExcludedTotal,
+                    prep.ExcludedCount,
+                    projectName);
+                AtomicTextFileWriter.WriteAllText(
+                    output,
+                    csv,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            });
+
+            LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
+            PdfExportProgress = "NPK-CSV fertig.";
             _dialogs.Info(
-                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{prep.Positions.Count} Positionen — " +
-                $"nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen — " +
+                $"nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{standHinweis}",
                 "Druckcenter");
         }
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
+            PdfExportProgress = "NPK-CSV fehlgeschlagen.";
             _dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+        }
+        finally
+        {
+            IsPdfExportInProgress = false;
         }
     }
 
@@ -266,8 +290,11 @@ public sealed partial class BuilderPageViewModel
     /// eigenen Schätzpreisen. Nutzt dieselbe Positions-Aggregation wie der CSV-Export.
     /// </summary>
     [RelayCommand]
-    private void ExportNpkLeistungsverzeichnisExcel()
+    private async Task ExportNpkLeistungsverzeichnisExcelAsync()
     {
+        if (IsPdfExportInProgress)
+            return;
+
         var prep = PrepareLvPositions();
         if (prep is null)
             return;
@@ -282,28 +309,45 @@ public sealed partial class BuilderPageViewModel
         if (string.IsNullOrWhiteSpace(output))
             return;
 
+        var positions = prep.Positions.ToList();
+        var projectName = _shell.Project.Name;
+        var vatRate = _vatRate;
+        var standHinweis = BuildLvStandHinweis();
+        IsPdfExportInProgress = true;
+        PdfExportProgress = "NPK-Excel wird erstellt...";
+
         try
         {
-            var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
-                prep.Positions,
-                "CHF",
-                _vatRate,
-                _shell.Project.Name,
-                prep.ExcludedTotal,
-                prep.ExcludedCount);
-            File.WriteAllBytes(output, bytes);
-            LastResult = $"Leistungsverzeichnis (Excel) erstellt: {Path.GetFileName(output)} ({prep.Positions.Count} Positionen)";
+            await BackgroundFileExportRunner.RunAsync(() =>
+            {
+                var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+                    positions,
+                    "CHF",
+                    vatRate,
+                    projectName,
+                    prep.ExcludedTotal,
+                    prep.ExcludedCount);
+                File.WriteAllBytes(output, bytes);
+            });
+
+            LastResult = $"Leistungsverzeichnis (Excel) erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis (Excel) erstellt");
+            PdfExportProgress = "NPK-Excel fertig.";
             _dialogs.Info(
                 $"Excel-Leistungsverzeichnis wurde erstellt:\n{output}\n\n" +
                 $"Reiter 'Zum Ausfüllen' (leere Preise für die Firma) + 'Kalkulation (intern)'.\n" +
-                $"{prep.Positions.Count} Positionen — nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{BuildLvStandHinweis()}",
+                $"{positions.Count} Positionen — nur Eigentum Abwasser Uri (AWU); Private werden separat abgehandelt.{standHinweis}",
                 "Druckcenter");
         }
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
+            PdfExportProgress = "NPK-Excel fehlgeschlagen.";
             _dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+        }
+        finally
+        {
+            IsPdfExportInProgress = false;
         }
     }
 
