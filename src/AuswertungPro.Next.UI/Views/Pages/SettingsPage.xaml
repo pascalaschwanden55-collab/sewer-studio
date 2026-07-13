@@ -866,7 +866,7 @@
                                                 Command="{Binding CreateFullBackupCommand}"
                                                 Width="210"
                                                 ToolTip="Programmdaten, Git-Verlauf, KI-Wissen, Einstellungen und Logs in einen Sicherungsordner spiegeln."/>
-                                        <TextBlock Text="{Binding LastFullBackupInfo}" Margin="10,0,0,0"
+                                        <TextBlock Text="{Binding FullBackupOperation.LastBackupInfo}" Margin="10,0,0,0"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    FontSize="11"
@@ -874,7 +874,7 @@
                                     </StackPanel>
 
                                     <StackPanel Margin="0,8,0,0"
-                                                Visibility="{Binding IsFullBackupRunning, Converter={StaticResource BoolToVis}}">
+                                                Visibility="{Binding FullBackupOperation.IsRunning, Converter={StaticResource BoolToVis}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -885,9 +885,9 @@
                                                          Minimum="0"
                                                          Maximum="100"
                                                          Height="10"
-                                                         Value="{Binding FullBackupPercent}"/>
+                                                         Value="{Binding FullBackupOperation.Percent}"/>
                                             <TextBlock Grid.Column="1"
-                                                       Text="{Binding FullBackupPercent, StringFormat={}{0:0}%}"
+                                                       Text="{Binding FullBackupOperation.Percent, StringFormat={}{0:0}%}"
                                                        Margin="8,0,0,0"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -899,14 +899,14 @@
                                                     Width="110"
                                                     ToolTip="Laufende Datensicherung abbrechen."/>
                                         </Grid>
-                                        <TextBlock Text="{Binding FullBackupCurrentFile}"
+                                        <TextBlock Text="{Binding FullBackupOperation.CurrentFile}"
                                                    Margin="0,5,0,0"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    FontSize="11"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
 
-                                    <TextBlock Text="{Binding FullBackupStatusText}" Margin="0,6,0,0"
+                                    <TextBlock Text="{Binding FullBackupOperation.StatusText}" Margin="0,6,0,0"
                                                Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
                                 </StackPanel>
                             </StackPanel>

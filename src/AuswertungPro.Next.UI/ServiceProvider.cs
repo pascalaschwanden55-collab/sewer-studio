@@ -36,6 +36,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
@@ -81,6 +82,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         public IFullBackupService FullBackup { get; }
+        public FullBackupOperationState FullBackupOperation { get; } = new();
         #endregion
 
         #region Persistenz
@@ -145,6 +147,11 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
+            FullBackupOperation.SetLastBackupInfo(
+                SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
+                    settings.LastFullBackupUtc,
+                    settings.LastFullBackupPath,
+                    settings.LastFullBackupSizeBytes));
 
             settings.MigrateLegacyKnowledgeRootPath();
 

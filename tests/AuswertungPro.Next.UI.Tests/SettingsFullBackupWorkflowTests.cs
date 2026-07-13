@@ -30,7 +30,7 @@ public sealed class SettingsFullBackupWorkflowTests
         };
         var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
         var toasts = new ToastFake();
-        var state = new UiState();
+        var state = new FullBackupOperationState();
         var calls = new List<string>();
 
         await SettingsFullBackupWorkflow.RunAsync(
@@ -59,7 +59,7 @@ public sealed class SettingsFullBackupWorkflowTests
     public async Task RunAsync_cancelled_folder_selection_does_not_start_analysis()
     {
         var backup = new FullBackupFake { AnalyzeReport = Report() };
-        var state = new UiState();
+        var state = new FullBackupOperationState();
 
         await SettingsFullBackupWorkflow.RunAsync(
             Request(new AppSettings(), backup, new DialogFake(), new ToastFake(), state, new List<string>(), DateTime.UtcNow),
@@ -91,7 +91,7 @@ public sealed class SettingsFullBackupWorkflowTests
         };
         var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
         var toasts = new ToastFake();
-        var state = new UiState();
+        var state = new FullBackupOperationState();
         var calls = new List<string>();
 
         await SettingsFullBackupWorkflow.RunAsync(
@@ -106,12 +106,37 @@ public sealed class SettingsFullBackupWorkflowTests
         Assert.False(state.IsRunning);
     }
 
+    [Fact]
+    public async Task RunAsync_running_backup_blocks_second_start()
+    {
+        var backup = new FullBackupFake { AnalyzeReport = Report() };
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
+        var toasts = new ToastFake();
+        var state = new FullBackupOperationState();
+        Assert.True(state.TryBegin(CancellationToken.None, out _));
+
+        try
+        {
+            await SettingsFullBackupWorkflow.RunAsync(
+                Request(new AppSettings(), backup, dialogs, toasts, state, new List<string>(), DateTime.UtcNow),
+                CancellationToken.None);
+
+            Assert.Equal(0, backup.AnalyzeCalls);
+            Assert.Equal(0, backup.RunCalls);
+            Assert.Equal(["info:Datensicherung laeuft bereits."], toasts.Messages);
+        }
+        finally
+        {
+            state.Finish();
+        }
+    }
+
     private static SettingsFullBackupWorkflowRequest Request(
         AppSettings settings,
         IFullBackupService backup,
         IDialogService dialogs,
         IToastService toasts,
-        UiState state,
+        FullBackupOperationState state,
         List<string> calls,
         DateTime nowUtc)
         => new(
@@ -119,12 +144,7 @@ public sealed class SettingsFullBackupWorkflowTests
             FullBackup: backup,
             Dialogs: dialogs,
             Toasts: toasts,
-            Ui: new SettingsFullBackupWorkflowUi(
-                SetIsRunning: value => state.IsRunning = value,
-                SetPercent: value => state.Percent = value,
-                SetCurrentFile: value => state.CurrentFile = value,
-                SetStatusText: value => state.StatusText = value,
-                SetLastBackupInfo: value => state.LastBackupInfo = value),
+            Operation: state,
             FlushPendingSave: () => calls.Add("flush"),
             SaveSettingsImmediate: () => calls.Add("save"),
             UtcNow: () => nowUtc);
@@ -134,15 +154,6 @@ public sealed class SettingsFullBackupWorkflowTests
             [new ComponentSize("Programm", "Code", 100, 1, SourceFound: true)],
             TotalBytes: 100,
             TotalFiles: 1);
-
-    private sealed class UiState
-    {
-        public bool IsRunning { get; set; }
-        public double Percent { get; set; }
-        public string CurrentFile { get; set; } = "";
-        public string StatusText { get; set; } = "";
-        public string LastBackupInfo { get; set; } = "";
-    }
 
     private sealed class FullBackupFake : IFullBackupService
     {

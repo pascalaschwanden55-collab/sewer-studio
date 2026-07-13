@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -12,7 +13,7 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class SettingsPageViewModel : ObservableObject
+public sealed partial class SettingsPageViewModel : ObservableObject, IDisposable
 {
     private const double DefaultYoloConfidence = 0.25d;
     private const double DefaultDinoBoxThreshold = 0.25d;
@@ -48,11 +49,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _logsFolderPath = string.Empty;
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
     [ObservableProperty] private string _backupStatusText = string.Empty;
-    [ObservableProperty] private string _fullBackupStatusText = string.Empty;
-    [ObservableProperty] private double _fullBackupPercent;
-    [ObservableProperty] private bool _isFullBackupRunning;
-    [ObservableProperty] private string _fullBackupCurrentFile = string.Empty;
-    [ObservableProperty] private string _lastFullBackupInfo = string.Empty;
     [ObservableProperty] private bool _includeProjectVideosInFullBackup;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
     [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
@@ -114,6 +110,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public AsyncRelayCommand CreateFullBackupCommand { get; }
     public IRelayCommand CancelFullBackupCommand { get; }
     public AsyncRelayCommand CleanProgramDataCommand { get; }
+    public FullBackupOperationState FullBackupOperation => _sp.FullBackupOperation;
 
     public SettingsPageViewModel(ServiceProvider sp)
     {
@@ -147,10 +144,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         DataFolderPath = AppSettings.AppDataDir;
         LogsFolderPath = Path.Combine(AppSettings.AppDataDir, "logs");
         RestorePointsFolderPath = RestorePointService.SettingsRestoreRoot;
-        LastFullBackupInfo = SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
-            _sp.Settings.LastFullBackupUtc,
-            _sp.Settings.LastFullBackupPath,
-            _sp.Settings.LastFullBackupSizeBytes);
         IncludeProjectVideosInFullBackup = _sp.Settings.FullBackupIncludeProjectVideos;
 
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
@@ -170,20 +163,29 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         StartAiCommand = new AsyncRelayCommand(StartAiAsync);
         ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
         ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
-        CreateFullBackupCommand = new AsyncRelayCommand(CreateFullBackupAsync, () => !IsFullBackupRunning);
+        CreateFullBackupCommand = new AsyncRelayCommand(
+            CreateFullBackupAsync,
+            () => !FullBackupOperation.IsRunning);
         CancelFullBackupCommand = new RelayCommand(
-            () => CreateFullBackupCommand.Cancel(),
-            () => IsFullBackupRunning);
+            FullBackupOperation.Cancel,
+            () => FullBackupOperation.IsRunning);
+        FullBackupOperation.PropertyChanged += OnFullBackupOperationPropertyChanged;
         CleanProgramDataCommand = new AsyncRelayCommand(
             CleanProgramDataAsync,
             () => !IsProgramCleanupRunning);
     }
 
-    partial void OnIsFullBackupRunningChanged(bool value)
+    private void OnFullBackupOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        CreateFullBackupCommand?.NotifyCanExecuteChanged();
-        CancelFullBackupCommand?.NotifyCanExecuteChanged();
+        if (e.PropertyName != nameof(FullBackupOperationState.IsRunning))
+            return;
+
+        CreateFullBackupCommand.NotifyCanExecuteChanged();
+        CancelFullBackupCommand.NotifyCanExecuteChanged();
     }
+
+    public void Dispose()
+        => FullBackupOperation.PropertyChanged -= OnFullBackupOperationPropertyChanged;
 
     partial void OnIncludeProjectVideosInFullBackupChanged(bool value)
     {
@@ -337,12 +339,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                 _sp.FullBackup,
                 _sp.Dialogs,
                 _sp.Toasts,
-                new SettingsFullBackupWorkflowUi(
-                    value => IsFullBackupRunning = value,
-                    value => FullBackupPercent = value,
-                    value => FullBackupCurrentFile = value,
-                    value => FullBackupStatusText = value,
-                    value => LastFullBackupInfo = value),
+                FullBackupOperation,
                 AppSettings.FlushPendingSave,
                 _sp.Settings.SaveImmediate,
                 () => DateTime.UtcNow),

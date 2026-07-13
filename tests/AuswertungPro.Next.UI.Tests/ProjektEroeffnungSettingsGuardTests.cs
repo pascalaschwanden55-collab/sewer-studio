@@ -102,11 +102,12 @@ public sealed class ProjektEroeffnungSettingsGuardTests
     }
 
     [Fact]
-    public void SettingsPageViewModel_delegates_full_backup_presentation()
+    public void SettingsPageViewModel_uses_shared_full_backup_state()
     {
         var vm = Vm();
 
-        Assert.Contains("SettingsFullBackupPresentationBuilder", vm);
+        Assert.Contains("FullBackupOperation", vm);
+        Assert.DoesNotContain("SettingsFullBackupPresentationBuilder", vm);
         Assert.DoesNotContain("BuildFullBackupConfirmText", vm);
         Assert.DoesNotContain("BuildLastFullBackupInfo", vm);
         Assert.DoesNotContain("ByteSizeFormatter", vm);

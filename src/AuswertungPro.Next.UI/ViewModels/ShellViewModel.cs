@@ -12,6 +12,7 @@ using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Settings;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -45,6 +46,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     /// <summary>AP-50: Modale Lade-/Speicheranzeige. Gebunden an das BusyOverlay im MainWindow.</summary>
     public BusyState Busy { get; } = new();
+
+    /// <summary>Laufender PC-Ausfallschutz, sichtbar in der Haupt-Statusleiste.</summary>
+    public FullBackupOperationState FullBackupOperation => _sp.FullBackupOperation;
 
     public Project Project => _project;
     private Project _project = new();

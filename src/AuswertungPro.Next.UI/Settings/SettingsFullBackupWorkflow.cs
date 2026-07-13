@@ -8,19 +8,12 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
 
-public sealed record SettingsFullBackupWorkflowUi(
-    Action<bool> SetIsRunning,
-    Action<double> SetPercent,
-    Action<string> SetCurrentFile,
-    Action<string> SetStatusText,
-    Action<string> SetLastBackupInfo);
-
 public sealed record SettingsFullBackupWorkflowRequest(
     AppSettings Settings,
     IFullBackupService FullBackup,
     IDialogService Dialogs,
     IToastService Toasts,
-    SettingsFullBackupWorkflowUi Ui,
+    FullBackupOperationState Operation,
     Action FlushPendingSave,
     Action SaveSettingsImmediate,
     Func<DateTime> UtcNow);
@@ -33,63 +26,71 @@ public static class SettingsFullBackupWorkflow
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.Operation.IsRunning)
+        {
+            request.Toasts.Info("Datensicherung laeuft bereits.");
+            return;
+        }
+
         var targetFolder = request.Dialogs.SelectFolder(
             "Zielordner fuer die Datensicherung waehlen",
             request.Settings.LastFullBackupPath);
         if (targetFolder is null)
             return;
 
-        request.Ui.SetIsRunning(true);
-        request.Ui.SetPercent(0);
-        request.Ui.SetCurrentFile(string.Empty);
-        request.Ui.SetStatusText("Berechne Groessen...");
+        if (!request.Operation.TryBegin(ct, out var runToken))
+        {
+            request.Toasts.Info("Datensicherung laeuft bereits.");
+            return;
+        }
 
         try
         {
             var report = await Task.Run(
-                () => request.FullBackup.AnalyzeAsync(progress: null, ct),
-                ct).ConfigureAwait(true);
+                () => request.FullBackup.AnalyzeAsync(progress: null, runToken),
+                runToken).ConfigureAwait(true);
 
             var targetRoot = Path.Combine(targetFolder, BackupPlanBuilder.TargetFolderName);
             var confirmText = SettingsFullBackupPresentationBuilder.BuildConfirmText(report, targetRoot);
             if (!request.Dialogs.Confirm(confirmText, "Datensicherung erstellen"))
             {
-                request.Ui.SetStatusText("Datensicherung nicht gestartet.");
+                request.Operation.SetStatus("Datensicherung nicht gestartet.");
                 return;
             }
 
             request.FlushPendingSave();
-            request.Ui.SetStatusText("Datensicherung laeuft...");
+            request.Operation.SetStatus("Datensicherung laeuft...");
 
             var progress = new InlineProgress<FullBackupProgress>(p =>
             {
                 var presentation = SettingsFullBackupPresentationBuilder.BuildProgress(p);
-                request.Ui.SetPercent(presentation.Percent);
-                request.Ui.SetCurrentFile(presentation.CurrentFileName);
-                request.Ui.SetStatusText(presentation.StatusText);
+                request.Operation.UpdateProgress(
+                    presentation.Percent,
+                    presentation.CurrentFileName,
+                    presentation.StatusText);
             });
 
             var result = await Task.Run(
-                () => request.FullBackup.RunAsync(targetFolder, progress, ct),
-                ct).ConfigureAwait(true);
+                () => request.FullBackup.RunAsync(targetFolder, progress, runToken),
+                runToken).ConfigureAwait(true);
 
             if (!result.Success)
             {
-                request.Ui.SetStatusText($"Fehler: {result.Error}");
+                request.Operation.SetStatus($"Fehler: {result.Error}");
                 request.Toasts.Error("Datensicherung fehlgeschlagen.");
                 request.Dialogs.Error(result.Error ?? "Datensicherung fehlgeschlagen.", "Datensicherung");
                 return;
             }
 
-            request.Ui.SetPercent(100);
-            request.Ui.SetCurrentFile(string.Empty);
             var databaseInfo = result.DatabasesSnapshotted switch
             {
                 1 => ", 1 Datenbank-Schnappschuss",
                 > 1 => $", {result.DatabasesSnapshotted} Datenbank-Schnappschuesse",
                 _ => string.Empty
             };
-            request.Ui.SetStatusText(
+            request.Operation.UpdateProgress(
+                100,
+                string.Empty,
                 $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollstaendig geprueft" +
                 $"{databaseInfo}, {result.FilesUnchanged} unveraendert, " +
                 $"{result.FilesDeleted} nach {BackupVersionRetention.VersionsFolderName} verschoben.");
@@ -99,7 +100,7 @@ public static class SettingsFullBackupWorkflow
             request.Settings.LastFullBackupPath = targetFolder;
             request.Settings.LastFullBackupSizeBytes = result.TotalBytes;
             request.SaveSettingsImmediate();
-            request.Ui.SetLastBackupInfo(SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
+            request.Operation.SetLastBackupInfo(SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
                 request.Settings.LastFullBackupUtc,
                 request.Settings.LastFullBackupPath,
                 request.Settings.LastFullBackupSizeBytes));
@@ -114,19 +115,21 @@ public static class SettingsFullBackupWorkflow
         }
         catch (OperationCanceledException)
         {
-            request.Ui.SetStatusText("Abgebrochen - bereits Kopiertes bleibt erhalten.");
-            request.Ui.SetCurrentFile(string.Empty);
+            request.Operation.UpdateProgress(
+                request.Operation.Percent,
+                string.Empty,
+                "Abgebrochen - bereits Kopiertes bleibt erhalten.");
             request.Toasts.Info("Datensicherung abgebrochen.");
         }
         catch (Exception ex)
         {
-            request.Ui.SetStatusText($"Fehler: {ex.Message}");
+            request.Operation.SetStatus($"Fehler: {ex.Message}");
             request.Toasts.Error("Datensicherung fehlgeschlagen.");
             request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{ex.Message}", "Datensicherung");
         }
         finally
         {
-            request.Ui.SetIsRunning(false);
+            request.Operation.Finish();
         }
     }
 
