@@ -80,4 +80,41 @@ public sealed class LeafViewModelBehaviorTests
         Assert.Equal("80454.mp4", viewModel.FileName);
         Assert.Equal(Path.Combine("C:\\", "Videoquelle"), viewModel.DirectoryName);
     }
+
+    [Fact]
+    public void Catalog_column_sorts_items_by_visible_label()
+    {
+        var zNode = new CatalogTreeNode("ZZ", "Zulu");
+        var aNode = new CatalogTreeNode("AA", "Alpha");
+
+        var viewModel = new CatalogColumnViewModel(
+            2,
+            [CatalogItem.FromNode(zNode), CatalogItem.FromNode(aNode)]);
+
+        Assert.Equal(2, viewModel.Index);
+        Assert.Equal(["Alpha", "Zulu"], viewModel.Items.Select(item => item.Label));
+    }
+
+    [Fact]
+    public void Parameter_value_rejects_unknown_enum_and_accepts_catalog_value()
+    {
+        var viewModel = new ParameterValueViewModel(
+            new CodeParameter
+            {
+                Name = "Material",
+                Type = "enum",
+                Required = true,
+                AllowedValues = ["Beton", "Steinzeug"]
+            },
+            existingValue: "Holz");
+
+        Assert.False(viewModel.Validate(out var invalidError));
+        Assert.Contains("Material", invalidError, StringComparison.Ordinal);
+        Assert.Contains("ungueltig", invalidError, StringComparison.OrdinalIgnoreCase);
+
+        viewModel.Value = "Steinzeug";
+
+        Assert.True(viewModel.Validate(out var validError));
+        Assert.Empty(validError);
+    }
 }
