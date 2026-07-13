@@ -125,7 +125,9 @@ public partial class SchaechtePage : UserControl
 
         SchachtansichtView.Settings = _vm.Services.Settings;
         _massnahmenController = new SchachtMassnahmenDialogController(
-            _vm.Services,
+            _vm.Services.Settings,
+            _vm.Services.Dialogs,
+            _vm.Services.SchachtMassnahmenKatalog,
             this,
             MarkProjectDirty,
             ApplySearchFilter);

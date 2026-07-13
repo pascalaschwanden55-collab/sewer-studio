@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.DataPage;
@@ -18,18 +19,24 @@ internal sealed class SchachtMassnahmenDialogController
 {
     private const string StoreFileName = "schacht_empfehlungen.json";
 
-    private readonly ServiceProvider _services;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly ISchachtMassnahmenKatalogStore _katalog;
     private readonly FrameworkElement _ownerElement;
     private readonly Action _markProjectDirty;
     private readonly Action _refreshPage;
 
     public SchachtMassnahmenDialogController(
-        ServiceProvider services,
+        AppSettings settings,
+        IDialogService dialogs,
+        ISchachtMassnahmenKatalogStore katalog,
         FrameworkElement ownerElement,
         Action markProjectDirty,
         Action refreshPage)
     {
-        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _katalog = katalog ?? throw new ArgumentNullException(nameof(katalog));
         _ownerElement = ownerElement ?? throw new ArgumentNullException(nameof(ownerElement));
         _markProjectDirty = markProjectDirty ?? throw new ArgumentNullException(nameof(markProjectDirty));
         _refreshPage = refreshPage ?? throw new ArgumentNullException(nameof(refreshPage));
@@ -40,13 +47,13 @@ internal sealed class SchachtMassnahmenDialogController
         ArgumentNullException.ThrowIfNull(record);
 
         var schachtNummer = SchaechteColumnPolicy.GetSchachtNumber(record);
-        var projectPath = _services.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         var repository = new ProjectCostStoreRepository(StoreFileName);
         var store = repository.Load(projectPath, out var loadError);
 
         if (loadError is not null)
         {
-            _services.Dialogs.Warn(
+            _dialogs.Warn(
                 $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\nDu kannst neu erfassen; Speichern legt die Datei neu an.",
                 "Sanierungsmassnahmen");
         }
@@ -57,7 +64,7 @@ internal sealed class SchachtMassnahmenDialogController
 
         var viewModel = new SchachtMassnahmenViewModel(
             record,
-            _services.SchachtMassnahmenKatalog.Load(),
+            _katalog.Load(),
             bestehend,
             onUebernehmen: cost => Persist(repository, store, schachtNummer, cost, projectPath),
             onListeBearbeiten: EditKatalog);
@@ -86,13 +93,13 @@ internal sealed class SchachtMassnahmenDialogController
 
             if (string.IsNullOrWhiteSpace(projectPath))
             {
-                _services.Dialogs.Info(
+                _dialogs.Info(
                     "Projekt bitte zuerst speichern, damit die Auswahl dauerhaft abgelegt wird.",
                     "Sanierungsmassnahmen");
             }
             else if (!repository.Save(projectPath, store, out var error))
             {
-                _services.Dialogs.Error(
+                _dialogs.Error(
                     $"Speichern der Schacht-Empfehlungen fehlgeschlagen:\n{error}",
                     "Sanierungsmassnahmen");
             }
@@ -106,7 +113,7 @@ internal sealed class SchachtMassnahmenDialogController
     private IReadOnlyList<SchachtMassnahmeKatalogEintrag>? EditKatalog()
     {
         var viewModel = new SchachtMassnahmenKatalogEditorViewModel(
-            _services.SchachtMassnahmenKatalog.Load());
+            _katalog.Load());
         var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive)
                     ?? Window.GetWindow(_ownerElement);
         var window = new SchachtMassnahmenKatalogEditorWindow(viewModel) { Owner = owner };
@@ -114,7 +121,7 @@ internal sealed class SchachtMassnahmenDialogController
         if (window.ShowDialog() != true)
             return null;
 
-        _services.SchachtMassnahmenKatalog.Save(viewModel.Ergebnis);
+        _katalog.Save(viewModel.Ergebnis);
         return viewModel.Ergebnis;
     }
 }

@@ -287,6 +287,8 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("store.ByHolding[schachtNummer] = cost", controller);
         Assert.Contains("new SchachtMassnahmenWindow", controller);
         Assert.Contains("new SchachtMassnahmenKatalogEditorWindow", controller);
+        Assert.DoesNotContain("ServiceProvider", controller, StringComparison.Ordinal);
+        Assert.DoesNotContain("_services", controller, StringComparison.Ordinal);
     }
 
     private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
