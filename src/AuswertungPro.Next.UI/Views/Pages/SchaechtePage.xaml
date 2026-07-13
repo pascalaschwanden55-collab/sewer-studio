@@ -266,7 +266,8 @@
                   CurrentCellChanged="Grid_CurrentCellChanged"
                   PreviewMouseWheel="Grid_PreviewMouseWheel"
                   PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
-                  PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown">
+                  PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown"
+                  PreviewMouseLeftButtonDown="Grid_QgisReselectOnClick">
             <DataGrid.LayoutTransform>
                 <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
             </DataGrid.LayoutTransform>

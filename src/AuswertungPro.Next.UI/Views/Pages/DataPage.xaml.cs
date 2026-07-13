@@ -180,6 +180,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        // QGIS: Jeder Klick auf eine Haltungszeile meldet die Haltung erneut an die Bridge —
+        // auch ein erneuter Klick auf die bereits ausgewaehlte Zeile laesst QGIS wieder aufleuchten.
+        // (SelectedItem-Changed feuert bei einem Klick auf die schon markierte Zeile NICHT.)
+        if (e.OriginalSource is DependencyObject clicked
+            && FindAncestor<DataGridRow>(clicked)?.Item is HaltungRecord record)
+        {
+            var haltungsname = record.GetFieldValue("Haltungsname");
+            if (!string.IsNullOrWhiteSpace(haltungsname))
+                QgisBridge.QgisBridgeSelection.Set(haltungsname);
+        }
+
         // Don't capture drag start when clicking inside an editing TextBox
         if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
             return;

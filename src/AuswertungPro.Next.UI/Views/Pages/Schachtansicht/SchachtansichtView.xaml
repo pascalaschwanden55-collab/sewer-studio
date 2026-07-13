@@ -22,6 +22,7 @@
                  ItemsSource="{Binding Records}"
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
                  SelectionChanged="SchachtList_SelectionChanged"
+                 PreviewMouseLeftButtonUp="SchachtList_QgisReselectOnClick"
                  PreviewMouseRightButtonDown="SchachtList_PreviewMouseRightButtonDown"
                  Background="{DynamicResource CardBrush}"
                  BorderBrush="{DynamicResource BorderBrush}"

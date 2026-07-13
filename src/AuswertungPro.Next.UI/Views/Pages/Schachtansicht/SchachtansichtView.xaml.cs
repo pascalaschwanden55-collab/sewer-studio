@@ -68,6 +68,23 @@ public partial class SchachtansichtView : UserControl
         RefreshAll();
     }
 
+    // Auch ein erneuter Klick auf den bereits markierten Schacht bekommt einen
+    // neuen QGIS-Stempel. SelectionChanged allein feuert in diesem Fall nicht.
+    private void SchachtList_QgisReselectOnClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _ = sender;
+        var dep = e.OriginalSource as DependencyObject;
+        while (dep is not null and not ListBoxItem)
+            dep = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(dep);
+
+        if (dep is ListBoxItem { DataContext: SchachtRecord record })
+        {
+            var nummer = record.GetFieldValue("Schachtnummer");
+            if (!string.IsNullOrWhiteSpace(nummer))
+                QgisBridge.QgisBridgeSelection.SetSchacht(nummer);
+        }
+    }
+
     private void SubscribeSelectedRecord(SchachtRecord? record)
     {
         if (_subscribedRecord is not null)
