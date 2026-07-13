@@ -87,6 +87,13 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("_vsaEvaluationController.ExecuteAsync", viewModel);
         Assert.Contains("_service.Evaluate", vsaController);
         Assert.DoesNotContain("_sp.Vsa.Evaluate", viewModel);
+        Assert.DoesNotContain("private readonly ServiceProvider", viewModel);
+        Assert.DoesNotContain("_sp.", viewModel);
+        Assert.Contains("_pdfImport.ImportPdf", viewModel);
+        Assert.Contains("_xtfImport.ImportXtfFiles", viewModel);
+        Assert.Contains("_winCanImport.ImportWinCanExport", viewModel);
+        Assert.Contains("_ibakImport.ImportIbakExport", viewModel);
+        Assert.Contains("_kinsImport.ImportKinsExport", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);

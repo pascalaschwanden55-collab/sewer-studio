@@ -14,7 +14,15 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class ImportPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly IDialogService _dialogs;
+    private readonly AppSettings _settings;
+    private readonly AuswertungPro.Next.Application.Projects.IProjectRepository _projects;
+    private readonly IPdfImportService _pdfImport;
+    private readonly IXtfImportService _xtfImport;
+    private readonly IWinCanDbImportService _winCanImport;
+    private readonly IIbakImportService _ibakImport;
+    private readonly IKinsImportService _kinsImport;
+    private readonly string? _pdfToTextPath;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
     private readonly Services.ImportProjectPhotoAssignmentController _projectPhotoAssignmentController;
     private readonly Services.ImportProtocolDistributionController _protocolDistributionController;
@@ -58,43 +66,54 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
-        _shell = shell;
-        _sp = sp;
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        ArgumentNullException.ThrowIfNull(sp);
+        _dialogs = sp.Dialogs;
+        _settings = sp.Settings;
+        _projects = sp.Projects;
+        _pdfImport = sp.PdfImport;
+        _xtfImport = sp.XtfImport;
+        _winCanImport = sp.WinCanImport;
+        _ibakImport = sp.IbakImport;
+        _kinsImport = sp.KinsImport;
+        _pdfToTextPath = sp.Diagnostics.ExplicitPdfToTextPath;
+        var oneClickImporter = sp.CreateOneClickProjectImportService();
+        var resolvedCatalogPath = sp.VsaCatalogResolvedPath;
         _projectPortabilityController = new Services.ImportProjectPortabilityController(
-            _sp.Dialogs,
-            _sp.ProjectPortability);
+            _dialogs,
+            sp.ProjectPortability);
         _projectPhotoAssignmentController = new Services.ImportProjectPhotoAssignmentController(
-            _sp.Dialogs,
-            _sp.ProjectPhotoAssignment);
+            _dialogs,
+            sp.ProjectPhotoAssignment);
         _protocolDistributionController = new Services.ImportProtocolDistributionController(
-            _sp.Dialogs,
-            _sp.NameBasedProtocolDistributor,
-            _sp.Logger);
+            _dialogs,
+            sp.NameBasedProtocolDistributor,
+            sp.Logger);
         _protocolRegenerationController = new Services.ImportProtocolRegenerationController(
-            _sp.Dialogs,
-            _sp.ProtocolRegeneration,
-            _sp.CodeCatalog);
+            _dialogs,
+            sp.ProtocolRegeneration,
+            sp.CodeCatalog);
         _oneClickProjectController = new Services.ImportOneClickProjectController(
-            _sp.Dialogs,
-            _sp.CreateOneClickProjectImportService,
-            _sp.OneClickImportReports);
+            _dialogs,
+            () => oneClickImporter,
+            sp.OneClickImportReports);
         _reportNavigationController = new Services.ImportReportNavigationController(
-            _sp.Dialogs,
-            () => _sp.Settings.LastProjectPath,
+            _dialogs,
+            () => _settings.LastProjectPath,
             path => Services.SafeShellOpen.TryOpen(path, out _));
         _summaryExportController = new Services.ImportSummaryExportController(
-            _sp.Dialogs,
-            _sp.ImportSummaryExporter,
-            _sp.Logger);
+            _dialogs,
+            sp.ImportSummaryExporter,
+            sp.Logger);
         _catalogController = new Services.ImportCatalogController(
-            () => _sp.Settings.VsaCatalogSecXmlPath,
-            () => _sp.Settings.VsaCatalogNodXmlPath,
-            () => _sp.VsaCatalogResolvedPath,
-            _sp.CodeCatalog,
-            _sp.Logger);
+            () => _settings.VsaCatalogSecXmlPath,
+            () => _settings.VsaCatalogNodXmlPath,
+            () => resolvedCatalogPath,
+            sp.CodeCatalog,
+            sp.Logger);
         _vsaEvaluationController = new Services.ImportVsaEvaluationController(
-            _sp.Vsa,
-            _sp.Logger);
+            sp.Vsa,
+            sp.Logger);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -167,7 +186,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 saveProjectAfterCommit),
             new Services.ImportRunWorkflowActions(
                 GetProject: () => _shell.Project,
-                DeepCopyProject: _sp.Projects.DeepCopy,
+                DeepCopyProject: _projects.DeepCopy,
                 ReplaceProject: _shell.ReplaceProject,
                 CreateRestorePoint: _shell.TryCreateImportRestorePoint,
                 GetReportDir: _reportNavigationController.GetReportDirectory,
@@ -219,7 +238,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportPdfAsync()
     {
-        var paths = _sp.Dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
+        var paths = _dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
         if (paths.Length == 0) return;
 
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS — Import-Arbeit nicht nur im RAM (Audit H4)
@@ -256,7 +275,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 "PDF lesen", i + 1, paths.Length,
                 $"PDF {i + 1}/{paths.Length}: {Path.GetFileName(path)}", Path.GetFileName(path)));
 
-            var res = _sp.PdfImport.ImportPdf(path, project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
+            var res = _pdfImport.ImportPdf(path, project, _pdfToTextPath, FillMissingOnly, ctx);
             if (!res.Ok || res.Value is null)
             {
                 totalErrors++;
@@ -294,7 +313,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportXtfAsync()
     {
-        var paths = _sp.Dialogs.OpenFiles(
+        var paths = _dialogs.OpenFiles(
             "Daten importieren (XTF/M150/MDB)",
             "Daten (*.xtf;*.m150;*.mdb;*.xml)|*.xtf;*.m150;*.mdb;*.xml|XTF (*.xtf)|*.xtf|M150/XML (*.m150;*.xml)|*.m150;*.xml|MDB (*.mdb)|*.mdb|Alle Dateien|*.*");
         if (paths.Length == 0) return;
@@ -310,7 +329,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private Result<ImportStats> ImportXtfCore(string[] paths, Project project, ImportRunContext ctx)
     {
-        return _sp.XtfImport.ImportXtfFiles(paths, project, ctx);
+        return _xtfImport.ImportXtfFiles(paths, project, ctx);
     }
 
     private Task PostImportXtfAsync(string[] paths, Project project, ImportRunContext ctx)
@@ -331,39 +350,39 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportWinCanAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("WinCan-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         await RunImportWithOptionalPreviewAsync(
             "WinCan",
             folder,
-            ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+            ImportFolderCore(_winCanImport.ImportWinCanExport),
             postImportAsync: PostImportFolderAsync,
             saveProjectAfterCommit: true);
     }
 
     private async Task ImportIbakAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("IBAK-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         await RunImportWithOptionalPreviewAsync(
             "IBAK",
             folder,
-            ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+            ImportFolderCore(_ibakImport.ImportIbakExport),
             postImportAsync: PostImportFolderAsync,
             saveProjectAfterCommit: true);
     }
 
     private async Task ImportKinsAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("KINS-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         await RunImportWithOptionalPreviewAsync(
             "KINS",
             folder,
-            ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+            ImportFolderCore(_kinsImport.ImportKinsExport),
             postImportAsync: PostImportFolderAsync,
             saveProjectAfterCommit: true);
     }
@@ -384,8 +403,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 ctx.Log.ImportType,
                 project,
                 _shell.GetProjectFolder(),
-                _sp.PdfImport,
-                _sp.Diagnostics.ExplicitPdfToTextPath,
+                _pdfImport,
+                _pdfToTextPath,
                 FillMissingOnly,
                 ctx,
                 _shell.CollectionLock),
@@ -490,7 +509,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private void ExportImportSummary()
         => _summaryExportController.Execute(
             new Services.ImportSummaryExportActions(
-                GetProjectPath: () => _sp.Settings.LastProjectPath,
+                GetProjectPath: () => _settings.LastProjectPath,
                 GetProject: () => _shell.Project,
                 SetLastResult: value => LastResult = value,
                 SetStatus: _shell.SetStatus));
@@ -510,7 +529,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private void StoreImportFiles(string[] paths, Project project, string importKind, string displayName)
     {
         var result = Services.StoredImportFileRegistry.Store(
-            _sp.Settings.LastProjectPath,
+            _settings.LastProjectPath,
             project.Metadata,
             importKind,
             paths);
