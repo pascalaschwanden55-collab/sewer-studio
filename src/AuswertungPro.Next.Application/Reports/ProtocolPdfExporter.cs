@@ -18,7 +18,7 @@ using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
 
 namespace AuswertungPro.Next.Application.Reports;
 
-public sealed class ProtocolPdfExporter
+public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)

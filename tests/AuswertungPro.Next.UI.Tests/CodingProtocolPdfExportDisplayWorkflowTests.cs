@@ -47,4 +47,62 @@ public sealed class CodingProtocolPdfExportDisplayWorkflowTests
         Assert.False(exported);
         Assert.Equal(["service", "confirm:1"], calls);
     }
+
+    [Fact]
+    public void Interner_Player_Pfad_akzeptiert_den_Schnittstellen_Exporter()
+    {
+        IProtocolPdfExporter exporter = new ThrowingProtocolPdfExporter();
+        IProtocolPdfExporter? received = null;
+        var document = new ProtocolDocument();
+        document.Current.Entries.Add(new ProtocolEntry { Code = "BAJ" });
+        var service = new CodingProtocolPdfExportService(
+            confirmPdfExport: _ => false,
+            buildPlan: (_, _, _, _) => throw new InvalidOperationException(),
+            chooseOutputPath: _ => throw new InvalidOperationException(),
+            getCurrentProject: () => throw new InvalidOperationException(),
+            buildPdf: (_, _, _, _, _) => throw new InvalidOperationException(),
+            saveAndOpen: (_, _) => throw new InvalidOperationException(),
+            showPdfExportFailed: _ => throw new InvalidOperationException(),
+            now: () => throw new InvalidOperationException(),
+            baseDirectory: () => throw new InvalidOperationException());
+
+        var exported = CodingProtocolPdfExportDisplayWorkflow.Offer(
+            new CodingProtocolPdfExportDisplayRequestCore(
+                new HaltungRecord(),
+                document,
+                LastProjectPath: null,
+                exporter),
+            new CodingProtocolPdfExportDisplayActionsCore(actual =>
+            {
+                received = actual;
+                return service;
+            }));
+
+        Assert.False(exported);
+        Assert.Same(exporter, received);
+    }
+
+    private sealed class ThrowingProtocolPdfExporter : IProtocolPdfExporter
+    {
+        public byte[] BuildPdf(string projectTitle, ProtocolDocument document, string projectRootAbs)
+            => throw new NotSupportedException();
+
+        public byte[] BuildPdf(
+            string projectTitle,
+            ProtocolDocument document,
+            string projectRootAbs,
+            ProtocolPdfExportOptions options)
+            => throw new NotSupportedException();
+
+        public byte[] BuildHaltungsprotokollPdf(
+            Project project,
+            HaltungRecord record,
+            ProtocolDocument document,
+            string projectRootAbs,
+            HaltungsprotokollPdfOptions? options = null)
+            => throw new NotSupportedException();
+
+        public byte[] BuildCsv(ProtocolDocument document, ProtocolPdfExportOptions? options = null)
+            => throw new NotSupportedException();
+    }
 }

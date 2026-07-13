@@ -14,16 +14,16 @@ public partial class PlayerWindow
     {
         CodingProtocolPdfExportCommandWorkflow.Execute(
             new CodingProtocolPdfExportCommandRequest(
-                _protocolContext.ProtocolPdfExporter is not null,
+                _protocolContext.ProtocolPdfExports is not null,
                 _protocolContext.HasHaltungRecord,
                 doc),
             new CodingProtocolPdfExportCommandActions(
                 OfferPdfExport: () => CodingProtocolPdfExportDisplayWorkflow.Offer(
-                    new CodingProtocolPdfExportDisplayRequest(
+                    new CodingProtocolPdfExportDisplayRequestCore(
                         _protocolContext.HaltungRecord!,
                         doc,
                         _protocolContext.LastProjectPath,
-                        _protocolContext.ProtocolPdfExporter!)),
+                        _protocolContext.ProtocolPdfExports!)),
                 ShowOverlay: ShowOverlay));
     }
 

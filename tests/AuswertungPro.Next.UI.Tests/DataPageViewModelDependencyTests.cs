@@ -16,7 +16,8 @@ public sealed class DataPageViewModelDependencyTests
 
         Assert.Contains("private readonly IDialogService _dialogs;", source);
         Assert.Contains("private readonly AppSettings _settings;", source);
-        Assert.Contains("private readonly ProtocolPdfExporter _protocolPdfExporter;", source);
+        Assert.Contains("private readonly IProtocolPdfExporter _protocolPdfExporter;", source);
+        Assert.DoesNotContain("private readonly ProtocolPdfExporter _protocolPdfExporter;", source);
         Assert.Contains("private readonly IDerivedCostFieldSynchronizer _costFieldSynchronizer;", source);
         Assert.Contains("private readonly DashboardRefreshNotifier _dashboardRefresh;", source);
         Assert.Contains("private readonly BatchMediaSearchService _batchMediaSearch;", source);

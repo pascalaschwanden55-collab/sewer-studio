@@ -23,6 +23,7 @@ public sealed class PlayerWindowDependencies
     public IVsaCodeSelectionCatalog? CodeSelectionCatalog => _serviceProvider?.CodeSelectionCatalog;
     public PipelineConfig? PipelineConfig => _serviceProvider?.PipelineCfg;
     public ProtocolPdfExporter? ProtocolPdfExporter => _serviceProvider?.ProtocolPdfExporter;
+    public IProtocolPdfExporter? ProtocolPdfExports => _serviceProvider?.ProtocolPdfExports;
     public ILoggerFactory? LoggerFactory => _serviceProvider?.LoggerFactory;
     public string? LastProjectPath => Settings?.LastProjectPath;
     public bool HasCodeCatalog => CodeCatalog is not null;

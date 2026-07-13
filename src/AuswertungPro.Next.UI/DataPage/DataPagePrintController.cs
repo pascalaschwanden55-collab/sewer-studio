@@ -59,6 +59,25 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null)
         : this(
             dialogs,
+            (IProtocolPdfExporter)protocolPdfExporter,
+            getProjectFolder,
+            buildHydraulikCalculation,
+            getLastProjectPath,
+            findSchachtByNummer,
+            buildDossierHydraulikCalculation)
+    {
+    }
+
+    internal DataPagePrintController(
+        IDialogService dialogs,
+        IProtocolPdfExporter protocolPdfExporter,
+        Func<string?> getProjectFolder,
+        Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
+        Func<string?>? getLastProjectPath = null,
+        Func<string?, SchachtRecord?>? findSchachtByNummer = null,
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null)
+        : this(
+            dialogs,
             getProjectFolder,
             CreateBuildAwuPdf(protocolPdfExporter),
             AppContext.BaseDirectory,
@@ -341,7 +360,7 @@ public sealed class DataPagePrintController
     }
 
     private static Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> CreateBuildAwuPdf(
-        ProtocolPdfExporter protocolPdfExporter)
+        IProtocolPdfExporter protocolPdfExporter)
     {
         ArgumentNullException.ThrowIfNull(protocolPdfExporter);
 

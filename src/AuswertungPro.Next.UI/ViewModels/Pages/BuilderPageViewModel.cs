@@ -34,7 +34,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
-    private readonly ProtocolPdfExporter _protocolPdfExporter;
+    private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();

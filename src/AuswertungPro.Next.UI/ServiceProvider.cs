@@ -124,6 +124,7 @@ namespace AuswertungPro.Next.UI
         public IExcelExportService ExcelExport { get; }
         public IProtocolService Protocols { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
+        public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
         public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion

@@ -7,6 +7,9 @@ namespace AuswertungPro.Next.UI.Ai;
 public static class CodingProtocolPdfExportServiceFactory
 {
     public static CodingProtocolPdfExportService Create(ProtocolPdfExporter exporter)
+        => Create((IProtocolPdfExporter)exporter);
+
+    public static CodingProtocolPdfExportService Create(IProtocolPdfExporter exporter)
         => new(
             eventCount => CodingProtocolDialogServiceFactory.Create().ConfirmPdfExport(eventCount),
             (record, lastProjectPath, baseDirectory, now) =>

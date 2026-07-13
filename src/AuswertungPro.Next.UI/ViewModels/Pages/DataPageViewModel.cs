@@ -39,7 +39,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
-    private readonly ProtocolPdfExporter _protocolPdfExporter;
+    private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSynchronizer;
     private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly BatchMediaSearchService _batchMediaSearch;
@@ -164,7 +164,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _settings = services.Settings;
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
-        _protocolPdfExporter = services.ProtocolPdfExporter;
+        _protocolPdfExporter = services.ProtocolPdfExports;
         _costFieldSynchronizer = services.CostFieldSync;
         _dashboardRefresh = services.DashboardRefresh;
         _batchMediaSearch = services.BatchMediaSearch;
