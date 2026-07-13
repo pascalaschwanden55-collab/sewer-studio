@@ -154,6 +154,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public void Importbericht_exportieren_ohne_gespeichertes_Projekt_zeigt_Hinweis()
+    {
+        var dialogs = new DialogFake();
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        viewModel.ExportImportSummaryCommand.Execute(null);
+
+        Assert.Contains("zuerst", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Import-Report", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
     public async Task Portabilitaets_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
     {
         var dialogs = new DialogFake();
@@ -388,6 +411,50 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Importbericht_Controller_uebernimmt_Pfad_und_Status()
+    {
+        var dialogs = new DialogFake();
+        var exporter = new ImportSummaryExporterFake();
+        var logger = new CapturingLogger();
+        var controller = new ImportSummaryExportController(dialogs, exporter, logger);
+        var lastResult = string.Empty;
+        var status = string.Empty;
+
+        controller.Execute(new ImportSummaryExportActions(
+            GetProjectPath: () => @"C:\Projekt\projekt.json",
+            GetProject: () => new Project(),
+            SetLastResult: value => lastResult = value,
+            SetStatus: value => status = value));
+
+        Assert.Equal(1, exporter.Calls);
+        Assert.Contains(exporter.ResultPath, lastResult);
+        Assert.Equal("Import-Report erstellt", status);
+        Assert.Equal(string.Empty, dialogs.LastErrorMessage);
+    }
+
+    [Fact]
+    public void Importbericht_Controller_zeigt_keine_technischen_Fehler()
+    {
+        var dialogs = new DialogFake();
+        var exporter = new ImportSummaryExporterFake
+        {
+            Error = new UnauthorizedAccessException("Geheimer Dateipfad")
+        };
+        var logger = new CapturingLogger();
+        var controller = new ImportSummaryExportController(dialogs, exporter, logger);
+
+        controller.Execute(new ImportSummaryExportActions(
+            GetProjectPath: () => @"C:\Projekt\projekt.json",
+            GetProject: () => new Project(),
+            SetLastResult: _ => { },
+            SetStatus: _ => { }));
+
+        Assert.Contains("Tageslog", dialogs.LastErrorMessage);
+        Assert.DoesNotContain("Geheimer", dialogs.LastErrorMessage);
+        Assert.Contains(logger.Messages, message => message.Contains("Geheimer Dateipfad", StringComparison.Ordinal));
+    }
+
     public void Dispose() => _loggerFactory.Dispose();
 
     private sealed class PortabilityFake : IProjectPortabilityService
@@ -463,7 +530,9 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             TState state,
             Exception? exception,
             Func<TState, Exception?, string> formatter)
-            => Messages.Add(formatter(state, exception));
+            => Messages.Add(
+                formatter(state, exception)
+                + (exception is null ? string.Empty : " " + exception));
     }
 
     private sealed class ProtocolRegenerationFake : IProtocolRegenerationService
@@ -524,6 +593,21 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             => Calls++;
     }
 
+    private sealed class ImportSummaryExporterFake : IImportSummaryExporter
+    {
+        public int Calls { get; private set; }
+        public string ResultPath { get; init; } = @"C:\Projekt\__IMPORT_REPORTS\import.csv";
+        public Exception? Error { get; init; }
+
+        public string Export(string projectPath, Project project)
+        {
+            Calls++;
+            if (Error is not null)
+                throw Error;
+            return ResultPath;
+        }
+    }
+
     private sealed class CodeCatalogFake : ICodeCatalogProvider
     {
         public IReadOnlyList<CodeDefinition> GetAll() => [];
@@ -543,6 +627,8 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         public string? SelectedFolder { get; init; }
         public string LastInfoMessage { get; private set; } = string.Empty;
         public string LastInfoTitle { get; private set; } = string.Empty;
+        public string LastErrorMessage { get; private set; } = string.Empty;
+        public string LastErrorTitle { get; private set; } = string.Empty;
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
@@ -554,7 +640,11 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             LastInfoTitle = title;
         }
         public void Warn(string message, string title = "Warnung") { }
-        public void Error(string message, string title = "Fehler") { }
+        public void Error(string message, string title = "Fehler")
+        {
+            LastErrorMessage = message;
+            LastErrorTitle = title;
+        }
         public bool Confirm(string message, string title = "Bestaetigung") => false;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;

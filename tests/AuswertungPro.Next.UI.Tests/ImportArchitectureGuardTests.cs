@@ -61,6 +61,8 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportOneClickProjectController.cs"));
         var reportNavigationController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportReportNavigationController.cs"));
+        var summaryExportController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportSummaryExportController.cs"));
 
         Assert.Contains("_oneClickProjectController.ExecuteAsync", viewModel);
         Assert.Contains("_createImporter().Import", oneClickController);
@@ -70,6 +72,10 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("_reportNavigationController.SetLastReportPath", viewModel);
         Assert.DoesNotContain("private string? _lastReportPath", viewModel);
         Assert.Contains("File.Exists(_lastReportPath)", reportNavigationController);
+        Assert.Contains("_summaryExportController.Execute", viewModel);
+        Assert.Contains("_exporter.Export", summaryExportController);
+        Assert.DoesNotContain("File.WriteAllText(path", viewModel);
+        Assert.DoesNotContain("private static string Escape", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
@@ -90,6 +96,7 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("CreateProjectImportOrchestrator", provider);
         Assert.Contains("CreateOneClickProjectImportService", provider);
         Assert.Contains("OneClickImportReports = new OneClickImportReportWriter", provider);
+        Assert.Contains("ImportSummaryExporter = new ImportSummaryExporter()", provider);
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
         Assert.Contains("ProtocolRegeneration = new ProtocolRegenerationAdapter()", provider);

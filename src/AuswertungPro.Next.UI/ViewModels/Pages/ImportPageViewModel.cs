@@ -1,6 +1,5 @@
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -22,6 +21,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly Services.ImportProtocolRegenerationController _protocolRegenerationController;
     private readonly Services.ImportOneClickProjectController _oneClickProjectController;
     private readonly Services.ImportReportNavigationController _reportNavigationController;
+    private readonly Services.ImportSummaryExportController _summaryExportController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -80,6 +80,10 @@ public sealed partial class ImportPageViewModel : ObservableObject
             _sp.Dialogs,
             () => _sp.Settings.LastProjectPath,
             path => Services.SafeShellOpen.TryOpen(path, out _));
+        _summaryExportController = new Services.ImportSummaryExportController(
+            _sp.Dialogs,
+            _sp.ImportSummaryExporter,
+            _sp.Logger);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -528,67 +532,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
     // ──── Import report ────
 
     private void ExportImportSummary()
-    {
-        var projectPath = _sp.Settings.LastProjectPath;
-        var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
-        if (string.IsNullOrWhiteSpace(projectDir))
-        {
-            _sp.Dialogs.Info("Bitte zuerst das Projekt speichern.", "Import-Report");
-            return;
-        }
-
-        var reportDir = Path.Combine(projectDir, "__IMPORT_REPORTS");
-        Directory.CreateDirectory(reportDir);
-        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var path = Path.Combine(reportDir, $"import_summary_{stamp}.csv");
-
-        var sb = new StringBuilder();
-        sb.AppendLine("Type;RecordId;Field;Value;Source;UserEdited;LastUpdatedUtc");
-
-        foreach (var rec in _shell.Project.Data)
-        {
-            foreach (var field in FieldCatalog.ColumnOrder)
-            {
-                var value = rec.GetFieldValue(field) ?? "";
-                var meta = rec.FieldMeta.TryGetValue(field, out var m) ? m : null;
-                sb.AppendLine(string.Join(";",
-                    "Haltung",
-                    rec.Id,
-                    Escape(field),
-                    Escape(value),
-                    meta?.Source.ToString() ?? "",
-                    meta?.UserEdited.ToString() ?? "",
-                    meta?.LastUpdatedUtc.ToString("o") ?? ""));
-            }
-        }
-
-        foreach (var schacht in _shell.Project.SchaechteData)
-        {
-            foreach (var kv in schacht.Fields)
-            {
-                sb.AppendLine(string.Join(";",
-                    "Schacht",
-                    schacht.Id,
-                    Escape(kv.Key),
-                    Escape(kv.Value ?? ""),
-                    "",
-                    "",
-                    schacht.ModifiedAtUtc.ToString("o")));
-            }
-        }
-
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
-        LastResult = $"Import-Report erstellt:\n{path}";
-        _shell.SetStatus("Import-Report erstellt");
-    }
-
-    private static string Escape(string v)
-    {
-        v ??= "";
-        if (v.Contains(';') || v.Contains('"') || v.Contains('\n') || v.Contains('\r'))
-            return "\"" + v.Replace("\"", "\"\"") + "\"";
-        return v;
-    }
+        => _summaryExportController.Execute(
+            new Services.ImportSummaryExportActions(
+                GetProjectPath: () => _sp.Settings.LastProjectPath,
+                GetProject: () => _shell.Project,
+                SetLastResult: value => LastResult = value,
+                SetStatus: _shell.SetStatus));
 
     // ──── File Storage ────
 

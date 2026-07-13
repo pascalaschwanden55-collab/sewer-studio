@@ -76,6 +76,19 @@ public class ProjectFieldCsvExporterTests : IDisposable
     }
 
     [Fact]
+    public void ImportSummaryExporter_verwendet_Berichtsordner_neben_Projektdatei()
+    {
+        var exporter = new ImportSummaryExporter();
+
+        var path = exporter.Export(Path.Combine(_tmpDir, "projekt.json"), new Project());
+
+        Assert.Equal(
+            Path.Combine(_tmpDir, "__IMPORT_REPORTS"),
+            Path.GetDirectoryName(path));
+        Assert.True(File.Exists(path));
+    }
+
+    [Fact]
     public void Escape_NormaleWerte_UnveraendertZurueck()
     {
         Assert.Equal("BCD", ProjectFieldCsvExporter.Escape("BCD"));
