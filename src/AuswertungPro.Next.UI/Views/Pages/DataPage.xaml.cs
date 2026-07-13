@@ -24,8 +24,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
 {
     private DataPageViewModel Vm => DataContext as DataPageViewModel
         ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
-    private ServiceProvider Services => Vm.Services;
-    private IDialogService Dialogs => Services.Dialogs;
+    private IDialogService Dialogs => Vm.Dialogs;
+    private AppSettings Settings => Vm.Settings;
+    private AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => Vm.Vsa;
+    private AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => Vm.CodeCatalog;
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
@@ -46,7 +48,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         PhotoHoverPreviewBehavior.SetProjectRootProvider(
             Grid,
             () => DataContext is DataPageViewModel vm
-                ? ProjectFileLocator.ProjectRootFromFile(vm.Services.Settings.LastProjectPath)
+                ? ProjectFileLocator.ProjectRootFromFile(vm.Settings.LastProjectPath)
                 : null);
         FilterChips.FilterGeaendert += WendeChipFilterAn;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
@@ -60,7 +62,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             (message, title) => Dialogs.Warn(message, title),
             record =>
             {
-                var result = Services.Vsa.EvaluateRecord(record);
+                var result = Vsa.EvaluateRecord(record);
                 return new DataPageBeobachtungenVsaResult(result.Ok, result.ErrorMessage);
             });
 
@@ -133,7 +135,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     }
 
     private void ApplyHaltungsansichtSettings(DataPageViewModel vm)
-        => HaltungsansichtView.Settings = vm.Services.Settings;
+        => HaltungsansichtView.Settings = vm.Settings;
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -604,7 +606,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return false;
         }
 
-        var projectPath = Services?.Settings.LastProjectPath;
+        var projectPath = Settings.LastProjectPath;
 
         // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
         var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
@@ -657,10 +659,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private string? ResolvePrimaryDamageCodeTitle(string code)
     {
-        var sp = Services;
-        if (sp?.CodeCatalog is null || string.IsNullOrWhiteSpace(code))
+        if (string.IsNullOrWhiteSpace(code))
             return null;
-        if (!sp.CodeCatalog.TryGet(code, out var def))
+        if (!CodeCatalog.TryGet(code, out var def))
             return null;
         return string.IsNullOrWhiteSpace(def.Title) ? null : def.Title.Trim();
     }
@@ -687,7 +688,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         var plan = DataPagePhotoLinkController.BuildOpenPlan(
             fe.Tag as string,
-            Services?.Settings.LastProjectPath,
+            Settings.LastProjectPath,
             AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath,
             File.Exists);
 
@@ -843,7 +844,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var sp = Services;
         var project = vm.Project;
         if (project is null)
         {
@@ -851,7 +851,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        var res = sp.Vsa.Explain(project, record);
+        var res = Vsa.Explain(project, record);
         if (!res.Ok || res.Value is null)
         {
             Dialogs.Error(res.ErrorMessage ?? "Berechnung fehlgeschlagen.", "Zustandsklasse");

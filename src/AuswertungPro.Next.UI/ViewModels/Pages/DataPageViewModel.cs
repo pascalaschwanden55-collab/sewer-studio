@@ -36,6 +36,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
     private readonly AppSettings _settings;
+    private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
+    private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -57,7 +59,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly TrainingCaseIndex _trainingCaseIndex = new();
     private bool _disposed;
 
-    internal ServiceProvider Services => _sp;
+    internal IDialogService Dialogs => _dialogs;
+    internal AppSettings Settings => _settings;
+    internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
+    internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
 
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
@@ -149,6 +154,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _sp = services;
         _dialogs = services.Dialogs;
         _settings = services.Settings;
+        _vsa = services.Vsa;
+        _codeCatalog = services.CodeCatalog;
         StartFilter = startFilter;
         _measureRecommendationService = _sp.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -283,7 +290,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _dialogs,
             () => Records,
             EnsureVideoPath,
-            () => _sp.CodeCatalog.AllowedCodes(),
+            () => _codeCatalog.AllowedCodes(),
             () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
             (cfg, plausibility, http) => _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http),
             ShowVideoAnalysisPipelineWindow,

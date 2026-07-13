@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class BeobachtungenWindow : Window
 {
     private readonly ObservableCollection<ProtocolEntry> _entries;
-    private readonly ServiceProvider _services;
+    private readonly AppSettings _settings;
     private readonly ICommand? _openProtocolCommand;
     private readonly object? _commandParameter;
     private Action? _vsaUpdateAction;
@@ -29,12 +29,31 @@ public partial class BeobachtungenWindow : Window
         object? commandParameter,
         Action? vsaUpdateAction = null,
         Action? syncHoldingFieldsAction = null)
+        : this(
+            entries,
+            services?.Settings ?? throw new ArgumentNullException(nameof(services)),
+            holdingName,
+            openProtocolCommand,
+            commandParameter,
+            vsaUpdateAction,
+            syncHoldingFieldsAction)
+    {
+    }
+
+    internal BeobachtungenWindow(
+        ObservableCollection<ProtocolEntry> entries,
+        AppSettings settings,
+        string? holdingName,
+        ICommand? openProtocolCommand,
+        object? commandParameter,
+        Action? vsaUpdateAction = null,
+        Action? syncHoldingFieldsAction = null)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
 
         _entries = entries;
-        _services = services;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _openProtocolCommand = openProtocolCommand;
         _commandParameter = commandParameter;
         _vsaUpdateAction = vsaUpdateAction;
@@ -45,7 +64,7 @@ public partial class BeobachtungenWindow : Window
         // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths (gleiche Aufloesung wie OpenPhotoLink_Click).
         Behaviors.PhotoHoverPreviewBehavior.SetProjectRootProvider(
             EntriesGrid,
-            () => ProjectFileLocator.ProjectRootFromFile(_services.Settings.LastProjectPath));
+            () => ProjectFileLocator.ProjectRootFromFile(_settings.LastProjectPath));
 
         if (!string.IsNullOrWhiteSpace(holdingName))
         {
@@ -101,7 +120,7 @@ public partial class BeobachtungenWindow : Window
         if (string.IsNullOrWhiteSpace(rawPath))
             return;
 
-        var resolved = TryResolvePath(rawPath, _services.Settings.LastProjectPath) ?? rawPath;
+        var resolved = TryResolvePath(rawPath, _settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
             DialogHost.Current.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");

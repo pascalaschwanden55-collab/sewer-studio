@@ -15,5 +15,31 @@ public sealed class DataPageViewModelDependencyTests
         Assert.Contains("private readonly AppSettings _settings;", source);
         Assert.DoesNotContain("_sp.Dialogs", source);
         Assert.DoesNotContain("_sp.Settings", source);
+
+        var pageDirectory = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages");
+        var pageSources = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(pageDirectory, "DataPage*.cs").Select(File.ReadAllText));
+        Assert.DoesNotContain("Vm.Services", pageSources);
+        Assert.DoesNotContain("private ServiceProvider Services", pageSources);
+        Assert.DoesNotContain("Services.Settings", pageSources);
+        Assert.DoesNotContain("Services.Dialogs", pageSources);
+        Assert.DoesNotContain("Services.Vsa", pageSources);
+        Assert.DoesNotContain("Services.CodeCatalog", pageSources);
+        Assert.Contains("private IDialogService Dialogs => Vm.Dialogs;", pageSources);
+        Assert.Contains("private AppSettings Settings => Vm.Settings;", pageSources);
+
+        var observationsWindow = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "BeobachtungenWindow.xaml.cs"));
+        Assert.DoesNotContain("private readonly ServiceProvider _services;", observationsWindow);
+        Assert.Contains("private readonly AppSettings _settings;", observationsWindow);
     }
 }

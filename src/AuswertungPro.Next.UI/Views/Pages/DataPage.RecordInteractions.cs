@@ -72,7 +72,7 @@ public partial class DataPage : UserControl
             _floatingGridWindow.SetGridContent(active);
 
             // Fensterposition aus Settings laden
-            var settings = Services.Settings;
+            var settings = Settings;
             _floatingGridWindow.ApplySavedBounds(settings?.FloatingGridBounds);
 
             // Titel und Info aktualisieren
@@ -120,7 +120,7 @@ public partial class DataPage : UserControl
             return;
 
         // Fensterposition speichern
-        var settings = Services.Settings;
+        var settings = Settings;
         if (settings is not null)
         {
             settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
@@ -158,7 +158,7 @@ public partial class DataPage : UserControl
         if (_floatingGridWindow is null)
             return;
 
-        var settings = Services.Settings;
+        var settings = Settings;
         if (settings is not null)
         {
             settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
@@ -218,7 +218,7 @@ public partial class DataPage : UserControl
 
         _beobachtungenWindow = new BeobachtungenWindow(
             request.Entries,
-            Services,
+            Settings,
             request.HoldingName,
             request.OpenProtocolCommand,
             request.Record,

@@ -197,8 +197,7 @@ public partial class DataPage
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = Services;
-        var layout = sp.Settings.DataPageLayout;
+        var layout = Settings.DataPageLayout;
         _columnLayoutController.Restore(Grid.Columns, layout);
     }
 
@@ -214,16 +213,15 @@ public partial class DataPage
     private void SaveLayoutToSettings()
     {
         // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
-        // null sein. Dann gibt es nichts zu speichern — kein Zugriff auf Vm/Services
+        // null sein. Dann gibt es nichts zu speichern — keinen Zugriff auf Vm/Settings
         // erzwingen (wuerde sonst werfen).
         if (_columnLayoutController.IsRestoring || Grid.Columns.Count == 0
             || DataContext is not AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel)
             return;
 
-        var sp = Services;
-        var layout = sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
+        var layout = Settings.DataPageLayout ?? new DataPageLayoutSettings();
         layout.Columns = _columnLayoutController.Capture(Grid.Columns).Columns;
-        sp.Settings.DataPageLayout = layout;
-        sp.Settings.Save();
+        Settings.DataPageLayout = layout;
+        Settings.Save();
     }
 }
