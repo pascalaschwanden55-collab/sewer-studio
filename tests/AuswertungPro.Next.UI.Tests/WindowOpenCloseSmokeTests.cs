@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Threading;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -10,7 +9,7 @@ public sealed class WindowOpenCloseSmokeTests
     [Fact]
     public void Einfache_fenster_lassen_sich_oeffnen_und_wieder_schliessen()
     {
-        RunOnStaThread(() =>
+        StaTestRunner.Run(() =>
         {
             OpenAndClose(new KarteWindow());
             OpenAndClose(new MeasureSelectionWindow());
@@ -41,32 +40,4 @@ public sealed class WindowOpenCloseSmokeTests
         Assert.False(window.IsVisible);
     }
 
-    private static void RunOnStaThread(Action action)
-    {
-        ExceptionDispatchInfo? failure = null;
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception ex)
-            {
-                failure = ExceptionDispatchInfo.Capture(ex);
-            }
-            finally
-            {
-                Dispatcher.CurrentDispatcher.InvokeShutdown();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "WPF-Fenster-Smoke"
-        };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-
-        Assert.True(thread.Join(TimeSpan.FromSeconds(15)), "Der WPF-Fenstertest reagiert nicht mehr.");
-        failure?.Throw();
-    }
 }
