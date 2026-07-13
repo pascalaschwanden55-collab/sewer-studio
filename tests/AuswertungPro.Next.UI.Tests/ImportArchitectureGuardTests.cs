@@ -57,8 +57,13 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportProtocolRegenerationController.cs"));
         var distributionController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportProtocolDistributionController.cs"));
+        var oneClickController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportOneClickProjectController.cs"));
 
-        Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
+        Assert.Contains("_oneClickProjectController.ExecuteAsync", viewModel);
+        Assert.Contains("_createImporter().Import", oneClickController);
+        Assert.DoesNotContain("_sp.CreateProjectImportOrchestrator()", viewModel);
+        Assert.DoesNotContain("TryWriteKanalImportReport", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
@@ -77,6 +82,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.DoesNotContain("new WinCanDbImportService", viewModel);
         Assert.DoesNotContain("new System.Net.Http.HttpClient", viewModel);
         Assert.Contains("CreateProjectImportOrchestrator", provider);
+        Assert.Contains("CreateOneClickProjectImportService", provider);
+        Assert.Contains("OneClickImportReports = new OneClickImportReportWriter", provider);
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
         Assert.Contains("ProtocolRegeneration = new ProtocolRegenerationAdapter()", provider);

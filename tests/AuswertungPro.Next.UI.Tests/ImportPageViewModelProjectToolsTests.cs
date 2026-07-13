@@ -107,6 +107,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Kanalprojekt_importieren_ohne_gespeichertes_Projekt_zeigt_Hinweis()
+    {
+        var dialogs = new DialogFake();
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        await viewModel.ImportKanalProjektCommand.ExecuteAsync(null);
+
+        Assert.Contains("zuerst", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Import Kanalfernseh-Projekt", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
     public async Task Portabilitaets_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
     {
         var dialogs = new DialogFake();
@@ -240,6 +263,71 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains(logger.Messages, message => message.Contains("Zugriff verweigert", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Ein_Knopf_Import_Controller_speichert_Report_und_Ergebnis()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.Kins);
+        var reports = new OneClickReportWriterFake();
+        var controller = new ImportOneClickProjectController(dialogs, () => importer, reports);
+        var project = new Project();
+        var collectionLock = new object();
+        var progress = string.Empty;
+        var summary = string.Empty;
+        var details = string.Empty;
+        var saveCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            CollectionLock: collectionLock,
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: value => progress = value,
+            AppendSummary: value => summary += value,
+            AppendDetails: value => details += value));
+
+        Assert.Equal(1, importer.Calls);
+        Assert.Same(collectionLock, importer.Context?.CollectionLock);
+        Assert.Equal(1, saveCalls);
+        Assert.Equal(1, reports.Calls);
+        Assert.Equal(string.Empty, progress);
+        Assert.Contains("4 Haltungen", summary);
+        Assert.Contains("Importmeldung", details);
+        Assert.Equal("Import Kanalfernseh-Projekt", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_Controller_speichert_bei_unbekanntem_Format_nicht()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.Unknown);
+        var reports = new OneClickReportWriterFake();
+        var controller = new ImportOneClickProjectController(dialogs, () => importer, reports);
+        var saveCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => new Project(),
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { }));
+
+        Assert.Equal(0, saveCalls);
+        Assert.Equal(0, reports.Calls);
+        Assert.Contains("nicht eindeutig", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Importmeldung", dialogs.LastInfoMessage);
+    }
+
     public void Dispose() => _loggerFactory.Dispose();
 
     private sealed class PortabilityFake : IProjectPortabilityService
@@ -335,6 +423,45 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
                 Errors: 1,
                 Messages: new[] { "Haltung A" });
         }
+    }
+
+    private sealed class OneClickImporterFake : IOneClickProjectImportService
+    {
+        private readonly OneClickProjectImportFormat _format;
+
+        public OneClickImporterFake(OneClickProjectImportFormat format)
+        {
+            _format = format;
+        }
+
+        public int Calls { get; private set; }
+        public ImportRunContext? Context { get; private set; }
+
+        public OneClickProjectImportResult Import(
+            string sourceFolder,
+            string projectFolder,
+            Project project,
+            ImportRunContext? context = null)
+        {
+            Calls++;
+            Context = context;
+            return new OneClickProjectImportResult(
+                _format,
+                Found: 4,
+                Created: 2,
+                Updated: 2,
+                Errors: 1,
+                Conflicts: 3,
+                Messages: new[] { "Importmeldung" });
+        }
+    }
+
+    private sealed class OneClickReportWriterFake : IOneClickImportReportWriter
+    {
+        public int Calls { get; private set; }
+
+        public void TryWrite(string projectFolder, OneClickProjectImportResult result)
+            => Calls++;
     }
 
     private sealed class CodeCatalogFake : ICodeCatalogProvider

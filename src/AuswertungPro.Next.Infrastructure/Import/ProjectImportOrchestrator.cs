@@ -35,7 +35,7 @@ public sealed record OneClickImportResult(
 /// Jeder Schritt laeuft in einem try/catch: Fehler werden als Message gesammelt,
 /// der Lauf wird nicht abgebrochen.
 /// </summary>
-public sealed class ProjectImportOrchestrator
+public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 {
     private readonly IXtfImportService _xtf;
     private readonly IWinCanDbImportService _winCan;
@@ -71,6 +71,31 @@ public sealed class ProjectImportOrchestrator
     /// <param name="projectFolder">Projektstammordner (wird angelegt falls nicht vorhanden).</param>
     /// <param name="project">Offenes Projekt-Objekt.</param>
     /// <param name="ctx">Optionaler Lauf-Kontext (CancellationToken, Log, …).</param>
+    OneClickProjectImportResult IOneClickProjectImportService.Import(
+        string sourceFolder,
+        string projectFolder,
+        Project project,
+        ImportRunContext? context)
+    {
+        var result = Import(sourceFolder, projectFolder, project, context);
+        return new OneClickProjectImportResult(
+            result.Format switch
+            {
+                KanalExportFormat.Ikas => OneClickProjectImportFormat.Ikas,
+                KanalExportFormat.Ibak => OneClickProjectImportFormat.Ibak,
+                KanalExportFormat.WinCan => OneClickProjectImportFormat.WinCan,
+                KanalExportFormat.Ambiguous => OneClickProjectImportFormat.Ambiguous,
+                KanalExportFormat.Kins => OneClickProjectImportFormat.Kins,
+                _ => OneClickProjectImportFormat.Unknown
+            },
+            result.Found,
+            result.Created,
+            result.Updated,
+            result.Errors,
+            result.Conflicts,
+            result.Messages);
+    }
+
     public OneClickImportResult Import(
         string sourceFolder,
         string projectFolder,
