@@ -34,6 +34,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
+    private readonly IDialogService _dialogs;
+    private readonly AppSettings _settings;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -145,6 +147,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         _shell = shell;
         _sp = services;
+        _dialogs = services.Dialogs;
+        _settings = services.Settings;
         StartFilter = startFilter;
         _measureRecommendationService = _sp.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -152,22 +156,22 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             value => IsSaveStatusVisible = value,
             AutoSaveOnTimerTick);
         _printController = new DataPagePrintController(
-            _sp.Dialogs,
+            _dialogs,
             _sp.ProtocolPdfExporter,
             () => _shell.GetProjectFolder(),
             record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings.HydraulikPanel,
-                saveSettings: _sp.Settings.Save),
-            getLastProjectPath: () => _sp.Settings.LastProjectPath,
+                _settings.HydraulikPanel,
+                saveSettings: _settings.Save),
+            getLastProjectPath: () => _settings.LastProjectPath,
             findSchachtByNummer: FindSchachtByNummer,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings.HydraulikPanel,
+                _settings.HydraulikPanel,
                 dn,
-                saveSettings: _sp.Settings.Save));
+                saveSettings: _settings.Save));
         _originalPdfController = new DataPageOriginalPdfController(
-            _sp.Dialogs,
+            _dialogs,
             EnsureProtocolPath,
             () => _shell.GetProjectFolder(),
             DataPageProtocolPathResolver.ResolveOriginalPdfPaths,
@@ -176,7 +180,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
         LiveControl.LiveControlRetryBridge.Register(TryStartVideoAiPipelineByName);
 
-        var gridLayout = DataPageGridLayoutController.Restore(_sp.Settings.DataPageLayout);
+        var gridLayout = DataPageGridLayoutController.Restore(_settings.DataPageLayout);
         GridMinRowHeight = gridLayout.GridMinRowHeight;
         GridZoom = gridLayout.GridZoom;
         IsColumnReorderEnabled = gridLayout.IsColumnReorderEnabled;
@@ -189,7 +193,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             DropdownOptionsStore.LoadEmpfohleneSanierungsmassnahmenOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
-            _sp.Dialogs,
+            _dialogs,
             _measureRecommendationService,
             () => Selected,
             () => Records,
@@ -202,36 +206,36 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _shell.SetStatus,
             UpdateLearningInfo);
         _costRestoreController = new DataPageCostRestoreController(
-            _sp.Dialogs,
+            _dialogs,
             () => Selected,
-            () => _sp.Settings.LastProjectPath,
+            () => _settings.LastProjectPath,
             projectPath => new ProjectCostStoreRepository().Load(projectPath),
             ProjectCostStoreRepository.GetStorePath,
             (record, cost) => ApplyCostsToRecord(record, cost, learn: false),
             _shell.SetStatus);
         _videoRelinkController = new DataPageVideoRelinkController(
-            _sp.Dialogs,
-            () => _sp.Settings.LastVideoSourceFolder,
-            () => _sp.Settings.LastVideoFolder,
-            () => _sp.Settings.LastProjectPath,
+            _dialogs,
+            () => _settings.LastVideoSourceFolder,
+            () => _settings.LastVideoFolder,
+            () => _settings.LastProjectPath,
             folder =>
             {
-                _sp.Settings.LastVideoSourceFolder = folder;
-                _sp.Settings.LastVideoFolder = folder; // legacy compatibility
-                _sp.Settings.Save();
+                _settings.LastVideoSourceFolder = folder;
+                _settings.LastVideoFolder = folder; // legacy compatibility
+                _settings.Save();
             },
             (record, path, userEdited) => SaveVideoLink(record, path, userEdited));
         _videoPlaybackController = new DataPageVideoPlaybackController(
-            _sp.Dialogs,
+            _dialogs,
             EnsureVideoPath,
-            () => PlayerWindowOptions.FromSettings(_sp.Settings),
+            () => PlayerWindowOptions.FromSettings(_settings),
             DataPageVideoOverlayBuilder.Build,
             ShowPlayerWindow,
             (ex, path) => DataPageVideoStartErrorLogWriter.TryWrite(ex, path));
         _mediaSearchController = new DataPageMediaSearchController(
             () => Records,
-            () => _sp.Settings.LastVideoSourceFolder,
-            () => _sp.Settings.LastVideoFolder,
+            () => _settings.LastVideoSourceFolder,
+            () => _settings.LastVideoFolder,
             ShowMediaSearchWindow,
             () =>
             {
@@ -253,7 +257,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _shell.SetStatus);
         _protocolWindowController = new DataPageProtocolWindowController(
             () => _shell.Project,
-            () => _sp.Settings.LastProjectPath,
+            () => _settings.LastProjectPath,
             ResolveExistingPath,
             ShowProtocolWindow,
             () =>
@@ -272,11 +276,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => _shell.Project,
             () => Selected,
             value => Selected = value,
-            (message, title) => _sp.Dialogs.Confirm(message, title),
+            (message, title) => _dialogs.Confirm(message, title),
             () => RecordsOrderChanged?.Invoke(),
             ScheduleAutoSave);
         _videoAnalysisController = new DataPageVideoAnalysisController(
-            _sp.Dialogs,
+            _dialogs,
             () => Records,
             EnsureVideoPath,
             () => _sp.CodeCatalog.AllowedCodes(),
@@ -290,7 +294,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ScheduleAutoSave,
             action => System.Windows.Application.Current?.Dispatcher.BeginInvoke(action));
         _sanierungWindowController = new DataPageSanierungWindowController(
-            _sp.Dialogs,
+            _dialogs,
             () => Selected,
             ParseRecommendedTemplates,
             () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
@@ -472,14 +476,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public void ScheduleAutoSave()
     {
         _timers.ScheduleAutoSave(
-            _sp.Settings.DataAutoSaveMode,
+            _settings.DataAutoSaveMode,
             markDirty: () => _shell.Project.Dirty = true);
     }
 
     private void AutoSaveOnTimerTick()
     {
         _timers.HandleAutoSaveTimerTick(
-            _sp.Settings.DataAutoSaveMode,
+            _settings.DataAutoSaveMode,
             save: AutoSave,
             isProjectDirty: () => _shell.Project.Dirty);
     }
@@ -509,7 +513,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         var path = ResolveExistingPath(record.GetFieldValue("Link_G"));
         if (string.IsNullOrWhiteSpace(path))
         {
-            _sp.Dialogs.Info("Für diese Haltung ist keine Gegeninspektion vorhanden.", "Gegeninspektion");
+            _dialogs.Info("Für diese Haltung ist keine Gegeninspektion vorhanden.", "Gegeninspektion");
             return;
         }
 
@@ -593,10 +597,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         var resolvedLink = ResolveExistingPath(record.GetFieldValue("Link"));
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
+        var initial = !string.IsNullOrWhiteSpace(_settings.LastVideoSourceFolder)
+            ? _settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_settings.LastVideoFolder)
+                ? _settings.LastVideoFolder
             : _shell.GetProjectFolder();   // Projekt-ROOT (nicht GetDirectoryName der projekt.json)
 
         var storedFilesRaw = _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) ? raw : null;
@@ -605,7 +609,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             record,
             resolvedLink,
             initial,
-            _sp.Settings.LastProjectPath,
+            _settings.LastProjectPath,
             storedFilesRaw);
     }
 
@@ -661,7 +665,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         var holding = SanierungsMatrixNavigationTarget.FromRecord(record);
         if (string.IsNullOrWhiteSpace(holding))
         {
-            _sp.Dialogs.Warn("Haltungsname fehlt in der Zeile.", "Sanierungs-Matrix");
+            _dialogs.Warn("Haltungsname fehlt in der Zeile.", "Sanierungs-Matrix");
             return;
         }
 
@@ -681,7 +685,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             request.Holding,
             null,
             request.RecommendedTemplates,
-            _sp.Settings.LastProjectPath,
+            _settings.LastProjectPath,
             request.ApplyCosts,
             haltungRecord: request.Record,
             projectRecords: Records);
@@ -691,7 +695,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         // darum laeuft der projektweite Sync hier (kennt Project + frisch gespeicherten Store).
         costCalcVm.Saved += () =>
         {
-            var syncProjectPath = _sp.Settings.LastProjectPath;
+            var syncProjectPath = _settings.LastProjectPath;
             if (string.IsNullOrWhiteSpace(syncProjectPath))
                 return;
             var syncStore = new ProjectCostStoreRepository().Load(syncProjectPath, out var syncLoadError);
@@ -721,10 +725,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private string? EnsureVideoPath(HaltungRecord record)
     {
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
+        var initial = !string.IsNullOrWhiteSpace(_settings.LastVideoSourceFolder)
+            ? _settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_settings.LastVideoFolder)
+                ? _settings.LastVideoFolder
             : _shell.GetProjectFolder();   // Projekt-ROOT (nicht GetDirectoryName der projekt.json)
 
         return DataPageVideoPathWorkflowController.Resolve(
@@ -734,15 +738,15 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ResolveExistingPath,
             Directory.Exists,
             DataPageVideoPathWorkflowController.ResolveWithVideoSearchTool,
-            (title, initialFolder) => _sp.Dialogs.SelectFolder(title, initialFolder),
+            (title, initialFolder) => _dialogs.SelectFolder(title, initialFolder),
             folder =>
             {
-                _sp.Settings.LastVideoSourceFolder = folder;
-                _sp.Settings.LastVideoFolder = folder; // legacy compatibility
-                _sp.Settings.Save();
+                _settings.LastVideoSourceFolder = folder;
+                _settings.LastVideoFolder = folder; // legacy compatibility
+                _settings.Save();
             },
-            (message, title) => _sp.Dialogs.Info(message, title),
-            (title, filter, initialFolder) => _sp.Dialogs.OpenFile(title, filter, initialFolder),
+            (message, title) => _dialogs.Info(message, title),
+            (title, filter, initialFolder) => _dialogs.OpenFile(title, filter, initialFolder),
             (path, userEdited) => SaveVideoLink(record, path, userEdited));
     }
 
@@ -765,8 +769,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         var win = new MediaSearchWindow(
             records.ToList(),
             initial,
-            _sp.Dialogs,
-            _sp.Settings,
+            _dialogs,
+            _settings,
             _sp.BatchMediaSearch);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
@@ -783,7 +787,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void ShowHydraulikPanel(DataPageHydraulikPanelRequest request)
     {
-        var vm = new HydraulikPanelViewModel(_sp.Settings);
+        var vm = new HydraulikPanelViewModel(_settings);
         vm.LoadFromRecord(request.DnMillimeters, request.Material, request.WasserstandMillimeters);
 
         var win = new HydraulikPanelWindow(vm);
@@ -827,7 +831,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (pdfs.Count == 0)
         {
             var name = record?.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 $"Kein Dichtheitspruefungsprotokoll fuer Haltung '{name}' gefunden.\n" +
                 "Dichtheitsprotokolle werden beim Kanalfernseh-Import automatisch verteilt (…_DP.pdf).",
                 "Dichtheitspruefung");
@@ -836,7 +840,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         var (ok, fehler) = DataPageOriginalPdfController.TryShellOpen(pdfs[0]);
         if (!ok)
-            _sp.Dialogs.Warn($"Dichtheitspruefung konnte nicht geoeffnet werden:\n{fehler}", "Dichtheitspruefung");
+            _dialogs.Warn($"Dichtheitspruefung konnte nicht geoeffnet werden:\n{fehler}", "Dichtheitspruefung");
     }
 
     private void OpenContainingFolder(HaltungRecord? record)
@@ -854,14 +858,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrWhiteSpace(target))
         {
             var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
-            _sp.Dialogs.Info(
+            _dialogs.Info(
                 $"Kein Datei- oder Ordnerpfad gefunden fuer Haltung '{name}'.",
                 "Ordner");
             return;
         }
 
         if (!ExplorerRevealService.TryReveal(target, out var error))
-            _sp.Dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
+            _dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
@@ -873,7 +877,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private string? ResolveExistingPath(string? raw)
-        => DataPageProtocolPathResolver.ResolveExistingPath(raw, _sp.Settings.LastProjectPath);
+        => DataPageProtocolPathResolver.ResolveExistingPath(raw, _settings.LastProjectPath);
 
     private void ShowSaveStatus(string? text)
     {
@@ -966,11 +970,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void PersistDataPageBasicUiSettings()
     {
         DataPageGridLayoutController.Persist(
-            _sp.Settings.DataPageLayout,
+            _settings.DataPageLayout,
             GridMinRowHeight,
             GridZoom,
             IsColumnReorderEnabled,
-            layout => _sp.Settings.DataPageLayout = layout,
-            _sp.Settings.Save);
+            layout => _settings.DataPageLayout = layout,
+            _settings.Save);
     }
 }
