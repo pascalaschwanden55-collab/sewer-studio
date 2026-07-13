@@ -37,6 +37,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public ObservableCollection<string> PruefungsresultatOptions { get; }
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
+    public ObservableCollection<string> SchachtformOptions { get; }
 
     [ObservableProperty] private SchachtRecord? _selected;
     [ObservableProperty] private string _lastResult = "";
@@ -98,6 +99,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         PruefungsresultatOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadPruefungsresultatOptions());
         ReferenzpruefungOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadReferenzpruefungOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
+        SchachtformOptions = new ObservableCollection<string>(
+            new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
         EnforceEigentuemerOptionsExact();
 
         _sanierenDropdownOptions = CreateDropdownOptionGroup(

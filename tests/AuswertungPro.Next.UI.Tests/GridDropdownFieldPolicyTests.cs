@@ -43,6 +43,17 @@ public sealed class GridDropdownFieldPolicyTests
     }
 
     [Fact]
+    public void TryResolve_returns_fixed_combo_for_schachtform()
+    {
+        var ok = GridDropdownFieldPolicy.TryResolve("Schachtform", out var spec);
+
+        Assert.True(ok);
+        Assert.False(spec.Managed);
+        Assert.False(spec.AllowFreeText);
+        Assert.Equal("SchachtformOptions", spec.ItemsSourcePath);
+    }
+
+    [Fact]
     public void TryResolve_returns_false_for_unknown_field()
     {
         var ok = GridDropdownFieldPolicy.TryResolve("Unbekannt", out var spec);

@@ -32,6 +32,15 @@ internal static class SchachtProtocolApplier
         if (!string.IsNullOrWhiteSpace(parsed.Funktion))
             SetSchachtField(target, "Funktion", parsed.Funktion);
 
+        if (!string.IsNullOrWhiteSpace(parsed.Schachtform))
+            SetSchachtField(target, "Schachtform", parsed.Schachtform);
+
+        if (!string.IsNullOrWhiteSpace(parsed.Dimension))
+            SetSchachtField(target, "Dimension", parsed.Dimension);
+
+        if (!string.IsNullOrWhiteSpace(parsed.Schachttiefe))
+            SetSchachtField(target, "Schachttiefe", parsed.Schachttiefe);
+
         if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden))
             SetSchachtField(target, "Primaere Schaeden", parsed.PrimaereSchaeden);
 
@@ -85,6 +94,9 @@ internal static class SchachtProtocolApplier
         if (!string.IsNullOrWhiteSpace(parsed.SchachtNummer)) imported.Add("Schachtnummer");
         if (!string.IsNullOrWhiteSpace(parsed.Datum)) imported.Add("Ausfuehrung Datum/Jahr");
         if (!string.IsNullOrWhiteSpace(parsed.Funktion)) imported.Add("Funktion");
+        if (!string.IsNullOrWhiteSpace(parsed.Schachtform)) imported.Add("Schachtform");
+        if (!string.IsNullOrWhiteSpace(parsed.Dimension)) imported.Add("Dimension");
+        if (!string.IsNullOrWhiteSpace(parsed.Schachttiefe)) imported.Add("Schachttiefe");
         if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden)) imported.Add("Primaere Schaeden");
         if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen)) imported.Add("Bemerkungen");
         if (damageEntries.Count > 0) imported.Add($"Protokoll ({damageEntries.Count} Beobachtungen)");

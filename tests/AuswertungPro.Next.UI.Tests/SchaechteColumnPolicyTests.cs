@@ -12,6 +12,8 @@ public sealed class SchaechteColumnPolicyTests
     [InlineData("Referenzprüfung", "Referenzpruefung")]
     [InlineData("Ja / Nein", "Sanieren_JaNein")]
     [InlineData("Sanierung ja", "Sanieren_JaNein")]
+    [InlineData("Schachtform", "Schachtform")]
+    [InlineData("Form", "Schachtform")]
     [InlineData("Dichtheitsprüfung", "Pruefungsresultat")]
     [InlineData("Bemerkung", null)]
     public void ResolveOptionField_BehaeltBestehendeSpaltenzuordnung(string column, string? expected)
@@ -52,6 +54,8 @@ public sealed class SchaechteColumnPolicyTests
     [InlineData("PDF Link", "Dokumente und Medien")]
     [InlineData("Zustandsklasse", "Zustand und Inspektion")]
     [InlineData("Schachtmaterial", "Stammdaten")]
+    [InlineData("Dimension", "Stammdaten")]
+    [InlineData("Schachttiefe", "Stammdaten")]
     [InlineData("Freie Notiz", "Weitere Angaben")]
     public void ResolveSchachtDetailGroup_BehaeltGruppierung(string column, string expected)
         => Assert.Equal(expected, SchaechteColumnPolicy.ResolveSchachtDetailGroup(column));

@@ -15,6 +15,9 @@ public sealed class SchachtProtocolImportServiceTests
         {
             "Schachtprotokoll   Nr. 74467",
             "Schachttyp Kontrollschacht",
+            "Schachtform Oval",
+            "Dimension 1000 x 800 mm",
+            "Schachttiefe 2,35 m",
             "Datum 02/10/2025"
         });
 
@@ -23,6 +26,9 @@ public sealed class SchachtProtocolImportServiceTests
         Assert.True(result.IstSchachtprotokoll);
         Assert.Equal("74467", result.Schachtnummer);
         Assert.Equal("Kontrollschacht", result.Funktion);
+        Assert.Equal("Oval", result.Schachtform);
+        Assert.Equal("1000 x 800 mm", result.Dimension);
+        Assert.Equal("2.35", result.Schachttiefe);
     }
 
     [Fact]
@@ -61,7 +67,8 @@ public sealed class SchachtProtocolImportServiceTests
     public void Apply_BautRecordNeuAuf()
     {
         var ergebnis = new SchachtProtocolParseResult(
-            true, "74467", "02.10.2025", "Kontrollschacht", null, null, "offen", null,
+            true, "74467", "02.10.2025", "Kontrollschacht",
+            "Rund", "1000 mm", "2.35", null, null, "offen", null,
             new[] { ("Schachtdeckel", "gerissen") });
         var schacht = new SchachtRecord();
         var svc = new SchachtProtocolImportService();
@@ -70,6 +77,9 @@ public sealed class SchachtProtocolImportServiceTests
 
         Assert.Equal("74467", schacht.GetFieldValue("Schachtnummer"));
         Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
+        Assert.Equal("Rund", schacht.GetFieldValue("Schachtform"));
+        Assert.Equal("1000 mm", schacht.GetFieldValue("Dimension"));
+        Assert.Equal("2.35", schacht.GetFieldValue("Schachttiefe"));
         Assert.Equal("Schaechte_Verteilt/74467/quelle.pdf", schacht.GetFieldValue("PDF_Path"));
         Assert.NotNull(schacht.Protocol);
         Assert.Single(schacht.Protocol!.Original.Entries);

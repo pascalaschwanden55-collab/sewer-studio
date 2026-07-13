@@ -62,6 +62,11 @@ public static class GridDropdownFieldPolicy
                 "AusgefuehrtDurchOptions",
                 AllowFreeText: true,
                 Managed: false),
+            "Schachtform" => new GridDropdownFieldSpec(
+                optionField,
+                "SchachtformOptions",
+                AllowFreeText: false,
+                Managed: false),
             _ => null!
         };
 

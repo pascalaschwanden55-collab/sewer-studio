@@ -17,6 +17,9 @@ public sealed class SchachtPdfImportMappingTests
             "GEP Aufnahmen Altdorf 2025",
             "Schachtprotokoll   Nr. 74467",
             "Schachttyp Kontrollschacht",
+            "Schachtform Rund",
+            "Dimension 1000 mm",
+            "Schachttiefe 2,35 m",
             "Zustand der Bauteile      Maengelfrei",
             "Datum 02/10/2025",
             "Bemerkung ohne Auffaelligkeiten"
@@ -27,8 +30,29 @@ public sealed class SchachtPdfImportMappingTests
         Assert.Equal("74467", parsed.SchachtNummer);
         Assert.Equal("02.10.2025", parsed.Datum);
         Assert.Equal("Kontrollschacht", parsed.Funktion);
+        Assert.Equal("Rund", parsed.Schachtform);
+        Assert.Equal("1000 mm", parsed.Dimension);
+        Assert.Equal("2.35", parsed.Schachttiefe);
         Assert.Equal("Maengelfrei", parsed.PrimaereSchaeden);
         Assert.Null(parsed.Bemerkungen);
+    }
+
+    [Theory]
+    [InlineData("Schachtform rund\nDurchmesser 1,2 m\nTiefe 2350 mm", "Rund", "1200 mm", "2.35")]
+    [InlineData("Form Oval\nAbmessung 1000 x 800 mm\nSchachttiefe 2.5", "Oval", "1000 x 800 mm", "2.5")]
+    [InlineData("Schachtform quadratisch\nDimension 80 cm x 80 cm\nSchachttiefe 250 cm", "Quadratisch", "800 x 800 mm", "2.5")]
+    [InlineData("Schachtform rechteckig\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Rechteckig", "1200 x 800 mm", "3")]
+    public void ParseSchachtFields_NormalisiertFormDimensionUndSchachttiefe(
+        string text,
+        string expectedForm,
+        string expectedDimension,
+        string expectedDepth)
+    {
+        var parsed = LegacyPdfImportService.ParseSchachtFields(text);
+
+        Assert.Equal(expectedForm, parsed.Schachtform);
+        Assert.Equal(expectedDimension, parsed.Dimension);
+        Assert.Equal(expectedDepth, parsed.Schachttiefe);
     }
 
     [Fact]
@@ -118,6 +142,9 @@ public sealed class SchachtPdfImportMappingTests
                 "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
                 "Schachtprotokoll Schacht Nr. 1085605",
                 "Schachtfunktion            Kontrollschacht",
+                "Schachtform                Rechteckig",
+                "Dimension                  1200 x 800 mm",
+                "Schachttiefe               2,35 m",
                 "Bemerkungen                ueberdeckt, 2 Einlaeufe",
                 "ZUSTAND DER SCHACHTBAUTEILE",
                 "Schacht                    Ueberdeckt");
@@ -129,6 +156,9 @@ public sealed class SchachtPdfImportMappingTests
             var record = Assert.Single(project.SchaechteData);
             Assert.Equal("1085605", record.GetFieldValue("Schachtnummer"));
             Assert.Equal("Kontrollschacht", record.GetFieldValue("Funktion"));
+            Assert.Equal("Rechteckig", record.GetFieldValue("Schachtform"));
+            Assert.Equal("1200 x 800 mm", record.GetFieldValue("Dimension"));
+            Assert.Equal("2.35", record.GetFieldValue("Schachttiefe"));
             Assert.Equal("18.06.2026", record.GetFieldValue("Ausführung\nDatum/Jahr"));
             Assert.Equal("offen", record.GetFieldValue("Status\noffen/abgeschlossen"));
             Assert.Contains("Schacht: Ueberdeckt", record.GetFieldValue("Primäre Schäden"));

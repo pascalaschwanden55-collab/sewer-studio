@@ -23,6 +23,10 @@ internal static class SchaechteColumnPolicy
     {
         var normalized = Normalize(columnName);
 
+        if (normalized.Contains("schachtform", StringComparison.Ordinal)
+            || string.Equals(normalized, "form", StringComparison.Ordinal))
+            return "Schachtform";
+
         if ((normalized.Contains("ausgefuehrt", StringComparison.Ordinal)
              || normalized.Contains("ausgefuhrt", StringComparison.Ordinal))
             && normalized.Contains("durch", StringComparison.Ordinal))
@@ -116,7 +120,8 @@ internal static class SchaechteColumnPolicy
         if (ContainsAny(
                 normalized,
                 "schacht", "nummer", "name", "nr", "funktion", "strasse", "lage", "ort",
-                "material", "dn", "durchmesser", "eigentuem", "eigentum"))
+                "material", "dn", "durchmesser", "dimension", "tiefe", "form",
+                "eigentuem", "eigentum"))
             return "Stammdaten";
 
         return "Weitere Angaben";

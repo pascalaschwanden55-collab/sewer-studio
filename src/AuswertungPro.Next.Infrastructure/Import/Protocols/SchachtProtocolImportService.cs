@@ -26,14 +26,15 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
         if (!istSchacht)
         {
             return new SchachtProtocolParseResult(
-                false, null, null, null, null, null, null, null,
+                false, null, null, null, null, null, null, null, null, null, null,
                 Array.Empty<(string, string)>());
         }
 
         var pf = LegacyPdfImportService.ParseSchachtFields(fullText);
         var damages = SchachtProtocolParser.ParseSchachtDamageEntries(fullText);
         return new SchachtProtocolParseResult(
-            true, pf.SchachtNummer, pf.Datum, pf.Funktion, pf.PrimaereSchaeden,
+            true, pf.SchachtNummer, pf.Datum, pf.Funktion,
+            pf.Schachtform, pf.Dimension, pf.Schachttiefe, pf.PrimaereSchaeden,
             pf.Bemerkungen, pf.Status, pf.Link, damages);
     }
 
@@ -53,6 +54,7 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
     {
         var pf = new LegacyPdfImportService.ParsedSchachtFields(
             ergebnis.Schachtnummer, ergebnis.Datum, ergebnis.Funktion,
+            ergebnis.Schachtform, ergebnis.Dimension, ergebnis.Schachttiefe,
             ergebnis.PrimaereSchaeden, ergebnis.Bemerkungen, ergebnis.Status, ergebnis.Link);
         var key = (ergebnis.Schachtnummer ?? "").Trim();
         SchachtProtocolApplier.Apply(ziel, key, pf, ergebnis.Schaeden, pdfPfadFuerFeld);

@@ -33,7 +33,8 @@ internal static class SchachtProtocolParser
     internal static LegacyPdfImportService.ParsedSchachtFields ParseSchachtFields(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
-            return new LegacyPdfImportService.ParsedSchachtFields(null, null, null, null, null, null, null);
+            return new LegacyPdfImportService.ParsedSchachtFields(
+                null, null, null, null, null, null, null, null, null, null);
 
         var normalized = NormalizePdfText(text.Replace("\r\n", "\n"));
 
@@ -53,6 +54,8 @@ internal static class SchachtProtocolParser
         var funktion = GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
                        ?? GetFirst(@"\bSchachtfunktion\s+(?<v>[^\n\r]+)")?.Trim();
 
+        var stammdaten = SchachtStammdatenParser.Parse(normalized);
+
         var primaryDamages = ParsePrimaryDamagesFromConditionSection(normalized);
         var remarkDamages = ParseRemarkDamageLines(normalized);
         var combinedPrimaryDamages = CombineDamageLines(primaryDamages, remarkDamages);
@@ -66,6 +69,9 @@ internal static class SchachtProtocolParser
             SchachtNummer: schachtNummer,
             Datum: datum,
             Funktion: funktion,
+            Schachtform: stammdaten.Schachtform,
+            Dimension: stammdaten.Dimension,
+            Schachttiefe: stammdaten.Schachttiefe,
             PrimaereSchaeden: effectivePrimaryDamages,
             Bemerkungen: null,
             Status: status,
