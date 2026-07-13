@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -19,7 +20,7 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// liegen, werden nur relativ verlinkt. GUID-benannte Fotos (nur über die DB zuordenbar) werden
 /// hier NICHT erfasst — dafür ist der DB-Pfad (WinCan .db3 / IKAS FDB) zuständig.
 /// </summary>
-public sealed class ProjectPhotoAssignmentService
+public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentService
 {
     public sealed record Result(
         int HoldingsMatched,
@@ -103,6 +104,20 @@ public sealed class ProjectPhotoAssignmentService
         if (holdings > 0)
             project.Dirty = true;
         return new Result(holdings, assigned, copied, unmatched, messages);
+    }
+
+    ProjectPhotoAssignmentResult IProjectPhotoAssignmentService.AssignFromFolder(
+        string projectFolder,
+        string sourceFolder,
+        Project project)
+    {
+        var result = AssignFromFolder(projectFolder, sourceFolder, project);
+        return new ProjectPhotoAssignmentResult(
+            result.HoldingsMatched,
+            result.PhotosAssigned,
+            result.PhotosCopied,
+            result.UnmatchedFiles,
+            result.Messages);
     }
 
     private static List<string> EnumerateImages(string root)

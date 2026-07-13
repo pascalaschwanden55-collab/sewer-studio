@@ -53,11 +53,14 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("_sp.CreateProjectImportOrchestrator()", viewModel);
         Assert.Contains("_sp.ProjectPortability.MakePortable", viewModel);
         Assert.DoesNotContain("new ProjectPortabilityService", viewModel);
+        Assert.Contains("_sp.ProjectPhotoAssignment.AssignFromFolder", viewModel);
+        Assert.DoesNotContain("new ProjectPhotoAssignmentService", viewModel);
         Assert.DoesNotContain("new XtfImportServiceAdapter", viewModel);
         Assert.DoesNotContain("new WinCanDbImportService", viewModel);
         Assert.DoesNotContain("new System.Net.Http.HttpClient", viewModel);
         Assert.Contains("CreateProjectImportOrchestrator", provider);
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
+        Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
         Assert.Contains("_importAiHttp", provider);
     }
 }

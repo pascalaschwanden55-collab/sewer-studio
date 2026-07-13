@@ -523,8 +523,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             return;
 
         ImportProgress = "Fotos zuordnen: nach Haltung matchen, ins Projekt kopieren, verlinken...";
-        var svc = new ProjectPhotoAssignmentService();
-        var result = await Task.Run(() => svc.AssignFromFolder(projectFolder!, src!, _shell.Project));
+        var result = await Task.Run(() =>
+            _sp.ProjectPhotoAssignment.AssignFromFolder(projectFolder!, src!, _shell.Project));
         ImportProgress = "";
 
         _ = _shell.TrySaveProject();
