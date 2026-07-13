@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Schatten;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Services;
@@ -21,8 +22,10 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
 {
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
-    private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly Func<Project?> _getProject;
+    private readonly ISchattenAuswertungStore _storeRepository;
+    private readonly Func<ISchattenAuswertungService> _createService;
+    private readonly Func<string?> _getProjectPath;
 
     private SchattenAuswertungStore _store = new();
     private string? _storeLoadError;
@@ -45,9 +48,24 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
     public IRelayCommand NeuLadenCommand { get; }
 
     public SchattenauswertungPageViewModel(ShellViewModel shell, ServiceProvider sp)
+        : this(
+            getProject: () => (shell ?? throw new ArgumentNullException(nameof(shell))).Project,
+            store: (sp ?? throw new ArgumentNullException(nameof(sp))).SchattenStore,
+            createService: sp.CreateSchattenAuswertung,
+            getProjectPath: () => sp.Settings.LastProjectPath)
     {
-        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
-        _sp = sp ?? throw new ArgumentNullException(nameof(sp));
+    }
+
+    public SchattenauswertungPageViewModel(
+        Func<Project?> getProject,
+        ISchattenAuswertungStore store,
+        Func<ISchattenAuswertungService> createService,
+        Func<string?> getProjectPath)
+    {
+        _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
+        _storeRepository = store ?? throw new ArgumentNullException(nameof(store));
+        _createService = createService ?? throw new ArgumentNullException(nameof(createService));
+        _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
 
         StartenCommand = new AsyncRelayCommand(StartenAsync, () => !IsBusy);
         AbbrechenCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -66,7 +84,7 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
     /// <summary>Gespeicherte Schatten-Ergebnisse laden und neben die Projektdaten legen.</summary>
     public void Reload()
     {
-        _store = _sp.SchattenStore.Load(_sp.Settings.LastProjectPath, out _storeLoadError);
+        _store = _storeRepository.Load(_getProjectPath(), out _storeLoadError);
         StoreWarnung = _storeLoadError is null
             ? ""
             : $"Schatten-Datei nicht lesbar — Lauf-Ergebnisse werden NICHT gespeichert: {_storeLoadError}";
@@ -78,7 +96,7 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
 
     private async Task StartenAsync()
     {
-        var projekt = _shell.Project;
+        var projekt = _getProject();
         if (projekt is null || projekt.Data.Count == 0)
         {
             StatusText = "Kein Projekt mit Haltungen geladen.";
@@ -94,7 +112,6 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
         // KI-Indikator der Shell nur anwerfen, wenn wirklich ein LLM-Teil laeuft.
         using var kiAnzeige = MitKi ? AiActivityTracker.Begin("Schattenauswertung") : null;
 
-        var service = _sp.CreateSchattenAuswertung();
         var progress = new Progress<SchattenFortschritt>(f =>
         {
             FortschrittText = $"{f.Phase} {f.Aktuell}/{f.Gesamt} — {f.Haltung}";
@@ -104,6 +121,7 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
 
         try
         {
+            var service = _createService();
             var store = await service.BerechneAsync(
                 projekt,
                 MitKi,
@@ -125,7 +143,8 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusText = $"Fehler: {ex.Message}";
+            BestEffort.ReportWarning($"[Schattenauswertung] Lauf fehlgeschlagen: {ex}");
+            StatusText = "Schattenauswertung fehlgeschlagen. Details stehen im Programmlog.";
         }
         finally
         {
@@ -145,13 +164,13 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
     {
         if (_storeLoadError is not null)
             return;
-        _sp.SchattenStore.Save(_sp.Settings.LastProjectPath, store, out _);
+        _storeRepository.Save(_getProjectPath(), store, out _);
     }
 
     private void BaueRows()
     {
         Rows.Clear();
-        var projekt = _shell.Project;
+        var projekt = _getProject();
         if (projekt is null)
         {
             Zusammenfassung = "";
