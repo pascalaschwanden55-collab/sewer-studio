@@ -1,0 +1,16 @@
+{
+  "contract_version": 1,
+  "expected_sidecar_version": "1.2.0",
+  "minimum_decoded_frames": 3,
+  "minimum_sam_masks": 0,
+  "required_checks": [
+    "health",
+    "video_frame_decode",
+    "classify",
+    "yolo",
+    "dino",
+    "sam",
+    "quantification",
+    "production_pipeline"
+  ]
+}

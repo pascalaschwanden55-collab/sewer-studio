@@ -14,6 +14,11 @@ Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser U
 
 > Stand: 2026-07-13 · Methode: 7 spezialisierte KI-Agenten (parallel, rein lesende Code-Analyse) auf Basis des committeten Standes. Kritische Funde wurden zur Gegenprüfung vorgesehen — **es trat kein Fund der Stufe „Kritisch" auf**, daher waren keine Gegenprüfungen nötig. Kein Framework-/Plattformwechsel vorgeschlagen.
 > Belegte Zusatzprüfungen des Orchestrators sind mit ✔ markiert.
+>
+> **Nachtrag 2026-07-13:** `A6-02` ist umgesetzt. `tools/SidecarE2eSmoke`
+> dekodierte drei Bilder aus einem echten Projektvideo und prüfte YOLO, DINO, SAM,
+> Quantifizierung sowie die produktive Mehrmodell-Kette gegen einen Golden-Vertrag.
+> Ergebnis auf der Zielmaschine: **PASS** (3/3 Bilder, 0 Modellfehler).
 
 ---
 
@@ -51,7 +56,7 @@ Kein Fund erreichte „Kritisch"; die folgenden drei sind die schwerwiegendsten 
 → *Zentrale Sink von `Debug` auf `Trace`/`ILogger` umstellen (Quick Win < 1h), dann in den Hot-Paths den Logger durchreichen.*
 
 **T2 — Belastbarkeit ist nicht getestet** (Agent 6, `A6-01`/`A6-02`/`A6-03`)
-Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lesen `.cs` als String); nur ~25 instanziieren wirklich ein ViewModel. Es gibt keine WPF-UI-Automation, keinen E2E-Test gegen echten Sidecar/Video (der „E2E"-Test nutzt 67-Byte-Stub-Frames) und keine Dauer-/Leak-Test-Infrastruktur (kein einziges `[Trait]` im Repo). Ein 8-Stunden-Nachtlauf ist heute **nicht** automatisiert fahrbar. → *Nachtlauf-Konzept in Punkt 6.*
+Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lesen `.cs` als String); nur ~25 instanziieren wirklich ein ViewModel. Zum Scan-Zeitpunkt gab es keinen E2E-Test gegen echten Sidecar/Video und keine Dauer-/Leak-Test-Infrastruktur. **Nachtrag:** Der echte Sidecar-/Video-Vertragstest (`A6-02`) ist inzwischen vorhanden und grün. WPF-UI-Automation und der 8-Stunden-Nachtlauf bleiben offen. → *Nachtlauf-Konzept in Punkt 6.*
 
 **T3 — Grossdatei-Guard ist rot, aber das Push-Gate prüft ihn nicht** (Agent 1, `A1-01`/`A1-02` + ✔ Orchestrator-Prüfung)
 ✔ Verifiziert: `SchaechtePage.xaml.cs` hat **1001 Zeilen** — genau über der Guard-Grenze (>1000, leere Whitelist). Der `MaintainabilityFitnessTests` ist damit **aktuell rot**. ✔ Der pre-push-Hook führt nur `Infrastructure.Tests` + `Pipeline.Tests` aus — die **UI-Tests laufen nicht im Gate**, deshalb blockiert der rote Guard keinen Push und die „alles grün"-Meldung deckte ihn nie ab. Zusätzlich versteckt der reine Datei-Zähler echte God-Classes: ✔ `PlayerWindow` = **119 Dateien / 9.479 Zeilen** über partielle Klassen verteilt.
@@ -136,7 +141,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
 | A6-01 | Hoch | `ArchitectureFitnessTests.cs` u.a. — 137 UI-Testdateien lesen `.cs` als Text; keine UI-Automation | ~46 ViewModels per `new + Command` testen (Quick Win); StaFact-Fenster-Smoke mittelfristig |
-| A6-02 | Hoch | `MultiModelAnalysisServiceE2ETests.cs:44-60` — Stub-Frames, gemockter Client; `VideoFullAnalysisService` ohne Test | Headless Integrationstreiber gegen echten Sidecar + kurzes Test-Video + Golden-JSON |
+| A6-02 | Hoch → **erledigt** | `tools/SidecarE2eSmoke` + `SidecarRealVideoIntegrationTests` | Echter Sidecar, reales Video, YOLO/DINO/SAM, Quantifizierung und Golden-Vertrag sind umgesetzt und auf der Zielmaschine grün |
 | A6-03 | Hoch | Repo-weit kein `[Trait]`, keine Dauer-/Leak-Testlogik | Trait-Kategorien (Unit/Integration/Endurance) + `NightlySoakRunner` |
 | A6-04 | Mittel | `integrations/qgis/sewerstudio_bridge/` — keine Tests | Python-Smoke für Bridge-Endpunkte (TestClient) + C#-Vertragstest |
 | A6-05 | Mittel | `KnowledgeBaseContext.cs:176-186` — KB-Schema-Migration (ADD COLUMN) im Bestand ungetestet | Test mit Alt-DB (ohne neue Spalten) → Upgrade + Datenerhalt prüfen |
@@ -193,7 +198,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - Die ~46 ViewModels per `new + Command` testen (kein UI-Thread nötig) — ersetzt echte Deckung, die die String-Guards nur vortäuschen.
 
 **Stufe B — Integration (auf der Zielmaschine, nicht CI):**
-- **Headless Pipeline-Treiber** (`tools/`): startet **einen echten Sidecar**, dekodiert ein kurzes Test-Video (2-3 s), fährt Video→Frames→YOLO/DINO/SAM→Quantifizierung durch und prüft das Antwortschema gegen ein Golden-JSON (`A6-02`). Als `[Trait("Category","Integration")]`.
+- ✔ **Headless Pipeline-Treiber** (`tools/SidecarE2eSmoke`): startet bei Bedarf einen echten Sidecar, dekodiert drei Videobilder, fährt YOLO/DINO/SAM→Quantifizierung durch und prüft den Vertrag gegen `golden/pipeline-contract.v1.json`. Als `[Trait("Category","Integration")]` maschinengebunden ausführbar.
 - **Negativtests je Importer** (truncated/leer/gesperrt) → Skip statt Crash (`A6-06`).
 - **KB-Migrationstest** mit Alt-DB → Upgrade + Datenerhalt (`A6-05`).
 - **QGIS-Bridge-Smoke** (Python-TestClient + C#-Vertragstest) (`A6-04`).
@@ -217,7 +222,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)
-- **Teststrategie Stufe B + C:** Headless Pipeline-Treiber (`A6-02`), NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`), QGIS-Smoke (`A6-04`).
+- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) erledigt; offen bleiben NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); ProtocolEntryEditorDialog-KI/Validierung ins ViewModel (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
 - **KI-Resilienz:** Prozess-Lebenszyklus + CUDA-Fehler-Klassifizierung (`A5-01`, `A5-04`); IBAK-`.fdb` read-only (`A4-01`).
