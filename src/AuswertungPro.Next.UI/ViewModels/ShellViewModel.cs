@@ -132,7 +132,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
-            new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
+            new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
+                getProject: () => Project,
+                getProjectPath: () => _sp.Settings.LastProjectPath,
+                dialogs: _sp.Dialogs,
+                dashboardRefresh: _sp.DashboardRefresh)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
             new("\uE8AA", "Schattenauswertung", () => new Pages.SchattenauswertungPageViewModel(
                 getProject: () => Project,

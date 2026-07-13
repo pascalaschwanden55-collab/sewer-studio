@@ -41,6 +41,18 @@ public sealed class SchachtSanierungsMatrixPageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ViewModel_speichert_weder_Shell_noch_ServiceProvider_als_Feld()
+    {
+        var fields = typeof(SchachtSanierungsMatrixPageViewModel).GetFields(
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public);
+
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ShellViewModel));
+        Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+    }
+
+    [Fact]
     public void Zeilen_werden_je_Schachtnummer_gebaut_und_leere_uebersprungen()
     {
         var (shell, sp) = CreateShell(

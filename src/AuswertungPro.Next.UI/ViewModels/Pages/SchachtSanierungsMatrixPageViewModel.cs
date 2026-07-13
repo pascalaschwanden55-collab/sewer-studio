@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -38,8 +39,10 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     private const string KeyWasser = "VORARBEIT_WASSERHALTUNG";
     private const string KeyDoku = "QK_DOKUMENTATION";
 
-    private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly Func<Project> _getProject;
+    private readonly Func<string?> _getProjectPath;
+    private readonly IDialogService _dialogs;
+    private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly CostCatalogStore _catalogStore = new();
     private readonly MeasureTemplateStore _templateStore = new();
     private readonly ProjectCostStoreRepository _costRepo = new("schacht_costs.json");
@@ -66,9 +69,24 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     [ObservableProperty] private SchachtMatrixRowVm? _selectedRow;
 
     public SchachtSanierungsMatrixPageViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(
+            getProject: () => shell.Project,
+            getProjectPath: () => services.Settings.LastProjectPath,
+            dialogs: services.Dialogs,
+            dashboardRefresh: services.DashboardRefresh)
     {
-        _shell = shell;
-        _sp = services;
+    }
+
+    public SchachtSanierungsMatrixPageViewModel(
+        Func<Project> getProject,
+        Func<string?> getProjectPath,
+        IDialogService dialogs,
+        DashboardRefreshNotifier dashboardRefresh)
+    {
+        _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
+        _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
         Reload();
     }
 
@@ -84,7 +102,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     private void Reload()
     {
         if (_hasUnsavedChanges &&
-            !_sp.Dialogs.Confirm("Nicht gespeicherte Aenderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?", PageTitle))
+            !_dialogs.Confirm("Nicht gespeicherte Aenderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?", PageTitle))
         {
             Status = "Neu laden abgebrochen (offene Aenderungen).";
             return;
@@ -99,7 +117,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     {
         _hasUnsavedChanges = false;
         _touchedSchaechte.Clear();
-        _projectPath = _sp.Settings.LastProjectPath ?? "";
+        _projectPath = _getProjectPath() ?? "";
 
         var catalog = _catalogStore.LoadMerged(_projectPath);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
@@ -121,7 +139,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         _store = _costRepo.Load(_projectPath, out _storeLoadError);
 
         Rows.Clear();
-        foreach (var record in _shell.Project.SchaechteData)
+        foreach (var record in _getProject().SchaechteData)
         {
             var nummer = record.GetFieldValue("Schachtnummer").Trim();
             if (string.IsNullOrWhiteSpace(nummer))
@@ -144,7 +162,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         if (_storeLoadError is not null)
         {
             Status = $"WARNUNG: {_storeLoadError} — Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
-            _sp.Dialogs.Warn(
+            _dialogs.Warn(
                 $"Schacht-Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit schacht_costs.json nicht mit einem leeren Stand ueberschrieben wird.",
                 "Schacht-Matrix");
         }
@@ -208,8 +226,9 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         var hauptKey = row.SelectedMeasure?.HauptItemKey;
         if (SchachtAbdeckungStkAutoFill.TryApplyForMeasure(row.Record, measureId, row.SelectedMeasure?.Name))
         {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
+            var project = _getProject();
+            project.ModifiedAtUtc = DateTime.UtcNow;
+            project.Dirty = true;
         }
 
         var cost = SchachtMeasureFactory.Build(row.Schachtnummer, measureId,
@@ -253,12 +272,12 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     {
         if (_storeLoadError is not null)
         {
-            _sp.Dialogs.Error($"Speichern gesperrt: {_storeLoadError}", PageTitle);
+            _dialogs.Error($"Speichern gesperrt: {_storeLoadError}", PageTitle);
             return;
         }
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
-            _sp.Dialogs.Warn("Kein Projektpfad — bitte zuerst ein Projekt speichern.", PageTitle);
+            _dialogs.Warn("Kein Projektpfad — bitte zuerst ein Projekt speichern.", PageTitle);
             return;
         }
 
@@ -266,7 +285,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         var fresh = _costRepo.Load(_projectPath, out var freshError);
         if (freshError is not null)
         {
-            _sp.Dialogs.Error($"Speichern gesperrt: schacht_costs.json konnte nicht frisch gelesen werden.\n{freshError}", PageTitle);
+            _dialogs.Error($"Speichern gesperrt: schacht_costs.json konnte nicht frisch gelesen werden.\n{freshError}", PageTitle);
             return;
         }
         foreach (var nummer in _touchedSchaechte)
@@ -280,21 +299,21 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         if (!_costRepo.Save(_projectPath, _store, out var error))
         {
-            _sp.Dialogs.Error($"Speichern fehlgeschlagen: {error}", PageTitle);
+            _dialogs.Error($"Speichern fehlgeschlagen: {error}", PageTitle);
             return;
         }
 
         _touchedSchaechte.Clear();
         _hasUnsavedChanges = false;
         Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schaechte).";
-        _sp.DashboardRefresh.NotifyCostsChanged();
+        _dashboardRefresh.NotifyCostsChanged();
     }
 
     public bool ConfirmLeave()
     {
         if (!_hasUnsavedChanges)
             return true;
-        return _sp.Dialogs.Confirm(
+        return _dialogs.Confirm(
             "Es gibt nicht gespeicherte Schacht-Kosten.\nSeite trotzdem verlassen (Aenderungen gehen verloren)?",
             PageTitle);
     }
