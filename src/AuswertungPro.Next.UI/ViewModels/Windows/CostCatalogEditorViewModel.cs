@@ -13,7 +13,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCatalogEditorViewModel : ObservableObject
 {
-    private readonly CostCatalogStore _store = new();
+    private readonly CostCatalogStore _store;
     private readonly CostCatalog _catalog;
     private readonly string? _projectPath;
     private readonly Window _window;
@@ -43,11 +43,16 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CloseCommand { get; }
 
-    public CostCatalogEditorViewModel(string? projectPath, Window window, IDialogService? dialogs = null)
+    public CostCatalogEditorViewModel(
+        string? projectPath,
+        Window window,
+        IDialogService? dialogs = null,
+        CostCatalogStore? store = null)
     {
         _projectPath = projectPath;
         _window = window;
         _dialogs = dialogs ?? new DialogService();
+        _store = store ?? new CostCatalogStore();
 
         _catalog = _store.LoadMerged(projectPath);
         Items = new ObservableCollection<CostCatalogItem>(_catalog.Items);
