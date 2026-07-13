@@ -33,6 +33,10 @@ a `Host` header is client-controlled and must never be treated as authentication
 `SEWER_SIDECAR_TRUSTED_HOSTS=*` is configured for diagnostics, requests without the correct
 token remain blocked.
 
+The supplied runtime also binds fail-closed to the local computer. `SEWER_SIDECAR_HOST`
+accepts only `localhost`, IPv4 loopback addresses (`127.x.x.x`), or IPv6 loopback (`::1`).
+Values such as `0.0.0.0`, LAN addresses, and public host names stop startup with an error.
+
 ## TensorRT Engine
 
 To rebuild the local YOLO TensorRT engine on the target GPU machine:

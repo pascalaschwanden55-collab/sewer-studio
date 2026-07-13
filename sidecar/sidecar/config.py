@@ -1,5 +1,8 @@
 """Configuration loaded from environment variables with SEWER_SIDECAR_ prefix."""
 
+from ipaddress import ip_address
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -17,6 +20,24 @@ class SidecarSettings(BaseSettings):
     auth_token_file: str = ""
     telemetry_enabled: bool = True
     telemetry_dir: str = ""
+
+    @field_validator("host")
+    @classmethod
+    def require_loopback_host(cls, value: str) -> str:
+        host = value.strip()
+        if host.lower() == "localhost":
+            return host
+
+        try:
+            if ip_address(host).is_loopback:
+                return host
+        except ValueError:
+            pass
+
+        raise ValueError(
+            "SEWER_SIDECAR_HOST muss eine Loopback-Adresse sein "
+            "(localhost, 127.x.x.x oder ::1)."
+        )
 
     # Training export sandbox. output_dir in /training/export-yolo must stay inside this root.
     training_export_root: str = "./training_export"

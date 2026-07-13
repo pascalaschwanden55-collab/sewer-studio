@@ -14,6 +14,24 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
+# Der Vision-Dienst darf nie versehentlich im lokalen Netzwerk veroeffentlicht werden.
+# Diese fruehe Pruefung greift, bevor Python, GPU oder Modelle gestartet werden.
+if (-not $env:SEWER_SIDECAR_HOST) { $env:SEWER_SIDECAR_HOST = "127.0.0.1" }
+$bindHost = $env:SEWER_SIDECAR_HOST.Trim()
+$isLoopbackHost = $bindHost -ieq "localhost"
+if (-not $isLoopbackHost) {
+    $parsedAddress = $null
+    if ([System.Net.IPAddress]::TryParse($bindHost, [ref]$parsedAddress)) {
+        $isLoopbackHost = [System.Net.IPAddress]::IsLoopback($parsedAddress)
+    }
+}
+if (-not $isLoopbackHost) {
+    Write-Host "  FEHLER: SEWER_SIDECAR_HOST erlaubt nur lokale Adressen." -ForegroundColor Red
+    Write-Host "  Erlaubt: localhost, 127.x.x.x oder ::1." -ForegroundColor Yellow
+    exit 1
+}
+$env:SEWER_SIDECAR_HOST = $bindHost
+
 Write-Host ""
 Write-Host "  ==============================================" -ForegroundColor Cyan
 Write-Host "   Sewer-Studio Vision Sidecar" -ForegroundColor Cyan
@@ -63,7 +81,6 @@ Write-Host "    DINO:  $dinoStatus" -ForegroundColor $(if ($dinoOk) { "Green" } 
 Write-Host "    SAM:   $samStatus" -ForegroundColor $(if ($samOk)  { "Green" } else { "Red" })
 
 # Set defaults
-if (-not $env:SEWER_SIDECAR_HOST) { $env:SEWER_SIDECAR_HOST = "127.0.0.1" }
 if (-not $env:SEWER_SIDECAR_PORT) { $env:SEWER_SIDECAR_PORT = "8100" }
 $env:SEWER_SIDECAR_MODELS_DIR = $modelsDir
 if (-not $env:SEWER_SIDECAR_YOLO_MODEL_NAME) {
