@@ -136,6 +136,8 @@ namespace AuswertungPro.Next.UI
         public IRetrievalService? Retrieval { get; }
         public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
         public IMeasureRecommendationService MeasureRecommendation { get; }
+        public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
+        public TrainingCenterImportService TrainingCenterImport { get; } = new();
 
         // Globale, selbst gepflegte Schacht-Massnahmen-Liste (einfacher Weg ohne NPK):
         // Name + manueller Preis, projektuebergreifend unter %AppData%.

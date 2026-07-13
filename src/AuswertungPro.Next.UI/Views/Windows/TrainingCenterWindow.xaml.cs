@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
@@ -26,7 +27,6 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
-using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -57,14 +57,37 @@ public partial class TrainingCenterWindow : Window
     private TrainingReviewSamSegmentationService? _reviewSamService;
 
     public TrainingCenterWindow()
-        : this(null)
+        : this(
+            services: null,
+            TrainingCenterWindowFallbackDependencies.Dialogs,
+            TrainingCenterWindowFallbackDependencies.Store,
+            TrainingCenterWindowFallbackDependencies.Import,
+            TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics)
     {
     }
 
     public TrainingCenterWindow(ServiceProvider? services)
+        : this(
+            services,
+            services?.Dialogs ?? TrainingCenterWindowFallbackDependencies.Dialogs,
+            services?.TrainingCenterStore ?? TrainingCenterWindowFallbackDependencies.Store,
+            services?.TrainingCenterImport ?? TrainingCenterWindowFallbackDependencies.Import,
+            services?.KnowledgeBaseDiagnostics ?? TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics)
+    {
+    }
+
+    public TrainingCenterWindow(
+        ServiceProvider? services,
+        IDialogService dialogs,
+        TrainingCenterStore store,
+        TrainingCenterImportService import,
+        IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics)
     {
         _services = services;
-        _dialogs = services?.Dialogs ?? new DialogService();
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(import);
+        ArgumentNullException.ThrowIfNull(knowledgeBaseDiagnostics);
 
         InitializeComponent();
         WindowStateManager.Track(this);
@@ -78,13 +101,11 @@ public partial class TrainingCenterWindow : Window
             TeacherGallery, Behaviors.PhotoHoverPreviewSelectors.TeacherAnnotationPhotos);
 
         var codeCatalog = services?.CodeCatalog;
-        var kbDiagnostics = services?.KnowledgeBaseDiagnostics
-            ?? new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();
         Vm = new TrainingCenterViewModel(
-            new TrainingCenterStore(),
-            new TrainingCenterImportService(),
+            store,
+            import,
             codeCatalog,
-            kbDiagnostics,
+            knowledgeBaseDiagnostics,
             services?.Settings);
 
         DataContext = Vm;
