@@ -640,7 +640,7 @@ class SewerStudioBridgeDock(QDockWidget):
             return
 
         marker = f"sewerstudio/{layer_key}_ausgefuehrt_renderer_version"
-        style_version = "2" if layer_key == "schacht_sanierungstyp" else "1"
+        style_version = "3" if layer_key == "schacht_sanierungstyp" else "1"
         initialized = str(layer.customProperty(marker, ""))
         if initialized == style_version:
             return
@@ -671,6 +671,9 @@ class SewerStudioBridgeDock(QDockWidget):
                         "outline_color": "#FF0000",
                         "outline_width": "0.6",
                         "size": "6.0",
+                        # Fest nach oben rechts versetzt. So bleibt der eigentliche
+                        # Schachtpunkt darunter sichtbar und wird nicht ueberdeckt.
+                        "offset": "5,-5",
                     })
                 else:
                     symbol = QgsLineSymbol.createSimple({
@@ -699,7 +702,7 @@ class SewerStudioBridgeDock(QDockWidget):
             return
 
         marker = f"sewerstudio/{layer_key}_nr_labels_style_version"
-        style_version = "2" if layer_key == "schacht_sanierungstyp" else "1"
+        style_version = "3" if layer_key == "schacht_sanierungstyp" else "1"
         initialized = str(layer.customProperty(marker, ""))
         if initialized == style_version:
             return
@@ -717,6 +720,13 @@ class SewerStudioBridgeDock(QDockWidget):
             settings.isExpression = False
             is_schacht = layer_key == "schacht_sanierungstyp"
             settings.dist = 0.0 if is_schacht else 2.0
+            if is_schacht:
+                # Exakt derselbe Versatz wie beim Kreissymbol. Dadurch bleibt die
+                # Nummer mittig im Kreis, obwohl beides ausserhalb des Schachts liegt.
+                settings.xOffset = 5.0
+                settings.yOffset = -5.0
+                settings.offsetUnits = Qgis.RenderUnit.Millimeters
+                settings.displayAll = True
 
             # Schacht-Nummer mittig im Kreis, Haltungs-Nummer waagrecht an der Linie.
             placement_name = "OverPoint" if is_schacht else "Horizontal"

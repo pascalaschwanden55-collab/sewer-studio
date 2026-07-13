@@ -146,6 +146,10 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("OverPoint", source);
         Assert.Contains("Horizontal", source);
         Assert.Contains("settings.dist = 0.0 if is_schacht else 2.0", source);
+        Assert.Contains("settings.xOffset = 5.0", source);
+        Assert.Contains("settings.yOffset = -5.0", source);
+        Assert.Contains("settings.offsetUnits = Qgis.RenderUnit.Millimeters", source);
+        Assert.Contains("settings.displayAll = True", source);
         Assert.Contains("buffer_settings.setEnabled(not is_schacht)", source);
     }
 
@@ -165,6 +169,7 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("#BF8F00", source); // Sanierer
         Assert.Contains("#00B050", source); // Gartenbauer
         Assert.Contains("\"outline_color\": \"#FF0000\"", source); // roter Kreisrand wie in QGIS
+        Assert.Contains("\"offset\": \"5,-5\"", source); // Kreis bleibt ausserhalb des Schachts
         Assert.Contains("renderer.type() != \"singleSymbol\"", source);
         Assert.Contains("{layer_key}_ausgefuehrt_renderer_version", source);
         Assert.Contains("layer_key != \"schacht_sanierungstyp\"", source);
