@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
@@ -127,6 +128,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 
         Assert.Contains("zuerst", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Import Kanalfernseh-Projekt", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
+    public void Importbericht_oeffnen_ohne_gespeichertes_Projekt_zeigt_Hinweis()
+    {
+        var dialogs = new DialogFake();
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        viewModel.OpenReportFolderCommand.Execute(null);
+
+        Assert.Contains("nicht vorhanden", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Import-Berichte", dialogs.LastInfoTitle);
     }
 
     [Fact]
@@ -326,6 +350,42 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Equal(0, reports.Calls);
         Assert.Contains("nicht eindeutig", dialogs.LastInfoMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Importmeldung", dialogs.LastInfoMessage);
+    }
+
+    [Fact]
+    public void Berichtsnavigation_oeffnet_den_zuletzt_erzeugten_Report_sicher()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "SewerStudio_ReportNavigation_" + Guid.NewGuid().ToString("N"));
+        var reportDirectory = Path.Combine(root, "__IMPORT_REPORTS");
+        var reportPath = Path.Combine(reportDirectory, "report.txt");
+        Directory.CreateDirectory(reportDirectory);
+        File.WriteAllText(reportPath, "Report");
+        try
+        {
+            var dialogs = new DialogFake();
+            string? openedPath = null;
+            var controller = new ImportReportNavigationController(
+                dialogs,
+                () => Path.Combine(root, "projekt.json"),
+                path =>
+                {
+                    openedPath = path;
+                    return true;
+                });
+            controller.SetLastReportPath(reportPath);
+
+            controller.OpenLastReport();
+
+            Assert.Equal(reportPath, openedPath);
+            Assert.Equal(reportDirectory, controller.GetReportDirectory());
+            Assert.Equal(string.Empty, dialogs.LastInfoMessage);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     public void Dispose() => _loggerFactory.Dispose();

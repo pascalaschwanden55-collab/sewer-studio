@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -22,6 +21,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly Services.ImportProtocolDistributionController _protocolDistributionController;
     private readonly Services.ImportProtocolRegenerationController _protocolRegenerationController;
     private readonly Services.ImportOneClickProjectController _oneClickProjectController;
+    private readonly Services.ImportReportNavigationController _reportNavigationController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -37,7 +37,6 @@ public sealed partial class ImportPageViewModel : ObservableObject
     [ObservableProperty] private bool _fillMissingOnly;
 
     private CancellationTokenSource? _importCts;
-    private string? _lastReportPath;
 
     public IAsyncRelayCommand ImportPdfCommand { get; }
     public IAsyncRelayCommand ImportSchachtPdfsFolderCommand { get; }
@@ -77,6 +76,10 @@ public sealed partial class ImportPageViewModel : ObservableObject
             _sp.Dialogs,
             _sp.CreateOneClickProjectImportService,
             _sp.OneClickImportReports);
+        _reportNavigationController = new Services.ImportReportNavigationController(
+            _sp.Dialogs,
+            () => _sp.Settings.LastProjectPath,
+            path => Services.SafeShellOpen.TryOpen(path, out _));
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
@@ -87,8 +90,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ExportImportSummaryCommand = new RelayCommand(ExportImportSummary);
         ReloadCatalogCommand = new RelayCommand(ReloadCatalog);
         CancelImportCommand = new RelayCommand(CancelImport, () => CanCancel);
-        OpenLastReportCommand = new RelayCommand(OpenLastReport);
-        OpenReportFolderCommand = new RelayCommand(OpenReportFolder);
+        OpenLastReportCommand = new RelayCommand(_reportNavigationController.OpenLastReport);
+        OpenReportFolderCommand = new RelayCommand(_reportNavigationController.OpenReportFolder);
         MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
         AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync);
         ImportKanalProjektCommand = new AsyncRelayCommand(ImportKanalProjektAsync, CanStartImport);
@@ -126,41 +129,6 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportPhase = "Abbruch angefordert...";
     }
 
-    // ──── Report Buttons ────
-
-    private void OpenLastReport()
-    {
-        if (!string.IsNullOrWhiteSpace(_lastReportPath) && File.Exists(_lastReportPath))
-        {
-            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(_lastReportPath, out _);
-        }
-        else
-        {
-            OpenReportFolder();
-        }
-    }
-
-    private void OpenReportFolder()
-    {
-        var dir = GetReportDir();
-        if (dir != null && Directory.Exists(dir))
-        {
-            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(dir, out _);
-        }
-        else
-        {
-            _sp.Dialogs.Info("Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchfuehren.",
-                "Import-Berichte");
-        }
-    }
-
-    private string? GetReportDir()
-    {
-        var projectPath = _sp.Settings.LastProjectPath;
-        var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
-        return string.IsNullOrWhiteSpace(projectDir) ? null : Path.Combine(projectDir, "__IMPORT_REPORTS");
-    }
-
     // ──── Generic Orchestrator ────
 
     private async Task RunImportAsync<TArg>(
@@ -187,7 +155,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 DeepCopyProject: _sp.Projects.DeepCopy,
                 ReplaceProject: _shell.ReplaceProject,
                 CreateRestorePoint: _shell.TryCreateImportRestorePoint,
-                GetReportDir: GetReportDir,
+                GetReportDir: _reportNavigationController.GetReportDirectory,
                 ExportReport: ImportRunReportExporter.Export,
                 ShowPreview: ShowPreviewWindow,
                 ValidatePlausibility: Application.Import.ImportPlausibilityValidator.Validate,
@@ -204,7 +172,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 SetSummaryText: value => SummaryText = value,
                 GetDetailsText: () => DetailsText,
                 SetDetailsText: value => DetailsText = value,
-                SetLastReportPath: value => _lastReportPath = value,
+                SetLastReportPath: _reportNavigationController.SetLastReportPath,
                 CollectionLock: _shell.CollectionLock),
             _importCts.Token);
     }

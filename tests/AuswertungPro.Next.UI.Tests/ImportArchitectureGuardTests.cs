@@ -59,11 +59,17 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportProtocolDistributionController.cs"));
         var oneClickController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportOneClickProjectController.cs"));
+        var reportNavigationController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportReportNavigationController.cs"));
 
         Assert.Contains("_oneClickProjectController.ExecuteAsync", viewModel);
         Assert.Contains("_createImporter().Import", oneClickController);
         Assert.DoesNotContain("_sp.CreateProjectImportOrchestrator()", viewModel);
         Assert.DoesNotContain("TryWriteKanalImportReport", viewModel);
+        Assert.Contains("_reportNavigationController.GetReportDirectory", viewModel);
+        Assert.Contains("_reportNavigationController.SetLastReportPath", viewModel);
+        Assert.DoesNotContain("private string? _lastReportPath", viewModel);
+        Assert.Contains("File.Exists(_lastReportPath)", reportNavigationController);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
