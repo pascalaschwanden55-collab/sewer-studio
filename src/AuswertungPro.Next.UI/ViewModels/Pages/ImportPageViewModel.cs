@@ -23,6 +23,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly Services.ImportReportNavigationController _reportNavigationController;
     private readonly Services.ImportSummaryExportController _summaryExportController;
     private readonly Services.ImportCatalogController _catalogController;
+    private readonly Services.ImportVsaEvaluationController _vsaEvaluationController;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -90,6 +91,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
             () => _sp.Settings.VsaCatalogNodXmlPath,
             () => _sp.VsaCatalogResolvedPath,
             _sp.CodeCatalog,
+            _sp.Logger);
+        _vsaEvaluationController = new Services.ImportVsaEvaluationController(
+            _sp.Vsa,
             _sp.Logger);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
@@ -457,21 +461,13 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 AppendSummary: value => SummaryText += value,
                 AppendDetails: value => DetailsText += value));
 
-    private async Task RunVsaAfterImport(Project project, string sourceLabel)
-    {
-        ImportProgress = $"{sourceLabel}: VSA-Zustandsbewertung wird berechnet...";
-
-        var vsaResult = await Task.Run(() => _sp.Vsa.Evaluate(project));
-
-        if (vsaResult.Ok)
-        {
-            SummaryText += $"\nVSA-Bewertung: {project.Data.Count} Haltungen bewertet";
-        }
-        else
-        {
-            SummaryText += $"\nVSA-Bewertung fehlgeschlagen: {vsaResult.ErrorMessage}";
-        }
-    }
+    private Task RunVsaAfterImport(Project project, string sourceLabel)
+        => _vsaEvaluationController.ExecuteAsync(
+            project,
+            sourceLabel,
+            new Services.ImportVsaEvaluationActions(
+                SetProgress: value => ImportProgress = value,
+                AppendSummary: value => SummaryText += value));
 
     // ──── Catalog ────
 

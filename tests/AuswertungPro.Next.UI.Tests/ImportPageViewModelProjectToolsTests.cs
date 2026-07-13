@@ -1,8 +1,11 @@
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Vsa;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -508,6 +511,48 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains("nicht gefunden", status.Text);
     }
 
+    [Fact]
+    public async Task Vsa_Nachlauf_Controller_meldet_erfolgreiche_Bewertung()
+    {
+        var service = new VsaEvaluationFake(success: true);
+        var controller = new ImportVsaEvaluationController(service, new CapturingLogger());
+        var project = new Project();
+        project.Data.Add(new HaltungRecord());
+        var progress = string.Empty;
+        var summary = string.Empty;
+
+        await controller.ExecuteAsync(
+            project,
+            "PDF",
+            new ImportVsaEvaluationActions(
+                SetProgress: value => progress = value,
+                AppendSummary: value => summary += value));
+
+        Assert.Equal(1, service.Calls);
+        Assert.Contains("PDF", progress);
+        Assert.Contains("1 Haltungen bewertet", summary);
+    }
+
+    [Fact]
+    public async Task Vsa_Nachlauf_Controller_verbirgt_technischen_Fehler()
+    {
+        var service = new VsaEvaluationFake(success: false);
+        var logger = new CapturingLogger();
+        var controller = new ImportVsaEvaluationController(service, logger);
+        var summary = string.Empty;
+
+        await controller.ExecuteAsync(
+            new Project(),
+            "XTF",
+            new ImportVsaEvaluationActions(
+                SetProgress: _ => { },
+                AppendSummary: value => summary += value));
+
+        Assert.Contains("Tageslog", summary);
+        Assert.DoesNotContain("Interner VSA-Fehler", summary);
+        Assert.Contains(logger.Messages, message => message.Contains("Interner VSA-Fehler", StringComparison.Ordinal));
+    }
+
     public void Dispose() => _loggerFactory.Dispose();
 
     private sealed class PortabilityFake : IProjectPortabilityService
@@ -659,6 +704,32 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
                 throw Error;
             return ResultPath;
         }
+    }
+
+    private sealed class VsaEvaluationFake : IVsaEvaluationService
+    {
+        private readonly bool _success;
+
+        public VsaEvaluationFake(bool success)
+        {
+            _success = success;
+        }
+
+        public int Calls { get; private set; }
+
+        public Result<IReadOnlyList<VsaConditionResult>> Evaluate(Project project)
+        {
+            Calls++;
+            return _success
+                ? Result<IReadOnlyList<VsaConditionResult>>.Success([])
+                : Result<IReadOnlyList<VsaConditionResult>>.Fail("VSA-01", "Interner VSA-Fehler");
+        }
+
+        public Result<bool> EvaluateRecord(HaltungRecord record)
+            => Result<bool>.Success(true);
+
+        public Result<string> Explain(Project project, HaltungRecord record)
+            => Result<string>.Success(string.Empty);
     }
 
     private sealed class CodeCatalogFake : ICodeCatalogProvider

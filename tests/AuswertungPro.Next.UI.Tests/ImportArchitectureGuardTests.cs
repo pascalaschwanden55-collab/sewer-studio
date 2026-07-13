@@ -65,6 +65,8 @@ public sealed class ImportArchitectureGuardTests
             "src", "AuswertungPro.Next.UI", "Services", "ImportSummaryExportController.cs"));
         var catalogController = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Services", "ImportCatalogController.cs"));
+        var vsaController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "ImportVsaEvaluationController.cs"));
 
         Assert.Contains("_oneClickProjectController.ExecuteAsync", viewModel);
         Assert.Contains("_createImporter().Import", oneClickController);
@@ -82,6 +84,9 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("switch (_catalog)", catalogController);
         Assert.DoesNotContain("private void UpdateCatalogStatus", viewModel);
         Assert.DoesNotContain("case AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider", viewModel);
+        Assert.Contains("_vsaEvaluationController.ExecuteAsync", viewModel);
+        Assert.Contains("_service.Evaluate", vsaController);
+        Assert.DoesNotContain("_sp.Vsa.Evaluate", viewModel);
         Assert.Contains("_projectPortabilityController.ExecuteAsync", viewModel);
         Assert.Contains("_service.MakePortable", portabilityController);
         Assert.DoesNotContain("_sp.ProjectPortability.MakePortable", viewModel);
