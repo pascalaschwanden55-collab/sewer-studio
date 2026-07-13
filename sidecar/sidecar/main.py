@@ -30,6 +30,31 @@ def _looks_like_oom(exc: BaseException) -> bool:
     return "out of memory" in str(exc).lower()
 
 
+def _looks_like_cuda_failure(exc: BaseException) -> bool:
+    """Erkennt typische CUDA-/Treiberfehler ohne harten torch-Import."""
+    type_name = type(exc).__name__.lower()
+    message = str(exc).lower()
+    if "cuda" in type_name:
+        return True
+
+    markers = (
+        "cuda error",
+        "cuda runtime",
+        "cuda driver",
+        "cuda initialization",
+        "cuda-capable device",
+        "cuda gpus",
+        "cublas",
+        "cudnn",
+        "nvrtc",
+        "device-side assert",
+        "invalid device ordinal",
+        "unspecified launch failure",
+        "illegal memory access",
+    )
+    return any(marker in message for marker in markers)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.getLogger("sidecar").info(
@@ -66,6 +91,7 @@ async def handle_unexpected(request: Request, exc: Exception):
     """Zentraler Fallback: nie roher 500-Stacktrace nach aussen.
 
     - CUDA-OOM      -> VRAM freigeben, 503 (Aufrufer kann Frame ueberspringen/retryen)
+    - CUDA sonst    -> 503 mit stabilem Fehlercode, ohne Treiberdetails nach aussen
     - Modell fehlt  -> 503 (Dienst voruebergehend nicht verfuegbar)
     - sonst         -> 500 mit generischer Meldung (Trace nur ins Log)
     """
@@ -82,6 +108,16 @@ async def handle_unexpected(request: Request, exc: Exception):
         gpu_manager.evict_lru()
         gpu_manager.empty_cache()
         return JSONResponse({"detail": "GPU out of memory"}, status_code=503)
+
+    if _looks_like_cuda_failure(exc):
+        gpu_manager.empty_cache()
+        return JSONResponse(
+            {
+                "detail": "GPU/CUDA temporarily unavailable",
+                "code": "cuda_unavailable",
+            },
+            status_code=503,
+        )
 
     if isinstance(exc, FileNotFoundError):
         return JSONResponse({"detail": "model unavailable"}, status_code=503)

@@ -59,6 +59,7 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Selbst gestartete KI-Prozesse aufgeräumt (A5-01 erledigt):** Nur Ollama- und Sidecar-Prozesse, die Sewer Studio selbst startet, werden registriert. Beim Beenden der App schließt ein Windows-Job-Objekt diese Prozesse samt Unterprozessen; eine Prüfung von Prozess-ID und Startzeit schützt den Rückfallpfad vor Verwechslungen. Bereits vorher laufende KI-Dienste bleiben unangetastet. Zwei Tests schützen Prozessende und App-Verdrahtung.
 - **Sidecar-Sicherheitsgrenze klargestellt (A5-02 erledigt):** Code und Betriebsdokumentation benennen die Host-Prüfung ausdrücklich nur als Schutz gegen DNS-Rebinding. Ausschließlich das geheime `X-Sidecar-Token` kontrolliert den Zugriff; selbst eine Host-Freigabe mit `*` umgeht das Token nicht. Drei gezielte und alle 86 GPU-freien Sidecar-Tests sind grün.
 - **Sidecar bleibt lokal gebunden (A5-03 erledigt):** `SEWER_SIDECAR_HOST` akzeptiert nur `localhost`, IPv4-Loopback (`127.x.x.x`) oder IPv6-Loopback (`::1`). Python-Konfiguration und PowerShell-Startskript weisen `0.0.0.0`, LAN-Adressen und Hostnamen vor dem Dienststart ab. Acht neue und insgesamt 94 GPU-freie Sidecar-Tests sind grün.
+- **CUDA-Ausfälle verständlich klassifiziert (A5-04 erledigt):** CUDA-, Treiber-, cuDNN-, cuBLAS- und Kernel-Ausfälle werden ohne interne Treiberdetails als vorübergehender 503-Fehler mit stabilem Code `cuda_unavailable` gemeldet. Der vorhandene C#-Client behandelt 503 nach genau einem Wiederholungsversuch als nicht verfügbaren KI-Dienst. Alle 95 GPU-freien Sidecar-Tests sind grün.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
 - **Gesamtprüfung grün:** 8.733 Tests bestanden (2.512 Infrastruktur, 1.813 Pipeline, 4.346 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
@@ -182,7 +183,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A5-01 | Mittel → **erledigt** | `DefaultAiStartupLauncher.cs:68` / `App.xaml.cs:231` — Sidecar/Ollama bei App-Ende nicht beendet (~21 GB VRAM bleiben) | Von Sewer Studio gestartete KI-Prozesse werden per Windows-Job-Objekt verfolgt und beim App-Ende samt Unterprozessen beendet; bereits laufende Fremdprozesse bleiben unangetastet |
 | A5-02 | Mittel → **erledigt** | `sidecar/main.py:92-144` — Trusted-Host-Check per Host-Header trivial umgehbar | Code, README und Regressionstest stellen klar: Host-Prüfung schützt gegen DNS-Rebinding; allein das verpflichtende Token ist die Zugriffssperre |
 | A5-03 | Mittel → **erledigt** | `sidecar/config.py:9` + `start_sidecar.ps1:66` — `SEWER_SIDECAR_HOST` ungeprüft an uvicorn | Python-Konfiguration und Startskript erlauben ausschließlich Loopback; Nicht-Loopback bricht vor dem Dienststart mit verständlicher Meldung ab |
-| A5-04 | Mittel | `sidecar/main.py:77-89` + `VisionPipelineClient.cs:186-197` — CUDA-Fehler (kein OOM) → generischer 500, Client wrappt nicht | CUDA-Fehler serverseitig als 503 mit Klartext; oder 500 clientseitig typisiert wrappen |
+| A5-04 | Mittel → **erledigt** | `sidecar/main.py:77-89` + `VisionPipelineClient.cs:186-197` — CUDA-Fehler (kein OOM) → generischer 500, Client wrappt nicht | Typische CUDA-/Treiberfehler liefern einen bereinigten 503 mit stabilem Fehlercode; der bestehende 503-Pfad des Clients wiederholt einmal und meldet danach `SidecarUnavailableException` |
 | A5-05 | Niedrig | `sidecar/main.py:146-154` — Token-Enforcement fail-open bei leerem Token | Fail-closed: ohne Token alle Anfragen ablehnen |
 | A5-06 | Niedrig | `QgisBridgeServer.cs:68` — Bridge (8765) ohne Token, read-only Loopback | Bei Mehrbenutzer-Szenario Token wie beim Sidecar; sonst bewusst dokumentieren |
 | A5-07 | Niedrig | `AiStartupOrchestrator.cs:76-82` — Ollama ohne Auth, keine Loopback-Erzwingung | Ollama mit `OLLAMA_HOST=127.0.0.1` starten, bei Nicht-Loopback warnen |
@@ -237,7 +238,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 2. **Grossdatei-Guard reparieren und ins Gate nehmen (`A1-09`, `A1-02`, Push-Hook):** Guard auf „Zeilen je Typ" erweitern (schließt das Partial-Schlupfloch), `SchaechtePage` unter die Grenze bringen, und die UI-Tests in den pre-push-Hook aufnehmen — sonst laufen Architektur-Guards nie automatisch.
 3. **Echte God-Classes zerlegen statt weiter fragmentieren (`A1-01`, `A1-03`, `A1-04`):** PlayerWindow-Partials und die Fachlogik in SchaechtePage/ProtocolEntryEditorDialog schrittweise in Services/Controller mit Interface überführen — testgeschützt, kein Big-Bang.
 4. **DI-Hygiene (`A1-05`, `A1-07`, `A1-10`):** ViewModels nur die benötigten Interfaces geben statt des ganzen `ServiceProvider`; per-`new`-Streuung in Fenstern beenden. Das macht Kernabläufe unit-testbar.
-5. **KI-Prozess-Lebenszyklus (`A5-01`, `A5-04`):** ✔ Selbst gestartete Sidecar-/Ollama-Prozesse werden beim App-Ende kontrolliert gestoppt. Offen bleibt, CUDA-Fehler in klare, freundliche Meldungen zu übersetzen.
+5. **KI-Prozess-Lebenszyklus (`A5-01`, `A5-04`):** ✔ Selbst gestartete Sidecar-/Ollama-Prozesse werden beim App-Ende kontrolliert gestoppt; CUDA-Ausfälle erscheinen als klarer, vorübergehender KI-Fehler.
 6. **Fremd-DB schützen (`A4-01`):** IBAK-`.fdb` nur über eine Temp-Kopie/read-only anfassen — schützt Kunden-Originaldaten.
 
 ---
@@ -278,7 +279,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) erledigt; offen bleiben NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
-- **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt; offen bleibt die CUDA-Fehler-Klassifizierung (`A5-04`).
+- **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`), CUDA-Fehler-Klassifizierung (`A5-04`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt.
 - **Ergebnis:** Der 8-Stunden-Nachtlauf ist fahrbar, die größten Wartungsbremsen sind entschärft, das KI-Subsystem verhält sich bei Ausfällen berechenbar.
 
 ---

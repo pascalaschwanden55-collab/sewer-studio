@@ -58,3 +58,19 @@ def test_cuda_oom_returns_503(monkeypatch):
 
     assert resp.status_code == 503
     assert resp.json()["detail"] == "GPU out of memory"
+
+
+def test_cuda_runtime_error_returns_clear_503_without_internal_detail(monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("CUDA error: invalid device ordinal; geheimer Treiberpfad")
+
+    monkeypatch.setattr(yolo_wrapper, "detect", boom)
+
+    resp = _client().post("/detect/yolo", json=_BODY, headers=_HEADERS)
+
+    assert resp.status_code == 503
+    assert resp.json() == {
+        "detail": "GPU/CUDA temporarily unavailable",
+        "code": "cuda_unavailable",
+    }
+    assert "Treiberpfad" not in resp.text
