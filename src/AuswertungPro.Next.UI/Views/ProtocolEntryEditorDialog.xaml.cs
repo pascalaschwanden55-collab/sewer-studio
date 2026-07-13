@@ -21,6 +21,7 @@ public partial class ProtocolEntryEditorDialog : Window
     private readonly ProtocolEntryVM _entryVm;
     private readonly ProtocolEntryEditorViewModel? _paramVm;
     private readonly ProtocolEntryEditorKiViewModel? _kiVm;
+    private readonly ProtocolEntryEditorValidationViewModel _validationVm;
     private readonly string? _haltungId;
     private readonly string? _videoPath;
     private readonly string? _projectFolder;
@@ -53,6 +54,7 @@ public partial class ProtocolEntryEditorDialog : Window
         _kiVm = _paramVm is null || _sp is null
             ? null
             : new ProtocolEntryEditorKiViewModel(_paramVm, _sp.ProtocolAi, _entryVm);
+        _validationVm = new ProtocolEntryEditorValidationViewModel(_sp?.CodeCatalog, _paramVm);
 
         LoadFromEntry();
 
@@ -267,100 +269,42 @@ public partial class ProtocolEntryEditorDialog : Window
 
     private void ApplyLiveValidation()
     {
-        var errors = new List<string>();
-
-        var code = (CodeTextBox.Text ?? string.Empty).Trim();
-        var hasCatalog = _sp?.CodeCatalog is not null;
-        var codeOk = !string.IsNullOrWhiteSpace(code);
-        var codeInCatalog = false;
-        if (!codeOk)
-            errors.Add("Code ist erforderlich.");
-        else if (!hasCatalog || !_sp!.CodeCatalog.TryGet(code, out _))
-        {
-            codeOk = false;
-            errors.Add("Code ist nicht im Katalog vorhanden.");
-        }
-        else
-        {
-            codeInCatalog = true;
-        }
-
-        var meterStartOk = TryParseOptionalDouble(MeterStartTextBox.Text, out var meterStart);
-        var meterEndOk = TryParseOptionalDouble(MeterEndTextBox.Text, out var meterEnd);
-        if (!meterStartOk)
-            errors.Add("MeterStart ist ungueltig.");
-        if (!meterEndOk)
-            errors.Add("MeterEnd ist ungueltig.");
-
-        var zeitOk = TryParseOptionalTimeSpan(ZeitTextBox.Text, out _);
-        if (!zeitOk)
-            errors.Add("Zeit ist ungueltig.");
-
-        var streckeOk = true;
-        if (StreckenschadenCheckBox.IsChecked == true)
-        {
-            if (!meterStart.HasValue || !meterEnd.HasValue)
+        var result = _validationVm.Validate(new ProtocolEntryEditorValidationInput(
+            Code: CodeTextBox.Text ?? string.Empty,
+            MeterStart: MeterStartTextBox.Text ?? string.Empty,
+            MeterEnd: MeterEndTextBox.Text ?? string.Empty,
+            Zeit: ZeitTextBox.Text ?? string.Empty,
+            IsStreckenschaden: StreckenschadenCheckBox.IsChecked == true,
+            Vsa: new VsaFieldInputs
             {
-                streckeOk = false;
-                errors.Add("Streckenschaden: MeterStart und MeterEnde sind Pflicht.");
-            }
-            else if (meterEnd < meterStart)
-            {
-                streckeOk = false;
-                errors.Add("Streckenschaden: MeterEnde muss groesser/gleich MeterStart sein.");
-            }
-        }
+                Distanz = VsaDistanzTextBox.Text,
+                Video = VsaVideoTextBox.Text,
+                UhrVon = VsaUhrVonComboBox.Text,
+                UhrBis = VsaUhrBisComboBox.Text,
+                Q1 = VsaQ1TextBox.Text,
+                Q2 = VsaQ2TextBox.Text,
+                Strecke = VsaStreckeTextBox.Text,
+                Ez = VsaEzComboBox.Text,
+                Schachtbereich = VsaSchachtbereichTextBox.Text
+            }));
 
-        var vsaErrors = ValidateVsaUiFields(
-            code,
-            codeInCatalog,
-            out var vsaDistanzOk,
-            out var vsaVideoOk,
-            out var vsaUhrVonOk,
-            out var vsaUhrBisOk,
-            out var vsaQ1Ok,
-            out var vsaQ2Ok,
-            out var vsaStreckeOk,
-            out var vsaEzOk,
-            out var vsaSchachtbereichOk);
-        errors.AddRange(vsaErrors);
+        SetControlValidationState(CodeTextBox, result.CodeOk, "Code fehlt oder nicht im Katalog.");
+        SetControlValidationState(MeterStartTextBox, result.MeterStartOk, "Numerischer Wert erwartet.");
+        SetControlValidationState(MeterEndTextBox, result.MeterEndOk, "Numerischer Wert erwartet.");
+        SetControlValidationState(ZeitTextBox, result.ZeitOk, "Erlaubt: mm:ss oder hh:mm:ss.");
+        SetControlValidationState(StreckenschadenCheckBox, result.StreckenschadenOk, "Streckenschaden benötigt gueltige Meter von/bis.");
+        SetControlValidationState(VsaDistanzTextBox, result.Vsa.DistanzOk, "Numerischer Wert erwartet.");
+        SetControlValidationState(VsaVideoTextBox, result.Vsa.VideoOk, "Erlaubt: mm:ss oder hh:mm:ss.");
+        SetControlValidationState(VsaUhrVonComboBox, result.Vsa.UhrVonOk, "Erlaubt: 00 bis 12.");
+        SetControlValidationState(VsaUhrBisComboBox, result.Vsa.UhrBisOk, "Erlaubt: 00 bis 12.");
+        SetControlValidationState(VsaQ1TextBox, result.Vsa.Q1Ok, "Numerischer Wert erwartet.");
+        SetControlValidationState(VsaQ2TextBox, result.Vsa.Q2Ok, "Numerischer Wert erwartet.");
+        SetControlValidationState(VsaStreckeTextBox, result.Vsa.StreckeOk, "Erlaubt: A1/B1/C1...");
+        SetControlValidationState(VsaEzComboBox, result.Vsa.EzOk, "Erlaubt: EZ0 bis EZ4.");
+        SetControlValidationState(VsaSchachtbereichTextBox, result.Vsa.SchachtbereichOk, "Erlaubt: A/B/D/F/H/I/J.");
 
-        if (_paramVm is not null)
-        {
-            if (!string.Equals(_paramVm.Code, code, StringComparison.OrdinalIgnoreCase))
-                _paramVm.Code = code;
-
-            _paramVm.Validate();
-            if (!_paramVm.IsValid)
-                errors.AddRange(_paramVm.ValidationMessages);
-        }
-
-        SetControlValidationState(CodeTextBox, codeOk, "Code fehlt oder nicht im Katalog.");
-        SetControlValidationState(MeterStartTextBox, meterStartOk, "Numerischer Wert erwartet.");
-        SetControlValidationState(MeterEndTextBox, meterEndOk, "Numerischer Wert erwartet.");
-        SetControlValidationState(ZeitTextBox, zeitOk, "Erlaubt: mm:ss oder hh:mm:ss.");
-        SetControlValidationState(StreckenschadenCheckBox, streckeOk, "Streckenschaden benötigt gueltige Meter von/bis.");
-        SetControlValidationState(VsaDistanzTextBox, vsaDistanzOk, "Numerischer Wert erwartet.");
-        SetControlValidationState(VsaVideoTextBox, vsaVideoOk, "Erlaubt: mm:ss oder hh:mm:ss.");
-        SetControlValidationState(VsaUhrVonComboBox, vsaUhrVonOk, "Erlaubt: 00 bis 12.");
-        SetControlValidationState(VsaUhrBisComboBox, vsaUhrBisOk, "Erlaubt: 00 bis 12.");
-        SetControlValidationState(VsaQ1TextBox, vsaQ1Ok, "Numerischer Wert erwartet.");
-        SetControlValidationState(VsaQ2TextBox, vsaQ2Ok, "Numerischer Wert erwartet.");
-        SetControlValidationState(VsaStreckeTextBox, vsaStreckeOk, "Erlaubt: A1/B1/C1...");
-        SetControlValidationState(VsaEzComboBox, vsaEzOk, "Erlaubt: EZ0 bis EZ4.");
-        SetControlValidationState(VsaSchachtbereichTextBox, vsaSchachtbereichOk, "Erlaubt: A/B/D/F/H/I/J.");
-
-        var uniqueErrors = errors
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (uniqueErrors.Count == 0)
-            ValidationStatus.Text = "Eingabe gültig.";
-        else
-            ValidationStatus.Text = string.Join(Environment.NewLine, uniqueErrors.Take(12));
-
-        OkButton.IsEnabled = uniqueErrors.Count == 0 && !_isKiBusy;
+        ValidationStatus.Text = result.ValidationText;
+        OkButton.IsEnabled = result.IsValid && !_isKiBusy;
     }
 
     private static void SetControlValidationState(Control control, bool isValid, string? tooltip = null)
@@ -477,51 +421,6 @@ public partial class ProtocolEntryEditorDialog : Window
 
         if (revalidate)
             ApplyLiveValidation();
-    }
-
-    // Delegation an ProtocolEntryValidator (Application-Schicht)
-    private List<string> ValidateVsaUiFields(
-        string code,
-        bool codeInCatalog,
-        out bool vsaDistanzOk,
-        out bool vsaVideoOk,
-        out bool vsaUhrVonOk,
-        out bool vsaUhrBisOk,
-        out bool vsaQ1Ok,
-        out bool vsaQ2Ok,
-        out bool vsaStreckeOk,
-        out bool vsaEzOk,
-        out bool vsaSchachtbereichOk)
-    {
-        CodeDefinition? catalogDef = null;
-        if (codeInCatalog && _sp?.CodeCatalog is not null)
-            _sp.CodeCatalog.TryGet(code, out catalogDef);
-
-        var inputs = new VsaFieldInputs
-        {
-            Distanz = VsaDistanzTextBox.Text,
-            Video = VsaVideoTextBox.Text,
-            UhrVon = VsaUhrVonComboBox.Text,
-            UhrBis = VsaUhrBisComboBox.Text,
-            Q1 = VsaQ1TextBox.Text,
-            Q2 = VsaQ2TextBox.Text,
-            Strecke = VsaStreckeTextBox.Text,
-            Ez = VsaEzComboBox.Text,
-            Schachtbereich = VsaSchachtbereichTextBox.Text,
-            IsStreckenschaden = StreckenschadenCheckBox.IsChecked == true
-        };
-
-        var result = ProtocolEntryValidator.ValidateVsaFields(code, inputs, catalogDef, requireDistanz: true);
-        vsaDistanzOk = result.DistanzOk;
-        vsaVideoOk = result.VideoOk;
-        vsaUhrVonOk = result.UhrVonOk;
-        vsaUhrBisOk = result.UhrBisOk;
-        vsaQ1Ok = result.Q1Ok;
-        vsaQ2Ok = result.Q2Ok;
-        vsaStreckeOk = result.StreckeOk;
-        vsaEzOk = result.EzOk;
-        vsaSchachtbereichOk = result.SchachtbereichOk;
-        return result.Errors.ToList();
     }
 
     private void NormalizeAllStrictInputs()
@@ -736,10 +635,22 @@ public partial class ProtocolEntryEditorDialog : Window
         _entryVm.EnsureVsaDefaults();
         _entryVm.ApplyStreckenLogik();
 
-        var vsaErrors = ValidateVsaFields();
-        if (vsaErrors.Count > 0)
+        var vsaResult = _validationVm.ValidateVsaFields(_entryVm.Code, new VsaFieldInputs
         {
-            ValidationStatus.Text = string.Join(Environment.NewLine, vsaErrors);
+            Distanz = _entryVm.VsaDistanz,
+            Video = _entryVm.VsaVideo,
+            UhrVon = _entryVm.VsaUhrVon,
+            UhrBis = _entryVm.VsaUhrBis,
+            Q1 = _entryVm.VsaQ1,
+            Q2 = _entryVm.VsaQ2,
+            Strecke = _entryVm.VsaStrecke,
+            Ez = _entryVm.VsaEz,
+            Schachtbereich = _entryVm.VsaSchachtbereich,
+            IsStreckenschaden = _entryVm.Model.IsStreckenschaden
+        });
+        if (vsaResult.Errors.Count > 0)
+        {
+            ValidationStatus.Text = string.Join(Environment.NewLine, vsaResult.Errors);
             return;
         }
 
@@ -760,33 +671,6 @@ public partial class ProtocolEntryEditorDialog : Window
 
         DialogResult = true;
         Close();
-    }
-
-    // Delegation an ProtocolEntryValidator (Application-Schicht)
-    private List<string> ValidateVsaFields()
-    {
-        var code = (_entryVm.Code ?? string.Empty).Trim();
-        if (code.Length == 0)
-            return new List<string>();
-
-        CodeDefinition? catalogDef = null;
-        _sp?.CodeCatalog?.TryGet(code, out catalogDef);
-
-        var inputs = new VsaFieldInputs
-        {
-            Distanz = _entryVm.VsaDistanz,
-            Video = _entryVm.VsaVideo,
-            UhrVon = _entryVm.VsaUhrVon,
-            UhrBis = _entryVm.VsaUhrBis,
-            Q1 = _entryVm.VsaQ1,
-            Q2 = _entryVm.VsaQ2,
-            Strecke = _entryVm.VsaStrecke,
-            Ez = _entryVm.VsaEz,
-            Schachtbereich = _entryVm.VsaSchachtbereich,
-            IsStreckenschaden = _entryVm.Model.IsStreckenschaden
-        };
-
-        return ProtocolEntryValidator.ValidateVsaFields(code, inputs, catalogDef, requireDistanz: true).Errors.ToList();
     }
 
     private string ResolveProjectFolder()

@@ -7,9 +7,9 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Release-Protokollierung repariert:** Im Produktionscode gibt es keine `Debug.WriteLine`-Stelle mehr. Wichtige Warnungen und Fehler aus KI, Training, Import, Backup und Dateizugriff landen über `BestEffort` im Tageslog. Reine Statusinformationen verwenden `Trace`.
 - **Echter Log-Dateitest ergänzt:** Ein Integrationstest prüft, dass eine `BestEffort`-Warnung tatsächlich als Warnung in die Tageslogdatei geschrieben wird.
 - **Schacht-Seite verkleinert:** Die Sanierungsmaßnahmen- und Speicherlogik wurde in `SchachtMassnahmenDialogController` ausgelagert. `SchaechtePage.xaml.cs` liegt nun mit 930 Zeilen wieder unter der Grenze von 1.000 Zeilen.
-- **Protokoll-Editor entkoppelt (A1-04, KI-Teil):** Request-Aufbau, Eingabeprüfung, KI-Aufruf und Fehlerbehandlung liegen nun im testbaren `ProtocolEntryEditorKiViewModel`. Der Dialog zeigt nur noch das Ergebnis an. Laufende Aufrufe werden beim Schließen abgebrochen; technische Fehlerdetails landen im Tageslog statt im Nutzerdialog. Die VSA-Validierung bleibt als eigenes kleines Folgepaket offen.
+- **Protokoll-Editor entkoppelt (A1-04 erledigt):** Request-Aufbau, KI-Aufruf und Fehlerbehandlung liegen im testbaren `ProtocolEntryEditorKiViewModel`; die VSA- und Gesamtprüfung liegt im `ProtocolEntryEditorValidationViewModel`. Der Dialog zeigt nur noch Ergebnisse und Feldmarkierungen an. Laufende KI-Aufrufe werden beim Schließen abgebrochen; technische Fehlerdetails landen im Tageslog statt im Nutzerdialog. `ProtocolEntryEditorDialog.xaml.cs` sank von 943 auf 789 Zeilen.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.634 Tests bestanden (2.482 Infrastruktur, 1.812 Pipeline, 4.278 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.639 Tests bestanden (2.482 Infrastruktur, 1.812 Pipeline, 4.283 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -81,7 +81,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
 | A1-03 | Hoch → **erledigt** | `SchaechtePage.xaml.cs:929` `new ProjectCostStoreRepository(...)` + Persistenzlogik im Code-behind | In `SchachtMassnahmenDialogController` ausgelagert und testgeschützt |
-| A1-04 | Hoch → **teilweise erledigt** | `ProtocolEntryEditorDialog.xaml.cs:540/609` KI-Vorschlag + VSA-Validierung im Dialog | KI-Ablauf ist im `ProtocolEntryEditorKiViewModel` ausgelagert und mit 5 Tests geschützt; VSA-Validierung bleibt offen |
+| A1-04 | Hoch → **erledigt** | `ProtocolEntryEditorDialog.xaml.cs:540/609` KI-Vorschlag + VSA-Validierung im Dialog | KI-Ablauf und VSA-Gesamtprüfung sind in zwei kleine ViewModels ausgelagert und mit 10 fokussierten Tests geschützt; der Dialog sank auf 789 Zeilen |
 | A1-05 | Hoch | `ServiceProvider.cs:50` God-Container mit IO im Ktor; als Ganzes in ~15 ViewModels injiziert | ViewModels nur benötigte Interfaces geben; IO in Lazy/Init verschieben |
 | A1-07 | Mittel | `TrainingCenterWindow.xaml.cs:83-84`, `MediaSearchWindow.xaml.cs:114` — Dienste per `new` | Dienste im ServiceProvider registrieren, per Konstruktor übergeben |
 | A1-06 | Mittel | `Application/Reports/ProtocolPdfExporter.cs` — QuestPDF-Rendering in Application-Schicht | Hinter `IProtocolPdfExporter` legen, konkrete Umsetzung nach Infrastructure |
@@ -224,7 +224,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)
 - **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) erledigt; offen bleiben NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
-- **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); beim ProtocolEntryEditorDialog ist der KI-Teil erledigt, die VSA-Validierung bleibt offen (`A1-04`).
+- **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
 - **KI-Resilienz:** Prozess-Lebenszyklus + CUDA-Fehler-Klassifizierung (`A5-01`, `A5-04`); IBAK-`.fdb` read-only (`A4-01`).
 - **Ergebnis:** Der 8-Stunden-Nachtlauf ist fahrbar, die größten Wartungsbremsen sind entschärft, das KI-Subsystem verhält sich bei Ausfällen berechenbar.
