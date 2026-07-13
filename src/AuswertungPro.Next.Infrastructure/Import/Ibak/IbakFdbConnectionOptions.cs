@@ -24,7 +24,7 @@ public static class IbakFdbConnectionOptions
 
     public static FbConnectionStringBuilder CreatePhotoMap(string databasePath, string? clientLibrary)
     {
-        var credentials = LoadCredentials();
+        var credentials = LoadCredentials(requireExplicit: IsServerDatabasePath(databasePath));
         var builder = new FbConnectionStringBuilder
         {
             Database = databasePath,
@@ -42,11 +42,41 @@ public static class IbakFdbConnectionOptions
     }
 
     public static (string User, string Password) LoadCredentials()
+        => LoadCredentials(requireExplicit: false);
+
+    private static (string User, string Password) LoadCredentials(bool requireExplicit)
     {
         var user = Environment.GetEnvironmentVariable(UserEnvVar);
         var password = Environment.GetEnvironmentVariable(PasswordEnvVar);
+
+        if (requireExplicit
+            && (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password)))
+        {
+            throw new InvalidOperationException(
+                "Firebird-Serverzugriff benoetigt ausdrueckliche Zugangsdaten. " +
+                $"Setze {UserEnvVar} und {PasswordEnvVar}; die lokalen Embedded-Standardwerte " +
+                "werden fuer Serverpfade nicht verwendet.");
+        }
+
         return (
             string.IsNullOrWhiteSpace(user) ? DefaultUser : user.Trim(),
             string.IsNullOrWhiteSpace(password) ? DefaultPassword : password);
+    }
+
+    internal static bool IsServerDatabasePath(string? databasePath)
+    {
+        if (string.IsNullOrWhiteSpace(databasePath))
+            return false;
+
+        var path = databasePath.Trim();
+        if (path.StartsWith(@"\\", StringComparison.Ordinal)
+            || path.Contains("://", StringComparison.Ordinal)
+            || (path.StartsWith("[", StringComparison.Ordinal) && path.Contains("]:", StringComparison.Ordinal)))
+        {
+            return true;
+        }
+
+        var firstColon = path.IndexOf(':');
+        return firstColon > 1;
     }
 }

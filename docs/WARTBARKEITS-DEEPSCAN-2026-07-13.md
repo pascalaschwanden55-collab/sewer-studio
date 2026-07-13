@@ -55,9 +55,10 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Excel-Speicherverbrauch begrenzt (A4-03 erledigt):** Der speichergebundene ClosedXML-Vorlagenexport lehnt mehr als 20.000 Haltungen oder Schächte ab, bevor die Arbeitsmappe geladen oder eine Zieldatei angelegt wird. Die Oberfläche nennt die Grenze und empfiehlt das Aufteilen; drei Tests schützen Grenzwert, Meldung und den frühen Abbruch.
 - **PDF-Textextraktion begrenzt (A4-04 erledigt):** Vor `pdftotext` wird die Seitenzahl gegen das vorhandene Budget geprüft. Externe und interne Extraktion laden insgesamt höchstens 16 Millionen Zeichen in den Speicher; die externe Textdatei wird dabei stückweise statt vollständig gelesen. Zwei Verhaltenstests und der vorhandene Nutzungs-Guard schützen beide Grenzen.
 - **Browser-PDF-Export zeitlich begrenzt (A4-05 erledigt):** Angebot, Druckcenter und NPK-PDF besitzen ein hartes Gesamtlimit von zwei Minuten. Browserstart, HTML-Laden, PDF-Erzeugung und Chromium-Installation beachten den Abbruch; Installationsprozesse werden bei Ablauf samt Unterprozessen beendet, Seite und Browser begrenzt aufgeräumt. Zwei Tests unterscheiden Zeitablauf und Benutzerabbruch.
+- **Firebird-Serverzugang fail-closed (A4-06 erledigt):** Die bekannten IBAK-Standarddaten bleiben ausschließlich für lokale Embedded-Dateien erlaubt. Server-, Netzwerk- und IPv6-Pfade erfordern ausdrücklich `IBAK_FDB_USER` und `IBAK_FDB_PASSWORD`; ohne beide Werte wird vor dem Verbindungsaufbau abgebrochen. Sieben neue Testfälle schützen Zugangspflicht und Pfaderkennung.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.724 Tests bestanden (2.504 Infrastruktur, 1.813 Pipeline, 4.345 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.731 Tests bestanden (2.511 Infrastruktur, 1.813 Pipeline, 4.345 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -167,7 +168,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A4-03 | Niedrig → **erledigt** | `ExcelTemplateExportService.cs` — ClosedXML hält gesamtes Workbook im RAM | Harte Obergrenze von 20.000 Datensätzen vor dem Laden der Arbeitsmappe; verständliche Fehlermeldung mit Aufteilungshinweis |
 | A4-04 | Niedrig → **erledigt** | `PdfTextExtractor.cs:70/99` — Seiten-Budget nur im PdfPig-Fallback, nicht bei pdftotext | Seitenzahl wird vor `pdftotext` geprüft; beide Pfade begrenzen extrahierten Text auf 16 Millionen Zeichen |
 | A4-05 | Niedrig → **erledigt** | `OfferHtmlToPdfRenderer.cs:84-145` — Playwright ohne hartes Gesamt-Timeout | Verknüpftes Zwei-Minuten-Limit durch Browser-, PDF- und Installationspfad; begrenztes Ressourcen-Aufräumen |
-| A4-06 | Niedrig | `IbakFdbConnectionOptions.cs:9-10` — SYSDBA/masterkey im Code (Env-übersteuerbar) | Für Embedded belassen; bei Server-Zugriff nur aus Env/Config |
+| A4-06 | Niedrig → **erledigt** | `IbakFdbConnectionOptions.cs:9-10` — SYSDBA/masterkey im Code (Env-übersteuerbar) | Defaults bleiben nur für lokale Embedded-Dateien; Serverpfade verlangen Benutzer und Passwort aus der Umgebung |
 
 *Positiv bestätigt: SQL parametrisiert (keine Injection); WinCan `.db3` ReadOnly; QGIS-Bridge Loopback-only, GET-only, Exception-gekapselt, in `App.OnExit` disposed; große Haupt-Exports laufen korrekt via `Task.Run`.*
 
