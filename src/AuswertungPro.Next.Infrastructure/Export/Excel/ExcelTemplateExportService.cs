@@ -20,6 +20,13 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             if (!File.Exists(templatePath)) throw new FileNotFoundException("Excel-Vorlage nicht gefunden.", templatePath);
             if (string.IsNullOrWhiteSpace(outputPath)) throw new ArgumentException("Output-Pfad fehlt.", nameof(outputPath));
 
+            var limitFailure = ExcelTemplateExportLimit.RejectIfExceeded(
+                project.Data.Count,
+                "Haltungen",
+                "EXP-EXCEL-LIMIT");
+            if (limitFailure is not null)
+                return limitFailure;
+
             if (headerRow <= 0) headerRow = 11;
             if (startRow <= 0) startRow = 12;
 
@@ -124,6 +131,13 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             if (string.IsNullOrWhiteSpace(templatePath)) throw new ArgumentException("Template-Pfad fehlt.", nameof(templatePath));
             if (!File.Exists(templatePath)) throw new FileNotFoundException("Excel-Vorlage nicht gefunden.", templatePath);
             if (string.IsNullOrWhiteSpace(outputPath)) throw new ArgumentException("Output-Pfad fehlt.", nameof(outputPath));
+
+            var limitFailure = ExcelTemplateExportLimit.RejectIfExceeded(
+                project.SchaechteData.Count,
+                "Schaechte",
+                "EXP-EXCEL-SCHACHT-LIMIT");
+            if (limitFailure is not null)
+                return limitFailure;
 
             if (headerRow <= 0) headerRow = 11;
             if (startRow <= 0) startRow = 12;

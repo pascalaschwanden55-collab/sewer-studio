@@ -131,6 +131,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
                 _toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
+            else
+                _toasts.Error(res.ErrorMessage ?? "Haltungs-Export fehlgeschlagen.");
         }
         finally
         {
@@ -161,6 +163,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
                 _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
+            else
+                _toasts.Error(res.ErrorMessage ?? "Schacht-Export fehlgeschlagen.");
         }
         finally
         {
