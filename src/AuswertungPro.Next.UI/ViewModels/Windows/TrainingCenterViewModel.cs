@@ -490,6 +490,11 @@ public partial class TrainingCenterViewModel : ObservableObject
         return ResetGenerationCancellationSource().Token;
     }
 
+    internal void CancelOutstandingOperations()
+    {
+        _genCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_genCts);
+    }
+
     private bool HasSampleSelection() => SelectedSample is not null;
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]

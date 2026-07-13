@@ -5,11 +5,27 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
+using System.IO;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class TrainingCenterWindowDependencyTests
 {
+    [Fact]
+    public void Fenster_reicht_seinen_Lebensdauer_Abbruch_an_Sam_und_ViewModel_weiter()
+    {
+        var source = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingCenterWindow.xaml.cs"));
+
+        Assert.Contains("private readonly TrainingCenterWindowLifetime _lifetime = new();", source);
+        Assert.Contains("Closing += TrainingCenterWindow_Closing;", source);
+        Assert.Contains("Vm.CancelOutstandingOperations();", source);
+        Assert.Contains("_lifetime.Dispose();", source);
+        Assert.Contains("catch (OperationCanceledException) when (ct.IsCancellationRequested)", source);
+        Assert.Contains("ResolveReviewPipeDiameterMm(),\n                ct", source.Replace("\r\n", "\n"));
+    }
+
     [Fact]
     public void Fenster_kann_zentrale_kernabhaengigkeiten_entgegennehmen()
     {

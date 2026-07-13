@@ -38,6 +38,7 @@ public partial class TrainingCenterWindow : Window
     private readonly ServiceProvider? _services;
     private readonly IDialogService _dialogs;
     private readonly TrainingCenterLazyServices _trainingServices;
+    private readonly TrainingCenterWindowLifetime _lifetime = new();
 
     private IVsaCodeSelectionCatalog? CodeSelectionCatalog
         => _services?.CodeSelectionCatalog;
@@ -153,7 +154,14 @@ public partial class TrainingCenterWindow : Window
         };
 
         Vm.PropertyChanged += OnVmPropertyChanged;
+        Closing += TrainingCenterWindow_Closing;
         Closed += (_, _) => Vm.PropertyChanged -= OnVmPropertyChanged;
+    }
+
+    private void TrainingCenterWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        _lifetime.Dispose();
+        Vm.CancelOutstandingOperations();
     }
 
     private void SetupPipelineElements()
@@ -339,6 +347,7 @@ public partial class TrainingCenterWindow : Window
             return;
         }
 
+        var ct = _lifetime.Token;
         try
         {
             BtnReviewSegmentSam.IsEnabled = false;
@@ -350,7 +359,8 @@ public partial class TrainingCenterWindow : Window
                 card.FramePath,
                 box,
                 card.ProtocolCode,
-                ResolveReviewPipeDiameterMm());
+                ResolveReviewPipeDiameterMm(),
+                ct);
 
             SamMaskRenderer.RenderMasks(
                 BoxCanvas,
@@ -365,6 +375,10 @@ public partial class TrainingCenterWindow : Window
                 ? BuildSamStatus(result.Response)
                 : $"SAM: {result.Response.Masks.Count} Maske(n) - wird mit Akzeptieren gespeichert";
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Das Fenster wird geschlossen; keine Meldung mehr anzeigen.
+        }
         catch (Exception ex)
         {
             ReviewSamStatusText.Text = "SAM Fehler";
@@ -372,7 +386,8 @@ public partial class TrainingCenterWindow : Window
         }
         finally
         {
-            BtnReviewSegmentSam.IsEnabled = true;
+            if (!ct.IsCancellationRequested)
+                BtnReviewSegmentSam.IsEnabled = true;
         }
     }
 
