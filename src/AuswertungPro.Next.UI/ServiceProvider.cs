@@ -85,6 +85,7 @@ namespace AuswertungPro.Next.UI
         public IProgramRootLocator ProgramRootLocator { get; }
         public IRepositoryRootLocator RepositoryRootLocator { get; }
         public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
+        public IVsaYoloClassMapStore VsaYoloClasses { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -308,6 +309,9 @@ namespace AuswertungPro.Next.UI
             // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
             KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
             KnowledgeRoot = KnowledgeBasePaths.GetRoot();
+            VsaYoloClasses = new VsaYoloClassMapFileStore(
+                Path.Combine(KnowledgeRoot, "yolo_class_map.json"));
+            VsaYoloClassMap.Use(VsaYoloClasses);
             TrainingSettings = new TrainingCenterSettingsFileStore(
                 KnowledgeBasePaths.GetTrainingSettingsPath());
             TrainingCenterSettingsStore.Use(TrainingSettings);
@@ -712,6 +716,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
             if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
+            if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;
