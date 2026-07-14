@@ -1,7 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
@@ -10,7 +9,6 @@ using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-[Collection("EnvironmentVars")]
 public sealed class TrainingCenterReviewThreadingTests
 {
     [Fact]
@@ -18,8 +16,9 @@ public sealed class TrainingCenterReviewThreadingTests
     {
         using var temp = new TempKnowledgeRoot();
         var uiThread = new RecordingUiThread();
-        var vm = CreateViewModel(temp, uiThread);
-        await TrainingSamplesStore.SaveAsync(
+        var sampleStore = new TrainingSampleFileStore(Path.Combine(temp.Path, "training_samples.json"));
+        var vm = CreateViewModel(temp, uiThread, sampleStore);
+        await sampleStore.SaveAsync(
         [
             new TrainingSample { SampleId = "sample-1", CaseId = "case-1", Code = "BAA" }
         ]);
@@ -44,14 +43,20 @@ public sealed class TrainingCenterReviewThreadingTests
         Assert.Equal(2, vm.StartdataCandidateCount);
     }
 
-    private static TrainingCenterViewModel CreateViewModel(TempKnowledgeRoot temp, IUiThread uiThread)
+    private static TrainingCenterViewModel CreateViewModel(
+        TempKnowledgeRoot temp,
+        IUiThread uiThread,
+        ITrainingSampleStore? trainingSamples = null)
         => new(
             new TrainingCenterStore(Path.Combine(temp.Path, "training_center.json")),
             new TrainingCenterImportService(),
             codeCatalog: null,
             kbDiagnostics: new NoopKnowledgeBaseDiagnosticsRunner(),
             settings: null,
-            uiThread: uiThread);
+            uiThread: uiThread,
+            knowledgeBackup: new KnowledgeBackupTransferService(),
+            trainingSamples: trainingSamples ?? new TrainingSampleFileStore(
+                Path.Combine(temp.Path, "training_samples.json")));
 
     private static InfraSelfImproving.ReviewQueueItem Item(string id, string? matchLevel)
         => new(id, Entry: null, Priority: 0.5, EnqueuedUtc: DateTime.UtcNow)
@@ -88,8 +93,6 @@ public sealed class TrainingCenterReviewThreadingTests
 
     private sealed class TempKnowledgeRoot : IDisposable
     {
-        private readonly string? _oldKnowledgeRoot;
-
         public string Path { get; } = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),
             "training-center-review-threading-" + Guid.NewGuid().ToString("N"));
@@ -97,16 +100,10 @@ public sealed class TrainingCenterReviewThreadingTests
         public TempKnowledgeRoot()
         {
             Directory.CreateDirectory(Path);
-            _oldKnowledgeRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
-            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", Path);
-            KnowledgeBasePaths.InvalidateCache();
         }
 
         public void Dispose()
         {
-            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", _oldKnowledgeRoot);
-            KnowledgeBasePaths.InvalidateCache();
-
             try
             {
                 if (Directory.Exists(Path))

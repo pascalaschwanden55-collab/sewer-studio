@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai.Teacher;
@@ -10,10 +11,16 @@ namespace AuswertungPro.Next.UI.Ai.Teacher;
 public static class TrainingAnnotationExportServiceFactory
 {
     public static ITrainingAnnotationExportService Create()
-        => new TrainingAnnotationExportService(
-            TeacherAnnotationStore.GetImagesDir(),
-            TeacherAnnotationStore.GetLabelsDir(),
+        => Create(TeacherAnnotationStore.Current);
+
+    public static ITrainingAnnotationExportService Create(ITeacherAnnotationStore annotationStore)
+    {
+        ArgumentNullException.ThrowIfNull(annotationStore);
+        return new TrainingAnnotationExportService(
+            annotationStore.GetImagesDir(),
+            annotationStore.GetLabelsDir(),
             new WpfTrainingImageCropper());
+    }
 }
 
 internal sealed class WpfTrainingImageCropper : ITrainingImageCropper

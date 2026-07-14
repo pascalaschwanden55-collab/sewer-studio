@@ -1,21 +1,17 @@
 using System.IO;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-[Collection("EnvironmentVars")]
 public sealed class TrainingAnnotationExportServiceTests
 {
     [Fact]
     public async Task ExportAsync_WorksWithoutWpfApplication()
     {
-        var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
         var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
-        Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", root);
-        KnowledgeBasePaths.InvalidateCache();
 
         try
         {
@@ -23,7 +19,8 @@ public sealed class TrainingAnnotationExportServiceTests
             Directory.CreateDirectory(root);
             await File.WriteAllBytesAsync(sourcePath, TransparentPng1x1);
 
-            var service = TrainingAnnotationExportServiceFactory.Create();
+            var service = TrainingAnnotationExportServiceFactory.Create(
+                new TeacherAnnotationFileStore(root));
 
             var result = await service.ExportAsync(
                 sourcePath,
@@ -48,8 +45,6 @@ public sealed class TrainingAnnotationExportServiceTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
-            KnowledgeBasePaths.InvalidateCache();
             if (Directory.Exists(root))
                 Directory.Delete(root, recursive: true);
         }

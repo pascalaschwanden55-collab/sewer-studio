@@ -1286,7 +1286,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var factorySource = File.ReadAllText(factoryPath);
 
         Assert.Contains("TrainingSamplePersistenceWorkflowController.PersistAsync(", persistMethod, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplePersistenceRequestFactory.CreateWithDefaults(", persistMethod, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplePersistenceRequestFactory.Create(", persistMethod, StringComparison.Ordinal);
+        Assert.Contains("_trainingSamples.MergeOrUpdateAsync", persistMethod, StringComparison.Ordinal);
         Assert.Contains("TrainingSamplesStore.MergeOrUpdateAsync", factorySource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             persistMethod,
@@ -2085,7 +2086,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var loadFactorySource = File.ReadAllText(loadFactoryPath);
 
         Assert.Contains("TrainingSampleLoadWorkflow.RunAsync(", loadSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSampleLoadRequestFactory.CreateWithDefaults(", loadSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleLoadRequestFactory.Create(", loadSource, StringComparison.Ordinal);
+        Assert.Contains("_trainingSamples.LoadAsync", loadSource, StringComparison.Ordinal);
         Assert.Contains("TrainingSamplesStore.LoadAsync", loadFactorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingSampleCollectionController.ReplaceOnUi(", loadWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("AppendSamples: samples => TrainingSampleCollectionController.Append(Samples, samples)", generateMethod, StringComparison.Ordinal);

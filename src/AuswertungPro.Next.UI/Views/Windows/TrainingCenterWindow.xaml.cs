@@ -136,7 +136,8 @@ public partial class TrainingCenterWindow : Window
             knowledgeBaseDiagnostics,
             services?.Settings,
             uiThread: null,
-            knowledgeBackup: services?.KnowledgeBackup ?? new KnowledgeBackupTransferService());
+            knowledgeBackup: services?.KnowledgeBackup ?? new KnowledgeBackupTransferService(),
+            trainingSamples: services?.TrainingSamples ?? TrainingSamplesStore.Current);
 
         DataContext = Vm;
 

@@ -442,9 +442,10 @@ public partial class TrainingCenterViewModel : ObservableObject
     private async Task LoadSamplesInternalAsync()
     {
         await TrainingSampleLoadWorkflow.RunAsync(
-            TrainingSampleLoadRequestFactory.CreateWithDefaults(
+            TrainingSampleLoadRequestFactory.Create(
                 Samples,
-                OnUi)).ConfigureAwait(false);
+                OnUi,
+                _trainingSamples.LoadAsync)).ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -632,10 +633,12 @@ public partial class TrainingCenterViewModel : ObservableObject
     private async Task PersistSamplesAsync(TrainingSample? changedSample = null)
     {
         await TrainingSamplePersistenceWorkflowController.PersistAsync(
-            TrainingSamplePersistenceRequestFactory.CreateWithDefaults(
+            TrainingSamplePersistenceRequestFactory.Create(
                 Samples,
                 changedSample,
                 IncrementalKbUpdateWithReasonAsync,
+                new TrainingSamplePersistenceRequestFactoryDefaults(
+                    _trainingSamples.MergeOrUpdateAsync),
                 CancellationToken.None)).ConfigureAwait(false);
     }
 
