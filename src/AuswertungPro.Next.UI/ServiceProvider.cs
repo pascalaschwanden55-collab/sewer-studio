@@ -79,6 +79,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+        public ISafeShellOpenService ShellOpen { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -262,6 +263,8 @@ namespace AuswertungPro.Next.UI
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
+            ShellOpen = new SafeShellOpenService();
+            Services.SafeShellOpen.Use(ShellOpen);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -675,6 +678,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
             if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
+            if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;

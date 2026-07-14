@@ -1,72 +1,25 @@
-using System.Diagnostics;
-using System.IO;
+using System;
+using System.Threading;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.UI.Services;
 
 public static class SafeShellOpen
 {
-    private static readonly HashSet<string> AllowedFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    private static ISafeShellOpenService _current = new SafeShellOpenService();
+
+    internal static ISafeShellOpenService CompatibilityService
+        => Volatile.Read(ref _current);
+
+    internal static void Use(ISafeShellOpenService service)
     {
-        ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff",
-        ".mp4", ".mpg", ".mpeg", ".avi", ".mov", ".mkv",
-        ".xlsx", ".csv", ".txt", ".json"
-    };
+        ArgumentNullException.ThrowIfNull(service);
+        Volatile.Write(ref _current, service);
+    }
 
     public static bool TryOpen(string? path, out string? error)
     {
-        error = null;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            error = "Pfad fehlt.";
-            return false;
-        }
-
-        string fullPath;
-        try
-        {
-            fullPath = Path.GetFullPath(path);
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-
-        if (Directory.Exists(fullPath))
-            return Start(fullPath, out error);
-
-        if (!File.Exists(fullPath))
-        {
-            error = "Datei nicht gefunden.";
-            return false;
-        }
-
-        var ext = Path.GetExtension(fullPath);
-        if (!AllowedFileExtensions.Contains(ext))
-        {
-            error = $"Dateityp nicht zum direkten Oeffnen freigegeben: {ext}";
-            return false;
-        }
-
-        return Start(fullPath, out error);
-    }
-
-    private static bool Start(string fullPath, out string? error)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = fullPath,
-                UseShellExecute = true
-            });
-            error = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
+        return CompatibilityService.TryOpen(path, out error);
     }
 }
