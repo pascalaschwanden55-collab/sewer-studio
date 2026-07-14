@@ -10,7 +10,6 @@ using AuswertungPro.Next.Application.Ai.Backup;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraBackup = AuswertungPro.Next.Infrastructure.Ai.Backup;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -32,14 +31,29 @@ public static class KnowledgeBackupService
         string zipPath,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
+        => await ExportAsync(
+            zipPath,
+            KnowledgeBackupLocations.FromCurrentSystem(),
+            AppSettings.FlushPendingSave,
+            FlushSqliteWal,
+            progress,
+            ct).ConfigureAwait(false);
+
+    internal static async Task<BackupResult> ExportAsync(
+        string zipPath,
+        KnowledgeBackupLocations locations,
+        Action flushPendingSettings,
+        Action<IProgress<string>?> flushSqliteWal,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
     {
         try
         {
-            AppSettings.FlushPendingSave();
+            flushPendingSettings();
 
             // SQLite WAL-Checkpoint: Alle Daten in die Hauptdatei flushen
             // damit der Export transaktionskonsistent ist.
-            FlushSqliteWal(progress);
+            flushSqliteWal(progress);
 
             if (File.Exists(zipPath))
                 File.Delete(zipPath);
@@ -47,7 +61,7 @@ public static class KnowledgeBackupService
             int fileCount = 0;
             using (var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
-                foreach (var (source, entry) in EnumerateBackupFiles())
+                foreach (var (source, entry) in EnumerateBackupFiles(locations))
                 {
                     ct.ThrowIfCancellationRequested();
                     if (!File.Exists(source))
@@ -70,7 +84,7 @@ public static class KnowledgeBackupService
                     Product = "SewerStudio",
                     ExportedUtc = DateTime.UtcNow.ToString("o"),
                     FileCount = fileCount,
-                    KnowledgeRoot = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot()
+                    KnowledgeRoot = locations.KnowledgeRoot
                 };
                 var manifestEntry = zip.CreateEntry("_manifest.json", CompressionLevel.Fastest);
                 using var mStream = manifestEntry.Open();
@@ -97,10 +111,23 @@ public static class KnowledgeBackupService
         string zipPath,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
+        => await ImportAsync(
+            zipPath,
+            KnowledgeBackupLocations.FromCurrentSystem(),
+            AppSettings.FlushPendingSave,
+            progress,
+            ct).ConfigureAwait(false);
+
+    internal static async Task<BackupResult> ImportAsync(
+        string zipPath,
+        KnowledgeBackupLocations locations,
+        Action flushPendingSettings,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
     {
         try
         {
-            AppSettings.FlushPendingSave();
+            flushPendingSettings();
 
             using var zip = ZipFile.OpenRead(zipPath);
 
@@ -125,7 +152,7 @@ public static class KnowledgeBackupService
             {
                 if (entry.FullName == "_manifest.json" || string.IsNullOrEmpty(entry.Name))
                     continue;
-                var targetPath = MapEntryToLocalPath(entry.FullName);
+                var targetPath = MapEntryToLocalPath(entry.FullName, locations);
                 if (targetPath is not null)
                     filesToImport.Add((entry, targetPath));
             }
@@ -134,7 +161,9 @@ public static class KnowledgeBackupService
                 return new BackupResult(false, "Keine importierbaren Dateien im Archiv gefunden.", 0, 0);
 
             // Backup bestehender Dateien in Temp-Ordner (fuer Rollback)
-            var backupDir = Path.Combine(Path.GetTempPath(), $"sewerstudio_import_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}");
+            var backupDir = Path.Combine(
+                locations.TempRoot,
+                $"sewerstudio_import_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}");
             Directory.CreateDirectory(backupDir);
             var backedUpFiles = new List<(string Original, string Backup)>();
             var newlyCreatedFiles = new List<string>(); // Dateien die vorher nicht existierten
@@ -181,15 +210,15 @@ public static class KnowledgeBackupService
 
                 // Phase 3: FramePaths in training_samples.json remappen
                 progress?.Report("Passe Frame-Pfade an lokale Struktur an...");
-                await RemapFramePathsAsync(ct).ConfigureAwait(false);
+                await RemapFramePathsAsync(locations, ct).ConfigureAwait(false);
 
                 // Phase 4: training_center.json aus Knowledge-Root an den
                 // aktuellen AppData-Pfad kopieren (TrainingCenterStore liest von dort).
-                CopyTrainingCenterStateToAppData();
+                CopyTrainingCenterStateToAppData(locations);
 
                 // Phase 5: Absolute Pfade in teacher_annotations.json remappen
                 progress?.Report("Passe Lehrer-Annotationspfade an...");
-                RemapTeacherAnnotationPaths();
+                RemapTeacherAnnotationPaths(locations);
 
                 // Erfolg — Backup-Ordner aufraeumen
                 SafeDeleteBackupDir(backupDir);
@@ -285,18 +314,20 @@ public static class KnowledgeBackupService
     /// Passt absolute FramePaths in training_samples.json an den lokalen KnowledgeRoot an.
     /// Erkennt Frames die im knowledge/frames/ Ordner liegen und setzt den lokalen Pfad.
     /// </summary>
-    private static async Task RemapFramePathsAsync(CancellationToken ct)
+    private static async Task RemapFramePathsAsync(
+        KnowledgeBackupLocations locations,
+        CancellationToken ct)
     {
         try
         {
-            var samplesPath = InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSamplesPath();
+            var samplesPath = Path.Combine(locations.KnowledgeRoot, "training_samples.json");
             if (!File.Exists(samplesPath)) return;
 
             var json = await File.ReadAllTextAsync(samplesPath, ct).ConfigureAwait(false);
             var samples = JsonSerializer.Deserialize<List<TrainingSample>>(json);
             if (samples is null || samples.Count == 0) return;
 
-            var localFramesDir = InfraKnowledgeBase.KnowledgeBasePaths.GetFramesDir();
+            var localFramesDir = Path.Combine(locations.KnowledgeRoot, "frames");
             var changed = false;
 
             foreach (var s in samples)
@@ -346,15 +377,14 @@ public static class KnowledgeBackupService
     /// Kopiert training_center.json aus dem Knowledge-Root nach AppData,
     /// damit der TrainingCenterStore den importierten Fortschritt findet.
     /// </summary>
-    private static void CopyTrainingCenterStateToAppData()
+    private static void CopyTrainingCenterStateToAppData(KnowledgeBackupLocations locations)
     {
         try
         {
-            var importedPath = Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "training_center.json");
+            var importedPath = Path.Combine(locations.KnowledgeRoot, "training_center.json");
             if (!File.Exists(importedPath)) return;
 
-            var tcStore = new Ai.Training.TrainingCenterStore();
-            var targetPath = tcStore.StoreFilePath;
+            var targetPath = locations.TrainingCenterStatePath;
 
             // Zielverzeichnis sicherstellen
             var dir = Path.GetDirectoryName(targetPath);
@@ -376,11 +406,11 @@ public static class KnowledgeBackupService
     /// in teacher_annotations.json an den lokalen KnowledgeRoot an.
     /// Beim Transfer auf einen anderen Rechner zeigen die Pfade sonst ins Leere.
     /// </summary>
-    private static void RemapTeacherAnnotationPaths()
+    private static void RemapTeacherAnnotationPaths(KnowledgeBackupLocations locations)
     {
         try
         {
-            var annotationsPath = Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
+            var annotationsPath = Path.Combine(locations.KnowledgeRoot, "teacher_annotations.json");
             if (!File.Exists(annotationsPath)) return;
 
             var json = File.ReadAllText(annotationsPath);
@@ -388,8 +418,8 @@ public static class KnowledgeBackupService
             var annotations = JsonSerializer.Deserialize<List<TeacherAnnotation>>(json, opts);
             if (annotations is null || annotations.Count == 0) return;
 
-            var localImagesDir = InfraTeacher.TeacherAnnotationStore.GetImagesDir();
-            var localLabelsDir = InfraTeacher.TeacherAnnotationStore.GetLabelsDir();
+            var localImagesDir = Path.Combine(locations.KnowledgeRoot, "teacher_images");
+            var localLabelsDir = Path.Combine(locations.KnowledgeRoot, "teacher_labels");
             var changed = false;
 
             foreach (var a in annotations)
@@ -458,34 +488,27 @@ public static class KnowledgeBackupService
 
     // ── Path helpers ─────────────────────────────────────────────────
 
-    private static readonly string RoamingAp = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AuswertungPro");
-
-    private static readonly string RoamingSs = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.ProductName);
-
-    private static readonly string LocalSs = AppSettings.AppDataDir;
-
-    private static IEnumerable<(string Source, string Entry)> EnumerateBackupFiles()
+    private static IEnumerable<(string Source, string Entry)> EnumerateBackupFiles(
+        KnowledgeBackupLocations locations)
     {
-        var knowledgeRoot = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot();
+        var knowledgeRoot = locations.KnowledgeRoot;
 
         // ══════════════════════════════════════════════════════════════════
         // KNOWLEDGE-ROOT: Alle KI-Artefakte (vollstaendiger Hirntransfer)
         // ══════════════════════════════════════════════════════════════════
 
         // KB-Datenbank (nach WAL-Checkpoint nur noch .db noetig, WAL/SHM als Sicherheit)
-        var kbDbPath = InfraKnowledgeBase.KnowledgeBasePaths.GetKnowledgeDbPath();
+        var kbDbPath = Path.Combine(knowledgeRoot, "KnowledgeBase.db");
         yield return (kbDbPath, "knowledge/KnowledgeBase.db");
         yield return (kbDbPath + "-wal", "knowledge/KnowledgeBase.db-wal");
         yield return (kbDbPath + "-shm", "knowledge/KnowledgeBase.db-shm");
 
         // Training Samples + Settings
-        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSamplesPath(), "knowledge/training_samples.json");
-        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSettingsPath(), "knowledge/training_settings.json");
+        yield return (Path.Combine(knowledgeRoot, "training_samples.json"), "knowledge/training_samples.json");
+        yield return (Path.Combine(knowledgeRoot, "training_settings.json"), "knowledge/training_settings.json");
 
         // Frames (extrahierte Video-Bilder)
-        var knowledgeFramesDir = InfraKnowledgeBase.KnowledgeBasePaths.GetFramesDir();
+        var knowledgeFramesDir = Path.Combine(knowledgeRoot, "frames");
         if (Directory.Exists(knowledgeFramesDir))
         {
             foreach (var png in Directory.EnumerateFiles(knowledgeFramesDir, "*.png"))
@@ -542,28 +565,27 @@ public static class KnowledgeBackupService
         yield return (Path.Combine(knowledgeRoot, "selftraining_history.json"), "knowledge/selftraining_history.json");
 
         // Massnahmen-Modell
-        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetMeasuresLearningPath(), "knowledge/measures_learning.json");
-        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetMeasuresModelPath(), "knowledge/measures-model.zip");
+        yield return (Path.Combine(knowledgeRoot, "measures_learning.json"), "knowledge/measures_learning.json");
+        yield return (Path.Combine(knowledgeRoot, "measures-model.zip"), "knowledge/measures-model.zip");
 
         // Training-Center State (Case-Fortschritt) — liegt aktuell in AppData,
         // wird hier zusaetzlich unter knowledge/ exportiert fuer portablen Transfer.
-        var tcStore = new Ai.Training.TrainingCenterStore();
-        yield return (tcStore.StoreFilePath, "knowledge/training_center.json");
+        yield return (locations.TrainingCenterStatePath, "knowledge/training_center.json");
 
         // ══════════════════════════════════════════════════════════════════
         // LEGACY-PFADE (AppData, fuer Abwaertskompatibilitaet)
         // ══════════════════════════════════════════════════════════════════
 
-        var kbDir = Path.Combine(RoamingAp, "KiVideoanalyse");
+        var kbDir = Path.Combine(locations.RoamingAuswertungPro, "KiVideoanalyse");
         yield return (Path.Combine(kbDir, "KnowledgeBase.db"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db");
         yield return (Path.Combine(kbDir, "KnowledgeBase.db-wal"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db-wal");
         yield return (Path.Combine(kbDir, "KnowledgeBase.db-shm"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db-shm");
 
-        yield return (Path.Combine(RoamingAp, "training_center_samples.json"), "roaming_auswertungpro/training_center_samples.json");
-        yield return (Path.Combine(RoamingAp, "training_center_settings.json"), "roaming_auswertungpro/training_center_settings.json");
-        yield return (Path.Combine(RoamingAp, "training_center.json"), "roaming_auswertungpro/training_center.json");
+        yield return (Path.Combine(locations.RoamingAuswertungPro, "training_center_samples.json"), "roaming_auswertungpro/training_center_samples.json");
+        yield return (Path.Combine(locations.RoamingAuswertungPro, "training_center_settings.json"), "roaming_auswertungpro/training_center_settings.json");
+        yield return (Path.Combine(locations.RoamingAuswertungPro, "training_center.json"), "roaming_auswertungpro/training_center.json");
 
-        var framesDir = Path.Combine(RoamingAp, "frames");
+        var framesDir = Path.Combine(locations.RoamingAuswertungPro, "frames");
         if (Directory.Exists(framesDir))
         {
             foreach (var png in Directory.EnumerateFiles(framesDir, "*.png"))
@@ -571,29 +593,31 @@ public static class KnowledgeBackupService
         }
 
         // SewerStudio dropdowns + presets
-        var dropdownsDir = Path.Combine(RoamingSs, "dropdowns");
+        var dropdownsDir = Path.Combine(locations.RoamingSewerStudio, "dropdowns");
         if (Directory.Exists(dropdownsDir))
         {
             foreach (var json in Directory.EnumerateFiles(dropdownsDir, "*.json"))
                 yield return (json, "roaming_sewerstudio/dropdowns/" + Path.GetFileName(json));
         }
-        yield return (Path.Combine(RoamingSs, "presets.json"), "roaming_sewerstudio/presets.json");
+        yield return (Path.Combine(locations.RoamingSewerStudio, "presets.json"), "roaming_sewerstudio/presets.json");
 
         // Local settings
-        yield return (Path.Combine(LocalSs, "settings.json"), "local_sewerstudio/settings.json");
+        yield return (Path.Combine(locations.LocalSewerStudio, "settings.json"), "local_sewerstudio/settings.json");
     }
 
     /// <summary>
     /// Mappt ZIP-Eintraege zurueck auf lokale Pfade.
     /// Delegiert an KnowledgeBackupPathMapper (Application-Schicht).
     /// </summary>
-    private static string? MapEntryToLocalPath(string entryName)
+    private static string? MapEntryToLocalPath(
+        string entryName,
+        KnowledgeBackupLocations locations)
         => KnowledgeBackupPathMapper.MapEntryToLocalPath(
             entryName,
-            knowledgeRoot: InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(),
-            roamingAp: RoamingAp,
-            roamingSs: RoamingSs,
-            localSs: LocalSs);
+            knowledgeRoot: locations.KnowledgeRoot,
+            roamingAp: locations.RoamingAuswertungPro,
+            roamingSs: locations.RoamingSewerStudio,
+            localSs: locations.LocalSewerStudio);
 
     /// <summary>Erzeugt einen relativen Pfad fuer den Rollback-Ordner.</summary>
     private static string GetRelativeBackupPath(string fullPath)
