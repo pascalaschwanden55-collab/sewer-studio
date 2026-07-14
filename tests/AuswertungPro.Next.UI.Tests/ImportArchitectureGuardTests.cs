@@ -6,6 +6,20 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportArchitectureGuardTests
 {
     [Fact]
+    public void CsvImportReport_writes_through_instance_and_keeps_static_facade_thin()
+    {
+        var exporter = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportSummaryExporter.cs"));
+        var facade = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ProjectFieldCsvExporter.cs"));
+
+        Assert.Contains("public sealed class ImportSummaryExporter : IImportSummaryExporter", exporter);
+        Assert.Contains("AtomicTextFileWriter.WriteAllText", exporter);
+        Assert.Contains("private static readonly ImportSummaryExporter DefaultExporter", facade);
+        Assert.DoesNotContain("AtomicTextFileWriter.WriteAllText", facade);
+    }
+
+    [Fact]
     public void OneClickImport_uses_central_source_archiver_and_keeps_static_facade_thin()
     {
         var provider = File.ReadAllText(RepoFile(
