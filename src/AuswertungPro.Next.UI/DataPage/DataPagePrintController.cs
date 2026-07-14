@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -57,7 +58,8 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
-        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null)
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        IProtocolSingleRegenerationService? protocolRegeneration = null)
         : this(
             dialogs,
             (IProtocolPdfExporter)protocolPdfExporter,
@@ -65,7 +67,8 @@ public sealed class DataPagePrintController
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
-            buildDossierHydraulikCalculation)
+            buildDossierHydraulikCalculation,
+            protocolRegeneration)
     {
     }
 
@@ -76,7 +79,8 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
-        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null)
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        IProtocolSingleRegenerationService? protocolRegeneration = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -85,7 +89,11 @@ public sealed class DataPagePrintController
             buildHydraulikCalculation: buildHydraulikCalculation,
             getLastProjectPath: getLastProjectPath,
             findSchachtByNummer: findSchachtByNummer,
-            buildDossierHydraulikCalculation: buildDossierHydraulikCalculation)
+            buildDossierHydraulikCalculation: buildDossierHydraulikCalculation,
+            regenerateOne: protocolRegeneration is null
+                ? null
+                : (project, folder, record, document) =>
+                    protocolRegeneration.RegenerateOne(project, folder, record, document))
     {
     }
 

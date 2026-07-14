@@ -35,6 +35,8 @@ public sealed class DataPageViewModelDependencyTests
         Assert.DoesNotContain("_sp.DashboardRefresh", source);
         Assert.DoesNotContain("_sp.BatchMediaSearch", source);
         Assert.DoesNotContain("_sp.Protocols", source);
+        Assert.Contains("protocolRegeneration: services.ProtocolSingleRegeneration", source);
+        Assert.DoesNotContain("ProtocolRegenerationService", source);
 
         var pageDirectory = RepoFile(
             "src",

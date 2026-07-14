@@ -1,10 +1,5 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -25,6 +20,8 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// </summary>
 public static class ProtocolRegenerationService
 {
+    private static readonly ProtocolRegenerationAdapter Default = new();
+
     public sealed record Result(int Generated, int Errors, IReadOnlyList<string> Messages);
 
     /// <summary>
@@ -32,34 +29,8 @@ public static class ProtocolRegenerationService
     /// </summary>
     public static Result RegenerateAll(Project project, string projectFolder, ICodeCatalogProvider? codeCatalog = null)
     {
-        var messages = new List<string>();
-        int generated = 0, errors = 0;
-
-        foreach (var record in project.Data.ToList())
-        {
-            var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
-            if (string.IsNullOrWhiteSpace(haltung) || record.Protocol is null)
-                continue;
-
-            try
-            {
-                RegenerateOne(project, projectFolder, record, record.Protocol, codeCatalog);
-                generated++;
-            }
-            catch (Exception ex)
-            {
-                errors++;
-                messages.Add($"Protokoll {haltung}: {ex.Message}");
-            }
-        }
-
-        if (generated > 0)
-        {
-            project.ModifiedAtUtc = DateTime.UtcNow;
-            project.Dirty = true;
-        }
-
-        return new Result(generated, errors, messages);
+        var result = Default.RegenerateAll(project, projectFolder, codeCatalog);
+        return new Result(result.Generated, result.Errors, result.Messages);
     }
 
     /// <summary>
@@ -75,35 +46,5 @@ public static class ProtocolRegenerationService
         HaltungRecord record,
         ProtocolDocument doc,
         ICodeCatalogProvider? codeCatalog = null)
-    {
-        var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
-        if (string.IsNullOrWhiteSpace(haltung))
-            return null;
-
-        var san = ProjectPathResolver.SanitizePathSegment(haltung);
-        var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
-        Directory.CreateDirectory(dir);
-
-        var stamp = KanalImportDistributor.ResolveDateStamp(record);
-        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-        var options = new HaltungsprotokollPdfOptions
-        {
-            IncludePhotos = true,
-            CodeCatalog = codeCatalog,
-            LogoPathAbs = File.Exists(logo) ? logo : null
-        };
-
-        var pdf = new ProtocolPdfExporter().BuildHaltungsprotokollPdf(project, record, doc, projectFolder, options);
-
-        var dest = Path.Combine(dir, $"{stamp}_{san}_E.pdf");
-        File.WriteAllBytes(dest, pdf);
-
-        record.SetFieldValue(
-            FieldKeys.PdfEigen,
-            ProjectPathResolver.MakeRelative(dest, projectFolder),
-            FieldSource.Legacy,
-            userEdited: false);
-
-        return dest;
-    }
+        => Default.RegenerateOne(project, projectFolder, record, doc, codeCatalog);
 }

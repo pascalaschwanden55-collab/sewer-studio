@@ -112,6 +112,7 @@ namespace AuswertungPro.Next.UI
         public IProjectPortabilityService ProjectPortability { get; }
         public IProjectPhotoAssignmentService ProjectPhotoAssignment { get; }
         public IProtocolRegenerationService ProtocolRegeneration { get; }
+        public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
         public IOneClickImportReportWriter OneClickImportReports { get; }
         public IImportSummaryExporter ImportSummaryExporter { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
@@ -224,7 +225,10 @@ namespace AuswertungPro.Next.UI
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
-            ProtocolRegeneration = new ProtocolRegenerationAdapter();
+            ProtocolPdfExporter = new ProtocolPdfExporter();
+            var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
+            ProtocolRegeneration = protocolRegeneration;
+            ProtocolSingleRegeneration = protocolRegeneration;
             OneClickImportReports = new OneClickImportReportWriter(Logger);
             ImportSummaryExporter = new ImportSummaryExporter();
             ExcelExport = new ExcelTemplateExportService();
@@ -236,7 +240,6 @@ namespace AuswertungPro.Next.UI
             SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService();
             SchachtStammdatenErgaenzung = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtStammdatenErgaenzungsService(
                 SchachtProtocolImport);
-            ProtocolPdfExporter = new ProtocolPdfExporter();
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             FullBackup = new FullBackupService(
