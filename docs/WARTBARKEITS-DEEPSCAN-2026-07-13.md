@@ -231,7 +231,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
-| A8-01 | Hoch | `BestEffort.cs:54` + 81× `Debug.WriteLine` — im Release entfernt | Sink auf `Trace`/`ILogger` umstellen; Logger in Hot-Paths durchreichen |
+| A8-01 | Hoch → **erledigt** | `BestEffort.Write`, `App.xaml.cs` und `ReleaseOperationalLoggingArchitectureTests` | BestEffort-Warnungen gehen in das Tageslog, der Rückfall nutzt Release-taugliches `Trace`; `Debug.WriteLine` ist aus dem Produktionscode entfernt und der echte Dateilog ist getestet |
 | A8-02 | Mittel | `FindAncestor<T>` in ~7 Dateien dupliziert; 2× rohes `VisualTreeHelper.GetParent` | Auf zentrales `VisualTreeSafe.FindAncestor` konsolidieren |
 | A8-03 | Mittel | `AuswertungPro.sln` zieht 12 CLI-Tools in jeden Build; kein `.slnf` | Solution-Filter für den Alltag (4 src + 4 test) |
 | A8-04 | Mittel | `AGENTS.md` veraltet (beschreibt reines PDF-Tool, kein KI-Wort) | Auf Ist-Stand heben oder als Weiterleitung auf CLAUDE.md |
@@ -243,7 +243,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 ## 4. Quick Wins (< 2 Stunden, sofort umsetzbar)
 
-1. **`A8-01` (Teil 1):** `BestEffort.Report`-Standard-Sink von `Debug.WriteLine` auf `Trace.WriteLine`/`ILogger` umstellen — eine Datei, sofort sind Release-Warnungen wieder sichtbar. *Größter Sicherheitsgewinn pro Minute.*
+1. ✔ **`A8-01`:** `BestEffort` schreibt wichtige Warnungen in das Tageslog und fällt ohne App-Sink auf `Trace` zurück; ein echter Dateilog-Test schützt den Release-Weg.
 2. **`A3-01`:** Token-Werte in `umgebung.txt`/`RESTORE-ANLEITUNG.txt` redigieren (Namensfilter).
 3. **`A2-01`:** ffmpeg bei Abbruch killen (`p.Kill(entireProcessTree:true)`).
 4. **`A2-05`/`A2-06`:** CTS disposen + Such-Timer im Unloaded stoppen.
@@ -258,7 +258,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 ## 5. Strategische Empfehlungen
 
-1. **Diagnose-Sichtbarkeit herstellen (`A8-01`, `A8-05`, `A8-07`):** Alle fachlich relevanten Warn-/Fehlerpfade auf `ILogger` heben, ein „Diagnosepaket exportieren" bauen, rohe `ex.Message` durch gemappte Nutzertexte ersetzen. Ohne verlässliche Logs bleibt jede Fehlersuche im Feld Rätselraten.
+1. **Diagnose-Sichtbarkeit vervollständigen:** `A8-01` ist erledigt; offen sind das Diagnosepaket (`A8-05`) und verständliche, zentral gemappte Nutzerfehler (`A8-07`).
 2. **Grossdatei-Guard reparieren und ins Gate nehmen (`A1-09`, `A1-02`, Push-Hook):** Guard auf „Zeilen je Typ" erweitern (schließt das Partial-Schlupfloch), `SchaechtePage` unter die Grenze bringen, und die UI-Tests in den pre-push-Hook aufnehmen — sonst laufen Architektur-Guards nie automatisch.
 3. **Echte God-Classes zerlegen statt weiter fragmentieren (`A1-01`, `A1-03`, `A1-04`):** PlayerWindow-Partials und die Fachlogik in SchaechtePage/ProtocolEntryEditorDialog schrittweise in Services/Controller mit Interface überführen — testgeschützt, kein Big-Bang.
 4. **DI-Hygiene (`A1-05`, `A1-07`, `A1-10`):** ViewModels nur die benötigten Interfaces geben statt des ganzen `ServiceProvider`; per-`new`-Streuung in Fenstern beenden. Das macht Kernabläufe unit-testbar.
@@ -294,7 +294,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 ## 7. Roadmap für die nächsten zwei Releases (nur Wartbarkeit, keine Technologiewechsel)
 
 ### Release N+1 — „Sichtbarkeit & Sicherheitsnetz" (~1 Woche)
-- **Diagnose-Sichtbarkeit:** `A8-01` (Sink umstellen + Hot-Paths), `A8-05` (Diagnosepaket), `A8-07` (Fehler-Mapper) — schrittweise beginnen.
+- **Diagnose-Sichtbarkeit:** ✔ Release-Logging (`A8-01`) erledigt; Diagnosepaket (`A8-05`) und Fehler-Mapper (`A8-07`) bleiben offen.
 - **Test-Gate reparieren:** UI-Tests in den pre-push-Hook; `A1-09` (Guard je Typ); `A1-02`/`A1-03` (SchaechtePage-Fachlogik auslagern → Guard wieder grün).
 - **Quick Wins:** `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A8-06`, `A4-02`, `A5-02`/`A5-03`.
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
