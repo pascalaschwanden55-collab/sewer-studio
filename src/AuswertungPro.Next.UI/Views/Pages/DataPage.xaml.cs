@@ -589,7 +589,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     /// <summary>
     /// Wendet eine Haltungsnamen-Aenderung an: benennt Verteil-Ordner + Dateien um
-    /// (<see cref="AuswertungPro.Next.Application.Common.HoldingRenameService"/>), setzt den Namen,
+    /// (<see cref="IHoldingRenameService"/>), setzt den Namen,
     /// registriert den Rename und zieht die Nummer im Protokoll-PDF-Text mit. Gibt false zurueck, wenn
     /// der Rename fehlschlaegt (dann bleibt der Name unveraendert). Wird aus dem Datagrid-Zellen-Edit
     /// UND dem Formular-Detail-Editor aufgerufen, damit die Verteilung in beiden Faellen konsistent bleibt.
@@ -610,7 +610,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var projectPath = Settings.LastProjectPath;
 
         // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
-        var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
+        var renameResult = vm.HoldingRename.Rename(
             record, oldName, newName, projectPath);
 
         if (!renameResult.Success)

@@ -10,6 +10,19 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class HoldingRenameServiceTests
 {
     [Fact]
+    public void Instanzdienst_behaelt_kompatibles_NoOp_Verhalten()
+    {
+        IHoldingRenameService service = new HoldingRenameFileService();
+        var record = new HaltungRecord();
+
+        var result = service.Rename(record, "06-001", "06-001", projectFilePath: null);
+
+        Assert.True(result.Success);
+        Assert.False(result.FolderRenamed);
+        Assert.Equal(0, result.PathFieldsUpdated);
+    }
+
+    [Fact]
     public void Rename_RealDashUnderscoreGSchema_RenamesFolderVideoAndPdfFiles_AndUpdatesLink()
     {
         // Reales Verteilungs-Schema: JJJJMMTT-<Haltung>.mp4 (+ _G) und ....pdf (+ _G).

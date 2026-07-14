@@ -25,6 +25,7 @@ public sealed class DataPageViewModelDependencyTests
         Assert.Contains("private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;", source);
         Assert.Contains("private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;", source);
         Assert.Contains("private readonly IDataPageWindowLauncher _windows;", source);
+        Assert.Contains("private readonly IHoldingRenameService _holdingRename;", source);
         Assert.DoesNotContain("private readonly ServiceProvider _sp;", source);
         Assert.DoesNotContain("_sp.", source);
         Assert.DoesNotContain("_sp.Dialogs", source);
@@ -36,6 +37,7 @@ public sealed class DataPageViewModelDependencyTests
         Assert.DoesNotContain("_sp.BatchMediaSearch", source);
         Assert.DoesNotContain("_sp.Protocols", source);
         Assert.Contains("protocolRegeneration: services.ProtocolSingleRegeneration", source);
+        Assert.Contains("_holdingRename = services.HoldingRename;", source);
         Assert.DoesNotContain("ProtocolRegenerationService", source);
 
         var pageDirectory = RepoFile(
@@ -54,6 +56,13 @@ public sealed class DataPageViewModelDependencyTests
         Assert.DoesNotContain("Services.CodeCatalog", pageSources);
         Assert.Contains("private IDialogService Dialogs => Vm.Dialogs;", pageSources);
         Assert.Contains("private AppSettings Settings => Vm.Settings;", pageSources);
+        Assert.Contains("vm.HoldingRename.Rename(", pageSources);
+        Assert.DoesNotContain("HoldingRenameService.Rename(", pageSources);
+
+        var provider = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+        Assert.Contains("public IHoldingRenameService HoldingRename { get; }", provider);
+        Assert.Contains("HoldingRename = new HoldingRenameFileService();", provider);
 
         var observationsWindow = File.ReadAllText(RepoFile(
             "src",

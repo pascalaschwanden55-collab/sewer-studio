@@ -47,6 +47,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;
     private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;
     private readonly IDataPageWindowLauncher _windows;
+    private readonly IHoldingRenameService _holdingRename;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -72,6 +73,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     internal AppSettings Settings => _settings;
     internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
+    internal IHoldingRenameService HoldingRename => _holdingRename;
 
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
@@ -172,6 +174,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _videoAnalysisPipelineFactory = services.VideoAnalysisPipelines;
         _sanierungOptimizationFactory = services.SanierungOptimizations;
         _windows = services.DataPageWindows;
+        _holdingRename = services.HoldingRename;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(

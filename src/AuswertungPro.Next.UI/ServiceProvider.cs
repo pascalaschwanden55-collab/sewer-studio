@@ -111,6 +111,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.Infrastructure.Media.MediaConflictCenterService MediaConflictCenter { get; } = new();
         public IProjectPortabilityService ProjectPortability { get; }
         public IProjectPhotoAssignmentService ProjectPhotoAssignment { get; }
+        public IHoldingRenameService HoldingRename { get; }
         public IPlanPdfImporter PlanPdfImport { get; }
         public IProtocolRegenerationService ProtocolRegeneration { get; }
         public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
@@ -226,6 +227,7 @@ namespace AuswertungPro.Next.UI
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
+            HoldingRename = new HoldingRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);

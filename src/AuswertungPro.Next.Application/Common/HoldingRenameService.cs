@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using HoldingRenameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.HoldingRenameResult;
 
 namespace AuswertungPro.Next.Application.Common;
 
@@ -14,6 +15,8 @@ namespace AuswertungPro.Next.Application.Common;
 /// </summary>
 public static class HoldingRenameService
 {
+    private static readonly IHoldingRenameService Default = new HoldingRenameFileService();
+
     public sealed record HoldingRenameResult(
         bool Success,
         string? ErrorMessage,
@@ -26,12 +29,24 @@ public static class HoldingRenameService
             => new(false, message, false, 0);
     }
 
+    public static HoldingRenameResult Rename(
+        HaltungRecord record,
+        string oldHolding,
+        string newHolding,
+        string? projectFilePath)
+        => Default.Rename(record, oldHolding, newHolding, projectFilePath);
+}
+
+/// <summary>Dateisystem-Implementierung der atomaren Haltungsumbenennung.</summary>
+public sealed class HoldingRenameFileService : IHoldingRenameService
+{
+
     /// <summary>
     /// Benennt die Haltung atomar um: Dateisystem-Ordner + alle Pfad-Felder im Record.
     /// ACHTUNG: Setzt NICHT das Feld "Haltungsname" selbst — das muss der Aufrufer
     /// nach erfolgreichem Rename tun.
     /// </summary>
-    public static HoldingRenameResult Rename(
+    public HoldingRenameResult Rename(
         HaltungRecord record,
         string oldHolding,
         string newHolding,
