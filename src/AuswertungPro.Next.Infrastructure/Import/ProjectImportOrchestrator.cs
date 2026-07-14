@@ -51,6 +51,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IProjectRestorePointService _projectRestorePoints;
     private readonly IImportSourceArchiver _sourceArchiver;
     private readonly IDichtheitImportDistributor _dichtheitDistributor;
+    private readonly IKanalImportDistributor _kanalDistributor;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -62,7 +63,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IPlanPdfImporter? planPdfImporter = null,
         IProjectRestorePointService? projectRestorePoints = null,
         IImportSourceArchiver? sourceArchiver = null,
-        IDichtheitImportDistributor? dichtheitDistributor = null)
+        IDichtheitImportDistributor? dichtheitDistributor = null,
+        IKanalImportDistributor? kanalDistributor = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -74,6 +76,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _projectRestorePoints = projectRestorePoints ?? new ProjectRestorePointStore();
         _sourceArchiver = sourceArchiver ?? new ImportSourceArchiveService();
         _dichtheitDistributor = dichtheitDistributor ?? new DichtheitImportDistributionService();
+        _kanalDistributor = kanalDistributor ?? new KanalImportDistributionService();
     }
 
     /// <summary>
@@ -401,7 +404,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     messages.Add($"Protokoll nicht zugeordnet: {nz}");
             }
 
-            var distResult = KanalImportDistributor.Distribute(
+            var distResult = _kanalDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
                 splitPdf: nameBasedHaltungHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
                 primaryProtocolPdf: kinsGesamtprotokoll);

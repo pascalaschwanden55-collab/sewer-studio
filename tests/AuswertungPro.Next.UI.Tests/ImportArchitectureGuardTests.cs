@@ -6,6 +6,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportArchitectureGuardTests
 {
     [Fact]
+    public void OneClickImport_uses_central_kanal_distributor_and_keeps_static_facade_thin()
+    {
+        var provider = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+        var orchestrator = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ProjectImportOrchestrator.cs"));
+        var facade = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "KanalImportDistributor.cs"));
+        var service = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "KanalImportDistributionService.cs"));
+
+        Assert.Contains("public IKanalImportDistributor KanalImportDistributor", provider);
+        Assert.Contains("KanalImportDistributor = new KanalImportDistributionService()", provider);
+        Assert.Contains("private readonly IKanalImportDistributor _kanalDistributor;", orchestrator);
+        Assert.Contains("_kanalDistributor.Distribute(", orchestrator);
+        Assert.DoesNotContain("KanalImportDistributor.Distribute(", orchestrator);
+        Assert.Contains("private static readonly KanalImportDistributionService DefaultService", facade);
+        Assert.DoesNotContain("File.Copy", facade);
+        Assert.Contains("public sealed class KanalImportDistributionService : IKanalImportDistributor", service);
+        Assert.Contains("File.Copy", service);
+    }
+
+    [Fact]
     public void OneClickImport_uses_central_dichtheit_distributor_and_keeps_static_facade_thin()
     {
         var provider = File.ReadAllText(RepoFile(
@@ -227,7 +250,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("PlanPdfImport,", provider);
         Assert.Contains("ProjectRestorePoints,", provider);
         Assert.Contains("ImportSourceArchiver,", provider);
-        Assert.Contains("DichtheitImportDistributor);", provider);
+        Assert.Contains("DichtheitImportDistributor,", provider);
+        Assert.Contains("KanalImportDistributor);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);
