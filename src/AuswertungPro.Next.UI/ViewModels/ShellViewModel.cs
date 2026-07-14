@@ -597,7 +597,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return (res, null);
 
         // AP-01: Beschaedigte projekt.json aus .bak/Restore-Point retten (nur Daten, Dialog folgt spaeter).
-        return (res, ProjectRecovery.TryRecover(path, _sp.Projects));
+        return (res, _sp.ProjectRecovery.TryRecover(path, _sp.Projects));
     }
 
     /// <summary>Uebernahme des Ladeergebnisses (UI-Thread): Dialoge, Merkliste, ReplaceProject.</summary>

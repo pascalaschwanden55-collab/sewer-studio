@@ -121,6 +121,7 @@ namespace AuswertungPro.Next.UI
         public IImportSummaryExporter ImportSummaryExporter { get; }
         public IStoredImportFileService StoredImportFiles { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
+        public IProjectRecoveryService ProjectRecovery { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
@@ -244,6 +245,7 @@ namespace AuswertungPro.Next.UI
             ImportSummaryExporter = new ImportSummaryExporter();
             StoredImportFiles = new StoredImportFileService();
             ProjectRestorePoints = new ProjectRestorePointStore();
+            ProjectRecovery = new ProjectRecoveryService();
             ExcelExport = new ExcelTemplateExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
