@@ -32,6 +32,24 @@ public partial class PlayerWindow : Window
         _codingOverlayToolHost = codingSessionRuntime.OverlayToolHost;
 
         InitializeComponent();
+        _codingSchemaOverlayController = new CodingSchemaOverlayController(
+            _codingSchemaManager,
+            _codingSchemaTypeState,
+            _codingSessionHost,
+            _codingOverlayToolHost,
+            new CodingSchemaOverlayControllerActions(
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
+                UpdateOverlayInfo: UpdateCodingOverlayInfo,
+                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
+                    BtnCodingCreateEvent,
+                    enabled),
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                UpdateToolBadge: UpdateToolBadge,
+                RenderActiveCodingSchema: RenderActiveCodingSchema,
+                RedrawCodingCanvas: RedrawCodingCanvas));
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
         InitializeCodingConfirmationPanelControls();

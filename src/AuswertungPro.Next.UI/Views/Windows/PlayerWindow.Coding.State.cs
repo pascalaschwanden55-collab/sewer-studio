@@ -20,6 +20,7 @@ public partial class PlayerWindow
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
+    private readonly CodingSchemaOverlayController _codingSchemaOverlayController;
     private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
     private readonly CodingNavigationController _codingNavigationController;
 

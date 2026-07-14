@@ -14,6 +14,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
         var createWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayCreateWorkflow.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayActivationWorkflow.cs");
@@ -22,6 +23,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var ownerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayManagerOwner.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(controllerPath), "Schema-Overlay-Orchestrierung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(workflowPath), "Schema-Overlay-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(createWorkflowPath), "Schema-Overlay-Erzeugungsgate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(activationWorkflowPath), "Schema-Overlay-Aktivierungsgate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -32,6 +34,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var state = File.ReadAllText(statePath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var createWorkflow = File.Exists(createWorkflowPath) ? File.ReadAllText(createWorkflowPath) : "";
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
@@ -40,20 +43,22 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
 
         Assert.Contains("private CodingSchemaOverlayManagerOwner _codingSchemaManager => _codingSchemaStates.OverlayManagerOwner", state);
-        Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseMove", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseUp", schema);
-        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseDown", schema);
-        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseMove", schema);
-        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseUp", schema);
-        Assert.Contains("CodingSchemaOverlayCreateWorkflow.Execute", schema);
-        Assert.Contains("CodingSchemaOverlayActivationWorkflow.Execute", schema);
-        Assert.Contains("CodingSchemaOverlayUpdateWorkflow.Execute", schema);
-        Assert.Contains("CodingSchemaOverlayClearWorkflow.Execute", schema);
-        Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
-        Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
-        Assert.Contains("_codingSessionHost", schema);
+        Assert.Contains("_codingSchemaOverlayController.MouseDown", schema);
+        Assert.Contains("_codingSchemaOverlayController.MouseMove", schema);
+        Assert.Contains("_codingSchemaOverlayController.MouseUp", schema);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseDown", controller);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseMove", controller);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseUp", controller);
+        Assert.Contains("CodingSchemaOverlayCreateWorkflow.Execute", controller);
+        Assert.Contains("CodingSchemaOverlayActivationWorkflow.Execute", controller);
+        Assert.Contains("CodingSchemaOverlayUpdateWorkflow.Execute", controller);
+        Assert.Contains("CodingSchemaOverlayClearWorkflow.Execute", controller);
+        Assert.Contains("CodingSchemaOverlayBuilder.Create", controller);
+        Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", controller);
+        Assert.Contains("private readonly ICodingSessionHost _sessionHost", controller);
         Assert.Contains("actions.CreateAndActivateSchema()", workflow);
         Assert.Contains("if (!request.HasOverlayService)", createWorkflow);
         Assert.Contains("actions.CreateSchema()", createWorkflow);
@@ -70,6 +75,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         Assert.Contains("actions.SetCreateEventEnabled(false)", clearWorkflow);
         Assert.Contains("actions.ClearOverlayInfo()", clearWorkflow);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
+        Assert.Contains("public sealed class CodingSchemaOverlayController", controller);
         Assert.Contains("public sealed class CodingSchemaOverlayManagerOwner", owner);
         Assert.Contains("public SchemaOverlayBase? Active", owner);
         Assert.Contains("public bool IsActive", owner);
@@ -94,6 +100,18 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         };
         var forbiddenSchemaTokens = new[]
         {
+            "CodingSchemaOverlayInputWorkflow.MouseDown",
+            "CodingSchemaOverlayInputWorkflow.MouseMove",
+            "CodingSchemaOverlayInputWorkflow.MouseUp",
+            "CodingSchemaOverlayCreateWorkflow.Execute",
+            "CodingSchemaOverlayActivationWorkflow.Execute",
+            "CodingSchemaOverlayUpdateWorkflow.Execute",
+            "CodingSchemaOverlayClearWorkflow.Execute",
+            "CodingSchemaOverlayBuilder.Create",
+            "CodingSchemaOverlayBuilder.BuildGeometry",
+            "_codingSessionHost",
+            "_codingOverlayToolHost",
+            "_codingSchemaManager",
             "if (!_codingSessionHost.HasViewModel) return",
             "if (!_codingOverlayToolHost.HasOverlayService)",
             "if (!IsCodingSchemaToolSelected())",
@@ -116,16 +134,19 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayMouseWheelWorkflow.cs");
 
         var schema = File.ReadAllText(schemaPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.True(File.Exists(workflowPath), "Schema-Mausrad-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.Contains("private void CodingCanvas_MouseWheel", schema);
-        Assert.Contains("CodingSchemaOverlayMouseWheelWorkflow.Execute", schema);
-        Assert.Contains("bend?.AdjustAngle(angleDelta)", schema);
-        Assert.Contains("UpdateCodingSchemaOverlay(enableCreateEvent: true)", schema);
+        Assert.Contains("_codingSchemaOverlayController.MouseWheel", schema);
+        Assert.Contains("CodingSchemaOverlayMouseWheelWorkflow.Execute", controller);
+        Assert.Contains("bend?.AdjustAngle(angleDelta)", controller);
+        Assert.Contains("Update(enableCreateEvent: true)", controller);
         Assert.Contains("request.WheelDelta > 0 ? 5 : -5", workflow);
         Assert.Contains("actions.AdjustAngle(angleDelta)", workflow);
         Assert.Contains("actions.MarkHandled()", workflow);

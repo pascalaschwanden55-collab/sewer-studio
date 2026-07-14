@@ -1,139 +1,30 @@
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.UI.Ai;
 using System.Windows.Input;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private bool IsCodingSchemaToolSelected()
-        => _codingSchemaTypeState.ActiveSchemaType.HasValue
-           && _codingOverlayToolHost.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level;
-
-    private SchemaOverlayBase? CreateCodingSchemaOverlay()
-    {
-        return CodingSchemaOverlayCreateWorkflow.Execute(
-            new CodingSchemaOverlayCreateRequest(_codingOverlayToolHost.HasOverlayService),
-            new CodingSchemaOverlayCreateActions(
-                CreateSchema: () => CodingSchemaOverlayBuilder.Create(
-                    _codingSchemaTypeState.ActiveSchemaType,
-                    _codingOverlayToolHost.PipeBendSnapEnabled,
-                    _codingOverlayToolHost.ActiveLevelMode)))
-            .Schema;
-    }
-
-    private string GetDefaultCodingSchemaHandleId()
-        => CodingSchemaOverlayBuilder.GetDefaultHandleId(_codingSchemaTypeState.ActiveSchemaType);
-
     private OverlayGeometry? BuildCodingSchemaGeometry()
-        => CodingSchemaOverlayBuilder.BuildGeometry(_codingSchemaManager.Active);
+        => _codingSchemaOverlayController.BuildGeometry();
 
     private bool TryHandleCodingSchemaMouseDown(NormalizedPoint norm)
-    {
-        var result = CodingSchemaOverlayInputWorkflow.MouseDown(
-            new CodingSchemaOverlayMouseDownRequest(
-                IsCodingSchemaToolSelected(),
-                _codingSchemaManager.IsActive),
-            new CodingSchemaOverlayMouseDownActions(
-                CreateAndActivateSchema: () =>
-                    CodingSchemaOverlayActivationWorkflow.Execute(
-                        new CodingSchemaOverlayActivationWorkflowRequest(CreateCodingSchemaOverlay()),
-                        new CodingSchemaOverlayActivationWorkflowActions(
-                            schema => _codingSchemaManager.Activate(
-                                schema,
-                                _codingOverlayToolHost.Calibration)))
-                    .Activated,
-                PlaceSchema: () => _codingSchemaManager.Place(norm),
-                ResolveHandleId: () => _codingSchemaManager.HitTest(norm, 0.035) ?? GetDefaultCodingSchemaHandleId(),
-                BeginDrag: _codingSchemaManager.BeginDrag,
-                UpdateDrag: () => _codingSchemaManager.UpdateDrag(norm),
-                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
-                UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)));
-
-        return result.Handled;
-    }
+        => _codingSchemaOverlayController.MouseDown(norm);
 
     private bool TryHandleCodingSchemaMouseMove(NormalizedPoint norm)
-    {
-        return CodingSchemaOverlayInputWorkflow.MouseMove(
-            new CodingSchemaOverlayMouseMoveRequest(
-                IsCodingSchemaToolSelected(),
-                _codingSchemaManager.IsActive,
-                _codingSchemaManager.IsDragging),
-            new CodingSchemaOverlayMouseMoveActions(
-                UpdateDrag: () => _codingSchemaManager.UpdateDrag(norm),
-                UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)))
-            .Handled;
-    }
+        => _codingSchemaOverlayController.MouseMove(norm);
 
     private bool TryHandleCodingSchemaMouseUp(NormalizedPoint norm)
-    {
-        return CodingSchemaOverlayInputWorkflow.MouseUp(
-            new CodingSchemaOverlayMouseUpRequest(
-                IsCodingSchemaToolSelected(),
-                _codingSchemaManager.IsDragging),
-            new CodingSchemaOverlayMouseUpActions(
-                UpdateDrag: () => _codingSchemaManager.UpdateDrag(norm),
-                EndDrag: _codingSchemaManager.EndDrag,
-                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
-                UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)))
-            .Handled;
-    }
+        => _codingSchemaOverlayController.MouseUp(norm);
 
     private void UpdateCodingSchemaOverlay(bool enableCreateEvent)
-    {
-        OverlayGeometry? overlay = null;
-
-        CodingSchemaOverlayUpdateWorkflow.Execute(
-            new CodingSchemaOverlayUpdateRequest(
-                _codingSessionHost.HasViewModel,
-                enableCreateEvent),
-            new CodingSchemaOverlayUpdateActions(
-                BuildSetAndReportOverlay: () =>
-                {
-                    overlay = BuildCodingSchemaGeometry();
-                    _codingSessionHost.SetCurrentOverlay(overlay);
-                    return overlay != null;
-                },
-                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(overlay),
-                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
-                    BtnCodingCreateEvent,
-                    enabled),
-                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
-                RenderAiOverlays: RenderAiOverlays,
-                RenderReferenceDn: RenderReferenceDn,
-                UpdateToolBadge: UpdateToolBadge,
-                RenderActiveCodingSchema: RenderActiveCodingSchema));
-    }
+        => _codingSchemaOverlayController.Update(enableCreateEvent);
 
     private void ClearCodingSchemaOverlay(bool redraw)
-    {
-        CodingSchemaOverlayClearWorkflow.Execute(
-            new CodingSchemaOverlayClearRequest(redraw),
-            new CodingSchemaOverlayClearActions(
-                CancelSchema: _codingSchemaManager.Cancel,
-                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
-                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
-                    BtnCodingCreateEvent,
-                    enabled),
-                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
-                RedrawCodingCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay)));
-    }
+        => _codingSchemaOverlayController.Clear(redraw);
 
     private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        var bend = _codingSchemaManager.Active as PipeBendSchema;
-
-        CodingSchemaOverlayMouseWheelWorkflow.Execute(
-            new CodingSchemaOverlayMouseWheelRequest(
-                bend != null,
-                _codingSchemaManager.IsActive,
-                e.Delta),
-            new CodingSchemaOverlayMouseWheelActions(
-                AdjustAngle: angleDelta => bend?.AdjustAngle(angleDelta),
-                UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true),
-                MarkHandled: () => { e.Handled = true; }));
-    }
+        => _codingSchemaOverlayController.MouseWheel(
+            e.Delta,
+            () => e.Handled = true);
 }
