@@ -94,6 +94,7 @@ namespace AuswertungPro.Next.UI
         public ILogTailReader LogTailReader { get; }
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
         public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
+        public IKnowledgeWalCheckpoint KnowledgeWalCheckpoint { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -305,6 +306,7 @@ namespace AuswertungPro.Next.UI
                 SchachtProtocolImport);
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
+            KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
             FullBackup = new FullBackupService(
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
@@ -586,6 +588,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
+            if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
