@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
@@ -30,8 +31,11 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly NetworkFeatureCache _networkFeatures;
     private readonly Action<string, HaltungRecord> _playVideo;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
+    private readonly IKatasterXtfPathResolver _katasterXtfPaths;
 
-    private string XtfPath => KatasterXtfPathResolver.Resolve(_settings);
+    private string XtfPath => _katasterXtfPaths.Resolve(
+        _settings.AbwasserkatasterXtfPath,
+        _settings.KantonUriXtfDirectory);
 
     // Offline-Hintergrundkarten (Satellit/AV im Programmordner). Resolver toleriert einen
     // veralteten gespeicherten Pfad (z.B. "...\basemap_tiles\uri") und nimmt dann den
@@ -96,7 +100,8 @@ public sealed partial class KarteViewModel : ObservableObject
             settings: services.Settings,
             networkFeatures: services.NetworkFeatures,
             playVideo: KarteVideoLauncher.Create(services),
-            inspectionProtocolFiles: services.InspectionProtocolFiles)
+            inspectionProtocolFiles: services.InspectionProtocolFiles,
+            katasterXtfPaths: services.KatasterXtfPaths)
     {
     }
 
@@ -105,7 +110,8 @@ public sealed partial class KarteViewModel : ObservableObject
         AppSettings settings,
         NetworkFeatureCache networkFeatures,
         Action<string, HaltungRecord> playVideo,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IKatasterXtfPathResolver? katasterXtfPaths = null)
     {
         _shell = shell;
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -113,6 +119,7 @@ public sealed partial class KarteViewModel : ObservableObject
         _playVideo = playVideo ?? throw new ArgumentNullException(nameof(playVideo));
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
+        _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
         SchliesseInfoCommand = new RelayCommand(() =>

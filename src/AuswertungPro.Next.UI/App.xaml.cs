@@ -19,6 +19,7 @@ using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Vsa;
@@ -106,12 +107,14 @@ namespace AuswertungPro.Next.UI
                 BestEffort.ConfigureDefaultErrorSink(
                     message => bestEffortLogger.LogWarning("{Message}", message));
                 Helpers.TaskExtensions.ConfigureLogging(loggerFactory.CreateLogger("BackgroundTasks"));
+                var katasterXtfPaths = new KatasterXtfFilePathResolver();
                 // QGIS-Bridge-Verarbeitung: gemeinsam fuer Live-Control-Server (gleicher Port)
                 // und den eigenstaendigen Bridge-Host weiter unten.
                 var qgisBridgeProcessor = new QgisBridgeRequestProcessor(
                     this,
                     settings,
-                    loggerFactory.CreateLogger<QgisBridgeRequestProcessor>());
+                    loggerFactory.CreateLogger<QgisBridgeRequestProcessor>(),
+                    katasterXtfPaths);
                 _liveControlServer = LiveControlServer.TryStartFromEnvironment(
                     this,
                     loggerFactory.CreateLogger<LiveControlServer>(),
@@ -129,7 +132,8 @@ namespace AuswertungPro.Next.UI
                     logger,
                     loggerFactory,
                     settingsQuarantine,
-                    settingsMigration);
+                    settingsMigration,
+                    katasterXtfPaths);
                 DialogHost.Configure(_services.Dialogs);
                 var splashReadyTask = splash.SignalReadyAsync();
 

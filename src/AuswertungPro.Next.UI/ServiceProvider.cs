@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Map;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
 using AuswertungPro.Next.Application.Vsa;
 
@@ -30,6 +31,7 @@ using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Maintenance;
+using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Settings;
@@ -98,6 +100,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.Application.Common.IEtaCalculator CreateEtaCalculator() => new AuswertungPro.Next.Application.Common.EtaCalculator();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         public IDropdownOptionsStore DropdownOptions { get; }
+        public IKatasterXtfPathResolver KatasterXtfPaths { get; }
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
@@ -238,13 +241,16 @@ namespace AuswertungPro.Next.UI
             ILogger logger,
             ILoggerFactory loggerFactory,
             ISettingsQuarantineStore settingsQuarantine,
-            ISettingsMigrationService settingsMigration)
+            ISettingsMigrationService settingsMigration,
+            IKatasterXtfPathResolver? katasterXtfPaths = null)
         {
             Settings = settings;
             SettingsQuarantine = settingsQuarantine
                 ?? throw new ArgumentNullException(nameof(settingsQuarantine));
             SettingsMigration = settingsMigration
                 ?? throw new ArgumentNullException(nameof(settingsMigration));
+            KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
+            Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
@@ -655,6 +661,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
             if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
+            if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;

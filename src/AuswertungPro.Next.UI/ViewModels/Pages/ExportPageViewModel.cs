@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Map;
@@ -29,6 +30,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDistributionPatternResolver _patternResolver;
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
+    private readonly IKatasterXtfPathResolver _katasterXtfPaths;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -60,7 +62,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
             toasts: sp.Toasts,
             costFieldSync: sp.CostFieldSync,
             patternResolver: sp.DistributionPatterns,
-            directoryTreeResolver: sp.DistributionDirectoryTree)
+            directoryTreeResolver: sp.DistributionDirectoryTree,
+            katasterXtfPaths: sp.KatasterXtfPaths)
     {
     }
 
@@ -72,7 +75,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IToastService toasts,
         IDerivedCostFieldSynchronizer costFieldSync,
         IDistributionPatternResolver? patternResolver = null,
-        IDistributionDirectoryTreeResolver? directoryTreeResolver = null)
+        IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
+        IKatasterXtfPathResolver? katasterXtfPaths = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -88,6 +92,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
+        _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _settings.MigrateLegacyExcelExportRoot();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
@@ -680,7 +685,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IHaltungCadastreResolver? cadastre = null;
             try
             {
-                var katasterPfad = KatasterXtfPathResolver.Resolve(_settings);
+                var katasterPfad = _katasterXtfPaths.Resolve(
+                    _settings.AbwasserkatasterXtfPath,
+                    _settings.KantonUriXtfDirectory);
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
                     cadastre = await Task.Run(() => HaltungCadastreIndex.EnsureAndLoad(katasterPfad));
             }

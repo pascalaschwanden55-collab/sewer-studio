@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.UI.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -18,11 +19,16 @@ internal sealed class QgisBridgeRequestProcessor
     private readonly ILogger _logger;
     private readonly QgisBridgeEndpointRouter _router;
 
-    public QgisBridgeRequestProcessor(System.Windows.Application app, AppSettings settings, ILogger logger)
+    public QgisBridgeRequestProcessor(
+        System.Windows.Application app,
+        AppSettings settings,
+        ILogger logger,
+        IKatasterXtfPathResolver? katasterXtfPaths = null)
     {
         _app = app;
         _logger = logger;
-        _router = new QgisBridgeEndpointRouter(new QgisBridgeSnapshotBuilder(settings));
+        _router = new QgisBridgeEndpointRouter(
+            new QgisBridgeSnapshotBuilder(settings, katasterXtfPaths: katasterXtfPaths));
     }
 
     /// <summary>Pfade, die die QGIS-Bridge beantwortet (inkl. Status unter "/").</summary>

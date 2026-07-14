@@ -23,7 +23,9 @@ public static class KarteNetzVorladen
 
         // Pfad + Zustandsdaten auf dem aufrufenden (UI-)Thread ermitteln (leichtgewichtig),
         // das schwere Bauen (XTF-Parse + Features) laeuft im Hintergrund.
-        var xtfPath = KatasterXtfPathResolver.Resolve(services.Settings);
+        var xtfPath = services.KatasterXtfPaths.Resolve(
+            services.Settings.AbwasserkatasterXtfPath,
+            services.Settings.KantonUriXtfDirectory);
         var kondition = HaltungConditionProvider.Build(project.Data);
 
         // invertiert=true entspricht der Karte (EZ-Skala) -> gleicher Cache-Key, echtes Reuse.

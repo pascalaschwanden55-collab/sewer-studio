@@ -141,14 +141,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 dialogs: _sp.Dialogs,
                 excelExport: _sp.ExcelExport,
                 toasts: _sp.Toasts,
-                costFieldSync: _sp.CostFieldSync), canOpenWithoutProject: true),
+                costFieldSync: _sp.CostFieldSync,
+                patternResolver: _sp.DistributionPatterns,
+                directoryTreeResolver: _sp.DistributionDirectoryTree,
+                katasterXtfPaths: _sp.KatasterXtfPaths), canOpenWithoutProject: true),
             new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
             {
                 DataContext = new Pages.KarteViewModel(
                     this,
                     settings: _sp.Settings,
                     networkFeatures: _sp.NetworkFeatures,
-                    playVideo: KarteVideoLauncher.Create(_sp))
+                    playVideo: KarteVideoLauncher.Create(_sp),
+                    inspectionProtocolFiles: _sp.InspectionProtocolFiles,
+                    katasterXtfPaths: _sp.KatasterXtfPaths)
             }),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
                 getProject: () => Project,
@@ -215,7 +220,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 toasts: _sp.Toasts,
                 fullBackupOperation: _sp.FullBackupOperation,
                 programCleanup: _sp.ProgramCleanup,
-                knowledgeBackup: _sp.KnowledgeBackup), canOpenWithoutProject: true)
+                codexArtifactCleanup: _sp.CodexArtifactCleanup,
+                knowledgeBackup: _sp.KnowledgeBackup,
+                katasterXtfPaths: _sp.KatasterXtfPaths), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 

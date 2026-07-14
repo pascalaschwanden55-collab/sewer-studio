@@ -1,5 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
 
@@ -14,6 +15,7 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 internal sealed class QgisBridgeSnapshotBuilder
 {
     private readonly AppSettings _settings;
+    private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly string? _networkCacheFilePath;
     private readonly object _cacheSync = new();
     private string? _cachedXtfPath;
@@ -35,9 +37,11 @@ internal sealed class QgisBridgeSnapshotBuilder
     public QgisBridgeSnapshotBuilder(
         AppSettings settings,
         string? networkCacheFilePath = null,
-        string? manholeCacheFilePath = null)
+        string? manholeCacheFilePath = null,
+        IKatasterXtfPathResolver? katasterXtfPaths = null)
     {
         _settings = settings;
+        _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _networkCacheFilePath = networkCacheFilePath;
         _manholeCacheFilePath = manholeCacheFilePath;
     }
@@ -374,7 +378,9 @@ internal sealed class QgisBridgeSnapshotBuilder
     /// </summary>
     public long GetNetworkStampTicks()
     {
-        var xtfPath = KatasterXtfPathResolver.Resolve(_settings);
+        var xtfPath = _katasterXtfPaths.Resolve(
+            _settings.AbwasserkatasterXtfPath,
+            _settings.KantonUriXtfDirectory);
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return 0;
 
@@ -383,7 +389,9 @@ internal sealed class QgisBridgeSnapshotBuilder
 
     private NetworkLoadResult LoadNetwork()
     {
-        var xtfPath = KatasterXtfPathResolver.Resolve(_settings);
+        var xtfPath = _katasterXtfPaths.Resolve(
+            _settings.AbwasserkatasterXtfPath,
+            _settings.KantonUriXtfDirectory);
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return new NetworkLoadResult(xtfPath, XtfFound: false, Array.Empty<HaltungGeometry>(),
                 new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase),

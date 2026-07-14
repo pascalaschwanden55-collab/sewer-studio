@@ -1,5 +1,6 @@
 using System;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.Services;
 
@@ -32,7 +33,8 @@ public sealed record SettingsSaveWorkflowRequest(
     AppSettings Settings,
     DiagnosticsOptions Diagnostics,
     SettingsSaveValues Values,
-    Action SaveSettings);
+    Action SaveSettings,
+    IKatasterXtfPathResolver? KatasterXtfPaths = null);
 
 public static class SettingsSaveWorkflow
 {
@@ -49,7 +51,11 @@ public static class SettingsSaveWorkflow
         settings.ProjectsRootDirectory = NormalizeOptionalPath(values.ProjectsRootDirectory);
         var katasterXtfPath = NormalizeRequiredPath(values.AbwasserkatasterXtfPath);
         var kantonUriXtfDirectory = NormalizeRequiredPath(values.KantonUriXtfDirectory);
-        settings.AbwasserkatasterXtfPath = KatasterXtfPathResolver.Resolve(katasterXtfPath, kantonUriXtfDirectory);
+        var katasterXtfPaths = request.KatasterXtfPaths
+            ?? KatasterXtfPathResolver.CompatibilityService;
+        settings.AbwasserkatasterXtfPath = katasterXtfPaths.Resolve(
+            katasterXtfPath,
+            kantonUriXtfDirectory);
         settings.LastVideoSourceFolder = values.VideoFolder;
         settings.LastVideoFolder = values.VideoFolder;
         settings.KantonUriXtfDirectory = kantonUriXtfDirectory;

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Maintenance;
+using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Settings;
@@ -31,6 +32,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ProgramCleanupService _programCleanup;
     private readonly ICodexArtifactCleanupService _codexArtifactCleanup;
     private readonly IKnowledgeBackupService _knowledgeBackup;
+    private readonly IKatasterXtfPathResolver _katasterXtfPaths;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -134,7 +136,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             fullBackupOperation: sp.FullBackupOperation,
             programCleanup: sp.ProgramCleanup,
             codexArtifactCleanup: sp.CodexArtifactCleanup,
-            knowledgeBackup: sp.KnowledgeBackup)
+            knowledgeBackup: sp.KnowledgeBackup,
+            katasterXtfPaths: sp.KatasterXtfPaths)
     {
     }
 
@@ -189,7 +192,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         FullBackupOperationState fullBackupOperation,
         ProgramCleanupService programCleanup,
         ICodexArtifactCleanupService codexArtifactCleanup,
-        IKnowledgeBackupService knowledgeBackup)
+        IKnowledgeBackupService knowledgeBackup,
+        IKatasterXtfPathResolver? katasterXtfPaths = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -200,6 +204,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _programCleanup = programCleanup ?? throw new ArgumentNullException(nameof(programCleanup));
         _codexArtifactCleanup = codexArtifactCleanup ?? throw new ArgumentNullException(nameof(codexArtifactCleanup));
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
+        _katasterXtfPaths = katasterXtfPaths ?? Mapping.KatasterXtfPathResolver.CompatibilityService;
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -376,7 +381,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 PipelineYoloConfidence,
                 PipelineDinoBoxThreshold,
                 PipelineDinoTextThreshold),
-            _settings.Save));
+            _settings.Save,
+            _katasterXtfPaths));
     }
 
     private async Task StartAiAsync()
