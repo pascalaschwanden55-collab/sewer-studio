@@ -98,11 +98,11 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
     public void PlayerWindow_live_detection_marking_reads_player_timeline_through_host()
     {
         var root = FindRepositoryRoot();
-        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var paths = new[]
         {
             "PlayerWindow.LiveDetection.Confirmation.cs",
-            "PlayerWindow.LiveDetection.Confirmation.Training.cs",
             "PlayerWindow.LiveDetection.Marking.cs",
             "PlayerWindow.LiveDetection.Marking.Catalog.cs"
         };
@@ -115,6 +115,11 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
         }
+
+        var confirmationController = File.ReadAllText(
+            Path.Combine(uiRoot, "Player", "LiveDetectionConfirmationTrainingController.cs"));
+        Assert.Contains("PlayerTimelineHost", confirmationController);
+        Assert.Contains("_timelineHost", confirmationController);
     }
 
     [Fact]

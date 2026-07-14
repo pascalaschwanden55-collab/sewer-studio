@@ -68,6 +68,23 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _liveDetectionConfirmationTrainingController = new LiveDetectionConfirmationTrainingController(
+            _liveDetectionController,
+            _playerTimelineHost,
+            LiveDetectionTrainingAnnotationWriter.CreateDefault(),
+            new LiveDetectionConfirmationTrainingControllerActions(
+                ResolveAutomaticMeter: () => _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
+                SelectCorrection: (meter, timestampSeconds) => LiveDetectionCorrectionCodeSelectionWorkflow.Select(
+                    new LiveDetectionCorrectionCodeSelectionRequest(
+                        meter,
+                        timestampSeconds,
+                        _playbackContext.VideoPath,
+                        this),
+                    new LiveDetectionCorrectionCodeSelectionActions(
+                        CreateVsaCodeExplorerViewModel)),
+                CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
+                ShowOsdMeterStatus: ShowOsdMeterStatus,
+                ResumeDetection: ResumeDetection));
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,

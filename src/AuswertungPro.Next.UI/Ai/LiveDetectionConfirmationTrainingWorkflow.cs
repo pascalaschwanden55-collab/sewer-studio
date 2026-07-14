@@ -68,44 +68,6 @@ public static class LiveDetectionConfirmationTrainingWorkflow
             selectedEntry.Code);
     }
 
-    public static Task<LiveDetectionConfirmationTrainingResult> SaveAcceptedAsync(
-        IReadOnlyList<LiveFrameFinding>? findings,
-        double timestampSec,
-        byte[]? preCapturedFrame,
-        Func<Task<byte[]?>> captureCurrentFrameAsync,
-        LiveDetectionTrainingAnnotationWriter annotationWriter)
-    {
-        ArgumentNullException.ThrowIfNull(annotationWriter);
-
-        return SaveAcceptedAsync(
-            findings,
-            timestampSec,
-            preCapturedFrame,
-            captureCurrentFrameAsync,
-            (frameBytes, finding, videoTimestamp) =>
-                annotationWriter.SaveAcceptedAsync(frameBytes, finding, videoTimestamp));
-    }
-
-    public static Task<LiveDetectionConfirmationTrainingResult> SaveCorrectedAsync(
-        IReadOnlyList<LiveFrameFinding>? findings,
-        ProtocolEntry? selectedEntry,
-        double timestampSec,
-        byte[]? preCapturedFrame,
-        Func<Task<byte[]?>> captureCurrentFrameAsync,
-        LiveDetectionTrainingAnnotationWriter annotationWriter)
-    {
-        ArgumentNullException.ThrowIfNull(annotationWriter);
-
-        return SaveCorrectedAsync(
-            findings,
-            selectedEntry,
-            timestampSec,
-            preCapturedFrame,
-            captureCurrentFrameAsync,
-            (frameBytes, finding, entry, videoTimestamp) =>
-                annotationWriter.SaveCorrectedAsync(frameBytes, finding, entry, videoTimestamp));
-    }
-
     private static async Task<byte[]?> ResolveFrameBytesAsync(
         byte[]? preCapturedFrame,
         Func<Task<byte[]?>> captureCurrentFrameAsync)

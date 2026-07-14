@@ -29,6 +29,8 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationAcceptCommandWorkflow.cs");
         var correctCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationCorrectCommandWorkflow.cs");
         var skipCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationSkipCommandWorkflow.cs");
+        var trainingControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionConfirmationTrainingController.cs");
+        var playerWindowPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
@@ -44,6 +46,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.True(File.Exists(acceptCommandWorkflowPath), "Detection-Accept-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(correctCommandWorkflowPath), "Detection-Correct-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(skipCommandWorkflowPath), "Detection-Skip-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(trainingControllerPath), "Detection-Bestaetigungssteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
@@ -61,6 +64,8 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         var acceptCommandWorkflow = File.Exists(acceptCommandWorkflowPath) ? File.ReadAllText(acceptCommandWorkflowPath) : "";
         var correctCommandWorkflow = File.Exists(correctCommandWorkflowPath) ? File.ReadAllText(correctCommandWorkflowPath) : "";
         var skipCommandWorkflow = File.Exists(skipCommandWorkflowPath) ? File.ReadAllText(skipCommandWorkflowPath) : "";
+        var trainingController = File.ReadAllText(trainingControllerPath);
+        var playerWindow = File.ReadAllText(playerWindowPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -109,6 +114,16 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
             "LiveDetectionTrainingFrameExporter",
             "LiveDetectionTrainingExportPlanner.BuildAccepted",
             "LiveDetectionTrainingExportPlanner.BuildCorrected",
+            "LiveDetectionTrainingAnnotationWriter.CreateDefault",
+            "LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync",
+            "LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync",
+            "LiveDetectionCorrectionCodeSelectionWorkflow.Select",
+            "LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync",
+            "LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync",
+            "LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted",
+            "LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected",
+            "HandleDetectionAcceptAsync",
+            "HandleDetectionCorrectAsync",
             "VsaYoloClassMap.GetClassId",
             "BBoxFromClockPosition",
             "det_corr_",
@@ -120,16 +135,19 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("private void DetectionCorrect_Click", training);
         Assert.Contains(".SafeFireAndForget(\"DetectionAccept\")", training);
         Assert.Contains(".SafeFireAndForget(\"DetectionCorrect\")", training);
-        Assert.Contains("private async Task HandleDetectionAcceptAsync", training);
-        Assert.Contains("private async Task HandleDetectionCorrectAsync", training);
-        Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", training);
-        Assert.Contains("LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync", training);
-        Assert.Contains("LiveDetectionCorrectionCodeSelectionWorkflow.Select", training);
-        Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
-        Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync", training);
-        Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
-        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted", training);
-        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected", training);
+        Assert.Contains("_liveDetectionConfirmationTrainingController.AcceptAsync()", training);
+        Assert.Contains("_liveDetectionConfirmationTrainingController.CorrectAsync()", training);
+        Assert.Contains("public sealed class LiveDetectionConfirmationTrainingController", trainingController);
+        Assert.Contains("ILiveDetectionTrainingAnnotationWriter", trainingController);
+        Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", trainingController);
+        Assert.Contains("LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync", trainingController);
+        Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync", trainingController);
+        Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", trainingController);
+        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted", trainingController);
+        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected", trainingController);
+        Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", trainingController);
+        Assert.Contains("new LiveDetectionConfirmationTrainingController", playerWindow);
+        Assert.Equal(1, CountOccurrences(playerWindow, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
         Assert.Contains("var trainingResult = await actions.SaveAcceptedAsync()", acceptCommandWorkflow);
         Assert.Contains("actions.HandleAcceptedResult(trainingResult)", acceptCommandWorkflow);
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", acceptCommandWorkflow);
@@ -154,7 +172,8 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("public static class LiveDetectionTrainingExportPlanner", exportPlanner);
         Assert.Contains("VsaYoloClassMap.GetClassId", exportPlanner);
         Assert.Contains("LiveDetectionGeometryMapper.BBoxFromClockPosition", exportPlanner);
-        Assert.Contains("public sealed class LiveDetectionTrainingAnnotationWriter", annotationWriter);
+        Assert.Contains("public interface ILiveDetectionTrainingAnnotationWriter", annotationWriter);
+        Assert.Contains("public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTrainingAnnotationWriter", annotationWriter);
         Assert.Contains("TrainingAnnotationExportServiceFactory.Create", annotationWriter);
         Assert.Contains("LiveDetectionTrainingExportPlanner.BuildAccepted", annotationWriter);
         Assert.Contains("LiveDetectionTrainingExportPlanner.BuildCorrected", annotationWriter);
@@ -180,4 +199,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
             hits.Count == 0,
             "Verbotene alte LiveDetection-Confirmation-Logik gefunden: " + string.Join(", ", hits));
     }
+
+    private static int CountOccurrences(string source, string value)
+        => (source.Length - source.Replace(value, "", StringComparison.Ordinal).Length) / value.Length;
 }

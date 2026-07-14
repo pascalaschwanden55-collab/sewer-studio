@@ -7,7 +7,32 @@ using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai;
 
-public sealed class LiveDetectionTrainingAnnotationWriter
+public interface ILiveDetectionTrainingAnnotationWriter
+{
+    Task<TeacherAnnotation> SaveAcceptedAsync(
+        byte[] frameBytes,
+        LiveFrameFinding finding,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default);
+
+    Task<TeacherAnnotation> SaveCorrectedAsync(
+        byte[] frameBytes,
+        LiveFrameFinding sourceFinding,
+        ProtocolEntry selectedEntry,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default);
+
+    Task<TeacherAnnotation?> SaveManualMarkAsync(
+        byte[] frameBytes,
+        ProtocolEntry selectedEntry,
+        OverlayGeometry overlay,
+        string? clockPosition,
+        double captureMeter,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default);
+}
+
+public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTrainingAnnotationWriter
 {
     private readonly LiveDetectionTrainingFrameExporter _frameExporter;
     private readonly Func<string> _annotationIdFactory;
