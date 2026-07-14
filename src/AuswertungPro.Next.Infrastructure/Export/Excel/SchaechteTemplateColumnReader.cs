@@ -11,11 +11,11 @@ public sealed record SchaechteTemplateColumnReadResult(string TemplatePath, IRea
     public bool TemplateFound => !string.IsNullOrWhiteSpace(TemplatePath);
 }
 
-public static class SchaechteTemplateColumnReader
+public sealed class SchaechteTemplateColumnFileReader : ISchaechteTemplateColumnReader
 {
     private const int HeaderRow = 12;
 
-    public static SchaechteTemplateColumnReadResult LoadFromExportDirectory(string baseDirectory)
+    public SchaechteTemplateColumnReadResult LoadFromExportDirectory(string baseDirectory)
     {
         var templatePath = ResolveTemplatePath(baseDirectory);
         if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
@@ -24,7 +24,7 @@ public static class SchaechteTemplateColumnReader
         return new SchaechteTemplateColumnReadResult(templatePath, ReadColumns(templatePath));
     }
 
-    public static IReadOnlyList<string> ReadColumns(string templatePath)
+    public IReadOnlyList<string> ReadColumns(string templatePath)
     {
         using var workbook = new XLWorkbook(templatePath);
         var worksheet = workbook.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Schaechte", StringComparison.OrdinalIgnoreCase))
@@ -96,4 +96,19 @@ public static class SchaechteTemplateColumnReader
 
         return !header.Trim().All(char.IsDigit);
     }
+}
+
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer des Vorlagenlesers.
+/// </summary>
+public static class SchaechteTemplateColumnReader
+{
+    public static ISchaechteTemplateColumnReader DefaultReader { get; } =
+        new SchaechteTemplateColumnFileReader();
+
+    public static SchaechteTemplateColumnReadResult LoadFromExportDirectory(string baseDirectory)
+        => DefaultReader.LoadFromExportDirectory(baseDirectory);
+
+    public static IReadOnlyList<string> ReadColumns(string templatePath)
+        => DefaultReader.ReadColumns(templatePath);
 }

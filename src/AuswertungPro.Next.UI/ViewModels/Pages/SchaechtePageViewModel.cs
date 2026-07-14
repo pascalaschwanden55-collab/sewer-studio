@@ -25,6 +25,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IShaftRenameService _shaftRename;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly ISchaechteTemplateColumnReader _templateColumnReader;
     private readonly ShellViewModel _shell;
     private readonly DropdownOptionGroupController _sanierenDropdownOptions;
     private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
@@ -103,7 +104,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
             dropdownOptions: services.DropdownOptions,
             shaftRename: services.ShaftRename,
-            explorerReveal: services.ExplorerReveal)
+            explorerReveal: services.ExplorerReveal,
+            templateColumnReader: services.SchaechteTemplateColumns)
     {
     }
 
@@ -116,7 +118,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog,
         IDropdownOptionsStore? dropdownOptions = null,
         IShaftRenameService? shaftRename = null,
-        IExplorerRevealService? explorerReveal = null)
+        IExplorerRevealService? explorerReveal = null,
+        ISchaechteTemplateColumnReader? templateColumnReader = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -127,6 +130,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
         _shaftRename = shaftRename ?? new ShaftRenameFileService();
         _explorerReveal = explorerReveal ?? ExplorerRevealService.DefaultService;
+        _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;
 
         var uiLayout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
@@ -309,7 +313,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         Columns.Clear();
 
-        var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
+        var result = _templateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
         if (!result.TemplateFound)
         {
             LastResult = "Schaechte-Vorlage nicht gefunden.";

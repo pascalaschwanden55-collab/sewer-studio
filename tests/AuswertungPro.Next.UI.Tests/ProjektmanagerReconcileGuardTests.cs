@@ -66,6 +66,23 @@ public sealed class ProjektmanagerReconcileGuardTests
         Assert.DoesNotContain("KanalExportDetector.Detect(sourceFolder)", orchestrator);
     }
 
+    [Fact]
+    public void Schachtseite_nutzt_zentralen_Excel_Vorlagenleser()
+    {
+        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var viewModel = ReadRepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.cs");
+
+        Assert.Contains("public ISchaechteTemplateColumnReader SchaechteTemplateColumns", provider);
+        Assert.Contains("SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader()", provider);
+        Assert.Contains("templateColumnReader: services.SchaechteTemplateColumns", viewModel);
+        Assert.Contains("_templateColumnReader.LoadFromExportDirectory", viewModel);
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

@@ -9,6 +9,17 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class SchaechteTemplateColumnReaderTests
 {
     [Fact]
+    public void InstanceReader_returns_empty_result_when_directory_is_missing()
+    {
+        ISchaechteTemplateColumnReader reader = new SchaechteTemplateColumnFileReader();
+
+        var result = reader.LoadFromExportDirectory(CreateTempRoot());
+
+        Assert.False(result.TemplateFound);
+        Assert.Empty(result.Columns);
+    }
+
+    [Fact]
     public void Only_export_excel_reader_exists()
     {
         var duplicateImportReader = Path.Combine(

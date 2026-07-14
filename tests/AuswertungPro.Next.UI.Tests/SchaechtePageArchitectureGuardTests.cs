@@ -86,7 +86,8 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.True(File.Exists(infrastructurePath), "Schaechte-Template-Spalten sollen ausserhalb der ViewModel-UI-Schicht gelesen werden.");
 
         var viewModel = File.ReadAllText(viewModelPath);
-        Assert.Contains("SchaechteTemplateColumnReader.LoadFromExportDirectory", viewModel);
+        Assert.Contains("_templateColumnReader.LoadFromExportDirectory", viewModel);
+        Assert.DoesNotContain("SchaechteTemplateColumnReader.LoadFromExportDirectory", viewModel);
         AssertNoForbiddenTokens(
             viewModel,
             "using ClosedXML.Excel",
