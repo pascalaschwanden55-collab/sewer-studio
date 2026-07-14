@@ -33,6 +33,7 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -154,6 +155,7 @@ namespace AuswertungPro.Next.UI
         #region KI / Vision
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
+        public ISidecarTelemetryWriter SidecarTelemetry { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
         public ITrainingCenterSettingsStore TrainingSettings { get; }
         public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
@@ -199,6 +201,8 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
+            SidecarTelemetry = new SidecarTelemetryFileWriter();
+            SidecarTelemetryWriter.Use(SidecarTelemetry);
             var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
             LogTailReader = new DailyLogTailReader(logDirectory);
             DiagnosticsPackages = new DiagnosticsPackageService(logDirectory, AppIdentity.Version);
@@ -585,6 +589,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
+            if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;

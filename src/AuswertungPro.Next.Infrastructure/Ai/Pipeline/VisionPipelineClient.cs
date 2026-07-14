@@ -22,6 +22,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
     private readonly Uri _baseUri;
     private readonly string? _sidecarToken;
     private readonly bool _sendSidecarToken;
+    private readonly ISidecarTelemetryWriter _telemetry;
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -29,9 +30,19 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
     };
 
     public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null, string? sidecarToken = null)
+        : this(baseUri, httpClient, sidecarToken, SidecarTelemetryWriter.Current)
+    {
+    }
+
+    public VisionPipelineClient(
+        Uri baseUri,
+        HttpClient? httpClient,
+        string? sidecarToken,
+        ISidecarTelemetryWriter telemetry)
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        _telemetry = telemetry ?? throw new ArgumentNullException(nameof(telemetry));
         // KEIN _http.BaseAddress setzen: BuildUri() erzeugt immer absolute URIs. Ein gesetztes
         // BaseAddress auf einem GETEILTEN HttpClient (VideoAnalysisPipelineService nutzt fuer
         // mehrere Clients dieselbe Instanz) wirft InvalidOperationException, sobald der Client
@@ -226,7 +237,8 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
             ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
 
         if (result is YoloResponse yolo)
-            await SidecarTelemetryWriter.WriteAsync(CreateTelemetryEvent(endpoint, yolo, roundtrip.ElapsedMilliseconds)).ConfigureAwait(false);
+            await WriteTelemetryBestEffortAsync(
+                CreateTelemetryEvent(endpoint, yolo, roundtrip.ElapsedMilliseconds)).ConfigureAwait(false);
 
         return result;
     }
@@ -251,6 +263,18 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
             DetectionCount: yolo.Detections.Count,
             IsRelevant: yolo.IsRelevant,
             FrameClass: yolo.FrameClass);
+
+    private async Task WriteTelemetryBestEffortAsync(SidecarTelemetryEvent entry)
+    {
+        try
+        {
+            await _telemetry.WriteAsync(entry).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Auch ein ersetzter Schreiber darf die Analyseantwort nie beeinflussen.
+        }
+    }
 
     private Uri BuildUri(string endpoint)
     {

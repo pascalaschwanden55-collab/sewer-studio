@@ -371,6 +371,40 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task DetectYoloAsync_Verwendet_Injizierten_Telemetrie_Schreiber()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "is_relevant": true,
+            "detections": [],
+            "frame_class": "relevant",
+            "inference_time_ms": 12.5,
+            "model_name": "test-model.pt",
+            "device": "cpu",
+            "queue_wait_ms": 1.5,
+            "vram_allocated_gb": 0,
+            "vram_total_gb": 31.5
+        }
+        """);
+        var writer = new RecordingSidecarTelemetryWriter();
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: null,
+            writer);
+
+        var response = await client.DetectYoloAsync(new YoloRequest("abc", 0.25));
+
+        Assert.True(response.IsRelevant);
+        var entry = Assert.Single(writer.Entries);
+        Assert.Equal("/detect/yolo", entry.Endpoint);
+        Assert.Equal("test-model.pt", entry.ModelName);
+        Assert.Equal(12.5, entry.InferenceTimeMs);
+        Assert.Equal(1.5, entry.QueueWaitMs);
+        Assert.Equal(0, entry.DetectionCount);
+    }
+
+    [Fact]
     public void MultiModelFrameResult_CanBeConstructed()
     {
         var result = new MultiModelFrameResult(
@@ -409,6 +443,19 @@ public class VisionPipelineClientTests
             };
             return Task.FromResult(response);
         }
+    }
+
+    private sealed class RecordingSidecarTelemetryWriter : ISidecarTelemetryWriter
+    {
+        public List<SidecarTelemetryEntry> Entries { get; } = [];
+
+        public Task WriteAsync(SidecarTelemetryEntry entry)
+        {
+            Entries.Add(entry);
+            return Task.CompletedTask;
+        }
+
+        public string? ResolvePath() => null;
     }
 
     private sealed class StatusCodeHandler(HttpStatusCode statusCode, string body) : HttpMessageHandler

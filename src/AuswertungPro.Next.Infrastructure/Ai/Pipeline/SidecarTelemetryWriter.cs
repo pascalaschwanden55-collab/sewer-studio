@@ -1,70 +1,20 @@
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using AuswertungPro.Next.Infrastructure.Telemetry;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
+/// <summary>Kompatibilitaetsfassade; die Dateiarbeit liegt im Instanzdienst.</summary>
 public static class SidecarTelemetryWriter
 {
-    private static readonly SemaphoreSlim WriteLock = new(1, 1);
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    };
+    private static ISidecarTelemetryWriter _current = new SidecarTelemetryFileWriter();
 
-    public static async Task WriteAsync(SidecarTelemetryEvent entry)
-    {
-        try
-        {
-            var path = ResolvePath();
-            if (path is null)
-                return;
+    public static ISidecarTelemetryWriter Current => Volatile.Read(ref _current);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var line = JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine;
+    public static void Use(ISidecarTelemetryWriter writer) =>
+        Volatile.Write(ref _current, writer ?? throw new ArgumentNullException(nameof(writer)));
 
-            await WriteLock.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                RotateIfTooLarge(path);   // begrenzt das sonst unbegrenzte jsonl-Wachstum (Audit)
-                await File.AppendAllTextAsync(path, line).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteLock.Release();
-            }
-        }
-        catch
-        {
-            // Telemetry must never break the actual analysis request.
-        }
-    }
+    public static Task WriteAsync(SidecarTelemetryEvent entry) => Current.WriteAsync(entry);
 
-    private const long MaxBytes = 10L * 1024 * 1024;   // 10 MB, dann eine Generation rotieren
-
-    private static void RotateIfTooLarge(string path)
-    {
-        try
-        {
-            var fi = new FileInfo(path);
-            if (fi.Exists && fi.Length >= MaxBytes)
-            {
-                var rolled = path + ".1";
-                if (File.Exists(rolled)) File.Delete(rolled);   // nur 1 alte Generation behalten
-                File.Move(path, rolled);
-            }
-        }
-        catch
-        {
-            // Rotation darf das Schreiben (und die Analyse) nie kippen.
-        }
-    }
-
-    public static string? ResolvePath()
-        => TelemetryPathResolver.ResolveFile("sidecar.jsonl");
+    public static string? ResolvePath() => Current.ResolvePath();
 }
 
 public sealed record SidecarTelemetryEvent(
@@ -79,4 +29,17 @@ public sealed record SidecarTelemetryEvent(
     double? VramTotalGb,
     int DetectionCount,
     bool? IsRelevant,
-    string? FrameClass);
+    string? FrameClass)
+    : SidecarTelemetryEntry(
+        TimestampUtc,
+        Endpoint,
+        ModelName,
+        RoundtripMs,
+        InferenceTimeMs,
+        QueueWaitMs,
+        Device,
+        VramAllocatedGb,
+        VramTotalGb,
+        DetectionCount,
+        IsRelevant,
+        FrameClass);
