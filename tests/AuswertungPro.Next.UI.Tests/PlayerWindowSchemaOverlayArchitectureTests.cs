@@ -11,6 +11,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
@@ -28,6 +29,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         Assert.True(File.Exists(clearWorkflowPath), "Schema-Overlay-Clear-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(ownerPath), "SchemaOverlayManager-Besitz soll nicht direkt im PlayerWindow liegen.");
 
+        var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var state = File.ReadAllText(statePath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
@@ -74,6 +76,37 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         Assert.Contains("public bool IsDragging", owner);
         Assert.Contains("public void Activate", owner);
         Assert.Contains("public void Cancel", owner);
+
+        var forbiddenOverlayInputTokens = new[]
+        {
+            "private bool IsCodingSchemaToolSelected",
+            "private SchemaOverlayBase? CreateCodingSchemaOverlay",
+            "private void UpdateCodingSchemaOverlay",
+            "private void ClearCodingSchemaOverlay",
+            "_codingSchemaManager.BeginDrag",
+            "_codingSchemaManager.EndDrag",
+            "private void CodingCanvas_MouseWheel"
+        };
+        var forbiddenStateTokens = new[]
+        {
+            "private readonly SchemaOverlayManager _codingSchemaManager = new();",
+            "private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();"
+        };
+        var forbiddenSchemaTokens = new[]
+        {
+            "if (!_codingSessionHost.HasViewModel) return",
+            "if (!_codingOverlayToolHost.HasOverlayService)",
+            "if (!IsCodingSchemaToolSelected())",
+            "if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)",
+            "if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)",
+            "if (schema == null)",
+            "double delta = e.Delta > 0 ? 5 : -5",
+            "if (_codingSchemaManager.Active is PipeBendSchema"
+        };
+
+        Assert.DoesNotContain(forbiddenOverlayInputTokens, token => overlayInput.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenStateTokens, token => state.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenSchemaTokens, token => schema.Contains(token, StringComparison.Ordinal));
     }
 
     [Fact]

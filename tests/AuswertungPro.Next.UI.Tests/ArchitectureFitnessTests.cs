@@ -364,59 +364,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_overlay_input_root_does_not_own_schema_overlay_wiring()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs"),
-            "private bool IsCodingSchemaToolSelected",
-            "private SchemaOverlayBase? CreateCodingSchemaOverlay",
-            "private void UpdateCodingSchemaOverlay",
-            "private void ClearCodingSchemaOverlay",
-            "_codingSchemaManager.BeginDrag",
-            "_codingSchemaManager.EndDrag",
-            "private void CodingCanvas_MouseWheel");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow.Coding.OverlayInput.cs soll Schema-Overlay-Wiring an das Schema-Partial delegieren:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_schema_overlay_state_lives_behind_owner()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs"),
-            "private readonly SchemaOverlayManager _codingSchemaManager = new();",
-            "private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-State soll SchemaOverlayManager ueber CodingSchemaOverlayManagerOwner kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_schema_overlay_partial_delegates_gates_and_wheel_logic()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Schema.cs"),
-            "if (!_codingSessionHost.HasViewModel) return",
-            "if (!_codingOverlayToolHost.HasOverlayService)",
-            "if (!IsCodingSchemaToolSelected())",
-            "if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)",
-            "if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)",
-            "if (schema == null)",
-            "double delta = e.Delta > 0 ? 5 : -5",
-            "if (_codingSchemaManager.Active is PipeBendSchema");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Schema-Overlay-Partial soll Gates und Mausrad-Entscheidung ueber Workflows kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_partials_do_not_access_runtime_owner_fields_directly()
     {
         var offenders = FindPlayerWindowPartialTokenOffenders(
