@@ -11,6 +11,16 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class SchachtPdfParsingTests
 {
     [Fact]
+    public void ParseSchachtPdf_LeererText_MeldetFehlendeTextebeneVerstaendlich()
+    {
+        var parsed = HoldingFolderDistributor.ParseSchachtPdf("");
+
+        Assert.False(parsed.Success);
+        Assert.Contains("keine lesbare Textebene", parsed.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Empty page", parsed.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ParseSchachtPdfPage_ExtractsNumberAndDate_FromSchachtprotokollLine()
     {
         var text = string.Join("\n", new[]

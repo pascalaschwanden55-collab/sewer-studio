@@ -36,6 +36,24 @@ public sealed class DistributionPdfAssignmentControllerTests
     }
 
     [Fact]
+    public void ReadPages_BildPdfOhneText_ErhaeltLeereSeitenFuerOcr()
+    {
+        using var temp = new TempDirectory();
+        var pdfPath = Path.Combine(temp.Path, "bildseiten.pdf");
+        WriteEmptyPdf(pdfPath, pageCount: 3);
+
+        var pages = DistributionPdfAssignmentController.ReadPages(pdfPath);
+
+        Assert.Equal(3, pages.Count);
+        Assert.Equal(new[] { 1, 2, 3 }, pages.Select(page => page.PageNumber));
+        Assert.All(pages, page =>
+        {
+            Assert.Equal("", page.Text);
+            Assert.Equal(pdfPath, page.SourcePath);
+        });
+    }
+
+    [Fact]
     public void ExtractDichtheitPerPage_ordnet_Kontrollseite_und_Projekt_Richtung_zu()
     {
         var project = new Project();
@@ -105,6 +123,14 @@ public sealed class DistributionPdfAssignmentControllerTests
             var page = builder.AddPage(PageSize.A4);
             page.AddText(text, 12, new PdfPoint(40, 780), font);
         }
+        File.WriteAllBytes(path, builder.Build());
+    }
+
+    private static void WriteEmptyPdf(string path, int pageCount)
+    {
+        using var builder = new PdfDocumentBuilder();
+        for (var pageNumber = 0; pageNumber < pageCount; pageNumber++)
+            builder.AddPage(PageSize.A4);
         File.WriteAllBytes(path, builder.Build());
     }
 

@@ -47,7 +47,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedShaftPdf(false, "Empty page", null, null);
+            return new ParsedShaftPdf(false, "PDF enthaelt keine lesbare Textebene", null, null);
 
         return ParseSchachtPdfPage(text);
     }
@@ -57,7 +57,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedShaftPdf(false, "Empty page", null, null);
+            return new ParsedShaftPdf(false, "PDF-Seite enthaelt keine lesbare Textebene", null, null);
 
         var shaftNumber = TryFindSchachtNumber(text);
         var date = TryFindSchachtDate(text);
@@ -164,7 +164,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedPdf(false, "Empty page", null, null, null);
+            return new ParsedPdf(false, "PDF-Seite enthaelt keine lesbare Textebene", null, null, null);
 
         var isWinCan = text.Contains("wincan", StringComparison.OrdinalIgnoreCase);
         var filenameHaltung = isWinCan ? TryExtractHaltungFromPdfPath(pdfPath) : null;

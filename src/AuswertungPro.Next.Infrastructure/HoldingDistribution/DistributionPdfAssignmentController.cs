@@ -310,26 +310,20 @@ internal static class DistributionPdfAssignmentController
 
     private static IReadOnlyList<DistributionPdfPage> ReadPagesWithPdfPig(string pdfPath)
     {
-        try
+        var pages = new List<DistributionPdfPage>();
+        PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
+        using var document = PdfDocument.Open(pdfPath);
+        PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
+        var pageNumber = 0;
+        foreach (var page in document.GetPages())
         {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
-            return CreatePages(extraction.Pages, pdfPath);
+            pageNumber++;
+            var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
+            // Leere Seiten muessen erhalten bleiben. Bei reinen Bild-PDFs braucht
+            // der nachfolgende Verteiler die Seitennummer, um OCR zu starten.
+            pages.Add(new DistributionPdfPage(pageNumber, text, pdfPath));
         }
-        catch
-        {
-            var pages = new List<DistributionPdfPage>();
-            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
-            using var document = PdfDocument.Open(pdfPath);
-            PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
-            var pageNumber = 0;
-            foreach (var page in document.GetPages())
-            {
-                pageNumber++;
-                var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
-                pages.Add(new DistributionPdfPage(pageNumber, text, pdfPath));
-            }
-            return pages;
-        }
+        return pages;
     }
 
     private static IReadOnlyList<DistributionPdfPage> CreatePages(
