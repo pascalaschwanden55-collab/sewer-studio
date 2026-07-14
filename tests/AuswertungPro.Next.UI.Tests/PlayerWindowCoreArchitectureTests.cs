@@ -9,6 +9,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCoreArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_partials_do_not_reference_ui_services_namespace()
+    {
+        AssertNoForbiddenTokens(ReadPlayerWindowPartials(), "AuswertungPro.Next.UI.Services");
+    }
+
+    [Fact]
+    public void PlayerWindow_partials_do_not_call_DialogHost_directly()
+    {
+        AssertNoForbiddenTokens(ReadPlayerWindowPartials(), "DialogHost.Current");
+    }
+
+    [Fact]
+    public void PlayerWindow_partials_do_not_open_dialog_windows_directly()
+    {
+        AssertNoForbiddenTokens(
+            ReadPlayerWindowPartials(),
+            "ShowDialog",
+            "SaveFileDialog",
+            "new Views.",
+            "dlg.Owner");
+    }
+
+    [Fact]
     public void PlayerWindow_video_path_validation_lives_in_guard()
     {
         var root = FindRepositoryRoot();
@@ -210,6 +233,16 @@ public sealed class PlayerWindowCoreArchitectureTests
         Assert.Contains("PlayerClock.UtcNow", playerWindowText);
         Assert.Contains("PlayerClock.NowOffset", playerWindowText);
         Assert.Contains("TimeProvider.System", clock);
+    }
+
+    private static string ReadPlayerWindowPartials()
+    {
+        var windowsRoot = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows");
+        return string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
     }
 
     private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)

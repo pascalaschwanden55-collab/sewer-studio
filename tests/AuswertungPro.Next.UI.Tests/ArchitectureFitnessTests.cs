@@ -47,42 +47,6 @@ public sealed class ArchitectureFitnessTests
     ];
 
     [Fact]
-    public void PlayerWindow_partials_do_not_reference_ui_services_namespace()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders("AuswertungPro.Next.UI.Services");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen UI.Services nicht direkt referenzieren:\n" + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_partials_do_not_call_DialogHost_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders("DialogHost.Current");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen DialogHost.Current ueber Dialog-/Workflow-Services kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_partials_do_not_open_dialog_windows_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "ShowDialog",
-            "SaveFileDialog",
-            "new Views.",
-            "dlg.Owner");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Dialoge/Fenster ueber kleine Workflow-/Dialog-Services oeffnen:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_resources_keep_theme_dependent_styles_in_window_scope()
     {
         var offenders = FindFileTokenOffenders(
