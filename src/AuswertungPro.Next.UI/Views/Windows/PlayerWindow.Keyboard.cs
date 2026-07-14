@@ -22,7 +22,7 @@ public partial class PlayerWindow
                 StopPlayback: _playerPlaybackControlHost.Stop,
                 SetPause: _playerPlaybackControlHost.SetPause,
                 EnsurePlaying: EnsurePlaying,
-                ChangeSpeed: ChangeSpeed,
+                ChangeSpeed: _playerControlInputController.ChangeSpeed,
                 JumpSeconds: JumpSeconds,
                 ToggleDetection: ToggleDetectionShortcut,
                 ToggleMarkTool: ToggleMarkToolShortcut));

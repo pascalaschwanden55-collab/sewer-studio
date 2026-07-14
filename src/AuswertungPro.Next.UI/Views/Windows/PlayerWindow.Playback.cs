@@ -66,11 +66,6 @@ public partial class PlayerWindow
                 _playbackContext.VideoPath),
             new PlayerPlaybackEnsurePlayingActions(Play));
 
-    private void ChangeSpeed(float delta)
-    {
-        SetSpeed(AuswertungPro.Next.UI.Player.PlayerPlaybackState.ApplyRateDelta(_playerPlaybackControlHost.Rate, delta));
-    }
-
     private void JumpSeconds(int seconds)
         => PlayerPlaybackCommandRunner.JumpSeconds(
             _playerTimelineHost.TimeMilliseconds ?? 0,
@@ -86,7 +81,7 @@ public partial class PlayerWindow
             new PlayerPlaybackStartActions(
                 _playerPlaybackControlHost.PlayPath,
                 _playerTimerController.StartUpdateTimer,
-                UpdateRateLabel));
+                _playerControlInputController.UpdateRateLabel));
 
     private void UpdateUi()
         => PlayerUiUpdateWorkflow.Execute(
@@ -97,7 +92,7 @@ public partial class PlayerWindow
                 _playerTimelineHost.LengthMilliseconds ?? 0),
             new PlayerUiUpdateWorkflowActions(
                 _positionControls.ApplyPlaybackState,
-                UpdateRateLabel,
+                _playerControlInputController.UpdateRateLabel,
                 UpdateCodingCurrentCode));
 
     // Quick-Scan

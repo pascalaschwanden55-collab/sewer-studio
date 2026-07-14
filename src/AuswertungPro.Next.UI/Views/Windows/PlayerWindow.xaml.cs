@@ -44,7 +44,6 @@ public partial class PlayerWindow : Window
             onEntryCreated,
             haltungRecord);
         var playerSettings = _protocolContext.Settings ?? AppSettings.Load();
-        _playerControlSettingsController = new PlayerControlSettingsController(playerSettings);
         WireCodingPhotoHoverPreview();
         _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
@@ -55,32 +54,21 @@ public partial class PlayerWindow : Window
         _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(normalizedOptions);
         _playerMediaRuntime.AttachVideoView(VideoView);
         _playerMediaHosts = _playerMediaRuntime.Hosts;
-        _playerControlSettingsView = new PlayerControlSettingsView(
-            VolumeSlider,
-            VolumeText,
-            MuteButton,
-            MuteIconText,
-            OverlayOpacitySlider,
-            OverlayOpacityText,
-            CodingOverlayCanvas,
-            DetectionCanvas,
-            _playerPlaybackControlHost.SetVolume,
-            _playerPlaybackControlHost.SetMute);
-
         _playerControllers = PlayerWindowControllerSetInitializer.Create(
             this,
             new PlayerWindowControllerSetDependencies(
                 DamageOverlay: _playbackContext.DamageOverlay,
                 PlaybackControlHost: _playerPlaybackControlHost,
                 TimelineHost: _playerTimelineHost,
+                PlayerSettings: playerSettings,
                 VideoPath: _playbackContext.VideoPath,
                 EnsurePlaying: EnsurePlaying,
                 UpdateUi: UpdateUi,
                 ScrubSeekToSlider: ScrubSeekToSlider,
+                ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
-        ApplyPersistedPlayerControlSettings();
-        _playerControlEventsEnabled = true;
+        _playerControlInputController.Initialize();
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
         WireWindowSurfaceEvents();

@@ -13,9 +13,9 @@ public sealed record PlayerWindowControllerSet(
     PlayerPositionSliderStateController PositionSliderStateController,
     PlayerKeyboardActionControllerOwner KeyboardActionControllerOwner,
     PlayerShortcutOverlayController ShortcutOverlayController,
+    PlayerControlInputController ControlInputController,
     PlayerWindowShutdownStateController ShutdownStateController,
     PlayerWindowTimerController TimerController,
-    PlayerSpeedControls SpeedControls,
     PlayerMarkToolControls MarkToolControls,
     CodingOverlayRenderController CodingOverlayRenderController,
     LiveDetectionController LiveDetectionController);
@@ -29,6 +29,12 @@ public sealed record PlayerWindowControllerSetControls(
     TextBlock CurrentTimeText,
     TextBlock DurationText,
     FrameworkElement ShortcutOverlay,
+    Slider VolumeSlider,
+    TextBlock VolumeText,
+    ToggleButton MuteButton,
+    TextBlock MuteIcon,
+    Slider OverlayOpacitySlider,
+    TextBlock OverlayOpacityText,
     TextBlock RateText,
     Slider SpeedSlider,
     ToggleButton Speed05Button,
@@ -51,10 +57,12 @@ public sealed record PlayerWindowControllerSetDependencies(
     PlayerDamageOverlayData? DamageOverlay,
     PlayerPlaybackControlHost PlaybackControlHost,
     PlayerTimelineHost TimelineHost,
+    IPlayerControlSettingsStore PlayerSettings,
     string VideoPath,
     Action EnsurePlaying,
     Action UpdateUi,
     Action ScrubSeekToSlider,
+    Action<float> ShowUnsupportedRate,
     Func<(double offsetX, double trackWidth)> ResolveSliderTrackBounds,
     Func<NormalizedPoint, Point> MapCodingOverlayPoint);
 
@@ -70,6 +78,32 @@ public static class PlayerWindowControllerSetFactory
         var positionSliderStateController = new PlayerPositionSliderStateController();
         var keyboardActionControllerOwner = new PlayerKeyboardActionControllerOwner();
         var shutdownStateController = new PlayerWindowShutdownStateController();
+        var speedControls = new PlayerSpeedControls(
+            controls.RateText,
+            controls.SpeedSlider,
+            controls.Speed05Button,
+            controls.Speed1Button,
+            controls.Speed15Button,
+            controls.Speed2Button,
+            controls.Speed4Button,
+            controls.Speed8Button);
+        var settingsView = new PlayerControlSettingsView(
+            controls.VolumeSlider,
+            controls.VolumeText,
+            controls.MuteButton,
+            controls.MuteIcon,
+            controls.OverlayOpacitySlider,
+            controls.OverlayOpacityText,
+            controls.CodingOverlayCanvas,
+            controls.DetectionCanvas,
+            dependencies.PlaybackControlHost.SetVolume,
+            dependencies.PlaybackControlHost.SetMute);
+        var controlInputController = new PlayerControlInputController(
+            new PlayerControlSettingsController(dependencies.PlayerSettings),
+            settingsView,
+            dependencies.PlaybackControlHost,
+            speedControls,
+            dependencies.ShowUnsupportedRate);
         var timerController = PlayerWindowTimerController.Create(
             createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
                 shutdownStateController.IsClosing,
@@ -106,17 +140,9 @@ public static class PlayerWindowControllerSetFactory
             positionSliderStateController,
             keyboardActionControllerOwner,
             new PlayerShortcutOverlayController(controls.ShortcutOverlay),
+            controlInputController,
             shutdownStateController,
             timerController,
-            new PlayerSpeedControls(
-                controls.RateText,
-                controls.SpeedSlider,
-                controls.Speed05Button,
-                controls.Speed1Button,
-                controls.Speed15Button,
-                controls.Speed2Button,
-                controls.Speed4Button,
-                controls.Speed8Button),
             new PlayerMarkToolControls(
                 controls.MarkToolPopup,
                 controls.CodingMarkToolPopup,

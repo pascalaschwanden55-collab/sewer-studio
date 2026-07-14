@@ -23,6 +23,12 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 CurrentTimeText: new TextBlock(),
                 DurationText: new TextBlock(),
                 ShortcutOverlay: new Border(),
+                VolumeSlider: new Slider(),
+                VolumeText: new TextBlock(),
+                MuteButton: new ToggleButton(),
+                MuteIcon: new TextBlock(),
+                OverlayOpacitySlider: new Slider(),
+                OverlayOpacityText: new TextBlock(),
                 RateText: new TextBlock(),
                 SpeedSlider: new Slider(),
                 Speed05Button: new ToggleButton(),
@@ -62,10 +68,12 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 DamageOverlay: null,
                 PlaybackControlHost: playbackHost,
                 TimelineHost: timelineHost,
+                PlayerSettings: new Store(),
                 VideoPath: "sample.mp4",
                 EnsurePlaying: () => { },
                 UpdateUi: () => { },
                 ScrubSeekToSlider: () => { },
+                ShowUnsupportedRate: _ => { },
                 ResolveSliderTrackBounds: () => (0, 100),
                 MapCodingOverlayPoint: _ => new Point(1, 2));
 
@@ -74,7 +82,7 @@ public sealed class PlayerWindowControllerSetFactoryTests
             Assert.NotNull(set.DamageMarkerController);
             Assert.NotNull(set.QuickScanController);
             Assert.NotNull(set.PositionControls);
-            Assert.NotNull(set.SpeedControls);
+            Assert.NotNull(set.ControlInputController);
             Assert.NotNull(set.MarkToolControls);
             Assert.NotNull(set.CodingOverlayRenderController);
             Assert.Contains(
@@ -124,5 +132,16 @@ public sealed class PlayerWindowControllerSetFactoryTests
 
         if (exception is not null)
             throw exception;
+    }
+
+    private sealed class Store : IPlayerControlSettingsStore
+    {
+        public int PlayerVolume { get; set; } = 80;
+        public bool PlayerMuted { get; set; }
+        public double PlayerOverlayOpacity { get; set; } = 1d;
+
+        public void Save()
+        {
+        }
     }
 }

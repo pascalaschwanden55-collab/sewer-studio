@@ -12,10 +12,6 @@ public partial class PlayerWindow
 
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;
-    private readonly PlayerControlSettingsController _playerControlSettingsController;
-    private readonly PlayerControlSettingsView _playerControlSettingsView;
-    private bool _playerControlEventsEnabled;
-
     private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();
 
     private PlayerTimelineHost _playerTimelineHost => _playerMediaHosts.TimelineHost;
@@ -34,9 +30,9 @@ public partial class PlayerWindow
 
     private PlayerShortcutOverlayController _shortcutOverlayController => _playerControllers.ShortcutOverlayController;
 
-    private PlayerWindowTimerController _playerTimerController => _playerControllers.TimerController;
+    private PlayerControlInputController _playerControlInputController => _playerControllers.ControlInputController;
 
-    private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls;
+    private PlayerWindowTimerController _playerTimerController => _playerControllers.TimerController;
 
     private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls;
 

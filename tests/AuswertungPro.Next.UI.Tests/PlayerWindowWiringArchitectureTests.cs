@@ -96,6 +96,9 @@ public sealed class PlayerWindowWiringArchitectureTests
             "new QuickScanController",
             "new PlayerPositionControls",
             "new PlayerSpeedControls",
+            "new PlayerControlSettingsController",
+            "new PlayerControlSettingsView",
+            "new PlayerControlInputController",
             "new PlayerMarkToolControls",
             "new CodingOverlayRenderController",
             "WindowStateManager.Track(this)",
@@ -110,6 +113,9 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("new QuickScanController", controllerSetFactory);
         Assert.Contains("new PlayerPositionControls", controllerSetFactory);
         Assert.Contains("new PlayerSpeedControls", controllerSetFactory);
+        Assert.Contains("new PlayerControlSettingsController", controllerSetFactory);
+        Assert.Contains("new PlayerControlSettingsView", controllerSetFactory);
+        Assert.Contains("new PlayerControlInputController", controllerSetFactory);
         Assert.Contains("new PlayerMarkToolControls", controllerSetFactory);
         Assert.Contains("new CodingOverlayRenderController", controllerSetFactory);
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);

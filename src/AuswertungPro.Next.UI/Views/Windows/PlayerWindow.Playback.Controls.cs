@@ -9,65 +9,42 @@ public partial class PlayerWindow
         => PlayerPlaybackCommandRunner.Play(
             EnsurePlaying,
             _playerPlaybackControlHost.SetPause,
-            UpdateRateLabel,
+            _playerControlInputController.UpdateRateLabel,
             ClearDetectionOverlays);
 
     private void Pause_Click(object sender, RoutedEventArgs e)
         => PlayerPlaybackCommandRunner.Pause(
             _playerPlaybackControlHost.SetPause,
-            UpdateRateLabel);
+            _playerControlInputController.UpdateRateLabel);
 
     private void Stop_Click(object sender, RoutedEventArgs e)
         => PlayerPlaybackCommandRunner.Stop(
             _playerPlaybackControlHost.Stop,
-            UpdateRateLabel);
+            _playerControlInputController.UpdateRateLabel);
 
-    private void Speed05_Click(object sender, RoutedEventArgs e) => SetSpeed(0.5f);
+    private void Speed05_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(0.5f);
 
-    private void Speed1_Click(object sender, RoutedEventArgs e) => SetSpeed(1.0f);
+    private void Speed1_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(1.0f);
 
-    private void Speed15_Click(object sender, RoutedEventArgs e) => SetSpeed(1.5f);
+    private void Speed15_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(1.5f);
 
-    private void Speed2_Click(object sender, RoutedEventArgs e) => SetSpeed(2.0f);
+    private void Speed2_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(2.0f);
 
-    private void Speed4_Click(object sender, RoutedEventArgs e) => SetSpeed(4.0f);
+    private void Speed4_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(4.0f);
 
-    private void Speed8_Click(object sender, RoutedEventArgs e) => SetSpeed(8.0f);
+    private void Speed8_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(8.0f);
 
     private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_playerControlEventsEnabled)
-            return;
-
-        SetSpeed((float)e.NewValue);
-    }
+        => _playerControlInputController.SetSpeed((float)e.NewValue);
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_playerControlEventsEnabled)
-            return;
-
-        _playerControlSettingsView.ApplyVolume(
-            _playerControlSettingsController.SetVolume(e.NewValue));
-    }
+        => _playerControlInputController.SetVolume(e.NewValue);
 
     private void MuteButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_playerControlEventsEnabled)
-            return;
-
-        _playerControlSettingsView.ApplyMuted(
-            _playerControlSettingsController.SetMuted(MuteButton.IsChecked == true));
-    }
+        => _playerControlInputController.SetMuted(MuteButton.IsChecked == true);
 
     private void OverlayOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_playerControlEventsEnabled)
-            return;
-
-        _playerControlSettingsView.ApplyOverlayOpacity(
-            _playerControlSettingsController.SetOverlayOpacity(e.NewValue));
-    }
+        => _playerControlInputController.SetOverlayOpacity(e.NewValue);
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         => PlayerPositionSliderValueChangedWorkflow.Execute(
@@ -108,21 +85,4 @@ public partial class PlayerWindow
             _positionControls.ApplyScrubPreview);
     }
 
-    private void SetSpeed(float rate)
-        => PlayerPlaybackCommandRunner.SetSpeed(
-            rate,
-            _playerPlaybackControlHost.SetRate,
-            PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
-            UpdateRateLabel);
-
-    private void UpdateRateLabel()
-    {
-        _speedControls.Update(_playerPlaybackControlHost.Rate);
-    }
-
-    private void ApplyPersistedPlayerControlSettings()
-    {
-        _playerControlSettingsView.ApplyInitial(_playerControlSettingsController.LoadInitial());
-        UpdateRateLabel();
-    }
 }
