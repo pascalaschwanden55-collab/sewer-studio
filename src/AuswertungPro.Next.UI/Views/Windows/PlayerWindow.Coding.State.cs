@@ -16,6 +16,7 @@ public partial class PlayerWindow
     private readonly CodingTrainingSamplesOwner _codingTrainingSamplesOwner;
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
+    private readonly CodingConfirmationDecisionController _codingConfirmationDecisionController;
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;

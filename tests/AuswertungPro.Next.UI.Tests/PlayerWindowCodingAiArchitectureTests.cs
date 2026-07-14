@@ -166,6 +166,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationResumeWorkflow.cs");
         var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+        var confirmationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
 
         Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -175,9 +176,11 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
         var toggleWorkflow = File.ReadAllText(toggleWorkflowPath);
         var policy = File.ReadAllText(policyPath);
+        var confirmationController = File.ReadAllText(confirmationControllerPath);
 
         Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
-        Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmation);
+        Assert.DoesNotContain("CodingConfirmationResumeWorkflow.Apply", confirmation);
+        Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmationController);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", resumeWorkflow);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", toggleWorkflow);
         Assert.Contains("actions.StartTimers()", toggleWorkflow);

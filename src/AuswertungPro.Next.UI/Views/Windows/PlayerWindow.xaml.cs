@@ -87,6 +87,23 @@ public partial class PlayerWindow : Window
                 ResumeDetection: ResumeDetection));
         _liveDetectionConfirmationTrainingController = liveDetectionTrainingControllers.Confirmation;
         _liveDetectionManualMarkTrainingController = liveDetectionTrainingControllers.ManualMark;
+        _codingConfirmationDecisionController = new CodingConfirmationDecisionController(
+            _codingPendingConfirmationState,
+            new CodingConfirmationDecisionControllerActions(
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                ResolveCodingEvents: () => _codingSessionHost.EventCollection,
+                PersistTrainingSample: (codingEvent, operation) =>
+                    PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget(operation),
+                RefreshCodingEvents: RefreshCodingEventsList,
+                HideConfirmationPanel: _codingConfirmationPanelControls.Hide,
+                SelectEvent: _codingSidePanelControllers.EventsList.SelectEvent,
+                IsLiveAiEnabled: () => PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
+                ResolveModelName: () => _codingAiRuntimeOwner.Controller.ModelName,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                ApplyResumeStatus: status => SetCodingAiState(
+                    status.StatusText,
+                    PlayerStatusColors.Success,
+                    status.DetailText)));
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,
