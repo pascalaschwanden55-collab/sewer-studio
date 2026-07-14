@@ -11,7 +11,7 @@ internal static class PdfOcrExtractor
     public static OcrPageExtractionResult TryExtractPageText(string pdfPath, int pageNumber)
     {
         if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
-            return new OcrPageExtractionResult(false, null, "PDF not found");
+            return new OcrPageExtractionResult(false, null, "PDF wurde nicht gefunden.");
         try
         {
             PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
@@ -21,15 +21,21 @@ internal static class PdfOcrExtractor
             return new OcrPageExtractionResult(false, null, ex.Message);
         }
         if (pageNumber <= 0)
-            return new OcrPageExtractionResult(false, null, "Invalid page number");
+            return new OcrPageExtractionResult(false, null, "Ungueltige Seitennummer.");
 
         var pdftoppm = FindPdfToPpmPath();
         if (string.IsNullOrWhiteSpace(pdftoppm))
-            return new OcrPageExtractionResult(false, null, "pdftoppm.exe not found");
+            return new OcrPageExtractionResult(
+                false,
+                null,
+                "pdftoppm.exe wurde nicht gefunden. Poppler muss installiert oder im App-Ordner tools vorhanden sein.");
 
         var tesseract = FindTesseractPath();
         if (string.IsNullOrWhiteSpace(tesseract))
-            return new OcrPageExtractionResult(false, null, "tesseract.exe not found");
+            return new OcrPageExtractionResult(
+                false,
+                null,
+                "tesseract.exe wurde nicht gefunden. Tesseract muss installiert oder im App-Ordner tools vorhanden sein.");
 
         var tempBase = Path.Combine(Path.GetTempPath(), $"pdf_ocr_{Guid.NewGuid():N}");
         var pngPath = $"{tempBase}.png";
@@ -41,19 +47,19 @@ internal static class PdfOcrExtractor
                  "-r", "300", "-gray", "-singlefile", "-png", pdfPath, tempBase],
                 timeoutMs: 45_000);
             if (!render.Success)
-                return new OcrPageExtractionResult(false, null, $"pdftoppm failed: {render.Message}");
+                return new OcrPageExtractionResult(false, null, $"PDF-Seite konnte nicht in ein Bild umgewandelt werden: {render.Message}");
             if (!File.Exists(pngPath))
-                return new OcrPageExtractionResult(false, null, "pdftoppm produced no image");
+                return new OcrPageExtractionResult(false, null, "pdftoppm hat kein Seitenbild erzeugt.");
 
             var ocr = RunProcess(tesseract,
                 [pngPath, "stdout", "-l", "deu+eng", "--oem", "1", "--psm", "6"],
                 timeoutMs: 60_000);
             if (!ocr.Success)
-                return new OcrPageExtractionResult(false, null, $"tesseract failed: {ocr.Message}");
+                return new OcrPageExtractionResult(false, null, $"Tesseract-Texterkennung fehlgeschlagen: {ocr.Message}");
 
             var text = NormalizeText(ocr.StdOut);
             if (string.IsNullOrWhiteSpace(text))
-                return new OcrPageExtractionResult(false, null, "OCR returned empty text");
+                return new OcrPageExtractionResult(false, null, "Die Texterkennung lieferte keinen Text.");
 
             return new OcrPageExtractionResult(true, text, null);
         }

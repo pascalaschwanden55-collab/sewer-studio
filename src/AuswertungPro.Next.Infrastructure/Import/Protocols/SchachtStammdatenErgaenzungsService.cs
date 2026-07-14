@@ -82,7 +82,10 @@ public sealed class SchachtStammdatenErgaenzungsService : ISchachtStammdatenErga
                 if (!parsed.IstSchachtprotokoll)
                 {
                     nichtLesbar++;
-                    meldungen.Add($"Schacht {nummer}: PDF ist kein Schachtprotokoll ({Path.GetFileName(pdfPath)}).");
+                    var detail = string.IsNullOrWhiteSpace(parsed.Lesehinweis)
+                        ? "PDF ist kein Schachtprotokoll."
+                        : parsed.Lesehinweis;
+                    meldungen.Add($"Schacht {nummer}: {detail} ({Path.GetFileName(pdfPath)}).");
                     continue;
                 }
 

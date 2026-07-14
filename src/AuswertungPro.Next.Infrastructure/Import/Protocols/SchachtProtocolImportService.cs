@@ -15,7 +15,55 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
     public SchachtProtocolParseResult Parse(string pdfPfad)
     {
         var extraction = PdfTextExtractor.ExtractPages(pdfPfad);
-        return ParseFromText(extraction.FullText);
+        return ParseWithOcrFallback(
+            extraction.FullText,
+            () => PdfDocumentOcrExtractor.TryExtract(pdfPfad));
+    }
+
+    internal static SchachtProtocolParseResult ParseWithOcrFallback(
+        string? extractedText,
+        Func<OcrDocumentExtractionResult> readWithOcr)
+    {
+        ArgumentNullException.ThrowIfNull(readWithOcr);
+
+        var directResult = ParseFromText(extractedText ?? string.Empty);
+        if (directResult.IstSchachtprotokoll)
+            return directResult;
+
+        if (!IsEmptyOrNearlyEmpty(extractedText))
+        {
+            return directResult with
+            {
+                Lesehinweis = "Das PDF enthaelt lesbaren Text, wurde aber nicht als Schachtprotokoll erkannt."
+            };
+        }
+
+        var ocr = readWithOcr();
+        if (!ocr.Success)
+        {
+            return directResult with
+            {
+                Lesehinweis = "Das PDF ist vermutlich ein Bild-Scan ohne Textebene. " +
+                              $"Die Texterkennung konnte nicht ausgefuehrt werden: {ocr.Message}"
+            };
+        }
+
+        var ocrResult = ParseFromText(ocr.Text);
+        if (!ocrResult.IstSchachtprotokoll)
+        {
+            return ocrResult with
+            {
+                Lesehinweis = "Die Texterkennung wurde ausgefuehrt, der Inhalt wurde aber nicht als Schachtprotokoll erkannt."
+            };
+        }
+
+        var partialHint = ocr.ExtractedPages < ocr.TotalPages
+            ? $" Nicht lesbare Seiten: {ocr.TotalPages - ocr.ExtractedPages}."
+            : string.Empty;
+        return ocrResult with
+        {
+            Lesehinweis = $"Texterkennung (OCR) verwendet: {ocr.ExtractedPages} von {ocr.TotalPages} Seiten.{partialHint}"
+        };
     }
 
     /// <summary>Reine Text-zu-Ergebnis-Logik, damit sie ohne echtes PDF testbar ist.</summary>
@@ -35,6 +83,16 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
             true, pf.SchachtNummer, pf.Datum, pf.Funktion,
             pf.Schachtform, pf.Dimension, pf.Schachttiefe, pf.PrimaereSchaeden,
             pf.Bemerkungen, pf.Status, pf.Link, damages);
+    }
+
+    private static bool IsEmptyOrNearlyEmpty(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        var meaningfulCharacters = text.Count(character =>
+            !char.IsWhiteSpace(character) && !char.IsControl(character));
+        return meaningfulCharacters < 40;
     }
 
     public SchachtRecord? FindSchacht(Project project, string? schachtnummer)

@@ -26,9 +26,14 @@ Fuer Entwickler: Release mit `tools\Publish-SewerStudio.ps1` erzeugen und mit
 
 ## 3. Werkzeuge einrichten
 
-- **PDF:** `pdftotext.exe` nach `<Release>\tools\pdftotext.exe` kopieren oder den
-  Pfad in SewerStudio einstellen. Ohne das Werkzeug gibt es einen internen
-  PDF-Fallback, die Texterkennung kann aber schlechter sein.
+- **PDF mit Textebene:** `pdftotext.exe` nach `<Release>\tools\pdftotext.exe`
+  kopieren oder den Pfad in SewerStudio einstellen. Ohne das Werkzeug gibt es
+  einen internen PDF-Fallback.
+- **Gescannte PDF ohne Textebene:** Zusaetzlich `pdftoppm.exe` (Poppler samt
+  benoetigten DLLs) und `tesseract.exe` installieren oder unter
+  `<Release>\tools\` bereitstellen. SewerStudio sucht auch im Windows-PATH,
+  in WinGet-Paketen und bei einer normalen Tesseract-Installation unter
+  `C:\Program Files\Tesseract-OCR\`.
 - **Video/KI:** `ffmpeg.exe` und `ffprobe.exe` in den Windows-PATH aufnehmen oder
   `SEWERSTUDIO_FFMPEG` auf den vollstaendigen Pfad zu `ffmpeg.exe` setzen.
 - **Ollama:** Ollama installieren und danach ausfuehren:

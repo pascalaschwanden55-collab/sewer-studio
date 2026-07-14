@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Protocols;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -83,6 +84,76 @@ public sealed class SchachtProtocolImportServiceTests
             "Haltungsinspektion 80454-80455\nOberer Schacht 80454\nUnterer Schacht 80455");
 
         Assert.False(result.IstSchachtprotokoll);
+    }
+
+    [Fact]
+    public void ParseWithOcrFallback_BildScan_LiestSchachtprotokoll()
+    {
+        var ocrCalls = 0;
+
+        var result = SchachtProtocolImportService.ParseWithOcrFallback(
+            "",
+            () =>
+            {
+                ocrCalls++;
+                return new OcrDocumentExtractionResult(
+                    true,
+                    "Zustandsaufnahme Schacht Nr. 80454\nSchachttyp Kontrollschacht\nDimension 1100/900\nTiefe 2.12\n20/09/2024",
+                    3,
+                    3,
+                    null);
+            });
+
+        Assert.True(result.IstSchachtprotokoll);
+        Assert.Equal("80454", result.Schachtnummer);
+        Assert.Equal("1100 x 900 mm", result.Dimension);
+        Assert.Equal("2.12", result.Schachttiefe);
+        Assert.Equal(1, ocrCalls);
+        Assert.Contains("OCR", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseWithOcrFallback_LesbarerDirekttext_StartetKeineOcr()
+    {
+        var result = SchachtProtocolImportService.ParseWithOcrFallback(
+            "Schachtprotokoll Nr. 74467\nSchachttyp Kontrollschacht\nDimension 1000 mm\nSchachttiefe 2.35 m",
+            () => throw new InvalidOperationException("OCR darf nicht aufgerufen werden."));
+
+        Assert.True(result.IstSchachtprotokoll);
+        Assert.Null(result.Lesehinweis);
+    }
+
+    [Fact]
+    public void ParseWithOcrFallback_FehlendesWerkzeug_LiefertVerstaendlichenHinweis()
+    {
+        var result = SchachtProtocolImportService.ParseWithOcrFallback(
+            "",
+            () => new OcrDocumentExtractionResult(
+                false,
+                "",
+                3,
+                0,
+                "pdftoppm.exe wurde nicht gefunden."));
+
+        Assert.False(result.IstSchachtprotokoll);
+        Assert.Contains("Bild-Scan", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pdftoppm.exe", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseWithOcrFallback_OcrTextOhneSchachtprotokoll_UnterscheidetErkennungsfehler()
+    {
+        var result = SchachtProtocolImportService.ParseWithOcrFallback(
+            "",
+            () => new OcrDocumentExtractionResult(
+                true,
+                "Gesamtauszug Gemeinde ohne passende Protokollfelder",
+                1,
+                1,
+                null));
+
+        Assert.False(result.IstSchachtprotokoll);
+        Assert.Contains("Texterkennung wurde ausgefuehrt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

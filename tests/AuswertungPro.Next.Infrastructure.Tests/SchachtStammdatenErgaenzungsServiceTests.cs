@@ -102,6 +102,35 @@ public sealed class SchachtStammdatenErgaenzungsServiceTests
         Assert.Equal(0, parser.ParseCalls);
     }
 
+    [Fact]
+    public void Ermitteln_UebernimmtOcrFehlerInDieMeldung()
+    {
+        using var temp = new TempProject();
+        var pdf = temp.CreatePdf("Schaechte_Verteilt", "80454", "80454.pdf");
+        var parseResult = new SchachtProtocolParseResult(
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Array.Empty<(string, string)>(),
+            "Bild-Scan: pdftoppm.exe wurde nicht gefunden.");
+        var parser = new FakeProtocolImportService(pdf, parseResult);
+        var sut = new SchachtStammdatenErgaenzungsService(parser);
+
+        var result = sut.Ermitteln(temp.Root, new[] { MissingSource("80454") });
+
+        Assert.Equal(1, result.NichtLesbar);
+        Assert.Contains(result.Meldungen, message =>
+            message.Contains("pdftoppm.exe", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static SchachtStammdatenQuelle MissingSource(string number)
         => new(Guid.NewGuid(), number, "", "", "", "", "");
 

@@ -18,7 +18,8 @@ public sealed record SchachtProtocolParseResult(
     string? Bemerkungen,
     string? Status,
     string? Link,
-    IReadOnlyList<(string Bauteil, string Schaden)> Schaeden);
+    IReadOnlyList<(string Bauteil, string Schaden)> Schaeden,
+    string? Lesehinweis = null);
 
 /// <summary>
 /// Liest ein einzelnes Schacht-Protokoll-PDF und wendet es auf einen Schacht an

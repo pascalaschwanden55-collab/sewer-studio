@@ -4,6 +4,7 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -42,6 +43,15 @@ public sealed class SchaechtePageViewModelProtocolCommandTests : IDisposable
         vm.Selected = mitPdf;
 
         Assert.True(vm.RefreshProtocolCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void PdfBefehle_LaufenAsynchron_DamitOcrDieOberflaecheNichtBlockiert()
+    {
+        var vm = CreateVm();
+
+        Assert.IsAssignableFrom<IAsyncRelayCommand>(vm.RefreshProtocolCommand);
+        Assert.IsAssignableFrom<IAsyncRelayCommand>(vm.ImportProtocolCommand);
     }
 
     private SchaechtePageViewModel CreateVm()

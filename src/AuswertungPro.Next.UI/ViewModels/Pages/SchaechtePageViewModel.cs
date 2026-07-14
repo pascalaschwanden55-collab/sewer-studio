@@ -170,8 +170,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
         SaveCommand = new RelayCommand(Save);
-        RefreshProtocolCommand = new RelayCommand(RefreshProtocol, CanRefreshProtocol);
-        ImportProtocolCommand = new RelayCommand(ImportProtocol);
+        RefreshProtocolCommand = new AsyncRelayCommand(RefreshProtocolAsync, CanRefreshProtocol);
+        ImportProtocolCommand = new AsyncRelayCommand(ImportProtocolAsync);
         ErgaenzeStammdatenAusPdfsCommand = new AsyncRelayCommand(
             ErgaenzeStammdatenAusPdfsAsync,
             CanErgaenzeStammdatenAusPdfs);
@@ -218,7 +218,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         (RemoveCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        (RefreshProtocolCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (RefreshProtocolCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedChanging(SchachtRecord? oldValue, SchachtRecord? newValue)
@@ -473,124 +473,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var ok = _shell.TrySaveProject();
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
-    }
-
-    // "Aktualisieren": verknuepftes Protokoll neu einlesen -> Schacht komplett neu aufbauen (mit Warnung).
-    private bool CanRefreshProtocol()
-        => Selected is not null && !string.IsNullOrWhiteSpace(Selected.GetFieldValue("PDF_Path"));
-
-    private void RefreshProtocol()
-    {
-        var schacht = Selected;
-        if (schacht is null)
-            return;
-
-        var relPath = schacht.GetFieldValue("PDF_Path");
-        if (string.IsNullOrWhiteSpace(relPath))
-            return;
-
-        var projektOrdner = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projektOrdner))
-        {
-            _dialogs.Info("Kein Projekt geoeffnet.", "Aktualisieren");
-            return;
-        }
-
-        if (!_dialogs.ConfirmWarn(
-                "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
-                "Aktualisieren"))
-            return;
-
-        var absPath = ProjectPathResolver.ResolveFilePathFromProjectFolder(relPath, projektOrdner);
-        if (absPath is null)
-        {
-            _dialogs.Warn("Die verknuepfte Protokoll-Datei wurde nicht gefunden.", "Aktualisieren");
-            return;
-        }
-
-        var ergebnis = _schachtProtocolImport.Parse(absPath);
-        if (!ergebnis.IstSchachtprotokoll || string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
-        {
-            _dialogs.Warn("Das verknuepfte PDF ist kein lesbares Schachtprotokoll.", "Aktualisieren");
-            return;
-        }
-
-        // Relativen Pfad behalten (Datei liegt bereits im Projekt).
-        _schachtProtocolImport.Apply(schacht, ergebnis, relPath);
-
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        _shell.TrySaveProject();
-        LastResult = $"Schacht {ergebnis.Schachtnummer} aktualisiert ({ergebnis.Schaeden.Count} Beobachtungen).";
-    }
-
-    // "Protokoll importieren": einzelnes PDF waehlen -> bei Kollision nachfragen -> verteilen + anwenden.
-    private void ImportProtocol()
-    {
-        var projektOrdner = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projektOrdner))
-        {
-            _dialogs.Info("Kein Projekt geoeffnet.", "Protokoll importieren");
-            return;
-        }
-
-        var pdfPfad = _dialogs.OpenFile("Protokoll importieren", "PDF (*.pdf)|*.pdf");
-        if (string.IsNullOrWhiteSpace(pdfPfad))
-            return;
-
-        var ergebnis = _schachtProtocolImport.Parse(pdfPfad);
-        if (!ergebnis.IstSchachtprotokoll)
-        {
-            _dialogs.Warn("Das gewaehlte PDF ist kein Schachtprotokoll.", "Protokoll importieren");
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
-        {
-            _dialogs.Warn("Im Protokoll wurde keine Schachtnummer gefunden.", "Protokoll importieren");
-            return;
-        }
-
-        var vorhanden = _schachtProtocolImport.FindSchacht(_shell.Project, ergebnis.Schachtnummer);
-        SchachtRecord ziel;
-        if (vorhanden is not null)
-        {
-            var wahl = _dialogs.ConfirmCancel(
-                $"Schacht {ergebnis.Schachtnummer} ist bereits vorhanden.\n\n" +
-                "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
-                "Protokoll importieren");
-
-            if (wahl == DialogConfirm.Cancel)
-                return;
-            if (wahl == DialogConfirm.Yes)
-            {
-                ziel = vorhanden;
-            }
-            else
-            {
-                ziel = new SchachtRecord();
-                lock (_shell.CollectionLock)
-                {
-                    Records.Add(ziel);
-                }
-            }
-        }
-        else
-        {
-            ziel = new SchachtRecord();
-            lock (_shell.CollectionLock)
-            {
-                Records.Add(ziel);
-            }
-        }
-
-        var relPath = _schachtProtocolImport.DistributePdf(projektOrdner, ergebnis.Schachtnummer, pdfPfad);
-        _schachtProtocolImport.Apply(ziel, ergebnis, relPath);
-        Selected = ziel;
-
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        _shell.TrySaveProject();
-        LastResult = $"Protokoll importiert: Schacht {ergebnis.Schachtnummer} ({ergebnis.Schaeden.Count} Beobachtungen).";
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
