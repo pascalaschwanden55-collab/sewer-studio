@@ -196,7 +196,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _dialogs,
             _protocolPdfExporter,
             () => _shell.GetProjectFolder(),
-            record => DataPageHydraulikReportCalculator.BuildReportCalculation(
+            services.PdfMerge,
+            buildHydraulikCalculation: record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
                 saveSettings: _settings.Save),

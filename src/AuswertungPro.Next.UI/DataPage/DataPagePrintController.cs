@@ -40,8 +40,7 @@ public sealed class DataPagePrintController
     private readonly Func<HaltungRecord, string, SchachtRecord?, SchachtRecord?, List<string>> _resolveDossierOriginalPdfPaths;
     private readonly Func<DataPageDossierPrintAvailability, DossierPrintOptions?> _selectDossierPrintOptions;
     private readonly Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>> _buildDossierPdfAsync;
-    private readonly Func<IReadOnlyList<string>, byte[]> _mergeOriginals;
-    private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergeWithOriginals;
+    private readonly IPdfMergeService _pdfMerge;
     private readonly string _baseDirectory;
     private readonly Func<string, bool> _fileExists;
     private readonly Action<string, byte[]> _writeAllBytes;
@@ -78,6 +77,33 @@ public sealed class DataPagePrintController
     {
     }
 
+    public DataPagePrintController(
+        IDialogService dialogs,
+        ProtocolPdfExporter protocolPdfExporter,
+        Func<string?> getProjectFolder,
+        IPdfMergeService pdfMerge,
+        Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
+        Func<string?>? getLastProjectPath = null,
+        Func<string?, SchachtRecord?>? findSchachtByNummer = null,
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        IProtocolSingleRegenerationService? protocolRegeneration = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        : this(
+            dialogs,
+            protocolPdfExporter,
+            getProjectFolder,
+            buildHydraulikCalculation,
+            getLastProjectPath,
+            findSchachtByNummer,
+            buildDossierHydraulikCalculation,
+            protocolRegeneration,
+            dossierPhotoAvailability,
+            inspectionProtocolFiles)
+    {
+        _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
+    }
+
     internal DataPagePrintController(
         IDialogService dialogs,
         IProtocolPdfExporter protocolPdfExporter,
@@ -105,6 +131,33 @@ public sealed class DataPagePrintController
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles)
     {
+    }
+
+    internal DataPagePrintController(
+        IDialogService dialogs,
+        IProtocolPdfExporter protocolPdfExporter,
+        Func<string?> getProjectFolder,
+        IPdfMergeService pdfMerge,
+        Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
+        Func<string?>? getLastProjectPath = null,
+        Func<string?, SchachtRecord?>? findSchachtByNummer = null,
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        IProtocolSingleRegenerationService? protocolRegeneration = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        : this(
+            dialogs,
+            protocolPdfExporter,
+            getProjectFolder,
+            buildHydraulikCalculation,
+            getLastProjectPath,
+            findSchachtByNummer,
+            buildDossierHydraulikCalculation,
+            protocolRegeneration,
+            dossierPhotoAvailability,
+            inspectionProtocolFiles)
+    {
+        _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
 
     public DataPagePrintController(
@@ -158,8 +211,12 @@ public sealed class DataPagePrintController
         _buildDossierPdfAsync = buildDossierPdfAsync
             ?? ((project, record, schachtVon, schachtBis, calc, projectRoot, options) =>
                 Task.Run(() => HaltungsDossierPdfBuilder.Build(project, record, schachtVon, schachtBis, calc, projectRoot, options)));
-        _mergeOriginals = mergeOriginals ?? PdfMergeHelper.MergeOriginals;
-        _mergeWithOriginals = mergeWithOriginals ?? PdfMergeHelper.MergeWithOriginals;
+        var mergeFallback = PdfMergeHelper.Current;
+        _pdfMerge = mergeOriginals is null && mergeWithOriginals is null
+            ? mergeFallback
+            : new DelegatePdfMergeService(
+                mergeOriginals ?? mergeFallback.MergeOriginals,
+                mergeWithOriginals ?? mergeFallback.MergeWithOriginals);
         _regenerateOne = regenerateOne
             ?? ((project, folder, record, doc) =>
                 AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
@@ -261,7 +318,7 @@ public sealed class DataPagePrintController
             }
             else
             {
-                pdf = await Task.Run(() => _mergeOriginals(originalPdfPaths));
+                pdf = await Task.Run(() => _pdfMerge.MergeOriginals(originalPdfPaths));
                 if (pdf.Length == 0)
                     throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
 
@@ -269,7 +326,7 @@ public sealed class DataPagePrintController
             }
 
             if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-                pdf = await Task.Run(() => _mergeWithOriginals(pdf, originalPdfPaths));
+                pdf = await Task.Run(() => _pdfMerge.MergeWithOriginals(pdf, originalPdfPaths));
 
             await _writeAllBytesAsync(output, pdf);
             _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
@@ -465,5 +522,18 @@ public sealed class DataPagePrintController
             text = text.Replace(c, '_');
 
         return text.Trim();
+    }
+
+    private sealed class DelegatePdfMergeService(
+        Func<IReadOnlyList<string>, byte[]> mergeOriginals,
+        Func<byte[], IReadOnlyList<string>, byte[]> mergeWithOriginals) : IPdfMergeService
+    {
+        public byte[] MergeWithOriginals(
+            byte[] generatedPdf,
+            IReadOnlyList<string> originalPdfPaths)
+            => mergeWithOriginals(generatedPdf, originalPdfPaths);
+
+        public byte[] MergeOriginals(IReadOnlyList<string> originalPdfPaths)
+            => mergeOriginals(originalPdfPaths);
     }
 }

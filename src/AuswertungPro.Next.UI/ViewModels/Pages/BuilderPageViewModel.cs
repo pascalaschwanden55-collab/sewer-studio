@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -38,6 +39,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
+    private readonly IPdfMergeService _pdfMerge;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -133,6 +135,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles)
     {
+        _pdfMerge = services.PdfMerge;
     }
 
     public BuilderPageViewModel(
@@ -153,6 +156,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             ?? DataPage.DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
+        _pdfMerge = PdfMergeHelper.Current;
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         _refreshDebounceTimer.Tick += RefreshDebounceTimerTick;

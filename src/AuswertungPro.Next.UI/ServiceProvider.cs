@@ -187,6 +187,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolService Protocols { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
+        public IPdfMergeService PdfMerge { get; }
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
         public IDichtheitProtocolFileLocator DichtheitProtocolFiles { get; }
@@ -395,6 +396,8 @@ namespace AuswertungPro.Next.UI
             ShaftRename = new ShaftRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
+            PdfMerge = new PdfMergeService();
+            PdfMergeHelper.Use(PdfMerge);
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator();
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
@@ -766,6 +769,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
             if (serviceType == typeof(IInspectionProtocolFileLocator)) return InspectionProtocolFiles;
             if (serviceType == typeof(IDichtheitProtocolFileLocator)) return DichtheitProtocolFiles;

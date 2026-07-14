@@ -196,7 +196,8 @@ public sealed partial class BuilderPageViewModel
             _dialogs,
             _protocolPdfExporter,
             () => _shell.GetProjectFolder(),
-            record => DataPageHydraulikReportCalculator.BuildReportCalculation(
+            _pdfMerge,
+            buildHydraulikCalculation: record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
                 saveSettings: _settings.Save),
