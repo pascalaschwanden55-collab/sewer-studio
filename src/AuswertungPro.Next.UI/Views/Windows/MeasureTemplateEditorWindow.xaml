@@ -69,7 +69,7 @@
                 <Button Width="110" Margin="0,0,6,0"
                         Command="{Binding RemoveCatalogItemCommand}">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                         <TextBlock Text="Löschen"/>
                     </StackPanel>
                 </Button>
@@ -141,10 +141,10 @@
                     <Button Command="{Binding SaveTemplateCommand}" Content="Template speichern" Width="150" Margin="0,0,6,0"/>
                     <Button Command="{Binding DeleteLineCommand}" Content="Zeile löschen" Width="120" Margin="0,0,6,0"/>
                     <Button Command="{Binding MoveLineUpCommand}" Width="40" Margin="0,0,6,0" ToolTip="Nach oben">
-                        <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets"/>
+                        <TextBlock Text="&#xE70E;" FontFamily="{DynamicResource FontIcon}"/>
                     </Button>
                     <Button Command="{Binding MoveLineDownCommand}" Width="40" ToolTip="Nach unten">
-                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}"/>
                     </Button>
                 </StackPanel>
             </Grid>

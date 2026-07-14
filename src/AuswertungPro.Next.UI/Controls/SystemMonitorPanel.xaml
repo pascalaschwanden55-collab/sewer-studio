@@ -102,7 +102,7 @@
                         Style="{StaticResource SecondaryButton}"
                         Click="Detach_Click"
                         ToolTip="System-Monitor in eigenem Fenster oeffnen">
-                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
             </Grid>
         </Expander.Header>

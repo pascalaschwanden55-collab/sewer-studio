@@ -41,7 +41,7 @@
                             <Button Command="{Binding RemoveGroupCommand}" 
                                     Padding="8,4" MinWidth="80" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Löschen"/>
                                 </StackPanel>
                             </Button>
@@ -76,7 +76,7 @@
                             <Button Command="{Binding RemovePositionCommand}" 
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Entfernen"/>
                                 </StackPanel>
                             </Button>
@@ -84,19 +84,19 @@
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
                                     ToolTip="In Wartebox verschieben">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                    <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Wartebox"/>
                                 </StackPanel>
                             </Button>
                             <Button Command="{Binding MoveUpCommand}"
                                     Padding="8,4" Width="36" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
                                     ToolTip="Nach oben">
-                                <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets"/>
+                                <TextBlock Text="&#xE70E;" FontFamily="{DynamicResource FontIcon}"/>
                             </Button>
                             <Button Command="{Binding MoveDownCommand}"
                                     Padding="8,4" Width="36" Style="{StaticResource SecondaryButton}"
                                     ToolTip="Nach unten">
-                                <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"/>
+                                <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}"/>
                             </Button>
                         </StackPanel>
                     </StackPanel>
@@ -129,7 +129,7 @@
                                                     Padding="0"
                                                     Width="32" Height="32"
                                                     Click="DeletePosition_Click">
-                                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets"/>
+                                                <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}"/>
                                             </Button>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

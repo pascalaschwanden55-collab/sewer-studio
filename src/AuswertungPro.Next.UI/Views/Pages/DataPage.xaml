@@ -113,7 +113,7 @@
                                   Unchecked="HaltungsansichtToggle_Changed"
                                   ToolTip="Zwischen Tabelle und Haltungsansicht umschalten">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="13"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Haltungsansicht" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -124,21 +124,21 @@
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74E;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding AddCommand}" IsEnabled="{Binding IsProjectReady}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding RemoveCommand}" IsEnabled="{Binding IsProjectReady}"
                             Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Löschen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -149,9 +149,9 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Sanierungsmaßnahme für die gewählte Haltung bearbeiten">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE90F;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Sanierungsmaßnahme" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -180,7 +180,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Videos und PDFs automatisch suchen und mit Haltungen verlinken">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xED25;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Medien suchen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -191,7 +191,7 @@
                         <StackPanel Orientation="Horizontal">
                             <ui:FluentIcon Glyph="&#xE8EF;" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                             <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -213,7 +213,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Haltungsdossier als PDF drucken (Sektionen auswählbar)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Dossier" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -224,7 +224,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="DataGrid in separatem Fenster öffnen (Multi-Monitor)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -234,9 +234,9 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Zeilen, Spalten und Darstellung anpassen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7B3;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE7B3;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Ansicht" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -383,7 +383,7 @@
                                  TextChanged="SearchBox_TextChanged"/>
                         <Button Margin="4,0,0,0" Style="{StaticResource IconButton}"
                                 Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                            <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                         </Button>
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 
@@ -392,7 +392,7 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
                                 ToolTip="Selektierte Zeile an Position verschieben"
                                 Click="MoveToPosition_Click"/>
@@ -404,7 +404,7 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zeilennummer eingeben und Enter drücken"
                                  KeyDown="GoToRowBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
                                 ToolTip="Zu Zeile springen"
                                 Click="GoToRow_Click"/>
@@ -428,7 +428,7 @@
                     Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1" CornerRadius="8" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
-                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="40"
                                Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <TextBlock Text="Die Ansicht ist in einem separaten Fenster geöffnet"
                                Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="SemiBold"
@@ -439,7 +439,7 @@
                     <Button x:Name="DockBackPlaceholderButton" Click="DockBackFromPlaceholder_Click"
                             Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE89F;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Andocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

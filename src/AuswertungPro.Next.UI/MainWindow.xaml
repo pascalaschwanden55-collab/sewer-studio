@@ -197,7 +197,7 @@
                             Margin="10,0"
                             Background="{DynamicResource BorderBrush}"/>
                     <TextBlock Text="&#xE8FD;"
-                               FontFamily="Segoe MDL2 Assets"
+                               FontFamily="{DynamicResource FontIcon}"
                                FontSize="12"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
@@ -207,7 +207,7 @@
                                FontSize="11"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="&#xE7F4;"
-                               FontFamily="Segoe MDL2 Assets"
+                               FontFamily="{DynamicResource FontIcon}"
                                FontSize="12"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
@@ -239,7 +239,7 @@
                             </Style>
                         </StackPanel.Style>
                         <TextBlock Text="&#xE946;"
-                                   FontFamily="Segoe MDL2 Assets"
+                                   FontFamily="{DynamicResource FontIcon}"
                                    FontSize="12"
                                    Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center"
@@ -271,7 +271,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
                                    Text="&#xE74E;"
-                                   FontFamily="Segoe MDL2 Assets"
+                                   FontFamily="{DynamicResource FontIcon}"
                                    FontSize="12"
                                    Foreground="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center"
@@ -389,7 +389,7 @@
                                 <Grid Width="24" Height="18" VerticalAlignment="Center">
                                     <TextBlock x:Name="DefaultNavIcon"
                                                Text="{Binding Icon}"
-                                               FontFamily="Segoe MDL2 Assets"
+                                               FontFamily="{DynamicResource FontIcon}"
                                                FontSize="16"
                                                Width="24"
                                                Foreground="{DynamicResource TextSecondaryBrush}"

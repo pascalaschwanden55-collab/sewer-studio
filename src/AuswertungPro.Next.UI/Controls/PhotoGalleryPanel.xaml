@@ -21,7 +21,7 @@
                     Style="{StaticResource SecondaryButton}"
                     Click="Detach_Click"
                     ToolTip="In eigenem Fenster oeffnen">
-                <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
             </Button>
             <TextBlock DockPanel.Dock="Left"
                        Text="Kacheln"

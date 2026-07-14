@@ -16,10 +16,10 @@
             <Button Content="Hinzufügen" Command="{Binding AddCommand}" Margin="0,0,8,0"/>
             <Button Content="Entfernen" Command="{Binding RemoveCommand}" Margin="0,0,8,0"/>
             <Button Command="{Binding MoveUpCommand}" Margin="0,0,8,0" MinWidth="36" ToolTip="Nach oben">
-                <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets"/>
+                <TextBlock Text="&#xE70E;" FontFamily="{DynamicResource FontIcon}"/>
             </Button>
             <Button Command="{Binding MoveDownCommand}" Margin="0,0,8,0" MinWidth="36" ToolTip="Nach unten">
-                <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"/>
+                <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}"/>
             </Button>
             <Button Content="OK" Command="{Binding OkCommand}" IsDefault="True"/>
             <Button Content="Abbrechen" Command="{Binding CancelCommand}" IsCancel="True"/>

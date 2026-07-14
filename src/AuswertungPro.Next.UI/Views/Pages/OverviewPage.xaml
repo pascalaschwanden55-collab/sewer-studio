@@ -33,7 +33,7 @@
                         Padding="0"
                         Margin="0,0,6,0"
                         ToolTip="Projektliste ein- oder ausklappen">
-                    <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                    <TextBlock Text="&#xE76B;" FontFamily="{DynamicResource FontIcon}" FontSize="14"/>
                 </Button>
                 <Button Content="Neues Projekt"
                         Command="{Binding NewCommand}"
@@ -105,7 +105,7 @@
                                 <ColumnDefinition Width="28"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#xE721;"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{DynamicResource FontIcon}"
                                        FontSize="12"
                                        Foreground="{DynamicResource MutedBrush}"
                                        VerticalAlignment="Center"
@@ -134,7 +134,7 @@
                                     Padding="0"
                                     ToolTip="Suche löschen">
                                 <TextBlock Text="&#xE711;"
-                                           FontFamily="Segoe MDL2 Assets"
+                                           FontFamily="{DynamicResource FontIcon}"
                                            FontSize="10"
                                            Foreground="{DynamicResource MutedBrush}"/>
                             </Button>
@@ -275,7 +275,7 @@
                             Visibility="{Binding ShowProjectChoice, Converter={StaticResource BoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" TextBlock.TextAlignment="Center">
                             <TextBlock Text="&#xE8B7;"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{DynamicResource FontIcon}"
                                        FontSize="32"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,8"/>
@@ -308,7 +308,7 @@
                             Visibility="{Binding ShowDataEmptyState, Converter={StaticResource BoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" TextBlock.TextAlignment="Center">
                             <TextBlock Text="&#xE9D9;"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{DynamicResource FontIcon}"
                                        FontSize="32"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,8"/>
@@ -348,7 +348,7 @@
                                         ToolTip="Projektvorschau als PDF speichern">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE749;"
-                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontFamily="{DynamicResource FontIcon}"
                                                    FontSize="13"
                                                    Margin="0,0,6,0"/>
                                         <TextBlock Text="PDF"/>

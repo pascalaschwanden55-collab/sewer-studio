@@ -23,7 +23,7 @@
                         Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
                         ToolTip="Haltungsdaten in die Excel-Vorlage Haltungen.xlsx exportieren.">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -31,7 +31,7 @@
                         Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                         ToolTip="Schachtdaten in die Excel-Vorlage Schaechte.xlsx exportieren.">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -46,9 +46,9 @@
                         Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                         ToolTip="Haltungen und Schächte in Ordner verteilen">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE72D;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                     <Button.ContextMenu>
                         <ContextMenu>
@@ -80,7 +80,7 @@
                 Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="{Binding DistributionProgress}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"

@@ -448,10 +448,10 @@
                             Click="ToolsDropdown_Click"
                             ToolTip="Werkzeuge (Messen, Markieren, Vermessen)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                            <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
                                        VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <TextBlock Text="Werkzeuge" FontSize="11" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10"
                                        VerticalAlignment="Center" Margin="4,0,0,0"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                         </StackPanel>
@@ -796,21 +796,21 @@
                     <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
                             ToolTip="Video abspielen (Leertaste)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Play" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
                             ToolTip="Video pausieren (Leertaste)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE769;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Pause" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}" Click="Stop_Click"
                             ToolTip="Wiedergabe stoppen und zum Anfang zurücksetzen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Stop" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -824,7 +824,7 @@
                                   Click="QuickScan_Click"
                                   ToolTip="Schnell-Scan: KI-Heatmap auf der Timeline erzeugen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE9D9;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Schnell-Scan" VerticalAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
@@ -844,7 +844,7 @@
                                   Click="LiveDetection_Click"
                                   ToolTip="Live-KI: Echtzeit-Schadenserkennung während Wiedergabe (D)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE945;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
@@ -855,7 +855,7 @@
                                 Click="ManualMark_Click"
                                 ToolTip="Markieren: Werkzeug wählen (M)">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE7C8;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -888,7 +888,7 @@
                             Click="CodingMode_Click"
                             ToolTip="Codier-Modus: Haltung komplett durchcodieren mit Overlay-Werkzeugen (C)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Codier-Modus" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -899,7 +899,7 @@
                             Click="CodingScreenshot_Click"
                             ToolTip="Screen: ganzes Fenster (mit Boxen) in die Zwischenablage kopieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE722;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Screen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -923,7 +923,7 @@
                                       Padding="8,3"
                                       Margin="8,0,0,0"
                                       ToolTip="Geschwindigkeitsstufen anzeigen">
-                            <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                            <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                         </ToggleButton>
                         <Slider x:Name="SpeedSlider"
                                 Minimum="0.25"
@@ -985,7 +985,7 @@
                                       ToolTip="Ton stummschalten">
                             <TextBlock x:Name="MuteIconText"
                                        Text="&#xE767;"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{DynamicResource FontIcon}"
                                        FontSize="13"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
@@ -1049,7 +1049,7 @@
                                 Style="{StaticResource ToolbarButton}"
                                 Click="CloseShortcutOverlay_Click"
                                 ToolTip="Schliessen">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11"/>
+                            <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="11"/>
                         </Button>
                         <TextBlock Text="Tastenkürzel"
                                    FontSize="18"

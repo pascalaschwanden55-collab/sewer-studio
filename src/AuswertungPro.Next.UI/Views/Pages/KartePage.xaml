@@ -57,25 +57,25 @@
                         Style="{StaticResource SecondaryButton}"
                         Click="ZoomIn_Click"
                         ToolTip="Karte vergroessern">
-                    <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                    <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
                 <Button Width="34" Height="30" MinWidth="34" Padding="0" Margin="0,0,0,4"
                         Style="{StaticResource SecondaryButton}"
                         Click="ZoomOut_Click"
                         ToolTip="Karte verkleinern">
-                    <TextBlock Text="&#xE738;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                    <TextBlock Text="&#xE738;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
                 <Button Width="34" Height="30" MinWidth="34" Padding="0" Margin="0,0,0,4"
                         Style="{StaticResource SecondaryButton}"
                         Click="ZoomToNetwork_Click"
                         ToolTip="Ganzes Netz anzeigen">
-                    <TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                    <TextBlock Text="&#xE9A6;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
                 <Button Width="34" Height="30" MinWidth="34" Padding="0" Margin="0,0,0,4"
                         Style="{StaticResource SecondaryButton}"
                         Click="ToggleBasemap_Click"
                         ToolTip="Hintergrundkarte umschalten: Satellit → AV-Karte → OpenStreetMap">
-                    <TextBlock Text="&#xE909;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                    <TextBlock Text="&#xE909;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
                 <Button Width="34" Height="30" MinWidth="34" Padding="0"
                         Style="{StaticResource SecondaryButton}"
@@ -116,7 +116,7 @@
                     <Button DockPanel.Dock="Right" Width="22" Height="22" Padding="0"
                             FontSize="11" Command="{Binding SchliesseInfoCommand}"
                             Style="{StaticResource SecondaryButton}" ToolTip="Schließen">
-                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"/>
+                        <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="10"/>
                     </Button>
                     <TextBlock Text="{Binding SelectedInfo.Name}" FontSize="14" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"

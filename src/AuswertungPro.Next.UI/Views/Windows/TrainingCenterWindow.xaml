@@ -93,7 +93,7 @@
                     <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="11"
                                Text="{Binding KbErrorCount, StringFormat=' ({0}'}"/>
                     <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="11"
-                               Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets"/>
+                               Text="&#xE7BA;" FontFamily="{DynamicResource FontIcon}"/>
                     <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                Text="{Binding KbNewCount, StringFormat=' {0} neu)'}"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" Text="  |  Codes: "/>
@@ -289,7 +289,7 @@
                                 Background="{DynamicResource SuccessBrush}" Foreground="White" FontWeight="SemiBold"
                                 Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="12" Margin="0,0,6,0"/>
                                 <TextBlock Text="Selbsttraining starten"/>
                             </StackPanel>
                         </Button>
@@ -298,7 +298,7 @@
                                 Background="{DynamicResource WarningBrush}" Foreground="White" FontWeight="SemiBold"
                                 Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE769;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" FontSize="12" Margin="0,0,6,0"/>
                                 <TextBlock Text="Pause / Fortsetzen"/>
                             </StackPanel>
                         </Button>
@@ -307,7 +307,7 @@
                                 Background="{DynamicResource DangerBrush}" Foreground="White" FontWeight="SemiBold"
                                 Padding="16,6" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" FontSize="12" Margin="0,0,6,0"/>
                                 <TextBlock Text="Abbrechen"/>
                             </StackPanel>
                         </Button>
@@ -321,31 +321,31 @@
                                 <Ellipse Width="12" Height="12" x:Name="Dot0" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="OSD-Scan" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
                             <!-- Stage 1: Frame -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage1">
                                 <Ellipse Width="12" Height="12" x:Name="Dot1" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Frame" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
                             <!-- Stage 2: KI -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage2">
                                 <Ellipse Width="12" Height="12" x:Name="Dot2" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="KI-Analyse" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
                             <!-- Stage 3: Vergleich -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage3">
                                 <Ellipse Width="12" Height="12" x:Name="Dot3" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Vergleich" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
                             <!-- Stage 4: Technik -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage4">
                                 <Ellipse Width="12" Height="12" x:Name="Dot4" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Technik" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" Margin="6,0"/>
                             <!-- Stage 5: Fertig -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage5">
                                 <Ellipse Width="12" Height="12" x:Name="Dot5" Fill="{DynamicResource MutedBrush}"/>
@@ -813,7 +813,7 @@
                         <Button Command="{Binding ApproveSelectedReviewCommand}"
                                 Padding="12,4" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Akzeptieren"/>
                             </StackPanel>
                         </Button>
@@ -821,14 +821,14 @@
                                 IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"
                                 Padding="12,4" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Korrigieren"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding RejectSelectedReviewCommand}"
                                 Padding="12,4">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Ablehnen"/>
                             </StackPanel>
                         </Button>
@@ -932,7 +932,7 @@
                                         Click="TeacherRefresh_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="12">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                        <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                         <TextBlock Text="Aktualisieren"/>
                                     </StackPanel>
                                 </Button>
@@ -940,8 +940,8 @@
                                         Click="TeacherAddToFewShot_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="12" IsEnabled="False">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE736;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
-                                        <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                        <TextBlock Text="&#xE736;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                        <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                         <TextBlock Text="FewShot"/>
                                     </StackPanel>
                                 </Button>
@@ -950,7 +950,7 @@
                                         Padding="8,4" FontSize="12" IsEnabled="False"
                                         Foreground="{DynamicResource DangerBrush}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                        <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                         <TextBlock Text="Löschen"/>
                                     </StackPanel>
                                 </Button>

@@ -87,7 +87,7 @@
                             <Button Content="+ DN" Command="{Binding AddDnCommand}" Padding="12,6" Margin="0,0,6,0"/>
                             <Button Command="{Binding RemoveDnCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                                     <TextBlock Text="DN löschen"/>
                                 </StackPanel>
                             </Button>
@@ -106,7 +106,7 @@
                 <Button Content="+ Position" Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0"/>
                 <Button Command="{Binding RemoveCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                         <TextBlock Text="Löschen"/>
                     </StackPanel>
                 </Button>

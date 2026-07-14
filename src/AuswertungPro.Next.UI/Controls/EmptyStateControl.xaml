@@ -34,7 +34,7 @@
                 HorizontalAlignment="Center"
                 Margin="0,0,0,14">
             <TextBlock Text="{Binding Icon, ElementName=Root}"
-                       FontFamily="Segoe MDL2 Assets"
+                       FontFamily="{DynamicResource FontIcon}"
                        FontSize="30"
                        Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center"
