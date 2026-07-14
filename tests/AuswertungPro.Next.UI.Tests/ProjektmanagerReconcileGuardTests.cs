@@ -50,6 +50,22 @@ public sealed class ProjektmanagerReconcileGuardTests
         Assert.DoesNotContain("Directory.CreateDirectory", facade);
     }
 
+    [Fact]
+    public void Ein_Knopf_Import_nutzt_zentrale_Kanalexport_Erkennung()
+    {
+        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var orchestrator = ReadRepoFile(
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Import",
+            "ProjectImportOrchestrator.cs");
+
+        Assert.Contains("public IKanalExportDetectionService KanalExportDetection", provider);
+        Assert.Contains("KanalExportDetection = new KanalExportDetectionService()", provider);
+        Assert.Contains("_exportDetector.Detect(sourceFolder)", orchestrator);
+        Assert.DoesNotContain("KanalExportDetector.Detect(sourceFolder)", orchestrator);
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

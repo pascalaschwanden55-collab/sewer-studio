@@ -53,7 +53,7 @@ public sealed record KanalExportDetection(
 ///
 /// Treffen beide zu → Ambiguous; keins → Unknown.
 /// </summary>
-public static class KanalExportDetector
+public sealed class KanalExportDetectionService : IKanalExportDetectionService
 {
     // Anzahl Bytes die beim XTF-Header-Scan gelesen werden (erste ~64 KB reichen)
     private const int XtfHeaderBytes = 65_536;
@@ -62,7 +62,7 @@ public static class KanalExportDetector
     /// Analysiert <paramref name="sourceFolder"/> und liefert das erkannte Format
     /// samt Pfaden zu den relevanten Nutzdateien.
     /// </summary>
-    public static KanalExportDetection Detect(string sourceFolder)
+    public KanalExportDetection Detect(string sourceFolder)
     {
         // Ungueltige oder nicht vorhandene Pfade → Unknown
         if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
@@ -291,4 +291,16 @@ public static class KanalExportDetector
             return null;
         }
     }
+}
+
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer der Formaterkennung.
+/// </summary>
+public static class KanalExportDetector
+{
+    private static readonly IKanalExportDetectionService DefaultDetector =
+        new KanalExportDetectionService();
+
+    public static KanalExportDetection Detect(string sourceFolder)
+        => DefaultDetector.Detect(sourceFolder);
 }

@@ -54,6 +54,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IDichtheitImportDistributor _dichtheitDistributor;
     private readonly IKanalImportDistributor _kanalDistributor;
     private readonly IProjectStructureInitializer _projectStructure;
+    private readonly IKanalExportDetectionService _exportDetector;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -67,7 +68,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IImportSourceArchiver? sourceArchiver = null,
         IDichtheitImportDistributor? dichtheitDistributor = null,
         IKanalImportDistributor? kanalDistributor = null,
-        IProjectStructureInitializer? projectStructure = null)
+        IProjectStructureInitializer? projectStructure = null,
+        IKanalExportDetectionService? exportDetector = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -81,6 +83,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _dichtheitDistributor = dichtheitDistributor ?? new DichtheitImportDistributionService();
         _kanalDistributor = kanalDistributor ?? new KanalImportDistributionService();
         _projectStructure = projectStructure ?? new ProjectStructureInitializer();
+        _exportDetector = exportDetector ?? new KanalExportDetectionService();
     }
 
     /// <summary>
@@ -165,7 +168,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         KanalExportDetection det;
         try
         {
-            det = KanalExportDetector.Detect(sourceFolder);
+            det = _exportDetector.Detect(sourceFolder);
         }
         catch (Exception ex)
         {

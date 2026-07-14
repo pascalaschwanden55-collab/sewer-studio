@@ -138,6 +138,7 @@ namespace AuswertungPro.Next.UI
         public IStoredImportFileService StoredImportFiles { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
         public IProjectStructureInitializer ProjectStructure { get; }
+        public IKanalExportDetectionService KanalExportDetection { get; }
         public IProjectRecoveryService ProjectRecovery { get; }
         public IImportSourceArchiver ImportSourceArchiver { get; }
         public IDichtheitImportDistributor DichtheitImportDistributor { get; }
@@ -306,6 +307,7 @@ namespace AuswertungPro.Next.UI
 
             Projects = new JsonProjectRepository();
             ProjectStructure = new ProjectStructureInitializer();
+            KanalExportDetection = new KanalExportDetectionService();
             PdfImport = new PdfImportServiceAdapter();
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             XtfImport = new XtfImportServiceAdapter();
@@ -532,7 +534,8 @@ namespace AuswertungPro.Next.UI
                 ImportSourceArchiver,
                 DichtheitImportDistributor,
                 KanalImportDistributor,
-                ProjectStructure);
+                ProjectStructure,
+                KanalExportDetection);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();
@@ -629,6 +632,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
+            if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
