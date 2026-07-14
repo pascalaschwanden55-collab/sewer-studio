@@ -27,11 +27,27 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Shell_Projekterzeugung_nutzt_neue_Struktur_und_ProjectFileLocator()
     {
-        var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs");
+        var shell = ReadRepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs");
+        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var orchestrator = ReadRepoFile(
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Import",
+            "ProjectImportOrchestrator.cs");
+        var facade = ReadRepoFile(
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Import",
+            "ProjectStructure.cs");
 
-        Assert.Contains("NewProjectFolderPlanner.Plan", src);
-        Assert.Contains("ProjectStructure.EnsureCreated", src);
-        Assert.Contains("ProjectFileLocator.TargetPath", src);
+        Assert.Contains("NewProjectFolderPlanner.Plan", shell);
+        Assert.Contains("_sp.ProjectStructure.EnsureCreated", shell);
+        Assert.Contains("ProjectFileLocator.TargetPath", shell);
+        Assert.Contains("public IProjectStructureInitializer ProjectStructure", provider);
+        Assert.Contains("ProjectStructure = new ProjectStructureInitializer()", provider);
+        Assert.Contains("_projectStructure.EnsureCreated", orchestrator);
+        Assert.DoesNotContain("ProjectStructure.EnsureCreated(projectFolder)", orchestrator);
+        Assert.DoesNotContain("Directory.CreateDirectory", facade);
     }
 
     private static string ReadRepoFile(params string[] parts)

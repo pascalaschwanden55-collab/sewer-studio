@@ -1,5 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Projects;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -10,6 +11,9 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// </summary>
 public static class ProjectStructure
 {
+    private static readonly IProjectStructureInitializer DefaultInitializer =
+        new ProjectStructureInitializer();
+
     // --- Ordner-Konstanten (verbindlich) ---
 
     /// <summary>Wurzel-Ordner fuer alle importierten Rohdaten.</summary>
@@ -62,27 +66,7 @@ public static class ProjectStructure
     /// </summary>
     /// <param name="projectFolder">Absoluter Pfad zum Projektstammordner.</param>
     public static void EnsureCreated(string projectFolder)
-    {
-        // Importdateien + Unterordner
-        Directory.CreateDirectory(Path.Combine(projectFolder, Importdateien, Datenbanken));
-        Directory.CreateDirectory(Path.Combine(projectFolder, Importdateien, XtfDir));
-        Directory.CreateDirectory(Path.Combine(projectFolder, Importdateien, PdfDir));
-        Directory.CreateDirectory(Path.Combine(projectFolder, Importdateien, TxtDir));
-
-        // Haltungen/Schächte verteilt
-        Directory.CreateDirectory(Path.Combine(projectFolder, HaltungenVerteilt));
-        Directory.CreateDirectory(Path.Combine(projectFolder, SchaechteVerteilt));
-        Directory.CreateDirectory(Path.Combine(projectFolder, Plaene));
-
-        // Fotos
-        Directory.CreateDirectory(Path.Combine(projectFolder, Fotos, FotosHaltungen));
-        Directory.CreateDirectory(Path.Combine(projectFolder, Fotos, FotosSchaechte));
-
-        // Sonstige
-        Directory.CreateDirectory(Path.Combine(projectFolder, Projektdateien));
-        Directory.CreateDirectory(Path.Combine(projectFolder, ImportReports));
-        Directory.CreateDirectory(Path.Combine(projectFolder, RestorePoints));
-    }
+        => DefaultInitializer.EnsureCreated(projectFolder);
 
     // --- Pfad-Helfer ---
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Projects;
 
@@ -52,6 +53,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IImportSourceArchiver _sourceArchiver;
     private readonly IDichtheitImportDistributor _dichtheitDistributor;
     private readonly IKanalImportDistributor _kanalDistributor;
+    private readonly IProjectStructureInitializer _projectStructure;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -64,7 +66,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IProjectRestorePointService? projectRestorePoints = null,
         IImportSourceArchiver? sourceArchiver = null,
         IDichtheitImportDistributor? dichtheitDistributor = null,
-        IKanalImportDistributor? kanalDistributor = null)
+        IKanalImportDistributor? kanalDistributor = null,
+        IProjectStructureInitializer? projectStructure = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -77,6 +80,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _sourceArchiver = sourceArchiver ?? new ImportSourceArchiveService();
         _dichtheitDistributor = dichtheitDistributor ?? new DichtheitImportDistributionService();
         _kanalDistributor = kanalDistributor ?? new KanalImportDistributionService();
+        _projectStructure = projectStructure ?? new ProjectStructureInitializer();
     }
 
     /// <summary>
@@ -131,7 +135,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         try
         {
-            ProjectStructure.EnsureCreated(projectFolder);
+            _projectStructure.EnsureCreated(projectFolder);
         }
         catch (Exception ex)
         {

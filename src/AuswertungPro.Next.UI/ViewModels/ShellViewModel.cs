@@ -512,7 +512,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         {
             Directory.CreateDirectory(plan.FolderPath);
             // Feste Projekt-Struktur anlegen (Importdateien/Haltungen_Verteilt/Schächte_Verteilt/Fotos/Projektdateien/...).
-            AuswertungPro.Next.Infrastructure.Import.ProjectStructure.EnsureCreated(plan.FolderPath);
+            _sp.ProjectStructure.EnsureCreated(plan.FolderPath);
         }
         catch (Exception ex)
         {
