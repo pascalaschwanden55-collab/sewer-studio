@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Vsa;
 
@@ -389,6 +390,43 @@ public sealed class VsaEvaluationServiceTests
     }
 
     [Fact]
+    public void Evaluate_ShadowMode_Verwendet_Injizierten_Schreiber()
+    {
+        var root = TestPaths.FindSolutionRoot();
+        var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
+        var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
+        var writer = new RecordingShadowTelemetryWriter();
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "H_shadow_injected", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("DN_mm", "300", FieldSource.Xtf, userEdited: false);
+        record.VsaFindings =
+        [
+            new VsaFinding { KanalSchadencode = "BAAA", Quantifizierung1 = "0.5" }
+        ];
+        project.Data.Add(record);
+
+        var service = new VsaEvaluationService(
+            channelsTable,
+            manholesTable,
+            writer,
+            shadowModeEnabled: true,
+            shadowLogPath: "wird-nicht-geschrieben.jsonl",
+            useV2Engine: false);
+
+        var result = service.Evaluate(project);
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        var entry = Assert.Single(writer.Entries, item => item.Entry.Requirement == "S");
+        Assert.Equal("wird-nicht-geschrieben.jsonl", entry.PathOverride);
+        Assert.Equal("BAAA", entry.Entry.Code);
+        Assert.Equal(3, entry.Entry.LegacyEz);
+        Assert.Equal(4, entry.Entry.V2Ez);
+    }
+
+    [Fact]
     public void Evaluate_ShadowMode_DoesNotLogWhenV2MatchesLegacy()
     {
         var root = TestPaths.FindSolutionRoot();
@@ -543,5 +581,15 @@ public sealed class VsaEvaluationServiceTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    private sealed class RecordingShadowTelemetryWriter : IVsaShadowTelemetryWriter
+    {
+        public List<(VsaShadowTelemetryEntry Entry, string? PathOverride)> Entries { get; } = [];
+
+        public void Write(VsaShadowTelemetryEntry entry, string? pathOverride = null)
+            => Entries.Add((entry, pathOverride));
+
+        public string? ResolvePath() => null;
     }
 }

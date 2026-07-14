@@ -36,6 +36,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     private readonly bool _useV2Engine;
     private readonly string _v2ChannelsTablePath;
     private readonly string _v2ManholesTablePath;
+    private readonly IVsaShadowTelemetryWriter _shadowTelemetry;
 
     public VsaEvaluationService(
         string channelsTablePath,
@@ -45,9 +46,31 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         bool useV2Engine = true,
         string? v2ChannelsTablePath = null,
         string? v2ManholesTablePath = null)
+        : this(
+            channelsTablePath,
+            manholesTablePath,
+            VsaShadowTelemetryWriter.Current,
+            shadowModeEnabled,
+            shadowLogPath,
+            useV2Engine,
+            v2ChannelsTablePath,
+            v2ManholesTablePath)
+    {
+    }
+
+    public VsaEvaluationService(
+        string channelsTablePath,
+        string manholesTablePath,
+        IVsaShadowTelemetryWriter shadowTelemetry,
+        bool shadowModeEnabled = true,
+        string? shadowLogPath = null,
+        bool useV2Engine = true,
+        string? v2ChannelsTablePath = null,
+        string? v2ManholesTablePath = null)
     {
         _channelsTablePath = channelsTablePath;
         _manholesTablePath = manholesTablePath;
+        _shadowTelemetry = shadowTelemetry ?? throw new ArgumentNullException(nameof(shadowTelemetry));
         _shadowModeEnabled = shadowModeEnabled;
         _shadowLogPath = shadowLogPath;
         _useV2Engine = useV2Engine;
@@ -282,24 +305,31 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         if (legacyEz == v2Ez)
             return;
 
-        VsaShadowTelemetryWriter.Write(new VsaShadowTelemetryEvent(
-            TimestampUtc: DateTimeOffset.UtcNow,
-            Code: code,
-            BaseCode: baseCode,
-            Requirement: requirement,
-            LegacyEz: legacyEz,
-            V2Ez: v2Ez,
-            ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode),
-            V2Reason: v2Reason,
-            Ch1: ch1,
-            Ch2: ch2,
-            Q1: q1,
-            Q2: q2,
-            Material: material,
-            Dn: dn,
-            V2RuleId: v2Outcome?.RuleId,
-            V2SourceRef: v2Outcome?.SourceRef),
-            _shadowLogPath);
+        try
+        {
+            _shadowTelemetry.Write(new VsaShadowTelemetryEvent(
+                TimestampUtc: DateTimeOffset.UtcNow,
+                Code: code,
+                BaseCode: baseCode,
+                Requirement: requirement,
+                LegacyEz: legacyEz,
+                V2Ez: v2Ez,
+                ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode),
+                V2Reason: v2Reason,
+                Ch1: ch1,
+                Ch2: ch2,
+                Q1: q1,
+                Q2: q2,
+                Material: material,
+                Dn: dn,
+                V2RuleId: v2Outcome?.RuleId,
+                V2SourceRef: v2Outcome?.SourceRef),
+                _shadowLogPath);
+        }
+        catch
+        {
+            // Auch ein ersetzter Schreiber darf die produktive Auswertung nie beeinflussen.
+        }
     }
 
     private static string? ResolveV2Reason(VsaClassificationOutcome outcome, string requirement)

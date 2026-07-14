@@ -148,6 +148,7 @@ namespace AuswertungPro.Next.UI
         #region VSA-Bewertung
         // Zustandsklassifizierung nach VSA/EN 13508-2
         public IVsaEvaluationService Vsa { get; }
+        public IVsaShadowTelemetryWriter VsaShadowTelemetry { get; }
         #endregion
 
         #region KI / Vision
@@ -421,9 +422,12 @@ namespace AuswertungPro.Next.UI
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
             var v2ChannelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_channels.json");
             var v2ManholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
+            VsaShadowTelemetry = new VsaShadowTelemetryFileWriter();
+            VsaShadowTelemetryWriter.Use(VsaShadowTelemetry);
             Vsa = new VsaEvaluationService(
                 channelsTable,
                 manholesTable,
+                VsaShadowTelemetry,
                 shadowModeEnabled: settings.VsaClassificationShadowEnabled ?? true,
                 useV2Engine: settings.VsaUseV2Engine ?? true,
                 v2ChannelsTablePath: v2ChannelsTable,
@@ -580,6 +584,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
+            if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;

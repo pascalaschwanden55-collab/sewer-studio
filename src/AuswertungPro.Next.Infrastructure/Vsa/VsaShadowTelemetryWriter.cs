@@ -1,40 +1,21 @@
-using System.Text.Json;
-using AuswertungPro.Next.Infrastructure.Telemetry;
+using AuswertungPro.Next.Application.Vsa;
 
 namespace AuswertungPro.Next.Infrastructure.Vsa;
 
+/// <summary>Kompatibilitaetsfassade; die Dateiarbeit liegt im Instanzdienst.</summary>
 public static class VsaShadowTelemetryWriter
 {
-    private static readonly object Sync = new();
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-    };
+    private static IVsaShadowTelemetryWriter _current = new VsaShadowTelemetryFileWriter();
+
+    public static IVsaShadowTelemetryWriter Current => Volatile.Read(ref _current);
+
+    public static void Use(IVsaShadowTelemetryWriter writer) =>
+        Volatile.Write(ref _current, writer ?? throw new ArgumentNullException(nameof(writer)));
 
     public static void Write(VsaShadowTelemetryEvent entry, string? pathOverride = null)
-    {
-        try
-        {
-            var path = pathOverride ?? ResolvePath();
-            if (string.IsNullOrWhiteSpace(path))
-                return;
+        => Current.Write(entry, pathOverride);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var line = JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine;
-
-            lock (Sync)
-            {
-                File.AppendAllText(path, line);
-            }
-        }
-        catch
-        {
-            // Shadow telemetry must never change the productive VSA result.
-        }
-    }
-
-    public static string? ResolvePath()
-        => TelemetryPathResolver.ResolveFile("vsa_shadow.jsonl");
+    public static string? ResolvePath() => Current.ResolvePath();
 }
 
 public sealed record VsaShadowTelemetryEvent(
@@ -53,4 +34,21 @@ public sealed record VsaShadowTelemetryEvent(
     string? Material = null,
     string? Dn = null,
     string? V2RuleId = null,
-    string? V2SourceRef = null);
+    string? V2SourceRef = null)
+    : VsaShadowTelemetryEntry(
+        TimestampUtc,
+        Code,
+        BaseCode,
+        Requirement,
+        LegacyEz,
+        V2Ez,
+        ExpectedDrift,
+        V2Reason,
+        Ch1,
+        Ch2,
+        Q1,
+        Q2,
+        Material,
+        Dn,
+        V2RuleId,
+        V2SourceRef);
