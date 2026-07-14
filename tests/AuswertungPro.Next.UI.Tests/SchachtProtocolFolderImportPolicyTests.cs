@@ -49,6 +49,22 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
     }
 
     [Fact]
+    public void FindPdfFiles_SchliesstDirektGewaehltesProjektzielNichtAus()
+    {
+        var projectDistribution = Path.Combine(_root, "Projekt", "Schächte_Verteilt");
+        var shaftFolder = Path.Combine(projectDistribution, "844859");
+        Directory.CreateDirectory(shaftFolder);
+        var pdf = Path.Combine(shaftFolder, "20260629_844859.pdf");
+        File.WriteAllText(pdf, "test");
+
+        var files = SchachtProtocolFolderImportPolicy.FindPdfFiles(
+            projectDistribution,
+            new[] { projectDistribution });
+
+        Assert.Equal(new[] { pdf }, files);
+    }
+
+    [Fact]
     public void SelectCurrentPerShaft_NimmtDasNeuesteProtokolldatum()
     {
         var older = Candidate("S-23", "10.01.2024", "20240110_S-23.pdf");

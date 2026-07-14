@@ -65,19 +65,14 @@ public sealed class DialogService : IDialogService
 
     public string? SelectFolder(string title, string? initialPath = null)
     {
-        var dlg = new OpenFileDialog
+        var dlg = new OpenFolderDialog
         {
-            Title = title,
-            CheckFileExists = false,
-            CheckPathExists = true,
-            ValidateNames = false,
-            FileName = "Ordner auswaehlen"
+            Title = title
         };
         if (!string.IsNullOrWhiteSpace(initialPath) && Directory.Exists(initialPath))
             dlg.InitialDirectory = initialPath;
-        if (dlg.ShowDialog() != true)
-            return null;
-        var folder = Path.GetDirectoryName(dlg.FileName);
-        return string.IsNullOrWhiteSpace(folder) ? null : folder;
+        return dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.FolderName)
+            ? dlg.FolderName
+            : null;
     }
 }

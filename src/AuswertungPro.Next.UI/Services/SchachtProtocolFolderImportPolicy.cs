@@ -31,6 +31,9 @@ internal static class SchachtProtocolFolderImportPolicy
     {
         var exclusions = excludedFolders
             .Where(folder => !string.IsNullOrWhiteSpace(folder))
+            // Wird das Projektziel selbst ausgewaehlt, darf es nicht zugleich
+            // aus der Suche entfernt werden.
+            .Where(folder => !IsSameOrBelow(sourceFolder, folder))
             .ToArray();
 
         return
