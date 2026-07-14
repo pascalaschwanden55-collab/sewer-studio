@@ -74,10 +74,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Alter Preiskatalog-Editor isoliert geprüft (A6-01, Teilpaket):** Der bestehende Kompatibilitätsdienst akzeptiert optional einen Benutzerordner; ohne Übergabe bleibt sein bisheriger Pfad unverändert. Ein STA-Dateitest schützt Laden, Hinzufügen, Filtern und Speichern, ohne das echte Windows-Profil zu berühren. Damit kommt jedes öffentliche ViewModel wenigstens in einem UI-Test vor.
 - **Testarten getrennt (A6-03, Teilpaket):** Maschinengebundene Tests tragen die Kategorie `Integration`; zukünftige Nachtlauftests verwenden `Endurance`. Der pre-push-Hook führt weiterhin alle drei großen Testprojekte aus, schließt diese zwei langsamen Kategorien aber ausdrücklich aus. Ein Regressionstest schützt den Filter in allen drei Befehlen.
 - **Sidecar-Prozess messbar (A6-03, Vorbereitung):** Der token-geschützte lokale Health-Endpunkt liefert zusätzlich die tatsächliche Python-Prozess-ID. C#-Vertrag und E2E-Report übernehmen sie optional; ältere Sidecars bleiben kompatibel. Damit kann der Nachtlauf RAM und Handles des richtigen Prozesses statt des PowerShell-Starters messen.
+- **KI-Nachtlauf fahrbar (A6-03, Teilpaket):** `tools/NightlySoakRunner` wiederholt den echten Video-/Sidecar-Golden-Test über ein oder mehrere Videos. Jede Runde schreibt Laufzeit, Python-Prozess-RAM, Handles, Health-VRAM und – wenn `nvidia-smi` verfügbar ist – den prozessbezogenen GPU-Speicher sofort in eine CSV. Feste Ober- und Wachstumsgrenzen, P95-Prüfung, `GC.Collect`, Strg+C und eine gehaltene Sidecar-Lebensdauer verhindern stille Fehler und unbeabsichtigte Prozessreste. Sechs Verhaltenstests schützen Optionen, Loopback-Grenze, Video-Wechsel, CSV, Leak- und Latenzabbruch. Der echte achtstündige Lauf auf der Zielmaschine ist weiterhin eine offene Freigabeprüfung.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.761 Tests bestanden (2.514 Infrastruktur, 1.813 Pipeline, 4.372 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.767 Tests bestanden (2.514 Infrastruktur, 1.819 Pipeline, 4.372 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -125,7 +126,7 @@ Kein Fund erreichte „Kritisch"; die folgenden drei sind die schwerwiegendsten 
 → *Zentrale Sink von `Debug` auf `Trace`/`ILogger` umstellen (Quick Win < 1h), dann in den Hot-Paths den Logger durchreichen.*
 
 **T2 — Belastbarkeit ist nicht getestet** (Agent 6, `A6-01`/`A6-02`/`A6-03`)
-Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lesen `.cs` als String); nur ~25 instanziieren wirklich ein ViewModel. Zum Scan-Zeitpunkt gab es keinen E2E-Test gegen echten Sidecar/Video und keine Dauer-/Leak-Test-Infrastruktur. **Nachtrag:** Der echte Sidecar-/Video-Vertragstest (`A6-02`) ist inzwischen vorhanden und grün. Zusätzlich werden 15 zuvor völlig unberücksichtigte ViewModels mit 23 echten Verhaltenstests ausgeführt; zwei einfache WPF-Fenster besitzen einen Öffnen-/Schließen-Smoke. Smokes der Haupt-/Fachfenster und der 8-Stunden-Nachtlauf bleiben offen. → *Nachtlauf-Konzept in Punkt 6.*
+Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lesen `.cs` als String); nur ~25 instanziieren wirklich ein ViewModel. Zum Scan-Zeitpunkt gab es keinen E2E-Test gegen echten Sidecar/Video und keine Dauer-/Leak-Test-Infrastruktur. **Nachtrag:** Der echte Sidecar-/Video-Vertragstest (`A6-02`) ist inzwischen vorhanden und grün. Zusätzlich werden 15 zuvor völlig unberücksichtigte ViewModels mit 23 echten Verhaltenstests ausgeführt; zwei einfache WPF-Fenster besitzen einen Öffnen-/Schließen-Smoke. Der neue `NightlySoakRunner` kann die KI-Kette wiederholt fahren und RAM, Handles, Latenz sowie VRAM überwachen. Smokes der Haupt-/Fachfenster, die restliche Anwendungskette und der tatsächlich ausgeführte 8-Stunden-Lauf bleiben offen. → *Nachtlauf-Konzept in Punkt 6.*
 
 **T3 — Grossdatei-Guard ist rot, aber das Push-Gate prüft ihn nicht** (Agent 1, `A1-01`/`A1-02` + ✔ Orchestrator-Prüfung)
 ✔ Verifiziert: `SchaechtePage.xaml.cs` hat **1001 Zeilen** — genau über der Guard-Grenze (>1000, leere Whitelist). Der `MaintainabilityFitnessTests` ist damit **aktuell rot**. ✔ Der pre-push-Hook führt nur `Infrastructure.Tests` + `Pipeline.Tests` aus — die **UI-Tests laufen nicht im Gate**, deshalb blockiert der rote Guard keinen Push und die „alles grün"-Meldung deckte ihn nie ab. Zusätzlich versteckt der reine Datei-Zähler echte God-Classes: ✔ `PlayerWindow` = **119 Dateien / 9.479 Zeilen** über partielle Klassen verteilt.
@@ -211,7 +212,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 |---|---|---|---|
 | A6-01 | Hoch → **teilweise erledigt** | Kein öffentliches ViewModel ist mehr völlig ohne Testbezug; weiterhin bestehen viele Quelltext-Guards, und erst zwei einfache Fenster besitzen einen echten Öffnen-/Schließen-Smoke | 15 zuvor unberücksichtigte ViewModels werden mit 23 Verhaltenstests direkt ausgeführt; Smokes der Haupt- und Fachfenster bleiben offen |
 | A6-02 | Hoch → **erledigt** | `tools/SidecarE2eSmoke` + `SidecarRealVideoIntegrationTests` | Echter Sidecar, reales Video, YOLO/DINO/SAM, Quantifizierung und Golden-Vertrag sind umgesetzt und auf der Zielmaschine grün |
-| A6-03 | Hoch → **teilweise erledigt** | Maschinengebundene Tests sind als `Integration` markiert; der Push schließt `Integration` und `Endurance` testgeschützt aus | `NightlySoakRunner` mit Zeit-, RAM-, Handle-, Latenz- und optionaler VRAM-Messung bleibt offen |
+| A6-03 | Hoch → **teilweise erledigt** | Kategorien und Push-Filter sind geschützt; `tools/NightlySoakRunner` fährt mehrere echte Videos im Wechsel und misst Zeit, Python-RAM, Handles, P95 sowie optional prozessbezogenen VRAM in CSV | Echten 8-Stunden-Lauf auf der Zielmaschine durchführen; Import, PDF-Export, KB und QGIS sind noch nicht Teil der Schleife |
 | A6-04 | Mittel | `integrations/qgis/sewerstudio_bridge/` — keine Tests | Python-Smoke für Bridge-Endpunkte (TestClient) + C#-Vertragstest |
 | A6-05 | Mittel | `KnowledgeBaseContext.cs:176-186` — KB-Schema-Migration (ADD COLUMN) im Bestand ungetestet | Test mit Alt-DB (ohne neue Spalten) → Upgrade + Datenerhalt prüfen |
 | A6-06 | Mittel | Nur `DbfTableTests` prüft kaputte Dateien; PDF/XTF/WinCan/FDB nicht | Je Importer 1 Negativtest (truncated/leer/gesperrt) → Skip statt Crash |
@@ -274,8 +275,8 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **SAM/DINO CPU-Smoke** oder `pytest -m gpu` verpflichtend vor jedem Batch (`A6-07`).
 
 **Stufe C — Nachtlauf / Belastung (`tools/NightlySoakRunner`, 8 h, maschinengebunden):**
-- Schleife über N Test-Videos für 8 h: pro Runde Video-Import → KI-Auswertung → QualityGate → PDF-Export → KB-Index → QGIS-Sync.
-- Nach jeder Runde: `GC.Collect`, Assertion auf **Prozess-RAM-/Handle-Obergrenze** und **Sidecar-Latenz-Perzentil**; **VRAM** via `nvidia-smi` mitschreiben; Abbruch bei Regression/Leak. Ausgabe als CSV.
+- ✔ Erste fahrbare Stufe: Schleife über N Test-Videos mit echter KI-Auswertung und Golden-Vertrag; Video-Import, QualityGate, PDF-Export, KB-Index und QGIS-Sync bleiben als Erweiterung offen.
+- ✔ Nach jeder Runde: `GC.Collect`, Assertion auf **Prozess-RAM-/Handle-Obergrenze** und **Sidecar-Latenz-Perzentil**; **VRAM** via `nvidia-smi` mitschreiben; Abbruch bei Regression/Leak. Ausgabe als sofort gespeicherte CSV.
 - **UI-Runtime:** schmaler StaFact-Smoke pro Hauptfenster (öffnen/schließen ohne Exception), damit ein Oberflächen-Absturz im Dauerbetrieb auffällt.
 
 **Wichtig:** LibVLC, GPU, QGIS und Ollama laufen nur auf der Zielmaschine — Stufe B/C sind bewusst **maschinengebundene Jobs**, kein CI. Das Push-Gate bleibt schnell (Unit).
@@ -291,7 +292,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)
-- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) erledigt; offen bleiben NightlySoakRunner (`A6-03`), Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
+- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) und messbarer KI-Nachtlauf (`A6-03`, Werkzeug) erledigt; offen bleiben der echte 8-Stunden-Lauf, die restliche Anwendungskette, Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
 - **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`), CUDA-Fehler-Klassifizierung (`A5-04`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt.
