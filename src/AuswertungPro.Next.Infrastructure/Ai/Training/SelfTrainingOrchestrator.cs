@@ -25,6 +25,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly string _ffmpegPath;
     private readonly IRetrievalService? _retrieval;
     private readonly IReadOnlySet<string>? _evalHaltungKeys;
+    private readonly ITrainingFrameStore _frameStore;
 
     private readonly AsyncPauseGate _pauseGate = new();
 
@@ -38,7 +39,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         TrainingCenterSettings? settings = null,
         string? ffmpegPath = null,
         IRetrievalService? retrieval = null,
-        IReadOnlySet<string>? evalHaltungKeys = null)
+        IReadOnlySet<string>? evalHaltungKeys = null,
+        ITrainingFrameStore? frameStore = null)
     {
         _vision = vision;
         _comparison = comparison;
@@ -48,6 +50,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _ffmpegPath = string.IsNullOrWhiteSpace(ffmpegPath) ? "ffmpeg" : ffmpegPath;
         _retrieval = retrieval;
         _evalHaltungKeys = evalHaltungKeys;
+        _frameStore = frameStore ?? FrameStore.Current;
     }
 
     public void Pause() => _pauseGate.Pause();
@@ -199,7 +202,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 }
 
                 var sampleId = $"st_{tc.CaseId}_{i:D3}";
-                var framePath = await FrameStore.ExtractAndStoreAsync(
+                var framePath = await _frameStore.ExtractAndStoreAsync(
                     ffmpeg, tc.VideoPath, timeSec, sampleId, framesDir, ct);
 
                 if (framePath is not null)

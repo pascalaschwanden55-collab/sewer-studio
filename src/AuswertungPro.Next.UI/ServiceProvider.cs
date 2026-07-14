@@ -159,6 +159,7 @@ namespace AuswertungPro.Next.UI
         public ITeacherAnnotationStore TeacherAnnotations { get; }
         public IAiOptimizationSessionStore AiOptimizationSessions { get; }
         public ITrainingSampleStore TrainingSamples { get; }
+        public ITrainingFrameStore TrainingFrames { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -228,6 +229,8 @@ namespace AuswertungPro.Next.UI
             trainingSamples.ConfigureEvalProtection(settings.EvalSetRoot);
             TrainingSamples = trainingSamples;
             TrainingSamplesStore.Use(trainingSamples);
+            TrainingFrames = new TrainingFrameFileStore();
+            FrameStore.Use(TrainingFrames);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -584,6 +587,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ITeacherAnnotationStore)) return TeacherAnnotations;
             if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
             if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
+            if (serviceType == typeof(ITrainingFrameStore)) return TrainingFrames;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

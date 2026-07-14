@@ -48,18 +48,21 @@ public sealed class TrainingSampleGenerator
     private readonly MeterTimelineService _meterTimeline;
     private readonly TrainingCenterSettings _settings;
     private readonly ICodeCatalogProvider? _codeCatalog;
+    private readonly ITrainingFrameStore _frameStore;
     private string? _pdfFramesDir;
 
     public TrainingSampleGenerator(
         AiRuntimeSettings cfg,
         MeterTimelineService meterTimeline,
         TrainingCenterSettings? settings = null,
-        ICodeCatalogProvider? codeCatalog = null)
+        ICodeCatalogProvider? codeCatalog = null,
+        ITrainingFrameStore? frameStore = null)
     {
         _cfg = cfg;
         _meterTimeline = meterTimeline;
         _settings = settings ?? new TrainingCenterSettings();
         _codeCatalog = codeCatalog;
+        _frameStore = frameStore ?? FrameStore.Current;
     }
 
     public async Task<List<TrainingSample>> GenerateAsync(
@@ -88,7 +91,7 @@ public sealed class TrainingSampleGenerator
                 result, 0, 0, TrainingSampleGenerationOutcome.ProtocolFileMissing);
 
         // Frames-Ordner für PDF-Bildbericht-Fotos
-        _pdfFramesDir = framesDir ?? FrameStore.GetFramesDir(null);
+        _pdfFramesDir = framesDir ?? _frameStore.GetFramesDir(null);
 
         var doc = await LoadProtocolAsync(tc.ProtocolPath);
         if (doc is null)
@@ -170,7 +173,7 @@ public sealed class TrainingSampleGenerator
                 string? framePath = null;
                 if (hasVideo)
                 {
-                    framePath = await FrameStore.ExtractAndStoreAsync(
+                    framePath = await _frameStore.ExtractAndStoreAsync(
                         _cfg.FfmpegPath ?? "ffmpeg",
                         tc.VideoPath, t, sampleId, framesDir, ct).ConfigureAwait(false);
                 }
