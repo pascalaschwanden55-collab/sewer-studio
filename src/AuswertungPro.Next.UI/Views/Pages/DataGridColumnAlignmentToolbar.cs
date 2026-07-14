@@ -3,7 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Media;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -56,7 +56,7 @@ public sealed class DataGridColumnAlignmentToolbar
 
     public void TrackHeaderClick(DependencyObject source)
     {
-        var header = FindAncestor<DataGridColumnHeader>(source);
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(source);
         if (header?.Column is null)
             return;
 
@@ -159,19 +159,5 @@ public sealed class DataGridColumnAlignmentToolbar
         _buttons.Top.IsChecked = false;
         _buttons.Middle.IsChecked = false;
         _buttons.Bottom.IsChecked = false;
-    }
-
-    private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
-    {
-        DependencyObject? node = current;
-        while (node is not null)
-        {
-            if (node is T target)
-                return target;
-
-            node = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(node);
-        }
-
-        return null;
     }
 }

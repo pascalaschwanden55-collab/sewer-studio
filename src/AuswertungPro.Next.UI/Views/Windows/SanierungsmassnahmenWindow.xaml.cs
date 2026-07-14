@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -89,7 +90,7 @@ public partial class SanierungsmassnahmenWindow : Window
         if (sender is ListBox listBox)
         {
             var hit = VisualTreeHelper.HitTest(listBox, e.GetPosition(listBox));
-            var item = FindAncestor<ListBoxItem>(hit?.VisualHit);
+            var item = VisualTreeSafe.FindAncestor<ListBoxItem>(hit?.VisualHit);
             if (item?.DataContext is CatalogItemOption opt)
                 _draggedItem = opt;
         }
@@ -123,7 +124,7 @@ public partial class SanierungsmassnahmenWindow : Window
 
     private void LinesGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var row = FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
         if (row?.DataContext is not CostLineVm line)
             return;
 
@@ -343,23 +344,13 @@ public partial class SanierungsmassnahmenWindow : Window
 
     // ── Helpers ──────────────────────────────────────────
 
-    private static T? FindAncestor<T>(DependencyObject? obj) where T : DependencyObject
-    {
-        while (obj is not null)
-        {
-            if (obj is T target) return target;
-            obj = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(obj);
-        }
-        return null;
-    }
-
     private static MeasureBlockVm? FindMeasureBlock(DependencyObject? element)
     {
         while (element is not null)
         {
             if (element is FrameworkElement fe && fe.DataContext is MeasureBlockVm vm)
                 return vm;
-            element = VisualTreeHelper.GetParent(element);
+            element = VisualTreeSafe.GetParentSafe(element);
         }
         return null;
     }

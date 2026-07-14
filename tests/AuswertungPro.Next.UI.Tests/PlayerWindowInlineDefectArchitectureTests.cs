@@ -117,8 +117,11 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
             "while (dep != null && dep is not ListBoxItem)",
             "VisualTreeHelper.GetParent(dep)");
         Assert.Contains("public static bool SelectContainingListBoxItem", helper);
-        Assert.Contains("VisualTreeHelper.GetParent", helper);
-        Assert.Contains("LogicalTreeHelper.GetParent", helper);
+        Assert.Contains("VisualTreeSafe.FindAncestor<ListBoxItem>", helper);
+        AssertNoForbiddenTokens(
+            helper,
+            "VisualTreeHelper.GetParent",
+            "LogicalTreeHelper.GetParent");
     }
 
     [Fact]

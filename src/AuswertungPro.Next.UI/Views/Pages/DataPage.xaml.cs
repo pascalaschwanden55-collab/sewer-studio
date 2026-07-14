@@ -187,7 +187,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // auch ein erneuter Klick auf die bereits ausgewaehlte Zeile laesst QGIS wieder aufleuchten.
         // (SelectedItem-Changed feuert bei einem Klick auf die schon markierte Zeile NICHT.)
         if (e.OriginalSource is DependencyObject clicked
-            && FindAncestor<DataGridRow>(clicked)?.Item is HaltungRecord record)
+            && VisualTreeSafe.FindAncestor<DataGridRow>(clicked)?.Item is HaltungRecord record)
         {
             var haltungsname = record.GetFieldValue("Haltungsname");
             if (!string.IsNullOrWhiteSpace(haltungsname))
@@ -195,7 +195,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         // Don't capture drag start when clicking inside an editing TextBox
-        if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
+        if (e.OriginalSource is DependencyObject dep && VisualTreeSafe.FindAncestor<TextBox>(dep) is not null)
             return;
 
         _dragStartPoint = e.GetPosition(null);
@@ -215,8 +215,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (e.OriginalSource is not DependencyObject originalSource)
             return;
 
-        var header = FindAncestor<DataGridColumnHeader>(originalSource);
-        var row = FindAncestor<DataGridRow>(originalSource);
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(originalSource);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(originalSource);
         var fieldName = header?.Column.GetValue(FrameworkElement.TagProperty) as string;
         var displayName = header?.Column.Header?.ToString() ?? fieldName;
 
@@ -310,7 +310,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (combo.DataContext is HaltungRecord direct)
             return direct;
 
-        var row = FindAncestor<DataGridRow>(combo);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(combo);
         if (row?.Item is HaltungRecord fromRow)
             return fromRow;
 
@@ -327,7 +327,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (!DataPageDragStartPolicy.ShouldStartDrag(
                 isProjectReady: DataContext is not DataPageViewModel vm || vm.IsProjectReady,
                 isLeftButtonPressed: e.LeftButton == System.Windows.Input.MouseButtonState.Pressed,
-                isEditingTextBox: FindAncestor<TextBox>(dep) is not null,
+                isEditingTextBox: VisualTreeSafe.FindAncestor<TextBox>(dep) is not null,
                 deltaX: diff.X,
                 deltaY: diff.Y,
                 minimumHorizontalDragDistance: SystemParameters.MinimumHorizontalDragDistance,
@@ -336,7 +336,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        var row = FindAncestor<DataGridRow>(dep);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(dep);
         if (row == null) return;
         var record = row.Item as HaltungRecord;
         if (record == null) return;
@@ -366,14 +366,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (e.OriginalSource is not DependencyObject source)
             return;
 
-        var cell = FindAncestor<DataGridCell>(source);
+        var cell = VisualTreeSafe.FindAncestor<DataGridCell>(source);
         if (cell is null)
             return;
 
         if (cell.Column?.GetValue(FrameworkElement.TagProperty) is not string fieldName)
             return;
 
-        var row = FindAncestor<DataGridRow>(cell);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(cell);
         if (row?.Item is not HaltungRecord record)
             return;
 
@@ -799,7 +799,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (source is not DependencyObject dep)
             return null;
-        var row = FindAncestor<DataGridRow>(dep);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(dep);
         return row?.Item as HaltungRecord;
     }
 

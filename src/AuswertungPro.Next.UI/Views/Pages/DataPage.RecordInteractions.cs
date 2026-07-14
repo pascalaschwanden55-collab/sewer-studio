@@ -473,15 +473,4 @@ public partial class DataPage : UserControl
             Dialogs.Info,
             missingSelectionTitle: "Position");
 
-    private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
-    {
-        DependencyObject? node = current;
-        while (node is not null)
-        {
-            if (node is T target)
-                return target;
-            node = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(node);
-        }
-        return null;
-    }
 }

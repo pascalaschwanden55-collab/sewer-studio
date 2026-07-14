@@ -119,22 +119,7 @@ public static class CodingEventDragDropBehavior
     private static object? ItemFromPoint(ListBox list, Point p)
         => ResolveItemData(list.InputHitTest(p) as DependencyObject);
 
-    /// <summary>
-    /// Laeuft vom getroffenen Element bis zum umschliessenden <see cref="ListBoxItem"/> hoch und
-    /// gibt dessen DataContext zurueck. WICHTIG: <see cref="UIElement.InputHitTest(Point)"/> kann ein
-    /// <see cref="System.Windows.ContentElement"/> liefern (z.B. der Text-<c>Run</c> in der Kachel);
-    /// <see cref="VisualTreeHelper.GetParent"/> kennt aber nur Visual/Visual3D und wuerfe sonst
-    /// „... ist kein Visual oder Visual3D". Darum ueber ContentElemente per LogicalTree hochspringen,
-    /// bis wieder ein Visual erreicht ist, und erst dann im VisualTree weiter.
-    /// </summary>
-    internal static object? ResolveItemData(DependencyObject? d)
-    {
-        while (d != null && d is not ListBoxItem)
-        {
-            d = d is Visual or System.Windows.Media.Media3D.Visual3D
-                ? VisualTreeHelper.GetParent(d)
-                : LogicalTreeHelper.GetParent(d);
-        }
-        return (d as ListBoxItem)?.DataContext;
-    }
+    /// <summary>Gibt den Datenkontext des umschliessenden Listeneintrags zurueck.</summary>
+    internal static object? ResolveItemData(DependencyObject? source)
+        => VisualTreeSafe.FindAncestor<ListBoxItem>(source)?.DataContext;
 }

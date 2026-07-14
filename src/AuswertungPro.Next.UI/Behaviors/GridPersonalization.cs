@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
@@ -143,24 +142,11 @@ public static class GridPersonalization
         // damit braucht jedes personalisierte Grid keinen eigenen Button.
         private void OnHeaderRightClick(object sender, MouseButtonEventArgs e)
         {
-            if (e.OriginalSource is DependencyObject source && FindAncestor<DataGridColumnHeader>(source) is not null)
+            if (e.OriginalSource is DependencyObject source && VisualTreeSafe.FindAncestor<DataGridColumnHeader>(source) is not null)
             {
                 ColumnChooser.Show(_grid);
                 e.Handled = true;
             }
-        }
-
-        private static T? FindAncestor<T>(DependencyObject? node) where T : DependencyObject
-        {
-            while (node is not null)
-            {
-                if (node is T match)
-                    return match;
-                node = node is Visual or System.Windows.Media.Media3D.Visual3D
-                    ? VisualTreeHelper.GetParent(node)
-                    : LogicalTreeHelper.GetParent(node);
-            }
-            return null;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)

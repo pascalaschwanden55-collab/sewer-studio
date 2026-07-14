@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -29,7 +29,7 @@ public static class DataPageContextMenuRecordResolver
                     return grid.SelectedItem as HaltungRecord;
             }
 
-            current = LogicalTreeHelper.GetParent(current) ?? VisualTreeHelper.GetParent(current);
+            current = VisualTreeSafe.GetParentSafe(current);
         }
 
         return null;

@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -16,7 +17,7 @@ public partial class SchaechtePage
     private void Grid_QgisReselectOnClick(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is DependencyObject clicked
-            && FindAncestor<DataGridRow>(clicked)?.Item is SchachtRecord record)
+            && VisualTreeSafe.FindAncestor<DataGridRow>(clicked)?.Item is SchachtRecord record)
         {
             var schachtnummer = record.GetFieldValue("Schachtnummer");
             if (!string.IsNullOrWhiteSpace(schachtnummer))

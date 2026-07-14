@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -163,7 +163,7 @@ public static class DataGridComboColumnFactory
             if (contextMenu.PlacementTarget is not FrameworkElement target)
                 return;
 
-            var grid = FindAncestor<DataGrid>(target);
+            var grid = VisualTreeSafe.FindAncestor<DataGrid>(target);
             contextMenu.DataContext = grid?.DataContext ?? target.DataContext;
         };
 
@@ -188,18 +188,5 @@ public static class DataGridComboColumnFactory
         }
 
         return item;
-    }
-
-    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
-    {
-        while (current is not null)
-        {
-            if (current is T match)
-                return match;
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return null;
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -32,7 +33,7 @@ public partial class DataPage
         if (e.OriginalSource is not DependencyObject dep)
             return;
 
-        var header = FindAncestor<DataGridColumnHeader>(dep);
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(dep);
         if (header?.Column is null)
             return;
 

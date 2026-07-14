@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -483,7 +484,7 @@ public partial class SchaechtePage : UserControl
         if (combo.DataContext is SchachtRecord direct)
             return direct;
 
-        var row = FindAncestor<DataGridRow>(combo);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(combo);
         if (row?.Item is SchachtRecord fromRow)
             return fromRow;
 
@@ -539,14 +540,14 @@ public partial class SchaechtePage : UserControl
         if (e.OriginalSource is not DependencyObject source)
             return;
 
-        var cell = FindAncestor<DataGridCell>(source);
+        var cell = VisualTreeSafe.FindAncestor<DataGridCell>(source);
         if (cell is null)
             return;
 
         if (cell.Column?.GetValue(FrameworkElement.TagProperty) is not string fieldName)
             return;
 
-        var row = FindAncestor<DataGridRow>(cell);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(cell);
         if (row?.Item is not SchachtRecord record)
             return;
 
@@ -771,24 +772,11 @@ public partial class SchaechtePage : UserControl
             GetCurrentProject(),
             (message, title) => DialogHost.Current.Error(message, title));
 
-    private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
-    {
-        DependencyObject? node = current;
-        while (node is not null)
-        {
-            if (node is T target)
-                return target;
-            node = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.GetParentSafe(node);
-        }
-
-        return null;
-    }
-
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (ClearColumnModeButton.IsChecked == true)
         {
-            var header = FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
+            var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
             if (header?.Column is not null)
             {
                 var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
@@ -802,7 +790,7 @@ public partial class SchaechtePage : UserControl
             }
         }
 
-        var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
         if (row is not null)
             Grid.SelectedItem = row.Item;
     }

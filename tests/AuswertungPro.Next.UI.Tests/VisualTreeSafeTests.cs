@@ -44,6 +44,21 @@ public sealed class VisualTreeSafeTests
     }
 
     [Fact]
+    public void FindAncestor_findet_logischen_und_visuellen_Vorfahren()
+    {
+        RunOnStaThread(() =>
+        {
+            var run = new Run("BAB");
+            var textBlock = new TextBlock();
+            textBlock.Inlines.Add(run);
+            var border = new Border { Child = textBlock };
+
+            Assert.Same(textBlock, VisualTreeSafe.FindAncestor<TextBlock>(run));
+            Assert.Same(border, VisualTreeSafe.FindAncestor<Border>(run));
+        });
+    }
+
+    [Fact]
     public void GetParentSafe_ist_null_bei_null()
         => Assert.Null(VisualTreeSafe.GetParentSafe(null));
 
