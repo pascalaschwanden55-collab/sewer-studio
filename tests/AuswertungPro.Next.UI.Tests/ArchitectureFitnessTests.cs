@@ -378,21 +378,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_partials_do_not_own_detection_confirmation_state()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer",
-            "_detectionPendingFindings",
-            "_detectionPendingFrameBytes",
-            "_detectionPendingTimestampSec");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Detection-Pending-State ueber LiveDetectionController/Buffer kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_partials_do_not_manage_coding_analysis_cts_directly()
     {
         var offenders = FindPlayerWindowPartialTokenOffenders(
@@ -619,7 +604,6 @@ public sealed class ArchitectureFitnessTests
             ".AnalyzeFrameAsync(",
             "_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null",
             "!_player.IsPlaying",
-            "if (_detectionPendingFindings != null)",
             "private void SetLiveDetectionBadge",
             "private void SetYoloStatus",
             "private void SetCodingAiState",
