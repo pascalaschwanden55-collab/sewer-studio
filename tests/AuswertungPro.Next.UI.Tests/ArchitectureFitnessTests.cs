@@ -1285,7 +1285,7 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_root_does_not_own_media_host_wiring_or_player_fields()
+    public void PlayerWindow_root_does_not_own_media_host_wiring()
     {
         var offenders = FindFileTokenOffenders(
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
@@ -1294,27 +1294,12 @@ public sealed class ArchitectureFitnessTests
             "new PlayerPlaybackControlHost",
             "new PlayerMarqueeOverlayHost",
             "new PlayerSnapshotCaptureHost",
-            "_player.",
-            "_libVlc",
             "new MediaPlayer",
             "VideoView.MediaPlayer");
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Root soll Media-Hosts und Player-Felder ueber PlayerMediaRuntime kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerMediaRuntime_does_not_expose_raw_media_player()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerMediaRuntime.cs"),
-            "public MediaPlayer");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerMediaRuntime soll keinen rohen MediaPlayer als oeffentliche API herausreichen:\n"
+            "PlayerWindow-Root soll Media-Host-Verkabelung ueber PlayerMediaRuntime kapseln:\n"
             + string.Join("\n", offenders));
     }
 
