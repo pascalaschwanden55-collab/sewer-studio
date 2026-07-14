@@ -11,6 +11,7 @@ public partial class PlayerWindow
     private readonly PlayerWindowControllerSet _playerControllers;
     private readonly PlayerPlaybackController _playerPlaybackController;
     private readonly LiveDetectionConfirmationTrainingController _liveDetectionConfirmationTrainingController;
+    private readonly LiveDetectionManualMarkTrainingController _liveDetectionManualMarkTrainingController;
 
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;

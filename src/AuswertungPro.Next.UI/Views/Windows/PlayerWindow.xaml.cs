@@ -68,10 +68,11 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        var liveDetectionTrainingAnnotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
         _liveDetectionConfirmationTrainingController = new LiveDetectionConfirmationTrainingController(
             _liveDetectionController,
             _playerTimelineHost,
-            LiveDetectionTrainingAnnotationWriter.CreateDefault(),
+            liveDetectionTrainingAnnotationWriter,
             new LiveDetectionConfirmationTrainingControllerActions(
                 ResolveAutomaticMeter: () => _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
                 SelectCorrection: (meter, timestampSeconds) => LiveDetectionCorrectionCodeSelectionWorkflow.Select(
@@ -85,6 +86,28 @@ public partial class PlayerWindow : Window
                 CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
                 ShowOsdMeterStatus: ShowOsdMeterStatus,
                 ResumeDetection: ResumeDetection));
+        _liveDetectionManualMarkTrainingController = new LiveDetectionManualMarkTrainingController(
+            liveDetectionTrainingAnnotationWriter,
+            new LiveDetectionManualMarkTrainingControllerActions(
+                SelectEntry: (overlay, timestampSeconds) =>
+                {
+                    var automaticMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
+                    return CodingCodeExplorerSeedSelectionWorkflow.Execute(
+                        new CodingCodeExplorerSeedSelectionWorkflowRequest(
+                            overlay,
+                            automaticMeter,
+                            TimeSpan.FromSeconds(timestampSeconds),
+                            _playbackContext.VideoPath,
+                            this),
+                        CreateCodingCodeExplorerSeedSelectionActions());
+                },
+                ResolveDisplayedMeterText: () => TxtCodingMeter?.Text,
+                ResolveCodingSessionService: () => _codingSessionHost.HasViewModel
+                    ? _codingSessionRuntimeOwner.Service
+                    : null,
+                CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
+                RefreshCodingEvents: RefreshCodingEventsList,
+                ShowOsdMeterStatus: ShowOsdMeterStatus));
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,

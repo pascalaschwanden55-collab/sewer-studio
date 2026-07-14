@@ -248,6 +248,8 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
         var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionManualMarkTrainingController.cs");
+        var playerWindowPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -257,6 +259,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.True(File.Exists(commandWorkflowPath), "Manual-Mark-Training-Befehl soll Auswahl, Speichern, Ergebnis und Fehler ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resultWorkflowPath), "Manual-Mark-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Manual-Mark-Training-Steuerung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var marking = File.ReadAllText(markingPath);
         var training = File.ReadAllText(trainingPath);
@@ -267,17 +270,15 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
+        var controller = File.ReadAllText(controllerPath);
+        var playerWindow = File.ReadAllText(playerWindowPath);
 
         AssertNoForbiddenTokens(
             marking,
             "private async Task<bool> SaveMarkAsTrainingAsync",
             "TrainingAnnotationExportServiceFactory.Create");
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
-        Assert.Contains("LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync", training);
-        Assert.Contains("CodingCodeExplorerSeedSelectionWorkflow.Execute", training);
-        Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
-        Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", training);
-        Assert.Contains("_codingSessionHost", training);
+        Assert.Contains("_liveDetectionManualMarkTrainingController.SaveAsync", training);
         AssertNoForbiddenTokens(
             training,
             "if (selectedEntry == null)",
@@ -296,14 +297,32 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             "File.WriteAllBytesAsync",
             "File.Delete(tempFrame)",
             "Path.GetTempPath",
-            "LiveDetectionTeacherAnnotationFactory.CreateManualMark");
+            "LiveDetectionTeacherAnnotationFactory.CreateManualMark",
+            "LiveDetectionTrainingAnnotationWriter.CreateDefault",
+            "LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync",
+            "CodingCodeExplorerSeedSelectionWorkflow.Execute",
+            "LiveDetectionManualMarkTrainingWorkflow.SaveAsync",
+            "LiveDetectionManualMarkTrainingResultWorkflow.Execute",
+            "_codingSessionHost");
+        Assert.Contains("public sealed class LiveDetectionManualMarkTrainingController", controller);
+        Assert.Contains("ILiveDetectionTrainingAnnotationWriter", controller);
+        Assert.Contains("LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync", controller);
+        Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", controller);
+        Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", controller);
+        Assert.Contains("_annotationWriter.SaveManualMarkAsync", controller);
+        Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", controller);
+        Assert.Equal(1, CountOccurrences(playerWindow, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
+        Assert.Contains("new LiveDetectionConfirmationTrainingController", playerWindow);
+        Assert.Contains("new LiveDetectionManualMarkTrainingController", playerWindow);
+        Assert.True(
+            CountOccurrences(playerWindow, "liveDetectionTrainingAnnotationWriter,") >= 2,
+            "Bestaetigung und manuelle Markierung sollen denselben Trainings-Schreiber erhalten.");
         Assert.Contains(".SelectSeed(", seedSelectionWorkflow);
         Assert.Contains("actions.SelectEntry()", commandWorkflow);
         Assert.Contains("actions.SaveTrainingAsync(selectedEntry)", commandWorkflow);
         Assert.Contains("actions.HandleTrainingResult(trainingResult)", commandWorkflow);
         Assert.Contains("actions.ShowOsdMeterStatus", commandWorkflow);
         Assert.Contains("CodingExplorerEntryFactory.CreateManualFromSelected", appender);
-        Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
         Assert.Contains("LiveDetectionManualMarkEventAppender.Apply", workflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", workflow);
         Assert.Contains("saveManualMarkAsync", workflow);
@@ -407,4 +426,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             hits.Count == 0,
             "Verbotene alte PlayerWindow-LiveDetection-Markierlogik gefunden: " + string.Join(", ", hits));
     }
+
+    private static int CountOccurrences(string source, string value)
+        => (source.Length - source.Replace(value, "", StringComparison.Ordinal).Length) / value.Length;
 }

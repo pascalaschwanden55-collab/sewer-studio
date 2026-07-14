@@ -13,7 +13,7 @@ public sealed class MaintainabilityFitnessTests
 
     private static readonly Dictionary<string, int> ExistingLargePartialTypes = new(StringComparer.Ordinal)
     {
-        ["AuswertungPro.Next.UI.Views.Windows.PlayerWindow"] = 5_140,
+        ["AuswertungPro.Next.UI.Views.Windows.PlayerWindow"] = 5_126,
         ["AuswertungPro.Next.Infrastructure.HoldingFolderDistributor"] = 3_064
     };
 
