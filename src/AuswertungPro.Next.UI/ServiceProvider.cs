@@ -153,6 +153,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolAiService ProtocolAi { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
         public ITrainingCenterSettingsStore TrainingSettings { get; }
+        public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -209,6 +210,9 @@ namespace AuswertungPro.Next.UI
             TrainingSettings = new TrainingCenterSettingsFileStore(
                 KnowledgeBasePaths.GetTrainingSettingsPath());
             TrainingCenterSettingsStore.Use(TrainingSettings);
+            SelfTrainingHistory = new SelfTrainingHistoryFileStore(
+                Path.Combine(KnowledgeRoot, "selftraining_history.json"));
+            SelfTrainingHistoryStore.Use(SelfTrainingHistory);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -562,6 +566,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
+            if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

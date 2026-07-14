@@ -60,6 +60,7 @@ public sealed class TrainingCenterWindowDependencyTests
         var store = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingCenterStore));
         var import = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingCenterImport));
         var settings = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingSettings));
+        var history = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.SelfTrainingHistory));
         var review = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingReviewQueue));
         var samFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateTrainingReviewSam));
         var fewShotFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateFewShotStore));
@@ -73,6 +74,9 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.NotNull(settings);
         Assert.Equal(typeof(ITrainingCenterSettingsStore), settings.PropertyType);
         Assert.False(settings.CanWrite);
+        Assert.NotNull(history);
+        Assert.Equal(typeof(ISelfTrainingHistoryStore), history.PropertyType);
+        Assert.False(history.CanWrite);
         Assert.NotNull(review);
         Assert.Equal(typeof(ReviewQueueService), review.PropertyType);
         Assert.False(review.CanWrite);

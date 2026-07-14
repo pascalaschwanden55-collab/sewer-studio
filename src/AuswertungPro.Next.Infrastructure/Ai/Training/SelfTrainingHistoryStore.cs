@@ -1,132 +1,26 @@
-// AuswertungPro – Verlauf der Selbsttraining-Ergebnisse (Match-Rate pro Lauf)
-// Atomares Speichern: temp-Datei → Validierung → File.Move (wie TrainingSamplesStore)
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
-/// Persistiert Match-Rate-Verlaeufe im Knowledge-Ordner (portabel).
-/// Thread-safe + atomares Speichern (Write-Replace-Pattern).
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer. Die Dateiarbeit liegt im
+/// <see cref="ISelfTrainingHistoryStore"/>.
 /// </summary>
 public static class SelfTrainingHistoryStore
 {
-    private static readonly SemaphoreSlim _lock = new(1, 1);
+    private static ISelfTrainingHistoryStore _current = new SelfTrainingHistoryFileStore();
 
-    private static string GetPath()
-        => Path.Combine(KnowledgeBasePaths.GetRoot(), "selftraining_history.json");
+    public static string DefaultPath => Current.StoragePath;
 
-    public static async Task<List<SelfTrainingRunSnapshot>> LoadAsync()
-    {
-        await _lock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            return await LoadInternalAsync().ConfigureAwait(false);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
+    public static ISelfTrainingHistoryStore Current => Volatile.Read(ref _current);
 
-    private static async Task<List<SelfTrainingRunSnapshot>> LoadInternalAsync()
-    {
-        var path = GetPath();
-        if (!File.Exists(path))
-            return new List<SelfTrainingRunSnapshot>();
+    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    public static void Use(ISelfTrainingHistoryStore store) =>
+        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
 
-        try
-        {
-            using var stream = File.OpenRead(path);
-            var runs = await JsonSerializer.DeserializeAsync<List<SelfTrainingRunSnapshot>>(stream)
-                .ConfigureAwait(false);
-            return runs ?? new List<SelfTrainingRunSnapshot>();
-        }
-        catch (Exception ex)
-        {
-            // Korrupte Datei sichern, nicht loeschen
-            BestEffort.ReportWarning(
-                $"[SelfTrainingHistoryStore] WARNUNG: JSON korrupt: {ex.Message}");
-            var backup = path + $".corrupt_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-            BestEffort.Try(
-                () => File.Copy(path, backup, overwrite: true),
-                $"Selbsttraining-Verlauf: korrupte Datei nach {backup} sichern");
+    public static Task<List<SelfTrainingRunSnapshot>> LoadAsync() =>
+        Current.LoadAsync();
 
-            return new List<SelfTrainingRunSnapshot>();
-        }
-    }
-
-    /// <summary>Atomar speichern: temp → Validierung → File.Move.</summary>
-    private static async Task SaveInternalAsync(List<SelfTrainingRunSnapshot> runs)
-    {
-        var path = GetPath();
-        var dir = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(dir);
-
-        // Sicherheits-Backup vor Schreiben
-        if (File.Exists(path))
-        {
-            BestEffort.Try(
-                () => File.Copy(path, path + ".bak", overwrite: true),
-                "Selbsttraining-Verlauf: Sicherheitsbackup erstellen");
-        }
-
-        // In temp-Datei schreiben
-        var tempPath = path + ".tmp";
-        try
-        {
-            using (var stream = File.Create(tempPath))
-            {
-                await JsonSerializer.SerializeAsync(stream, runs, Application.Common.JsonDefaults.Indented)
-                    .ConfigureAwait(false);
-                await stream.FlushAsync().ConfigureAwait(false);
-            }
-
-            // Validierung
-            using (var check = File.OpenRead(tempPath))
-            {
-                var loaded = await JsonSerializer.DeserializeAsync<List<SelfTrainingRunSnapshot>>(check)
-                    .ConfigureAwait(false);
-                if (loaded is null || loaded.Count != runs.Count)
-                    throw new InvalidOperationException(
-                        $"Validierung fehlgeschlagen: erwartet {runs.Count}, gelesen {loaded?.Count ?? 0}");
-            }
-
-            // Atomares Rename
-            File.Move(tempPath, path, overwrite: true);
-        }
-        catch
-        {
-            BestEffort.Try(
-                () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
-                "Selbsttraining-Verlauf: Temp-Datei nach Speicherfehler loeschen");
-            throw;
-        }
-    }
-
-    /// <summary>Fuegt einen Lauf hinzu, behaelt max. 20 Eintraege. Thread-safe + atomar.</summary>
-    public static async Task AppendRunAsync(SelfTrainingRunSnapshot run)
-    {
-        await _lock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            var runs = await LoadInternalAsync().ConfigureAwait(false);
-            runs.Add(run);
-            if (runs.Count > 20)
-                runs = runs.Skip(runs.Count - 20).ToList();
-            await SaveInternalAsync(runs).ConfigureAwait(false);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
+    public static Task AppendRunAsync(SelfTrainingRunSnapshot run) =>
+        Current.AppendRunAsync(run);
 }
