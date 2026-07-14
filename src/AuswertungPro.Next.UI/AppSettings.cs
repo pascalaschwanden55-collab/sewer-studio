@@ -9,11 +9,12 @@ using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Hydraulik;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI;
 
-public sealed class AppSettings : IAiStartupSettings
+public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStore
 {
     private const int SaveDebounceMs = 750;
     public const string DefaultQgisExportDirectory = @"D:\QGIS_V4.03\Export_Sewer_Studio";

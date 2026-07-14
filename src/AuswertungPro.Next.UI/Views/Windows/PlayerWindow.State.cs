@@ -12,7 +12,7 @@ public partial class PlayerWindow
 
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;
-    private readonly AppSettings _playerSettings;
+    private readonly PlayerControlSettingsController _playerControlSettingsController;
     private bool _playerControlEventsEnabled;
 
     private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();

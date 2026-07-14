@@ -43,7 +43,8 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
-        _playerSettings = _protocolContext.Settings ?? AppSettings.Load();
+        var playerSettings = _protocolContext.Settings ?? AppSettings.Load();
+        _playerControlSettingsController = new PlayerControlSettingsController(playerSettings);
         WireCodingPhotoHoverPreview();
         _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
