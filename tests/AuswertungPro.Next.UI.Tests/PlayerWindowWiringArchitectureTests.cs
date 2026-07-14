@@ -80,6 +80,11 @@ public sealed class PlayerWindowWiringArchitectureTests
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
         var controllerSetInitializer = File.Exists(controllerSetInitializerPath) ? File.ReadAllText(controllerSetInitializerPath) : "";
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
 
         Assert.Contains("_playerControllers = PlayerWindowControllerSetInitializer.Create", windowRoot);
         AssertNoForbiddenTokens(
@@ -174,6 +179,12 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("PlayerApplicationControls.CurrentMainWindow()", wiring);
         Assert.Contains("DispatcherPriority.Loaded", dispatcherScheduler);
         Assert.Contains("DispatcherPriority.Input", dispatcherScheduler);
+        AssertNoForbiddenTokens(
+            playerWindowPartials,
+            "Dispatcher.Invoke(",
+            "Dispatcher.InvokeAsync(",
+            "Dispatcher.CheckAccess()",
+            "Dispatcher.HasShutdownStarted");
         Assert.Contains("public static bool FocusElement", focusControls);
         Assert.Contains("public static IInputElement? FocusWindowKeyboard", focusControls);
         Assert.Contains("public static bool ActivateWindow", focusControls);

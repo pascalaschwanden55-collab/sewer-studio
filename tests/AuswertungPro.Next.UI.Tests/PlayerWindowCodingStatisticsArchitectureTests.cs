@@ -44,6 +44,8 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", events);
+        Assert.DoesNotContain("Dispatcher.InvokeAsync", events, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Loaded", events, StringComparison.Ordinal);
         Assert.Contains("public static class CodingStatisticsUpdateCommandWorkflow", statisticsCommandWorkflow);
         Assert.Contains("if (!request.HasCodingViewModel)", statisticsCommandWorkflow);
         Assert.Contains("actions.RefreshStatistics()", statisticsCommandWorkflow);

@@ -364,21 +364,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_partials_do_not_access_dispatcher_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "Dispatcher.Invoke(",
-            "Dispatcher.InvokeAsync(",
-            "Dispatcher.CheckAccess()",
-            "Dispatcher.HasShutdownStarted");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen UI-Dispatch ueber PlayerDispatcherScheduler/Workflow-Services kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_transient_overlay_cleanup_partials_delegate_to_policy_controller_and_workflow()
     {
         var offenders = FindFileTokenOffenders(
@@ -1462,20 +1447,6 @@ public sealed class ArchitectureFitnessTests
         Assert.True(
             offenders.Length == 0,
             "PlayerWindow-Coding-Foto-Capture soll Frame-Extraktion nicht synchron blockierend abwarten:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_coding_statistics_partial_uses_scheduler_instead_of_dispatcher_details()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs"),
-            "Dispatcher.InvokeAsync",
-            "System.Windows.Threading.DispatcherPriority.Loaded");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Coding-Statistik soll Dispatcher-Details ueber PlayerDispatcherScheduler kapseln:\n"
             + string.Join("\n", offenders));
     }
 
