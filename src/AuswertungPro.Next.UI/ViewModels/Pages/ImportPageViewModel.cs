@@ -23,6 +23,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly IIbakImportService _ibakImport;
     private readonly IKinsImportService _kinsImport;
     private readonly IStoredImportFileService _storedImportFiles;
+    private readonly IImportRunReportExporter _importRunReports;
     private readonly string? _pdfToTextPath;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
     private readonly Services.ImportProjectPhotoAssignmentController _projectPhotoAssignmentController;
@@ -78,6 +79,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _ibakImport = sp.IbakImport;
         _kinsImport = sp.KinsImport;
         _storedImportFiles = sp.StoredImportFiles;
+        _importRunReports = sp.ImportRunReports;
         _pdfToTextPath = sp.Diagnostics.ExplicitPdfToTextPath;
         var oneClickImporter = sp.CreateOneClickProjectImportService();
         var resolvedCatalogPath = sp.VsaCatalogResolvedPath;
@@ -192,7 +194,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 ReplaceProject: _shell.ReplaceProject,
                 CreateRestorePoint: _shell.TryCreateImportRestorePoint,
                 GetReportDir: _reportNavigationController.GetReportDirectory,
-                ExportReport: ImportRunReportExporter.Export,
+                ExportReport: _importRunReports.Export,
                 ShowPreview: ShowPreviewWindow,
                 ValidatePlausibility: Application.Import.ImportPlausibilityValidator.Validate,
                 DeduplicateAllPrimaryDamages: DeduplicateAllPrimaryDamages,

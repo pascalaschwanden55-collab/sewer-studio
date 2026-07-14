@@ -126,6 +126,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolRegenerationService ProtocolRegeneration { get; }
         public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
         public IOneClickImportReportWriter OneClickImportReports { get; }
+        public IImportRunReportExporter ImportRunReports { get; }
         public IImportSummaryExporter ImportSummaryExporter { get; }
         public IStoredImportFileService StoredImportFiles { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
@@ -288,6 +289,7 @@ namespace AuswertungPro.Next.UI
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
             OneClickImportReports = new OneClickImportReportWriter(Logger);
+            ImportRunReports = new ImportRunReportFileExporter();
             ImportSummaryExporter = new ImportSummaryExporter();
             StoredImportFiles = new StoredImportFileService();
             ProjectRestorePoints = new ProjectRestorePointStore();
@@ -595,6 +597,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
+            if (serviceType == typeof(IImportRunReportExporter)) return ImportRunReports;
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Infrastructure.Import;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -17,6 +18,20 @@ public class ImportRunReportExporterTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_tempDir, true); } catch { }
+    }
+
+    [Fact]
+    public void InstanceExporter_CreatesTheSameReportContract()
+    {
+        var log = CreateSampleLog();
+        log.Complete();
+
+        IImportRunReportExporter exporter = new ImportRunReportFileExporter();
+        var textPath = exporter.Export(log, _tempDir);
+
+        Assert.True(File.Exists(textPath));
+        Assert.Single(Directory.GetFiles(_tempDir, "*.json"));
+        Assert.Single(Directory.GetFiles(_tempDir, "fehlerliste_*"));
     }
 
     [Fact]
