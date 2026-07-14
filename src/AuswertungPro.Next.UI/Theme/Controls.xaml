@@ -93,14 +93,18 @@
                              IsOpen="{TemplateBinding IsDropDownOpen}"
                              AllowsTransparency="True"
                              Focusable="False"
-                             PopupAnimation="Slide">
+                             PopupAnimation="None">
                             <Grid MinWidth="{TemplateBinding ActualWidth}"
                                 MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <Border Background="{DynamicResource CardBrush}"
+                                <Border x:Name="DropdownBorder"
+                                      Background="{DynamicResource CardBrush}"
                                       BorderBrush="{DynamicResource BorderBrush}"
                                       BorderThickness="1"
                                       CornerRadius="6"
                                       Margin="0,4,0,0">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="DropdownShift"/>
+                                    </Border.RenderTransform>
                                     <Border.Effect>
                                         <DropShadowEffect Color="#30000000"
                                                           BlurRadius="20"
@@ -110,6 +114,24 @@
                                     <ScrollViewer>
                                         <StackPanel IsItemsHost="True"/>
                                     </ScrollViewer>
+                                    <Border.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="DropdownBorder"
+                                                                     Storyboard.TargetProperty="Opacity"
+                                                                     From="0" To="1"
+                                                                     Duration="{StaticResource AnimDurationNormal}"
+                                                                     EasingFunction="{StaticResource AnimEaseOut}"/>
+                                                    <DoubleAnimation Storyboard.TargetName="DropdownShift"
+                                                                     Storyboard.TargetProperty="Y"
+                                                                     From="-4" To="0"
+                                                                     Duration="{StaticResource AnimDurationNormal}"
+                                                                     EasingFunction="{StaticResource AnimEaseOut}"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Border.Triggers>
                                 </Border>
                             </Grid>
                         </Popup>
@@ -612,13 +634,17 @@
                    AllowsTransparency="True"
                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                    Focusable="False"
-                   PopupAnimation="Slide">
-                <Border Background="{DynamicResource CardBrush}"
+                   PopupAnimation="None">
+                <Border x:Name="PopupBorder"
+                        Background="{DynamicResource CardBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Margin="0,4,0,0"
                         Padding="4">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="PopupShift"/>
+                    </Border.RenderTransform>
                     <Border.Effect>
                         <DropShadowEffect Color="#30000000"
                                           BlurRadius="18"
@@ -641,6 +667,22 @@
                 <Setter TargetName="Outer" Property="Background" Value="{DynamicResource HoverBrush}"/>
                 <Setter TargetName="Outer" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="PopupBorder"
+                                             Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1"
+                                             Duration="{StaticResource AnimDurationNormal}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                            <DoubleAnimation Storyboard.TargetName="PopupShift"
+                                             Storyboard.TargetProperty="Y"
+                                             From="-6" To="0"
+                                             Duration="{StaticResource AnimDurationNormal}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Opacity" Value="0.45"/>
@@ -680,6 +722,15 @@
 
     <ControlTemplate x:Key="SubmenuHeaderTemplate" TargetType="{x:Type MenuItem}">
         <Grid SnapsToDevicePixels="True">
+            <Border x:Name="AccentBar"
+                    Width="3"
+                    Height="14"
+                    CornerRadius="1.5"
+                    Background="{DynamicResource AccentBrush}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="1,0,0,0"
+                    Opacity="0"/>
             <Border x:Name="Outer"
                     Grid.ColumnSpan="3"
                     Background="{TemplateBinding Background}"
@@ -689,14 +740,19 @@
                     Padding="{TemplateBinding Padding}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
+                        <ColumnDefinition Width="24"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+                    <ContentPresenter x:Name="IconSlot"
+                                      Grid.Column="0"
+                                      ContentSource="Icon"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"/>
                     <TextBlock x:Name="Glyph"
                                Grid.Column="0"
                                Text="&#xE73E;"
-                               FontFamily="Segoe MDL2 Assets"
+                               FontFamily="{StaticResource FontIcon}"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -706,15 +762,13 @@
                                       ContentSource="Header"
                                       RecognizesAccessKey="True"
                                       VerticalAlignment="Center"/>
-                    <Path Grid.Column="2"
-                          Width="8"
-                          Height="8"
-                          Margin="8,0,0,0"
-                          VerticalAlignment="Center"
-                          HorizontalAlignment="Center"
-                          Stretch="Uniform"
-                          Fill="{TemplateBinding Foreground}"
-                          Data="M0,0 L0,8 L5,4 Z"/>
+                    <TextBlock Grid.Column="2"
+                               Text="&#xE76C;"
+                               FontFamily="{StaticResource FontIcon}"
+                               FontSize="10"
+                               Foreground="{DynamicResource MutedBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0"/>
                 </Grid>
             </Border>
             <Popup x:Name="PART_Popup"
@@ -723,12 +777,16 @@
                    AllowsTransparency="True"
                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                    Focusable="False"
-                   PopupAnimation="Slide">
-                <Border Background="{DynamicResource CardBrush}"
+                   PopupAnimation="None">
+                <Border x:Name="PopupBorder"
+                        Background="{DynamicResource CardBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="4">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="PopupShift"/>
+                    </Border.RenderTransform>
                     <Border.Effect>
                         <DropShadowEffect Color="#30000000"
                                           BlurRadius="18"
@@ -744,16 +802,55 @@
         <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
                 <Setter TargetName="Glyph" Property="Visibility" Value="Visible"/>
+                <Setter TargetName="IconSlot" Property="Visibility" Value="Collapsed"/>
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="Outer" Property="Background" Value="{DynamicResource HoverBrush}"/>
                 <Setter TargetName="Outer" Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="AccentBar"
+                                             Storyboard.TargetProperty="Opacity"
+                                             To="1"
+                                             Duration="{StaticResource AnimDurationFast}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="AccentBar"
+                                             Storyboard.TargetProperty="Opacity"
+                                             To="0"
+                                             Duration="{StaticResource AnimDurationFast}"
+                                             EasingFunction="{StaticResource AnimEaseIn}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
                 <Setter TargetName="Outer" Property="Background" Value="{DynamicResource HoverBrush}"/>
                 <Setter TargetName="Outer" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="PopupBorder"
+                                             Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1"
+                                             Duration="{StaticResource AnimDurationNormal}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                            <DoubleAnimation Storyboard.TargetName="PopupShift"
+                                             Storyboard.TargetProperty="X"
+                                             From="-6" To="0"
+                                             Duration="{StaticResource AnimDurationNormal}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Opacity" Value="0.45"/>
@@ -762,41 +859,86 @@
     </ControlTemplate>
 
     <ControlTemplate x:Key="SubmenuItemTemplate" TargetType="{x:Type MenuItem}">
-        <Border x:Name="Outer"
-                Background="{TemplateBinding Background}"
-                BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="{TemplateBinding Padding}"
-                SnapsToDevicePixels="True">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="18"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="Glyph"
-                           Grid.Column="0"
-                           Text="&#xE73E;"
-                           FontFamily="Segoe MDL2 Assets"
-                           Visibility="Collapsed"
-                           Foreground="{DynamicResource AccentBrush}"
-                           FontWeight="Bold"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"/>
-                <ContentPresenter Grid.Column="1"
-                                  ContentSource="Header"
-                                  RecognizesAccessKey="True"
-                                  VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
+        <Grid SnapsToDevicePixels="True">
+            <Border x:Name="AccentBar"
+                    Width="3"
+                    Height="14"
+                    CornerRadius="1.5"
+                    Background="{DynamicResource AccentBrush}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="1,0,0,0"
+                    Opacity="0"/>
+            <Border x:Name="Outer"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="{TemplateBinding Padding}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ContentPresenter x:Name="IconSlot"
+                                      Grid.Column="0"
+                                      ContentSource="Icon"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="Glyph"
+                               Grid.Column="0"
+                               Text="&#xE73E;"
+                               FontFamily="{StaticResource FontIcon}"
+                               Visibility="Collapsed"
+                               Foreground="{DynamicResource AccentBrush}"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"/>
+                    <ContentPresenter Grid.Column="1"
+                                      ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{TemplateBinding InputGestureText}"
+                               Foreground="{DynamicResource MutedBrush}"
+                               FontSize="11"
+                               Margin="24,0,4,0"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
                 <Setter TargetName="Glyph" Property="Visibility" Value="Visible"/>
+                <Setter TargetName="IconSlot" Property="Visibility" Value="Collapsed"/>
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="Outer" Property="Background" Value="{DynamicResource HoverBrush}"/>
                 <Setter TargetName="Outer" Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="AccentBar"
+                                             Storyboard.TargetProperty="Opacity"
+                                             To="1"
+                                             Duration="{StaticResource AnimDurationFast}"
+                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="AccentBar"
+                                             Storyboard.TargetProperty="Opacity"
+                                             To="0"
+                                             Duration="{StaticResource AnimDurationFast}"
+                                             EasingFunction="{StaticResource AnimEaseIn}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="Outer" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
@@ -836,11 +978,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ContextMenu}">
-                    <Border Background="{TemplateBinding Background}"
+                    <Border x:Name="ContextMenuBorder"
+                            Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="6"
                             Padding="{TemplateBinding Padding}">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="ContextMenuShift"/>
+                        </Border.RenderTransform>
                         <Border.Effect>
                             <DropShadowEffect Color="#30000000"
                                               BlurRadius="18"
@@ -849,6 +995,24 @@
                         </Border.Effect>
                         <StackPanel IsItemsHost="True"
                                     KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ContextMenuBorder"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0" To="1"
+                                                         Duration="{StaticResource AnimDurationNormal}"
+                                                         EasingFunction="{StaticResource AnimEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="ContextMenuShift"
+                                                         Storyboard.TargetProperty="Y"
+                                                         From="-4" To="0"
+                                                         Duration="{StaticResource AnimDurationNormal}"
+                                                         EasingFunction="{StaticResource AnimEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -859,9 +1023,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Separator}">
-                    <Border Height="1"
-                            Margin="8,5"
-                            Background="{DynamicResource BorderBrush}"/>
+                    <Border Height="1" Margin="10,5">
+                        <Border.Background>
+                            <!-- Dekorativer Verlauf fuer beide Themes; keine Funktionsfarbe. -->
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="Transparent" Offset="0"/>
+                                <GradientStop Color="#809EAEC4" Offset="0.5"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
