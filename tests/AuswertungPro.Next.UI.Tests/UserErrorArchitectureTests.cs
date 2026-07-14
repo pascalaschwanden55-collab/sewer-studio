@@ -14,7 +14,7 @@ public sealed class UserErrorArchitectureTests
         RegexOptions.CultureInvariant);
 
     private static readonly Regex RawExceptionInVisibleTextControl = new(
-        @"(?m)\b(?:Txt[A-Za-z0-9_]*|_[A-Za-z0-9_]*Status[A-Za-z0-9_]*)\.Text\s*=\s*[^;\r\n]*\b(?:ex|exception)\.Message",
+        @"(?m)(?:\b(?:Txt[A-Za-z0-9_]*|_[A-Za-z0-9_]*Status[A-Za-z0-9_]*)\.Text\s*=|\bSetStatus\s*\()\s*[^;\r\n]*\b(?:ex|exception)\.Message",
         RegexOptions.CultureInvariant);
 
     [Fact]

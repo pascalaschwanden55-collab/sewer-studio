@@ -292,7 +292,7 @@ namespace AuswertungPro.Next.UI
             {
                 logger.LogWarning(ex, "KI-Autostart fehlgeschlagen.");
                 if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shellAfter)
-                    shellAfter.SetStatus($"KI-Autostart fehlgeschlagen: {ex.Message}");
+                    shellAfter.SetStatus($"KI-Autostart fehlgeschlagen: {UserError.Describe(ex)}");
             }
         }
 
