@@ -51,6 +51,7 @@ public sealed class DataPagePrintController
     private readonly Func<Project, string, HaltungRecord, ProtocolDocument, string?> _regenerateOne;
     private readonly Func<string, bool> _openPdf;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
+    private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
 
     public DataPagePrintController(
         IDialogService dialogs,
@@ -61,7 +62,8 @@ public sealed class DataPagePrintController
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
-        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
         : this(
             dialogs,
             (IProtocolPdfExporter)protocolPdfExporter,
@@ -71,7 +73,8 @@ public sealed class DataPagePrintController
             findSchachtByNummer,
             buildDossierHydraulikCalculation,
             protocolRegeneration,
-            dossierPhotoAvailability)
+            dossierPhotoAvailability,
+            inspectionProtocolFiles)
     {
     }
 
@@ -84,7 +87,8 @@ public sealed class DataPagePrintController
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
-        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -98,7 +102,8 @@ public sealed class DataPagePrintController
                 ? null
                 : (project, folder, record, document) =>
                     protocolRegeneration.RegenerateOne(project, folder, record, document),
-            dossierPhotoAvailability: dossierPhotoAvailability)
+            dossierPhotoAvailability: dossierPhotoAvailability,
+            inspectionProtocolFiles: inspectionProtocolFiles)
     {
     }
 
@@ -127,7 +132,8 @@ public sealed class DataPagePrintController
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         Func<string, bool>? openPdf = null,
-        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -160,6 +166,8 @@ public sealed class DataPagePrintController
         _openPdf = openPdf ?? (path => DataPageOriginalPdfController.TryShellOpen(path).Success);
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPageDossierAvailability.CompatibilityService;
+        _inspectionProtocolFiles = inspectionProtocolFiles
+            ?? DataPageProtocolPathResolver.CompatibilityService;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -415,17 +423,17 @@ public sealed class DataPagePrintController
         return store.ByHolding.TryGetValue(holdingLabel.Trim(), out var cost) ? cost : null;
     }
 
-    private static List<string> ResolveDossierOriginalPdfPaths(
+    private List<string> ResolveDossierOriginalPdfPaths(
         HaltungRecord record,
         string projectFolder,
         SchachtRecord? schachtVon,
         SchachtRecord? schachtBis)
     {
-        var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
+        var paths = _inspectionProtocolFiles.ResolveOriginalPdfPaths(record, projectFolder);
         if (schachtVon is not null)
-            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtVon, projectFolder, paths);
+            _inspectionProtocolFiles.ResolveSchachtPdfPaths(schachtVon, projectFolder, paths);
         if (schachtBis is not null)
-            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtBis, projectFolder, paths);
+            _inspectionProtocolFiles.ResolveSchachtPdfPaths(schachtBis, projectFolder, paths);
 
         return paths;
     }

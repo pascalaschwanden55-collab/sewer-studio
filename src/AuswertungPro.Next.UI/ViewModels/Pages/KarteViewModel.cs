@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
@@ -28,6 +29,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly NetworkFeatureCache _networkFeatures;
     private readonly Action<string, HaltungRecord> _playVideo;
+    private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
 
     private string XtfPath => KatasterXtfPathResolver.Resolve(_settings);
 
@@ -93,7 +95,8 @@ public sealed partial class KarteViewModel : ObservableObject
             shell,
             settings: services.Settings,
             networkFeatures: services.NetworkFeatures,
-            playVideo: KarteVideoLauncher.Create(services))
+            playVideo: KarteVideoLauncher.Create(services),
+            inspectionProtocolFiles: services.InspectionProtocolFiles)
     {
     }
 
@@ -101,12 +104,15 @@ public sealed partial class KarteViewModel : ObservableObject
         ShellViewModel shell,
         AppSettings settings,
         NetworkFeatureCache networkFeatures,
-        Action<string, HaltungRecord> playVideo)
+        Action<string, HaltungRecord> playVideo,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
     {
         _shell = shell;
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _networkFeatures = networkFeatures ?? throw new ArgumentNullException(nameof(networkFeatures));
         _playVideo = playVideo ?? throw new ArgumentNullException(nameof(playVideo));
+        _inspectionProtocolFiles = inspectionProtocolFiles
+            ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
         SchliesseInfoCommand = new RelayCommand(() =>
@@ -697,5 +703,5 @@ public sealed partial class KarteViewModel : ObservableObject
     // Video-Pfad aufloesen: absolut ODER relativ zum Projektordner — wiederverwendeter
     // Resolver der Datenseite statt eigener File.Exists-Logik hier (behebt relative Links).
     private string? ResolveExistingPath(string? path)
-        => DataPage.DataPageProtocolPathResolver.ResolveExistingPath(path, _settings.LastProjectPath);
+        => _inspectionProtocolFiles.ResolveExistingPath(path, _settings.LastProjectPath);
 }

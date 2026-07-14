@@ -286,6 +286,28 @@ public sealed class DataPageProtocolPathResolverTests
         Assert.Equal(splitPdf, found, ignoreCase: true);
     }
 
+    [Fact]
+    public void FindProtocolPath_bevorzugt_Inspektionsprotokoll_vor_Lageplan()
+    {
+        using var temp = new TempDir();
+        var holdingDir = Directory.CreateDirectory(Path.Combine(temp.Path, "06-001")).FullName;
+        var protocol = Path.Combine(holdingDir, "A_Protokoll_06-001.pdf");
+        var plan = Path.Combine(holdingDir, "Z_Plan_06-001.pdf");
+        File.WriteAllText(protocol, "Haltungsinspektion 06-001 Leitungsbericht");
+        File.WriteAllText(plan, "Leitungsende 06-001 Dachwasser angeschlossen");
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "06-001", FieldSource.Manual, userEdited: true);
+
+        var found = DataPageProtocolPathResolver.FindProtocolPath(
+            record,
+            resolvedLink: null,
+            initialFolder: temp.Path,
+            projectPath: null,
+            storedFilesRaw: null);
+
+        Assert.Equal(protocol, found, ignoreCase: true);
+    }
+
     // --- ResolveSchachtPdfPaths ---
 
     [Fact]

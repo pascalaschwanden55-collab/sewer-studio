@@ -30,6 +30,7 @@ using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Maintenance;
+using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Vsa;
@@ -164,6 +165,7 @@ namespace AuswertungPro.Next.UI
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
+        public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
         // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
         public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion
@@ -334,6 +336,8 @@ namespace AuswertungPro.Next.UI
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
+            InspectionProtocolFiles = new InspectionProtocolFileLocator();
+            DataPage.DataPageProtocolPathResolver.Use(InspectionProtocolFiles);
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
@@ -674,6 +678,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
+            if (serviceType == typeof(IInspectionProtocolFileLocator)) return InspectionProtocolFiles;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;

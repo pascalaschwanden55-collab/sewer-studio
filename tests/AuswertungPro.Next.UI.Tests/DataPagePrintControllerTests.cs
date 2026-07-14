@@ -511,6 +511,27 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_verwendet_injizierte_Protokollsuche()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var locator = new RecordingInspectionProtocolFileLocator("C:\\projekt\\original.pdf");
+        var controller = CreateController(
+            dialogs,
+            inspectionProtocolFiles: locator,
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeOriginalProtokolle = true },
+            mergeOriginals: paths =>
+            {
+                Assert.Equal(new[] { "C:\\projekt\\original.pdf" }, paths);
+                return new byte[] { 7 };
+            });
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal(1, locator.ResolveOriginalCalls);
+        Assert.Equal(("Dossier wurde erstellt:\nC:\\out\\dossier.pdf", "Dossier"), dialogs.LastInfo);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_meldet_fehler_wenn_original_merge_leer_ist()
     {
         var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
@@ -550,7 +571,8 @@ public sealed class DataPagePrintControllerTests
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         Func<string, bool>? openPdf = null,
-        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -575,7 +597,8 @@ public sealed class DataPagePrintControllerTests
             mergeWithOriginals: mergeWithOriginals,
             regenerateOne: regenerateOne,
             openPdf: openPdf,
-            dossierPhotoAvailability: dossierPhotoAvailability);
+            dossierPhotoAvailability: dossierPhotoAvailability,
+            inspectionProtocolFiles: inspectionProtocolFiles);
 
     private static HaltungRecord Record(string holding)
     {
@@ -638,6 +661,39 @@ public sealed class DataPagePrintControllerTests
         {
             Calls++;
             return result;
+        }
+    }
+
+    private sealed class RecordingInspectionProtocolFileLocator(string originalPath)
+        : IInspectionProtocolFileLocator
+    {
+        public int ResolveOriginalCalls { get; private set; }
+
+        public string? ResolveExistingPath(string? raw, string? projectPath) => null;
+
+        public string? FindProtocolPath(
+            HaltungRecord record,
+            string? resolvedLink,
+            string? initialFolder,
+            string? projectPath,
+            string? storedFilesRaw)
+            => null;
+
+        public List<string> ResolveOriginalPdfPaths(HaltungRecord record, string projectFolder)
+        {
+            ResolveOriginalCalls++;
+            return [originalPath];
+        }
+
+        public void AddResolvedPdf(List<string> paths, string? raw, string projectFolder)
+        {
+        }
+
+        public void ResolveSchachtPdfPaths(
+            SchachtRecord schacht,
+            string projectFolder,
+            List<string> paths)
+        {
         }
     }
 

@@ -203,6 +203,7 @@ public sealed partial class BuilderPageViewModel
             getLastProjectPath: () => _settings.LastProjectPath,
             findSchachtByNummer: FindSchachtByNummer,
             dossierPhotoAvailability: _dossierPhotoAvailability,
+            inspectionProtocolFiles: _inspectionProtocolFiles,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,

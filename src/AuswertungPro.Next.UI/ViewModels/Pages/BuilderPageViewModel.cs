@@ -37,6 +37,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
+    private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -129,7 +130,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             dialogs: services.Dialogs,
             protocolPdfExporter: services.ProtocolPdfExporter,
             costFieldSync: services.CostFieldSync,
-            dossierPhotoAvailability: services.DossierPhotoAvailability)
+            dossierPhotoAvailability: services.DossierPhotoAvailability,
+            inspectionProtocolFiles: services.InspectionProtocolFiles)
     {
     }
 
@@ -139,7 +141,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         IDialogService dialogs,
         ProtocolPdfExporter protocolPdfExporter,
         IDerivedCostFieldSynchronizer costFieldSync,
-        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -148,6 +151,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPage.DataPageDossierAvailability.CompatibilityService;
+        _inspectionProtocolFiles = inspectionProtocolFiles
+            ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         _refreshDebounceTimer.Tick += RefreshDebounceTimerTick;

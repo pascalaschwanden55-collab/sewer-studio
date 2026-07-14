@@ -52,6 +52,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IVideoStartErrorLogWriter _videoStartErrorLogs;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -183,6 +184,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _dropdownOptions = services.DropdownOptions;
         _videoStartErrorLogs = services.VideoStartErrorLogs;
         _explorerReveal = services.ExplorerReveal;
+        _inspectionProtocolFiles = services.InspectionProtocolFiles;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -201,6 +203,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             findSchachtByNummer: FindSchachtByNummer,
             protocolRegeneration: services.ProtocolSingleRegeneration,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
+            inspectionProtocolFiles: services.InspectionProtocolFiles,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
@@ -210,7 +213,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _dialogs,
             EnsureProtocolPath,
             () => _shell.GetProjectFolder(),
-            DataPageProtocolPathResolver.ResolveOriginalPdfPaths,
+            _inspectionProtocolFiles.ResolveOriginalPdfPaths,
             DataPageOriginalPdfController.TryShellOpen);
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
@@ -614,7 +617,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         var storedFilesRaw = _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) ? raw : null;
 
-        return DataPageProtocolPathResolver.FindProtocolPath(
+        return _inspectionProtocolFiles.FindProtocolPath(
             record,
             resolvedLink,
             initial,
@@ -869,7 +872,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ResolveExistingPath,
             EnsureProtocolPath,
             () => _shell.GetProjectFolder(),
-            DataPageProtocolPathResolver.ResolveOriginalPdfPaths);
+            _inspectionProtocolFiles.ResolveOriginalPdfPaths);
 
         if (string.IsNullOrWhiteSpace(target))
         {
@@ -893,7 +896,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private string? ResolveExistingPath(string? raw)
-        => DataPageProtocolPathResolver.ResolveExistingPath(raw, _settings.LastProjectPath);
+        => _inspectionProtocolFiles.ResolveExistingPath(raw, _settings.LastProjectPath);
 
     private void ShowSaveStatus(string? text)
     {
