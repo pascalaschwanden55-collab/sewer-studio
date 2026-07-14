@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -39,6 +40,7 @@ public sealed class TrainingGoldKbReconcileCommandWorkflowTests
         var calls = new List<string>();
         using var cts = new CancellationTokenSource();
         CancellationToken runToken = default;
+        TrainingGoldKbReconcileRunWorkflowRequest? runRequest = null;
 
         await TrainingGoldKbReconcileCommandWorkflow.RunAsync(
             CreateRequest(calls) with
@@ -51,13 +53,25 @@ public sealed class TrainingGoldKbReconcileCommandWorkflowTests
                 RunReconcileAsync = request =>
                 {
                     runToken = request.CancellationToken;
+                    runRequest = request;
                     calls.Add("run");
                     return Task.CompletedTask;
+                },
+                ExportBackupAsync = (path, _, _) =>
+                {
+                    calls.Add("backup:" + path);
+                    return Task.FromResult(
+                        new KnowledgeBackupService.BackupResult(true, null, 4, 100));
                 }
             });
 
-        Assert.Equal(["reset-cancel", "run"], calls);
+        var backup = await runRequest!.ExportBackupAsync(
+            "zentral.zip",
+            new Progress<string>(),
+            CancellationToken.None);
+        Assert.Equal(["reset-cancel", "run", "backup:zentral.zip"], calls);
         Assert.Equal(cts.Token, runToken);
+        Assert.Equal(new TrainingGoldKbReconcileBackupResult(true, null, 4), backup);
     }
 
     private static TrainingGoldKbReconcileCommandWorkflowRequest CreateRequest(List<string> calls)

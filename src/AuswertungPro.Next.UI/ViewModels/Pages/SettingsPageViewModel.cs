@@ -28,6 +28,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ToastService _toasts;
     private readonly FullBackupOperationState _fullBackupOperation;
     private readonly ProgramCleanupService _programCleanup;
+    private readonly IKnowledgeBackupService _knowledgeBackup;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -127,7 +128,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             fullBackup: sp.FullBackup,
             toasts: sp.Toasts,
             fullBackupOperation: sp.FullBackupOperation,
-            programCleanup: sp.ProgramCleanup)
+            programCleanup: sp.ProgramCleanup,
+            knowledgeBackup: sp.KnowledgeBackup)
     {
     }
 
@@ -139,6 +141,27 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ToastService toasts,
         FullBackupOperationState fullBackupOperation,
         ProgramCleanupService programCleanup)
+        : this(
+            settings,
+            diagnostics,
+            dialogs,
+            fullBackup,
+            toasts,
+            fullBackupOperation,
+            programCleanup,
+            new KnowledgeBackupTransferService())
+    {
+    }
+
+    public SettingsPageViewModel(
+        AppSettings settings,
+        DiagnosticsOptions diagnostics,
+        IDialogService dialogs,
+        IFullBackupService fullBackup,
+        ToastService toasts,
+        FullBackupOperationState fullBackupOperation,
+        ProgramCleanupService programCleanup,
+        IKnowledgeBackupService knowledgeBackup)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -147,6 +170,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _fullBackupOperation = fullBackupOperation ?? throw new ArgumentNullException(nameof(fullBackupOperation));
         _programCleanup = programCleanup ?? throw new ArgumentNullException(nameof(programCleanup));
+        _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -351,6 +375,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private async Task ExportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ExportAsync(
+            _knowledgeBackup,
             _dialogs,
             value => BackupStatusText = value,
             () => DateTime.Now).ConfigureAwait(true);
@@ -359,6 +384,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private async Task ImportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ImportAsync(
+            _knowledgeBackup,
             _dialogs,
             value => BackupStatusText = value,
             () => DateTime.Now).ConfigureAwait(true);

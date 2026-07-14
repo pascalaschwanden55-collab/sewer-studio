@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -11,7 +12,8 @@ public sealed record TrainingGoldKbReconcileCommandRequestFactoryRequest(
     Action<string> Log,
     Action<string> SetStatus,
     Action<Action> OnUi,
-    Func<TrainingGoldKbReconcileRunWorkflowRequest, Task> RunReconcileAsync);
+    Func<TrainingGoldKbReconcileRunWorkflowRequest, Task> RunReconcileAsync,
+    Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? ExportBackupAsync = null);
 
 public sealed record TrainingGoldKbReconcileCommandDefaultRequestFactoryRequest(
     Func<bool> GetIsBusy,
@@ -21,7 +23,8 @@ public sealed record TrainingGoldKbReconcileCommandDefaultRequestFactoryRequest(
     Func<List<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> IndexAsync,
     Action<string> Log,
     Action<string> SetStatus,
-    Action<Action> OnUi);
+    Action<Action> OnUi,
+    Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? ExportBackupAsync = null);
 
 public static class TrainingGoldKbReconcileCommandRequestFactory
 {
@@ -48,7 +51,8 @@ public static class TrainingGoldKbReconcileCommandRequestFactory
             request.Log,
             request.SetStatus,
             request.OnUi,
-            request.RunReconcileAsync);
+            request.RunReconcileAsync,
+            request.ExportBackupAsync);
     }
 
     public static TrainingGoldKbReconcileCommandWorkflowRequest CreateWithDefaults(
@@ -66,6 +70,7 @@ public static class TrainingGoldKbReconcileCommandRequestFactory
             request.Log,
             request.SetStatus,
             request.OnUi,
-            runReconcileAsync ?? TrainingGoldKbReconcileRunWorkflow.RunAsync));
+            runReconcileAsync ?? TrainingGoldKbReconcileRunWorkflow.RunAsync,
+            request.ExportBackupAsync));
     }
 }

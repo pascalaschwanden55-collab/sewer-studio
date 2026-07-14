@@ -34,7 +34,8 @@ public static class TrainingGoldKbReconcileRequestFactory
         Action<string> Log,
         Action<string> SetStatus,
         Action<Action> OnUi,
-        CancellationToken CancellationToken)
+        CancellationToken CancellationToken,
+        Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? ExportBackupAsync = null)
         => Create(
             SetBusy,
             LoadSamplesAsync,
@@ -45,7 +46,7 @@ public static class TrainingGoldKbReconcileRequestFactory
             OnUi,
             CancellationToken,
             new TrainingGoldKbReconcileRuntimeServices(
-                KnowledgeBackupService.ExportAsync,
+                ExportBackupAsync ?? KnowledgeBackupService.ExportAsync,
                 () => KnowledgeBasePaths.GetRoot(),
                 () => DateTime.Now,
                 directory => System.IO.Directory.CreateDirectory(directory)));

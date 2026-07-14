@@ -29,6 +29,28 @@ public static class SettingsKnowledgeBackupWorkflow
         CancellationToken ct = default)
         => ImportAsync(DefaultRequest(dialogs, setStatusText, now), ct);
 
+    public static Task ExportAsync(
+        IKnowledgeBackupService knowledgeBackup,
+        IDialogService dialogs,
+        Action<string> setStatusText,
+        Func<DateTime> now,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(knowledgeBackup);
+        return ExportAsync(DefaultRequest(dialogs, setStatusText, now, knowledgeBackup), ct);
+    }
+
+    public static Task ImportAsync(
+        IKnowledgeBackupService knowledgeBackup,
+        IDialogService dialogs,
+        Action<string> setStatusText,
+        Func<DateTime> now,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(knowledgeBackup);
+        return ImportAsync(DefaultRequest(dialogs, setStatusText, now, knowledgeBackup), ct);
+    }
+
     public static async Task ExportAsync(
         SettingsKnowledgeBackupWorkflowRequest request,
         CancellationToken ct)
@@ -138,11 +160,12 @@ public static class SettingsKnowledgeBackupWorkflow
     private static SettingsKnowledgeBackupWorkflowRequest DefaultRequest(
         IDialogService dialogs,
         Action<string> setStatusText,
-        Func<DateTime> now)
+        Func<DateTime> now,
+        IKnowledgeBackupService? knowledgeBackup = null)
         => new(
             dialogs,
             setStatusText,
-            KnowledgeBackupService.ExportAsync,
-            KnowledgeBackupService.ImportAsync,
+            knowledgeBackup is null ? KnowledgeBackupService.ExportAsync : knowledgeBackup.ExportAsync,
+            knowledgeBackup is null ? KnowledgeBackupService.ImportAsync : knowledgeBackup.ImportAsync,
             now);
 }

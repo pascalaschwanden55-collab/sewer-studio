@@ -212,7 +212,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 fullBackup: _sp.FullBackup,
                 toasts: _sp.Toasts,
                 fullBackupOperation: _sp.FullBackupOperation,
-                programCleanup: _sp.ProgramCleanup), canOpenWithoutProject: true)
+                programCleanup: _sp.ProgramCleanup,
+                knowledgeBackup: _sp.KnowledgeBackup), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 

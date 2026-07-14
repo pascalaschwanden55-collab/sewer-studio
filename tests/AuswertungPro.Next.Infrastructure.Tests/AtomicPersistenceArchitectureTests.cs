@@ -26,7 +26,7 @@ public sealed class AtomicPersistenceArchitectureTests
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Teacher", "TrainingAnnotationExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Teacher", "VsaYoloClassMap.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "SelfImproving", "ReviewQueueService.cs"),
-        Path.Combine("src", "AuswertungPro.Next.UI", "Services", "KnowledgeBackupService.cs")
+        Path.Combine("src", "AuswertungPro.Next.UI", "Services", "KnowledgeBackupImportPostProcessor.cs")
     };
 
     [Theory]

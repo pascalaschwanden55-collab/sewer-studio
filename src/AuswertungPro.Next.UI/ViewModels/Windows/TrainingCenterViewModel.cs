@@ -267,23 +267,6 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private Task RefreshKbStatusAsync() => _kbDashboard.RefreshStatusAsync();
 
-    public TrainingCenterViewModel(
-        TrainingCenterStore store,
-        TrainingCenterImportService import,
-        ICodeCatalogProvider? codeCatalog,
-        IKnowledgeBaseDiagnosticsRunner kbDiagnostics,
-        AppSettings? settings = null,
-        IUiThread? uiThread = null)
-    {
-        _store = store;
-        _import = import;
-        _codeCatalog = codeCatalog;
-        _kbDiagnostics = kbDiagnostics;
-        _settings = settings;
-        _uiThread = uiThread ?? UiThreadDispatcher.Instance;
-        _kbDashboard = CreateKnowledgeBaseDashboard(kbDiagnostics);
-    }
-
     // ── Cases ────────────────────────────────────────────────────────────────
 
     public async Task LoadAsync()
@@ -680,7 +663,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 IndexAsync: IncrementalKbUpdateWithReasonAsync,
                 Log: Log,
                 SetStatus: SetStatus,
-                OnUi: OnUi))).ConfigureAwait(false);
+                OnUi: OnUi,
+                ExportBackupAsync: _knowledgeBackup.ExportAsync))).ConfigureAwait(false);
     }
 
 

@@ -21,11 +21,11 @@ public sealed class KnowledgeBackupServiceIsolationTests
         await File.WriteAllTextAsync(samplesPath, "[{\"sampleId\":\"isoliert\"}]");
 
         var zipPath = Path.Combine(temp.Path, "wissen.zip");
-        var result = await KnowledgeBackupService.ExportAsync(
-            zipPath,
+        var service = new KnowledgeBackupTransferService(
             locations,
             flushPendingSettings: () => { },
             flushSqliteWal: _ => { });
+        var result = await service.ExportAsync(zipPath);
 
         Assert.True(result.Success, result.Error);
         Assert.Equal(1, result.FileCount);
@@ -59,10 +59,11 @@ public sealed class KnowledgeBackupServiceIsolationTests
             await writer.WriteAsync("{\"epochs\":7}");
         }
 
-        var result = await KnowledgeBackupService.ImportAsync(
-            zipPath,
+        var service = new KnowledgeBackupTransferService(
             locations,
-            flushPendingSettings: () => { });
+            flushPendingSettings: () => { },
+            flushSqliteWal: _ => { });
+        var result = await service.ImportAsync(zipPath);
 
         Assert.True(result.Success, result.Error);
         Assert.Equal(1, result.FileCount);
@@ -94,16 +95,100 @@ public sealed class KnowledgeBackupServiceIsolationTests
                 cancellation.Cancel();
         });
 
+        var service = new KnowledgeBackupTransferService(
+            locations,
+            flushPendingSettings: () => { },
+            flushSqliteWal: _ => { });
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            KnowledgeBackupService.ImportAsync(
-                zipPath,
-                locations,
-                flushPendingSettings: () => { },
-                progress,
-                cancellation.Token));
+            service.ImportAsync(zipPath, progress, cancellation.Token));
 
         Assert.Equal("alt", await File.ReadAllTextAsync(settingsPath));
         Assert.False(File.Exists(Path.Combine(locations.KnowledgeRoot, "classes.txt")));
+    }
+
+    [Fact]
+    public async Task Instanzdienst_fuehrt_nur_eine_Wissensoperation_gleichzeitig_aus()
+    {
+        using var temp = new TempDirectory();
+        var locations = temp.CreateLocations();
+        using var firstEntered = new ManualResetEventSlim(false);
+        using var releaseFirst = new ManualResetEventSlim(false);
+        var flushCalls = 0;
+        var service = new KnowledgeBackupTransferService(
+            locations,
+            flushPendingSettings: () =>
+            {
+                if (Interlocked.Increment(ref flushCalls) != 1)
+                    return;
+
+                firstEntered.Set();
+                releaseFirst.Wait(TimeSpan.FromSeconds(5));
+            },
+            flushSqliteWal: _ => { });
+
+        var first = Task.Run(() => service.ExportAsync(Path.Combine(temp.Path, "eins.zip")));
+        Assert.True(firstEntered.Wait(TimeSpan.FromSeconds(5)), "Erster Export startete nicht.");
+        var second = Task.Run(() => service.ExportAsync(Path.Combine(temp.Path, "zwei.zip")));
+
+        try
+        {
+            await Task.Delay(100);
+            Assert.Equal(1, Volatile.Read(ref flushCalls));
+            Assert.False(second.IsCompleted);
+        }
+        finally
+        {
+            releaseFirst.Set();
+        }
+
+        var results = await Task.WhenAll(first, second);
+        Assert.All(results, result => Assert.True(result.Success, result.Error));
+        Assert.Equal(2, flushCalls);
+    }
+
+    [Fact]
+    public async Task Abgebrochener_Export_behaelt_das_vorhandene_Archiv()
+    {
+        using var temp = new TempDirectory();
+        var locations = temp.CreateLocations();
+        var zipPath = Path.Combine(temp.Path, "vorhanden.zip");
+        await File.WriteAllTextAsync(zipPath, "vorheriges Archiv");
+        using var cancellation = new CancellationTokenSource();
+        var service = new KnowledgeBackupTransferService(
+            locations,
+            flushPendingSettings: () => { },
+            flushSqliteWal: _ => cancellation.Cancel());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ExportAsync(zipPath, ct: cancellation.Token));
+
+        Assert.Equal("vorheriges Archiv", await File.ReadAllTextAsync(zipPath));
+        Assert.Empty(Directory.EnumerateFiles(temp.Path, ".vorhanden.zip.*.tmp"));
+    }
+
+    [Fact]
+    public async Task Fehlgeschlagene_Nachbearbeitung_stellt_TrainingCenter_Stand_wieder_her()
+    {
+        using var temp = new TempDirectory();
+        var locations = temp.CreateLocations();
+        Directory.CreateDirectory(Path.GetDirectoryName(locations.TrainingCenterStatePath)!);
+        await File.WriteAllTextAsync(locations.TrainingCenterStatePath, "alter Stand");
+
+        var zipPath = Path.Combine(temp.Path, "nachbearbeitung.zip");
+        using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+        {
+            await WriteEntryAsync(archive, "knowledge/training_center.json", "neuer Stand");
+            await WriteEntryAsync(archive, "knowledge/teacher_annotations.json", "kein JSON");
+        }
+
+        var service = new KnowledgeBackupTransferService(
+            locations,
+            flushPendingSettings: () => { },
+            flushSqliteWal: _ => { });
+        var result = await service.ImportAsync(zipPath);
+
+        Assert.False(result.Success);
+        Assert.Equal("alter Stand", await File.ReadAllTextAsync(locations.TrainingCenterStatePath));
     }
 
     private static async Task WriteEntryAsync(

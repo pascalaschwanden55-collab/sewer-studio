@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -12,7 +13,8 @@ public sealed record TrainingGoldKbReconcileCommandWorkflowRequest(
     Action<string> Log,
     Action<string> SetStatus,
     Action<Action> OnUi,
-    Func<TrainingGoldKbReconcileRunWorkflowRequest, Task> RunReconcileAsync);
+    Func<TrainingGoldKbReconcileRunWorkflowRequest, Task> RunReconcileAsync,
+    Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? ExportBackupAsync = null);
 
 public static class TrainingGoldKbReconcileCommandWorkflow
 {
@@ -38,6 +40,7 @@ public static class TrainingGoldKbReconcileCommandWorkflow
                 request.Log,
                 request.SetStatus,
                 request.OnUi,
-                ct)).ConfigureAwait(false);
+                ct,
+                request.ExportBackupAsync)).ConfigureAwait(false);
     }
 }

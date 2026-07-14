@@ -89,6 +89,7 @@ namespace AuswertungPro.Next.UI
         public ILogTailReader LogTailReader { get; }
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
         public IFullBackupService FullBackup { get; }
+        public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         public ProgramCleanupService ProgramCleanup { get; } = new();
         #endregion
@@ -267,6 +268,7 @@ namespace AuswertungPro.Next.UI
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
                 ct => OllamaListAsync(ct));
+            KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
 

@@ -133,7 +133,8 @@ public sealed class ProjektEroeffnungSettingsGuardTests
 
         Assert.Contains("SettingsKnowledgeBackupWorkflow.ExportAsync", vm);
         Assert.Contains("SettingsKnowledgeBackupWorkflow.ImportAsync", vm);
-        Assert.DoesNotContain("KnowledgeBackupService", vm);
+        Assert.DoesNotContain("KnowledgeBackupService.ExportAsync", vm);
+        Assert.DoesNotContain("KnowledgeBackupService.ImportAsync", vm);
         Assert.DoesNotContain("KI-Wissen erfolgreich exportiert", vm);
         Assert.DoesNotContain("Vorhandene KI-Daten", vm);
     }
