@@ -121,6 +121,37 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 DataYamlPath: ""));
     }
 
+    private sealed class ThrowingRecordingPipelineTraceWriter : IPipelineTraceWriter
+    {
+        private int _writeCalls;
+        private int _summaryCalls;
+        private int _resolvePathCalls;
+
+        public int WriteCalls => Volatile.Read(ref _writeCalls);
+        public int SummaryCalls => Volatile.Read(ref _summaryCalls);
+        public int ResolvePathCalls => Volatile.Read(ref _resolvePathCalls);
+
+        public Task WriteAsync(PipelineTraceEntry entry)
+        {
+            Interlocked.Increment(ref _writeCalls);
+            throw new InvalidOperationException("Testfehler beim Trace-Schreiben");
+        }
+
+        public Task WriteSummaryAsync(string runId, TelemetrySummary summary)
+        {
+            Interlocked.Increment(ref _summaryCalls);
+            throw new InvalidOperationException("Testfehler beim Summary-Schreiben");
+        }
+
+        public string? ResolvePath(string runId)
+        {
+            Interlocked.Increment(ref _resolvePathCalls);
+            throw new InvalidOperationException("Testfehler beim Pfad-Aufloesen");
+        }
+
+        public string? ResolveSummaryPath(string runId) => null;
+    }
+
     // ── Tests ────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -186,5 +217,31 @@ public sealed class MultiModelAnalysisServiceE2ETests
             .Where(d => string.Equals(d.VsaCodeHint, "BCD", StringComparison.OrdinalIgnoreCase))
             .ToList();
         Assert.Empty(bcdDetections);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_verwendet_injizierten_Trace_ohne_den_Hauptablauf_abzubrechen()
+    {
+        var traceWriter = new ThrowingRecordingPipelineTraceWriter();
+        var svc = new MultiModelAnalysisService(
+            pipelineTraceWriter: traceWriter,
+            client: new BcdOnlyClassifierStub(),
+            config: MinimalConfig(),
+            ffmpegPath: "ffmpeg",
+            frameSource: TenFrameSource,
+            durationProbe: (_, _) => Task.FromResult(10.0))
+        {
+            EstimatedReachLengthM = 3.0,
+            FrameStepSeconds = 1.0,
+            ClassifierOnlyStructuralEnabled = true,
+            UseClsPrefilter = true
+        };
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(traceWriter.WriteCalls > 0);
+        Assert.Equal(1, traceWriter.SummaryCalls);
+        Assert.Equal(1, traceWriter.ResolvePathCalls);
     }
 }

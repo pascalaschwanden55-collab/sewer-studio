@@ -1,109 +1,46 @@
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
-/// Schreibt pro KI-Lauf eine Trace-Datei (JSONL) mit einem Eintrag je Frame.
-/// Reine Sichtbarkeit fuer die Fehlersuche — aendert KEIN Pipeline-Verhalten.
-/// Zeigt pro Frame, wie viele Befunde nach jeder Stufe (YOLO/DINO/SAM/Qwen/
-/// Validierung/Dedup) uebrig bleiben und WARUM etwas verworfen wurde.
-/// Datei: %LOCALAPPDATA%/SewerStudio/Telemetry/pipeline_trace_{runId}.jsonl
-/// (Spiegelt das Muster von <see cref="SidecarTelemetryWriter"/>.)
+/// Kompatibilitaetsfassade fuer den Frame-Ablauf eines KI-Laufs. Die Dateiarbeit
+/// liegt im Instanzdienst und aendert kein Pipeline-Verhalten.
 /// </summary>
 public static class PipelineTraceWriter
 {
-    private static readonly SemaphoreSlim WriteLock = new(1, 1);
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    private static IPipelineTraceWriter _current = new PipelineTraceFileWriter();
+
+    public static IPipelineTraceWriter Current => Volatile.Read(ref _current);
+
+    public static void Use(IPipelineTraceWriter writer) =>
+        Volatile.Write(ref _current, writer ?? throw new ArgumentNullException(nameof(writer)));
 
     public static async Task WriteAsync(PipelineFrameTrace entry)
     {
-        await BestEffort.TryAsync(
-            async () =>
-            {
-                var path = ResolvePath(entry.RunId);
-                if (path is null)
-                    return;
+        var mapped = PipelineTraceEntryMapper.Map(entry);
 
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                var line = JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine;
-
-                await WriteLock.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    await File.AppendAllTextAsync(path, line).ConfigureAwait(false);
-                }
-                finally
-                {
-                    WriteLock.Release();
-                }
-            },
-            $"PipelineTraceWriter Trace schreiben: {entry.RunId}").ConfigureAwait(false);
+        await PipelineTraceWriteGuard.WriteAsync(Current, mapped).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Schreibt die aggregierte TelemetrySummary eines Laufs als JSON neben die
-    /// Trace-Datei (pipeline_summary_{runId}.json) — Stufen-Latenzen
-    /// (YOLO/DINO/SAM/Qwen) werden so ohne Log-Parsing auswertbar.
+    /// Schreibt die aggregierte Zusammenfassung neben die Trace-Datei, damit
+    /// Stufen-Latenzen ohne Log-Auswertung verfuegbar bleiben.
     /// </summary>
     public static async Task WriteSummaryAsync(string runId, TelemetrySummary summary)
-    {
-        await BestEffort.TryAsync(
-            async () =>
-            {
-                var path = ResolveSummaryPath(runId);
-                if (path is null)
-                    return;
-
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                var json = JsonSerializer.Serialize(summary, JsonOptions);
-
-                await WriteLock.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    await AtomicTextFileWriter.WriteAllTextAsync(path, json).ConfigureAwait(false);
-                }
-                finally
-                {
-                    WriteLock.Release();
-                }
-            },
-            $"PipelineTraceWriter Summary schreiben: {runId}").ConfigureAwait(false);
-    }
+        => await PipelineTraceWriteGuard
+            .WriteSummaryAsync(Current, runId, summary)
+            .ConfigureAwait(false);
 
     public static string? ResolvePath(string runId)
-        => ResolveFile(runId, "pipeline_trace_", ".jsonl");
+        => PipelineTraceWriteGuard.ResolvePath(Current, runId);
 
     public static string? ResolveSummaryPath(string runId)
-        => ResolveFile(runId, "pipeline_summary_", ".json");
-
-    private static string? ResolveFile(string runId, string prefix, string extension)
-    {
-        // RunId fliesst in den Dateinamen — gegen Path-Traversal absichern
-        // (RunId ist ein public settable Property; "..\\.." o.ae. darf nicht durchschlagen).
-        if (string.IsNullOrWhiteSpace(runId))
-            return null;
-        foreach (var c in Path.GetInvalidFileNameChars())
-            runId = runId.Replace(c, '_');
-
-        return TelemetryPathResolver.ResolveFile($"{prefix}{runId}{extension}");
-    }
+        => PipelineTraceWriteGuard.ResolveSummaryPath(Current, runId);
 }
 
 /// <summary>
 /// Ein Trace-Eintrag pro Frame. Mutable, weil er waehrend der Frame-Verarbeitung
-/// stufenweise befuellt und am Ende (bzw. am jeweiligen Abbruchpunkt) einmal geschrieben wird.
+/// stufenweise befuellt und am jeweiligen End- oder Abbruchpunkt geschrieben wird.
 /// </summary>
 public sealed class PipelineFrameTrace
 {
@@ -113,7 +50,7 @@ public sealed class PipelineFrameTrace
     public double TimeSec { get; set; }
     public double Meter { get; set; }
 
-    /// <summary>Welcher Pfad der Frame genommen hat: processed / empty_frame / cls_quality_skip / yolo_cls_skip / yolo_error / yolo_irrelevant / dino_error / dino_no_boxes / sam_error.</summary>
+    /// <summary>Verarbeitungspfad, etwa processed, empty_frame oder dino_error.</summary>
     public string Path { get; set; } = "processed";
 
     public bool YoloBypass { get; set; }
@@ -122,41 +59,46 @@ public sealed class PipelineFrameTrace
     public int DinoBoxCount { get; set; }
     public int SamMaskCount { get; set; }
 
-    /// <summary>Befunde aus SAM-Masken gebaut (vor Qwen).</summary>
+    /// <summary>Befunde aus SAM-Masken vor der Qwen-Anreicherung.</summary>
     public int FindingsBuilt { get; set; }
-    /// <summary>Codes vor Validierung/Qwen: aus dem DINO-Label abgeleitete VSA-Codes.</summary>
+
+    /// <summary>Aus DINO-Beschriftungen abgeleitete VSA-Codes.</summary>
     public int CodesFromLabel { get; set; }
 
-    // ── Klassifikator-Entscheidung (Paket 2) ──
-    /// <summary>Vom Klassifikator aufgeloester Code (vor Voting), inkl. LEER.</summary>
+    /// <summary>Vom Klassifikator aufgeloester Code vor dem zeitlichen Voting.</summary>
     public string? ClassifierCode { get; set; }
     public double? ClassifierConfidence { get; set; }
-    /// <summary>Begruendung aus ResolveFromClassifier (z.B. "Meter 0.3m + YOLO BCD 85%").</summary>
-    public string? ClassifierSource { get; set; }
-    /// <summary>Modellversion: name@sha12 aus der Sidecar-Response (active.json-Governance).</summary>
-    public string? ClassifierModel { get; set; }
-    /// <summary>True, wenn das Temporal-Voting den Code bestaetigt hat (Code wurde angewendet).</summary>
-    public bool? ClassifierVoteConfirmed { get; set; }
 
+    /// <summary>Begruendung der Klassifikatorentscheidung.</summary>
+    public string? ClassifierSource { get; set; }
+
+    /// <summary>Verwendete Modellversion.</summary>
+    public string? ClassifierModel { get; set; }
+
+    /// <summary>Gibt an, ob das zeitliche Voting den Code bestaetigt hat.</summary>
+    public bool? ClassifierVoteConfirmed { get; set; }
     public bool QwenCalled { get; set; }
     public string? QwenImageQuality { get; set; }
     public int QwenRawFindingCount { get; set; }
-    /// <summary>Codes nach Qwen-Anreicherung (Befunde mit nicht-leerem VSA-Code).</summary>
+
+    /// <summary>Befunde mit VSA-Code nach der Qwen-Anreicherung.</summary>
     public int CodesAfterQwen { get; set; }
 
-    /// <summary>Befunde am Frame-Ende (nach evtl. ImageQuality-Clear).</summary>
+    /// <summary>Befunde am Frame-Ende.</summary>
     public int FindingsEndOfFrame { get; set; }
-    /// <summary>Aktive Befunde im Tracking/Dedup-Puffer nach diesem Frame.</summary>
+
+    /// <summary>Aktive Befunde im Dedup-Puffer nach diesem Frame.</summary>
     public int ActiveCount { get; set; }
-    /// <summary>Bisher abgeschlossene Detections (laufende Summe).</summary>
+
+    /// <summary>Bisher abgeschlossene Erkennungen des Laufs.</summary>
     public int DetectionsTotal { get; set; }
 
-    /// <summary>Grund, falls (Teil-)Befunde verloren gehen: empty_frame, frame_too_dark/too_bright/too_uniform/too_blurry (Quality-Gate), yolo_cls_normal, yolo_error, yolo_irrelevant, dino_error, dino_no_boxes, dino_degraded, sam_error, sam_degraded, image_quality_bad, all_findings_missing_code, no_findings.</summary>
+    /// <summary>Grund fuer verlorene oder verworfene Befunde.</summary>
     public string? DropReason { get; set; }
 
-    /// <summary>True, wenn der Sidecar einen degraded-Befund meldete (Modell-/Inferenzfehler bzw.
-    /// verlorene Boxen) -> der Frame ist KEIN sauberer Negativbefund, sondern Review-bedürftig.</summary>
+    /// <summary>Ein Modell- oder Inferenzfehler macht den Frame pruefbeduerftig.</summary>
     public bool Degraded { get; set; }
-    /// <summary>Grund des degraded-Zustands (z. B. dino_inference_failed, sam_skipped_2_of_3).</summary>
+
+    /// <summary>Technischer Grund des eingeschraenkten Zustands.</summary>
     public string? DegradedReason { get; set; }
 }

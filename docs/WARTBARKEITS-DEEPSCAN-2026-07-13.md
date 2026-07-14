@@ -142,6 +142,8 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
 - **Gesamtprüfung grün:** 8.871 Tests bestanden (2.535 Infrastruktur, 1.835 Pipeline, 4.439 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der vollständige Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
 
+- **Pipeline-Ablaufdateien instanzbasiert (A1-10, Teilpaket):** JSONL-Ausgabe, atomare Laufzusammenfassung und Schreibsperre liegen im `PipelineTraceFileWriter` hinter `IPipelineTraceWriter`. Der zentrale `ServiceProvider` reicht genau eine Instanz ueber Fabrik und beide Analysewege weiter; die bisherige statische API und der oeffentliche Frame-Typ bleiben kompatibel. Sieben Datei-/Fassadentests, ein echter Verbrauchertest und ein Verdrahtungstest schuetzen Dateiformat, paralleles Schreiben, Pfade, Nullverhalten, Fehlerisolation sowie die vollstaendige Feldweitergabe.
+
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
 > Stand: 2026-07-13 · Methode: 7 spezialisierte KI-Agenten (parallel, rein lesende Code-Analyse) auf Basis des committeten Standes. Kritische Funde wurden zur Gegenprüfung vorgesehen — **es trat kein Fund der Stufe „Kritisch" auf**, daher waren keine Gegenprüfungen nötig. Kein Framework-/Plattformwechsel vorgeschlagen.

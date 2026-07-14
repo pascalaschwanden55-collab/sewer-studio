@@ -33,6 +33,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
+    private readonly IPipelineTraceWriter _pipelineTraceWriter;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
@@ -41,7 +42,27 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         HttpClient httpClient,
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null)
+        : this(
+            PipelineTraceWriter.Current,
+            cfg,
+            pipelineCfg,
+            plausibility,
+            httpClient,
+            codeCatalog,
+            loggerFactory)
     {
+    }
+
+    public VideoAnalysisPipelineService(
+        IPipelineTraceWriter pipelineTraceWriter,
+        AiRuntimeSettings cfg,
+        PipelineConfig pipelineCfg,
+        IAiSuggestionPlausibilityService plausibility,
+        HttpClient httpClient,
+        ICodeCatalogProvider? codeCatalog = null,
+        ILoggerFactory? loggerFactory = null)
+    {
+        _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
@@ -101,6 +122,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _codeCatalog);
 
             var multiModel = new MultiModelAnalysisService(
+                _pipelineTraceWriter,
                 pipelineClient, pipelineCfg,
                 _cfg.FfmpegPath ?? "ffmpeg",
                 qwenVision: qwenVision,
@@ -123,6 +145,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             // â”€â”€ Ollama-Only Path (existing behavior) â”€â”€
             var client = CreateOllamaClient();
             var videoService = VideoFullAnalysisService.Create(
+                pipelineTraceWriter: _pipelineTraceWriter,
                 client: client,
                 visionModel: _cfg.VisionModel,
                 ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg",

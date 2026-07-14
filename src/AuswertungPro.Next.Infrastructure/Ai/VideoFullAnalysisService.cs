@@ -31,6 +31,7 @@ public sealed class VideoFullAnalysisService
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
     private readonly ILogger _logger;
+    private readonly IPipelineTraceWriter _pipelineTraceWriter;
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
@@ -44,7 +45,18 @@ public sealed class VideoFullAnalysisService
         string ffmpegPath = "ffmpeg",
         string? ffprobePath = null,
         ILogger? logger = null)
+        : this(PipelineTraceWriter.Current, vision, ffmpegPath, ffprobePath, logger)
     {
+    }
+
+    public VideoFullAnalysisService(
+        IPipelineTraceWriter pipelineTraceWriter,
+        EnhancedVisionAnalysisService vision,
+        string ffmpegPath = "ffmpeg",
+        string? ffprobePath = null,
+        ILogger? logger = null)
+    {
+        _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _vision = vision;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = ffprobePath ?? DeriveFFprobePath(ffmpegPath);
@@ -61,6 +73,19 @@ public sealed class VideoFullAnalysisService
         ICodeCatalogProvider? codeCatalog = null,
         ILogger? logger = null)
         => new(new EnhancedVisionAnalysisService(client, visionModel, codeCatalog), ffmpegPath, logger: logger);
+
+    public static VideoFullAnalysisService Create(
+        IPipelineTraceWriter pipelineTraceWriter,
+        OllamaClient client,
+        string visionModel,
+        string ffmpegPath = "ffmpeg",
+        ICodeCatalogProvider? codeCatalog = null,
+        ILogger? logger = null)
+        => new(
+            pipelineTraceWriter,
+            new EnhancedVisionAnalysisService(client, visionModel, codeCatalog),
+            ffmpegPath,
+            logger: logger);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,
@@ -219,7 +244,9 @@ public sealed class VideoFullAnalysisService
             $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
 
         var summary = telemetry.GetSummary();
-        await PipelineTraceWriter.WriteSummaryAsync(runId, summary).ConfigureAwait(false);
+        await PipelineTraceWriteGuard
+            .WriteSummaryAsync(_pipelineTraceWriter, runId, summary)
+            .ConfigureAwait(false);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);

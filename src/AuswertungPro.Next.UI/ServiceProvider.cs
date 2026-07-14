@@ -156,6 +156,7 @@ namespace AuswertungPro.Next.UI
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
+        public IPipelineTraceWriter PipelineTrace { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
         public ITrainingCenterSettingsStore TrainingSettings { get; }
         public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
@@ -203,6 +204,8 @@ namespace AuswertungPro.Next.UI
             LoggerFactory = loggerFactory;
             SidecarTelemetry = new SidecarTelemetryFileWriter();
             SidecarTelemetryWriter.Use(SidecarTelemetry);
+            PipelineTrace = new PipelineTraceFileWriter();
+            PipelineTraceWriter.Use(PipelineTrace);
             var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
             LogTailReader = new DailyLogTailReader(logDirectory);
             DiagnosticsPackages = new DiagnosticsPackageService(logDirectory, AppIdentity.Version);
@@ -316,6 +319,7 @@ namespace AuswertungPro.Next.UI
             VsaCatalogResolvedPath = catalogPaths.DisplayPath;
             CodeCatalog = CreateCodeCatalog(settings, catalogPaths.KekManifestPath, catalogPaths.XmlCatalogPaths);
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
+                PipelineTrace,
                 () => AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
                 CodeCatalog,
                 LoggerFactory);
@@ -590,6 +594,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
+            if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;

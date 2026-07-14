@@ -29,6 +29,7 @@ public sealed class MultiModelAnalysisService
     private readonly PipelineConfig _config;
     private readonly EnhancedVisionAnalysisService? _qwenVision;
     private readonly ILogger _logger;
+    private readonly IPipelineTraceWriter _pipelineTraceWriter;
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
     private readonly VideoProbeService _videoProbe;
@@ -90,7 +91,29 @@ public sealed class MultiModelAnalysisService
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
         Func<string, CancellationToken, Task<double>>? durationProbe = null)
+        : this(
+            PipelineTraceWriter.Current,
+            client,
+            config,
+            ffmpegPath,
+            qwenVision,
+            logger,
+            frameSource,
+            durationProbe)
     {
+    }
+
+    public MultiModelAnalysisService(
+        IPipelineTraceWriter pipelineTraceWriter,
+        IVisionPipelineClient client,
+        PipelineConfig config,
+        string ffmpegPath = "ffmpeg",
+        EnhancedVisionAnalysisService? qwenVision = null,
+        ILogger? logger = null,
+        Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
+        Func<string, CancellationToken, Task<double>>? durationProbe = null)
+    {
+        _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _client = client;
         _config = config;
         _qwenVision = qwenVision;
@@ -161,7 +184,7 @@ public sealed class MultiModelAnalysisService
         var runId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)
                     + "_" + Guid.NewGuid().ToString("N")[..6];
         _logger.LogInformation("Multi-Model Pipeline runId={RunId}, Stufen-Trace: {TracePath}",
-            runId, PipelineTraceWriter.ResolvePath(runId));
+            runId, PipelineTraceWriteGuard.ResolvePath(_pipelineTraceWriter, runId));
 
         // frameSource-Seam: im Test injizierbar; sonst echter VideoFrameStream.
         var frames = _frameSource is not null
@@ -192,7 +215,7 @@ public sealed class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "empty_frame";
                 trace.DropReason = "empty_frame";
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -237,7 +260,7 @@ public sealed class MultiModelAnalysisService
                     trace.Path = "cls_quality_skip";
                     trace.YoloRelevant = false;
                     trace.DropReason = $"frame_{clsResult.QualityReason}";
-                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
                     continue;
                 }
@@ -264,7 +287,7 @@ public sealed class MultiModelAnalysisService
                     trace.ClassifierCode = "LEER";
                     trace.ClassifierConfidence = topPred.Confidence;
                     trace.ClassifierModel = ClassifierModelTag(clsResult);
-                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
                     continue;
                 }
@@ -285,7 +308,7 @@ public sealed class MultiModelAnalysisService
                     trace.Path = "yolo_cls_skip";
                     trace.YoloRelevant = false;
                     trace.DropReason = "yolo_cls_normal";
-                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
                     continue;
                 }
@@ -399,7 +422,7 @@ public sealed class MultiModelAnalysisService
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                     trace.Path = "yolo_error";
                     trace.DropReason = "yolo_error";
-                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
                     continue;
                 }
@@ -417,7 +440,7 @@ public sealed class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "yolo_irrelevant";
                 trace.DropReason = "yolo_irrelevant";
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -446,7 +469,7 @@ public sealed class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "dino_error";
                 trace.DropReason = "dino_error";
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -467,7 +490,7 @@ public sealed class MultiModelAnalysisService
                 trace.DropReason = "dino_degraded";
                 trace.Degraded = true;
                 trace.DegradedReason = dinoResult.ErrorCode ?? "dino_degraded";
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -534,7 +557,7 @@ public sealed class MultiModelAnalysisService
                     detections.AddRange(deduplicator.AdvanceAll());
                 }
 
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 continue;
             }
 
@@ -562,7 +585,7 @@ public sealed class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "sam_error";
                 trace.DropReason = "sam_error";
-                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -839,7 +862,7 @@ public sealed class MultiModelAnalysisService
                 else if (trace.CodesAfterQwen == 0)
                     trace.DropReason = "all_findings_missing_code";
             }
-            await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+            await WriteTraceAsync(trace).ConfigureAwait(false);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
@@ -863,7 +886,9 @@ public sealed class MultiModelAnalysisService
             summary.WallClockMs, summary.Extraction.MeanMs, summary.Extraction.P95Ms,
             summary.Yolo.MeanMs, summary.Yolo.P95Ms, summary.Dino.MeanMs,
             summary.Sam.MeanMs, summary.Qwen.MeanMs);
-        await PipelineTraceWriter.WriteSummaryAsync(runId, summary).ConfigureAwait(false);
+        await PipelineTraceWriteGuard
+            .WriteSummaryAsync(_pipelineTraceWriter, runId, summary)
+            .ConfigureAwait(false);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
@@ -892,6 +917,11 @@ public sealed class MultiModelAnalysisService
     // ── Private helpers ────────────────────────────────────────────────
 
     /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
+    private Task WriteTraceAsync(PipelineFrameTrace trace)
+        => PipelineTraceWriteGuard.WriteAsync(
+            _pipelineTraceWriter,
+            PipelineTraceEntryMapper.Map(trace));
+
     public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
 
     private double EstimateMeter(double t, double duration, ref double lastMeter)
