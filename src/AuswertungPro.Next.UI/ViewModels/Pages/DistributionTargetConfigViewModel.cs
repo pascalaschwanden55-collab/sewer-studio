@@ -61,9 +61,17 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     public IReadOnlyList<DistributionPatternBlock> AvailablePatternBlocks { get; } =
         DistributionPatternBlockComposer.AvailableExcelBlocks;
 
+    /// <summary>Anklickbare Bausteine fuer die beiden optionalen Verteil-Ordner.</summary>
+    public IReadOnlyList<DistributionPatternBlock> AvailableDirectoryBlocks { get; } =
+        DistributionPatternBlockComposer.AvailableDirectoryBlocks;
+
     [ObservableProperty] private string? _root;
     [ObservableProperty] private string _ordnerPattern;
     [ObservableProperty] private string _unterordnerPattern;
+    [ObservableProperty] private IReadOnlyList<DistributionPatternPart> _ordnerPatternParts =
+        Array.Empty<DistributionPatternPart>();
+    [ObservableProperty] private IReadOnlyList<DistributionPatternPart> _unterordnerPatternParts =
+        Array.Empty<DistributionPatternPart>();
     [ObservableProperty] private string _dateiPattern;
     [ObservableProperty] private IReadOnlyList<DistributionPatternPart> _dateiPatternParts =
         Array.Empty<DistributionPatternPart>();
@@ -73,6 +81,12 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     public IRelayCommand<DistributionPatternBlock> AddPatternBlockCommand { get; }
     public IRelayCommand RemoveLastPatternBlockCommand { get; }
     public IRelayCommand ClearPatternCommand { get; }
+    public IRelayCommand<DistributionPatternBlock> AddOrdnerPatternBlockCommand { get; }
+    public IRelayCommand RemoveLastOrdnerPatternBlockCommand { get; }
+    public IRelayCommand ClearOrdnerPatternCommand { get; }
+    public IRelayCommand<DistributionPatternBlock> AddUnterordnerPatternBlockCommand { get; }
+    public IRelayCommand RemoveLastUnterordnerPatternBlockCommand { get; }
+    public IRelayCommand ClearUnterordnerPatternCommand { get; }
 
     public DistributionTargetConfigViewModel(
         string titel,
@@ -119,6 +133,13 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         AddPatternBlockCommand = new RelayCommand<DistributionPatternBlock>(AddPatternBlock);
         RemoveLastPatternBlockCommand = new RelayCommand(RemoveLastPatternBlock);
         ClearPatternCommand = new RelayCommand(ClearPattern);
+        AddOrdnerPatternBlockCommand = new RelayCommand<DistributionPatternBlock>(AddOrdnerPatternBlock);
+        RemoveLastOrdnerPatternBlockCommand = new RelayCommand(RemoveLastOrdnerPatternBlock);
+        ClearOrdnerPatternCommand = new RelayCommand(ClearOrdnerPattern);
+        AddUnterordnerPatternBlockCommand = new RelayCommand<DistributionPatternBlock>(AddUnterordnerPatternBlock);
+        RemoveLastUnterordnerPatternBlockCommand = new RelayCommand(RemoveLastUnterordnerPatternBlock);
+        ClearUnterordnerPatternCommand = new RelayCommand(ClearUnterordnerPattern);
+        UpdateDirectoryPatternParts();
         UpdateDateiPatternParts();
         UpdateVorschau();
     }
@@ -141,6 +162,7 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     partial void OnOrdnerPatternChanged(string value)
     {
         _config.OrdnerPattern = value ?? string.Empty;
+        UpdateDirectoryPatternParts();
         UpdateVorschau();
         _onChanged();
     }
@@ -148,6 +170,7 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     partial void OnUnterordnerPatternChanged(string value)
     {
         _config.UnterordnerPattern = value ?? string.Empty;
+        UpdateDirectoryPatternParts();
         UpdateVorschau();
         _onChanged();
     }
@@ -224,6 +247,48 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     {
         if (ShowFilePattern)
             DateiPattern = string.Empty;
+    }
+
+    private void AddOrdnerPatternBlock(DistributionPatternBlock? block)
+    {
+        if (ShowDirectoryTree && block is not null)
+            OrdnerPattern = DistributionPatternBlockComposer.Append(OrdnerPattern, block);
+    }
+
+    private void RemoveLastOrdnerPatternBlock()
+    {
+        if (ShowDirectoryTree)
+            OrdnerPattern = DistributionPatternBlockComposer.RemoveLast(OrdnerPattern);
+    }
+
+    private void ClearOrdnerPattern()
+    {
+        if (ShowDirectoryTree)
+            OrdnerPattern = string.Empty;
+    }
+
+    private void AddUnterordnerPatternBlock(DistributionPatternBlock? block)
+    {
+        if (ShowDirectoryTree && block is not null)
+            UnterordnerPattern = DistributionPatternBlockComposer.Append(UnterordnerPattern, block);
+    }
+
+    private void RemoveLastUnterordnerPatternBlock()
+    {
+        if (ShowDirectoryTree)
+            UnterordnerPattern = DistributionPatternBlockComposer.RemoveLast(UnterordnerPattern);
+    }
+
+    private void ClearUnterordnerPattern()
+    {
+        if (ShowDirectoryTree)
+            UnterordnerPattern = string.Empty;
+    }
+
+    private void UpdateDirectoryPatternParts()
+    {
+        OrdnerPatternParts = DistributionPatternBlockComposer.Parse(OrdnerPattern);
+        UnterordnerPatternParts = DistributionPatternBlockComposer.Parse(UnterordnerPattern);
     }
 
     private void UpdateDateiPatternParts()

@@ -4,14 +4,14 @@ using System.Linq;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-/// <summary>Ein anklickbarer Baustein fuer einen Export-Dateinamen.</summary>
+/// <summary>Ein anklickbarer Baustein fuer einen Ordner- oder Dateinamen.</summary>
 public sealed record DistributionPatternBlock(
     string Label,
     string Value,
     string Description,
     bool IsPlaceholder = false);
 
-/// <summary>Ein sichtbar zusammengesetzter Teil des aktuellen Dateinamens.</summary>
+/// <summary>Ein sichtbar zusammengesetzter Teil des aktuellen Musters.</summary>
 public sealed record DistributionPatternPart(
     string Text,
     string RawValue,
@@ -35,6 +35,17 @@ public static class DistributionPatternBlockComposer
         new("Leer", " ", "Leerzeichen als Trennzeichen")
     ];
 
+    private static readonly DistributionPatternBlock[] DirectoryBlocks =
+    [
+        new("Gemeinde", "{Gemeinde}", "Projektgemeinde, zum Beispiel Altdorf", true),
+        new("Datum", "{Datum}", "Inspektionsdatum, zum Beispiel 20260626", true),
+        new("Jahr", "{Jahr}", "Jahr, zum Beispiel 2026", true),
+        new("Monat", "{Monat}", "Monat, zum Beispiel 06", true),
+        new("_", "_", "Unterstrich als Trennzeichen"),
+        new("-", "-", "Bindestrich als Trennzeichen"),
+        new("Leer", " ", "Leerzeichen als Trennzeichen")
+    ];
+
     private static readonly (string Value, string Label)[] PlaceholderLabels =
     [
         ("{Datum}", "Datum"),
@@ -47,6 +58,8 @@ public static class DistributionPatternBlockComposer
 
     public static IReadOnlyList<DistributionPatternBlock> AvailableExcelBlocks => Blocks;
 
+    public static IReadOnlyList<DistributionPatternBlock> AvailableDirectoryBlocks => DirectoryBlocks;
+
     public static string Append(string? pattern, DistributionPatternBlock? block)
         => block is null ? pattern ?? string.Empty : (pattern ?? string.Empty) + block.Value;
 
@@ -55,7 +68,7 @@ public static class DistributionPatternBlockComposer
         if (string.IsNullOrEmpty(pattern))
             return string.Empty;
 
-        var knownValues = Blocks.Select(block => block.Value)
+        var knownValues = Blocks.Concat(DirectoryBlocks).Select(block => block.Value)
             .Concat(PlaceholderLabels.Select(item => item.Value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(value => value.Length);

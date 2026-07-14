@@ -10,7 +10,7 @@ Ziel: Für **Haltungen, Schächte und Dichtheitsprüfungen** je ein konfigurierb
 
 ## 2. Umfang
 
-- **Etappe 1 (dieses Dokument):** Standard-Zielordner + 3-Ebenen-Muster je Typ, Live-Vorschau, Ein-Klick-Verteilung mit den gemerkten Werten. Excel-Export bekommt Ziel-Ordner + Datei-Muster.
+- **Etappe 1 (dieses Dokument):** Standard-Zielordner + sicherer Verzeichnisbaum je Verteiltyp, Live-Vorschau und Ein-Klick-Verteilung mit den gemerkten Werten. Excel bekommt nur einen gemeinsamen Zielordner; die Dateinamen bleiben fest.
 - **Etappe 2 (später, eigene Spec):** benannte Profile (mehrere gespeicherte Konfigurationen, wählbar per Dropdown).
 
 Nicht in Etappe 1: Profile, Migration bestehender Verteilungen, Umbenennen bereits verteilter Dateien.
@@ -61,13 +61,13 @@ Neue Felder, gruppiert pro Typ. Um Wildwuchs zu vermeiden: ein kleines serialisi
 - `SchachtDistribution` : `DistributionTargetConfig`
 - `DichtheitDistribution` : `DistributionTargetConfig`
 - `ExcelExportRoot`: gemeinsamer Zielordner für beide Excel-Dateien
-- `HaltungExport` / `SchachtExport`: getrennte `DateiPattern`; die alten Root-Felder werden für Rückwärtskompatibilität gespiegelt
+- `HaltungExport` / `SchachtExport`: alte Felder bleiben für Rückwärtskompatibilität lesbar, werden von der neuen Excel-Oberfläche aber nicht mehr bearbeitet
 
 Defaults reproduzieren das bisherige Verhalten: optionale Überordner leer, fester Objektordner direkt unter der Ziel-Wurzel. Alte getrennte Excel-Zielordner werden einmalig übernommen (Haltungen vor Schächten) und anschließend gemeinsam geführt. Waren die alten Zielordner verschieden, bleibt der frühere Schacht-Zielordner zusätzlich in `LegacySchachtExportRoot` dokumentiert und geht bei der Umstellung nicht still verloren. Leere oder gleiche Excel-Dateinamen werden automatisch auf die getrennten sicheren Vorgaben `Haltungen.xlsx` und `Schaechte.xlsx` zurückgesetzt, damit sich die Exporte nicht gegenseitig überschreiben. Persistenz über den bestehenden atomaren `SettingsStore`.
 
 ## 6. UI (bisher leere Fläche der Export-Seite)
 
-Row 3 (`Height="*"`) bekommt einen scrollbaren Bereich mit einer Karte pro Typ (Haltungen, Schächte, Dichtheit, Excel-Export). Jede Karte: Ziel-Wurzel (TextBox + „…"-Ordnerdialog), drei Muster-TextBoxen (bzw. eine beim Excel), eine Platzhalter-Legende und eine **Live-Vorschau** des fertigen Pfads/Namens anhand eines Beispiel-Datensatzes (erster passender Datensatz im Projekt; sonst Dummy-Werte). Änderungen werden debounced gespeichert und die Vorschau sofort aktualisiert. Konsistent zum bestehenden Karten-/Theme-Stil der Seite.
+Row 3 (`Height="*"`) bekommt einen scrollbaren Bereich. Oben steht eine einfache Excel-Karte mit genau einem gemeinsamen Zielordner. Darunter folgen drei Verteilkarten für Haltungen, Schächte und Dichtheit. In jeder Verteilkarte werden die beiden optionalen Ordnerebenen mit anklickbaren Bausteinen zusammengestellt. Der feste Objektordner und der feste Dateiname sind sichtbar, aber nicht änderbar. Eine **Live-Vorschau** zeigt sofort den fertigen Zielpfad. Änderungen werden debounced gespeichert.
 
 ## 7. Verdrahtung in die Verteilung
 
@@ -77,22 +77,22 @@ Die Verteil-Commands (`DistributeHoldingsAsync`, `DistributeShaftsAsync`, `Distr
 
 Die drei manuellen Verteilbefehle übergeben eine eingefrorene Kopie der Baumkonfiguration. Sind beide Baumebenen leer, wird weiterhin gar keine Baumkonfiguration übergeben; damit bleiben auch die bisherigen DP-Datumsregeln unverändert. Automatische Importe ohne diesen optionalen Parameter behalten exakt die alte Struktur. `DistributionDirectoryTreeResolver` kapselt Auflösung und Bereinigung der Segmente; `HoldingFolderDistributor` verwendet ihn erst nach der endgültigen Haltungs-/Schachtkorrektur. DP wird fachlich nach Haltung abgelegt und verwendet das feste Schema `{Datum}_{Haltung}_DP`. Der Befehl „Dichtheitsprüfung (PDF) öffnen“ sucht sowohl im Projektordner als auch in einer extern konfigurierten Ziel-Wurzel rekursiv nach dem festen Haltungsordner.
 
-Excel bleibt davon getrennt: Beide Excel-Exporte verwenden `ExcelExportRoot`, behalten aber ihre getrennten Dateinamensmuster.
+Excel bleibt davon getrennt: Beide Excel-Exporte verwenden nur `ExcelExportRoot`. Die Dateien heißen fest `Haltungen.xlsx` und `Schaechte.xlsx`.
 
 ### Ergänzung: grafischer Baustein-Editor
 
-Die beiden Excel-Karten erhalten anklickbare Bausteine für festen Text, Datum, Jahr,
-Monat und Trennzeichen. Die aktuelle Reihenfolge wird als farbige Bausteinkette angezeigt;
-Rückgängig, Leeren und eine optionale Text-Feinbearbeitung bleiben möglich. Bei Haltungen,
-Schächten und Dichtheit wird das feste Schema ebenfalls als Bausteinkette angezeigt, aber
-nicht editierbar. Damit bleibt die Video-Zuordnung unverändert.
+Die drei Verteilkarten erhalten anklickbare Bausteine für Gemeinde, Datum, Jahr,
+Monat und Trennzeichen. Erste und zweite Ordnerebene besitzen jeweils eigene Bausteinkette,
+Zurück, Leeren und eine optionale Text-Feinbearbeitung. Der letzte Haltungs-/Schachtordner
+und der Dateiname werden ebenfalls als Bausteinkette angezeigt, bleiben aber nicht editierbar.
+Excel besitzt keinen Baustein-Editor. Damit bleibt die Video-Zuordnung unverändert.
 
 ## 8. Testkonzept
 
 - **DistributionPatternResolver:** Unit-Tests (TDD) für jeden Platzhalter, Sonderzeichen-Sanitizing, fehlende Felder, leere Ebenen (flach vs. tief), Endungserhalt, Schacht- vs. Haltungs-Kontext.
 - **DistributionDirectoryTreeResolver:** fester letzter Objektordner, optionale Überordner, Pfadbereinigung und unverändertes Altschema ohne Muster.
 - **AppSettings:** Roundtrip-Test (Serialisierung der neuen Felder, Defaults).
-- **ExportPageViewModel:** kompletter Vorschaupfad, gemeinsamer Excel-Zielordner und getrennte Excel-Dateinamen.
+- **ExportPageViewModel:** kompletter Vorschaupfad, grafische Bausteine je Ordnerebene sowie gemeinsamer Excel-Zielordner mit festen Dateinamen.
 - **Distributor:** Integrationstest, dass die Baumkonfiguration tatsächlich bei der Dateiablage verwendet wird und Dateinamen unverändert bleiben.
 - **UI:** Build + manuelle Abnahme.
 

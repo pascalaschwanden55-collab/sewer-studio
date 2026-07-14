@@ -107,6 +107,49 @@ public sealed class DistributionTargetConfigViewModelTests
     }
 
     [Fact]
+    public void Verteil_bausteine_bauen_beide_optionalen_ordnerebenen()
+    {
+        var config = new DistributionTargetConfig { Root = @"D:\Ziel" };
+        var vm = CreateVerteil(config);
+
+        vm.AddOrdnerPatternBlockCommand.Execute(
+            vm.AvailableDirectoryBlocks.Single(x => x.Label == "Gemeinde"));
+        vm.AddOrdnerPatternBlockCommand.Execute(
+            vm.AvailableDirectoryBlocks.Single(x => x.Label == "_"));
+        vm.AddOrdnerPatternBlockCommand.Execute(
+            vm.AvailableDirectoryBlocks.Single(x => x.Label == "Jahr"));
+        vm.AddUnterordnerPatternBlockCommand.Execute(
+            vm.AvailableDirectoryBlocks.Single(x => x.Label == "Datum"));
+
+        Assert.Equal("{Gemeinde}_{Jahr}", config.OrdnerPattern);
+        Assert.Equal("{Datum}", config.UnterordnerPattern);
+        Assert.Equal(["Gemeinde", "_", "Jahr"], vm.OrdnerPatternParts.Select(x => x.Text));
+        Assert.Equal(["Datum"], vm.UnterordnerPatternParts.Select(x => x.Text));
+        Assert.Equal(
+            @"D:\Ziel\Altdorf_2026\20260626\06.24341-35625\20260626_06.24341-35625.pdf",
+            vm.Vorschau);
+    }
+
+    [Fact]
+    public void Verteil_bausteine_lassen_sich_je_ordnerebene_zuruecknehmen_und_leeren()
+    {
+        var config = new DistributionTargetConfig
+        {
+            OrdnerPattern = "{Gemeinde}_{Jahr}",
+            UnterordnerPattern = "{Monat}"
+        };
+        var vm = CreateVerteil(config);
+
+        vm.RemoveLastOrdnerPatternBlockCommand.Execute(null);
+        vm.ClearUnterordnerPatternCommand.Execute(null);
+
+        Assert.Equal("{Gemeinde}_", vm.OrdnerPattern);
+        Assert.Equal(string.Empty, vm.UnterordnerPattern);
+        Assert.Equal(["Gemeinde", "_"], vm.OrdnerPatternParts.Select(x => x.Text));
+        Assert.Empty(vm.UnterordnerPatternParts);
+    }
+
+    [Fact]
     public void Nur_verteilung_zeigt_verzeichnisbaum_excel_nicht()
     {
         var verteilung = CreateVerteil(new DistributionTargetConfig());

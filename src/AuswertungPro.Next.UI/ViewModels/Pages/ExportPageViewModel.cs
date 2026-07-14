@@ -48,7 +48,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
     public IRelayCommand BrowseExcelExportRootCommand { get; }
 
-    /// <summary>Konfig-Karten (Ziel-Wurzel + Namens-/Ordner-Muster) je Verteil-/Export-Typ.</summary>
+    /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
 
     public ExportPageViewModel(ShellViewModel shell, ServiceProvider sp)
@@ -125,6 +125,21 @@ public sealed partial class ExportPageViewModel : ObservableObject
         return Path.Combine(sharedRoot, relativ);
     }
 
+    /// <summary>
+    /// Baut den Excel-Zielpfad nur aus dem gemeinsamen Zielordner und dem festen Exportnamen.
+    /// Die Oberflaeche bietet bewusst keine Dateinamens- oder Verzeichnisbaum-Muster fuer Excel an.
+    /// </summary>
+    internal static string? BuildFixedExcelPath(string? sharedRoot, string fileNameWithoutExtension)
+    {
+        if (string.IsNullOrWhiteSpace(sharedRoot))
+            return null;
+        if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
+            throw new ArgumentException("Der feste Excel-Dateiname darf nicht leer sein.", nameof(fileNameWithoutExtension));
+
+        var safeFileName = ProjectPathResolver.SanitizePathSegment(fileNameWithoutExtension.Trim());
+        return Path.Combine(sharedRoot.Trim(), safeFileName + ".xlsx");
+    }
+
     /// <summary>Rueckwaertskompatibler Test-/Hilfsweg fuer alte Aufrufer.</summary>
     internal static string? BuildConfiguredExcelPath(
         DistributionTargetConfig cfg,
@@ -164,7 +179,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Baut die fuenf Konfig-Karten (Haltungen/Schaechte/Dichtheit verteilen + Excel-Export Haltungen/Schaechte).
+    /// Baut die drei Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheit.
     /// Die Live-Vorschau nutzt die Projektgemeinde sowie Beispiel-Haltung/-Schacht und heutiges Datum;
     /// Aenderungen werden ueber den debounced <see cref="AppSettings.Save"/> persistiert.
     /// </summary>
@@ -175,25 +190,14 @@ public sealed partial class ExportPageViewModel : ObservableObject
             && !string.IsNullOrWhiteSpace(projektGemeinde)
                 ? projektGemeinde.Trim()
                 : "Gemeinde";
-        // Excel-Vorschau nutzt nur {Datum}/{Jahr}/{Monat}. Die drei Verteilungen erhalten
-        // typgerechte Beispiele fuer ihren kompletten, sicheren Verzeichnisbaum.
-        var excelSample = new DistributionPatternContext(heute);
+        // Die drei Verteilungen erhalten typgerechte Beispiele fuer ihren kompletten,
+        // sicheren Verzeichnisbaum.
         var haltungSample = new DistributionPatternContext(heute, gemeinde, "06.24341-35625");
         var schachtSample = new DistributionPatternContext(heute, gemeinde, Schachtnummer: "80454");
         var dichtheitSample = new DistributionPatternContext(heute, gemeinde, "06.24341-35625");
 
         void OnCfgChanged()
         {
-            if (_settings.NormalizeExcelExportFilePatterns())
-            {
-                var excelTargets = DistributionTargets.Where(x => x.ShowFilePattern).ToArray();
-                if (excelTargets.Length >= 2)
-                {
-                    excelTargets[0].ApplyFilePattern(_settings.HaltungExport.DateiPattern);
-                    excelTargets[1].ApplyFilePattern(_settings.SchachtExport.DateiPattern);
-                }
-            }
-
             _settings.Save();
         }
         string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
@@ -201,8 +205,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
         const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben fuer die sichere Video-Zuordnung fest.";
         const string schachtHinweis = "Der letzte Schachtordner und der Dateiname bleiben fest.";
         const string dichtheitHinweis = "DP wird sicher je Haltung abgelegt; Objektordner und Dateiname bleiben fest.";
-        const string excelHinweis = "Platzhalter: {Datum} {Jahr} {Monat}";
-
         return new[]
         {
             new DistributionTargetConfigViewModel(
@@ -226,19 +228,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 fixedPattern: "{Datum}_{Haltung}_DP",
                 fixedObjectFolderPattern: "{Haltung}",
                 directoryTreeResolver: _directoryTreeResolver),
-            new DistributionTargetConfigViewModel(
-                "Excel-Export Haltungen", "Eine Datei (Haltungen.xlsx)",
-                _settings.HaltungExport, resolver, excelSample, ".xlsx",
-                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot,
-                showRootEditor: false,
-                showSharedExcelRoot: true,
-                directoryTreeResolver: _directoryTreeResolver),
-            new DistributionTargetConfigViewModel(
-                "Excel-Export Schächte", "Eine Datei (Schächte.xlsx)",
-                _settings.SchachtExport, resolver, excelSample, ".xlsx",
-                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot,
-                showRootEditor: false,
-                directoryTreeResolver: _directoryTreeResolver),
         };
     }
 
@@ -257,9 +246,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             _excelExportRoot = normalized;
             OnPropertyChanged(nameof(ExcelExportRoot));
         }
-
-        foreach (var target in DistributionTargets.Where(x => x.ShowFilePattern))
-            target.ApplySharedRoot(normalized);
 
         _settings.Save();
     }
@@ -296,12 +282,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
         try
         {
-            // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Dialog wie bisher.
-            var outPath = ResolveConfiguredExcelPath(
-                    _settings.HaltungExport,
-                    "Haltungen",
-                    _settings.SchachtExport,
-                    "Schaechte")
+            // Ein gemeinsamer Zielordner, fester Dateiname; ohne Zielordner den Dialog wie bisher.
+            var outPath = ResolveConfiguredExcelPath("Haltungen")
                 ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
             if (outPath is null)
                 return;
@@ -348,11 +330,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
         try
         {
-            var outPath = ResolveConfiguredExcelPath(
-                    _settings.SchachtExport,
-                    "Schaechte",
-                    _settings.HaltungExport,
-                    "Haltungen")
+            var outPath = ResolveConfiguredExcelPath("Schaechte")
                 ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
             if (outPath is null)
                 return;
@@ -834,24 +812,12 @@ public sealed partial class ExportPageViewModel : ObservableObject
         => string.IsNullOrWhiteSpace(cfg.Root) ? null : cfg.Root;
 
     /// <summary>
-    /// Excel-Zielpfad aus der Konfiguration (Ziel-Wurzel + Datei-Muster); legt den Zielordner an.
+    /// Excel-Zielpfad aus dem gemeinsamen Zielordner und dem festen Dateinamen; legt den Zielordner an.
     /// Null -> keine Wurzel gesetzt -> Aufrufer nutzt den Speichern-Dialog.
     /// </summary>
-    private string? ResolveConfiguredExcelPath(
-        DistributionTargetConfig cfg,
-        string fallbackFilePattern,
-        DistributionTargetConfig otherCfg,
-        string otherFallbackFilePattern)
+    private string? ResolveConfiguredExcelPath(string fixedFileName)
     {
-        var datum = DateTime.Today;
-        var ziel = BuildCollisionSafeExcelPath(
-            _settings.ExcelExportRoot,
-            cfg,
-            fallbackFilePattern,
-            otherCfg,
-            otherFallbackFilePattern,
-            _patternResolver,
-            datum);
+        var ziel = BuildFixedExcelPath(_settings.ExcelExportRoot, fixedFileName);
         if (ziel is null)
             return null;
 

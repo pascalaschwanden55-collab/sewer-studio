@@ -58,6 +58,25 @@ public sealed class ExportPageExcelPathTests
     }
 
     [Fact]
+    public void Excel_mit_nur_zielordner_verwendet_immer_den_festen_dateinamen()
+    {
+        var haltungPfad = ExportPageViewModel.BuildFixedExcelPath(
+            @"D:\Gemeinsam", "Haltungen");
+        var schachtPfad = ExportPageViewModel.BuildFixedExcelPath(
+            @"D:\Gemeinsam", "Schaechte");
+
+        Assert.Equal(@"D:\Gemeinsam\Haltungen.xlsx", haltungPfad);
+        Assert.Equal(@"D:\Gemeinsam\Schaechte.xlsx", schachtPfad);
+    }
+
+    [Fact]
+    public void Excel_ohne_gemeinsamen_zielordner_bleibt_beim_speichern_dialog()
+    {
+        Assert.Null(ExportPageViewModel.BuildFixedExcelPath(null, "Haltungen"));
+        Assert.Null(ExportPageViewModel.BuildFixedExcelPath("  ", "Schaechte"));
+    }
+
+    [Fact]
     public void Gleiche_dateimuster_fallen_auf_zwei_sichere_standardnamen_zurueck()
     {
         var haltung = new DistributionTargetConfig { DateiPattern = "Auswertung_{Jahr}" };

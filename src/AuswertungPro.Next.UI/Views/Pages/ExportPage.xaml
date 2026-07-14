@@ -5,6 +5,25 @@
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <DataTemplate x:Key="PatternPartTemplate">
+            <Border Padding="7,3" Margin="0,0,4,3" CornerRadius="9" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="{Binding Text}" FontSize="10"
+                           Foreground="{DynamicResource TextBrush}"
+                           ToolTip="{Binding RawValue}"/>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>
@@ -102,12 +121,44 @@
 
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                 <StackPanel>
-                    <TextBlock Text="Zielverzeichnisse &amp; Namensvorlagen"
+                    <TextBlock Text="Zielordner &amp; Verzeichnisbaum"
                                FontWeight="SemiBold" FontSize="13"
                                Foreground="{DynamicResource TextBrush}" Margin="2,0,0,2"/>
-                    <TextBlock Text="Excel nutzt einen gemeinsamen Zielordner. Bei der Verteilung sind zwei Überordner frei; Objektordner und Dateinamen bleiben sicher fest."
+                    <TextBlock Text="Excel nutzt nur einen gemeinsamen Zielordner. Den Verzeichnisbaum stellst du getrennt für Haltungen, Schächte und DP zusammen."
                                FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                TextWrapping="Wrap" Margin="2,0,0,8"/>
+
+                    <!-- Excel: bewusst nur ein gemeinsamer Zielordner, keine Namens- oder Baum-Muster -->
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Excel-Export" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="Ein gemeinsamer Zielordner für Haltungen.xlsx und Schaechte.xlsx"
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Zielordner" FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <Grid Margin="0,2,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding ExcelExportRoot, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Dieser Ordner gilt für beide Excel-Dateien."/>
+                                <Button Grid.Column="1" Command="{Binding BrowseExcelExportRootCommand}"
+                                        Margin="4,0,0,0" Padding="10,0"
+                                        ToolTip="Gemeinsamen Excel-Zielordner wählen">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="Feste Dateien: Haltungen.xlsx · Schaechte.xlsx"
+                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Verzeichnisbaum für die Verteilung"
+                               FontWeight="SemiBold" FontSize="12"
+                               Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>
 
                     <ItemsControl ItemsSource="{Binding DistributionTargets}">
                         <ItemsControl.ItemTemplate>
@@ -139,92 +190,107 @@
                                             </Grid>
                                         </StackPanel>
 
-                                        <!-- Genau einmal fuer beide Excel-Exporte -->
-                                        <StackPanel Visibility="{Binding ShowSharedExcelRoot, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="Gemeinsamer Excel-Zielordner" FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <Grid Margin="0,2,0,8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Text="{Binding DataContext.ExcelExportRoot, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
-                                                         ToolTip="Dieser Ordner gilt fuer Haltungen.xlsx und Schaechte.xlsx."/>
-                                                <Button Grid.Column="1"
-                                                        Command="{Binding DataContext.BrowseExcelExportRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        Margin="4,0,0,0" Padding="10,0"
-                                                        ToolTip="Gemeinsamen Excel-Zielordner waehlen">
-                                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                                </Button>
-                                            </Grid>
-                                        </StackPanel>
-
-                                        <!-- Zwei frei einstellbare Ueberordner; letzter Objektordner bleibt fest -->
+                                        <!-- Grafischer Verzeichnisbaum: zwei freie Ebenen, danach sichere feste Ebenen -->
                                         <StackPanel Visibility="{Binding ShowDirectoryTree, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="Verzeichnisbaum" FontSize="11" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock Text="Mögliche Platzhalter: {Gemeinde} {Datum} {Jahr} {Monat}. Leere Ebenen entfallen."
+                                            <TextBlock Text="Bausteine anklicken. Leere Ebenen werden weggelassen."
                                                        FontSize="10" Foreground="{DynamicResource MutedBrush}"
                                                        TextWrapping="Wrap" Margin="0,1,0,5"/>
-                                            <TextBlock Text="Überordner (optional)" FontSize="10"
-                                                       Foreground="{DynamicResource MutedBrush}"/>
-                                            <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,2,0,5"/>
-                                            <TextBlock Text="Unterordner (optional)" FontSize="10"
-                                                       Foreground="{DynamicResource MutedBrush}"/>
-                                            <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,2,0,5"/>
-                                            <TextBlock Text="Fester letzter Objektordner" FontSize="10"
-                                                       Foreground="{DynamicResource MutedBrush}"/>
-                                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                    BorderBrush="{DynamicResource BorderLightBrush}"
-                                                    BorderThickness="1" CornerRadius="4"
-                                                    Padding="8,5" Margin="0,2,0,7">
-                                                <TextBlock Text="{Binding FixedObjectFolderPattern}"
-                                                           FontFamily="Consolas" FontSize="11"
-                                                           Foreground="{DynamicResource TextBrush}"/>
-                                            </Border>
-                                        </StackPanel>
 
-                                        <!-- Grafischer Datei-Editor (nur Excel; die Verteilung bleibt sicher fest) -->
-                                        <StackPanel Visibility="{Binding ShowFilePattern, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="Dateiname zusammenstellen" FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBlock Text="Bausteine anklicken. Die Reihenfolge ergibt den Dateinamen."
-                                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"
-                                                       Margin="0,1,0,5"/>
-
-                                            <ItemsControl ItemsSource="{Binding AvailablePatternBlocks}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Button Content="{Binding Label}"
-                                                                Command="{Binding DataContext.AddPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                                CommandParameter="{Binding}"
-                                                                ToolTip="{Binding Description}"
-                                                                Padding="9,3" Margin="0,0,5,5"
-                                                                MinWidth="34"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                                <Button Content="Letzten Baustein entfernen"
-                                                        Command="{Binding RemoveLastPatternBlockCommand}"
-                                                        Padding="8,3" Margin="0,0,5,0"/>
-                                                <Button Content="Leeren"
-                                                        Command="{Binding ClearPatternCommand}"
-                                                        Padding="8,3"/>
+                                            <!-- Erste freie Ebene -->
+                                            <StackPanel Margin="0,0,0,8">
+                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                    <Run Text="&#x251C;&#x2500; "/><Run Text="1. Ordner (optional)"/>
+                                                </TextBlock>
+                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                                        BorderThickness="1" CornerRadius="4"
+                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,5">
+                                                    <ItemsControl ItemsSource="{Binding OrdnerPatternParts}"
+                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="{Binding Label}"
+                                                                    Command="{Binding DataContext.AddOrdnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}" ToolTip="{Binding Description}"
+                                                                    Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
+                                                    <Button Content="Zurück" Command="{Binding RemoveLastOrdnerPatternBlockCommand}"
+                                                            Padding="8,3" Margin="0,0,5,0"/>
+                                                    <Button Content="Leeren" Command="{Binding ClearOrdnerPatternCommand}" Padding="8,3"/>
+                                                </StackPanel>
+                                                <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                         Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des ersten Ordners"/>
                                             </StackPanel>
 
-                                            <TextBlock Text="Feinbearbeitung (optional)" FontSize="10"
-                                                       Foreground="{DynamicResource MutedBrush}"/>
-                                            <TextBox Text="{Binding DateiPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,2,0,6"/>
+                                            <!-- Zweite freie Ebene -->
+                                            <StackPanel Margin="14,0,0,8">
+                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                    <Run Text="&#x251C;&#x2500; "/><Run Text="2. Unterordner (optional)"/>
+                                                </TextBlock>
+                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                                        BorderThickness="1" CornerRadius="4"
+                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,5">
+                                                    <ItemsControl ItemsSource="{Binding UnterordnerPatternParts}"
+                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="{Binding Label}"
+                                                                    Command="{Binding DataContext.AddUnterordnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}" ToolTip="{Binding Description}"
+                                                                    Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
+                                                    <Button Content="Zurück" Command="{Binding RemoveLastUnterordnerPatternBlockCommand}"
+                                                            Padding="8,3" Margin="0,0,5,0"/>
+                                                    <Button Content="Leeren" Command="{Binding ClearUnterordnerPatternCommand}" Padding="8,3"/>
+                                                </StackPanel>
+                                                <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                         Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des zweiten Ordners"/>
+                                            </StackPanel>
+
+                                            <!-- Letzte Objekt-Ebene bleibt absichtlich fest -->
+                                            <StackPanel Margin="28,0,0,8">
+                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                    <Run Text="&#x2514;&#x2500; "/><Run Text="Objektordner (fest)"/>
+                                                </TextBlock>
+                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                                        BorderThickness="1" CornerRadius="4"
+                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,0">
+                                                    <ItemsControl ItemsSource="{Binding ObjectFolderPatternParts}"
+                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </Border>
+                                            </StackPanel>
                                         </StackPanel>
 
                                         <!-- Sichtbare Reihenfolge: editierbar bei Excel, fest bei der Verteilung -->
