@@ -249,6 +249,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
         var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionManualMarkTrainingController.cs");
+        var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "LiveDetectionTrainingControllerSetFactory.cs");
         var playerWindowPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
@@ -260,6 +261,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resultWorkflowPath), "Manual-Mark-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Manual-Mark-Training-Steuerung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "Detection-Trainingscontroller sollen ausserhalb von PlayerWindow aufgebaut werden.");
 
         var marking = File.ReadAllText(markingPath);
         var training = File.ReadAllText(trainingPath);
@@ -271,6 +273,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
         var controller = File.ReadAllText(controllerPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var playerWindow = File.ReadAllText(playerWindowPath);
 
         AssertNoForbiddenTokens(
@@ -311,11 +314,14 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", controller);
         Assert.Contains("_annotationWriter.SaveManualMarkAsync", controller);
         Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", controller);
-        Assert.Equal(1, CountOccurrences(playerWindow, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
-        Assert.Contains("new LiveDetectionConfirmationTrainingController", playerWindow);
-        Assert.Contains("new LiveDetectionManualMarkTrainingController", playerWindow);
+        Assert.Contains("LiveDetectionTrainingControllerSetFactory.Create", playerWindow);
+        Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", playerWindow);
+        Assert.DoesNotContain("new LiveDetectionManualMarkTrainingController", playerWindow);
+        Assert.Equal(1, CountOccurrences(controllerSetFactory, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
+        Assert.Contains("new LiveDetectionConfirmationTrainingController", controllerSetFactory);
+        Assert.Contains("new LiveDetectionManualMarkTrainingController", controllerSetFactory);
         Assert.True(
-            CountOccurrences(playerWindow, "liveDetectionTrainingAnnotationWriter,") >= 2,
+            CountOccurrences(controllerSetFactory, "annotationWriter,") >= 2,
             "Bestaetigung und manuelle Markierung sollen denselben Trainings-Schreiber erhalten.");
         Assert.Contains(".SelectSeed(", seedSelectionWorkflow);
         Assert.Contains("actions.SelectEntry()", commandWorkflow);

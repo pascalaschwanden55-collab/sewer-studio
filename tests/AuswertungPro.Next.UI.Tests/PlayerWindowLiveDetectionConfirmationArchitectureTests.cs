@@ -30,6 +30,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         var correctCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationCorrectCommandWorkflow.cs");
         var skipCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationSkipCommandWorkflow.cs");
         var trainingControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionConfirmationTrainingController.cs");
+        var trainingControllerSetFactoryPath = Path.Combine(uiRoot, "Player", "LiveDetectionTrainingControllerSetFactory.cs");
         var playerWindowPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
@@ -47,6 +48,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.True(File.Exists(correctCommandWorkflowPath), "Detection-Correct-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(skipCommandWorkflowPath), "Detection-Skip-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(trainingControllerPath), "Detection-Bestaetigungssteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(trainingControllerSetFactoryPath), "Detection-Trainingscontroller sollen ausserhalb von PlayerWindow aufgebaut werden.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
@@ -65,6 +67,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         var correctCommandWorkflow = File.Exists(correctCommandWorkflowPath) ? File.ReadAllText(correctCommandWorkflowPath) : "";
         var skipCommandWorkflow = File.Exists(skipCommandWorkflowPath) ? File.ReadAllText(skipCommandWorkflowPath) : "";
         var trainingController = File.ReadAllText(trainingControllerPath);
+        var trainingControllerSetFactory = File.ReadAllText(trainingControllerSetFactoryPath);
         var playerWindow = File.ReadAllText(playerWindowPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
@@ -146,8 +149,11 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted", trainingController);
         Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected", trainingController);
         Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", trainingController);
-        Assert.Contains("new LiveDetectionConfirmationTrainingController", playerWindow);
-        Assert.Equal(1, CountOccurrences(playerWindow, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
+        Assert.Contains("LiveDetectionTrainingControllerSetFactory.Create", playerWindow);
+        Assert.DoesNotContain("new LiveDetectionConfirmationTrainingController", playerWindow);
+        Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", playerWindow);
+        Assert.Contains("new LiveDetectionConfirmationTrainingController", trainingControllerSetFactory);
+        Assert.Equal(1, CountOccurrences(trainingControllerSetFactory, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
         Assert.Contains("var trainingResult = await actions.SaveAcceptedAsync()", acceptCommandWorkflow);
         Assert.Contains("actions.HandleAcceptedResult(trainingResult)", acceptCommandWorkflow);
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", acceptCommandWorkflow);

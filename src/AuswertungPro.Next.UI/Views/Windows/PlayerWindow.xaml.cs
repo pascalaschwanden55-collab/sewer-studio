@@ -68,46 +68,25 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
-        var liveDetectionTrainingAnnotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
-        _liveDetectionConfirmationTrainingController = new LiveDetectionConfirmationTrainingController(
-            _liveDetectionController,
-            _playerTimelineHost,
-            liveDetectionTrainingAnnotationWriter,
-            new LiveDetectionConfirmationTrainingControllerActions(
+        var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
+            new LiveDetectionTrainingControllerSetDependencies(
+                DetectionController: _liveDetectionController,
+                TimelineHost: _playerTimelineHost,
+                Owner: this,
+                VideoPath: _playbackContext.VideoPath,
                 ResolveAutomaticMeter: () => _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
-                SelectCorrection: (meter, timestampSeconds) => LiveDetectionCorrectionCodeSelectionWorkflow.Select(
-                    new LiveDetectionCorrectionCodeSelectionRequest(
-                        meter,
-                        timestampSeconds,
-                        _playbackContext.VideoPath,
-                        this),
-                    new LiveDetectionCorrectionCodeSelectionActions(
-                        CreateVsaCodeExplorerViewModel)),
-                CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
-                ShowOsdMeterStatus: ShowOsdMeterStatus,
-                ResumeDetection: ResumeDetection));
-        _liveDetectionManualMarkTrainingController = new LiveDetectionManualMarkTrainingController(
-            liveDetectionTrainingAnnotationWriter,
-            new LiveDetectionManualMarkTrainingControllerActions(
-                SelectEntry: (overlay, timestampSeconds) =>
-                {
-                    var automaticMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
-                    return CodingCodeExplorerSeedSelectionWorkflow.Execute(
-                        new CodingCodeExplorerSeedSelectionWorkflowRequest(
-                            overlay,
-                            automaticMeter,
-                            TimeSpan.FromSeconds(timestampSeconds),
-                            _playbackContext.VideoPath,
-                            this),
-                        CreateCodingCodeExplorerSeedSelectionActions());
-                },
+                CreateCorrectionViewModel: CreateVsaCodeExplorerViewModel,
+                CreateManualSelectionActions: CreateCodingCodeExplorerSeedSelectionActions,
                 ResolveDisplayedMeterText: () => TxtCodingMeter?.Text,
                 ResolveCodingSessionService: () => _codingSessionHost.HasViewModel
                     ? _codingSessionRuntimeOwner.Service
                     : null,
                 CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
                 RefreshCodingEvents: RefreshCodingEventsList,
-                ShowOsdMeterStatus: ShowOsdMeterStatus));
+                ShowOsdMeterStatus: ShowOsdMeterStatus,
+                ResumeDetection: ResumeDetection));
+        _liveDetectionConfirmationTrainingController = liveDetectionTrainingControllers.Confirmation;
+        _liveDetectionManualMarkTrainingController = liveDetectionTrainingControllers.ManualMark;
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,
