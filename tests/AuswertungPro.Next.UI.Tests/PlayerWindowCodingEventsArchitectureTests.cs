@@ -27,26 +27,32 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListControls.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsRefreshWorkflow.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventsRefreshController.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Codier-Ereignislisten-Rebind muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(workflowPath), "Codier-Ereignislisten-Refresh soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(commandWorkflowPath), "Codier-Ereignislisten-Refresh-Befehl soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(controllerPath), "Codier-Ereignislisten-Refresh soll einen eigenen Controller besitzen.");
 
         var events = File.ReadAllText(eventsPath);
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
-        Assert.Contains("CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
-        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
+        Assert.Contains("_codingEventsRefreshController.RefreshList", events);
+        Assert.DoesNotContain("CodingEventsRefreshWorkflow.RefreshListAndStatistics", events, StringComparison.Ordinal);
+        Assert.Contains("CodingEventsRefreshWorkflow.RefreshListAndStatistics", controller);
+        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", controller);
         Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
         Assert.Contains("public sealed class CodingEventsListControls", controls);
         Assert.Contains("_eventsList.ItemsSource", controls);
         Assert.Contains("CodingEventDisplayOrderPolicy.Order", workflow);
         Assert.Contains("listControls.ApplyOrderedEvents", workflow);
         Assert.Contains("actions.ScheduleColorize()", commandWorkflow);
+        Assert.Contains("public sealed class CodingEventsRefreshController", controller);
     }
 
     [Fact]

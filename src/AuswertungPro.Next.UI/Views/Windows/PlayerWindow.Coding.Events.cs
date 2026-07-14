@@ -3,7 +3,6 @@ using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -75,27 +74,8 @@ public partial class PlayerWindow
     }
 
     private void RefreshCodingEventsList()
-    {
-        CodingEventsListRefreshCommandWorkflow.Execute(
-            new CodingEventsListRefreshCommandActions(
-                RefreshListAndStatistics: () => CodingEventsRefreshWorkflow.RefreshListAndStatistics(
-                    _codingSessionHost.EventCollection,
-                    _codingSidePanelControllers.EventsList,
-                    _codingSidePanelControllers.Statistics,
-                    CodingSessionViewModel.GetDefectStatus),
-                ScheduleColorize: () => PlayerDispatcherScheduler.ScheduleLoaded(
-                    Dispatcher,
-                    ColorizeCodingEventListItems)));
-    }
+        => _codingEventsRefreshController.RefreshList();
 
     private void UpdateCodingStatistics()
-    {
-        CodingStatisticsUpdateCommandWorkflow.Execute(
-            new CodingStatisticsUpdateCommandRequest(_codingSessionHost.HasViewModel),
-            new CodingStatisticsUpdateCommandActions(
-                RefreshStatistics: () => CodingEventsRefreshWorkflow.RefreshStatistics(
-                    _codingSessionHost.Events,
-                    _codingSidePanelControllers.Statistics,
-                    CodingSessionViewModel.GetDefectStatus)));
-    }
+        => _codingEventsRefreshController.RefreshStatistics();
 }

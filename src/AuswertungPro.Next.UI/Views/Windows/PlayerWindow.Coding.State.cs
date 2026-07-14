@@ -23,6 +23,7 @@ public partial class PlayerWindow
     private readonly CodingSchemaOverlayController _codingSchemaOverlayController;
     private readonly CodingManualCalibrationController _codingManualCalibrationController;
     private readonly CodingCalibrationPointerController _codingCalibrationPointerController;
+    private readonly CodingEventsRefreshController _codingEventsRefreshController;
     private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
     private readonly CodingNavigationController _codingNavigationController;
 

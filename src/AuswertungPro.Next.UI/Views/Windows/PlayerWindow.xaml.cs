@@ -5,6 +5,7 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -90,6 +91,14 @@ public partial class PlayerWindow : Window
                 ApplyCalibration: (start, end) => _codingManualCalibrationController.Apply(start, end)));
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
+        _codingEventsRefreshController = new CodingEventsRefreshController(
+            _codingSessionHost,
+            _codingSidePanelControllers.EventsList,
+            _codingSidePanelControllers.Statistics,
+            CodingSessionViewModel.GetDefectStatus,
+            new CodingEventsRefreshControllerActions(
+                ScheduleLoaded: action => PlayerDispatcherScheduler.ScheduleLoaded(Dispatcher, action),
+                ColorizeListItems: ColorizeCodingEventListItems));
         InitializeCodingConfirmationPanelControls();
         PlayerWindowStateControls.Track(this);
 

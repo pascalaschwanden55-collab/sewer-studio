@@ -19,6 +19,8 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
         var statisticsCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsUpdateCommandWorkflow.cs");
         var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateWorkflow.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventsRefreshController.cs");
+        var playerPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Coding-Statistik-Anzeige muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
@@ -27,6 +29,7 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         Assert.True(File.Exists(commandWorkflowPath), "Coding-Eventlisten-Refresh-Befehl soll die Colorize-Reihenfolge ausserhalb der PlayerWindow-Partials koordinieren.");
         Assert.True(File.Exists(statisticsCommandWorkflowPath), "Coding-Statistik-Refresh-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Refresh-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Coding-Ereignislisten- und Statistik-Refresh sollen einen eigenen Controller besitzen.");
 
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
@@ -39,14 +42,17 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var statisticsCommandWorkflow = File.Exists(statisticsCommandWorkflowPath) ? File.ReadAllText(statisticsCommandWorkflowPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var player = File.ReadAllText(playerPath);
 
-        Assert.Contains("CodingStatisticsUpdateCommandWorkflow.Execute", events);
-        Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
+        Assert.Contains("_codingEventsRefreshController.RefreshStatistics", events);
+        Assert.Contains("CodingStatisticsUpdateCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", controller);
         Assert.DoesNotContain("CodingUiUpdateWorkflow.Apply", navigation, StringComparison.Ordinal);
         Assert.Contains("CodingUiUpdateWorkflow.Apply", navigationController);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
-        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
-        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", events);
+        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", controller);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", player);
         Assert.DoesNotContain("Dispatcher.InvokeAsync", events, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Loaded", events, StringComparison.Ordinal);
         Assert.Contains("public static class CodingStatisticsUpdateCommandWorkflow", statisticsCommandWorkflow);
