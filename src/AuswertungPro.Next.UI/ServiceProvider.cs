@@ -83,6 +83,7 @@ namespace AuswertungPro.Next.UI
         public ISafeShellOpenService ShellOpen { get; }
         public IFolderOpenService FolderOpen { get; }
         public IProgramRootLocator ProgramRootLocator { get; }
+        public IRepositoryRootLocator RepositoryRootLocator { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -278,6 +279,8 @@ namespace AuswertungPro.Next.UI
             AuswertungPro.Next.UI.Settings.SettingsPathWorkflow.Use(FolderOpen);
             ProgramRootLocator = new ProgramRootFileLocator();
             SettingsProgramCleanupRequestFactory.Use(ProgramRootLocator);
+            RepositoryRootLocator = new RepositoryRootFileLocator();
+            RepoRootLocator.Use(RepositoryRootLocator);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -405,7 +408,9 @@ namespace AuswertungPro.Next.UI
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
             GitCommit = new GitCommitFileResolver();
             FullBackup = new FullBackupService(
-                () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(settings),
+                () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(
+                    settings,
+                    RepositoryRootLocator),
                 KnowledgeWalCheckpoint.TryCheckpoint,
                 ct => OllamaListAsync(ct),
                 gitCommitResolver: GitCommit);
@@ -702,6 +707,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
             if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
+            if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;

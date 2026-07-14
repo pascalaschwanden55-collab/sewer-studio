@@ -13,8 +13,16 @@ namespace AuswertungPro.Next.UI.Services;
 public static class FullBackupSourcesFactory
 {
     public static FullBackupSources ErmittleAktuelleQuellen(AppSettings? settings = null)
-        => new(
-            RepoRoot: RepoRootLocator.Locate(),
+        => ErmittleAktuelleQuellen(settings, RepoRootLocator.Current);
+
+    internal static FullBackupSources ErmittleAktuelleQuellen(
+        AppSettings? settings,
+        IRepositoryRootLocator repositoryRootLocator)
+    {
+        ArgumentNullException.ThrowIfNull(repositoryRootLocator);
+
+        return new FullBackupSources(
+            RepoRoot: repositoryRootLocator.Locate(AppContext.BaseDirectory),
             KnowledgeRoot: KnowledgeBasePaths.GetRoot(),
             LocalSewerStudioDir: AppSettings.AppDataDir,
             RoamingSewerStudioDir: Path.Combine(
@@ -28,6 +36,7 @@ public static class FullBackupSourcesFactory
             EnvironmentVariables: BuildEnvironmentSnapshot(),
             ProjectRoots: BuildProjectRoots(settings),
             IncludeProjectVideos: settings?.FullBackupIncludeProjectVideos ?? false);
+    }
 
     private static IReadOnlyList<string> BuildProjectRoots(AppSettings? settings)
     {
