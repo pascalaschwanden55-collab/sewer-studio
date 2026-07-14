@@ -69,6 +69,16 @@ public sealed class DataPageDossierAvailabilityTests
     }
 
     [Fact]
+    public void HasPrintablePhotos_prueft_weitere_pfade_wenn_das_erste_foto_fehlt()
+    {
+        using var temp = new TempDir();
+        temp.CreateFile("vorhanden.jpg");
+        var record = RecordWithFotos(deleted: false, "fehlt.jpg", "vorhanden.jpg");
+
+        Assert.True(DataPageDossierAvailability.HasPrintablePhotos(record, temp.Path));
+    }
+
+    [Fact]
     public void HasPrintablePhotos_false_wenn_eintrag_geloescht()
     {
         using var temp = new TempDir();

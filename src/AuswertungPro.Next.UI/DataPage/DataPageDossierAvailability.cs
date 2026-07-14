@@ -1,7 +1,7 @@
 using System;
-using System.IO;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Reports;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -18,6 +18,11 @@ public sealed record DataPageDossierPrintableSections(
 /// </summary>
 public static class DataPageDossierAvailability
 {
+    private static readonly IDossierPhotoAvailabilityService DefaultService =
+        new DossierPhotoFileAvailabilityService();
+
+    internal static IDossierPhotoAvailabilityService CompatibilityService => DefaultService;
+
     public static DataPageDossierPrintableSections EvaluatePrintableSections(
         DossierPrintOptions options,
         HaltungRecord record,
@@ -27,14 +32,36 @@ public static class DataPageDossierAvailability
         bool hasHydraulikResult,
         bool kostenAvailable,
         int originalPdfCount)
+        => EvaluatePrintableSections(
+            options,
+            record,
+            projectFolder,
+            hasSchachtVon,
+            hasSchachtBis,
+            hasHydraulikResult,
+            kostenAvailable,
+            originalPdfCount,
+            DefaultService);
+
+    internal static DataPageDossierPrintableSections EvaluatePrintableSections(
+        DossierPrintOptions options,
+        HaltungRecord record,
+        string projectFolder,
+        bool hasSchachtVon,
+        bool hasSchachtBis,
+        bool hasHydraulikResult,
+        bool kostenAvailable,
+        int originalPdfCount,
+        IDossierPhotoAvailabilityService photoAvailability)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(photoAvailability);
 
         var hasDossierBaseSection =
             options.IncludeDeckblatt
             || options.IncludeHaltungsprotokoll
-            || (options.IncludeFotos && HasPrintablePhotos(record, projectFolder))
+            || (options.IncludeFotos && photoAvailability.HasPrintablePhotos(record, projectFolder))
             || (options.IncludeSchachtVon && hasSchachtVon)
             || (options.IncludeSchachtBis && hasSchachtBis)
             || (options.IncludeHydraulik && hasHydraulikResult)
@@ -52,43 +79,12 @@ public static class DataPageDossierAvailability
     /// (nicht geloeschtes) Foto enthaelt, dessen Datei tatsaechlich existiert.
     /// </summary>
     public static bool HasPrintablePhotos(HaltungRecord record, string projectFolder)
-    {
-        var entries = record.Protocol?.Current?.Entries;
-        if (entries is null || entries.Count == 0)
-            return false;
-
-        foreach (var entry in entries)
-        {
-            if (entry.IsDeleted || entry.FotoPaths is null || entry.FotoPaths.Count == 0)
-                continue;
-
-            foreach (var raw in entry.FotoPaths)
-            {
-                var resolved = ResolveDossierPhotoPath(raw, projectFolder);
-                if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
-                    return true;
-            }
-        }
-
-        return false;
-    }
+        => DefaultService.HasPrintablePhotos(record, projectFolder);
 
     /// <summary>
     /// Loest einen Foto-Pfad auf: absolute Pfade bleiben unveraendert, relative
     /// werden gegen den Projektordner kombiniert. Leere Eingaben ergeben null.
     /// </summary>
     public static string? ResolveDossierPhotoPath(string? raw, string projectFolder)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalized))
-            return normalized;
-
-        if (string.IsNullOrWhiteSpace(projectFolder))
-            return null;
-
-        return Path.GetFullPath(Path.Combine(projectFolder, normalized));
-    }
+        => DossierPhotoPathResolver.Resolve(raw, projectFolder);
 }

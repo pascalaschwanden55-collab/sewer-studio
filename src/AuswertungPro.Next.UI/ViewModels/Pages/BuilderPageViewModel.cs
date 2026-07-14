@@ -36,6 +36,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDialogService _dialogs;
     private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
+    private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -127,7 +128,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             settings: services.Settings,
             dialogs: services.Dialogs,
             protocolPdfExporter: services.ProtocolPdfExporter,
-            costFieldSync: services.CostFieldSync)
+            costFieldSync: services.CostFieldSync,
+            dossierPhotoAvailability: services.DossierPhotoAvailability)
     {
     }
 
@@ -136,13 +138,16 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         AppSettings settings,
         IDialogService dialogs,
         ProtocolPdfExporter protocolPdfExporter,
-        IDerivedCostFieldSynchronizer costFieldSync)
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _protocolPdfExporter = protocolPdfExporter ?? throw new ArgumentNullException(nameof(protocolPdfExporter));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
+        _dossierPhotoAvailability = dossierPhotoAvailability
+            ?? DataPage.DataPageDossierAvailability.CompatibilityService;
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         _refreshDebounceTimer.Tick += RefreshDebounceTimerTick;

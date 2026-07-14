@@ -200,6 +200,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             getLastProjectPath: () => _settings.LastProjectPath,
             findSchachtByNummer: FindSchachtByNummer,
             protocolRegeneration: services.ProtocolSingleRegeneration,
+            dossierPhotoAvailability: services.DossierPhotoAvailability,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,

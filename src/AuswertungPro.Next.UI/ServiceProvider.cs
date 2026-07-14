@@ -42,6 +42,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using AuswertungPro.Next.Infrastructure.Reports;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -162,6 +163,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolService Protocols { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
+        public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
         public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion
@@ -331,6 +333,7 @@ namespace AuswertungPro.Next.UI
             ShaftRename = new ShaftRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
+            DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
@@ -670,6 +673,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;

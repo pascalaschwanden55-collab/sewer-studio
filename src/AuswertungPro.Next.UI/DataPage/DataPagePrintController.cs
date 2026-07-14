@@ -50,6 +50,7 @@ public sealed class DataPagePrintController
     // AWU-Einzeldruck: erzeugt das _E-Protokoll in den Haltungsordner (Rueckgabe = Zielpfad, null wenn kein Haltungsname)
     private readonly Func<Project, string, HaltungRecord, ProtocolDocument, string?> _regenerateOne;
     private readonly Func<string, bool> _openPdf;
+    private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
 
     public DataPagePrintController(
         IDialogService dialogs,
@@ -59,7 +60,8 @@ public sealed class DataPagePrintController
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
-        IProtocolSingleRegenerationService? protocolRegeneration = null)
+        IProtocolSingleRegenerationService? protocolRegeneration = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
         : this(
             dialogs,
             (IProtocolPdfExporter)protocolPdfExporter,
@@ -68,7 +70,8 @@ public sealed class DataPagePrintController
             getLastProjectPath,
             findSchachtByNummer,
             buildDossierHydraulikCalculation,
-            protocolRegeneration)
+            protocolRegeneration,
+            dossierPhotoAvailability)
     {
     }
 
@@ -80,7 +83,8 @@ public sealed class DataPagePrintController
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
-        IProtocolSingleRegenerationService? protocolRegeneration = null)
+        IProtocolSingleRegenerationService? protocolRegeneration = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -93,7 +97,8 @@ public sealed class DataPagePrintController
             regenerateOne: protocolRegeneration is null
                 ? null
                 : (project, folder, record, document) =>
-                    protocolRegeneration.RegenerateOne(project, folder, record, document))
+                    protocolRegeneration.RegenerateOne(project, folder, record, document),
+            dossierPhotoAvailability: dossierPhotoAvailability)
     {
     }
 
@@ -121,7 +126,8 @@ public sealed class DataPagePrintController
         Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
-        Func<string, bool>? openPdf = null)
+        Func<string, bool>? openPdf = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -152,6 +158,8 @@ public sealed class DataPagePrintController
             ?? ((project, folder, record, doc) =>
                 AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
         _openPdf = openPdf ?? (path => DataPageOriginalPdfController.TryShellOpen(path).Success);
+        _dossierPhotoAvailability = dossierPhotoAvailability
+            ?? DataPageDossierAvailability.CompatibilityService;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -227,7 +235,8 @@ public sealed class DataPagePrintController
                 hasSchachtBis: schachtBis is not null,
                 hasHydraulikResult: calcResult is not null,
                 kostenAvailable,
-                originalPdfPaths.Count);
+                originalPdfPaths.Count,
+                _dossierPhotoAvailability);
             if (!printableSections.HasAnySection)
             {
                 _dialogs.Info(

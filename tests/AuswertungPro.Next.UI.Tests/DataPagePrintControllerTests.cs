@@ -373,6 +373,29 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_verwendet_injizierte_fotoverfuegbarkeit()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var photoAvailability = new RecordingDossierPhotoAvailability(result: true);
+        var buildCalled = false;
+        var controller = CreateController(
+            dialogs,
+            dossierPhotoAvailability: photoAvailability,
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeFotos = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) =>
+            {
+                buildCalled = true;
+                return Task.FromResult(new byte[] { 1 });
+            });
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal(1, photoAvailability.Calls);
+        Assert.True(buildCalled);
+        Assert.Equal(("Dossier wurde erstellt:\nC:\\out\\dossier.pdf", "Dossier"), dialogs.LastInfo);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_erzeugt_basis_dossier_und_haengt_originale_an()
     {
         var project = new Project { Name = "P" };
@@ -526,7 +549,8 @@ public sealed class DataPagePrintControllerTests
         Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
-        Func<string, bool>? openPdf = null)
+        Func<string, bool>? openPdf = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -550,7 +574,8 @@ public sealed class DataPagePrintControllerTests
             mergeOriginals: mergeOriginals,
             mergeWithOriginals: mergeWithOriginals,
             regenerateOne: regenerateOne,
-            openPdf: openPdf);
+            openPdf: openPdf,
+            dossierPhotoAvailability: dossierPhotoAvailability);
 
     private static HaltungRecord Record(string holding)
     {
@@ -604,6 +629,17 @@ public sealed class DataPagePrintControllerTests
             IncludeKostenschaetzung = false,
             IncludeOriginalProtokolle = false
         };
+
+    private sealed class RecordingDossierPhotoAvailability(bool result) : IDossierPhotoAvailabilityService
+    {
+        public int Calls { get; private set; }
+
+        public bool HasPrintablePhotos(HaltungRecord record, string projectFolder)
+        {
+            Calls++;
+            return result;
+        }
+    }
 
     private sealed class CapturingDialogService : IDialogService
     {

@@ -169,7 +169,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 settings: _sp.Settings,
                 dialogs: _sp.Dialogs,
                 protocolPdfExporter: _sp.ProtocolPdfExporter,
-                costFieldSync: _sp.CostFieldSync)),
+                costFieldSync: _sp.CostFieldSync,
+                dossierPhotoAvailability: _sp.DossierPhotoAvailability)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(
                 this,
                 settings: _sp.Settings,
