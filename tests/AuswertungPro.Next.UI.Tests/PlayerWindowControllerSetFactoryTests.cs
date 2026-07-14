@@ -72,7 +72,6 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 VideoPath: "sample.mp4",
                 EnsurePlaying: () => { },
                 UpdateUi: () => { },
-                ScrubSeekToSlider: () => { },
                 ShowUnsupportedRate: _ => { },
                 ResolveSliderTrackBounds: () => (0, 100),
                 MapCodingOverlayPoint: _ => new Point(1, 2));
@@ -82,6 +81,7 @@ public sealed class PlayerWindowControllerSetFactoryTests
             Assert.NotNull(set.DamageMarkerController);
             Assert.NotNull(set.QuickScanController);
             Assert.NotNull(set.PositionControls);
+            Assert.NotNull(set.PositionInputController);
             Assert.NotNull(set.ControlInputController);
             Assert.NotNull(set.MarkToolControls);
             Assert.NotNull(set.CodingOverlayRenderController);

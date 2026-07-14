@@ -24,6 +24,8 @@ public partial class PlayerWindow
 
     private PlayerPositionControls _positionControls => _playerControllers.PositionControls;
 
+    private PlayerPositionInputController _positionInputController => _playerControllers.PositionInputController;
+
     private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController;
 
     private PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner => _playerControllers.KeyboardActionControllerOwner;

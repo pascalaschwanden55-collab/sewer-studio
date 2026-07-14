@@ -10,6 +10,7 @@ public sealed record PlayerWindowControllerSet(
     DamageMarkerController DamageMarkerController,
     QuickScanController QuickScanController,
     PlayerPositionControls PositionControls,
+    PlayerPositionInputController PositionInputController,
     PlayerPositionSliderStateController PositionSliderStateController,
     PlayerKeyboardActionControllerOwner KeyboardActionControllerOwner,
     PlayerShortcutOverlayController ShortcutOverlayController,
@@ -61,7 +62,6 @@ public sealed record PlayerWindowControllerSetDependencies(
     string VideoPath,
     Action EnsurePlaying,
     Action UpdateUi,
-    Action ScrubSeekToSlider,
     Action<float> ShowUnsupportedRate,
     Func<(double offsetX, double trackWidth)> ResolveSliderTrackBounds,
     Func<NormalizedPoint, Point> MapCodingOverlayPoint);
@@ -78,6 +78,15 @@ public static class PlayerWindowControllerSetFactory
         var positionSliderStateController = new PlayerPositionSliderStateController();
         var keyboardActionControllerOwner = new PlayerKeyboardActionControllerOwner();
         var shutdownStateController = new PlayerWindowShutdownStateController();
+        var positionControls = new PlayerPositionControls(
+            controls.PositionSlider,
+            controls.CurrentTimeText,
+            controls.DurationText);
+        var positionInputController = new PlayerPositionInputController(
+            controls.PositionSlider,
+            dependencies.TimelineHost,
+            positionControls,
+            dependencies.UpdateUi);
         var speedControls = new PlayerSpeedControls(
             controls.RateText,
             controls.SpeedSlider,
@@ -111,7 +120,7 @@ public static class PlayerWindowControllerSetFactory
                 positionSliderStateController.IsDragging),
             actions: new PlayerWindowTimerTickWorkflowActions(
                 dependencies.UpdateUi,
-                dependencies.ScrubSeekToSlider));
+                () => positionInputController.ScrubSeekToSlider()));
 
         return new PlayerWindowControllerSet(
             new DamageMarkerController(
@@ -133,10 +142,8 @@ public static class PlayerWindowControllerSetFactory
                 dependencies.EnsurePlaying,
                 dependencies.UpdateUi,
                 dependencies.ResolveSliderTrackBounds),
-            new PlayerPositionControls(
-                controls.PositionSlider,
-                controls.CurrentTimeText,
-                controls.DurationText),
+            positionControls,
+            positionInputController,
             positionSliderStateController,
             keyboardActionControllerOwner,
             new PlayerShortcutOverlayController(controls.ShortcutOverlay),

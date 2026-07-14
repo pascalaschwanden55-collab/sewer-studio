@@ -219,6 +219,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var startWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackStartWorkflow.cs");
         var sliderSeekControllerPath = Path.Combine(uiRoot, "Player", "PlayerSliderSeekController.cs");
         var positionControlsPath = Path.Combine(uiRoot, "Player", "PlayerPositionControls.cs");
+        var positionInputPath = Path.Combine(uiRoot, "Player", "PlayerPositionInputController.cs");
         var speedControlsPath = Path.Combine(uiRoot, "Player", "PlayerSpeedControls.cs");
         var controlInputPath = Path.Combine(uiRoot, "Player", "PlayerControlInputController.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogService.cs");
@@ -232,6 +233,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.True(File.Exists(dialogServiceFactoryPath), "Playback-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogWorkflowPath), "Playback-Dialogaufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlInputPath), "Geschwindigkeit und Bedieneinstellungen sollen ausserhalb der PlayerWindow-Partials gesteuert werden.");
+        Assert.True(File.Exists(positionInputPath), "Positionsleisten-Eingaben sollen ausserhalb der PlayerWindow-Partials gesteuert werden.");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
@@ -239,6 +241,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var startWorkflow = File.Exists(startWorkflowPath) ? File.ReadAllText(startWorkflowPath) : "";
         var sliderSeekController = File.ReadAllText(sliderSeekControllerPath);
         var positionControls = File.ReadAllText(positionControlsPath);
+        var positionInput = File.ReadAllText(positionInputPath);
         var speedControls = File.ReadAllText(speedControlsPath);
         var controlInput = File.ReadAllText(controlInputPath);
         var dialogService = File.ReadAllText(dialogServicePath);
@@ -251,14 +254,15 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PlayerPlaybackStartWorkflow.Play", playback);
         Assert.Contains("PlayerPlaybackCommandRunner.TogglePlayPause", playback);
         Assert.Contains("PlayerPlaybackCommandRunner.JumpSeconds", playback);
-        Assert.Contains("PlayerSliderSeekController.SeekToSlider", playback);
-        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
-        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
+        Assert.Contains("PlayerSliderSeekController.SeekToSlider", positionInput);
+        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", positionInput);
+        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", positionInput);
         AssertNoForbiddenTokens(
             playback,
             "PlayerPlaybackDialogServiceFactory.Create",
             "new PlayerPlaybackDialogWorkflowActions",
             "PlayerPlaybackDialogWorkflow.ShowUnsupportedRate",
+            "PlayerSliderSeekController.",
             "_speedControls.Update");
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
         Assert.Contains("PlayerPlaybackCommandRunner.SetSpeed", controlInput);
@@ -326,6 +330,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
         var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
         var controlInputPath = Path.Combine(uiRoot, "Player", "PlayerControlInputController.cs");
+        var positionInputPath = Path.Combine(uiRoot, "Player", "PlayerPositionInputController.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiUpdateWorkflow.cs");
         var sliderValueChangedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderValueChangedWorkflow.cs");
         var playbackStartWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackStartWorkflow.cs");
@@ -338,11 +343,13 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.True(File.Exists(playbackStartWorkflowPath), "Playback-Start-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(lastOpenedPlaybackWorkflowPath), "Last-opened-Playback-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlInputPath), "Player-Bedieneingaben sollen in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(positionInputPath), "Positionsleisten-Eingaben sollen in einem eigenen Controller liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
         var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
         var controlInput = File.Exists(controlInputPath) ? File.ReadAllText(controlInputPath) : "";
+        var positionInput = File.Exists(positionInputPath) ? File.ReadAllText(positionInputPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sliderValueChangedWorkflow = File.Exists(sliderValueChangedWorkflowPath) ? File.ReadAllText(sliderValueChangedWorkflowPath) : "";
         var playbackStartWorkflow = File.Exists(playbackStartWorkflowPath) ? File.ReadAllText(playbackStartWorkflowPath) : "";
@@ -391,9 +398,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             controls,
             "private void UpdateSpeedButtons",
             "private static void SetSpeedButtonState");
-        Assert.Contains("PlayerSliderSeekController.SeekToSlider", controls);
-        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", controls);
-        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", controls);
+        Assert.Contains("PlayerSliderSeekController.SeekToSlider", positionInput);
+        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", positionInput);
+        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", positionInput);
+        AssertNoForbiddenTokens(controls, "PlayerSliderSeekController.");
         Assert.Contains("PlayerPositionSliderValueChangedWorkflow.Execute", controls);
         AssertNoForbiddenTokens(
             controls,
@@ -426,7 +434,6 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var paths = new[]
         {
             "PlayerWindow.Playback.cs",
-            "PlayerWindow.Playback.Controls.cs",
             "PlayerWindow.Playback.Snapshot.cs"
         };
 
@@ -444,6 +451,16 @@ public sealed class PlayerWindowPlaybackArchitectureTests
                 "_player?.Time",
                 "_player?.Length");
         }
+
+        var positionInputPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Player",
+            "PlayerPositionInputController.cs");
+        var positionInput = File.ReadAllText(positionInputPath);
+        Assert.Contains("_timelineHost", positionInput);
+        AssertNoForbiddenTokens(positionInput, "_player.Time", "_player.Length", "_player.Position");
     }
 
     [Fact]
@@ -528,7 +545,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var playerRoot = Path.Combine(uiRoot, "Player");
         var paths = new[]
         {
-            Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs"),
+            Path.Combine(playerRoot, "PlayerPositionInputController.cs"),
             Path.Combine(playerRoot, "DamageMarkerController.cs")
         };
 

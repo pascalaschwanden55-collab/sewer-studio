@@ -64,7 +64,6 @@ public partial class PlayerWindow : Window
                 VideoPath: _playbackContext.VideoPath,
                 EnsurePlaying: EnsurePlaying,
                 UpdateUi: UpdateUi,
-                ScrubSeekToSlider: ScrubSeekToSlider,
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));

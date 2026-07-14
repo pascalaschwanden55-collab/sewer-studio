@@ -95,6 +95,7 @@ public sealed class PlayerWindowWiringArchitectureTests
             "new DamageMarkerController",
             "new QuickScanController",
             "new PlayerPositionControls",
+            "new PlayerPositionInputController",
             "new PlayerSpeedControls",
             "new PlayerControlSettingsController",
             "new PlayerControlSettingsView",
@@ -112,6 +113,7 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("new DamageMarkerController", controllerSetFactory);
         Assert.Contains("new QuickScanController", controllerSetFactory);
         Assert.Contains("new PlayerPositionControls", controllerSetFactory);
+        Assert.Contains("new PlayerPositionInputController", controllerSetFactory);
         Assert.Contains("new PlayerSpeedControls", controllerSetFactory);
         Assert.Contains("new PlayerControlSettingsController", controllerSetFactory);
         Assert.Contains("new PlayerControlSettingsView", controllerSetFactory);

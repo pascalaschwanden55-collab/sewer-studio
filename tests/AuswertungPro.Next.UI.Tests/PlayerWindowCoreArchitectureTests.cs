@@ -100,6 +100,7 @@ public sealed class PlayerWindowCoreArchitectureTests
             "private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost",
             "private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost",
             "private readonly PlayerPositionControls _positionControls",
+            "private readonly PlayerPositionInputController _positionInputController",
             "private readonly PlayerSpeedControls _speedControls",
             "private readonly PlayerControlSettingsController _playerControlSettingsController",
             "private readonly PlayerControlSettingsView _playerControlSettingsView",
@@ -127,6 +128,7 @@ public sealed class PlayerWindowCoreArchitectureTests
         Assert.Contains("private readonly PlayerMediaHosts _playerMediaHosts", state);
         Assert.Contains("private readonly PlayerWindowControllerSet _playerControllers", state);
         Assert.Contains("private PlayerPositionControls _positionControls => _playerControllers.PositionControls", state);
+        Assert.Contains("private PlayerPositionInputController _positionInputController => _playerControllers.PositionInputController", state);
         Assert.Contains("private PlayerControlInputController _playerControlInputController => _playerControllers.ControlInputController", state);
         Assert.Contains("private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls", state);
         Assert.Contains("private DamageMarkerController _damageMarkerController => _playerControllers.DamageMarkerController", state);

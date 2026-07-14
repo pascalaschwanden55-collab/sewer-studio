@@ -49,40 +49,10 @@ public partial class PlayerWindow
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         => PlayerPositionSliderValueChangedWorkflow.Execute(
             new PlayerPositionSliderValueChangedWorkflowRequest(_positionSliderStateController.IsDragging),
-            new PlayerPositionSliderValueChangedWorkflowActions(UpdateSeekPreview));
-
-    private void SeekToSlider()
-    {
-        PlayerSliderSeekController.SeekToSlider(
-            PositionSlider.Value,
-            PositionSlider.Maximum,
-            _playerTimelineHost.LengthMilliseconds ?? 0,
-            _playerTimelineHost.SeekMilliseconds,
-            _playerTimelineHost.SetPositionRatio,
-            UpdateUi);
-    }
-
-    private void UpdateSeekPreview()
-    {
-        PlayerSliderSeekController.UpdateSeekPreview(
-            PositionSlider.Value,
-            PositionSlider.Maximum,
-            _playerTimelineHost.LengthMilliseconds ?? 0,
-            _positionSliderStateController.IsDragging,
-            _playerTimerController.IsScrubTimerEnabled,
-            _positionControls.ApplySeekPreview,
-            _playerTimerController.StartScrubTimer);
-    }
-
-    private void ScrubSeekToSlider()
-    {
-        PlayerSliderSeekController.ScrubSeekToSlider(
-            PositionSlider.Value,
-            PositionSlider.Maximum,
-            _playerTimelineHost.LengthMilliseconds ?? 0,
-            _playerTimelineHost.SeekMilliseconds,
-            _playerTimelineHost.SetPositionRatio,
-            _positionControls.ApplyScrubPreview);
-    }
+            new PlayerPositionSliderValueChangedWorkflowActions(
+                () => _positionInputController.UpdateSeekPreview(
+                    _positionSliderStateController.IsDragging,
+                    _playerTimerController.IsScrubTimerEnabled,
+                    _playerTimerController.StartScrubTimer)));
 
 }
