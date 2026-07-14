@@ -22,6 +22,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly IWinCanDbImportService _winCanImport;
     private readonly IIbakImportService _ibakImport;
     private readonly IKinsImportService _kinsImport;
+    private readonly IStoredImportFileService _storedImportFiles;
     private readonly string? _pdfToTextPath;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
     private readonly Services.ImportProjectPhotoAssignmentController _projectPhotoAssignmentController;
@@ -76,6 +77,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _winCanImport = sp.WinCanImport;
         _ibakImport = sp.IbakImport;
         _kinsImport = sp.KinsImport;
+        _storedImportFiles = sp.StoredImportFiles;
         _pdfToTextPath = sp.Diagnostics.ExplicitPdfToTextPath;
         var oneClickImporter = sp.CreateOneClickProjectImportService();
         var resolvedCatalogPath = sp.VsaCatalogResolvedPath;
@@ -528,7 +530,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void StoreImportFiles(string[] paths, Project project, string importKind, string displayName)
     {
-        var result = Services.StoredImportFileRegistry.Store(
+        var result = _storedImportFiles.Store(
             _settings.LastProjectPath,
             project.Metadata,
             importKind,

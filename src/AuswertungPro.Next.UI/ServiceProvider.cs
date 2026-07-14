@@ -119,6 +119,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
         public IOneClickImportReportWriter OneClickImportReports { get; }
         public IImportSummaryExporter ImportSummaryExporter { get; }
+        public IStoredImportFileService StoredImportFiles { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
@@ -240,6 +241,7 @@ namespace AuswertungPro.Next.UI
             ProtocolSingleRegeneration = protocolRegeneration;
             OneClickImportReports = new OneClickImportReportWriter(Logger);
             ImportSummaryExporter = new ImportSummaryExporter();
+            StoredImportFiles = new StoredImportFileService();
             ExcelExport = new ExcelTemplateExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 

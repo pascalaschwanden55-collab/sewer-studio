@@ -6,16 +6,34 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportArchitectureGuardTests
 {
     [Fact]
-    public void ImportPage_stored_file_registry_owns_project_import_storage()
+    public void ImportPage_uses_injected_stored_file_service_and_keeps_static_facade_thin()
     {
         var viewModelPath = RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");
         var registryPath = RepoFile("src", "AuswertungPro.Next.UI", "Services", "StoredImportFileRegistry.cs");
+        var contractPath = RepoFile("src", "AuswertungPro.Next.Application", "Import", "IStoredImportFileService.cs");
+        var servicePath = RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "StoredImportFileService.cs");
+        var providerPath = RepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
 
         Assert.True(File.Exists(registryPath), "Stored Import-Dateien muessen ausserhalb der ImportPageViewModel registriert werden.");
+        Assert.True(File.Exists(contractPath), "Stored Import-Dateien brauchen einen Application-Vertrag.");
+        Assert.True(File.Exists(servicePath), "Stored Import-Dateien muessen in Infrastructure geschrieben werden.");
 
         var viewModel = File.ReadAllText(viewModelPath);
+        var registry = File.ReadAllText(registryPath);
+        var contract = File.ReadAllText(contractPath);
+        var service = File.ReadAllText(servicePath);
+        var provider = File.ReadAllText(providerPath);
 
-        Assert.Contains("Services.StoredImportFileRegistry.Store(", viewModel);
+        Assert.Contains("private readonly IStoredImportFileService _storedImportFiles;", viewModel);
+        Assert.Contains("_storedImportFiles.Store(", viewModel);
+        Assert.DoesNotContain("Services.StoredImportFileRegistry.Store(", viewModel);
+        Assert.Contains("public interface IStoredImportFileService", contract);
+        Assert.Contains("public sealed class StoredImportFileService : IStoredImportFileService", service);
+        Assert.Contains("File.Copy", service);
+        Assert.Contains("private static readonly IStoredImportFileService DefaultService", registry);
+        Assert.DoesNotContain("File.Copy", registry);
+        Assert.Contains("public IStoredImportFileService StoredImportFiles", provider);
+        Assert.Contains("StoredImportFiles = new StoredImportFileService()", provider);
     }
 
     [Fact]
