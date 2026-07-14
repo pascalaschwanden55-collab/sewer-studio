@@ -39,7 +39,7 @@ internal static class SchachtProtocolFolderImportPolicy
                     "*.pdf",
                     recursive: true,
                     skippedDirectories)
-                .Where(path => exclusions.All(folder => !IsAtOrBelow(path, folder)))
+                .Where(path => exclusions.All(folder => !IsSameOrBelow(path, folder)))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -89,7 +89,7 @@ internal static class SchachtProtocolFolderImportPolicy
             : DateTime.MinValue;
     }
 
-    private static bool IsAtOrBelow(string path, string folder)
+    internal static bool IsSameOrBelow(string path, string folder)
     {
         try
         {

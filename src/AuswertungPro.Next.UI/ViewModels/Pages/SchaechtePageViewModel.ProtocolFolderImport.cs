@@ -13,6 +13,12 @@ public sealed partial class SchaechtePageViewModel
     {
         var destinationFolder = Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt);
         var legacyDestinationFolder = Path.Combine(projectFolder, "Schaechte_Verteilt");
+        var readsExistingDistribution =
+            SchachtProtocolFolderImportPolicy.IsSameOrBelow(sourceFolder, destinationFolder)
+            || SchachtProtocolFolderImportPolicy.IsSameOrBelow(sourceFolder, legacyDestinationFolder);
+        var excludedFolders = readsExistingDistribution
+            ? Array.Empty<string>()
+            : new[] { destinationFolder, legacyDestinationFolder };
         var skippedDirectories = new List<string>();
         LastResult = "Ordner und Unterordner werden nach PDF-Dateien durchsucht ...";
         _shell.SetStatus(LastResult);
@@ -23,7 +29,7 @@ public sealed partial class SchaechtePageViewModel
             sourcePdfs = await Task.Run(() =>
                 SchachtProtocolFolderImportPolicy.FindPdfFiles(
                     sourceFolder,
-                    new[] { destinationFolder, legacyDestinationFolder },
+                    excludedFolders,
                     skippedDirectories));
         }
         catch (Exception ex)
@@ -48,7 +54,9 @@ public sealed partial class SchaechtePageViewModel
 
         if (!_dialogs.ConfirmWarn(
                 $"Gefunden: {sourcePdfs.Count} PDF-Dateien.\n\n" +
-                "Alle lesbaren Schachtprotokolle werden ins Projekt kopiert. " +
+                (readsExistingDistribution
+                    ? "Die vorhandenen Projekt-PDFs werden direkt eingelesen und nicht erneut kopiert. "
+                    : "Alle lesbaren Schachtprotokolle werden ins Projekt kopiert. ") +
                 "Bestehende Schaechte werden mit den Protokolldaten aktualisiert; " +
                 "fehlende Schaechte werden angelegt.\n\nFortfahren?",
                 "Ordner importieren"))
@@ -59,53 +67,61 @@ public sealed partial class SchaechtePageViewModel
 
         _shell.TryCreateImportRestorePoint("Schachtprotokoll-Ordnerimport");
 
-        var distributionProgress = new Progress<HoldingFolderDistributor.DistributionProgress>(progress =>
+        var failures = new List<string>();
+        string[] preparedPdfs;
+        if (readsExistingDistribution)
         {
-            var current = string.IsNullOrWhiteSpace(progress.CurrentFile)
-                ? string.Empty
-                : $" - {Path.GetFileName(progress.CurrentFile)}";
-            LastResult = $"PDFs vorbereiten: {progress.Processed}/{progress.Total}{current}";
-            _shell.SetStatus(LastResult);
-        });
-
-        IReadOnlyList<HoldingFolderDistributor.DistributionResult> distributionResults;
-        try
-        {
-            distributionResults = await Task.Run(() => HoldingFolderDistributor.DistributeShaftFiles(
-                pdfFiles: sourcePdfs,
-                destGemeindeFolder: destinationFolder,
-                moveInsteadOfCopy: false,
-                overwrite: false,
-                project: _shell.Project,
-                progress: distributionProgress));
+            preparedPdfs = sourcePdfs.ToArray();
         }
-        catch (Exception ex)
+        else
         {
-            var userMessage = UserError.DescribeAndReport(ex, "Schachtprotokoll-Ordner verteilen");
-            _dialogs.Warn($"Der Ordnerimport ist fehlgeschlagen:\n{userMessage}", "Protokoll importieren");
-            LastResult = "Ordnerimport fehlgeschlagen.";
-            return;
+            var distributionProgress = new Progress<HoldingFolderDistributor.DistributionProgress>(progress =>
+            {
+                var current = string.IsNullOrWhiteSpace(progress.CurrentFile)
+                    ? string.Empty
+                    : $" - {Path.GetFileName(progress.CurrentFile)}";
+                LastResult = $"PDFs vorbereiten: {progress.Processed}/{progress.Total}{current}";
+                _shell.SetStatus(LastResult);
+            });
+
+            IReadOnlyList<HoldingFolderDistributor.DistributionResult> distributionResults;
+            try
+            {
+                distributionResults = await Task.Run(() => HoldingFolderDistributor.DistributeShaftFiles(
+                    pdfFiles: sourcePdfs,
+                    destGemeindeFolder: destinationFolder,
+                    moveInsteadOfCopy: false,
+                    overwrite: false,
+                    project: _shell.Project,
+                    progress: distributionProgress));
+            }
+            catch (Exception ex)
+            {
+                var userMessage = UserError.DescribeAndReport(ex, "Schachtprotokoll-Ordner verteilen");
+                _dialogs.Warn($"Der Ordnerimport ist fehlgeschlagen:\n{userMessage}", "Protokoll importieren");
+                LastResult = "Ordnerimport fehlgeschlagen.";
+                return;
+            }
+
+            failures.AddRange(distributionResults
+                .Where(result => !result.Success)
+                .Select(result => $"{Path.GetFileName(result.SourcePdfPath)}: {result.Message}"));
+            preparedPdfs = distributionResults
+                .Where(result => result.Success && !string.IsNullOrWhiteSpace(result.DestPdfPath))
+                .Select(result => result.DestPdfPath!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
         }
 
         if (!ProjectIsStillOpen(projectFolder, "Protokoll importieren"))
             return;
 
-        var failures = distributionResults
-            .Where(result => !result.Success)
-            .Select(result => $"{Path.GetFileName(result.SourcePdfPath)}: {result.Message}")
-            .ToList();
-        var distributedPdfs = distributionResults
-            .Where(result => result.Success && !string.IsNullOrWhiteSpace(result.DestPdfPath))
-            .Select(result => result.DestPdfPath!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
         var candidates = new List<SchachtProtocolFolderCandidate>();
-        for (var index = 0; index < distributedPdfs.Length; index++)
+        for (var index = 0; index < preparedPdfs.Length; index++)
         {
-            var pdfPath = distributedPdfs[index];
-            LastResult = $"Protokolldaten lesen: {index + 1}/{distributedPdfs.Length} - {Path.GetFileName(pdfPath)}";
+            var pdfPath = preparedPdfs[index];
+            LastResult = $"Protokolldaten lesen: {index + 1}/{preparedPdfs.Length} - {Path.GetFileName(pdfPath)}";
             _shell.SetStatus(LastResult);
 
             try
@@ -117,7 +133,10 @@ public sealed partial class SchaechtePageViewModel
                     continue;
                 }
 
-                var canonicalShaft = Path.GetFileName(Path.GetDirectoryName(pdfPath));
+                var canonicalShaft = ResolveCanonicalShaftFolder(
+                    pdfPath,
+                    destinationFolder,
+                    legacyDestinationFolder);
                 if (!string.IsNullOrWhiteSpace(canonicalShaft))
                     parsed = parsed with { Schachtnummer = canonicalShaft };
 
@@ -172,7 +191,7 @@ public sealed partial class SchaechtePageViewModel
 
         var summary = BuildFolderImportSummary(
             sourcePdfs.Count,
-            distributedPdfs.Length,
+            preparedPdfs.Length,
             created,
             updated,
             archivedOlderProtocols,
@@ -189,7 +208,7 @@ public sealed partial class SchaechtePageViewModel
 
     private static string BuildFolderImportSummary(
         int sourcePdfCount,
-        int distributedPdfCount,
+        int preparedPdfCount,
         int created,
         int updated,
         int archivedOlderProtocols,
@@ -199,7 +218,7 @@ public sealed partial class SchaechtePageViewModel
         var lines = new List<string>
         {
             $"Gefundene PDF-Dateien: {sourcePdfCount}",
-            $"Verteilte Schachtprotokolle: {distributedPdfCount}",
+            $"Eingelesene Schachtprotokolle: {preparedPdfCount}",
             $"Schaechte neu angelegt: {created}",
             $"Schaechte aktualisiert: {updated}"
         };
@@ -217,5 +236,37 @@ public sealed partial class SchaechtePageViewModel
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string? ResolveCanonicalShaftFolder(
+        string pdfPath,
+        params string[] distributionRoots)
+    {
+        var parentFolder = Path.GetDirectoryName(pdfPath);
+        if (string.IsNullOrWhiteSpace(parentFolder))
+            return null;
+
+        if (distributionRoots.Any(root =>
+                PathsEqual(parentFolder, root)))
+        {
+            return null;
+        }
+
+        return Path.GetFileName(Path.TrimEndingDirectorySeparator(parentFolder));
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        try
+        {
+            return string.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
