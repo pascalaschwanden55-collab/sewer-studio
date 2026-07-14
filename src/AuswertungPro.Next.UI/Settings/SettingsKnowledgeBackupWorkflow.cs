@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
@@ -68,9 +69,15 @@ public static class SettingsKnowledgeBackupWorkflow
                 request.Dialogs.Error($"Export fehlgeschlagen:\n{result.Error}", "SewerStudio");
             }
         }
+        catch (OperationCanceledException)
+        {
+            request.SetStatusText("Export abgebrochen.");
+        }
         catch (Exception ex)
         {
-            request.SetStatusText($"Fehler: {ex.Message}");
+            var userMessage = UserError.DescribeAndReport(ex, "KI-Wissen exportieren");
+            request.SetStatusText($"Fehler: {userMessage}");
+            request.Dialogs.Error($"Export fehlgeschlagen:\n{userMessage}", "SewerStudio");
         }
     }
 
@@ -116,9 +123,15 @@ public static class SettingsKnowledgeBackupWorkflow
                 request.Dialogs.Error($"Import fehlgeschlagen:\n{result.Error}", "SewerStudio");
             }
         }
+        catch (OperationCanceledException)
+        {
+            request.SetStatusText("Import abgebrochen.");
+        }
         catch (Exception ex)
         {
-            request.SetStatusText($"Fehler: {ex.Message}");
+            var userMessage = UserError.DescribeAndReport(ex, "KI-Wissen importieren");
+            request.SetStatusText($"Fehler: {userMessage}");
+            request.Dialogs.Error($"Import fehlgeschlagen:\n{userMessage}", "SewerStudio");
         }
     }
 

@@ -87,7 +87,7 @@ public static class KnowledgeBackupService
         {
             BestEffort.ReportWarning(
                 $"[KnowledgeBackup] Export fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
-            return new BackupResult(false, ex.Message, 0, 0);
+            return new BackupResult(false, UserError.Describe(ex), 0, 0);
         }
     }
 
@@ -222,7 +222,7 @@ public static class KnowledgeBackupService
         {
             BestEffort.ReportWarning(
                 $"[KnowledgeBackup] Import fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
-            return new BackupResult(false, ex.Message, 0, 0);
+            return new BackupResult(false, UserError.Describe(ex), 0, 0);
         }
     }
 

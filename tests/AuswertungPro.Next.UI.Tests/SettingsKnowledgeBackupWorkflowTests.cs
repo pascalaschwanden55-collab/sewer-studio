@@ -56,6 +56,27 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
     }
 
     [Fact]
+    public async Task ExportAsync_exception_zeigt_keine_technischen_Details()
+    {
+        var dialogs = new DialogFake { SavePath = @"D:\Backup\ki.zip" };
+        var state = new UiState();
+
+        await SettingsKnowledgeBackupWorkflow.ExportAsync(
+            Request(
+                dialogs,
+                state,
+                [],
+                DateTime.Today,
+                export: (_, _, _) => throw new InvalidOperationException(@"INTERN C:\Benutzer\Geheim")),
+            CancellationToken.None);
+
+        Assert.Contains("Programmlog", state.Status, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INTERN", state.Status, StringComparison.Ordinal);
+        Assert.Single(dialogs.Errors);
+        Assert.DoesNotContain("Geheim", dialogs.Errors[0], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ImportAsync_success_requires_confirmation_and_shows_restart_info()
     {
         var dialogs = new DialogFake { OpenPath = @"D:\Backup\ki.zip", ConfirmResult = true };
@@ -103,6 +124,27 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
 
         Assert.True(dialogs.ConfirmCalled);
         Assert.Empty(calls);
+    }
+
+    [Fact]
+    public async Task ImportAsync_exception_zeigt_keine_technischen_Details()
+    {
+        var dialogs = new DialogFake { OpenPath = @"D:\Backup\ki.zip", ConfirmResult = true };
+        var state = new UiState();
+
+        await SettingsKnowledgeBackupWorkflow.ImportAsync(
+            Request(
+                dialogs,
+                state,
+                [],
+                DateTime.Today,
+                import: (_, _, _) => throw new InvalidOperationException(@"INTERN C:\Benutzer\Geheim")),
+            CancellationToken.None);
+
+        Assert.Contains("Programmlog", state.Status, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INTERN", state.Status, StringComparison.Ordinal);
+        Assert.Single(dialogs.Errors);
+        Assert.DoesNotContain("Geheim", dialogs.Errors[0], StringComparison.Ordinal);
     }
 
     private static SettingsKnowledgeBackupWorkflowRequest Request(
