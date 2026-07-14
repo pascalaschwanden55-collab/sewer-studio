@@ -21,6 +21,19 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Startup;
 
 public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
 {
+    private readonly IAiStartedProcessLifetime _startedProcesses;
+
+    public DefaultAiStartupLauncher()
+        : this(AiStartedProcessLifetime.Current)
+    {
+    }
+
+    public DefaultAiStartupLauncher(IAiStartedProcessLifetime startedProcesses)
+    {
+        _startedProcesses = startedProcesses
+            ?? throw new ArgumentNullException(nameof(startedProcesses));
+    }
+
     public async Task<bool> IsReachableAsync(
         Uri baseUri,
         string relativePath,
@@ -62,7 +75,7 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
                 return false;
             }
 
-            if (!AiStartedProcessLifetime.TryTrack(process, out var trackingError))
+            if (!_startedProcesses.TryTrack(process, out var trackingError))
             {
                 try
                 {

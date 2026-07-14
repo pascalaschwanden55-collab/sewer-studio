@@ -250,7 +250,7 @@ namespace AuswertungPro.Next.UI
 
         protected override void OnExit(ExitEventArgs e)
         {
-            AiStartedProcessLifetime.StopAllStartedProcesses();
+            _services?.AiStartedProcesses.StopAllStartedProcesses();
             try
             {
                 _qgisBridgeServer?.Dispose();

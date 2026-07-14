@@ -91,6 +91,7 @@ namespace AuswertungPro.Next.UI
         public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
         public ISidecarScriptLocator SidecarScripts { get; }
         public ISidecarTokenResolver SidecarTokens { get; }
+        public IAiStartedProcessLifetime AiStartedProcesses { get; }
         public IVsaYoloClassMapStore VsaYoloClasses { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
@@ -297,6 +298,8 @@ namespace AuswertungPro.Next.UI
             SidecarScriptLocator.Use(SidecarScripts);
             SidecarTokens = new SidecarTokenFileResolver();
             SidecarTokenResolver.Use(SidecarTokens);
+            AiStartedProcesses = new AiStartedProcessLifetimeService();
+            AiStartedProcessLifetime.Use(AiStartedProcesses);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -731,6 +734,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
             if (serviceType == typeof(ISidecarScriptLocator)) return SidecarScripts;
             if (serviceType == typeof(ISidecarTokenResolver)) return SidecarTokens;
+            if (serviceType == typeof(IAiStartedProcessLifetime)) return AiStartedProcesses;
             if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
