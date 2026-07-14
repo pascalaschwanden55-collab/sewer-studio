@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using System.IO;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -7,69 +8,19 @@ public sealed record ExplorerRevealStartPlan(bool Success, ProcessStartInfo? Sta
 
 public static class ExplorerRevealService
 {
+    private static readonly ExplorerRevealLauncher DefaultLauncher = new();
+
+    internal static IExplorerRevealService DefaultService => DefaultLauncher;
+
     public static ExplorerRevealStartPlan BuildStartInfo(string? targetPath)
     {
-        if (string.IsNullOrWhiteSpace(targetPath))
-            return new ExplorerRevealStartPlan(false, null, "Pfad fehlt.");
-
-        string fullPath;
-        try
-        {
-            fullPath = Path.GetFullPath(targetPath);
-        }
-        catch (Exception ex)
-        {
-            return new ExplorerRevealStartPlan(false, null, ex.Message);
-        }
-
-        if (File.Exists(fullPath))
-        {
-            return new ExplorerRevealStartPlan(
-                true,
-                new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{fullPath}\"",
-                    UseShellExecute = false
-                },
-                null);
-        }
-
-        if (Directory.Exists(fullPath))
-        {
-            return new ExplorerRevealStartPlan(
-                true,
-                new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{fullPath}\"",
-                    UseShellExecute = false
-                },
-                null);
-        }
-
-        return new ExplorerRevealStartPlan(false, null, "Datei oder Ordner nicht gefunden.");
+        var plan = DefaultLauncher.BuildStartInfo(targetPath);
+        return new ExplorerRevealStartPlan(
+            plan.Success,
+            plan.StartInfo,
+            plan.Error);
     }
 
     public static bool TryReveal(string? targetPath, out string? error)
-    {
-        var plan = BuildStartInfo(targetPath);
-        if (!plan.Success || plan.StartInfo is null)
-        {
-            error = plan.Error;
-            return false;
-        }
-
-        try
-        {
-            Process.Start(plan.StartInfo);
-            error = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-    }
+        => DefaultLauncher.TryReveal(targetPath, out error);
 }

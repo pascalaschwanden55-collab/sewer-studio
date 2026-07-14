@@ -870,7 +870,7 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
-        if (!AuswertungPro.Next.UI.Services.ExplorerRevealService.TryReveal(target, out var error))
+        if (!Vm.ExplorerReveal.TryReveal(target, out var error))
             DialogHost.Current.Error($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
     }
 

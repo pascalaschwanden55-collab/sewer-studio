@@ -46,4 +46,18 @@ public sealed class ExplorerRevealServiceTests
             Directory.Delete(directory, recursive: true);
         }
     }
+
+    [Fact]
+    public void TryReveal_ReturnsNotFoundWithoutStartingExplorer()
+    {
+        var missingPath = Path.Combine(
+            Path.GetTempPath(),
+            $"missing_{Guid.NewGuid():N}",
+            "report.pdf");
+
+        var success = ExplorerRevealService.TryReveal(missingPath, out var error);
+
+        Assert.False(success);
+        Assert.Equal("Datei oder Ordner nicht gefunden.", error);
+    }
 }

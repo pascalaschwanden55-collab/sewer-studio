@@ -18,6 +18,7 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Vsa;
 
 using AuswertungPro.Next.Infrastructure.Backup;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
@@ -68,6 +69,7 @@ namespace AuswertungPro.Next.UI
         public AppSettings Settings { get; }
         public ISettingsRestorePointStore SettingsRestorePoints { get; }
         public ISettingsFileStore SettingsFiles { get; }
+        public IExplorerRevealService ExplorerReveal { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
@@ -208,6 +210,7 @@ namespace AuswertungPro.Next.UI
             Settings = settings;
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
+            ExplorerReveal = new ExplorerRevealLauncher();
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -596,6 +599,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
+            if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;

@@ -51,6 +51,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IHoldingRenameService _holdingRename;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IVideoStartErrorLogWriter _videoStartErrorLogs;
+    private readonly IExplorerRevealService _explorerReveal;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -181,6 +182,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _holdingRename = services.HoldingRename;
         _dropdownOptions = services.DropdownOptions;
         _videoStartErrorLogs = services.VideoStartErrorLogs;
+        _explorerReveal = services.ExplorerReveal;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -874,7 +876,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (!ExplorerRevealService.TryReveal(target, out var error))
+        if (!_explorerReveal.TryReveal(target, out var error))
             _dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
     }
 
