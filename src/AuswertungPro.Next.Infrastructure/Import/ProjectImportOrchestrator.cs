@@ -49,6 +49,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly INameBasedProtocolDistributor? _protocolDistributor;
     private readonly IPlanPdfImporter _planPdfImporter;
     private readonly IProjectRestorePointService _projectRestorePoints;
+    private readonly IImportSourceArchiver _sourceArchiver;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -58,7 +59,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         PdfKiSchiedsrichter? kiSchiedsrichter = null,
         INameBasedProtocolDistributor? protocolDistributor = null,
         IPlanPdfImporter? planPdfImporter = null,
-        IProjectRestorePointService? projectRestorePoints = null)
+        IProjectRestorePointService? projectRestorePoints = null,
+        IImportSourceArchiver? sourceArchiver = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -68,6 +70,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _protocolDistributor = protocolDistributor;
         _planPdfImporter = planPdfImporter ?? new PlanPdfImportService();
         _projectRestorePoints = projectRestorePoints ?? new ProjectRestorePointStore();
+        _sourceArchiver = sourceArchiver ?? new ImportSourceArchiveService();
     }
 
     /// <summary>
@@ -177,7 +180,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         try
         {
-            var archiveResult = ImportSourceArchiver.Archive(sourceFolder, projectFolder);
+            var archiveResult = _sourceArchiver.Archive(sourceFolder, projectFolder);
             messages.AddRange(archiveResult.Messages);
             messages.Add(
                 $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");

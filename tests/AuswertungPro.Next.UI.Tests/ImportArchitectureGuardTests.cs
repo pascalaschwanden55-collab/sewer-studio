@@ -6,6 +6,30 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportArchitectureGuardTests
 {
     [Fact]
+    public void OneClickImport_uses_central_source_archiver_and_keeps_static_facade_thin()
+    {
+        var provider = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+        var orchestrator = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ProjectImportOrchestrator.cs"));
+        var facade = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportSourceArchiver.cs"));
+        var service = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportSourceArchiveService.cs"));
+
+        Assert.Contains("public IImportSourceArchiver ImportSourceArchiver", provider);
+        Assert.Contains("ImportSourceArchiver = new ImportSourceArchiveService()", provider);
+        Assert.Contains("private readonly IImportSourceArchiver _sourceArchiver;", orchestrator);
+        Assert.Contains("_sourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
+        Assert.DoesNotContain("ImportSourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
+        Assert.Contains("private static readonly IImportSourceArchiver DefaultService", facade);
+        Assert.DoesNotContain("File.Copy", facade);
+        Assert.Contains("public sealed class ImportSourceArchiveService : IImportSourceArchiver", service);
+        Assert.Contains("lock (_sync)", service);
+        Assert.Contains("File.Copy", service);
+    }
+
+    [Fact]
     public void ProjectRestorePoints_use_one_central_instance_and_keep_static_facade_thin()
     {
         var provider = File.ReadAllText(RepoFile(
@@ -164,7 +188,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
         Assert.Contains("PlanPdfImport = new PlanPdfImportService()", provider);
         Assert.Contains("PlanPdfImport,", provider);
-        Assert.Contains("ProjectRestorePoints);", provider);
+        Assert.Contains("ProjectRestorePoints,", provider);
+        Assert.Contains("ImportSourceArchiver);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);
