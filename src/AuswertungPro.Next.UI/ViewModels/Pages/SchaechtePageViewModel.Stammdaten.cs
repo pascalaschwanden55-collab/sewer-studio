@@ -1,4 +1,5 @@
 using System.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -147,7 +148,8 @@ public sealed partial class SchaechtePageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"PDF-Stammdaten konnten nicht ergaenzt werden: {ex.Message}";
+            LastResult = "PDF-Stammdaten konnten nicht ergaenzt werden: "
+                         + UserError.DescribeAndReport(ex, "Schacht-PDF-Stammdaten");
             StammdatenErgaenzungText = LastResult;
             _dialogs.Warn(LastResult, "PDF-Stammdaten ergaenzen");
         }

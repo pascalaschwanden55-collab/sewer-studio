@@ -6,6 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -110,7 +111,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         catch (Exception ex)
         {
             HasError   = true;
-            StatusText = "Fehler: " + ex.Message;
+            StatusText = "Fehler: " + UserError.DescribeAndReport(ex, "Sanierungs-Optimierung");
         }
         finally
         {

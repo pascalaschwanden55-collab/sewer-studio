@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
@@ -178,7 +179,8 @@ public sealed partial class KarteViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusText = $"Fehler beim Laden der Netz-Datei: {ex.Message}";
+            StatusText = "Fehler beim Laden der Netz-Datei: "
+                         + UserError.DescribeAndReport(ex, "Karte laden");
         }
 
         // ── Klick-Handler: Haltungsname setzen ───────────────────────────────
@@ -686,7 +688,8 @@ public sealed partial class KarteViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusText = $"Video-Start fehlgeschlagen: {ex.Message}";
+            StatusText = "Video-Start fehlgeschlagen: "
+                         + UserError.DescribeAndReport(ex, "Karten-Video starten");
         }
     }
 

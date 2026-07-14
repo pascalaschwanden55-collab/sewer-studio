@@ -63,7 +63,8 @@ public sealed class SanierungOptimizationViewModelTests
         Assert.False(viewModel.IsBusy);
         Assert.True(viewModel.HasError);
         Assert.False(viewModel.HasResult);
-        Assert.Contains("Dienst nicht erreichbar", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.Contains("Programmlog", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Dienst nicht erreichbar", viewModel.StatusText, StringComparison.Ordinal);
         Assert.True(viewModel.OptimizeCommand.CanExecute(null));
     }
 

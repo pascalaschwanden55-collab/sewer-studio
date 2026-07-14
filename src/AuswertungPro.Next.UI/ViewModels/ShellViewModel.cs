@@ -515,7 +515,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         }
         catch (Exception ex)
         {
-            SetStatus($"Projektordner konnte nicht angelegt werden: {ex.Message}");
+            SetStatus(
+                "Projektordner konnte nicht angelegt werden: "
+                + UserError.DescribeAndReport(ex, "Projektordner anlegen"));
             return false;
         }
 

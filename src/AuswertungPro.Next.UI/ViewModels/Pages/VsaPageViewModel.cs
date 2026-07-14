@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Vsa;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -107,7 +108,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Summary = $"Fehler: {ex.Message}";
+            Summary = $"Fehler: {UserError.DescribeAndReport(ex, "VSA-Bewertung")}";
             _setStatus("VSA fehlgeschlagen");
         }
         finally

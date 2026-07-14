@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
@@ -335,7 +336,7 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            KiStatus = $"KI-Fehler: {ex.Message}";
+            KiStatus = "KI-Fehler: " + UserError.DescribeAndReport(ex, "Protokoll-KI-Vorschlag");
         }
         finally
         {
