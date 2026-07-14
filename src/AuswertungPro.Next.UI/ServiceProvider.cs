@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Media;
+using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Backup;
@@ -107,6 +108,7 @@ namespace AuswertungPro.Next.UI
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         public ProgramCleanupService ProgramCleanup { get; } = new();
+        public ICodexArtifactCleanupService CodexArtifactCleanup { get; } = new CodexArtifactCleanupService();
         #endregion
 
         #region Persistenz

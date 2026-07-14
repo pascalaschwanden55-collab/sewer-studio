@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Settings;
@@ -28,6 +29,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ToastService _toasts;
     private readonly FullBackupOperationState _fullBackupOperation;
     private readonly ProgramCleanupService _programCleanup;
+    private readonly ICodexArtifactCleanupService _codexArtifactCleanup;
     private readonly IKnowledgeBackupService _knowledgeBackup;
 
     [ObservableProperty] private bool _enableDiagnostics;
@@ -60,6 +62,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _includeProjectVideosInFullBackup;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
     [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
+    [ObservableProperty] private string _codexArtifactCleanupStatusText = "Noch nicht geprueft.";
     [ObservableProperty] private bool _isProgramCleanupRunning;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
@@ -118,6 +121,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public AsyncRelayCommand CreateFullBackupCommand { get; }
     public IRelayCommand CancelFullBackupCommand { get; }
     public AsyncRelayCommand CleanProgramDataCommand { get; }
+    public AsyncRelayCommand CleanCodexArtifactsCommand { get; }
     public FullBackupOperationState FullBackupOperation => _fullBackupOperation;
 
     public SettingsPageViewModel(ServiceProvider sp)
@@ -129,6 +133,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             toasts: sp.Toasts,
             fullBackupOperation: sp.FullBackupOperation,
             programCleanup: sp.ProgramCleanup,
+            codexArtifactCleanup: sp.CodexArtifactCleanup,
             knowledgeBackup: sp.KnowledgeBackup)
     {
     }
@@ -162,6 +167,29 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         FullBackupOperationState fullBackupOperation,
         ProgramCleanupService programCleanup,
         IKnowledgeBackupService knowledgeBackup)
+        : this(
+            settings,
+            diagnostics,
+            dialogs,
+            fullBackup,
+            toasts,
+            fullBackupOperation,
+            programCleanup,
+            new CodexArtifactCleanupService(),
+            knowledgeBackup)
+    {
+    }
+
+    public SettingsPageViewModel(
+        AppSettings settings,
+        DiagnosticsOptions diagnostics,
+        IDialogService dialogs,
+        IFullBackupService fullBackup,
+        ToastService toasts,
+        FullBackupOperationState fullBackupOperation,
+        ProgramCleanupService programCleanup,
+        ICodexArtifactCleanupService codexArtifactCleanup,
+        IKnowledgeBackupService knowledgeBackup)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -170,6 +198,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _fullBackupOperation = fullBackupOperation ?? throw new ArgumentNullException(nameof(fullBackupOperation));
         _programCleanup = programCleanup ?? throw new ArgumentNullException(nameof(programCleanup));
+        _codexArtifactCleanup = codexArtifactCleanup ?? throw new ArgumentNullException(nameof(codexArtifactCleanup));
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
 
         EnableDiagnostics = _settings.EnableDiagnostics;
@@ -230,6 +259,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         CleanProgramDataCommand = new AsyncRelayCommand(
             CleanProgramDataAsync,
             () => !IsProgramCleanupRunning);
+        CleanCodexArtifactsCommand = new AsyncRelayCommand(
+            CleanCodexArtifactsAsync,
+            () => !IsProgramCleanupRunning);
     }
 
     private void OnFullBackupOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -253,6 +285,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     partial void OnIsProgramCleanupRunningChanged(bool value)
     {
         CleanProgramDataCommand?.NotifyCanExecuteChanged();
+        CleanCodexArtifactsCommand?.NotifyCanExecuteChanged();
     }
 
     partial void OnUiThemeChanged(string value)
@@ -416,6 +449,19 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 new SettingsProgramCleanupWorkflowUi(
                     value => IsProgramCleanupRunning = value,
                     value => ProgramCleanupStatusText = value))).ConfigureAwait(true);
+    }
+
+    private async Task CleanCodexArtifactsAsync()
+    {
+        await SettingsCodexArtifactCleanupWorkflow.RunAsync(
+            new SettingsCodexArtifactCleanupWorkflowRequest(
+                SettingsCodexArtifactCleanupRequestFactory.Create(DateTime.UtcNow),
+                _codexArtifactCleanup,
+                _dialogs,
+                _toasts,
+                new SettingsProgramCleanupWorkflowUi(
+                    value => IsProgramCleanupRunning = value,
+                    value => CodexArtifactCleanupStatusText = value))).ConfigureAwait(true);
     }
 
     public sealed record AutoSaveModeOption(AutoSaveMode Value, string Label);
