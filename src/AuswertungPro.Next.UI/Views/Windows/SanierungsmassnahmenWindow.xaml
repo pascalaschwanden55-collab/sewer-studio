@@ -433,18 +433,24 @@
                                                 BorderBrush="{StaticResource BorderBrush}" Background="Transparent">
                                             <StackPanel>
                                                 <DockPanel>
-                                                    <Button DockPanel.Dock="Right" Content="X" Width="28" Height="28"
-                                                            Foreground="Red" FontWeight="Bold" Style="{x:Null}"
+                                                    <Button DockPanel.Dock="Right" Width="28" Height="28"
+                                                            Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" Style="{x:Null}"
                                                             Command="{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip="Maßnahme entfernen" Margin="8,0,0,0"/>
+                                                            ToolTip="Maßnahme entfernen" Margin="8,0,0,0">
+                                                        <ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/>
+                                                    </Button>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
-                                                        <Button Content="^" Width="28" Height="28" Style="{x:Null}"
+                                                        <Button Width="28" Height="28" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                CommandParameter="{Binding}" ToolTip="Nach oben"/>
-                                                        <Button Content="v" Width="28" Height="28" Margin="6,0,0,0" Style="{x:Null}"
+                                                                CommandParameter="{Binding}" ToolTip="Nach oben">
+                                                            <ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/>
+                                                        </Button>
+                                                        <Button Width="28" Height="28" Margin="6,0,0,0" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                CommandParameter="{Binding}" ToolTip="Nach unten"/>
+                                                                CommandParameter="{Binding}" ToolTip="Nach unten">
+                                                            <ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/>
+                                                        </Button>
                                                     </StackPanel>
                                                     <Button DockPanel.Dock="Right" Content="Vorlage speichern" Height="28"
                                                             Padding="8,2" Margin="8,0,0,0"
@@ -490,18 +496,24 @@
                                                             <DataGridTemplateColumn.CellTemplate>
                                                                 <DataTemplate>
                                                                     <StackPanel Orientation="Horizontal">
-                                                                        <Button Content="^" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                        <Button Width="22" Height="22" Padding="0" Margin="0,0,2,0"
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Nach oben"/>
-                                                                        <Button Content="v" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                                CommandParameter="{Binding}" ToolTip="Nach oben">
+                                                                            <ui:FluentIcon Glyph="&#xE74A;" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                                                                        </Button>
+                                                                        <Button Width="22" Height="22" Padding="0" Margin="0,0,2,0"
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Nach unten"/>
-                                                                        <Button Content="X" Width="22" Height="22" Padding="0"
-                                                                                Style="{x:Null}" Foreground="Red" FontWeight="Bold"
+                                                                                CommandParameter="{Binding}" ToolTip="Nach unten">
+                                                                            <ui:FluentIcon Glyph="&#xE74B;" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                                                                        </Button>
+                                                                        <Button Width="22" Height="22" Padding="0"
+                                                                                Style="{x:Null}" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold"
                                                                                 Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Position entfernen"/>
+                                                                                CommandParameter="{Binding}" ToolTip="Position entfernen">
+                                                                            <ui:FluentIcon Glyph="&#xE74D;" FontSize="11" Foreground="{DynamicResource DangerBrush}"/>
+                                                                        </Button>
                                                                     </StackPanel>
                                                                 </DataTemplate>
                                                             </DataGridTemplateColumn.CellTemplate>

@@ -390,30 +390,33 @@
                                          Text="{Binding ProjectPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="0" Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowseProjectPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Projektdatei auswaehlen."/>
+                                        ToolTip="Projektdatei auswaehlen.">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Projekte-Verzeichnis" Style="{StaticResource SettingsFieldLabel}"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
                                          Text="{Binding ProjectsRootDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="1" Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowseProjectsRootCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Standardordner fuer Projekte auswaehlen."/>
+                                        ToolTip="Standardordner fuer Projekte auswaehlen.">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Kataster-XTF (*.xtf)" Style="{StaticResource SettingsFieldLabel}"/>
                                 <TextBox Grid.Row="2" Grid.Column="1"
                                          Text="{Binding AbwasserkatasterXtfPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="2" Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowseAbwasserkatasterXtfPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Abwasserkataster-XTF fuer die Kartenansicht auswaehlen."/>
+                                        ToolTip="Abwasserkataster-XTF fuer die Kartenansicht auswaehlen.">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
                             </Grid>
                         </GroupBox>
 
@@ -572,9 +575,10 @@
                                          Text="{Binding VideoFolder}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowseVideoFolderCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}"/>
+                                        Style="{StaticResource SettingsBrowseButton}">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
                             </Grid>
                         </GroupBox>
 
@@ -590,9 +594,10 @@
                                          Text="{Binding PdfToTextPath}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowsePdfToTextCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}"/>
+                                        Style="{StaticResource SettingsBrowseButton}">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
                             </Grid>
                         </GroupBox>
 
@@ -612,9 +617,10 @@
                                          Text="{Binding KantonUriXtfDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="0" Grid.Column="2"
-                                        Content="..."
                                         Command="{Binding BrowseKantonUriXtfDirectoryCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}"/>
+                                        Style="{StaticResource SettingsBrowseButton}">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
                                 <TextBlock Grid.Row="1"
                                            Grid.Column="1"
                                            Grid.ColumnSpan="2"

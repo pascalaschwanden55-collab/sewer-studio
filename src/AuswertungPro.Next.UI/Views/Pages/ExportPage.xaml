@@ -130,9 +130,11 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
                                                      ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
-                                            <Button Grid.Column="1" Content="…" Command="{Binding BrowseRootCommand}"
+                                            <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
                                                     Margin="4,0,0,0" Padding="10,0"
-                                                    ToolTip="Ziel-Wurzel waehlen"/>
+                                                    ToolTip="Ziel-Wurzel waehlen">
+                                                <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                            </Button>
                                         </Grid>
 
                                         <!-- Grafischer Datei-Editor (nur Excel; die Verteilung bleibt sicher fest) -->

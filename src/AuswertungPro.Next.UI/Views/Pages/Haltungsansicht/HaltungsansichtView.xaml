@@ -187,9 +187,11 @@
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="14" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                        <Button DockPanel.Dock="Right" x:Name="SchadenAddButton" Content="+"
+                        <Button DockPanel.Dock="Right" x:Name="SchadenAddButton"
                                 Width="28" Height="24" FontSize="16" Padding="0"
-                                Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren"/>
+                                Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren">
+                            <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}"/>
+                        </Button>
                     </DockPanel>
 
                     <!-- Foto-Galerie: alle Schadensfotos der Haltung, aufklappbar. -->
