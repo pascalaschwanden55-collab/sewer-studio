@@ -82,28 +82,6 @@ public partial class PlayerWindow
                         PlayerFocusControls.FocusWindowKeyboard(this);
                     })));
 
-    private void ExecuteLoadedWorkflow()
-        => PlayerWindowLoadedWorkflow.Execute(
-            new PlayerWindowLoadedWorkflowRequest(
-                _playbackContext.InitialOverlayText,
-                TimeSpan.FromSeconds(6)),
-            new PlayerWindowLoadedWorkflowActions(
-                Play: () => Play(_playbackContext.VideoPath),
-                UpdateCodingOverlayViewport,
-                ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(
-                    Dispatcher,
-                    UpdateCodingOverlayViewport),
-                ShowOverlay,
-                BuildDamageMarkerTimeline: () => _damageMarkerController.Build(),
-                EnableFocusable: () => PlayerChromeControls.EnableFocusable(this),
-                ScheduleFocusWindow: () => PlayerDispatcherScheduler.ScheduleInput(
-                    Dispatcher,
-                    () =>
-                    {
-                        PlayerFocusControls.ActivateWindow(this);
-                        PlayerFocusControls.FocusWindowKeyboard(this);
-                    })));
-
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
         var main = PlayerApplicationControls.CurrentMainWindow();

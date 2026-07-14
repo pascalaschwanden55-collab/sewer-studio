@@ -176,6 +176,8 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Activate", wiring);
         Assert.Contains("PlayerWindowLoadedWorkflow.Execute", wiring);
+        Assert.DoesNotContain("private void ExecuteLoadedWorkflow", wiring, StringComparison.Ordinal);
+        Assert.Equal(1, wiring.Split("PlayerWindowLoadedWorkflow.Execute", StringSplitOptions.None).Length - 1);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", wiring);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", wiring);
         Assert.Contains("PlayerFocusControls.ActivateWindow(this)", wiring);
