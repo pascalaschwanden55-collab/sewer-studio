@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Player;
 
@@ -62,9 +63,10 @@ public sealed class DataPageVideoPlaybackController
             var nativeHint = ex.Message.Contains("native side", StringComparison.OrdinalIgnoreCase)
                 ? "\n\nHinweis: Bitte pruefen, ob 'VideoLAN.LibVLC.Windows' fuer dieses Projekt/Plattform installiert ist."
                 : string.Empty;
+            var userMessage = UserError.Describe(ex);
             var msg = logPath is null
-                ? $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\n(Details: ex.ToString() nicht gespeichert)"
-                : $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\nDetails gespeichert in:\n{logPath}";
+                ? $"Video konnte nicht gestartet werden:\n{userMessage}{nativeHint}\n\nTechnische Details konnten nicht gespeichert werden."
+                : $"Video konnte nicht gestartet werden:\n{userMessage}{nativeHint}\n\nDetails gespeichert in:\n{logPath}";
             _dialogs.Error(msg, "Video");
         }
     }

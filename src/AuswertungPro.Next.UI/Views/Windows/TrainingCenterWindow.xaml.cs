@@ -382,7 +382,8 @@ public partial class TrainingCenterWindow : Window
         catch (Exception ex)
         {
             ReviewSamStatusText.Text = "SAM Fehler";
-            Dialogs.Warn($"SAM-Segmentierung fehlgeschlagen:\n{ex.Message}", "SAM");
+            var userMessage = UserError.DescribeAndReport(ex, "SAM-Segmentierung");
+            Dialogs.Warn($"SAM-Segmentierung fehlgeschlagen:\n{userMessage}", "SAM");
         }
         finally
         {
@@ -548,7 +549,8 @@ public partial class TrainingCenterWindow : Window
         try { await Vm.ApproveAllStartdataAsync(); }
         catch (Exception ex)
         {
-            Dialogs.Warn($"Fehler bei der Sammel-Freigabe: {ex.Message}", "Sammel-Freigabe");
+            var userMessage = UserError.DescribeAndReport(ex, "Sammel-Freigabe");
+            Dialogs.Warn($"Fehler bei der Sammel-Freigabe: {userMessage}", "Sammel-Freigabe");
         }
     }
 
@@ -587,8 +589,9 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
+            var userMessage = UserError.DescribeAndReport(ex, "VideoLabelTool starten");
             Dialogs.Warn(
-                $"VideoLabelTool konnte nicht gestartet werden:\n{ex.Message}",
+                $"VideoLabelTool konnte nicht gestartet werden:\n{userMessage}",
                 "Gold-Label-Tool");
         }
         finally
@@ -620,7 +623,8 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            Dialogs.Warn($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}", "Lehrer");
+            var userMessage = UserError.DescribeAndReport(ex, "Lehrer-Annotationen laden");
+            Dialogs.Warn($"Fehler beim Laden der Lehrer-Annotationen:\n{userMessage}", "Lehrer");
         }
     }
 
@@ -729,7 +733,8 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            Dialogs.Error($"Fehler: {ex.Message}", "FewShot");
+            var userMessage = UserError.DescribeAndReport(ex, "FewShot-Lernen");
+            Dialogs.Error($"Fehler: {userMessage}", "FewShot");
         }
     }
 
@@ -751,7 +756,8 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            Dialogs.Error($"Fehler beim Loeschen: {ex.Message}", "Lehrer");
+            var userMessage = UserError.DescribeAndReport(ex, "Lehrer-Annotation loeschen");
+            Dialogs.Error($"Fehler beim Loeschen: {userMessage}", "Lehrer");
         }
     }
 

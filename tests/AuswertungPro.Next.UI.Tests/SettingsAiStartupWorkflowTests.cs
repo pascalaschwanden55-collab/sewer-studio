@@ -83,9 +83,12 @@ public sealed class SettingsAiStartupWorkflowTests
             CancellationToken.None);
 
         Assert.Equal(["start"], calls);
-        Assert.Equal("KI-Start fehlgeschlagen: kaputt", state.Status);
+        Assert.StartsWith("KI-Start fehlgeschlagen:", state.Status, StringComparison.Ordinal);
+        Assert.Contains("Programmlog", state.Status, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("kaputt", state.Status, StringComparison.Ordinal);
         Assert.False(state.IsStarting);
-        Assert.Equal(["KI-Start fehlgeschlagen: kaputt"], dialogs.Errors);
+        Assert.Single(dialogs.Errors);
+        Assert.Equal(state.Status, dialogs.Errors[0]);
         Assert.Equal("KI starten", dialogs.ErrorTitles[0]);
     }
 

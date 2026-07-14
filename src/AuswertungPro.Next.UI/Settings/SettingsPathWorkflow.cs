@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
@@ -72,7 +73,7 @@ public static class SettingsPathWorkflow
         catch (Exception ex)
         {
             request.Dialogs.Error(
-                $"Ordner konnte nicht geoeffnet werden:\n{ex.Message}",
+                $"Ordner konnte nicht geoeffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner oeffnen")}",
                 "SewerStudio");
         }
     }

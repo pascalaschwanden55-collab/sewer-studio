@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
@@ -123,9 +124,10 @@ public static class SettingsFullBackupWorkflow
         }
         catch (Exception ex)
         {
-            request.Operation.SetStatus($"Fehler: {ex.Message}");
+            var userMessage = UserError.DescribeAndReport(ex, "Datensicherung");
+            request.Operation.SetStatus($"Fehler: {userMessage}");
             request.Toasts.Error("Datensicherung fehlgeschlagen.");
-            request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{ex.Message}", "Datensicherung");
+            request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{userMessage}", "Datensicherung");
         }
         finally
         {

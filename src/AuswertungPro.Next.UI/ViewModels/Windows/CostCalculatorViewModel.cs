@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
@@ -310,7 +311,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF-Export");
+            _dialogs.Error(
+                $"PDF konnte nicht erstellt werden:\n{UserError.DescribeAndReport(ex, "Kosten-PDF erstellen")}",
+                "PDF-Export");
         }
         finally
         {

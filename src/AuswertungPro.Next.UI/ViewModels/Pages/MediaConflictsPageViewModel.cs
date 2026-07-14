@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.Services;
@@ -420,7 +421,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"Video konnte nicht gestartet werden:\n{ex.Message}", "Konfliktcenter");
+            _dialogs.Error(
+                $"Video konnte nicht gestartet werden:\n{UserError.DescribeAndReport(ex, "Konfliktcenter Video starten")}",
+                "Konfliktcenter");
         }
     }
 

@@ -221,7 +221,7 @@ namespace AuswertungPro.Next.UI
                 try
                 {
                     DialogHost.Current.Error(
-                        $"SewerStudio konnte nicht gestartet werden.\n\n{ex.Message}\n\nDetails: {fallbackLog}",
+                        $"SewerStudio konnte nicht gestartet werden.\n\n{UserError.Describe(ex)}\n\nDetails: {fallbackLog}",
                         "SewerStudio");
                 }
                 catch
@@ -434,7 +434,7 @@ namespace AuswertungPro.Next.UI
                     if (realSp.Diagnostics.EnableDiagnostics)
                     {
                         realSp.Dialogs.Error(
-                            $"Es ist ein Fehler aufgetreten.\n\nCode: {code}\n{ex.Message}\n\nDetails: siehe Log-Datei",
+                            $"Es ist ein Fehler aufgetreten.\n\nCode: {code}\n{UserError.Describe(ex)}\n\nDetails: siehe Log-Datei",
                             "SewerStudio");
                     }
                     else

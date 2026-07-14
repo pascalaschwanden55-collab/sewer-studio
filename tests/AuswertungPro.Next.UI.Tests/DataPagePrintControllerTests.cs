@@ -140,7 +140,10 @@ public sealed class DataPagePrintControllerTests
             Record("12/34"),
             ensureProtocolDocument: _ => new ProtocolDocument());
 
-        Assert.Equal(("AWU-Haltungsprotokoll konnte nicht erstellt werden:\nkaputt", "Haltungsprotokoll AWU"), dialogs.LastError);
+        Assert.NotNull(dialogs.LastError);
+        Assert.Equal("Haltungsprotokoll AWU", dialogs.LastError.Value.Title);
+        Assert.Contains("Programmlog", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("kaputt", dialogs.LastError.Value.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -275,7 +278,10 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintHydraulikPdfAsync(Record("12/34"));
 
-        Assert.Equal(("PDF konnte nicht erstellt werden:\nkaputt", "Hydraulik PDF"), dialogs.LastError);
+        Assert.NotNull(dialogs.LastError);
+        Assert.Equal("Hydraulik PDF", dialogs.LastError.Value.Title);
+        Assert.Contains("Programmlog", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("kaputt", dialogs.LastError.Value.Message, StringComparison.Ordinal);
     }
 
     [Fact]

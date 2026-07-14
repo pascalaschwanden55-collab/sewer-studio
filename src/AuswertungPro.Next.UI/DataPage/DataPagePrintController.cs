@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
@@ -237,7 +238,7 @@ public sealed class DataPagePrintController
             {
                 pdf = await Task.Run(() => _mergeOriginals(originalPdfPaths));
                 if (pdf.Length == 0)
-                    throw new InvalidOperationException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
+                    throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
 
                 originalsAlreadyMerged = true;
             }
@@ -250,7 +251,8 @@ public sealed class DataPagePrintController
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier");
+            var userMessage = UserError.DescribeAndReport(ex, "Dossier erstellen");
+            _dialogs.Error($"Dossier konnte nicht erstellt werden:\n{userMessage}", "Dossier");
         }
     }
 
@@ -305,7 +307,8 @@ public sealed class DataPagePrintController
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Hydraulik PDF");
+            var userMessage = UserError.DescribeAndReport(ex, "Hydraulik-PDF erstellen");
+            _dialogs.Error($"PDF konnte nicht erstellt werden:\n{userMessage}", "Hydraulik PDF");
         }
     }
 
@@ -355,7 +358,8 @@ public sealed class DataPagePrintController
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{ex.Message}", "Haltungsprotokoll AWU");
+            var userMessage = UserError.DescribeAndReport(ex, "AWU-Haltungsprotokoll erstellen");
+            _dialogs.Error($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{userMessage}", "Haltungsprotokoll AWU");
         }
     }
 

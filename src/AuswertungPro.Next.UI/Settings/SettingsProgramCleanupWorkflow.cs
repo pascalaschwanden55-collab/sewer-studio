@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Services;
 
@@ -69,10 +70,11 @@ public static class SettingsProgramCleanupWorkflow
         }
         catch (Exception ex)
         {
-            request.Ui.SetStatusText($"Fehler: {ex.Message}");
+            var userMessage = UserError.DescribeAndReport(ex, "Programmbereinigung");
+            request.Ui.SetStatusText($"Fehler: {userMessage}");
             request.Toasts.Error("Programmbereinigung fehlgeschlagen.");
             request.Dialogs.Error(
-                $"Programmbereinigung fehlgeschlagen:\n{ex.Message}",
+                $"Programmbereinigung fehlgeschlagen:\n{userMessage}",
                 "Programmdaten bereinigen");
         }
         finally

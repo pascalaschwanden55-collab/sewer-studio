@@ -99,7 +99,8 @@ public sealed class SettingsPathWorkflowTests
 
         Assert.Single(dialogs.Errors);
         Assert.Contains("Ordner konnte nicht geoeffnet werden", dialogs.Errors[0]);
-        Assert.Contains("kein Zugriff", dialogs.Errors[0]);
+        Assert.Contains("Programmlog", dialogs.Errors[0]);
+        Assert.DoesNotContain("kein Zugriff", dialogs.Errors[0]);
         Assert.Equal("SewerStudio", dialogs.ErrorTitles[0]);
     }
 

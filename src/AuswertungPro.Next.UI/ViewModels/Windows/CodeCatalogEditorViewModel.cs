@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
@@ -166,7 +167,9 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"Speichern fehlgeschlagen: {ex.Message}", "Code-Katalog");
+            _dialogs.Error(
+                $"Speichern fehlgeschlagen: {UserError.DescribeAndReport(ex, "Code-Katalog speichern")}",
+                "Code-Katalog");
         }
     }
 

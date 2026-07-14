@@ -88,7 +88,7 @@ public partial class DataPage : UserControl
         {
             // Bei Fehler: alles zuruecksetzen
             BestEffort.ReportWarning($"[DataPage] Abdocken fehlgeschlagen: {ex}");
-            Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
+            Dialogs.Warn($"Fehler beim Abdocken:\n{UserError.Describe(ex)}", "Abdocken");
 
             // Abgedockte Ansicht zuruecksetzen falls sie schon entfernt wurde
             GridDockingController.RestoreDockedState(

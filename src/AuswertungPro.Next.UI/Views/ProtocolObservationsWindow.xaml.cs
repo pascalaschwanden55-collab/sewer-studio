@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -278,7 +279,8 @@ public partial class ProtocolObservationsWindow : Window
             }
             catch (Exception ex)
             {
-                _sp.Dialogs.Error($"Video konnte nicht gestartet werden: {ex.Message}", "Video");
+                var userMessage = UserError.DescribeAndReport(ex, "Protokollvideo starten");
+                _sp.Dialogs.Error($"Video konnte nicht gestartet werden: {userMessage}", "Video");
             }
         }
     }
@@ -373,7 +375,8 @@ public partial class ProtocolObservationsWindow : Window
         }
         catch (Exception ex)
         {
-            _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF");
+            var userMessage = UserError.DescribeAndReport(ex, "Beobachtungs-PDF erstellen");
+            _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{userMessage}", "PDF");
         }
     }
 

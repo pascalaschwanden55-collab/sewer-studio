@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.UI.Services;
 
@@ -62,8 +63,9 @@ public static class SettingsAiStartupWorkflow
         }
         catch (Exception ex)
         {
-            request.Ui.SetStatusText($"KI-Start fehlgeschlagen: {ex.Message}");
-            request.Dialogs.Error($"KI-Start fehlgeschlagen: {ex.Message}", "KI starten");
+            var userMessage = UserError.DescribeAndReport(ex, "KI aus Einstellungen starten");
+            request.Ui.SetStatusText($"KI-Start fehlgeschlagen: {userMessage}");
+            request.Dialogs.Error($"KI-Start fehlgeschlagen: {userMessage}", "KI starten");
         }
         finally
         {

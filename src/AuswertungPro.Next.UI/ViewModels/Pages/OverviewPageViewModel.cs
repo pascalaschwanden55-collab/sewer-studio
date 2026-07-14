@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using AuswertungPro.Next.Application.Dashboard;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
@@ -327,7 +328,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             }
             catch (Exception ex)
             {
-                _dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Projektvorschau");
+                _dialogs.Error(
+                    $"PDF konnte nicht erstellt werden:\n{UserError.DescribeAndReport(ex, "Projektvorschau PDF erstellen")}",
+                    "Projektvorschau");
             }
             finally
             {
@@ -624,7 +627,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"Entfernen fehlgeschlagen: {ex.Message}", "Fehler");
+            _dialogs.Error(
+                $"Entfernen fehlgeschlagen: {UserError.DescribeAndReport(ex, "Letztes Projekt entfernen")}",
+                "Fehler");
         }
     }
 

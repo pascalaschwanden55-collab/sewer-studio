@@ -6,6 +6,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI;
@@ -182,7 +183,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            _dialogs.Warn(ex.Message, "Fehler");
+            _dialogs.Warn(UserError.DescribeAndReport(ex, "Codiersitzung speichern"), "Fehler");
         }
     }
 
@@ -211,7 +212,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            _dialogs.Warn(ex.Message, "Fehler");
+            _dialogs.Warn(UserError.DescribeAndReport(ex, "Codiersitzung exportieren"), "Fehler");
         }
     }
 

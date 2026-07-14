@@ -87,10 +87,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Agenten-Einstieg aktualisiert (A8-04 erledigt):** `AGENTS.md` verweist auf die ausführliche aktuelle Architektur in `CLAUDE.md` und nennt nur noch die stabilen Arbeits-, Sicherheits- und Prüfregeln. Veraltete Angaben zu einem reinen PDF-Tool, .NET 8 und optionalen Tests sind entfernt; ein Test verhindert die Rückkehr dieser Widersprüche.
 - **Diagnosepaket eingebaut (A8-05 erledigt):** Die Diagnose-Seite kann den Log-Ordner öffnen und ein ZIP speichern. Ein eigener Dienst nimmt höchstens sieben Tageslogs mit je maximal 5 MiB plus technische Systemangaben auf. Tokens, Benutzername und absolute Pfade werden nur in den ZIP-Kopien entfernt; Original-Logs und Projektdateien bleiben unberührt. Eine einzelne gesperrte Logdatei wird gemeldet und übersprungen, statt das ganze Paket zu verhindern.
 - **.NET-Codeprüfer aktiviert (A8-06 erledigt):** Alle Projekte bauen ausdrücklich mit den SDK-Analyzern auf `latest-recommended`. Die 40 bereits im Altbestand vorkommenden Regelarten sind transparent in `.editorconfig` als IDE-Hinweise baseliniert; neue Regelarten bleiben Build-Warnungen. Ein Konfigurationstest verhindert vollständiges Abschalten oder ein unbemerktes Warnungen-als-Fehler-Gate.
+- **Nutzerfehler sicher vereinheitlicht (A8-07 erledigt):** `UserError` übersetzt technische Ausnahmen zentral in kurze Hinweise und schreibt die vollständige Ursache ins Tageslog. Bewusst formulierte Fachhinweise bleiben über `UserFacingException` erhalten. Alle gefundenen UI-Dialoge sind umgestellt; ein Architekturtest verhindert neue rohe `ex.Message`-Ausgaben.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.797 Tests bestanden (2.524 Infrastruktur, 1.819 Pipeline, 4.392 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der vollständige Analyzer-Rebuild endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
+- **Gesamtprüfung grün:** 8.814 Tests bestanden (2.524 Infrastruktur, 1.835 Pipeline, 4.393 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der vollständige Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -241,7 +242,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A8-04 | Mittel → **erledigt** | `AGENTS.md` + `ProjectAgentInstructionsTests` | Kurzer aktueller Einstieg verweist auf `CLAUDE.md`, nennt .NET 10, Sidecar, QGIS sowie verbindliche Wartungs- und Testregeln; veraltete Angaben sind testgeschützt entfernt |
 | A8-05 | Niedrig → **erledigt** | `DiagnosticsPackageService` + `DiagnosticsPageViewModel` | Log-Ordner ist direkt erreichbar; begrenztes ZIP enthält bereinigte Logs und Systemangaben, keine Projektdateien; Erfolg und Fehler sind getestet |
 | A8-06 | Niedrig → **erledigt** | `Directory.Build.props`, `.editorconfig`, `AnalyzerConfigurationTests` | `latest-recommended` ist aktiv; 40 bekannte Altregelarten bleiben als sichtbare IDE-Hinweise baseliniert, neue Regelarten werden zu Build-Warnungen |
-| A8-07 | Niedrig | `DataPagePrintController.cs:234` u.a. — rohe `ex.Message` in Nutzer-Dialogen | Zentraler `UserError.Describe(ex)` (kurz für Nutzer, voll ins Log) |
+| A8-07 | Niedrig → **erledigt** | `UserError`, `UserFacingException` und `UserErrorArchitectureTests` | Technische Ausnahmen werden zentral und verständlich abgebildet, vollständig protokolliert und nie mehr roh im UI-Dialog angezeigt; bewusst sichere Fachhinweise bleiben möglich |
 
 ---
 
@@ -262,7 +263,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 
 ## 5. Strategische Empfehlungen
 
-1. **Diagnose-Sichtbarkeit vervollständigen:** Release-Logging (`A8-01`) und Diagnosepaket (`A8-05`) sind erledigt; offen bleiben verständliche, zentral gemappte Nutzerfehler (`A8-07`).
+1. **Diagnose-Sichtbarkeit vervollständigt:** Release-Logging (`A8-01`), Diagnosepaket (`A8-05`) und zentral gemappte Nutzerfehler (`A8-07`) sind erledigt.
 2. **Grossdatei-Guard reparieren und ins Gate nehmen (`A1-09`, `A1-02`, Push-Hook):** Guard auf „Zeilen je Typ" erweitern (schließt das Partial-Schlupfloch), `SchaechtePage` unter die Grenze bringen, und die UI-Tests in den pre-push-Hook aufnehmen — sonst laufen Architektur-Guards nie automatisch.
 3. **Echte God-Classes zerlegen statt weiter fragmentieren (`A1-01`, `A1-03`, `A1-04`):** PlayerWindow-Partials und die Fachlogik in SchaechtePage/ProtocolEntryEditorDialog schrittweise in Services/Controller mit Interface überführen — testgeschützt, kein Big-Bang.
 4. **DI-Hygiene (`A1-05`, `A1-07`, `A1-10`):** ViewModels nur die benötigten Interfaces geben statt des ganzen `ServiceProvider`; per-`new`-Streuung in Fenstern beenden. Das macht Kernabläufe unit-testbar.
@@ -298,7 +299,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 ## 7. Roadmap für die nächsten zwei Releases (nur Wartbarkeit, keine Technologiewechsel)
 
 ### Release N+1 — „Sichtbarkeit & Sicherheitsnetz" (~1 Woche)
-- **Diagnose-Sichtbarkeit:** ✔ Release-Logging (`A8-01`) und Diagnosepaket (`A8-05`) erledigt; der Fehler-Mapper (`A8-07`) bleibt offen.
+- **Diagnose-Sichtbarkeit:** ✔ Release-Logging (`A8-01`), Diagnosepaket (`A8-05`) und Fehler-Mapper (`A8-07`) sind erledigt.
 - **Test-Gate reparieren:** UI-Tests in den pre-push-Hook; `A1-09` (Guard je Typ); `A1-02`/`A1-03` (SchaechtePage-Fachlogik auslagern → Guard wieder grün).
 - **Quick Wins:** ✔ `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A8-04`, `A8-06`, `A4-02`, `A5-02`/`A5-03` sind erledigt.
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.

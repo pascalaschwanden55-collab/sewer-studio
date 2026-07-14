@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
@@ -387,7 +388,9 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _dialogs.Error($"Alte Vorlagen konnten nicht gelesen werden:\n{ex.Message}", "Vorlagen");
+            _dialogs.Error(
+                $"Alte Vorlagen konnten nicht gelesen werden:\n{UserError.DescribeAndReport(ex, "Alte Vorlagen lesen")}",
+                "Vorlagen");
         }
     }
 

@@ -177,10 +177,11 @@ public sealed partial class BuilderPageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"Fehler: {ex.Message}";
+            var userMessage = UserError.DescribeAndReport(ex, "Druckcenter PDF erstellen");
+            LastResult = $"Fehler: {userMessage}";
             PdfExportProgress = "PDF-Erstellung fehlgeschlagen.";
             _dialogs.Error(
-                $"PDF konnte nicht erstellt werden:\n{ex.Message}",
+                $"PDF konnte nicht erstellt werden:\n{userMessage}",
                 "Druckcenter");
         }
         finally
@@ -274,9 +275,10 @@ public sealed partial class BuilderPageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"Fehler: {ex.Message}";
+            var userMessage = UserError.DescribeAndReport(ex, "Druckcenter Leistungsverzeichnis erstellen");
+            LastResult = $"Fehler: {userMessage}";
             PdfExportProgress = "NPK-CSV fehlgeschlagen.";
-            _dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+            _dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{userMessage}", "Druckcenter");
         }
         finally
         {
@@ -341,9 +343,10 @@ public sealed partial class BuilderPageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"Fehler: {ex.Message}";
+            var userMessage = UserError.DescribeAndReport(ex, "Druckcenter Excel-Leistungsverzeichnis erstellen");
+            LastResult = $"Fehler: {userMessage}";
             PdfExportProgress = "NPK-Excel fehlgeschlagen.";
-            _dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+            _dialogs.Error($"Excel-Leistungsverzeichnis konnte nicht erstellt werden:\n{userMessage}", "Druckcenter");
         }
         finally
         {
@@ -554,9 +557,10 @@ public sealed partial class BuilderPageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"Fehler: {ex.Message}";
+            var userMessage = UserError.DescribeAndReport(ex, "Druckcenter NPK-Offerte erstellen");
+            LastResult = $"Fehler: {userMessage}";
             PdfExportProgress = "NPK-Offerte fehlgeschlagen.";
-            _dialogs.Error($"NPK-Offerte konnte nicht erstellt werden:\n{ex.Message}", "NPK-Offerte");
+            _dialogs.Error($"NPK-Offerte konnte nicht erstellt werden:\n{userMessage}", "NPK-Offerte");
         }
         finally
         {
@@ -608,9 +612,10 @@ public sealed partial class BuilderPageViewModel
         }
         catch (Exception ex)
         {
-            LastResult = $"Fehler beim Drucken: {ex.Message}";
+            var userMessage = UserError.DescribeAndReport(ex, "Druckcenter PDF drucken");
+            LastResult = $"Fehler beim Drucken: {userMessage}";
             _dialogs.Error(
-                $"PDF konnte nicht gedruckt werden:\n{ex.Message}",
+                $"PDF konnte nicht gedruckt werden:\n{userMessage}",
                 "Druckcenter");
         }
     }

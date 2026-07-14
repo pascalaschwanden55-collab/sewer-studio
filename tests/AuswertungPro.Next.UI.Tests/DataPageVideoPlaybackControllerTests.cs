@@ -93,9 +93,11 @@ public sealed class DataPageVideoPlaybackControllerTests
 
         controller.Play(new HaltungRecord());
 
-        Assert.Equal(
-            ("Video konnte nicht gestartet werden:\nStart fehlgeschlagen\n\nDetails gespeichert in:\nC:\\Logs\\video.log", "Video"),
-            dialogs.LastError);
+        Assert.NotNull(dialogs.LastError);
+        Assert.Equal("Video", dialogs.LastError.Value.Title);
+        Assert.Contains("Programmlog", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("C:\\Logs\\video.log", dialogs.LastError.Value.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Start fehlgeschlagen", dialogs.LastError.Value.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -110,9 +112,11 @@ public sealed class DataPageVideoPlaybackControllerTests
 
         controller.Play(new HaltungRecord());
 
-        Assert.Equal(
-            ("Video konnte nicht gestartet werden:\nFehler auf native side\n\nHinweis: Bitte pruefen, ob 'VideoLAN.LibVLC.Windows' fuer dieses Projekt/Plattform installiert ist.\n\n(Details: ex.ToString() nicht gespeichert)", "Video"),
-            dialogs.LastError);
+        Assert.NotNull(dialogs.LastError);
+        Assert.Equal("Video", dialogs.LastError.Value.Title);
+        Assert.Contains("VideoLAN.LibVLC.Windows", dialogs.LastError.Value.Message, StringComparison.Ordinal);
+        Assert.Contains("Technische Details konnten nicht gespeichert werden", dialogs.LastError.Value.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("native side", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static DataPageVideoPlaybackController CreateController(

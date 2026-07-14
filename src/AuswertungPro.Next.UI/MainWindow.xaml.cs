@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -175,8 +176,9 @@ public partial class MainWindow : Window
         }
         catch (System.Exception ex)
         {
-            shell?.SetStatus($"KI-Start fehlgeschlagen: {ex.Message}");
-            sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{ex.Message}", "KI starten");
+            var userMessage = UserError.DescribeAndReport(ex, "KI manuell starten");
+            shell?.SetStatus($"KI-Start fehlgeschlagen: {userMessage}");
+            sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{userMessage}", "KI starten");
         }
     }
 
