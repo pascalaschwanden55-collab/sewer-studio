@@ -1,5 +1,6 @@
 using System.Reflection;
 using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI;
@@ -50,6 +51,28 @@ public sealed class SettingsPageViewModelDependencyTests
         Assert.Same(operation, vm.FullBackupOperation);
     }
 
+    [Fact]
+    public void Logordner_verwendet_den_injizierten_Oeffnungsdienst()
+    {
+        var folderOpen = new FolderOpenFake();
+        using var vm = new SettingsPageViewModel(
+            new AppSettings(),
+            new DiagnosticsOptions(),
+            new DialogFake(),
+            new FullBackupFake(),
+            new ToastService(),
+            new FullBackupOperationState(),
+            new ProgramCleanupService(),
+            new CodexArtifactCleanupService(),
+            new KnowledgeBackupTransferService(),
+            katasterXtfPaths: null,
+            folderOpen: folderOpen);
+
+        vm.OpenLogsFolderCommand.Execute(null);
+
+        Assert.Equal(vm.LogsFolderPath, folderOpen.OpenedPath);
+    }
+
     private sealed class FullBackupFake : IFullBackupService
     {
         public Task<FullBackupSizeReport> AnalyzeAsync(
@@ -85,5 +108,16 @@ public sealed class SettingsPageViewModelDependencyTests
         public bool Confirm(string message, string title = "Bestaetigung") => false;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+    }
+
+    private sealed class FolderOpenFake : IFolderOpenService
+    {
+        public string? OpenedPath { get; private set; }
+
+        public FolderOpenResult EnsureAndOpen(string? path)
+        {
+            OpenedPath = path;
+            return new FolderOpenResult(true, null);
+        }
     }
 }

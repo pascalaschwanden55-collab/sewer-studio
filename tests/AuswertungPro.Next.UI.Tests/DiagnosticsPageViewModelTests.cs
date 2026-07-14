@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
@@ -90,6 +91,24 @@ public sealed class DiagnosticsPageViewModelTests
         Assert.Null(dialogs.InfoMessage);
     }
 
+    [Fact]
+    public void Logordner_verwendet_den_injizierten_Oeffnungsdienst()
+    {
+        var dialogs = new FakeDialogs();
+        var packages = new FakeDiagnosticsPackageService(
+            new DiagnosticsPackageResult(false, null, 0, "nicht verwendet"));
+        var folderOpen = new FolderOpenFake();
+        var viewModel = new DiagnosticsPageViewModel(
+            new FakeLogTailReader(new LogTailReadResult(false, [], null)),
+            packages,
+            dialogs,
+            folderOpen);
+
+        viewModel.OpenLogFolderCommand.Execute(null);
+
+        Assert.Equal(packages.LogDirectory, folderOpen.OpenedPath);
+    }
+
     private sealed class FakeLogTailReader(LogTailReadResult result) : ILogTailReader
     {
         public LogTailReadResult ReadToday(int maximumLines = 200) => result;
@@ -130,5 +149,16 @@ public sealed class DiagnosticsPageViewModelTests
         public bool Confirm(string message, string title = "Bestaetigung") => false;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+    }
+
+    private sealed class FolderOpenFake : IFolderOpenService
+    {
+        public string? OpenedPath { get; private set; }
+
+        public FolderOpenResult EnsureAndOpen(string? path)
+        {
+            OpenedPath = path;
+            return new FolderOpenResult(true, null);
+        }
     }
 }

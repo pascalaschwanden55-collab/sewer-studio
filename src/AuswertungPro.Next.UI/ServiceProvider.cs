@@ -81,6 +81,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
         public ISafeShellOpenService ShellOpen { get; }
+        public IFolderOpenService FolderOpen { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -269,6 +270,8 @@ namespace AuswertungPro.Next.UI
             ExplorerReveal = new ExplorerRevealLauncher();
             ShellOpen = new SafeShellOpenService();
             Services.SafeShellOpen.Use(ShellOpen);
+            FolderOpen = new FolderOpenService(ShellOpen);
+            AuswertungPro.Next.UI.Settings.SettingsPathWorkflow.Use(FolderOpen);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -691,6 +694,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
+            if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;

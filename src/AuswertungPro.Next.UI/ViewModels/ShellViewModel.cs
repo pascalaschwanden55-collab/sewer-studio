@@ -219,7 +219,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(
                 _sp.LogTailReader,
                 _sp.DiagnosticsPackages,
-                _sp.Dialogs)),
+                _sp.Dialogs,
+                _sp.FolderOpen)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(
                 settings: _sp.Settings,
                 diagnostics: _sp.Diagnostics,
@@ -230,7 +231,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 programCleanup: _sp.ProgramCleanup,
                 codexArtifactCleanup: _sp.CodexArtifactCleanup,
                 knowledgeBackup: _sp.KnowledgeBackup,
-                katasterXtfPaths: _sp.KatasterXtfPaths), canOpenWithoutProject: true)
+                katasterXtfPaths: _sp.KatasterXtfPaths,
+                folderOpen: _sp.FolderOpen), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 

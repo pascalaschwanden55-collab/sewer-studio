@@ -1,7 +1,8 @@
 using System;
 using System.IO;
+using System.Threading;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.UI.Settings;
 
@@ -15,6 +16,17 @@ public sealed record SettingsOpenFolderRequest(
 
 public static class SettingsPathWorkflow
 {
+    private static IFolderOpenService _folderOpen = new FolderOpenService(new SafeShellOpenService());
+
+    internal static IFolderOpenService CompatibilityService
+        => Volatile.Read(ref _folderOpen);
+
+    internal static void Use(IFolderOpenService folderOpen)
+    {
+        ArgumentNullException.ThrowIfNull(folderOpen);
+        Volatile.Write(ref _folderOpen, folderOpen);
+    }
+
     public static string? SelectPdfToText(IDialogService dialogs)
         => dialogs.OpenFile(
             "pdftotext.exe waehlen",
@@ -49,39 +61,64 @@ public static class SettingsPathWorkflow
         => dialogs.SelectFolder("XTF-Ordner Kanton Uri waehlen", currentPath);
 
     public static void OpenFolder(string? path, IDialogService dialogs)
-        => OpenFolder(new SettingsOpenFolderRequest(
+        => OpenFolder(path, dialogs, CompatibilityService);
+
+    internal static void OpenFolder(
+        string? path,
+        IDialogService dialogs,
+        IFolderOpenService folderOpen)
+    {
+        ArgumentNullException.ThrowIfNull(dialogs);
+        ArgumentNullException.ThrowIfNull(folderOpen);
+
+        OpenFolderCore(
             path,
             dialogs,
-            value => Directory.CreateDirectory(value),
-            TryOpenWithShell));
+            value =>
+            {
+                var result = folderOpen.EnsureAndOpen(value);
+                return new SettingsOpenFolderResult(result.Success, result.Error);
+            });
+    }
 
     public static void OpenFolder(SettingsOpenFolderRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        OpenFolderCore(
+            request.Path,
+            request.Dialogs,
+            value =>
+            {
+                request.CreateDirectory(value);
+                return request.TryOpen(value);
+            });
+    }
+
+    private static void OpenFolderCore(
+        string? path,
+        IDialogService dialogs,
+        Func<string, SettingsOpenFolderResult> open)
+    {
+        ArgumentNullException.ThrowIfNull(dialogs);
+        ArgumentNullException.ThrowIfNull(open);
+
         try
         {
-            if (string.IsNullOrWhiteSpace(request.Path))
+            if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            request.CreateDirectory(request.Path);
-
-            var result = request.TryOpen(request.Path);
+            var result = open(path);
             if (!result.Success)
                 throw new InvalidOperationException(result.Error ?? "Unbekannter Fehler");
         }
         catch (Exception ex)
         {
-            request.Dialogs.Error(
+            dialogs.Error(
                 $"Ordner konnte nicht geoeffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner oeffnen")}",
                 "SewerStudio");
         }
     }
-
-    private static SettingsOpenFolderResult TryOpenWithShell(string path)
-        => SafeShellOpen.TryOpen(path, out var error)
-            ? new SettingsOpenFolderResult(true, null)
-            : new SettingsOpenFolderResult(false, error);
 
     private static string? InitialDirectoryFromFilePath(string? path)
         => string.IsNullOrWhiteSpace(path) ? null : Path.GetDirectoryName(path);

@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Application.Map;
@@ -33,6 +34,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ICodexArtifactCleanupService _codexArtifactCleanup;
     private readonly IKnowledgeBackupService _knowledgeBackup;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
+    private readonly IFolderOpenService _folderOpen;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -137,7 +139,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             programCleanup: sp.ProgramCleanup,
             codexArtifactCleanup: sp.CodexArtifactCleanup,
             knowledgeBackup: sp.KnowledgeBackup,
-            katasterXtfPaths: sp.KatasterXtfPaths)
+            katasterXtfPaths: sp.KatasterXtfPaths,
+            folderOpen: sp.FolderOpen)
     {
     }
 
@@ -193,7 +196,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ProgramCleanupService programCleanup,
         ICodexArtifactCleanupService codexArtifactCleanup,
         IKnowledgeBackupService knowledgeBackup,
-        IKatasterXtfPathResolver? katasterXtfPaths = null)
+        IKatasterXtfPathResolver? katasterXtfPaths = null,
+        IFolderOpenService? folderOpen = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -205,6 +209,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _codexArtifactCleanup = codexArtifactCleanup ?? throw new ArgumentNullException(nameof(codexArtifactCleanup));
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
         _katasterXtfPaths = katasterXtfPaths ?? Mapping.KatasterXtfPathResolver.CompatibilityService;
+        _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -308,7 +313,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private void OpenLogsFolder() => OpenFolder(LogsFolderPath);
     private void OpenRestorePointsFolder() => OpenFolder(RestorePointsFolderPath);
 
-    private void OpenFolder(string path) => SettingsPathWorkflow.OpenFolder(path, _dialogs);
+    private void OpenFolder(string path)
+        => SettingsPathWorkflow.OpenFolder(path, _dialogs, _folderOpen);
 
     private void BrowsePdfToText()
     {

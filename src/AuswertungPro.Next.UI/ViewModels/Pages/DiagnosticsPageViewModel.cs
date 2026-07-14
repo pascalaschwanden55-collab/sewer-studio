@@ -11,6 +11,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
     private readonly ILogTailReader _logTailReader;
     private readonly IDiagnosticsPackageService? _diagnosticsPackage;
     private readonly IDialogService? _dialogs;
+    private readonly IFolderOpenService _folderOpen;
 
     [ObservableProperty] private string _logTail = "";
     [ObservableProperty] private string _packageStatus = "";
@@ -27,11 +28,13 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
     public DiagnosticsPageViewModel(
         ILogTailReader logTailReader,
         IDiagnosticsPackageService? diagnosticsPackage,
-        IDialogService? dialogs)
+        IDialogService? dialogs,
+        IFolderOpenService? folderOpen = null)
     {
         _logTailReader = logTailReader ?? throw new ArgumentNullException(nameof(logTailReader));
         _diagnosticsPackage = diagnosticsPackage;
         _dialogs = dialogs;
+        _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
         RefreshCommand = new RelayCommand(Refresh);
         OpenLogFolderCommand = new RelayCommand(
             OpenLogFolder,
@@ -47,7 +50,10 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
         if (_diagnosticsPackage is null || _dialogs is null)
             return;
 
-        SettingsPathWorkflow.OpenFolder(_diagnosticsPackage.LogDirectory, _dialogs);
+        SettingsPathWorkflow.OpenFolder(
+            _diagnosticsPackage.LogDirectory,
+            _dialogs,
+            _folderOpen);
     }
 
     private async Task CreatePackageAsync()
