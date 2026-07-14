@@ -23,6 +23,8 @@
 
     <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
+    <!-- Einheitliche Icon-Schrift: Fluent unter Windows 11, MDL2 als Fallback. -->
+    <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <!-- Zell-Style fuer technische Grid-Spalten (einmal definiert, keine Inline-Duplikation). -->
     <Style x:Key="MonoCellStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
