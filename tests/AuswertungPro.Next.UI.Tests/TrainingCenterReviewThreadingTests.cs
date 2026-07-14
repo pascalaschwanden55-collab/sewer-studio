@@ -10,6 +10,7 @@ using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+[Collection("EnvironmentVars")]
 public sealed class TrainingCenterReviewThreadingTests
 {
     [Fact]
