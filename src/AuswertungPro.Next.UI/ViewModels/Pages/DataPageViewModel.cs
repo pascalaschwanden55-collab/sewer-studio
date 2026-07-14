@@ -56,6 +56,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
+    private readonly DataPageDichtheitPdfController _dichtheitPdfController;
     private readonly DataPageMeasureSuggestionController _measureSuggestionController;
     private readonly DataPageCostRestoreController _costRestoreController;
     private readonly DataPageVideoRelinkController _videoRelinkController;
@@ -214,6 +215,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             EnsureProtocolPath,
             () => _shell.GetProjectFolder(),
             _inspectionProtocolFiles.ResolveOriginalPdfPaths,
+            DataPageOriginalPdfController.TryShellOpen);
+        _dichtheitPdfController = new DataPageDichtheitPdfController(
+            _dialogs,
+            services.DichtheitProtocolFiles,
+            () => _shell.GetProjectFolder(),
+            () => _settings.DichtheitDistribution?.Root,
             DataPageOriginalPdfController.TryShellOpen);
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
@@ -841,26 +848,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     /// <summary>Oeffnet das neueste verteilte Dichtheitspruefungsprotokoll der Haltung (…_DP.pdf).</summary>
     private void OpenDichtheitPdf(HaltungRecord? record)
-    {
-        record ??= Selected;
-        var pdfs = DataPageDichtheitPdfResolver.Resolve(
-            record,
-            _shell.GetProjectFolder(),
-            _settings.DichtheitDistribution?.Root);
-        if (pdfs.Count == 0)
-        {
-            var name = record?.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
-            _dialogs.Info(
-                $"Kein Dichtheitspruefungsprotokoll fuer Haltung '{name}' gefunden.\n" +
-                "Dichtheitsprotokolle werden beim Kanalfernseh-Import automatisch verteilt (…_DP.pdf).",
-                "Dichtheitspruefung");
-            return;
-        }
-
-        var (ok, fehler) = DataPageOriginalPdfController.TryShellOpen(pdfs[0]);
-        if (!ok)
-            _dialogs.Warn($"Dichtheitspruefung konnte nicht geoeffnet werden:\n{fehler}", "Dichtheitspruefung");
-    }
+        => _dichtheitPdfController.Open(record ?? Selected);
 
     private void OpenContainingFolder(HaltungRecord? record)
     {

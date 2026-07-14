@@ -166,6 +166,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
+        public IDichtheitProtocolFileLocator DichtheitProtocolFiles { get; }
         // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
         public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion
@@ -337,7 +338,9 @@ namespace AuswertungPro.Next.UI
             ProtocolPdfExporter = new ProtocolPdfExporter();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator();
+            DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             DataPage.DataPageProtocolPathResolver.Use(InspectionProtocolFiles);
+            DataPage.DataPageDichtheitPdfResolver.Use(DichtheitProtocolFiles);
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
@@ -679,6 +682,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
             if (serviceType == typeof(IInspectionProtocolFileLocator)) return InspectionProtocolFiles;
+            if (serviceType == typeof(IDichtheitProtocolFileLocator)) return DichtheitProtocolFiles;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
