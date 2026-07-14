@@ -77,6 +77,14 @@ Der Nutzer hat sich deshalb für **nur konfigurierbare Ziel-Wurzel** entschieden
 
 **Vorgemerkt (eigenes, geprüftes Paket):** Voll konfigurierbare Ordner-/Datei-Muster auch für die Kanal-Verteilung — nur mit Regressionstests, da die ~3000 Videos an der Zuordnung hängen.
 
+### Ergänzung: grafischer Baustein-Editor
+
+Die beiden Excel-Karten erhalten anklickbare Bausteine für festen Text, Datum, Jahr,
+Monat und Trennzeichen. Die aktuelle Reihenfolge wird als farbige Bausteinkette angezeigt;
+Rückgängig, Leeren und eine optionale Text-Feinbearbeitung bleiben möglich. Bei Haltungen,
+Schächten und Dichtheit wird das feste Schema ebenfalls als Bausteinkette angezeigt, aber
+nicht editierbar. Damit bleibt die Video-Zuordnung unverändert.
+
 ## 8. Testkonzept
 
 - **DistributionPatternResolver:** Unit-Tests (TDD) für jeden Platzhalter, Sonderzeichen-Sanitizing, fehlende Felder, leere Ebenen (flach vs. tief), Endungserhalt, Schacht- vs. Haltungs-Kontext.

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -28,7 +29,8 @@ public sealed class DistributionTargetConfigViewModelTests
             titel: "Haltungen verteilen", untertitel: "", config: config,
             resolver: new DistributionPatternResolver(), sampleContext: HaltungCtx,
             extension: ".pdf", showFilePattern: false, hinweis: "",
-            onChanged: onChanged ?? (() => { }), browseFolder: () => null);
+            onChanged: onChanged ?? (() => { }), browseFolder: () => null,
+            fixedPattern: "{Datum}_{Haltung}");
 
     [Fact]
     public void Excel_vorschau_setzt_wurzel_und_datei_muster_zusammen()
@@ -82,5 +84,47 @@ public sealed class DistributionTargetConfigViewModelTests
         Assert.Equal(@"E:\Ziel", config.Root);
         Assert.Equal(@"E:\Ziel", vm.Vorschau);
         Assert.True(saves >= 1);
+    }
+
+    [Fact]
+    public void Excel_baustein_klicks_bauen_dateinamen_und_vorschau_sofort_auf()
+    {
+        var config = new DistributionTargetConfig { Root = @"D:\Export" };
+        var saves = 0;
+        var vm = CreateExcel(config, () => saves++);
+
+        vm.AddPatternBlockCommand.Execute(vm.AvailablePatternBlocks.Single(x => x.Label == "Haltungen"));
+        vm.AddPatternBlockCommand.Execute(vm.AvailablePatternBlocks.Single(x => x.Label == "_"));
+        vm.AddPatternBlockCommand.Execute(vm.AvailablePatternBlocks.Single(x => x.Label == "Datum"));
+
+        Assert.Equal("Haltungen_{Datum}", vm.DateiPattern);
+        Assert.Equal("Haltungen_{Datum}", config.DateiPattern);
+        Assert.Equal(["Haltungen", "_", "Datum"], vm.DateiPatternParts.Select(x => x.Text));
+        Assert.EndsWith(@"\Haltungen_20260626.xlsx", vm.Vorschau);
+        Assert.True(saves >= 3);
+    }
+
+    [Fact]
+    public void Excel_rueckgaengig_und_leeren_arbeiten_mit_ganzen_bausteinen()
+    {
+        var config = new DistributionTargetConfig { DateiPattern = "Haltungen_{Datum}" };
+        var vm = CreateExcel(config);
+
+        vm.RemoveLastPatternBlockCommand.Execute(null);
+
+        Assert.Equal("Haltungen_", vm.DateiPattern);
+        vm.ClearPatternCommand.Execute(null);
+        Assert.Equal(string.Empty, vm.DateiPattern);
+        Assert.Empty(vm.DateiPatternParts);
+    }
+
+    [Fact]
+    public void Verteilung_zeigt_festes_schema_als_bausteine_ohne_es_editierbar_zu_machen()
+    {
+        var vm = CreateVerteil(new DistributionTargetConfig { DateiPattern = "wird_nicht_verwendet" });
+
+        Assert.True(vm.ShowFixedPattern);
+        Assert.False(vm.ShowFilePattern);
+        Assert.Equal(["Datum", "_", "Haltung"], vm.DateiPatternParts.Select(x => x.Text));
     }
 }

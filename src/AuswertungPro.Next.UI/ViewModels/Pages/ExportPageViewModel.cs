@@ -130,15 +130,18 @@ public sealed partial class ExportPageViewModel : ObservableObject
             new DistributionTargetConfigViewModel(
                 "Haltungen verteilen", "PDF-Protokoll + Video je Haltung",
                 _settings.HaltungDistribution, resolver, verteilSample, ".pdf",
-                showFilePattern: false, haltungHinweis, OnCfgChanged, BrowseRoot),
+                showFilePattern: false, haltungHinweis, OnCfgChanged, BrowseRoot,
+                fixedPattern: "{Datum}_{Haltung}"),
             new DistributionTargetConfigViewModel(
                 "Schächte verteilen", "Schachtprotokoll je Schacht",
                 _settings.SchachtDistribution, resolver, verteilSample, ".pdf",
-                showFilePattern: false, schachtHinweis, OnCfgChanged, BrowseRoot),
+                showFilePattern: false, schachtHinweis, OnCfgChanged, BrowseRoot,
+                fixedPattern: "{Datum}_{Schachtnummer}"),
             new DistributionTargetConfigViewModel(
                 "Dichtheitsprüfung verteilen", "DP-Protokoll je Schacht",
                 _settings.DichtheitDistribution, resolver, verteilSample, ".pdf",
-                showFilePattern: false, dichtheitHinweis, OnCfgChanged, BrowseRoot),
+                showFilePattern: false, dichtheitHinweis, OnCfgChanged, BrowseRoot,
+                fixedPattern: "{Datum}_{Schachtnummer}"),
             new DistributionTargetConfigViewModel(
                 "Excel-Export Haltungen", "Eine Datei (Haltungen.xlsx)",
                 _settings.HaltungExport, resolver, excelSample, ".xlsx",
