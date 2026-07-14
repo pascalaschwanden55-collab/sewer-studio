@@ -248,7 +248,7 @@
                          VerticalScrollBarVisibility="Auto"
                          Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
 
-                <TextBlock Text="{Binding ValidationMessage}" Foreground="OrangeRed" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>
 

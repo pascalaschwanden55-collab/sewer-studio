@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Windows.PlayerCodingSidePanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors">
             <Border x:Name="CodingSidePanel"
                     Visibility="Collapsed"
@@ -121,16 +122,26 @@
                                              SelectionChanged="CodingEvents_SelectionChanged">
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="Bearbeiten (Doppelklick)" Click="CodingEventEdit_Click"/>
-                                                <MenuItem Header="Fotos anzeigen" Click="CodingEventShowPhotos_Click"/>
+                                                <MenuItem Header="Bearbeiten (Doppelklick)" Click="CodingEventEdit_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Fotos anzeigen" Click="CodingEventShowPhotos_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
                                                 <Separator/>
                                                 <MenuItem Header="Streckenschaden schließen (Ende hier)"
                                                           Click="CodingEventCloseStretch_Click"
-                                                          FontWeight="SemiBold"/>
+                                                          FontWeight="SemiBold">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE930;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
                                                 <Separator/>
-                                                <MenuItem Header="Zum Zeitpunkt springen" Click="CodingEventSeek_Click"/>
+                                                <MenuItem Header="Zum Zeitpunkt springen" Click="CodingEventSeek_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE823;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
                                                 <Separator/>
-                                                <MenuItem Header="Löschen" Click="CodingEventDelete_Click" Foreground="OrangeRed"/>
+                                                <MenuItem Header="Löschen" Click="CodingEventDelete_Click" Foreground="{DynamicResource DangerBrush}">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>
                                         <ListBox.ItemContainerStyle>
@@ -344,11 +355,21 @@
                                              MouseDoubleClick="ImportEvents_DoubleClick">
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="&#x2713; Bestätigen → ins KI-Brain" Click="ImportConfirmToBrain_Click"/>
-                                                <MenuItem Header="&#x2713; Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click"/>
-                                                <MenuItem Header="Fotos anzeigen" Click="ImportShowPhotos_Click"/>
-                                                <MenuItem Header="Bearbeiten (Code / BBox ziehen)" Click="ImportEdit_Click"/>
-                                                <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click"/>
+                                                <MenuItem Header="Bestätigen → ins KI-Brain" Click="ImportConfirmToBrain_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Fotos anzeigen" Click="ImportShowPhotos_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Bearbeiten (Code / BBox ziehen)" Click="ImportEdit_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click">
+                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE823;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                </MenuItem>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>
                                         <ListBox.ItemContainerStyle>

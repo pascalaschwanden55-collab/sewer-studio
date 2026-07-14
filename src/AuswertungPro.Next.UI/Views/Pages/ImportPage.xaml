@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ImportPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -65,37 +66,25 @@
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Command="{Binding ImportXtfCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE968;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="XTF / M150 / MDB" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="XTF / M150 / MDB" Command="{Binding ImportXtfCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE968;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Command="{Binding ImportWinCanCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="WinCan-Projekte" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="WinCan-Projekte" Command="{Binding ImportWinCanCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Command="{Binding ImportIbakCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="IBAK-Projekte" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="IBAK-Projekte" Command="{Binding ImportIbakCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE714;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Command="{Binding ImportKinsCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="KINS-Projekte" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="KINS-Projekte" Command="{Binding ImportKinsCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
                             </ContextMenu>
                         </Button.ContextMenu>

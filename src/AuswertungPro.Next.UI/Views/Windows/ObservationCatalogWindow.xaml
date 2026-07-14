@@ -131,7 +131,7 @@
                                         <Style TargetType="ComboBox">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                                    <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
                                                     <Setter Property="BorderThickness" Value="2"/>
                                                     <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
                                                 </DataTrigger>
@@ -152,7 +152,7 @@
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                                    <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
                                                     <Setter Property="BorderThickness" Value="2"/>
                                                     <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
                                                 </DataTrigger>
@@ -168,7 +168,7 @@
                                             <Style TargetType="TextBox">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                                        <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
                                                         <Setter Property="BorderThickness" Value="2"/>
                                                         <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
                                                     </DataTrigger>
@@ -311,7 +311,7 @@
                     </Grid>
                 </GroupBox>
 
-                <TextBlock Text="{Binding ValidationMessage}" Foreground="OrangeRed" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" Margin="0,8,0,0"/>
             </StackPanel>
         </ScrollViewer>
 

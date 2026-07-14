@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
@@ -74,19 +75,39 @@
                  ScrollViewer.CanContentScroll="True">
             <ListBox.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Position nach oben" Click="CtxMoveUp_Click"/>
-                    <MenuItem Header="Position nach unten" Click="CtxMoveDown_Click"/>
+                    <MenuItem Header="Position nach oben" Click="CtxMoveUp_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Position nach unten" Click="CtxMoveDown_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Beobachtungen..." Click="CtxBeobachtungen_Click"/>
+                    <MenuItem Header="Beobachtungen..." Click="CtxBeobachtungen_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Play" Click="CtxPlay_Click"/>
-                    <MenuItem Header="Play (Gegeninspektion)" Click="CtxPlayGegen_Click"/>
-                    <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="CtxPrintAwu_Click"/>
-                    <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="CtxOpenPdf_Click"/>
-                    <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click"/>
-                    <MenuItem Header="Sanierungsmaßnahmen..." Click="CtxCosts_Click"/>
+                    <MenuItem Header="Play" Click="CtxPlay_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Play (Gegeninspektion)" Click="CtxPlayGegen_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="CtxPrintAwu_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="CtxOpenPdf_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Sanierungsmaßnahmen..." Click="CtxCosts_Click">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Haltung löschen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
+                    <MenuItem Header="Haltung löschen" Click="CtxDelete_Click" Foreground="{DynamicResource DangerBrush}">
+                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+                    </MenuItem>
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemTemplate>

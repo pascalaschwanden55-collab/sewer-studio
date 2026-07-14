@@ -4,6 +4,7 @@
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht">
     <UserControl.Resources>
         <local:CountToMarkConverter x:Key="Foto1Mark" MinCount="1"/>
@@ -154,11 +155,23 @@
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Sanierungsmaßnahme bearbeiten" Click="CostsMenu_Click"/>
-                                <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click"/>
+                                <MenuItem Header="Sanierungsmaßnahme bearbeiten" Click="CostsMenu_Click">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <Separator/>
                                 <MenuItem Header="Alle Maßnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"
-                                          ToolTip="Sanierungsmaßnahmen für alle Haltungen mit Sanierungsbedarf vorschlagen"/>
+                                          ToolTip="Sanierungsmaßnahmen für alle Haltungen mit Sanierungsbedarf vorschlagen">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
@@ -176,27 +189,21 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Hydraulik-Berechnung und Bericht">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE8EF;" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                             <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Click="HydraulikMenu_Click">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Hydraulik berechnen" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="Hydraulik berechnen" Click="HydraulikMenu_Click">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE8EF;" Foreground="{DynamicResource AccentBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Click="HydraulikPrint_Click">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Hydraulik PDF" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="Hydraulik PDF" Click="HydraulikPrint_Click">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource AccentBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
                             </ContextMenu>
                         </Button.ContextMenu>
@@ -233,21 +240,15 @@
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Command="{Binding MoveUpCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Nach oben" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="Nach oben" Command="{Binding MoveUpCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Command="{Binding MoveDownCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Nach unten" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
+                                <MenuItem Header="Nach unten" Command="{Binding MoveDownCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
                                 <MenuItem Header="Spalten anordnen" IsCheckable="True" IsChecked="{Binding IsColumnReorderEnabled}"/>
@@ -493,21 +494,43 @@
                 </DataGrid.LayoutTransform>
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Position nach oben" Click="MoveRecordUpMenu_Click" />
-                        <MenuItem Header="Position nach unten" Click="MoveRecordDownMenu_Click" />
+                        <MenuItem Header="Position nach oben" Click="MoveRecordUpMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Position nach unten" Click="MoveRecordDownMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
-                        <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click" />
+                        <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
-                        <MenuItem Header="Play" Click="PlayMenu_Click" />
-                        <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click" />
-                        <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
-                        <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click" />
-                        <MenuItem Header="Dichtheitsprüfung (PDF) öffnen..." Click="OpenDichtheitPdfMenu_Click" />
-                        <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click" />
-                        <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click" />
+                        <MenuItem Header="Play" Click="PlayMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Dichtheitsprüfung (PDF) öffnen..." Click="OpenDichtheitPdfMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
                         <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
-                                  InputGestureText="Del" Foreground="OrangeRed"/>
+                                  InputGestureText="Del" Foreground="{DynamicResource DangerBrush}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>
