@@ -43,6 +43,22 @@ public sealed class DataPageVideoStartErrorLogWriterTests
             logPath);
     }
 
+    [Fact]
+    public void TryWrite_returns_null_when_log_directory_cannot_be_created()
+    {
+        using var temp = new TempDir();
+        var blockedBasePath = Path.Combine(temp.Path, "keine_dateiablage");
+        File.WriteAllText(blockedBasePath, "blockiert");
+
+        var logPath = DataPageVideoStartErrorLogWriter.TryWrite(
+            new Exception("boom"),
+            videoPath: "haltung-01.mp4",
+            baseDirectory: blockedBasePath,
+            now: new DateTime(2026, 6, 21, 12, 34, 56));
+
+        Assert.Null(logPath);
+    }
+
     private sealed class TempDir : IDisposable
     {
         public TempDir()

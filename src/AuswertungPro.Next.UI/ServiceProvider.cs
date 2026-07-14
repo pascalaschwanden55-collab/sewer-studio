@@ -13,6 +13,7 @@ using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.DataPage;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
 using AuswertungPro.Next.Application.Vsa;
 
@@ -92,6 +93,7 @@ namespace AuswertungPro.Next.UI
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         public ILogTailReader LogTailReader { get; }
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
+        public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -206,6 +208,7 @@ namespace AuswertungPro.Next.UI
             SidecarTelemetryWriter.Use(SidecarTelemetry);
             PipelineTrace = new PipelineTraceFileWriter();
             PipelineTraceWriter.Use(PipelineTrace);
+            VideoStartErrorLogs = new VideoStartErrorLogFileWriter();
             var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
             LogTailReader = new DailyLogTailReader(logDirectory);
             DiagnosticsPackages = new DiagnosticsPackageService(logDirectory, AppIdentity.Version);
@@ -582,6 +585,7 @@ namespace AuswertungPro.Next.UI
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IProjectRepository)) return Projects;
+            if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;

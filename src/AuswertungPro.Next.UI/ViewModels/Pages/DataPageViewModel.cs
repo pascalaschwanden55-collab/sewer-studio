@@ -50,6 +50,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IDataPageWindowLauncher _windows;
     private readonly IHoldingRenameService _holdingRename;
     private readonly IDropdownOptionsStore _dropdownOptions;
+    private readonly IVideoStartErrorLogWriter _videoStartErrorLogs;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -179,6 +180,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _windows = services.DataPageWindows;
         _holdingRename = services.HoldingRename;
         _dropdownOptions = services.DropdownOptions;
+        _videoStartErrorLogs = services.VideoStartErrorLogs;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -262,7 +264,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => PlayerWindowOptions.FromSettings(_settings),
             DataPageVideoOverlayBuilder.Build,
             _windows.ShowPlayer,
-            (ex, path) => DataPageVideoStartErrorLogWriter.TryWrite(ex, path));
+            _videoStartErrorLogs.TryWrite);
         _mediaSearchController = new DataPageMediaSearchController(
             () => Records,
             () => _settings.LastVideoSourceFolder,

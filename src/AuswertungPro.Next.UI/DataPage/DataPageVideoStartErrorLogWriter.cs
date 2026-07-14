@@ -1,5 +1,5 @@
 using System;
-using System.IO;
+using AuswertungPro.Next.Infrastructure.Diagnostics;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -10,39 +10,8 @@ namespace AuswertungPro.Next.UI.DataPage;
 public static class DataPageVideoStartErrorLogWriter
 {
     public static string? TryWrite(Exception exception, string videoPath, string? baseDirectory = null, DateTime? now = null)
-    {
-        try
-        {
-            var timestamp = now ?? DateTime.Now;
-            var root = string.IsNullOrWhiteSpace(baseDirectory)
-                ? AppDomain.CurrentDomain.BaseDirectory
-                : baseDirectory;
-            var logsDir = Path.Combine(root, "logs");
-            Directory.CreateDirectory(logsDir);
-
-            var safeName = MakeSafeVideoName(videoPath);
-            var file = $"video_start_error_{timestamp:yyyyMMdd_HHmmss}_{safeName}.txt";
-            var logPath = Path.Combine(logsDir, file);
-
-            var content =
-                $"Time: {timestamp:O}{Environment.NewLine}" +
-                $"VideoPath: {videoPath}{Environment.NewLine}" +
-                $"Exception:{Environment.NewLine}{exception}{Environment.NewLine}";
-            File.WriteAllText(logPath, content);
-            return logPath;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string MakeSafeVideoName(string videoPath)
-    {
-        var safeName = Path.GetFileNameWithoutExtension(videoPath);
-        foreach (var c in Path.GetInvalidFileNameChars())
-            safeName = safeName.Replace(c, '_');
-
-        return string.IsNullOrWhiteSpace(safeName) ? "video" : safeName;
-    }
+        => new VideoStartErrorLogFileWriter(
+                baseDirectory,
+                now.HasValue ? () => now.Value : null)
+            .TryWrite(exception, videoPath);
 }
