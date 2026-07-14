@@ -18,7 +18,11 @@ public sealed class ImportBestEffortLoggingArchitectureTests
     [Fact]
     public void DichtheitImport_best_effort_catches_log_and_continue()
     {
-        var source = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "DichtheitImportDistributor.cs"));
+        var source = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Import",
+            "DichtheitImportDistributionService.cs"));
 
         Assert.DoesNotContain("catch {", source);
         Assert.Contains("Kandidat uebersprungen", source);

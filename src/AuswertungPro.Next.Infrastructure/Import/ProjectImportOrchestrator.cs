@@ -50,6 +50,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IPlanPdfImporter _planPdfImporter;
     private readonly IProjectRestorePointService _projectRestorePoints;
     private readonly IImportSourceArchiver _sourceArchiver;
+    private readonly IDichtheitImportDistributor _dichtheitDistributor;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -60,7 +61,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         INameBasedProtocolDistributor? protocolDistributor = null,
         IPlanPdfImporter? planPdfImporter = null,
         IProjectRestorePointService? projectRestorePoints = null,
-        IImportSourceArchiver? sourceArchiver = null)
+        IImportSourceArchiver? sourceArchiver = null,
+        IDichtheitImportDistributor? dichtheitDistributor = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -71,6 +73,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _planPdfImporter = planPdfImporter ?? new PlanPdfImportService();
         _projectRestorePoints = projectRestorePoints ?? new ProjectRestorePointStore();
         _sourceArchiver = sourceArchiver ?? new ImportSourceArchiveService();
+        _dichtheitDistributor = dichtheitDistributor ?? new DichtheitImportDistributionService();
     }
 
     /// <summary>
@@ -417,7 +420,11 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             //     gemeinsam im Haltungen_Verteilt-Ordner. Sicher erkannte DP-PDFs
             //     duerfen auch in neutralen Dokumente-Ordnern liegen; die KI-Zweitmeinung
             //     bleibt auf DP-/Dichtheits-Ordner begrenzt.
-            var dpResult = DichtheitImportDistributor.Distribute(project, projectFolder, sourceFolder, _kiSchiedsrichter);
+            var dpResult = _dichtheitDistributor.Distribute(
+                project,
+                projectFolder,
+                sourceFolder,
+                _kiSchiedsrichter);
             messages.AddRange(dpResult.Messages);
             if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
                 messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");

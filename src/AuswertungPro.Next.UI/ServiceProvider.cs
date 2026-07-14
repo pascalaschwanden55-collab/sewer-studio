@@ -123,6 +123,7 @@ namespace AuswertungPro.Next.UI
         public IProjectRestorePointService ProjectRestorePoints { get; }
         public IProjectRecoveryService ProjectRecovery { get; }
         public IImportSourceArchiver ImportSourceArchiver { get; }
+        public IDichtheitImportDistributor DichtheitImportDistributor { get; }
         // Einzel-Import eines Schacht-Protokolls (Aktualisieren + Protokoll importieren, Schachtseite).
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
@@ -248,6 +249,7 @@ namespace AuswertungPro.Next.UI
             ProjectRestorePoints = new ProjectRestorePointStore();
             ProjectRecovery = new ProjectRecoveryService();
             ImportSourceArchiver = new ImportSourceArchiveService();
+            DichtheitImportDistributor = new DichtheitImportDistributionService();
             ExcelExport = new ExcelTemplateExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
@@ -442,7 +444,8 @@ namespace AuswertungPro.Next.UI
                 NameBasedProtocolDistributor,
                 PlanPdfImport,
                 ProjectRestorePoints,
-                ImportSourceArchiver);
+                ImportSourceArchiver,
+                DichtheitImportDistributor);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();
