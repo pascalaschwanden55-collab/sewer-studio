@@ -48,6 +48,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     // Task 4: optionaler name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
     private readonly INameBasedProtocolDistributor? _protocolDistributor;
     private readonly IPlanPdfImporter _planPdfImporter;
+    private readonly IProjectRestorePointService _projectRestorePoints;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -56,7 +57,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IIbakImportService? ibak = null,
         PdfKiSchiedsrichter? kiSchiedsrichter = null,
         INameBasedProtocolDistributor? protocolDistributor = null,
-        IPlanPdfImporter? planPdfImporter = null)
+        IPlanPdfImporter? planPdfImporter = null,
+        IProjectRestorePointService? projectRestorePoints = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -65,6 +67,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _ibak   = ibak;
         _protocolDistributor = protocolDistributor;
         _planPdfImporter = planPdfImporter ?? new PlanPdfImportService();
+        _projectRestorePoints = projectRestorePoints ?? new ProjectRestorePointStore();
     }
 
     /// <summary>
@@ -135,7 +138,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             // Bugfix AP-02: Neue Projekte legen projekt.json unter Projektdateien\ ab,
             // Alt-Projekte direkt im Root. ProjectFileLocator findet beide Faelle — der
             // frueher hartkodierte Root-Pfad uebersprang das Sicherheitsnetz bei neuen Projekten.
-            var restorePoint = ProjectRestorePointService.TryCreateForProjectFolder(projectFolder);
+            var restorePoint = _projectRestorePoints.TryCreateForProjectFolder(projectFolder);
             messages.Add(restorePoint.Message);
         }
         catch (Exception ex)

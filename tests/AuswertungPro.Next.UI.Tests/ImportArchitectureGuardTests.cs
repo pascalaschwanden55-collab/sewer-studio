@@ -6,6 +6,33 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportArchitectureGuardTests
 {
     [Fact]
+    public void ProjectRestorePoints_use_one_central_instance_and_keep_static_facade_thin()
+    {
+        var provider = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));
+        var shell = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs"));
+        var orchestrator = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ProjectImportOrchestrator.cs"));
+        var facade = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Projects", "ProjectRestorePointService.cs"));
+        var store = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Projects", "ProjectRestorePointStore.cs"));
+
+        Assert.Contains("public IProjectRestorePointService ProjectRestorePoints", provider);
+        Assert.Contains("ProjectRestorePoints = new ProjectRestorePointStore()", provider);
+        Assert.Contains("_sp.ProjectRestorePoints.TryCreateForProjectFile", shell);
+        Assert.DoesNotContain("ProjectRestorePointService.TryCreateForProjectFile", shell);
+        Assert.Contains("private readonly IProjectRestorePointService _projectRestorePoints;", orchestrator);
+        Assert.Contains("_projectRestorePoints.TryCreateForProjectFolder", orchestrator);
+        Assert.Contains("private static readonly IProjectRestorePointService DefaultService", facade);
+        Assert.DoesNotContain("File.Copy", facade);
+        Assert.Contains("public sealed class ProjectRestorePointStore : IProjectRestorePointService", store);
+        Assert.Contains("lock (_sync)", store);
+        Assert.Contains("File.Copy", store);
+    }
+
+    [Fact]
     public void ImportPage_uses_injected_stored_file_service_and_keeps_static_facade_thin()
     {
         var viewModelPath = RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");
@@ -136,7 +163,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
         Assert.Contains("PlanPdfImport = new PlanPdfImportService()", provider);
-        Assert.Contains("PlanPdfImport);", provider);
+        Assert.Contains("PlanPdfImport,", provider);
+        Assert.Contains("ProjectRestorePoints);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);

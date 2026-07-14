@@ -859,8 +859,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             Directory.CreateDirectory(dir);
     }
 
-    private static ProjectRestorePointResult TryCreateProjectRestorePoint(string projectPath) =>
-        ProjectRestorePointService.TryCreateForProjectFile(projectPath);
+    private ProjectRestorePointResult TryCreateProjectRestorePoint(string projectPath) =>
+        _sp.ProjectRestorePoints.TryCreateForProjectFile(projectPath);
 
     private void OpenPriceCatalog()
     {
