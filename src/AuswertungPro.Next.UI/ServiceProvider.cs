@@ -84,6 +84,7 @@ namespace AuswertungPro.Next.UI
         public IFolderOpenService FolderOpen { get; }
         public IProgramRootLocator ProgramRootLocator { get; }
         public IRepositoryRootLocator RepositoryRootLocator { get; }
+        public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -281,6 +282,8 @@ namespace AuswertungPro.Next.UI
             SettingsProgramCleanupRequestFactory.Use(ProgramRootLocator);
             RepositoryRootLocator = new RepositoryRootFileLocator();
             RepoRootLocator.Use(RepositoryRootLocator);
+            TrainingFfmpegPaths = new TrainingFfmpegFilePathResolver();
+            AuswertungPro.Next.UI.Ai.Training.TrainingFfmpegPathResolver.Use(TrainingFfmpegPaths);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -708,6 +711,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
+            if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;
