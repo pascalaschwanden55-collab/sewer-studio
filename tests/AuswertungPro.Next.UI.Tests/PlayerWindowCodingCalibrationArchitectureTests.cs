@@ -72,6 +72,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationToggleWorkflow.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationControls.cs");
         var stateControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationStateController.cs");
+        var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingManualCalibrationController.cs");
         var pointerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationPointerController.cs");
         var renderControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingOverlayRenderController.cs");
         var playerStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
@@ -85,6 +86,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         Assert.True(File.Exists(toggleWorkflowPath), "Manuelle Kalibrierungs-Toggle-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(stateControllerPath), "Manueller Kalibrierungszustand soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(manualControllerPath), "Manueller Kalibrierungsbefehl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pointerControllerPath), "Manuelle Kalibrierungs-Maussteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Preview-Rendering soll ueber den Overlay-RenderController laufen.");
 
@@ -98,24 +100,25 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
+        var manualController = File.Exists(manualControllerPath) ? File.ReadAllText(manualControllerPath) : "";
         var pointerController = File.Exists(pointerControllerPath) ? File.ReadAllText(pointerControllerPath) : "";
         var renderController = File.Exists(renderControllerPath) ? File.ReadAllText(renderControllerPath) : "";
         var playerState = File.ReadAllText(playerStatePath);
         var player = File.ReadAllText(playerPath);
 
-        Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
-        Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", calibration);
-        Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
+        Assert.Contains("CodingManualCalibrationPolicy.Build", manualController);
+        Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", manualController);
+        Assert.Contains("CodingManualCalibrationWorkflow.Apply", manualController);
         AssertNoForbiddenTokens(calibration, "CodingCalibrationPreviewPolicy.Build");
         Assert.Contains("CodingCalibrationPreviewPolicy.Build", renderController);
-        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
+        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", manualController);
         AssertNoForbiddenTokens(calibration, "CodingCalibrationTogglePolicy.Build");
-        Assert.Contains("CodingCalibrationControls.ApplyToggle", calibration);
-        Assert.Contains("CodingCalibrationControls.ShowHint", calibration);
-        Assert.Contains("CodingCalibrationControls.ApplyManualResult", calibration);
+        Assert.Contains("CodingCalibrationControls.ApplyToggle", player);
+        Assert.Contains("CodingCalibrationControls.ShowHint", player);
+        Assert.Contains("CodingCalibrationControls.ApplyManualResult", player);
         Assert.Contains("CodingCalibrationControls.ApplyPreview", player);
-        Assert.Contains("CodingCalibrationControls.HideHint", calibration);
-        Assert.Contains("_codingCalibrationState", calibration);
+        Assert.Contains("CodingCalibrationControls.HideHint", player);
+        Assert.Contains("_calibrationState", manualController);
         Assert.Contains("_codingCalibrationState", playerState);
         AssertNoForbiddenTokens(
             playerState,
@@ -155,6 +158,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         Assert.Contains("public bool IsCalibrating", stateController);
         Assert.Contains("public NormalizedPoint? Start", stateController);
         Assert.Contains("public void Reset", stateController);
+        Assert.Contains("public sealed class CodingManualCalibrationController", manualController);
         Assert.Contains("public sealed class CodingCalibrationPointerController", pointerController);
     }
 
@@ -165,15 +169,18 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var pointerWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationPointerWorkflow.cs");
         var pointerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationPointerController.cs");
+        var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingManualCalibrationController.cs");
 
         Assert.True(File.Exists(calibrationPath), "Manuelle Kalibrierungs-Verdrahtung soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(pointerWorkflowPath), "Manueller Kalibrierungs-Pointerflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(pointerControllerPath), "Manuelle Kalibrierungs-Pointersteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(manualControllerPath), "Manueller Kalibrierungsbefehl soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
         var pointerWorkflow = File.Exists(pointerWorkflowPath) ? File.ReadAllText(pointerWorkflowPath) : "";
         var pointerController = File.Exists(pointerControllerPath) ? File.ReadAllText(pointerControllerPath) : "";
+        var manualController = File.Exists(manualControllerPath) ? File.ReadAllText(manualControllerPath) : "";
 
         AssertNoForbiddenTokens(
             overlayInput,
@@ -183,7 +190,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
             "private bool TryPreviewCodingCalibration",
             "private bool TryFinishCodingCalibration");
         Assert.Contains("private void CodingCalibrate_Click", calibration);
-        Assert.Contains("private void ApplyCodingCalibration", calibration);
+        AssertNoForbiddenTokens(calibration, "private void ApplyCodingCalibration");
         Assert.Contains("private bool TryStartCodingCalibration", calibration);
         Assert.Contains("private bool TryPreviewCodingCalibration", calibration);
         Assert.Contains("private bool TryFinishCodingCalibration", calibration);
@@ -193,11 +200,13 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         Assert.Contains("CodingCalibrationPointerWorkflow.Start", pointerController);
         Assert.Contains("CodingCalibrationPointerWorkflow.Preview", pointerController);
         Assert.Contains("CodingCalibrationPointerWorkflow.Finish", pointerController);
-        Assert.Contains("_codingSessionHost", calibration);
-        Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", calibration);
-        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
-        Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
-        Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
+        Assert.Contains("_codingManualCalibrationController.Toggle", calibration);
+        AssertNoForbiddenTokens(calibration, "_codingSessionHost", "_codingOverlayToolHost");
+        Assert.Contains("ICodingSessionHost _sessionHost", manualController);
+        Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", manualController);
+        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", manualController);
+        Assert.Contains("CodingManualCalibrationPolicy.Build", manualController);
+        Assert.Contains("CodingManualCalibrationWorkflow.Apply", manualController);
         AssertNoForbiddenTokens(
             calibration,
             "CodingCalibrationPointerWorkflow.Start",

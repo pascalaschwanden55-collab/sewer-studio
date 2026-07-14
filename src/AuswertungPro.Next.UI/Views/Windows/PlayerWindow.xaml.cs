@@ -50,6 +50,33 @@ public partial class PlayerWindow : Window
                 UpdateToolBadge: UpdateToolBadge,
                 RenderActiveCodingSchema: RenderActiveCodingSchema,
                 RedrawCodingCanvas: RedrawCodingCanvas));
+        _codingManualCalibrationController = new CodingManualCalibrationController(
+            _codingCalibrationState,
+            _codingActiveToolNameState,
+            _codingSchemaManager,
+            _codingSessionHost,
+            _codingOverlayToolHost,
+            new CodingManualCalibrationControllerActions(
+                CloseToolsDropdown: () => CodingOverlayInputControls.ClosePopup(ToolsDropdownPopup),
+                ApplyActiveToolSelection: label => CodingOverlayInputControls.ApplyActiveToolSelection(
+                    TxtActiveToolLabel,
+                    BtnCodingCreateEvent,
+                    label),
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
+                ApplyToggleControls: state => CodingCalibrationControls.ApplyToggle(
+                    CodingCalibrationHint,
+                    TxtCodingCalibHint,
+                    state),
+                UpdateOverlayCursor: UpdateCodingOverlayCursor,
+                RedrawCodingCanvas: RedrawCodingCanvas,
+                MapToPixel: CodingNormToPixel,
+                ShowInvalidHint: text => CodingCalibrationControls.ShowHint(TxtCodingCalibHint, text),
+                ApplyManualResult: result => CodingCalibrationControls.ApplyManualResult(
+                    TxtCodingCalibStatus,
+                    TxtCodingCalibHint,
+                    result),
+                HideHint: () => CodingCalibrationControls.HideHint(CodingCalibrationHint),
+                EnableCodingSchemaOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)));
         _codingCalibrationPointerController = new CodingCalibrationPointerController(
             _codingCalibrationState,
             new CodingCalibrationPointerControllerActions(
@@ -60,7 +87,7 @@ public partial class PlayerWindow : Window
                 RenderReferenceDn: RenderReferenceDn,
                 RenderPreview: _codingOverlayRenderController.RenderCalibrationPreview,
                 ApplyPreview: preview => CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview),
-                ApplyCalibration: ApplyCodingCalibration));
+                ApplyCalibration: (start, end) => _codingManualCalibrationController.Apply(start, end)));
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
         InitializeCodingConfirmationPanelControls();

@@ -13,6 +13,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "CodingOverlayToolHost.cs");
         var schemaControllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
+        var manualCalibrationControllerPath = Path.Combine(uiRoot, "Player", "CodingManualCalibrationController.cs");
 
         var host = File.ReadAllText(hostPath);
         Assert.Contains("PipeCalibration? Calibration", host);
@@ -41,6 +42,10 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         var schemaController = File.ReadAllText(schemaControllerPath);
         Assert.Contains("ICodingOverlayToolHost _toolHost", schemaController);
         Assert.Contains("_toolHost.Calibration", schemaController);
+        var manualCalibrationController = File.ReadAllText(manualCalibrationControllerPath);
+        Assert.Contains("ICodingOverlayToolHost _toolHost", manualCalibrationController);
+        Assert.Contains("_toolHost.NominalDiameterMm", manualCalibrationController);
+        Assert.Contains("_toolHost.SetCalibration", manualCalibrationController);
 
         var partials = ReadPlayerWindowPartials(windowsRoot);
         Assert.DoesNotContain("_codingOverlayService?.Calibration", partials, StringComparison.Ordinal);
@@ -59,6 +64,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "CodingOverlayToolHost.cs");
         var schemaControllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
+        var manualCalibrationControllerPath = Path.Combine(uiRoot, "Player", "CodingManualCalibrationController.cs");
 
         var host = File.ReadAllText(hostPath);
         Assert.Contains("OverlayToolType ActiveTool", host);
@@ -72,7 +78,6 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             "PlayerWindow.Coding.cs",
             "PlayerWindow.Coding.Lifecycle.Ui.cs",
             "PlayerWindow.Coding.OverlayInput.cs",
-            "PlayerWindow.Coding.OverlayInput.Calibration.cs",
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
             "PlayerWindow.Coding.OverlayInput.Visibility.cs",
             "PlayerWindow.LiveDetection.Marking.cs",
@@ -89,6 +94,8 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         Assert.Contains("ICodingOverlayToolHost _toolHost", schemaController);
         Assert.Contains("_toolHost.ActiveTool", schemaController);
         Assert.Contains("_toolHost.ActiveLevelMode", schemaController);
+        var manualCalibrationController = File.ReadAllText(manualCalibrationControllerPath);
+        Assert.Contains("_toolHost.SetActiveTool", manualCalibrationController);
 
         var partials = ReadPlayerWindowPartials(windowsRoot);
         Assert.DoesNotContain("_codingOverlayService.ActiveTool", partials, StringComparison.Ordinal);
