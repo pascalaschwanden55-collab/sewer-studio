@@ -82,10 +82,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **WinCan-DB-Fehler begrenzt (A6-06, Teilpaket):** Eine als `.db3` benannte Nicht-Datenbank wird über den echten WinCan-Importweg geöffnet. Sie liefert genau einen verständlichen Importfehler, der MDB-Fallback bleibt kontrolliert, Projekt und Schächte bleiben leer und die fremde Originaldatei ist bytegenau unverändert. Nur FDB bleibt offen.
 - **IBAK-FDB-Fehler isoliert (A6-06 erledigt):** Der vollständige IBAK-Import läuft mit einer ungültigen `Arizona.fdb` und einer gültigen `Daten.txt`. Der optionale FDB-Fotozugriff fällt mit klarer Meldung auf die Dateinamenslogik zurück, die Haltung aus `Daten.txt` wird trotzdem importiert und das Kundenoriginal bleibt bytegenau unverändert. Damit sind die vier geforderten Importer-Negativpfade abgedeckt.
 - **SAM/DINO ohne GPU startgeprüft (A6-07 erledigt):** Zwei schnelle CPU-Smokes ersetzen nur die schweren Fremdmodelle, durchlaufen aber die echten SewerStudio-Lader. Sie prüfen Modell- und Konfigurationsauswahl, CPU-Weitergabe sowie den Rückgabevertrag. Die bereits vorhandenen GPU-freien Endpunkttests schützen zusätzlich das Antwortschema und die sichtbare Fehlerkennzeichnung.
+- **KB-Parallelzugriff geprüft (A6-08 erledigt):** Ein echter Zwei-Verbindungs-Test hält die Neuaufbau-Transaktion absichtlich offen. Die Suche bleibt dank WAL lesbar, sieht währenddessen den letzten vollständigen Bestand und übernimmt nach dem Commit automatisch die neuen Datensätze. Der Test ist auf zwei Sekunden begrenzt und würde eine Datenbanksperre sichtbar machen.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.788 Tests bestanden (2.520 Infrastruktur, 1.819 Pipeline, 4.387 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
+- **Gesamtprüfung grün:** 8.789 Tests bestanden (2.521 Infrastruktur, 1.819 Pipeline, 4.387 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -224,7 +225,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A6-05 | Mittel → **erledigt** | `KnowledgeBaseInfrastructureTests.KnowledgeBaseContext_MigriertAlteDatenbankOhneDatenverlust` | Reale Alt-DB wird auf sechs neue Sample-Spalten migriert; Sample-, Embedding- und Versionsdaten bleiben vollständig erhalten |
 | A6-06 | Mittel → **erledigt** | PDF: leer/abgeschnitten; XTF: kaputt vor gültig; WinCan: ungültige DB3; IBAK: ungültige FDB mit gültiger `Daten.txt` | Alle vier Importwege begrenzen Dateifehler; Folgedaten werden weiter verarbeitet und DB-Originale bleiben unverändert |
 | A6-07 | Mittel → **erledigt** | `sidecar/tests/test_model_cpu_smoke.py` + vorhandene Endpunkt-Vertragstests | DINO- und SAM-2.1-Lader laufen mit Ersatzmodellen auf CPU; Auswahl, Device, Rückgabe und Antwortschema sind im normalen Testlauf geschützt |
-| A6-08 | Niedrig | `KnowledgeBaseContext.cs:52-56` — WAL/busy_timeout-Schutz ungetestet | Parallel-Reindex-vs-Retrieve-Test (kein „database is locked") |
+| A6-08 | Niedrig → **erledigt** | `KnowledgeBaseConcurrencyTests.Retrieval_BleibtWaehrenOffenerRebuildTransaktionLesbar` | Offene Rebuild-Transaktion blockiert Retrieval nicht; alter Snapshot bleibt vollständig, nach Commit wird der neue Bestand geladen |
 
 ### Schwerpunkt 8 — Wartbarkeit für Solo-Entwickler
 
@@ -299,7 +300,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)
-- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`), messbarer KI-Nachtlauf (`A6-03`, Werkzeug), QGIS-Brücken-Smoke (`A6-04`), KB-Bestandsmigration (`A6-05`), Importer-Negativtests (`A6-06`) und CPU-Modell-Smokes (`A6-07`) erledigt; offen bleiben der echte 8-Stunden-Lauf und die restliche Anwendungskette.
+- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`), messbarer KI-Nachtlauf (`A6-03`, Werkzeug), QGIS-Brücken-Smoke (`A6-04`), KB-Bestandsmigration (`A6-05`), Importer-Negativtests (`A6-06`), CPU-Modell-Smokes (`A6-07`) und KB-Parallelzugriff (`A6-08`) erledigt; offen bleiben der echte 8-Stunden-Lauf und die restliche Anwendungskette.
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
 - **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`), CUDA-Fehler-Klassifizierung (`A5-04`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt.
