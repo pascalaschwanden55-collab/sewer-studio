@@ -2,6 +2,7 @@ using System.Reflection;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
@@ -19,6 +20,7 @@ public sealed class SettingsPageViewModelDependencyTests
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+        Assert.Contains(fields, field => field.FieldType == typeof(IProgramRootLocator));
         Assert.Equal(
             typeof(ProgramCleanupService),
             typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.ProgramCleanup))?.PropertyType);

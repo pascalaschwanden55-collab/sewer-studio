@@ -2,20 +2,46 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 
 namespace AuswertungPro.Next.UI.Settings;
 
 public static class SettingsProgramCleanupRequestFactory
 {
+    private static IProgramRootLocator _current = new ProgramRootFileLocator();
+
+    internal static IProgramRootLocator CompatibilityService
+        => Volatile.Read(ref _current);
+
+    internal static void Use(IProgramRootLocator locator)
+    {
+        ArgumentNullException.ThrowIfNull(locator);
+        Volatile.Write(ref _current, locator);
+    }
+
     public static ProgramCleanupRequest Create(AppSettings settings, DateTime utcNow)
         => Create(
             settings,
             AppContext.BaseDirectory,
             Environment.CurrentDirectory,
             Path.GetTempPath(),
-            utcNow);
+            utcNow,
+            CompatibilityService);
+
+    internal static ProgramCleanupRequest Create(
+        AppSettings settings,
+        DateTime utcNow,
+        IProgramRootLocator programRootLocator)
+        => Create(
+            settings,
+            AppContext.BaseDirectory,
+            Environment.CurrentDirectory,
+            Path.GetTempPath(),
+            utcNow,
+            programRootLocator);
 
     internal static ProgramCleanupRequest Create(
         AppSettings settings,
@@ -23,11 +49,27 @@ public static class SettingsProgramCleanupRequestFactory
         string currentDirectory,
         string systemTempRoot,
         DateTime utcNow)
+        => Create(
+            settings,
+            appBaseDirectory,
+            currentDirectory,
+            systemTempRoot,
+            utcNow,
+            CompatibilityService);
+
+    internal static ProgramCleanupRequest Create(
+        AppSettings settings,
+        string appBaseDirectory,
+        string currentDirectory,
+        string systemTempRoot,
+        DateTime utcNow,
+        IProgramRootLocator programRootLocator)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(programRootLocator);
 
         return new ProgramCleanupRequest(
-            FindProgramRoot(appBaseDirectory, currentDirectory),
+            programRootLocator.FindProgramRoot(appBaseDirectory, currentDirectory),
             systemTempRoot,
             appBaseDirectory,
             BuildProtectedProjectRoots(settings),
@@ -35,23 +77,7 @@ public static class SettingsProgramCleanupRequestFactory
     }
 
     internal static string FindProgramRoot(string appBaseDirectory, string currentDirectory)
-    {
-        foreach (var start in new[] { appBaseDirectory, currentDirectory }
-                     .Where(path => !string.IsNullOrWhiteSpace(path))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var directory = new DirectoryInfo(Path.GetFullPath(start));
-            while (directory is not null)
-            {
-                if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
-                    return directory.FullName;
-
-                directory = directory.Parent;
-            }
-        }
-
-        return Path.GetFullPath(appBaseDirectory);
-    }
+        => CompatibilityService.FindProgramRoot(appBaseDirectory, currentDirectory);
 
     private static IReadOnlyCollection<string> BuildProtectedProjectRoots(AppSettings settings)
     {

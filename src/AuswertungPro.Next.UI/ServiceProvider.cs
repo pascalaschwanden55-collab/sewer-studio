@@ -82,6 +82,7 @@ namespace AuswertungPro.Next.UI
         public IExplorerRevealService ExplorerReveal { get; }
         public ISafeShellOpenService ShellOpen { get; }
         public IFolderOpenService FolderOpen { get; }
+        public IProgramRootLocator ProgramRootLocator { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -275,6 +276,8 @@ namespace AuswertungPro.Next.UI
             Services.SafeShellOpen.Use(ShellOpen);
             FolderOpen = new FolderOpenService(ShellOpen);
             AuswertungPro.Next.UI.Settings.SettingsPathWorkflow.Use(FolderOpen);
+            ProgramRootLocator = new ProgramRootFileLocator();
+            SettingsProgramCleanupRequestFactory.Use(ProgramRootLocator);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -698,6 +701,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
             if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
+            if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;

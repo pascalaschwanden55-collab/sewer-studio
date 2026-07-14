@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
@@ -133,6 +134,25 @@ public sealed class SettingsProgramCleanupWorkflowTests
         }
     }
 
+    [Fact]
+    public void RequestFactory_verwendet_die_injizierte_Programmordner_Suche()
+    {
+        var locator = new ProgramRootLocatorFake("C:\\SewerStudio-Test");
+        var settings = new AppSettings();
+
+        var request = SettingsProgramCleanupRequestFactory.Create(
+            settings,
+            "C:\\App",
+            "C:\\Arbeitsordner",
+            "C:\\Temp",
+            new DateTime(2026, 7, 15, 10, 0, 0, DateTimeKind.Utc),
+            locator);
+
+        Assert.Equal("C:\\SewerStudio-Test", request.ProgramRoot);
+        Assert.Equal("C:\\App", locator.AppBaseDirectory);
+        Assert.Equal("C:\\Arbeitsordner", locator.CurrentDirectory);
+    }
+
     private static SettingsProgramCleanupWorkflowRequest Request(
         string programRoot,
         string tempRoot,
@@ -197,6 +217,19 @@ public sealed class SettingsProgramCleanupWorkflowTests
             return ConfirmWarnResult;
         }
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+    }
+
+    private sealed class ProgramRootLocatorFake(string result) : IProgramRootLocator
+    {
+        public string? AppBaseDirectory { get; private set; }
+        public string? CurrentDirectory { get; private set; }
+
+        public string FindProgramRoot(string appBaseDirectory, string currentDirectory)
+        {
+            AppBaseDirectory = appBaseDirectory;
+            CurrentDirectory = currentDirectory;
+            return result;
+        }
     }
 
     private sealed class ToastFake : IToastService

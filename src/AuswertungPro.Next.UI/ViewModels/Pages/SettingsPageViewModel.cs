@@ -35,6 +35,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly IKnowledgeBackupService _knowledgeBackup;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IFolderOpenService _folderOpen;
+    private readonly IProgramRootLocator _programRootLocator;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -140,7 +141,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             codexArtifactCleanup: sp.CodexArtifactCleanup,
             knowledgeBackup: sp.KnowledgeBackup,
             katasterXtfPaths: sp.KatasterXtfPaths,
-            folderOpen: sp.FolderOpen)
+            folderOpen: sp.FolderOpen,
+            programRootLocator: sp.ProgramRootLocator)
     {
     }
 
@@ -198,6 +200,35 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IKnowledgeBackupService knowledgeBackup,
         IKatasterXtfPathResolver? katasterXtfPaths = null,
         IFolderOpenService? folderOpen = null)
+        : this(
+            settings,
+            diagnostics,
+            dialogs,
+            fullBackup,
+            toasts,
+            fullBackupOperation,
+            programCleanup,
+            codexArtifactCleanup,
+            knowledgeBackup,
+            katasterXtfPaths,
+            folderOpen,
+            programRootLocator: null)
+    {
+    }
+
+    internal SettingsPageViewModel(
+        AppSettings settings,
+        DiagnosticsOptions diagnostics,
+        IDialogService dialogs,
+        IFullBackupService fullBackup,
+        ToastService toasts,
+        FullBackupOperationState fullBackupOperation,
+        ProgramCleanupService programCleanup,
+        ICodexArtifactCleanupService codexArtifactCleanup,
+        IKnowledgeBackupService knowledgeBackup,
+        IKatasterXtfPathResolver? katasterXtfPaths,
+        IFolderOpenService? folderOpen,
+        IProgramRootLocator? programRootLocator)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -210,6 +241,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
         _katasterXtfPaths = katasterXtfPaths ?? Mapping.KatasterXtfPathResolver.CompatibilityService;
         _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
+        _programRootLocator = programRootLocator
+            ?? SettingsProgramCleanupRequestFactory.CompatibilityService;
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -454,7 +487,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         await SettingsProgramCleanupWorkflow.RunAsync(
             new SettingsProgramCleanupWorkflowRequest(
-                SettingsProgramCleanupRequestFactory.Create(_settings, DateTime.UtcNow),
+                SettingsProgramCleanupRequestFactory.Create(
+                    _settings,
+                    DateTime.UtcNow,
+                    _programRootLocator),
                 _programCleanup,
                 _dialogs,
                 _toasts,
@@ -467,7 +503,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         await SettingsCodexArtifactCleanupWorkflow.RunAsync(
             new SettingsCodexArtifactCleanupWorkflowRequest(
-                SettingsCodexArtifactCleanupRequestFactory.Create(DateTime.UtcNow),
+                SettingsCodexArtifactCleanupRequestFactory.Create(
+                    DateTime.UtcNow,
+                    _programRootLocator),
                 _codexArtifactCleanup,
                 _dialogs,
                 _toasts,
