@@ -288,7 +288,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | ID | Schweregrad | Fundstelle | Empfehlung |
 |---|---|---|---|
 | A8-01 | Hoch → **erledigt** | `BestEffort.Write`, `App.xaml.cs` und `ReleaseOperationalLoggingArchitectureTests` | BestEffort-Warnungen gehen in das Tageslog, der Rückfall nutzt Release-taugliches `Trace`; `Debug.WriteLine` ist aus dem Produktionscode entfernt und der echte Dateilog ist getestet |
-| A8-02 | Mittel | `FindAncestor<T>` in ~7 Dateien dupliziert; 2× rohes `VisualTreeHelper.GetParent` | Auf zentrales `VisualTreeSafe.FindAncestor` konsolidieren |
+| A8-02 | Mittel → **erledigt** | Alle UI-Elternsuchen sind auf `VisualTreeSafe.GetParentSafe` und `FindAncestor` konsolidiert; Verhaltenstest deckt logische und visuelle Vorfahren ab, Architekturtest verbietet neue Direktzugriffe und Kopien | Zentralen Helfer beibehalten; neue Suchfälle dort ergänzen |
 | A8-03 | Mittel → **erledigt** | `AuswertungPro.Dev.slnf` + `DevelopmentSolutionFilterTests` | Alltagsfilter führt nur 4 Produkt- und 4 Testprojekte; notwendige Projektverweise bleiben automatisch enthalten, eigenständige Tools entfallen |
 | A8-04 | Mittel → **erledigt** | `AGENTS.md` + `ProjectAgentInstructionsTests` | Kurzer aktueller Einstieg verweist auf `CLAUDE.md`, nennt .NET 10, Sidecar, QGIS sowie verbindliche Wartungs- und Testregeln; veraltete Angaben sind testgeschützt entfernt |
 | A8-05 | Niedrig → **erledigt** | `DiagnosticsPackageService` + `DiagnosticsPageViewModel` | Log-Ordner ist direkt erreichbar; begrenztes ZIP enthält bereinigte Logs und Systemangaben, keine Projektdateien; Erfolg und Fehler sind getestet |
