@@ -47,6 +47,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 
     // Task 4: optionaler name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
     private readonly INameBasedProtocolDistributor? _protocolDistributor;
+    private readonly IPlanPdfImporter _planPdfImporter;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -54,7 +55,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IKinsImportService? kins = null,
         IIbakImportService? ibak = null,
         PdfKiSchiedsrichter? kiSchiedsrichter = null,
-        INameBasedProtocolDistributor? protocolDistributor = null)
+        INameBasedProtocolDistributor? protocolDistributor = null,
+        IPlanPdfImporter? planPdfImporter = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -62,6 +64,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _kins   = kins;
         _ibak   = ibak;
         _protocolDistributor = protocolDistributor;
+        _planPdfImporter = planPdfImporter ?? new PlanPdfImportService();
     }
 
     /// <summary>
@@ -177,7 +180,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");
 
             var archivePdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var planResult = PlanPdfImporter.ImportFromArchivedPdfFolder(archivePdfDir, projectFolder);
+            var planResult = _planPdfImporter.ImportFromArchivedPdfFolder(archivePdfDir, projectFolder);
             messages.AddRange(planResult.Messages);
             errors += planResult.Errors;
             if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)

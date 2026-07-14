@@ -5,6 +5,39 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 public sealed class PlanPdfImporterTests
 {
     [Fact]
+    public void Service_verwendet_injizierte_Dokumenterkennung()
+    {
+        var root = CreateTempRoot();
+        try
+        {
+            var projectDir = Path.Combine(root, "projekt");
+            var archivedPdfDir = Path.Combine(projectDir, ProjectStructure.Importdateien, ProjectStructure.PdfDir);
+            Directory.CreateDirectory(archivedPdfDir);
+            var plan = Path.Combine(archivedPdfDir, "erzwingen.pdf");
+            var skip = Path.Combine(archivedPdfDir, "ignorieren.pdf");
+            File.WriteAllBytes(plan, [1, 2, 3]);
+            File.WriteAllBytes(skip, [4, 5, 6]);
+            var checkedFiles = new List<string>();
+            var service = new PlanPdfImportService(path =>
+            {
+                checkedFiles.Add(Path.GetFileName(path));
+                return path.EndsWith("erzwingen.pdf", StringComparison.OrdinalIgnoreCase);
+            });
+
+            var result = service.ImportFromArchivedPdfFolder(archivedPdfDir, projectDir);
+
+            Assert.Equal(1, result.Copied);
+            Assert.Equal(1, result.Skipped);
+            Assert.Equal(["erzwingen.pdf", "ignorieren.pdf"], checkedFiles.OrderBy(name => name));
+            Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(projectDir, "Pläne", "erzwingen.pdf")));
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
     public void ImportFromArchivedPdfFolder_KopiertPlanUndIgnoriertProtokoll()
     {
         var root = CreateTempRoot();

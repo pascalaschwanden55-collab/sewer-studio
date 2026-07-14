@@ -13,9 +13,19 @@ public sealed record PlanPdfImportResult(
 /// <summary>
 /// Kopiert erkannte Plan-PDFs aus dem Rohdatenarchiv in den zentralen Projektordner Pläne.
 /// </summary>
-public static class PlanPdfImporter
+public interface IPlanPdfImporter
 {
-    public static PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder)
+    PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder);
+}
+
+public sealed class PlanPdfImportService : IPlanPdfImporter
+{
+    private readonly Func<string, bool> _looksLikePlan;
+
+    public PlanPdfImportService(Func<string, bool>? looksLikePlan = null)
+        => _looksLikePlan = looksLikePlan ?? DefaultLooksLikePlan;
+
+    public PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder)
     {
         var copied = 0;
         var reused = 0;
@@ -33,7 +43,7 @@ public static class PlanPdfImporter
         {
             try
             {
-                if (!LooksLikePlan(sourcePath))
+                if (!_looksLikePlan(sourcePath))
                 {
                     skipped++;
                     continue;
@@ -69,7 +79,7 @@ public static class PlanPdfImporter
         return new PlanPdfImportResult(copied, reused, skipped, errors, messages);
     }
 
-    internal static bool LooksLikePlan(string path)
+    internal static bool DefaultLooksLikePlan(string path)
         => PdfDokumentTypErkennung.ErkenneDatei(path) == PdfDokumentTyp.PlanSituation;
 
     private static string BuildCollisionSafePath(string directory, string fileName)
@@ -88,4 +98,16 @@ public static class PlanPdfImporter
 
         return candidate;
     }
+}
+
+/// <summary>Kompatible statische Fassade fuer bestehende Aufrufer.</summary>
+public static class PlanPdfImporter
+{
+    private static readonly IPlanPdfImporter Default = new PlanPdfImportService();
+
+    public static PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder)
+        => Default.ImportFromArchivedPdfFolder(archivedPdfDir, projectFolder);
+
+    internal static bool LooksLikePlan(string path)
+        => PlanPdfImportService.DefaultLooksLikePlan(path);
 }

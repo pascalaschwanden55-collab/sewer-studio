@@ -117,6 +117,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("ImportSummaryExporter = new ImportSummaryExporter()", provider);
         Assert.Contains("ProjectPortability = new ProjectPortabilityService()", provider);
         Assert.Contains("ProjectPhotoAssignment = new ProjectPhotoAssignmentService()", provider);
+        Assert.Contains("PlanPdfImport = new PlanPdfImportService()", provider);
+        Assert.Contains("PlanPdfImport);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);

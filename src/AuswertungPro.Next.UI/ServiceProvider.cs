@@ -111,6 +111,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.Infrastructure.Media.MediaConflictCenterService MediaConflictCenter { get; } = new();
         public IProjectPortabilityService ProjectPortability { get; }
         public IProjectPhotoAssignmentService ProjectPhotoAssignment { get; }
+        public IPlanPdfImporter PlanPdfImport { get; }
         public IProtocolRegenerationService ProtocolRegeneration { get; }
         public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
         public IOneClickImportReportWriter OneClickImportReports { get; }
@@ -225,6 +226,7 @@ namespace AuswertungPro.Next.UI
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
+            PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
@@ -422,7 +424,8 @@ namespace AuswertungPro.Next.UI
                 KinsImport,
                 IbakImport,
                 CreateImportAiArbitrator(),
-                NameBasedProtocolDistributor);
+                NameBasedProtocolDistributor,
+                PlanPdfImport);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();
