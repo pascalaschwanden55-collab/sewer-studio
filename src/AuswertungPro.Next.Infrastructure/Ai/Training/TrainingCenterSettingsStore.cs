@@ -1,42 +1,26 @@
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-namespace AuswertungPro.Next.Infrastructure.Ai.Training
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
+
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer. Die Dateiarbeit liegt im
+/// <see cref="ITrainingCenterSettingsStore"/>.
+/// </summary>
+public static class TrainingCenterSettingsStore
 {
-    public static class TrainingCenterSettingsStore
-    {
-        private static string GetStorePath()
-            => KnowledgeBasePaths.GetTrainingSettingsPath();
+    private static ITrainingCenterSettingsStore _current = new TrainingCenterSettingsFileStore();
 
-        public static async Task<TrainingCenterSettings> LoadAsync()
-        {
-            var path = GetStorePath();
-            if (!File.Exists(path))
-                return new TrainingCenterSettings();
+    public static string DefaultPath => Current.StoragePath;
 
-            try
-            {
-                using var stream = File.OpenRead(path);
-                var settings = await JsonSerializer.DeserializeAsync<TrainingCenterSettings>(stream);
-                return settings ?? new TrainingCenterSettings();
-            }
-            catch
-            {
-                var backup = path + $".bad_{DateTime.UtcNow:yyyyMMddHHmmss}";
-                File.Move(path, backup, overwrite: true);
-                return new TrainingCenterSettings();
-            }
-        }
+    public static ITrainingCenterSettingsStore Current => Volatile.Read(ref _current);
 
-        public static async Task SaveAsync(TrainingCenterSettings settings)
-        {
-            var path = GetStorePath();
-            using var stream = File.Create(path);
-            await JsonSerializer.SerializeAsync(stream, settings, Application.Common.JsonDefaults.Indented);
-        }
-    }
+    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    public static void Use(ITrainingCenterSettingsStore store) =>
+        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+
+    public static Task<TrainingCenterSettings> LoadAsync() =>
+        Current.LoadAsync();
+
+    public static Task SaveAsync(TrainingCenterSettings settings) =>
+        Current.SaveAsync(settings);
 }

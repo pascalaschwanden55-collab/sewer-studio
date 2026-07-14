@@ -43,6 +43,7 @@ using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI
@@ -151,6 +152,7 @@ namespace AuswertungPro.Next.UI
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
+        public ITrainingCenterSettingsStore TrainingSettings { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -204,6 +206,9 @@ namespace AuswertungPro.Next.UI
             // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
             KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
             KnowledgeRoot = KnowledgeBasePaths.GetRoot();
+            TrainingSettings = new TrainingCenterSettingsFileStore(
+                KnowledgeBasePaths.GetTrainingSettingsPath());
+            TrainingCenterSettingsStore.Use(TrainingSettings);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -556,6 +561,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
+            if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;
