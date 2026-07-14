@@ -50,6 +50,17 @@ public partial class PlayerWindow : Window
                 UpdateToolBadge: UpdateToolBadge,
                 RenderActiveCodingSchema: RenderActiveCodingSchema,
                 RedrawCodingCanvas: RedrawCodingCanvas));
+        _codingCalibrationPointerController = new CodingCalibrationPointerController(
+            _codingCalibrationState,
+            new CodingCalibrationPointerControllerActions(
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                RenderPreview: _codingOverlayRenderController.RenderCalibrationPreview,
+                ApplyPreview: preview => CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview),
+                ApplyCalibration: ApplyCodingCalibration));
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
         InitializeCodingConfirmationPanelControls();

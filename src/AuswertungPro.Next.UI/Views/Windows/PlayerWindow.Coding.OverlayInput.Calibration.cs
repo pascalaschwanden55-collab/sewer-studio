@@ -67,51 +67,11 @@ public partial class PlayerWindow
     }
 
     private bool TryStartCodingCalibration(NormalizedPoint norm)
-    {
-        return CodingCalibrationPointerWorkflow.Start(
-            new CodingCalibrationPointerStartRequest(_codingCalibrationState.IsCalibrating),
-            new CodingCalibrationPointerStartActions(
-                SetCalibrationStart: () => _codingCalibrationState.SetStart(norm),
-                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
-                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
-                RenderAiOverlays: RenderAiOverlays,
-                RenderReferenceDn: RenderReferenceDn))
-            .Handled;
-    }
+        => _codingCalibrationPointerController.Start(norm);
 
     private bool TryPreviewCodingCalibration(NormalizedPoint norm)
-    {
-        var calibrationStart = _codingCalibrationState.Start;
-
-        return CodingCalibrationPointerWorkflow.Preview(
-            new CodingCalibrationPointerPreviewRequest(
-                _codingCalibrationState.IsCalibrating,
-                calibrationStart != null),
-            new CodingCalibrationPointerPreviewActions(
-                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
-                RenderAiOverlays: RenderAiOverlays,
-                RenderReferenceDn: RenderReferenceDn,
-                RenderPreview: () =>
-                {
-                    var preview = _codingOverlayRenderController.RenderCalibrationPreview(
-                        calibrationStart!,
-                        norm);
-                    CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
-                }))
-            .Handled;
-    }
+        => _codingCalibrationPointerController.Preview(norm);
 
     private bool TryFinishCodingCalibration(NormalizedPoint norm)
-    {
-        var calibrationStart = _codingCalibrationState.Start;
-
-        return CodingCalibrationPointerWorkflow.Finish(
-            new CodingCalibrationPointerFinishRequest(
-                _codingCalibrationState.IsCalibrating,
-                calibrationStart != null),
-            new CodingCalibrationPointerFinishActions(
-                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
-                ApplyCalibration: () => ApplyCodingCalibration(calibrationStart!, norm)))
-            .Handled;
-    }
+        => _codingCalibrationPointerController.Finish(norm);
 }
