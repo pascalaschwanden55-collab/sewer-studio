@@ -91,12 +91,6 @@
           "System.ComponentModel.Annotations": "5.0.0"
         }
       },
-      "QuestPDF": {
-        "type": "Direct",
-        "requested": "[2026.2.0, )",
-        "resolved": "2026.2.0",
-        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
-      },
       "SkiaSharp.Views.WPF": {
         "type": "Direct",
         "requested": "[3.119.4, )",
@@ -428,6 +422,11 @@
           "OpenTK.redist.glfw": "[3.3.0-pre20200830200122, 3.4.0-pre)"
         }
       },
+      "QuestPDF": {
+        "type": "Transitive",
+        "resolved": "2026.2.0",
+        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
+      },
       "RAMSPDToolkit-NDD": {
         "type": "Transitive",
         "resolved": "1.4.2",
@@ -726,8 +725,7 @@
       "auswertungpro.next.application": {
         "type": "Project",
         "dependencies": {
-          "AuswertungPro.Next.Domain": "[1.0.0, )",
-          "QuestPDF": "[2026.2.0, )"
+          "AuswertungPro.Next.Domain": "[1.0.0, )"
         }
       },
       "auswertungpro.next.domain": {
@@ -743,6 +741,7 @@
           "Microsoft.Data.Sqlite": "[10.0.3, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.2, )",
           "Microsoft.Playwright": "[1.50.0, )",
+          "QuestPDF": "[2026.2.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.3, )",
           "Scriban": "[7.2.5, )",
           "UglyToad.PdfPig": "[1.7.0-custom-5, )"
@@ -764,12 +763,6 @@
           "System.IO.Ports": "10.0.3",
           "System.Management": "10.0.2"
         }
-      },
-      "QuestPDF": {
-        "type": "Direct",
-        "requested": "[2026.2.0, )",
-        "resolved": "2026.2.0",
-        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
       },
       "HarfBuzzSharp.NativeAssets.Linux": {
         "type": "Transitive",
@@ -793,6 +786,11 @@
         "type": "Transitive",
         "resolved": "3.3.0-pre20200830200122",
         "contentHash": "EKE9pJCFHScbqOv/t0zG1h5Eh24nWr44SXYnpYtAWDhJhzAoUoI8TwDRXGvTGhDeCBp8ONEaVsq9xRC+OQIxQA=="
+      },
+      "QuestPDF": {
+        "type": "Transitive",
+        "resolved": "2026.2.0",
+        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
       },
       "runtime.android-arm.runtime.native.System.IO.Ports": {
         "type": "Transitive",

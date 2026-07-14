@@ -51,6 +51,12 @@
           "System.ComponentModel.Annotations": "5.0.0"
         }
       },
+      "QuestPDF": {
+        "type": "Direct",
+        "requested": "[2026.2.0, )",
+        "resolved": "2026.2.0",
+        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
+      },
       "Scriban": {
         "type": "Direct",
         "requested": "[7.2.5, )",
@@ -122,11 +128,6 @@
         "type": "Transitive",
         "resolved": "10.0.2",
         "contentHash": "zOIurr59+kUf9vNcsUkCvKWZv+fPosUZXURZesYkJCvl0EzTc9F7maAO4Cd2WEV7ZJJ0AZrFQvuH6Npph9wdBw=="
-      },
-      "QuestPDF": {
-        "type": "Transitive",
-        "resolved": "2026.2.0",
-        "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
       },
       "RBush.Signed": {
         "type": "Transitive",
@@ -209,8 +210,7 @@
       "auswertungpro.next.application": {
         "type": "Project",
         "dependencies": {
-          "AuswertungPro.Next.Domain": "[1.0.0, )",
-          "QuestPDF": "[2026.2.0, )"
+          "AuswertungPro.Next.Domain": "[1.0.0, )"
         }
       },
       "auswertungpro.next.domain": {
@@ -219,7 +219,8 @@
     },
     "net10.0/win-x64": {
       "QuestPDF": {
-        "type": "Transitive",
+        "type": "Direct",
+        "requested": "[2026.2.0, )",
         "resolved": "2026.2.0",
         "contentHash": "BRjl/iXknSC/uyWmn2eOwKLqgFhwVwrtic181IzFiCe49idGnjlQ1QiiXBxb7MKPd2Tgd/JL9yCija6MiQB1yA=="
       },

@@ -292,8 +292,7 @@
       "auswertungpro.next.application": {
         "type": "Project",
         "dependencies": {
-          "AuswertungPro.Next.Domain": "[1.0.0, )",
-          "QuestPDF": "[2026.2.0, )"
+          "AuswertungPro.Next.Domain": "[1.0.0, )"
         }
       },
       "auswertungpro.next.domain": {
@@ -309,6 +308,7 @@
           "Microsoft.Data.Sqlite": "[10.0.3, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.2, )",
           "Microsoft.Playwright": "[1.50.0, )",
+          "QuestPDF": "[2026.2.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.3, )",
           "Scriban": "[7.2.5, )",
           "UglyToad.PdfPig": "[1.7.0-custom-5, )"

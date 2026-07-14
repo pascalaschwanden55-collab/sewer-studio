@@ -229,16 +229,17 @@ UI  ──▶  Infrastructure  ──▶  Application  ──▶  Domain
 ```
 
 - **Domain** (`AuswertungPro.Next.Domain`): KEINE Projektabhängigkeiten, KEINE NuGet-Pakete. Reines Kern-Modell. Ordner: `Models/`, `Protocol/`, `Vsa/`, `VsaCatalog/`. Hier liegen Records/Enums der Fachdomäne (Haltung, Schacht, VSA-Codes/Katalog).
-- **Application** (`AuswertungPro.Next.Application`): referenziert nur `Domain`. Enthält Interfaces und Geschäftslogik-Verträge (Thin-AI-Prinzip: C# = Geschäftslogik). Ordner u. a.: `Ai/`, `Common/`, `Diagnostics/`, `Export/`, `Import/`, `Media/`, `Projects/`, `Protocol/`, `Reports/`, `Vsa/`. Einziges NuGet-Paket: `QuestPDF 2026.2.0`.
-- **Infrastructure** (`AuswertungPro.Next.Infrastructure`): referenziert `Domain` + `Application`. Implementiert die Interfaces (Persistenz, Import/Export, KI-Sidecar-Client, KnowledgeBase). Ordner u. a.: `Ai/` (Pipeline, KnowledgeBase, Ollama, Training, Sanierung), `Costs/`, `Export/`, `HoldingDistribution/`, `Import/` (Pdf, Xtf, WinCan, Ibak, Kins), `Map/`, `Media/`, `Output/`, `Projects/`, `Vsa/`.
+- **Application** (`AuswertungPro.Next.Application`): referenziert nur `Domain`. Enthält Interfaces, Ausgabeoptionen und Geschäftslogik-Verträge (Thin-AI-Prinzip: C# = Geschäftslogik). Ordner u. a.: `Ai/`, `Common/`, `Diagnostics/`, `Export/`, `Import/`, `Media/`, `Projects/`, `Protocol/`, `Reports/`, `Vsa/`. Keine konkrete PDF-Bibliothek wird hier referenziert.
+- **Infrastructure** (`AuswertungPro.Next.Infrastructure`): referenziert `Domain` + `Application`. Implementiert die Interfaces (Persistenz, Import/Export, QuestPDF-Renderer, KI-Sidecar-Client, KnowledgeBase). Ordner u. a.: `Ai/` (Pipeline, KnowledgeBase, Ollama, Training, Sanierung), `Costs/`, `Export/`, `HoldingDistribution/`, `Import/` (Pdf, Xtf, WinCan, Ibak, Kins), `Map/`, `Media/`, `Output/`, `Projects/`, `Reports/`, `Vsa/`.
 - **UI** (`AuswertungPro.Next.UI`, Assembly `SewerStudio.exe`): referenziert `Domain` + `Application` + `Infrastructure` direkt. WPF/MVVM. Ordner: `Views/` (mit `Controls/`, `Pages/`, `Windows/`), `ViewModels/`, `Theme/`, `Controls/`, `Dialogs/`, `Player/`, `Mapping/`, `Hydraulik/`, `LiveControl/`, `Services/`, `Ai/`, `Helpers/`, `Logging/`, `Data/`, `Config/`, `Templates/`, `Assets/`.
 
 **Regel zum Nachbauen:** Domain bleibt abhängigkeitsfrei; Geschäftslogik/Interfaces in Application; konkrete I/O-Implementierungen in Infrastructure; UI verdrahtet alles im Composition Root. Kein Microsoft-Hosting/DI-Paket — siehe nächster Abschnitt.
 
 ### Wichtigste NuGet-Pakete (pro Projekt, mit Versionen)
 
-- **Application:** `QuestPDF 2026.2.0` (PDF-Erzeugung).
+- **Application:** keine externen NuGet-Pakete.
 - **Infrastructure:**
+  - `QuestPDF 2026.2.0` (PDF-Erzeugung)
   - `ClosedXML 0.105.0` (Excel-Export)
   - `UglyToad.PdfPig 1.7.0-custom-5` (PDF-Parsing; **Custom-Build-Version**, kein Standard-NuGet — Fallstrick beim Nachbau, eigene Feed-/Paketquelle nötig)
   - `Microsoft.Playwright 1.50.0` (Headless-Browser, z. B. HTML→PDF/Render)
@@ -251,7 +252,7 @@ UI  ──▶  Infrastructure  ──▶  Application  ──▶  Domain
   - `LibVLCSharp 3.9.5` + `LibVLCSharp.WPF 3.9.5` + `VideoLAN.LibVLC.Windows 3.0.23` (Video-Player im PlayerWindow)
   - `Mapsui.Wpf 5.1.0` + `SkiaSharp.Views.WPF 3.119.4` (GIS-Karte). **Fallstrick:** `SkiaSharp.Views.WPF` ist explizit auf `3.119.4` gepinnt, weil Mapsui sonst transitive net462-Assets zieht → unter .NET 10 weißer Bildschirm bei Pan/Drag. Dieser Pin und das TFM `windows10.0.19041` gehören zusammen.
   - `LibreHardwareMonitorLib 0.9.6` (Hardware-/VRAM-Anzeige, Laptop/Workstation-Mode)
-  - außerdem `QuestPDF`, `UglyToad.PdfPig 1.7.0-custom-5`, `Microsoft.Playwright 1.50.0`, `Microsoft.Data.Sqlite 10.0.3`, `Microsoft.Extensions.Logging 10.0.2`
+  - außerdem `UglyToad.PdfPig 1.7.0-custom-5`, `Microsoft.Playwright 1.50.0`, `Microsoft.Data.Sqlite 10.0.3`, `Microsoft.Extensions.Logging 10.0.2`
 - **Alle Test-Projekte:** `Microsoft.NET.Test.Sdk 17.10.0`, `xunit 2.7.0`, `xunit.runner.visualstudio 2.5.7` (Test-Framework = **xUnit**).
 - **SewerStudioMcpServer** (Tool, nicht in der Solution): Konsolen-`Exe`, `AssemblyName SewerStudio.McpServer`, referenziert Domain/Application/Infrastructure; MCP-Server ohne externes MCP-NuGet (selbst implementiertes stdio-Protokoll).
 
@@ -1593,7 +1594,7 @@ Ein **vierter** Pfad ist `HoldingFolderDistributor` / `HoldingFolderDistributor.
 ### Export
 
 - **Excel:** `IExcelExportService` (`src/.../Application/Export/IExportServices.cs`) mit `ExportToTemplate` und `ExportSchaechteToTemplate(project, templatePath, outputPath, headerRow, startRow)`. Produktiv-Implementierung `ExcelTemplateExportService` (`src/.../Export/Excel/`, **ClosedXML**): öffnet eine vorhandene `.xlsx`-Vorlage, sucht das Worksheet „Haltungen“, liest die Header-Zeile (`headerRow`, Default 11), mappt Spalten-Überschriften über Aliasse (`"Haltungsnahme (ID)"→Haltungsname`, `"Fliessrichtung"→Inspektionsrichtung`) und `FieldCatalog.Definitions` (Label/Key, normalisiert) auf logische Feldnamen, leert ab `startRow` (Default 12) und schreibt die Records sortiert nach `NR` dann `Haltungsname`, Spaltenreihenfolge aus `FieldCatalog.ColumnOrder`. `CsvExcelExportService` ist die einfache CSV-Fallback-Implementierung desselben Interfaces (Semikolon-getrennt, alle `FieldCatalog.ColumnOrder`-Felder, UTF-8).
-- **PDF:** `ProtocolPdfExporter` (`src/.../Application/Reports/`, **QuestPDF** Community-Lizenz). `BuildPdf(projectTitle, ProtocolDocument doc, projectRootAbs, ProtocolPdfExportOptions)` → `byte[]`. Rendert A4-Protokoll mit Header (Projekt, `Haltung: doc.HaltungId`, Revision), optionaler KI-Zusammenfassung und einem Block je nicht-gelöschtem `ProtocolEntry` (Code, „Meter/Strecke“-Bereich), plus Haltungsgrafik (feste Pixelmaße `770×520`, Schachtknoten oben/unten).
+- **PDF:** Vertrag und Optionen liegen unter `src/.../Application/Reports/`; `ProtocolPdfExporter` und die übrigen QuestPDF-Renderer unter `src/.../Infrastructure/Reports/` (**QuestPDF** Community-Lizenz). `BuildPdf(projectTitle, ProtocolDocument doc, projectRootAbs, ProtocolPdfExportOptions)` → `byte[]`. Rendert A4-Protokoll mit Header (Projekt, `Haltung: doc.HaltungId`, Revision), optionaler KI-Zusammenfassung und einem Block je nicht-gelöschtem `ProtocolEntry` (Code, „Meter/Strecke“-Bereich), plus Haltungsgrafik (feste Pixelmaße `770×520`, Schachtknoten oben/unten).
 - **Devis/Kostenvoranschlag:** Es gibt im aktuellen HEAD keinen dedizierten Devis-/Excel-Export als eigenen Service — Kostenvoranschlags-Export läuft über die Excel-Template-/CSV-Wege bzw. ist noch nicht als eigener Service implementiert (in Doku nur als Vorschlag, „CPM“ offen).
 
 ### Relevante Dateipfade
@@ -1601,7 +1602,7 @@ Ein **vierter** Pfad ist `HoldingFolderDistributor` / `HoldingFolderDistributor.
 - Verträge: `src/AuswertungPro.Next.Application/Import/IImportServices.cs`, `.../Import/ImportRunContext.cs`, `src/AuswertungPro.Next.Application/Export/IExportServices.cs`
 - Importer: `src/AuswertungPro.Next.Infrastructure/Import/{WinCan/WinCanDbImportService.cs, Ibak/IbakExportImportService.cs, Kins/KinsImportService.cs, Xtf/*, Pdf/*}`
 - Kataster: `src/AuswertungPro.Next.Infrastructure/Map/{HaltungCadastreExtractor.cs, HaltungCadastreIndex.cs}`, Tabellen-Builder `tools/CadastreTableBuilder/Program.cs`
-- Export: `src/AuswertungPro.Next.Infrastructure/Export/{Excel/ExcelTemplateExportService.cs, CsvExcelExportService.cs}`, `src/AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs`
+- Export: `src/AuswertungPro.Next.Infrastructure/Export/{Excel/ExcelTemplateExportService.cs, CsvExcelExportService.cs}`, `src/AuswertungPro.Next.Infrastructure/Reports/ProtocolPdfExporter.cs`
 - Verdrahtung: `src/AuswertungPro.Next.UI/ServiceProvider.cs` (Konstruktion, ab Zeile 92)
 
 ### Fallstricke (für den Nachbau wichtig)

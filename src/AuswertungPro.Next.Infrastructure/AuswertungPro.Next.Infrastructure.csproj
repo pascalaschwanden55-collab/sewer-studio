@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <PackageReference Include="Scriban" Version="7.2.5" />
+    <PackageReference Include="QuestPDF" Version="2026.2.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <!-- Explizit gepinnt gegen NU1903 (GHSA-2m69-gcr7-jv3q): die transitive 2.1.11 enthielt
          eine SQLite-Memory-Corruption-Luecke. 3.0.3 buendelt SQLite 3.50.4.5 (> gefordert 3.50.2)

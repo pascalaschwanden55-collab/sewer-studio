@@ -6,7 +6,4 @@
   <ItemGroup>
     <ProjectReference Include="..\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="QuestPDF" Version="2026.2.0" />
-  </ItemGroup>
 </Project>
