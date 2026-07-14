@@ -49,6 +49,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Reports;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.Application.Ai;
@@ -188,6 +189,7 @@ namespace AuswertungPro.Next.UI
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
+        public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
         public IPipelineTraceWriter PipelineTrace { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
@@ -303,6 +305,8 @@ namespace AuswertungPro.Next.UI
             TrainingFrames = new TrainingFrameFileStore();
             FrameStore.Use(TrainingFrames);
             CodingFramePhotos = new CodingFramePhotoFileStore();
+            CodingDefectPreviews = new CodingDefectPreviewRenderer();
+            CodingDefectPreviewService.Use(CodingDefectPreviews);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -711,6 +715,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
             if (serviceType == typeof(ITrainingFrameStore)) return TrainingFrames;
             if (serviceType == typeof(ICodingFramePhotoStore)) return CodingFramePhotos;
+            if (serviceType == typeof(ICodingDefectPreviewRenderer)) return CodingDefectPreviews;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;
