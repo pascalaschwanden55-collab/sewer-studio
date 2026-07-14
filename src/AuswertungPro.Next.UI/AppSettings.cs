@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Hydraulik;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Player;
@@ -78,6 +79,17 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     // Last destination root used by distribution workflows.
     public string? LastDistributionTargetFolder { get; set; }
+
+    // Konfigurierbare Ziel-Ablage je Verteil-/Export-Typ: Ziel-Wurzel + 3 Namens-/Ordner-Ebenen
+    // (Ordner/Unterordner/Datei) als Platzhalter-Muster. Leere Ordner-Ebenen entfallen.
+    // Defaults reproduzieren das bisherige flache Ablageschema (Datum_Haltung bzw. Datum_Schachtnummer).
+    public DistributionTargetConfig HaltungDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Haltung}" };
+    public DistributionTargetConfig SchachtDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Schachtnummer}" };
+    public DistributionTargetConfig DichtheitDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Schachtnummer}" };
+
+    // Excel-Export: nur Ziel-Ordner + Dateiname (keine Ordner-Ebenen).
+    public DistributionTargetConfig HaltungExport { get; set; } = new() { DateiPattern = "Haltungen" };
+    public DistributionTargetConfig SchachtExport { get; set; } = new() { DateiPattern = "Schaechte" };
 
     // Legacy compatibility property (mirrors LastVideoSourceFolder).
     public string? LastVideoFolder { get; set; }
