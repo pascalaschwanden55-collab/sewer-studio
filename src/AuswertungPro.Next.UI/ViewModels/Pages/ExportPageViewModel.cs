@@ -26,6 +26,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
+    private readonly IDistributionPatternResolver _patternResolver;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -77,7 +78,31 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
         DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
-        DistributionTargets = BuildDistributionTargets(patternResolver ?? new DistributionPatternResolver());
+        _patternResolver = patternResolver ?? new DistributionPatternResolver();
+        DistributionTargets = BuildDistributionTargets(_patternResolver);
+    }
+
+    /// <summary>
+    /// Baut den Excel-Zielpfad aus konfigurierter Ziel-Wurzel + Datei-Muster; <c>null</c>, wenn keine
+    /// Wurzel gesetzt ist (dann faellt der Aufrufer auf den Speichern-Dialog zurueck).
+    /// Rein und ohne Seiteneffekte -> testbar.
+    /// </summary>
+    internal static string? BuildConfiguredExcelPath(
+        DistributionTargetConfig cfg,
+        IDistributionPatternResolver resolver,
+        DateTime datum)
+    {
+        if (string.IsNullOrWhiteSpace(cfg.Root))
+            return null;
+
+        // Excel ist eine einzelne Datei -> keine Ordner-Ebenen, nur Ziel-Wurzel + Datei-Muster.
+        var relativ = resolver.ResolveRelativePath(
+            ordnerPattern: null,
+            unterordnerPattern: null,
+            dateiPattern: cfg.DateiPattern,
+            context: new DistributionPatternContext(datum),
+            extension: ".xlsx");
+        return Path.Combine(cfg.Root, relativ);
     }
 
     /// <summary>
@@ -152,7 +177,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportAsync()
     {
-        var outPath = _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Speichern-Dialog wie bisher.
+        var outPath = ResolveConfiguredExcelPath(_settings.HaltungExport)
+            ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
@@ -190,7 +217,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportSchaechteAsync()
     {
-        var outPath = _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Speichern-Dialog wie bisher.
+        var outPath = ResolveConfiguredExcelPath(_settings.SchachtExport)
+            ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
@@ -622,6 +651,22 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
         var baseFolder = ResolveDistributionTargetFolder();
         return string.IsNullOrWhiteSpace(baseFolder) ? null : Path.Combine(baseFolder, subfolder);
+    }
+
+    /// <summary>
+    /// Excel-Zielpfad aus der Konfiguration (Ziel-Wurzel + Datei-Muster); legt den Zielordner an.
+    /// Null -> keine Wurzel gesetzt -> Aufrufer nutzt den Speichern-Dialog.
+    /// </summary>
+    private string? ResolveConfiguredExcelPath(DistributionTargetConfig cfg)
+    {
+        var ziel = BuildConfiguredExcelPath(cfg, _patternResolver, DateTime.Today);
+        if (ziel is null)
+            return null;
+
+        var ordner = Path.GetDirectoryName(ziel);
+        if (!string.IsNullOrWhiteSpace(ordner))
+            Directory.CreateDirectory(ordner);
+        return ziel;
     }
 
     private void StorePdfFiles(string[] paths)
