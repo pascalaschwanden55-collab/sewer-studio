@@ -1,72 +1,29 @@
-using System.IO;
-using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Sanierung;
-using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer. Die Dateiarbeit liegt im
+/// <see cref="IAiOptimizationSessionStore"/>.
+/// </summary>
 public static class AiOptimizationSessionStore
 {
-    private static readonly string FilePath =
-        Path.Combine(GetAppDataDir(), "ai_sanierung_sessions.json");
+    private static IAiOptimizationSessionStore _current = new AiOptimizationSessionFileStore();
 
-    private static readonly SemaphoreSlim _lock = new(1, 1);
-    private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
+    public static string DefaultPath => Current.StoragePath;
 
-    public static async Task SaveAsync(AiOptimizationSession session)
-    {
-        await _lock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            var all = await LoadCoreAsync().ConfigureAwait(false);
-            all.RemoveAll(s => s.Id == session.Id);
-            all.Add(session);
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            var json = JsonSerializer.Serialize(all, _jsonOpts);
-            await AtomicTextFileWriter.WriteAllTextAsync(FilePath, json).ConfigureAwait(false);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
+    public static IAiOptimizationSessionStore Current => Volatile.Read(ref _current);
 
-    public static async Task<IReadOnlyList<AiOptimizationSession>> LoadAllAsync()
-    {
-        await _lock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            return await LoadCoreAsync().ConfigureAwait(false);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
+    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    public static void Use(IAiOptimizationSessionStore store) =>
+        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
 
-    public static async Task<IReadOnlyList<AiOptimizationSession>> LoadForHaltungAsync(string haltungId)
-    {
-        var all = await LoadAllAsync().ConfigureAwait(false);
-        return all
-            .Where(s => string.Equals(s.HaltungId, haltungId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
+    public static Task SaveAsync(AiOptimizationSession session) =>
+        Current.SaveAsync(session);
 
-    private static async Task<List<AiOptimizationSession>> LoadCoreAsync()
-    {
-        try
-        {
-            if (!File.Exists(FilePath))
-                return [];
-            var json = await File.ReadAllTextAsync(FilePath).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<List<AiOptimizationSession>>(json) ?? [];
-        }
-        catch
-        {
-            return [];
-        }
-    }
+    public static Task<IReadOnlyList<AiOptimizationSession>> LoadAllAsync() =>
+        Current.LoadAllAsync();
 
-    private static string GetAppDataDir()
-        => AppDataPathResolver.Resolve();
+    public static Task<IReadOnlyList<AiOptimizationSession>> LoadForHaltungAsync(string haltungId) =>
+        Current.LoadForHaltungAsync(haltungId);
 }

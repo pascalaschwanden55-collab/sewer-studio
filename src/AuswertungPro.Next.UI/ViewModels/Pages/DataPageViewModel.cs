@@ -46,6 +46,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IProtocolService _protocols;
     private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;
     private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;
+    private readonly IAiOptimizationSessionStore _aiOptimizationSessions;
     private readonly IDataPageWindowLauncher _windows;
     private readonly IHoldingRenameService _holdingRename;
     private readonly IDropdownOptionsStore _dropdownOptions;
@@ -174,6 +175,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _protocols = services.Protocols;
         _videoAnalysisPipelineFactory = services.VideoAnalysisPipelines;
         _sanierungOptimizationFactory = services.SanierungOptimizations;
+        _aiOptimizationSessions = services.AiOptimizationSessions;
         _windows = services.DataPageWindows;
         _holdingRename = services.HoldingRename;
         _dropdownOptions = services.DropdownOptions;
@@ -712,7 +714,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (request.RuntimeSettings is not null)
         {
             var aiService = _sanierungOptimizationFactory.Create(request.RuntimeSettings);
-            optimizationVm = new SanierungOptimizationViewModel(request.Record, aiService, request.RuleRecommendation);
+            optimizationVm = new SanierungOptimizationViewModel(
+                request.Record,
+                aiService,
+                request.RuleRecommendation,
+                _aiOptimizationSessions);
             optimizationVm.TransferredToPrimary += _ => request.OnOptimizationTransferred();
         }
 

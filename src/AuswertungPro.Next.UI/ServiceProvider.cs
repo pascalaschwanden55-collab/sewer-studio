@@ -157,6 +157,7 @@ namespace AuswertungPro.Next.UI
         public ITrainingCenterSettingsStore TrainingSettings { get; }
         public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
         public ITeacherAnnotationStore TeacherAnnotations { get; }
+        public IAiOptimizationSessionStore AiOptimizationSessions { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -218,6 +219,9 @@ namespace AuswertungPro.Next.UI
             SelfTrainingHistoryStore.Use(SelfTrainingHistory);
             TeacherAnnotations = new TeacherAnnotationFileStore(KnowledgeRoot);
             TeacherAnnotationStore.Use(TeacherAnnotations);
+            AiOptimizationSessions = new AiOptimizationSessionFileStore(
+                Path.Combine(AppSettings.AppDataDir, "ai_sanierung_sessions.json"));
+            AiOptimizationSessionStore.Use(AiOptimizationSessions);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -573,6 +577,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
             if (serviceType == typeof(ITeacherAnnotationStore)) return TeacherAnnotations;
+            if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

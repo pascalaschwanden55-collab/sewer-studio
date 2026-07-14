@@ -82,6 +82,32 @@ public sealed class SanierungOptimizationViewModelTests
         Assert.Null(service.Request);
     }
 
+    [Fact]
+    public async Task ApplyToSecondaryCommand_usesInjectedSessionStore()
+    {
+        var service = new ControlledOptimizationService();
+        var store = new RecordingSessionStore();
+        var viewModel = new SanierungOptimizationViewModel(
+            CreateRecord(),
+            service,
+            null,
+            store);
+
+        var execution = viewModel.OptimizeCommand.ExecuteAsync(null);
+        await service.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        service.Complete(new SanierungOptimizationResult
+        {
+            RecommendedMeasure = "Kurzliner",
+            CostEstimate = new CostBand()
+        });
+        await execution;
+        await viewModel.ApplyToSecondaryCommand.ExecuteAsync(null);
+
+        var session = Assert.Single(store.Saved);
+        Assert.Equal("H-100", session.HaltungId);
+        Assert.Equal("Kurzliner", session.FinalAppliedMeasure);
+    }
+
     private static HaltungRecord CreateRecord()
     {
         var record = new HaltungRecord();
@@ -122,5 +148,25 @@ public sealed class SanierungOptimizationViewModelTests
             SanierungOptimizationRequest req,
             CancellationToken ct)
             => throw new InvalidOperationException("Dienst nicht erreichbar");
+    }
+
+    private sealed class RecordingSessionStore : IAiOptimizationSessionStore
+    {
+        public List<AiOptimizationSession> Saved { get; } = new();
+
+        public string StoragePath => "test.json";
+
+        public Task SaveAsync(AiOptimizationSession session)
+        {
+            Saved.Add(session);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<AiOptimizationSession>> LoadAllAsync() =>
+            Task.FromResult<IReadOnlyList<AiOptimizationSession>>(Saved);
+
+        public Task<IReadOnlyList<AiOptimizationSession>> LoadForHaltungAsync(string haltungId) =>
+            Task.FromResult<IReadOnlyList<AiOptimizationSession>>(
+                Saved.Where(item => string.Equals(item.HaltungId, haltungId, StringComparison.OrdinalIgnoreCase)).ToList());
     }
 }

@@ -14,6 +14,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
 {
     private readonly HaltungRecord _record;
     private readonly IAiSanierungOptimizationService _aiService;
+    private readonly IAiOptimizationSessionStore _sessionStore;
     private readonly SanierungOptimizationRequest _request;
 
     // ── Observable properties ─────────────────────────────────────────────
@@ -52,9 +53,19 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         HaltungRecord record,
         IAiSanierungOptimizationService aiService,
         RuleRecommendationDto? ruleRecommendation)
+        : this(record, aiService, ruleRecommendation, AiOptimizationSessionStore.Current)
+    {
+    }
+
+    public SanierungOptimizationViewModel(
+        HaltungRecord record,
+        IAiSanierungOptimizationService aiService,
+        RuleRecommendationDto? ruleRecommendation,
+        IAiOptimizationSessionStore sessionStore)
     {
         _record    = record;
         _aiService = aiService;
+        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _request   = BuildRequest(record, ruleRecommendation);
 
         HaltungName = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
@@ -128,7 +139,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         if (Result is null) return;
 
         var session = BuildSession(UserDecision.Accepted);
-        await AiOptimizationSessionStore.SaveAsync(session);
+        await _sessionStore.SaveAsync(session);
 
         AppliedToSecondary?.Invoke(Result, session);
         StatusText = "KI-Vorschlag als Sekundärdaten gespeichert.";
@@ -144,7 +155,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         // Write session with Accepted decision
         var session = BuildSession(UserDecision.Accepted);
         session.FinalAppliedMeasure = Result.RecommendedMeasure;
-        await AiOptimizationSessionStore.SaveAsync(session);
+        await _sessionStore.SaveAsync(session);
 
         // Apply to HaltungRecord fields
         _record.SetFieldValue("Empfohlene_Sanierungsmassnahmen",
