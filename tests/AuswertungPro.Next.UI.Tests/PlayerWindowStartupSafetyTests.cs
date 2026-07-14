@@ -26,5 +26,15 @@ public sealed class PlayerWindowStartupSafetyTests
 
         Assert.True(createIndex >= 0, "Die Playersteuerung muss im Konstruktor erstellt werden.");
         Assert.True(inputIndex > createIndex, "Die Reglersteuerung darf erst nach der Playersteuerung erstellt werden.");
+
+        Assert.Contains(
+            "RenderPreview: (start, current) =>",
+            constructor);
+        Assert.Contains(
+            "_codingOverlayRenderController.RenderCalibrationPreview(start, current)",
+            constructor);
+        Assert.DoesNotContain(
+            "RenderPreview: _codingOverlayRenderController.RenderCalibrationPreview",
+            constructor);
     }
 }

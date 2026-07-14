@@ -86,7 +86,8 @@ public partial class PlayerWindow : Window
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
                 RenderAiOverlays: RenderAiOverlays,
                 RenderReferenceDn: RenderReferenceDn,
-                RenderPreview: _codingOverlayRenderController.RenderCalibrationPreview,
+                RenderPreview: (start, current) =>
+                    _codingOverlayRenderController.RenderCalibrationPreview(start, current),
                 ApplyPreview: preview => CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview),
                 ApplyCalibration: (start, end) => _codingManualCalibrationController.Apply(start, end)));
         WireCodingSidePanelEvents();
