@@ -1,62 +1,63 @@
-# AGENTS.md — Projektanweisungen für Codex/Agenten
+# AGENTS.md — Einstieg für Codex und andere Agenten
 
-## Projekt
-**AuswertungPro** (C#/.NET) – Verarbeitung von VSA-Inspektionsdaten:
-- Import von PDF-Protokollen und Videos
-- Verteilung pro Haltung in Zielordnerstruktur
-- Video-Playback in UI (LibVLCSharp)
-- Export/Excel-Vorlage (Statistiken/KPIs)
+Immer einfach und ehrlich antworten.
 
-## Zielstruktur (Output)
-Für jede Haltung:
-<ProjektRoot>\Haltungen\<Gemeinde>\<Haltung>\
-  - <yyyyMMdd>_<Haltung>.pdf
-  - <yyyyMMdd>_<Haltung>.<videoext>
-Optional:
-<ProjektRoot>\Haltungen\<Gemeinde>\__UNMATCHED\<Haltung>\...
+## Verbindliche Projektbeschreibung
 
-## Kernlogik (Parsing & Zuordnung)
-### PDF Parsing (Quelle der Wahrheit)
-- Aus PDF-Text: "Haltungsinspektion - dd.MM.yyyy - <Haltung>"
-- Haltung-Regex: [0-9.]+-[0-9.]+
-- Videodateiname aus PDF: "Film <filename>.<ext>"
+Vor Änderungen zuerst [`CLAUDE.md`](CLAUDE.md) vollständig lesen. Dort stehen der
+aktuelle Aufbau, die KI-Pipeline, wichtige Klassen und fachliche Regeln. Diese Datei
+ist bewusst nur der kurze Einstieg und dupliziert die Architektur nicht.
 
-### Video Matching (robust)
-1) Exakt: Filmname aus PDF == Video-Dateiname im Video-Ordner
-2) Falls Video noch falsch benannt:
-   - Suffix-Match ab erstem "_" (GUID/Suffix bleibt gleich)
-   - Wenn genau 1 Treffer -> verwenden
-   - Wenn mehrere -> Ambiguous (nicht automatisch zuordnen)
-   - Wenn keiner -> NotFound
-3) Kein Crashing: pro Datei Fehler abfangen und Ergebnis protokollieren
+SewerStudio ist heute eine Windows-WPF-Anwendung auf .NET 10. Zum System gehören
+unter anderem:
 
-### Unmatched Handling
-- PDF wird immer korrekt kopiert/verschoben und umbenannt
-- NotFound -> *_VIDEO_MISSING.txt im Haltung-Ordner
-- Ambiguous -> *_VIDEO_AMBIGUOUS.txt + Kandidaten nach __UNMATCHED kopieren (COPY, nie MOVE)
+- Projekt-, Haltungs- und Schachtdaten mit VSA-KEK/EN-13508-2-Codierung
+- PDF-, XTF-, WinCan-, IBAK- und Medienimporte
+- Videoauswertung mit LibVLC
+- lokaler Python-Sidecar für YOLO, Grounding DINO und SAM 2.1
+- Ollama/Qwen, SQLite-Wissensdatenbank und Trainingsabläufe
+- lokale QGIS-Brücke und Sicherungs-/Wiederherstellungsfunktionen
 
-## UI / Video Player
-- WPF: LibVLCSharp.WPF + VideoLAN.LibVLC.Windows
-- Player oeffnet Video per gespeichertem VideoPath in Datenzeile (HaltungRow.VideoPath)
-- Keine UI-Overlays direkt ueber VideoView (Airspace in WPF beachten)
+## Arbeitsregeln
 
-## Build / Run
-- .NET SDK: (Projektziel eintragen, z.B. net8.0)
-- Standard: `dotnet build`
-- Tests: `dotnet test` (falls vorhanden)
+- Wartbarkeit, Robustheit, Sicherheit und messbare Leistung sind wichtiger als
+  schnelle Grossumbauten.
+- Keine God-Classes erweitern. Neue Fachlogik in kleine Services/Controller legen;
+  UI-Code bleibt dünn.
+- Öffentliche Fassaden und gespeicherte Datenformate bei Umbauten erhalten.
+- Kundenoriginale nie verändern. Dateioperationen absichern und Fehler pro Datei
+  protokollieren, damit ein Defekt nicht den ganzen Import abbricht.
+- Keine neuen NuGet-Pakete und kein grosses Refactoring ohne Rücksprache.
+- Riskante Änderungen zuerst mit einem fokussierten Verhaltenstest schützen.
+- Laufendes SewerStudio nicht automatisch beenden. Vor einem Build darf nur ein
+  hängen gebliebener `testhost`-Prozess beendet werden.
 
-## Coding Standards
-- Kein "magischer" Parsing-Code in UI: Parsing/IO in Services (z.B. Distributor-Klassen)
-- Alle File-Operationen: Path-Sanitizing, EnsureUniquePath bei overwrite=false
-- Exceptions pro Datei fangen, als Result zurueckgeben (kein globaler Abbruch)
-- Logging: klare Messages (Datei, Haltung, Datum, Status)
+## Build und Tests
 
-## Dependencies (NuGet)
-- PDF: UglyToad.PdfPig
-- VLC: LibVLCSharp.WPF, VideoLAN.LibVLC.Windows
+Schneller Alltags-Build:
 
-## Deliverables bei Änderungen
-Wenn du neue Features implementierst:
-- Update/Erweiterung der Result-Records (Success/Message/Paths)
-- Mini-Beispiel/CLI zum manuellen Testen
-- (Optional) Unit Tests fuer Parser/Matcher
+```powershell
+dotnet build AuswertungPro.Dev.slnf -c Release --no-restore
+```
+
+Vor jedem Commit mit Codeänderungen den vollständigen Release-Weg prüfen:
+
+```powershell
+dotnet build AuswertungPro.sln -c Release --no-restore
+dotnet test tests\AuswertungPro.Next.Infrastructure.Tests\AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore
+dotnet test tests\AuswertungPro.Next.Pipeline.Tests\AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore
+dotnet test tests\AuswertungPro.Next.UI.Tests\AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore
+dotnet test tests\ProjectModernizer.Tests\ProjectModernizer.Tests.csproj -c Release --no-build --no-restore
+```
+
+Bei Sidecar- oder QGIS-Arbeit zusätzlich:
+
+```powershell
+cd sidecar
+.\.venv\Scripts\python.exe -m pytest -m "not gpu" -q
+cd ..
+python -m unittest discover integrations\qgis\tests -v
+```
+
+Neue Funktionen werden mit kurzer, verständlicher Beschreibung, passendem Test und
+aktualisierter Dokumentation geliefert.
