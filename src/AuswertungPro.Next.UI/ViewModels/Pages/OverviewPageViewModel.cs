@@ -37,6 +37,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly DashboardRefreshNotifier _dashboardRefresh;
         private readonly IDialogService _dialogs;
         private readonly IProjectRepository _projects;
+        private readonly IProjectFileDiscovery _projectFileDiscovery;
         private readonly DispatcherTimer _dashboardRefreshTimer;
         private readonly DispatcherTimer _previewRefreshTimer;
         private readonly ProjectCostStoreRepository _haltungCostRepo = new();
@@ -88,7 +89,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
         public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
-            : this(shell, sp.Settings, sp.DashboardRefresh, sp.Dialogs, sp.Projects)
+            : this(
+                shell,
+                sp.Settings,
+                sp.DashboardRefresh,
+                sp.Dialogs,
+                sp.Projects,
+                sp.ProjectFileDiscovery)
         {
         }
 
@@ -98,12 +105,31 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             DashboardRefreshNotifier dashboardRefresh,
             IDialogService dialogs,
             IProjectRepository projects)
+            : this(
+                shell,
+                settings,
+                dashboardRefresh,
+                dialogs,
+                projects,
+                ProjectFileDiscovery.CompatibilityService)
+        {
+        }
+
+        public OverviewPageViewModel(
+            ShellViewModel shell,
+            AppSettings settings,
+            DashboardRefreshNotifier dashboardRefresh,
+            IDialogService dialogs,
+            IProjectRepository projects,
+            IProjectFileDiscovery projectFileDiscovery)
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
             _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
+            _projectFileDiscovery = projectFileDiscovery
+                ?? throw new ArgumentNullException(nameof(projectFileDiscovery));
             _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
             _previewRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -525,7 +551,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _settings.LastProjectPath,
             _settings.RecentProjectPaths);
 
-        foreach (var file in ProjectFileDiscovery.FindProjectFiles(baseDirs))
+        foreach (var file in _projectFileDiscovery.FindProjectFiles(baseDirs))
             AddEntry(file, false);
 
         _allEntries = entries

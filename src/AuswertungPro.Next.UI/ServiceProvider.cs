@@ -114,6 +114,7 @@ namespace AuswertungPro.Next.UI
         #region Persistenz
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
+        public IProjectFileDiscovery ProjectFileDiscovery { get; }
         #endregion
 
         #region Import
@@ -312,6 +313,7 @@ namespace AuswertungPro.Next.UI
             ProtocolTrainingStore.Use(ProtocolTraining);
 
             Projects = new JsonProjectRepository();
+            ProjectFileDiscovery = new ProjectFileDiscoveryService();
             ProjectStructure = new ProjectStructureInitializer();
             KanalExportDetection = new KanalExportDetectionService();
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
@@ -643,6 +645,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
+            if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
             if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
             if (serviceType == typeof(ISchaechteTemplateColumnReader)) return SchaechteTemplateColumns;
