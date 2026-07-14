@@ -1,0 +1,49 @@
+root = true
+
+[*.cs]
+# Analyzer-Einstiegsbaseline vom 2026-07-13:
+# Diese Regeln treffen den gewachsenen Bestand bereits tausendfach (vor allem den festen
+# Namespace "AuswertungPro.Next" und lesbare Testnamen mit Unterstrichen). Sie laufen weiter,
+# erscheinen vorerst aber als IDE-Hinweise statt als 8.886 Build-Warnungen. Neue Regelarten
+# aus "latest-recommended" bleiben Warnungen. Ein eigenes Paket kann die Eintraege spaeter
+# einzeln entfernen, sobald die jeweilige Altlast behoben ist.
+dotnet_diagnostic.CA1000.severity = suggestion
+dotnet_diagnostic.CA1001.severity = suggestion
+dotnet_diagnostic.CA1050.severity = suggestion
+dotnet_diagnostic.CA1051.severity = suggestion
+dotnet_diagnostic.CA1068.severity = suggestion
+dotnet_diagnostic.CA1305.severity = suggestion
+dotnet_diagnostic.CA1310.severity = suggestion
+dotnet_diagnostic.CA1510.severity = suggestion
+dotnet_diagnostic.CA1512.severity = suggestion
+dotnet_diagnostic.CA1707.severity = suggestion
+dotnet_diagnostic.CA1711.severity = suggestion
+dotnet_diagnostic.CA1716.severity = suggestion
+dotnet_diagnostic.CA1720.severity = suggestion
+dotnet_diagnostic.CA1725.severity = suggestion
+dotnet_diagnostic.CA1805.severity = suggestion
+dotnet_diagnostic.CA1806.severity = suggestion
+dotnet_diagnostic.CA1816.severity = suggestion
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CA1825.severity = suggestion
+dotnet_diagnostic.CA1826.severity = suggestion
+dotnet_diagnostic.CA1835.severity = suggestion
+dotnet_diagnostic.CA1836.severity = suggestion
+dotnet_diagnostic.CA1845.severity = suggestion
+dotnet_diagnostic.CA1847.severity = suggestion
+dotnet_diagnostic.CA1848.severity = suggestion
+dotnet_diagnostic.CA1850.severity = suggestion
+dotnet_diagnostic.CA1853.severity = suggestion
+dotnet_diagnostic.CA1854.severity = suggestion
+dotnet_diagnostic.CA1859.severity = suggestion
+dotnet_diagnostic.CA1861.severity = suggestion
+dotnet_diagnostic.CA1865.severity = suggestion
+dotnet_diagnostic.CA1866.severity = suggestion
+dotnet_diagnostic.CA1869.severity = suggestion
+dotnet_diagnostic.CA1870.severity = suggestion
+dotnet_diagnostic.CA1873.severity = suggestion
+dotnet_diagnostic.CA1874.severity = suggestion
+dotnet_diagnostic.CA1875.severity = suggestion
+dotnet_diagnostic.CA2016.severity = suggestion
+dotnet_diagnostic.CA2201.severity = suggestion
+dotnet_diagnostic.CA2249.severity = suggestion

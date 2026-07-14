@@ -86,10 +86,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Schneller Alltags-Build ergänzt (A8-03 erledigt):** `AuswertungPro.Dev.slnf` enthält ausdrücklich nur die vier Produkt- und vier Testprojekte. Benötigte Projektverweise werden weiterhin automatisch gebaut, die übrigen eigenständigen Hilfsprogramme aber nicht mehr. README und ein Architekturtest schützen die Nutzung und den schlanken Inhalt.
 - **Agenten-Einstieg aktualisiert (A8-04 erledigt):** `AGENTS.md` verweist auf die ausführliche aktuelle Architektur in `CLAUDE.md` und nennt nur noch die stabilen Arbeits-, Sicherheits- und Prüfregeln. Veraltete Angaben zu einem reinen PDF-Tool, .NET 8 und optionalen Tests sind entfernt; ein Test verhindert die Rückkehr dieser Widersprüche.
 - **Diagnosepaket eingebaut (A8-05 erledigt):** Die Diagnose-Seite kann den Log-Ordner öffnen und ein ZIP speichern. Ein eigener Dienst nimmt höchstens sieben Tageslogs mit je maximal 5 MiB plus technische Systemangaben auf. Tokens, Benutzername und absolute Pfade werden nur in den ZIP-Kopien entfernt; Original-Logs und Projektdateien bleiben unberührt. Eine einzelne gesperrte Logdatei wird gemeldet und übersprungen, statt das ganze Paket zu verhindern.
+- **.NET-Codeprüfer aktiviert (A8-06 erledigt):** Alle Projekte bauen ausdrücklich mit den SDK-Analyzern auf `latest-recommended`. Die 40 bereits im Altbestand vorkommenden Regelarten sind transparent in `.editorconfig` als IDE-Hinweise baseliniert; neue Regelarten bleiben Build-Warnungen. Ein Konfigurationstest verhindert vollständiges Abschalten oder ein unbemerktes Warnungen-als-Fehler-Gate.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.796 Tests bestanden (2.524 Infrastruktur, 1.819 Pipeline, 4.391 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
+- **Gesamtprüfung grün:** 8.797 Tests bestanden (2.524 Infrastruktur, 1.819 Pipeline, 4.392 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der vollständige Analyzer-Rebuild endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -239,7 +240,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A8-03 | Mittel → **erledigt** | `AuswertungPro.Dev.slnf` + `DevelopmentSolutionFilterTests` | Alltagsfilter führt nur 4 Produkt- und 4 Testprojekte; notwendige Projektverweise bleiben automatisch enthalten, eigenständige Tools entfallen |
 | A8-04 | Mittel → **erledigt** | `AGENTS.md` + `ProjectAgentInstructionsTests` | Kurzer aktueller Einstieg verweist auf `CLAUDE.md`, nennt .NET 10, Sidecar, QGIS sowie verbindliche Wartungs- und Testregeln; veraltete Angaben sind testgeschützt entfernt |
 | A8-05 | Niedrig → **erledigt** | `DiagnosticsPackageService` + `DiagnosticsPageViewModel` | Log-Ordner ist direkt erreichbar; begrenztes ZIP enthält bereinigte Logs und Systemangaben, keine Projektdateien; Erfolg und Fehler sind getestet |
-| A8-06 | Niedrig | `Directory.Build.props` — keine Roslyn-Analyzer/Warnungs-Gate | `EnableNETAnalyzers=true`, `AnalysisLevel=latest-recommended` |
+| A8-06 | Niedrig → **erledigt** | `Directory.Build.props`, `.editorconfig`, `AnalyzerConfigurationTests` | `latest-recommended` ist aktiv; 40 bekannte Altregelarten bleiben als sichtbare IDE-Hinweise baseliniert, neue Regelarten werden zu Build-Warnungen |
 | A8-07 | Niedrig | `DataPagePrintController.cs:234` u.a. — rohe `ex.Message` in Nutzer-Dialogen | Zentraler `UserError.Describe(ex)` (kurz für Nutzer, voll ins Log) |
 
 ---
@@ -251,7 +252,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 3. **`A2-01`:** ffmpeg bei Abbruch killen (`p.Kill(entireProcessTree:true)`).
 4. **`A2-05`/`A2-06`:** CTS disposen + Such-Timer im Unloaded stoppen.
 5. ✔ **`A8-03`:** `AuswertungPro.Dev.slnf` bietet den schlanken Alltags-Build mit 4 Produkt- und 4 Testprojekten.
-6. **`A8-06`:** Roslyn-Analyzer in `Directory.Build.props` aktivieren (ohne TreatWarningsAsErrors).
+6. ✔ **`A8-06`:** SDK-Analyzer laufen auf `latest-recommended`; eine dokumentierte Einstiegsbaseline verhindert Warnflut ohne die Prüfer abzuschalten.
 7. ✔ **`A8-04`:** `AGENTS.md` ist ein kurzer aktueller Einstieg mit Verweis auf `CLAUDE.md`; ein Test verhindert veraltete Angaben.
 8. **`A4-02`:** NPK-Export in `Task.Run` auslagern (kein UI-Einfrieren).
 9. **`A5-02`/`A5-03`:** Host-Check-Kommentar klarstellen + Warnung bei Nicht-Loopback-Host.
@@ -299,7 +300,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 ### Release N+1 — „Sichtbarkeit & Sicherheitsnetz" (~1 Woche)
 - **Diagnose-Sichtbarkeit:** ✔ Release-Logging (`A8-01`) und Diagnosepaket (`A8-05`) erledigt; der Fehler-Mapper (`A8-07`) bleibt offen.
 - **Test-Gate reparieren:** UI-Tests in den pre-push-Hook; `A1-09` (Guard je Typ); `A1-02`/`A1-03` (SchaechtePage-Fachlogik auslagern → Guard wieder grün).
-- **Quick Wins:** ✔ `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A8-04`, `A4-02`, `A5-02`/`A5-03`; offen bleibt `A8-06`.
+- **Quick Wins:** ✔ `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A8-04`, `A8-06`, `A4-02`, `A5-02`/`A5-03` sind erledigt.
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)

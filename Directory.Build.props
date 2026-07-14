@@ -3,6 +3,10 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- SDK-eigene Codepruefer in jedem Projekt ausdruecklich aktivieren. Warnungen bleiben
+         zunaechst Warnungen; ein globales TreatWarningsAsErrors waere fuer den Bestand zu hart. -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
     <!-- Reproduzierbare Restores: schreibt/aktualisiert pro Projekt eine packages.lock.json.
          Lokal reibungslos (Restore aktualisiert die Lock-Datei automatisch); ein erzwungener
          Locked-Mode wuerde nur in einer CI genutzt (Restore mit Locked-Mode-Flag). -->
