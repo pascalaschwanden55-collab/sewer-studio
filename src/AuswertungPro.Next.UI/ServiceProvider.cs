@@ -175,6 +175,7 @@ namespace AuswertungPro.Next.UI
         #region KI / Vision
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
+        public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
         public IPipelineTraceWriter PipelineTrace { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
@@ -284,6 +285,7 @@ namespace AuswertungPro.Next.UI
             TrainingSamplesStore.Use(trainingSamples);
             TrainingFrames = new TrainingFrameFileStore();
             FrameStore.Use(TrainingFrames);
+            CodingFramePhotos = new CodingFramePhotoFileStore();
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -675,6 +677,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
             if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
             if (serviceType == typeof(ITrainingFrameStore)) return TrainingFrames;
+            if (serviceType == typeof(ICodingFramePhotoStore)) return CodingFramePhotos;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

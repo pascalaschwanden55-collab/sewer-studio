@@ -44,6 +44,8 @@ public sealed class PlayerWindowProtocolContext
 
     public IProtocolPdfExporter? ProtocolPdfExports => _dependencies.ProtocolPdfExports;
 
+    public ICodingFramePhotoStore CodingFramePhotos => _dependencies.CodingFramePhotos;
+
     public ILoggerFactory? LoggerFactory => _dependencies.LoggerFactory;
 
     public string? LastProjectPath => _dependencies.LastProjectPath;

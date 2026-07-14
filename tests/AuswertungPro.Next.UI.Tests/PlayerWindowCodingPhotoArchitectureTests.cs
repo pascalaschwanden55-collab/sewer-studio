@@ -180,7 +180,9 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.Contains("CodingEventPhotoApplier.Apply", photos);
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
         Assert.Contains("CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync", photos);
-        Assert.Contains("CodingAnalyzedFramePhotoAttacher.Attach", photos);
+        Assert.Contains("CodingAnalyzedFramePhotoAttacher.AttachWithStore", photos);
+        Assert.Contains("_protocolContext.CodingFramePhotos", photos);
+        Assert.DoesNotContain("CodingAiFramePhotoService.AttachAnalyzedFramePhoto", photos);
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
         Assert.Contains("photoPaths.Count >= 2", policy);
         Assert.Contains("CodingPhotoSlotPolicy.Apply", applier);
@@ -194,7 +196,8 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.Contains("actions.GetPreferredFrameBytesAsync()", attachmentWorkflow);
         Assert.Contains("actions.AttachAnalyzedFramePhoto(frameBytes)", attachmentWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddDistinctNonBlank", attachmentWorkflow);
-        Assert.Contains("CodingAiFramePhotoService.AttachAnalyzedFramePhoto", framePhotoAttacher);
+        Assert.Contains("ICodingFramePhotoStore framePhotoStore", framePhotoAttacher);
+        Assert.Contains("framePhotoStore.AttachAnalyzedFramePhoto", framePhotoAttacher);
     }
 
 }

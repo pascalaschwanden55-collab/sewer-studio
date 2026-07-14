@@ -21,10 +21,11 @@ public partial class PlayerWindow
             new CodingAnalyzedFramePhotoAttachmentAsyncActions(
                 GetPreferredFrameBytesAsync: TryExtractAnalyzedFrameBytesAsync,
                 GetBufferedFrameBytes: () => _liveDetectionController.PendingConfirmationFrameBytes,
-                AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.Attach(
+                AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.AttachWithStore(
                     entry,
                     frameBytes,
-                    _playbackContext.VideoPath),
+                    _playbackContext.VideoPath,
+                    _protocolContext.CodingFramePhotos),
                 CaptureSnapshot: () => CodingCaptureSnapshot(entry)));
 
         if (!string.IsNullOrWhiteSpace(result.PhotoPath))
@@ -35,10 +36,11 @@ public partial class PlayerWindow
 
     private string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
     {
-        return CodingAnalyzedFramePhotoAttacher.Attach(
+        return CodingAnalyzedFramePhotoAttacher.AttachWithStore(
             entry,
             analyzedFrameBytes,
-            _playbackContext.VideoPath);
+            _playbackContext.VideoPath,
+            _protocolContext.CodingFramePhotos);
     }
 
     private void CodingTakePhotoForSelectedEvent()

@@ -68,6 +68,39 @@ public sealed class CodingAiFramePhotoServiceTests
         }
     }
 
+    [Fact]
+    public void AttachAnalyzedFramePhoto_uses_a_new_name_when_the_target_already_exists()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sewerstudio-ai-frame-photo-collision-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root);
+            var entry = new ProtocolEntry
+            {
+                Source = ProtocolEntrySource.Ai,
+                Code = "BDDC",
+                MeterStart = 5.70,
+                Zeit = TimeSpan.FromSeconds(42),
+                EntryId = Guid.Parse("11111111-1111-1111-1111-111111111111")
+            };
+            var expectedName = "BDDC_5.70m_00-00-42-000_11111111111111111111111111111111_ai.png";
+            var occupiedPath = Path.Combine(root, expectedName);
+            File.WriteAllBytes(occupiedPath, [9, 8, 7]);
+
+            var savedPath = InvokeAttachAnalyzedFramePhoto(entry, ValidPngBytes(), null, root);
+
+            Assert.Equal(Path.Combine(root, Path.GetFileNameWithoutExtension(expectedName) + "_1.png"), savedPath);
+            Assert.Equal(new byte[] { 9, 8, 7 }, File.ReadAllBytes(occupiedPath));
+            Assert.Equal(ValidPngBytes(), File.ReadAllBytes(savedPath!));
+            Assert.Equal(savedPath, Assert.Single(entry.FotoPaths));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static string? InvokeAttachAnalyzedFramePhoto(
         ProtocolEntry entry,
         byte[]? frameBytes,

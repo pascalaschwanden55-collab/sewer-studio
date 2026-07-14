@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -8,15 +9,23 @@ public static class CodingAnalyzedFramePhotoAttacher
         ProtocolEntry entry,
         byte[]? frameBytes,
         string? videoPath)
-        => Attach(
+        => AttachWithStore(
             entry,
             frameBytes,
             videoPath,
-            (targetEntry, targetFrameBytes, targetVideoPath) =>
-                CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
-                    targetEntry,
-                    targetFrameBytes,
-                    targetVideoPath));
+            CodingAiFramePhotoService.CompatibilityService);
+
+    public static string? AttachWithStore(
+        ProtocolEntry entry,
+        byte[]? frameBytes,
+        string? videoPath,
+        ICodingFramePhotoStore framePhotoStore)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(framePhotoStore);
+
+        return framePhotoStore.AttachAnalyzedFramePhoto(entry, frameBytes, videoPath);
+    }
 
     public static string? Attach(
         ProtocolEntry entry,
