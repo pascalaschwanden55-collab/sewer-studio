@@ -65,6 +65,7 @@ namespace AuswertungPro.Next.UI
         #region Infrastruktur / Querschnitt
         // Basis-Einstellungen, Logging und Fehlercode-Generator
         public AppSettings Settings { get; }
+        public ISettingsFileStore SettingsFiles { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
@@ -203,6 +204,8 @@ namespace AuswertungPro.Next.UI
                 // Removed misplaced property initialization
         {
             Settings = settings;
+            SettingsFiles = SettingsStore.CreateDefault();
+            settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
@@ -588,6 +591,7 @@ namespace AuswertungPro.Next.UI
         public object? GetService(Type serviceType)
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
+            if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;

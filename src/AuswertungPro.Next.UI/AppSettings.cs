@@ -28,6 +28,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     private static readonly object SaveSync = new();
     private static Timer? SaveDebounceTimer;
     private static PendingSettingsWrite? PendingWrite;
+    private ISettingsFileStore _settingsFileStore = SettingsStore.CreateDefault();
 
     public bool EnableDiagnostics { get; set; } = true;
     public string? PdfToTextPath { get; set; }
@@ -264,7 +265,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
         lock (SaveSync)
         {
-            PendingWrite = new PendingSettingsWrite(json, EnableRestorePoints);
+            PendingWrite = new PendingSettingsWrite(
+                json,
+                EnableRestorePoints,
+                _settingsFileStore);
 
             if (SaveDebounceTimer is null)
             {
@@ -293,7 +297,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
             SaveDebounceTimer = null;
         }
 
-        PersistSerializedState(json, EnableRestorePoints);
+        PersistSerializedState(json, EnableRestorePoints, _settingsFileStore);
     }
 
     public static void FlushPendingSave()
@@ -310,7 +314,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         if (pending is null)
             return;
 
-        PersistSerializedState(pending.Json, pending.EnableRestorePoints);
+        PersistSerializedState(
+            pending.Json,
+            pending.EnableRestorePoints,
+            pending.SettingsFileStore);
     }
 
     private static void MigrateLegacySettingsIfNeeded()
@@ -351,8 +358,15 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         }
     }
 
-    private static void PersistSerializedState(string json, bool enableRestorePoints)
-        => SettingsStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
+    internal void UseSettingsFileStore(ISettingsFileStore settingsFileStore)
+        => _settingsFileStore = settingsFileStore
+            ?? throw new ArgumentNullException(nameof(settingsFileStore));
+
+    private static void PersistSerializedState(
+        string json,
+        bool enableRestorePoints,
+        ISettingsFileStore settingsFileStore)
+        => settingsFileStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
 
     private static void TryQuarantineCorruptSettings(Exception ex)
         => SettingsQuarantine.TryMoveToQuarantine(SettingsPath, AppDataDir, ex, TryAppendSettingsLog);
@@ -379,7 +393,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         }
     }
 
-    private sealed record PendingSettingsWrite(string Json, bool EnableRestorePoints);
+    private sealed record PendingSettingsWrite(
+        string Json,
+        bool EnableRestorePoints,
+        ISettingsFileStore SettingsFileStore);
 }
 
 public sealed class DataPageLayoutSettings
