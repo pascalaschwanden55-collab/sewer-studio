@@ -86,6 +86,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         public ILogTailReader LogTailReader { get; }
+        public IDiagnosticsPackageService DiagnosticsPackages { get; }
         public IFullBackupService FullBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         public ProgramCleanupService ProgramCleanup { get; } = new();
@@ -175,7 +176,9 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
-            LogTailReader = new DailyLogTailReader(Path.Combine(AppSettings.AppDataDir, "logs"));
+            var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
+            LogTailReader = new DailyLogTailReader(logDirectory);
+            DiagnosticsPackages = new DiagnosticsPackageService(logDirectory, AppIdentity.Version);
             FullBackupOperation.SetLastBackupInfo(
                 SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
                     settings.LastFullBackupUtc,
@@ -519,6 +522,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
+            if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)) return CodeSelectionCatalog;
             if (serviceType == typeof(ILogger)) return Logger;

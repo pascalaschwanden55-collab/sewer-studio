@@ -201,7 +201,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 setStatus: SetStatus,
                 createImportRestorePoint: TryCreateImportRestorePoint,
                 refreshTitleAndDirty: RefreshTitleAndDirty)),
-            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp.LogTailReader)),
+            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(
+                _sp.LogTailReader,
+                _sp.DiagnosticsPackages,
+                _sp.Dialogs)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(
                 settings: _sp.Settings,
                 diagnostics: _sp.Diagnostics,
