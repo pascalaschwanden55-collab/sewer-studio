@@ -11,6 +11,7 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var navigationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsPolicy.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsControls.cs");
         var refreshPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsRefreshPolicy.cs");
@@ -30,6 +31,7 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
         var navigation = File.ReadAllText(navigationPath);
+        var navigationController = File.ReadAllText(navigationControllerPath);
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
@@ -40,7 +42,8 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
 
         Assert.Contains("CodingStatisticsUpdateCommandWorkflow.Execute", events);
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
-        Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
+        Assert.DoesNotContain("CodingUiUpdateWorkflow.Apply", navigation, StringComparison.Ordinal);
+        Assert.Contains("CodingUiUpdateWorkflow.Apply", navigationController);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", events);

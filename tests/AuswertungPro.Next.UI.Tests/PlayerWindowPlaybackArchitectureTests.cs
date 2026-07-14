@@ -13,6 +13,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackControlHost.cs");
+        var navigationControllerPath = Path.Combine(uiRoot, "Player", "CodingNavigationController.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
@@ -24,7 +25,6 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.Lifecycle.Ui.cs",
-            "PlayerWindow.Coding.Navigation.cs",
             "PlayerWindow.LiveDetection.Confirmation.cs",
             "PlayerWindow.LiveDetection.Marking.Catalog.cs",
             "PlayerWindow.LiveDetection.MarkTools.cs"
@@ -36,12 +36,15 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var host = File.ReadAllText(hostPath);
+        var navigationController = File.ReadAllText(navigationControllerPath);
         var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
         Assert.Contains("private PlayerPlaybackControlHost _playerPlaybackControlHost => _playerMediaHosts.PlaybackControlHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerPlaybackControlHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
+        Assert.Contains("PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause)", windowRoot);
+        Assert.Contains("_actions.PausePlayback", navigationController);
 
         foreach (var fileName in paths)
         {
@@ -173,6 +176,8 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerCodingPlayback.cs");
+        var navigationControllerPath = Path.Combine(uiRoot, "Player", "CodingNavigationController.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
         var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var codingPaths = new[]
@@ -180,8 +185,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs"),
-            Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs"),
-            Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs")
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs")
         };
 
         Assert.True(File.Exists(helperPath), "Coding-Interaktions-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -190,11 +194,15 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var helper = File.ReadAllText(helperPath);
         var workflow = File.ReadAllText(preparePlaybackWorkflowPath);
         var lifecycleUi = File.ReadAllText(lifecycleUiPath);
+        var navigationController = File.ReadAllText(navigationControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         Assert.Contains("public static class PlayerCodingPlayback", helper);
         Assert.Contains("PauseForCodingInteraction", helper);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", workflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", lifecycleUi);
         AssertNoForbiddenTokens(lifecycleUi, "PlayerCodingPlayback.PauseForCodingInteraction");
+        Assert.Contains("_actions.PausePlayback", navigationController);
+        Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", windowRoot);
 
         foreach (var path in codingPaths)
         {

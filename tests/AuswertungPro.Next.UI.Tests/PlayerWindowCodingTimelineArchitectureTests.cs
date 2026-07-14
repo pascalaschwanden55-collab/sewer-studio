@@ -9,17 +9,23 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
     public void PlayerWindow_meter_timeline_uses_controls_adapter()
     {
         var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var navigationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMeterTimelineControls.cs");
 
         Assert.True(File.Exists(controlsPath), "Meteranzeige und Timeline-Playhead sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var navigation = File.ReadAllText(navigationPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var session = File.ReadAllText(sessionPath);
+        var navigationController = File.ReadAllText(navigationControllerPath);
         var controls = File.ReadAllText(controlsPath);
         var playerText = navigation + session;
 
-        Assert.Contains("CodingMeterTimelineControls.Apply", navigation);
+        Assert.DoesNotContain("CodingMeterTimelineControls.Apply", navigation, StringComparison.Ordinal);
+        Assert.Contains("CodingMeterTimelineControls.Apply", windowRoot);
+        Assert.Contains("_actions.ApplyMeterTimeline", navigationController);
         Assert.Contains("CodingMeterTimelineControls.SetText", session);
         Assert.Contains("public static class CodingMeterTimelineControls", controls);
         Assert.Contains("PipeGraphTimeline", controls);

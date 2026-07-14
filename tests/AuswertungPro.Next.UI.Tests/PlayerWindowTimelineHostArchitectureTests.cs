@@ -72,10 +72,10 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
     public void PlayerWindow_remaining_coding_timeline_partials_read_player_timeline_through_host()
     {
         var root = FindRepositoryRoot();
-        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var paths = new[]
         {
-            "PlayerWindow.Coding.Navigation.cs",
             "PlayerWindow.Coding.Lifecycle.Exit.cs",
             "PlayerWindow.Coding.Photos.Capture.cs"
         };
@@ -88,6 +88,10 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
         }
+
+        var navigationController = File.ReadAllText(
+            Path.Combine(uiRoot, "Player", "CodingNavigationController.cs"));
+        Assert.Contains("_timelineHost", navigationController);
     }
 
     [Fact]

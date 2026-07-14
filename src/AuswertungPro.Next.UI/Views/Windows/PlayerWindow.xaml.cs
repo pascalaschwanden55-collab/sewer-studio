@@ -2,6 +2,7 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
@@ -67,6 +68,22 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _codingNavigationController = new CodingNavigationController(
+            _codingSessionHost,
+            _codingNavigationPendingState,
+            _codingOsdMeterController,
+            _playerTimelineHost,
+            new CodingNavigationControllerActions(
+                ApplyMeterTimeline: meter => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, meter),
+                UpdateOverlayInfo: UpdateCodingOverlayInfo,
+                ApplyCurrentCodeState: state => CodingCurrentCodeBadgeControls.Apply(
+                    CodingCurrentCodeBadge,
+                    TxtCodingCurrentCode,
+                    state),
+                UpdateStatistics: UpdateCodingStatistics,
+                PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
+                ReadOsdMeterAsync: CodingReadOsdMeterAsync,
+                TraceError: message => PlayerTrace.WriteLine(message)));
         _playerPlaybackController = new PlayerPlaybackController(
             _playbackContext.VideoPath,
             _playerPlaybackControlHost,
