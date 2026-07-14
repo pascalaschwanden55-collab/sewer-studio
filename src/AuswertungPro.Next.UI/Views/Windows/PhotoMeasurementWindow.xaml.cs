@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
@@ -168,7 +169,8 @@ public partial class PhotoMeasurementWindow : Window
         }
         catch (Exception ex)
         {
-            TxtStatus.Text = $"Fehler beim Laden: {ex.Message}";
+            TxtStatus.Text = "Fehler beim Laden: "
+                             + UserError.DescribeAndReport(ex, "Messfoto laden");
         }
     }
 
@@ -599,7 +601,8 @@ public partial class PhotoMeasurementWindow : Window
             catch (Exception ex)
             {
                 // Overlay-Export fehlgeschlagen → trotzdem Ergebnis zurueckgeben (ohne Overlay-Foto)
-                TxtStatus.Text = $"Overlay-Export fehlgeschlagen: {ex.Message}";
+                TxtStatus.Text = "Overlay-Export fehlgeschlagen: "
+                                 + UserError.DescribeAndReport(ex, "Messfoto-Overlay exportieren");
             }
         }
 

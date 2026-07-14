@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
@@ -129,7 +130,8 @@ public sealed class QuickScanController
         }
         catch (Exception ex)
         {
-            _quickScanStatusText.Text = $"Fehler: {ex.Message}";
+            _quickScanStatusText.Text = "Fehler: "
+                                        + UserError.DescribeAndReport(ex, "KI-Schnellscan");
         }
         finally
         {

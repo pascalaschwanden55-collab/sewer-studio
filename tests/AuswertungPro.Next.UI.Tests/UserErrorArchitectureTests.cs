@@ -13,6 +13,10 @@ public sealed class UserErrorArchitectureTests
         @"(?m)(?:\b(?:StatusText|Summary|LastResult|KiStatus)\s*=|\bSetStatus\s*\()\s*[^;\r\n]*\b(?:ex|exception)\.Message",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex RawExceptionInVisibleTextControl = new(
+        @"(?m)\b(?:Txt[A-Za-z0-9_]*|_[A-Za-z0-9_]*Status[A-Za-z0-9_]*)\.Text\s*=\s*[^;\r\n]*\b(?:ex|exception)\.Message",
+        RegexOptions.CultureInvariant);
+
     [Fact]
     public void Ui_Dialoge_zeigen_keine_rohen_Exception_Meldungen()
     {
@@ -50,6 +54,25 @@ public sealed class UserErrorArchitectureTests
         Assert.True(
             offenders.Length == 0,
             "Technische Exception-Texte duerfen nicht direkt im sichtbaren ViewModel-Status erscheinen. "
+            + "UserError verwenden und die volle Ursache nur protokollieren:\n"
+            + string.Join("\n", offenders));
+    }
+
+    [Fact]
+    public void Sichtbare_Textfelder_zeigen_keine_rohen_Exception_Meldungen()
+    {
+        var root = TestRepoPaths.FindRepoRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+
+        var offenders = Directory.EnumerateFiles(uiRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(file => RawExceptionInVisibleTextControl.IsMatch(File.ReadAllText(file)))
+            .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+            .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Technische Exception-Texte duerfen nicht direkt in sichtbaren Textfeldern erscheinen. "
             + "UserError verwenden und die volle Ursache nur protokollieren:\n"
             + string.Join("\n", offenders));
     }
