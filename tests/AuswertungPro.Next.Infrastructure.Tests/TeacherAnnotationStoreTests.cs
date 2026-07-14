@@ -97,6 +97,23 @@ public sealed class TeacherAnnotationStoreTests
         });
     }
 
+    [Fact]
+    public async Task FileStore_UsesExplicitRootAndKeepsParallelAppends()
+    {
+        await WithTempKnowledgeRoot(async () =>
+        {
+            var store = new TeacherAnnotationFileStore(KnowledgeBasePaths.GetRoot());
+            await Task.WhenAll(Enumerable.Range(0, 12).Select(index =>
+                store.AppendAsync(Make($"direct-{index}"))));
+
+            var annotations = await store.LoadAsync();
+
+            Assert.Equal(12, annotations.Count);
+            Assert.Equal(12, annotations.Select(item => item.AnnotationId).Distinct().Count());
+            Assert.StartsWith(KnowledgeBasePaths.GetRoot(), store.StoragePath, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
     private static async Task WithTempKnowledgeRoot(Func<Task> body)
     {
         var previous = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");

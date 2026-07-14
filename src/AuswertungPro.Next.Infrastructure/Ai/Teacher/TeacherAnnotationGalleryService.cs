@@ -11,10 +11,21 @@ public sealed class TeacherAnnotationGalleryService
 {
     private const string AllFilter = "Alle";
     private const string TeacherSourcePrefix = "teacher:";
+    private readonly ITeacherAnnotationStore _annotations;
+
+    public TeacherAnnotationGalleryService()
+        : this(TeacherAnnotationStore.Current)
+    {
+    }
+
+    public TeacherAnnotationGalleryService(ITeacherAnnotationStore annotations)
+    {
+        _annotations = annotations ?? throw new ArgumentNullException(nameof(annotations));
+    }
 
     public async Task<TeacherAnnotationGallerySnapshot> LoadPendingAsync(CancellationToken ct = default)
     {
-        var all = await TeacherAnnotationStore.LoadAsync();
+        var all = await _annotations.LoadAsync();
         var trainedIds = await LoadTrainedAnnotationIdsAsync(ct);
         var pending = trainedIds.Count > 0
             ? all.Where(a => !trainedIds.Contains(a.AnnotationId)).ToList()
@@ -54,7 +65,7 @@ public sealed class TeacherAnnotationGalleryService
         TryDeleteFile(annotation.CroppedRegionPath);
         TryDeleteFile(annotation.YoloAnnotationPath);
 
-        await TeacherAnnotationStore.DeleteAsync(annotation.AnnotationId);
+        await _annotations.DeleteAsync(annotation.AnnotationId);
     }
 
     private static async Task<HashSet<string>> LoadTrainedAnnotationIdsAsync(CancellationToken ct)

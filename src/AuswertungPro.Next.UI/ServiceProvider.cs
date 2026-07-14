@@ -36,6 +36,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -44,6 +45,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI
@@ -154,6 +156,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolTrainingStore ProtocolTraining { get; }
         public ITrainingCenterSettingsStore TrainingSettings { get; }
         public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
+        public ITeacherAnnotationStore TeacherAnnotations { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -213,6 +216,8 @@ namespace AuswertungPro.Next.UI
             SelfTrainingHistory = new SelfTrainingHistoryFileStore(
                 Path.Combine(KnowledgeRoot, "selftraining_history.json"));
             SelfTrainingHistoryStore.Use(SelfTrainingHistory);
+            TeacherAnnotations = new TeacherAnnotationFileStore(KnowledgeRoot);
+            TeacherAnnotationStore.Use(TeacherAnnotations);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -567,6 +572,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
+            if (serviceType == typeof(ITeacherAnnotationStore)) return TeacherAnnotations;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

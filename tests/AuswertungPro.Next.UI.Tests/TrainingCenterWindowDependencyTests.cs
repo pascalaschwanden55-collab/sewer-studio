@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -61,6 +62,7 @@ public sealed class TrainingCenterWindowDependencyTests
         var import = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingCenterImport));
         var settings = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingSettings));
         var history = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.SelfTrainingHistory));
+        var annotations = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TeacherAnnotations));
         var review = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingReviewQueue));
         var samFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateTrainingReviewSam));
         var fewShotFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateFewShotStore));
@@ -77,6 +79,9 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.NotNull(history);
         Assert.Equal(typeof(ISelfTrainingHistoryStore), history.PropertyType);
         Assert.False(history.CanWrite);
+        Assert.NotNull(annotations);
+        Assert.Equal(typeof(ITeacherAnnotationStore), annotations.PropertyType);
+        Assert.False(annotations.CanWrite);
         Assert.NotNull(review);
         Assert.Equal(typeof(ReviewQueueService), review.PropertyType);
         Assert.False(review.CanWrite);
