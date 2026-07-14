@@ -22,6 +22,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
+    private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly ShellViewModel _shell;
     private readonly DropdownOptionGroupController _sanierenDropdownOptions;
     private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
@@ -95,7 +96,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             dialogs: services.Dialogs,
             schachtProtocolImport: services.SchachtProtocolImport,
             schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
-            schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog)
+            schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
+            dropdownOptions: services.DropdownOptions)
     {
     }
 
@@ -105,7 +107,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         IDialogService dialogs,
         ISchachtProtocolImportService schachtProtocolImport,
         ISchachtStammdatenErgaenzungsService schachtStammdatenErgaenzung,
-        ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog)
+        ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog,
+        IDropdownOptionsStore? dropdownOptions = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -113,6 +116,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
+        _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
 
         var uiLayout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
@@ -123,10 +127,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             : 1.0d;
         IsColumnReorderEnabled = uiLayout.IsColumnReorderEnabled;
 
-        SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
-        EigentuemerOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadEigentuemerOptions());
-        PruefungsresultatOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadPruefungsresultatOptions());
-        ReferenzpruefungOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadReferenzpruefungOptions());
+        SanierenOptions = new ObservableCollection<string>(_dropdownOptions.LoadSanierenOptions());
+        EigentuemerOptions = new ObservableCollection<string>(_dropdownOptions.LoadEigentuemerOptions());
+        PruefungsresultatOptions = new ObservableCollection<string>(_dropdownOptions.LoadPruefungsresultatOptions());
+        ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         SchachtformOptions = new ObservableCollection<string>(
             new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
@@ -139,7 +143,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _eigentuemerDropdownOptions = CreateDropdownOptionGroup(
             EigentuemerOptions,
             "Eigentuemer-Liste",
-            DropdownOptionsStore.FixedEigentuemerOptions,
+            _dropdownOptions.FixedEigentuemerOptions,
             lockedToResetItems: true);
         _pruefungsresultatDropdownOptions = CreateDropdownOptionGroup(
             PruefungsresultatOptions,
@@ -601,10 +605,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 PruefungsresultatOptions,
                 ReferenzpruefungOptions,
                 AusgefuehrtDurchOptions));
-        DropdownOptionsStore.SaveSanierenOptions(SanierenOptions);
-        DropdownOptionsStore.SaveEigentuemerOptions(EigentuemerOptions);
-        DropdownOptionsStore.SavePruefungsresultatOptions(PruefungsresultatOptions);
-        DropdownOptionsStore.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
+        _dropdownOptions.SaveSanierenOptions(SanierenOptions);
+        _dropdownOptions.SaveEigentuemerOptions(EigentuemerOptions);
+        _dropdownOptions.SavePruefungsresultatOptions(PruefungsresultatOptions);
+        _dropdownOptions.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
     }
 
     private void UpdateNr()
@@ -635,7 +639,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void EnforceEigentuemerOptionsExact()
     {
-        DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
     }
 
     private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)

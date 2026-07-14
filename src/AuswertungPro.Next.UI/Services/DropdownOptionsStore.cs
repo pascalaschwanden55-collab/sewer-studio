@@ -14,26 +14,54 @@ public sealed class DropdownOptionsModel
     public List<string> EmpfohleneSanierungsmassnahmenOptions { get; set; } = new() { "" };
 }
 
-public static class DropdownOptionsStore
+public interface IDropdownOptionsStore
 {
-    public static IReadOnlyList<string> FixedEigentuemerOptions { get; } =
+    IReadOnlyList<string> FixedEigentuemerOptions { get; }
+    DropdownOptionsModel LoadOrDefault();
+    void Save(DropdownOptionsModel model);
+    List<string> LoadSanierenOptions();
+    void SaveSanierenOptions(IEnumerable<string> options);
+    List<string> LoadEigentuemerOptions();
+    void SaveEigentuemerOptions(IEnumerable<string> options);
+    List<string> LoadPruefungsresultatOptions();
+    void SavePruefungsresultatOptions(IEnumerable<string> options);
+    List<string> LoadReferenzpruefungOptions();
+    void SaveReferenzpruefungOptions(IEnumerable<string> options);
+    List<string> LoadEmpfohleneSanierungsmassnahmenOptions();
+    void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options);
+}
+
+/// <summary>Dateibasierter, atomar schreibender Speicher fuer die editierbaren Auswahllisten.</summary>
+public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
+{
+    private static readonly IReadOnlyList<string> FixedOwners =
         new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
 
-    private static string OptionsDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.ProductName, "dropdowns");
+    private readonly string _optionsDir;
+    private readonly string _legacyOptionsDir;
+    private readonly string _legacyOptionsPath;
+    private readonly object _sync = new();
+    private bool _migrated;
 
-    private static string LegacyOptionsDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.LegacyRoamingDataFolder, "dropdowns");
-
-    private static string LegacyOptionsPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.LegacyRoamingDataFolder, "dropdowns.json");
-
-    private static readonly object MigrationLock = new();
-    private static bool _migrated;
-
-    public static DropdownOptionsModel LoadOrDefault()
+    public FileDropdownOptionsStore()
+        : this(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.ProductName, "dropdowns"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.LegacyRoamingDataFolder, "dropdowns"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.LegacyRoamingDataFolder, "dropdowns.json"))
     {
-        return new DropdownOptionsModel
+    }
+
+    public FileDropdownOptionsStore(string optionsDir, string legacyOptionsDir, string legacyOptionsPath)
+    {
+        _optionsDir = NormalizeRequiredPath(optionsDir, nameof(optionsDir));
+        _legacyOptionsDir = NormalizeRequiredPath(legacyOptionsDir, nameof(legacyOptionsDir));
+        _legacyOptionsPath = NormalizeRequiredPath(legacyOptionsPath, nameof(legacyOptionsPath));
+    }
+
+    public IReadOnlyList<string> FixedEigentuemerOptions => FixedOwners;
+
+    public DropdownOptionsModel LoadOrDefault()
+        => new()
         {
             SanierenOptions = LoadSanierenOptions(),
             EigentuemerOptions = LoadEigentuemerOptions(),
@@ -41,10 +69,10 @@ public static class DropdownOptionsStore
             ReferenzpruefungOptions = LoadReferenzpruefungOptions(),
             EmpfohleneSanierungsmassnahmenOptions = LoadEmpfohleneSanierungsmassnahmenOptions()
         };
-    }
 
-    public static void Save(DropdownOptionsModel model)
+    public void Save(DropdownOptionsModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
         SaveSanierenOptions(model.SanierenOptions);
         SaveEigentuemerOptions(model.EigentuemerOptions);
         SavePruefungsresultatOptions(model.PruefungsresultatOptions);
@@ -52,113 +80,122 @@ public static class DropdownOptionsStore
         SaveEmpfohleneSanierungsmassnahmenOptions(model.EmpfohleneSanierungsmassnahmenOptions);
     }
 
-    public static List<string> LoadSanierenOptions()
+    public List<string> LoadSanierenOptions()
         => LoadList("sanieren", DefaultModel().SanierenOptions);
 
-    public static void SaveSanierenOptions(IEnumerable<string> options)
+    public void SaveSanierenOptions(IEnumerable<string> options)
         => SaveList("sanieren", options);
 
-    public static List<string> LoadEigentuemerOptions()
+    public List<string> LoadEigentuemerOptions()
         => new(FixedEigentuemerOptions);
 
-    public static void SaveEigentuemerOptions(IEnumerable<string> options)
+    public void SaveEigentuemerOptions(IEnumerable<string> options)
         => SaveList("eigentuemer", FixedEigentuemerOptions);
 
-    public static List<string> LoadPruefungsresultatOptions()
+    public List<string> LoadPruefungsresultatOptions()
         => LoadList("pruefungsresultat", DefaultModel().PruefungsresultatOptions);
 
-    public static void SavePruefungsresultatOptions(IEnumerable<string> options)
+    public void SavePruefungsresultatOptions(IEnumerable<string> options)
         => SaveList("pruefungsresultat", options);
 
-    public static List<string> LoadReferenzpruefungOptions()
+    public List<string> LoadReferenzpruefungOptions()
         => LoadList("referenzpruefung", DefaultModel().ReferenzpruefungOptions);
 
-    public static void SaveReferenzpruefungOptions(IEnumerable<string> options)
+    public void SaveReferenzpruefungOptions(IEnumerable<string> options)
         => SaveList("referenzpruefung", options);
 
-    public static List<string> LoadEmpfohleneSanierungsmassnahmenOptions()
+    public List<string> LoadEmpfohleneSanierungsmassnahmenOptions()
         => LoadList("sanierungsmassnahmen", DefaultModel().EmpfohleneSanierungsmassnahmenOptions);
 
-    public static void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options)
+    public void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options)
         => SaveList("sanierungsmassnahmen", options);
 
-    private static List<string> LoadList(string key, List<string> defaults)
+    private List<string> LoadList(string key, List<string> defaults)
     {
-        EnsureMigrated();
-        try
+        lock (_sync)
         {
-            Directory.CreateDirectory(OptionsDir);
-            var path = Path.Combine(OptionsDir, $"{key}.json");
-            if (!File.Exists(path))
+            EnsureMigrated();
+            try
+            {
+                Directory.CreateDirectory(_optionsDir);
+                var path = Path.Combine(_optionsDir, $"{key}.json");
+                if (!File.Exists(path))
+                    return new List<string>(defaults);
+
+                var json = File.ReadAllText(path);
+                var list = JsonSerializer.Deserialize<List<string>>(
+                    json,
+                    Application.Common.JsonDefaults.CaseInsensitive);
+
+                if (list is null || list.Count == 0)
+                    return new List<string>(defaults);
+
+                if (list.All(x => string.IsNullOrWhiteSpace(x))
+                    && defaults.Any(x => !string.IsNullOrWhiteSpace(x)))
+                    return new List<string>(defaults);
+
+                return list;
+            }
+            catch
+            {
                 return new List<string>(defaults);
-
-            var json = File.ReadAllText(path);
-            var list = JsonSerializer.Deserialize<List<string>>(json,
-                Application.Common.JsonDefaults.CaseInsensitive);
-
-            if (list is null || list.Count == 0)
-                return new List<string>(defaults);
-
-            // If the saved list only contains empty strings, it's a broken state — use defaults
-            if (list.All(x => string.IsNullOrWhiteSpace(x)) && defaults.Any(x => !string.IsNullOrWhiteSpace(x)))
-                return new List<string>(defaults);
-
-            return list;
-        }
-        catch
-        {
-            return new List<string>(defaults);
+            }
         }
     }
 
-    private static void SaveList(string key, IEnumerable<string> options)
+    private void SaveList(string key, IEnumerable<string> options)
     {
-        Directory.CreateDirectory(OptionsDir);
-        var path = Path.Combine(OptionsDir, $"{key}.json");
-        var json = JsonSerializer.Serialize(options, Application.Common.JsonDefaults.Indented);
-        // Atomar schreiben: temp -> File.Replace (mit .bak) statt direktem WriteAllText,
-        // damit ein Absturz mitten im Schreiben die Dropdown-Liste nicht korrumpiert.
-        Application.Common.AtomicTextFileWriter.WriteAllText(path, json);
+        ArgumentNullException.ThrowIfNull(options);
+        lock (_sync)
+        {
+            Directory.CreateDirectory(_optionsDir);
+            var path = Path.Combine(_optionsDir, $"{key}.json");
+            var json = JsonSerializer.Serialize(options, Application.Common.JsonDefaults.Indented);
+            Application.Common.AtomicTextFileWriter.WriteAllText(path, json);
+        }
     }
 
-    private static void EnsureMigrated()
+    private void EnsureMigrated()
     {
         if (_migrated)
             return;
-        lock (MigrationLock)
+
+        lock (_sync)
         {
             if (_migrated)
                 return;
             _migrated = true;
 
-            // Migration 1: copy legacy per-key files (Roaming/AuswertungPro/dropdowns/*.json)
             try
             {
-                if (Directory.Exists(LegacyOptionsDir) && !Directory.Exists(OptionsDir))
+                if (Directory.Exists(_legacyOptionsDir) && !Directory.Exists(_optionsDir))
                 {
-                    Directory.CreateDirectory(OptionsDir);
-                    foreach (var legacyFile in Directory.EnumerateFiles(LegacyOptionsDir, "*.json", SearchOption.TopDirectoryOnly))
+                    Directory.CreateDirectory(_optionsDir);
+                    foreach (var legacyFile in Directory.EnumerateFiles(
+                                 _legacyOptionsDir,
+                                 "*.json",
+                                 SearchOption.TopDirectoryOnly))
                     {
-                        var dest = Path.Combine(OptionsDir, Path.GetFileName(legacyFile));
-                        if (!File.Exists(dest))
-                            File.Copy(legacyFile, dest, overwrite: false);
+                        var destination = Path.Combine(_optionsDir, Path.GetFileName(legacyFile));
+                        if (!File.Exists(destination))
+                            File.Copy(legacyFile, destination, overwrite: false);
                     }
                 }
             }
             catch
             {
-                // ignore migration errors
+                // Alte Optionsdateien sind optional; sichere Standardwerte bleiben verfuegbar.
             }
 
-            if (!File.Exists(LegacyOptionsPath))
+            if (!File.Exists(_legacyOptionsPath))
                 return;
 
             try
             {
-                var json = File.ReadAllText(LegacyOptionsPath);
-                var model = JsonSerializer.Deserialize<DropdownOptionsModel>(json,
+                var json = File.ReadAllText(_legacyOptionsPath);
+                var model = JsonSerializer.Deserialize<DropdownOptionsModel>(
+                    json,
                     Application.Common.JsonDefaults.CaseInsensitive);
-
                 if (model is null)
                     return;
 
@@ -175,35 +212,61 @@ public static class DropdownOptionsStore
             }
             catch
             {
-                // ignore migration errors
+                // Beschaedigte Altdateien werden ignoriert; sichere Standardwerte bleiben verfuegbar.
             }
         }
     }
 
-    private static DropdownOptionsModel DefaultModel() => new()
-    {
-        SanierenOptions = new List<string> { "Ja", "Nein" },
-        EigentuemerOptions = new List<string>(FixedEigentuemerOptions),
-        PruefungsresultatOptions = new List<string>
+    private DropdownOptionsModel DefaultModel()
+        => new()
         {
-            "Pruefung bestanden",
-            "Pruefung knapp nicht bestanden",
-            "Pruefung nicht bestanden (grob undicht)",
-            "Keine"
-        },
-        ReferenzpruefungOptions = new List<string> { "Ja", "Nein" },
-        EmpfohleneSanierungsmassnahmenOptions = new List<string>
-        {
-            "",
-            "Schlauchliner (Nadelfilz) DN 100-200",
-            "Schlauchliner (GFK) DN 200-300",
-            "Kurzliner / Partliner",
-            "Manschette (Quick Lock)",
-            "Manschette (Quick Lock EPDM)",
-            "Pointliner",
-            "Anschluss verpressen",
-            "Reinigung + TV-Inspektion",
-            "Erneuerung / Neubau"
-        }
-    };
+            SanierenOptions = new List<string> { "Ja", "Nein" },
+            EigentuemerOptions = new List<string>(FixedEigentuemerOptions),
+            PruefungsresultatOptions = new List<string>
+            {
+                "Pruefung bestanden",
+                "Pruefung knapp nicht bestanden",
+                "Pruefung nicht bestanden (grob undicht)",
+                "Keine"
+            },
+            ReferenzpruefungOptions = new List<string> { "Ja", "Nein" },
+            EmpfohleneSanierungsmassnahmenOptions = new List<string>
+            {
+                "",
+                "Schlauchliner (Nadelfilz) DN 100-200",
+                "Schlauchliner (GFK) DN 200-300",
+                "Kurzliner / Partliner",
+                "Manschette (Quick Lock)",
+                "Manschette (Quick Lock EPDM)",
+                "Pointliner",
+                "Anschluss verpressen",
+                "Reinigung + TV-Inspektion",
+                "Erneuerung / Neubau"
+            }
+        };
+
+    private static string NormalizeRequiredPath(string path, string parameterName)
+        => string.IsNullOrWhiteSpace(path)
+            ? throw new ArgumentException("Speicherpfad fehlt.", parameterName)
+            : Path.GetFullPath(path);
+}
+
+/// <summary>Kompatibilitaetsfassade fuer bestehende Aufrufer.</summary>
+public static class DropdownOptionsStore
+{
+    private static readonly IDropdownOptionsStore Default = new FileDropdownOptionsStore();
+
+    public static IReadOnlyList<string> FixedEigentuemerOptions => Default.FixedEigentuemerOptions;
+    public static DropdownOptionsModel LoadOrDefault() => Default.LoadOrDefault();
+    public static void Save(DropdownOptionsModel model) => Default.Save(model);
+    public static List<string> LoadSanierenOptions() => Default.LoadSanierenOptions();
+    public static void SaveSanierenOptions(IEnumerable<string> options) => Default.SaveSanierenOptions(options);
+    public static List<string> LoadEigentuemerOptions() => Default.LoadEigentuemerOptions();
+    public static void SaveEigentuemerOptions(IEnumerable<string> options) => Default.SaveEigentuemerOptions(options);
+    public static List<string> LoadPruefungsresultatOptions() => Default.LoadPruefungsresultatOptions();
+    public static void SavePruefungsresultatOptions(IEnumerable<string> options) => Default.SavePruefungsresultatOptions(options);
+    public static List<string> LoadReferenzpruefungOptions() => Default.LoadReferenzpruefungOptions();
+    public static void SaveReferenzpruefungOptions(IEnumerable<string> options) => Default.SaveReferenzpruefungOptions(options);
+    public static List<string> LoadEmpfohleneSanierungsmassnahmenOptions() => Default.LoadEmpfohleneSanierungsmassnahmenOptions();
+    public static void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options) => Default.SaveEmpfohleneSanierungsmassnahmenOptions(options);
 }

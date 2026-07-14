@@ -81,6 +81,7 @@ namespace AuswertungPro.Next.UI
         // ETA fuer lange Laeufe: pro Lauf eine frische Instanz (gleitende Rate ist lauf-spezifisch).
         public AuswertungPro.Next.Application.Common.IEtaCalculator CreateEtaCalculator() => new AuswertungPro.Next.Application.Common.EtaCalculator();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
+        public IDropdownOptionsStore DropdownOptions { get; }
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
@@ -217,6 +218,8 @@ namespace AuswertungPro.Next.UI
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
             Theme.StatusColors.Current = StatusColors;
             CodeUsageTrackers.Current = CodeUsage;
+
+            DropdownOptions = new FileDropdownOptionsStore();
 
             Projects = new JsonProjectRepository();
             PdfImport = new PdfImportServiceAdapter();

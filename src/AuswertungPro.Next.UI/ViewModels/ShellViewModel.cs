@@ -124,7 +124,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 dashboardRefresh: _sp.DashboardRefresh,
                 dialogs: _sp.Dialogs,
                 projects: _sp.Projects), canOpenWithoutProject: true),
-            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
+            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, dropdownOptions: _sp.DropdownOptions), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(
                 this,
@@ -467,7 +467,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SelectedNavItem = null;
         _suppressLeaveGuard = false;
         CurrentMode = ShellMode.Draft;
-        SetCurrentPage(new Pages.ProjectPageViewModel(this));
+        SetCurrentPage(new Pages.ProjectPageViewModel(this, dropdownOptions: _sp.DropdownOptions));
     }
 
     /// <summary>Wechselt in den Arbeitsbereich und navigiert auf die Landeseite.</summary>

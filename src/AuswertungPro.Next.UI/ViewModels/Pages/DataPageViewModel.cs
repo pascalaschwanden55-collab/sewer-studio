@@ -48,6 +48,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;
     private readonly IDataPageWindowLauncher _windows;
     private readonly IHoldingRenameService _holdingRename;
+    private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
@@ -175,6 +176,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _sanierungOptimizationFactory = services.SanierungOptimizations;
         _windows = services.DataPageWindows;
         _holdingRename = services.HoldingRename;
+        _dropdownOptions = services.DropdownOptions;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -212,12 +214,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         GridZoom = gridLayout.GridZoom;
         IsColumnReorderEnabled = gridLayout.IsColumnReorderEnabled;
 
-        SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
-        EigentuemerOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadEigentuemerOptions());
-        PruefungsresultatOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadPruefungsresultatOptions());
-        ReferenzpruefungOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadReferenzpruefungOptions());
+        SanierenOptions = new ObservableCollection<string>(_dropdownOptions.LoadSanierenOptions());
+        EigentuemerOptions = new ObservableCollection<string>(_dropdownOptions.LoadEigentuemerOptions());
+        PruefungsresultatOptions = new ObservableCollection<string>(_dropdownOptions.LoadPruefungsresultatOptions());
+        ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         EmpfohleneSanierungsmassnahmenOptions = new ObservableCollection<string>(
-            DropdownOptionsStore.LoadEmpfohleneSanierungsmassnahmenOptions());
+            _dropdownOptions.LoadEmpfohleneSanierungsmassnahmenOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
             _dialogs,

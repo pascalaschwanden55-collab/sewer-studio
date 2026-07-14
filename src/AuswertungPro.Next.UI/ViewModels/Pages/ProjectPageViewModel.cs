@@ -13,6 +13,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
 {
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly IDropdownOptionsStore _dropdownOptions;
     private bool _disposed;
 
     public Project Project => _shell.Project;
@@ -51,14 +52,18 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
     public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
 
-    public ProjectPageViewModel(ShellViewModel shell, IDialogService? dialogs = null)
+    public ProjectPageViewModel(
+        ShellViewModel shell,
+        IDialogService? dialogs = null,
+        IDropdownOptionsStore? dropdownOptions = null)
     {
         _shell = shell;
         _dialogs = dialogs ?? new DialogService();
+        _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
 
         // Dropdown-Optionen laden
-        SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
-        EigentuemerOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadEigentuemerOptions());
+        SanierenOptions = new ObservableCollection<string>(_dropdownOptions.LoadSanierenOptions());
+        EigentuemerOptions = new ObservableCollection<string>(_dropdownOptions.LoadEigentuemerOptions());
         EnforceEigentuemerOptionsExact();
 
         // Projektwert ggf. temporaer ergaenzen
@@ -230,13 +235,13 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
     private void SaveDropdownOptions()
     {
         EnforceEigentuemerOptionsExact();
-        DropdownOptionsStore.SaveSanierenOptions(SanierenOptions);
-        DropdownOptionsStore.SaveEigentuemerOptions(EigentuemerOptions);
+        _dropdownOptions.SaveSanierenOptions(SanierenOptions);
+        _dropdownOptions.SaveEigentuemerOptions(EigentuemerOptions);
     }
 
     private void EnforceEigentuemerOptionsExact()
     {
-        DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
     }
 
 }

@@ -114,7 +114,7 @@ public sealed partial class DataPageViewModel
 
     private void ResetEigentuemerOptions()
     {
-        DropdownOptionList.ReplaceWith(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
+        DropdownOptionList.ReplaceWith(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
         SaveDropdownOptions();
     }
 
@@ -232,11 +232,11 @@ public sealed partial class DataPageViewModel
     {
         EnforceEigentuemerOptionsExact();
         SyncDropdownOptionsFromRecords();
-        DropdownOptionsStore.SaveSanierenOptions(SanierenOptions);
-        DropdownOptionsStore.SaveEigentuemerOptions(EigentuemerOptions);
-        DropdownOptionsStore.SavePruefungsresultatOptions(PruefungsresultatOptions);
-        DropdownOptionsStore.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
-        DropdownOptionsStore.SaveEmpfohleneSanierungsmassnahmenOptions(EmpfohleneSanierungsmassnahmenOptions);
+        _dropdownOptions.SaveSanierenOptions(SanierenOptions);
+        _dropdownOptions.SaveEigentuemerOptions(EigentuemerOptions);
+        _dropdownOptions.SavePruefungsresultatOptions(PruefungsresultatOptions);
+        _dropdownOptions.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
+        _dropdownOptions.SaveEmpfohleneSanierungsmassnahmenOptions(EmpfohleneSanierungsmassnahmenOptions);
     }
 
     private void SyncDropdownOptionsFromRecords()
@@ -255,7 +255,7 @@ public sealed partial class DataPageViewModel
 
     private void EnforceEigentuemerOptionsExact()
     {
-        DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
     }
 
     private static IReadOnlyList<string> ParseRecommendedTemplates(string? raw)
