@@ -55,6 +55,17 @@ public partial class PlayerWindow : Window
         _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(normalizedOptions);
         _playerMediaRuntime.AttachVideoView(VideoView);
         _playerMediaHosts = _playerMediaRuntime.Hosts;
+        _playerControlSettingsView = new PlayerControlSettingsView(
+            VolumeSlider,
+            VolumeText,
+            MuteButton,
+            MuteIconText,
+            OverlayOpacitySlider,
+            OverlayOpacityText,
+            CodingOverlayCanvas,
+            DetectionCanvas,
+            _playerPlaybackControlHost.SetVolume,
+            _playerPlaybackControlHost.SetMute);
 
         _playerControllers = PlayerWindowControllerSetInitializer.Create(
             this,

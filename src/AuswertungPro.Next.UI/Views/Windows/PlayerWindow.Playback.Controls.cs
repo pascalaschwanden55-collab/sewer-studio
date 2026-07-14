@@ -47,9 +47,8 @@ public partial class PlayerWindow
         if (!_playerControlEventsEnabled)
             return;
 
-        var state = _playerControlSettingsController.SetVolume(e.NewValue);
-        ApplyVolume(state.Volume);
-        ApplyMuted(state.Muted);
+        _playerControlSettingsView.ApplyVolume(
+            _playerControlSettingsController.SetVolume(e.NewValue));
     }
 
     private void MuteButton_Click(object sender, RoutedEventArgs e)
@@ -57,7 +56,8 @@ public partial class PlayerWindow
         if (!_playerControlEventsEnabled)
             return;
 
-        ApplyMuted(_playerControlSettingsController.SetMuted(MuteButton.IsChecked == true));
+        _playerControlSettingsView.ApplyMuted(
+            _playerControlSettingsController.SetMuted(MuteButton.IsChecked == true));
     }
 
     private void OverlayOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -65,7 +65,8 @@ public partial class PlayerWindow
         if (!_playerControlEventsEnabled)
             return;
 
-        ApplyOverlayOpacity(_playerControlSettingsController.SetOverlayOpacity(e.NewValue));
+        _playerControlSettingsView.ApplyOverlayOpacity(
+            _playerControlSettingsController.SetOverlayOpacity(e.NewValue));
     }
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -121,33 +122,7 @@ public partial class PlayerWindow
 
     private void ApplyPersistedPlayerControlSettings()
     {
-        var state = _playerControlSettingsController.LoadInitial();
-        VolumeSlider.Value = state.Volume;
-        ApplyVolume(state.Volume);
-        ApplyMuted(state.Muted);
-        ApplyOverlayOpacity(state.OverlayOpacity);
+        _playerControlSettingsView.ApplyInitial(_playerControlSettingsController.LoadInitial());
         UpdateRateLabel();
-    }
-
-    private void ApplyVolume(int volume)
-    {
-        _playerPlaybackControlHost.SetVolume(volume);
-        VolumeText.Text = $"{volume}%";
-    }
-
-    private void ApplyMuted(bool muted)
-    {
-        _playerPlaybackControlHost.SetMute(muted);
-        MuteButton.IsChecked = muted;
-        MuteIconText.Text = muted ? "\uE74F" : "\uE767";
-        MuteButton.ToolTip = muted ? "Ton einschalten" : "Ton stummschalten";
-    }
-
-    private void ApplyOverlayOpacity(double opacity)
-    {
-        OverlayOpacitySlider.Value = opacity;
-        OverlayOpacityText.Text = $"{opacity:P0}";
-        CodingOverlayCanvas.Opacity = opacity;
-        DetectionCanvas.Opacity = opacity;
     }
 }
