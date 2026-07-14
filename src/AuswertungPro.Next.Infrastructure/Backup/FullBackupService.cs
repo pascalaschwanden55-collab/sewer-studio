@@ -27,17 +27,20 @@ public sealed class FullBackupService : IFullBackupService
     private readonly Action? _walCheckpoint;
     private readonly Func<CancellationToken, Task<string?>>? _ollamaList;
     private readonly Func<string, long?> _availableBytes;
+    private readonly IGitCommitResolver _gitCommitResolver;
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
         Action? walCheckpoint = null,
         Func<CancellationToken, Task<string?>>? ollamaListe = null,
-        Func<string, long?>? availableBytes = null)
+        Func<string, long?>? availableBytes = null,
+        IGitCommitResolver? gitCommitResolver = null)
     {
         _sourcesFactory = quellenFactory ?? throw new ArgumentNullException(nameof(quellenFactory));
         _walCheckpoint = walCheckpoint;
         _ollamaList = ollamaListe;
         _availableBytes = availableBytes ?? BackupDiskSpaceGuard.GetAvailableBytes;
+        _gitCommitResolver = gitCommitResolver ?? GitCommitResolver.DefaultResolver;
     }
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
@@ -451,7 +454,7 @@ public sealed class FullBackupService : IFullBackupService
             : 0;
     }
 
-    private static object BuildManifest(
+    private object BuildManifest(
         FullBackupSources sources,
         IReadOnlyList<BackupComponent> plan,
         FullBackupSizeReport sizeReport,
@@ -465,7 +468,7 @@ public sealed class FullBackupService : IFullBackupService
         {
             CreatedUtc = DateTimeOffset.UtcNow,
             sources.AppVersion,
-            GitCommit = GitCommitResolver.Resolve(sources.RepoRoot),
+            GitCommit = _gitCommitResolver.Resolve(sources.RepoRoot),
             SourcePaths = new
             {
                 sources.RepoRoot,

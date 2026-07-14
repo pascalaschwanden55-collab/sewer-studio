@@ -15,6 +15,31 @@ public sealed class FullBackupServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_Verwendet_Injizierten_GitCommitResolver_Im_Manifest()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target-git-resolver");
+        var resolver = new RecordingGitCommitResolver("injiziert123");
+        var service = new FullBackupService(
+            () => sources,
+            gitCommitResolver: resolver);
+
+        var result = await service.RunAsync(targetParent);
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(1, resolver.Calls);
+        Assert.Equal(sources.RepoRoot, resolver.LastRepoRoot);
+        var manifestPath = Path.Combine(
+            targetParent,
+            BackupPlanBuilder.TargetFolderName,
+            "manifest.json");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        Assert.Equal(
+            "injiziert123",
+            manifest.RootElement.GetProperty("GitCommit").GetString());
+    }
+
+    [Fact]
     public async Task RunAsync_SpiegeltUnersetzliches_GeneriertExtrasUndManifest_UndLaeuftInkrementell()
     {
         var sources = CreateSourceTree();
@@ -95,6 +120,19 @@ public sealed class FullBackupServiceTests : IDisposable
         var third = await service.RunAsync(targetParent);
         Assert.True(third.Success, third.Error);
         Assert.True(File.Exists(versioniert));
+    }
+
+    private sealed class RecordingGitCommitResolver(string commit) : IGitCommitResolver
+    {
+        public int Calls { get; private set; }
+        public string? LastRepoRoot { get; private set; }
+
+        public string? Resolve(string? repoRoot)
+        {
+            Calls++;
+            LastRepoRoot = repoRoot;
+            return commit;
+        }
     }
 
     [Fact]

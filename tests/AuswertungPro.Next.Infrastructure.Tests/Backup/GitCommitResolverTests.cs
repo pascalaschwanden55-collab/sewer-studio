@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Infrastructure.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
@@ -20,6 +21,17 @@ public sealed class GitCommitResolverTests : IDisposable
         File.WriteAllText(Path.Combine(git, "HEAD"), "abc123");
 
         Assert.Equal("abc123", GitCommitResolver.Resolve(_root));
+    }
+
+    [Fact]
+    public void InstanceService_Resolve_DetachedHead_LiestHashDirekt()
+    {
+        var git = Path.Combine(_root, ".git");
+        Directory.CreateDirectory(git);
+        File.WriteAllText(Path.Combine(git, "HEAD"), "instance123");
+        IGitCommitResolver resolver = new GitCommitFileResolver();
+
+        Assert.Equal("instance123", resolver.Resolve(_root));
     }
 
     [Fact]

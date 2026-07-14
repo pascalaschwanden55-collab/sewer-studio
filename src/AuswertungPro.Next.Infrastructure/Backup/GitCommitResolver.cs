@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Backup;
 
@@ -7,9 +8,9 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 /// Liest den aktuellen Git-Commit direkt aus .git, ohne git.exe aufzurufen.
 /// Fehler sind nicht kritisch fuer die Sicherung und liefern null.
 /// </summary>
-public static class GitCommitResolver
+public sealed class GitCommitFileResolver : IGitCommitResolver
 {
-    public static string? Resolve(string? repoRoot)
+    public string? Resolve(string? repoRoot)
     {
         try
         {
@@ -66,4 +67,16 @@ public static class GitCommitResolver
 
         return null;
     }
+}
+
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer der Git-Commit-Erkennung.
+/// </summary>
+public static class GitCommitResolver
+{
+    public static IGitCommitResolver DefaultResolver { get; } =
+        new GitCommitFileResolver();
+
+    public static string? Resolve(string? repoRoot)
+        => DefaultResolver.Resolve(repoRoot);
 }

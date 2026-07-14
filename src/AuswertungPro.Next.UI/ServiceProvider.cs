@@ -72,6 +72,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+        public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
@@ -346,10 +347,12 @@ namespace AuswertungPro.Next.UI
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
+            GitCommit = new GitCommitFileResolver();
             FullBackup = new FullBackupService(
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
-                ct => OllamaListAsync(ct));
+                ct => OllamaListAsync(ct),
+                gitCommitResolver: GitCommit);
             KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
@@ -632,6 +635,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
             if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
+            if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
             if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
