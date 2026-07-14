@@ -45,6 +45,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Reports;
@@ -56,6 +57,7 @@ using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
@@ -85,6 +87,7 @@ namespace AuswertungPro.Next.UI
         public IProgramRootLocator ProgramRootLocator { get; }
         public IRepositoryRootLocator RepositoryRootLocator { get; }
         public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
+        public ISidecarScriptLocator SidecarScripts { get; }
         public IVsaYoloClassMapStore VsaYoloClasses { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
@@ -285,6 +288,8 @@ namespace AuswertungPro.Next.UI
             RepoRootLocator.Use(RepositoryRootLocator);
             TrainingFfmpegPaths = new TrainingFfmpegFilePathResolver();
             AuswertungPro.Next.UI.Ai.Training.TrainingFfmpegPathResolver.Use(TrainingFfmpegPaths);
+            SidecarScripts = new SidecarScriptFileLocator();
+            SidecarScriptLocator.Use(SidecarScripts);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -716,6 +721,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
             if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
+            if (serviceType == typeof(ISidecarScriptLocator)) return SidecarScripts;
             if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
