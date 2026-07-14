@@ -43,6 +43,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeShaftsCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
 
+    /// <summary>Konfig-Karten (Ziel-Wurzel + Namens-/Ordner-Muster) je Verteil-/Export-Typ.</summary>
+    public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
+
     public ExportPageViewModel(ShellViewModel shell, ServiceProvider sp)
         : this(
             shell,
@@ -60,7 +63,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDialogService dialogs,
         IExcelExportService excelExport,
         IToastService toasts,
-        IDerivedCostFieldSynchronizer costFieldSync)
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IDistributionPatternResolver? patternResolver = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -73,6 +77,50 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
         DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
+        DistributionTargets = BuildDistributionTargets(patternResolver ?? new DistributionPatternResolver());
+    }
+
+    /// <summary>
+    /// Baut die fuenf Konfig-Karten (Haltungen/Schaechte/Dichtheit verteilen + Excel-Export Haltungen/Schaechte).
+    /// Die Live-Vorschau nutzt Beispielwerte (Altdorf, Beispiel-Haltung/-Schacht, heutiges Datum);
+    /// Aenderungen werden ueber den debounced <see cref="AppSettings.Save"/> persistiert.
+    /// </summary>
+    private IReadOnlyList<DistributionTargetConfigViewModel> BuildDistributionTargets(IDistributionPatternResolver resolver)
+    {
+        var heute = DateTime.Today;
+        var haltungSample = new DistributionPatternContext(heute, Gemeinde: "Altdorf", Haltung: "06.24341-35625");
+        var schachtSample = new DistributionPatternContext(heute, Gemeinde: "Altdorf", Schachtnummer: "KS 60191");
+
+        void OnCfgChanged() => _settings.Save();
+        string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
+
+        const string haltungHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde} {Haltung}";
+        const string schachtHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde} {Schachtnummer}";
+        const string excelHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde}";
+
+        return new[]
+        {
+            new DistributionTargetConfigViewModel(
+                "Haltungen verteilen", "PDF-Protokoll + Video je Haltung",
+                _settings.HaltungDistribution, resolver, haltungSample, ".pdf",
+                showFolderLevels: true, haltungHinweis, OnCfgChanged, BrowseRoot),
+            new DistributionTargetConfigViewModel(
+                "Schächte verteilen", "Schachtprotokoll je Schacht",
+                _settings.SchachtDistribution, resolver, schachtSample, ".pdf",
+                showFolderLevels: true, schachtHinweis, OnCfgChanged, BrowseRoot),
+            new DistributionTargetConfigViewModel(
+                "Dichtheitsprüfung verteilen", "DP-Protokoll je Schacht",
+                _settings.DichtheitDistribution, resolver, schachtSample, ".pdf",
+                showFolderLevels: true, schachtHinweis, OnCfgChanged, BrowseRoot),
+            new DistributionTargetConfigViewModel(
+                "Excel-Export Haltungen", "Eine Datei (Haltungen.xlsx)",
+                _settings.HaltungExport, resolver, haltungSample, ".xlsx",
+                showFolderLevels: false, excelHinweis, OnCfgChanged, BrowseRoot),
+            new DistributionTargetConfigViewModel(
+                "Excel-Export Schächte", "Eine Datei (Schächte.xlsx)",
+                _settings.SchachtExport, resolver, schachtSample, ".xlsx",
+                showFolderLevels: false, excelHinweis, OnCfgChanged, BrowseRoot),
+        };
     }
 
     /// <summary>Excel-Export braucht geladenes Projekt.</summary>

@@ -101,10 +101,94 @@
             </StackPanel>
         </Border>
 
-        <!-- Ergebnis -->
-        <TextBox Grid.Row="3" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
-                 IsReadOnly="True" VerticalScrollBarVisibility="Auto"
-                 Foreground="{DynamicResource MutedBrush}"/>
+        <!-- Ziel-/Namensvorlagen-Konfiguration + Ergebnis der letzten Verteilung -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="Zielverzeichnisse &amp; Namensvorlagen"
+                               FontWeight="SemiBold" FontSize="13"
+                               Foreground="{DynamicResource TextBrush}" Margin="2,0,0,2"/>
+                    <TextBlock Text="Pro Typ die Ziel-Wurzel und die Benennung ueber drei Ebenen festlegen. Leere Ordner-Ebenen entfallen."
+                               FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                               TextWrapping="Wrap" Margin="2,0,0,8"/>
+
+                    <ItemsControl ItemsSource="{Binding DistributionTargets}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="{Binding Untertitel}" FontSize="11"
+                                                   Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+
+                                        <!-- Ziel-Wurzel -->
+                                        <TextBlock Text="Ziel-Wurzel" FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <Grid Margin="0,2,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
+                                                     ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
+                                            <Button Grid.Column="1" Content="…" Command="{Binding BrowseRootCommand}"
+                                                    Margin="4,0,0,0" Padding="10,0"
+                                                    ToolTip="Ziel-Wurzel waehlen"/>
+                                        </Grid>
+
+                                        <!-- Ordner-Ebenen (nur Verteilung) -->
+                                        <StackPanel Visibility="{Binding ShowFolderLevels, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="1. Ordner" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,2,0,6"/>
+                                            <TextBlock Text="2. Unterordner" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,2,0,6"/>
+                                        </StackPanel>
+
+                                        <!-- Datei -->
+                                        <TextBlock Text="Datei" FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBox Text="{Binding DateiPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,2,0,6"/>
+
+                                        <TextBlock Text="{Binding PlatzhalterHinweis}" FontSize="10"
+                                                   Foreground="{DynamicResource MutedBrush}"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                                        <!-- Live-Vorschau -->
+                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                                CornerRadius="4" Padding="8,6">
+                                            <StackPanel>
+                                                <TextBlock Text="Vorschau" FontSize="10"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding Vorschau}" FontFamily="Consolas" FontSize="11"
+                                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Ergebnis der letzten Verteilung -->
+            <TextBox Grid.Row="1" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
+                     IsReadOnly="True" VerticalScrollBarVisibility="Auto" MaxHeight="140" Margin="0,8,0,0"
+                     Foreground="{DynamicResource MutedBrush}"/>
+        </Grid>
 
         <!-- Lade-Overlay fuer den xlsx-Export (deckt alle Zeilen ab) -->
         <ctrl:BusyOverlay Grid.RowSpan="4"
