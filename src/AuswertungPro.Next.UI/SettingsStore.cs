@@ -12,8 +12,17 @@ internal static class SettingsStore
     internal static ISettingsFileStore CreateDefault(
         int maxAttempts = 3,
         int retryDelayMs = 200)
+        => CreateDefault(
+            new SettingsRestorePointStore(),
+            maxAttempts,
+            retryDelayMs);
+
+    internal static ISettingsFileStore CreateDefault(
+        ISettingsRestorePointStore restorePoints,
+        int maxAttempts = 3,
+        int retryDelayMs = 200)
         => new SettingsFileStore(
-            sourceFilePath => RestorePointService.TryCreate(
+            sourceFilePath => restorePoints.TryCreate(
                 sourceFilePath,
                 RestorePointService.SettingsRestoreRoot,
                 "settings"),

@@ -29,6 +29,7 @@ using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.Infrastructure.Projects;
+using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
@@ -65,6 +66,7 @@ namespace AuswertungPro.Next.UI
         #region Infrastruktur / Querschnitt
         // Basis-Einstellungen, Logging und Fehlercode-Generator
         public AppSettings Settings { get; }
+        public ISettingsRestorePointStore SettingsRestorePoints { get; }
         public ISettingsFileStore SettingsFiles { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -204,7 +206,8 @@ namespace AuswertungPro.Next.UI
                 // Removed misplaced property initialization
         {
             Settings = settings;
-            SettingsFiles = SettingsStore.CreateDefault();
+            SettingsRestorePoints = new SettingsRestorePointStore();
+            SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -591,6 +594,7 @@ namespace AuswertungPro.Next.UI
         public object? GetService(Type serviceType)
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
+            if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
