@@ -143,29 +143,19 @@
                                                     ToolTip="Ziel-Wurzel waehlen"/>
                                         </Grid>
 
-                                        <!-- Ordner-Ebenen (nur Verteilung) -->
-                                        <StackPanel Visibility="{Binding ShowFolderLevels, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="1. Ordner" FontSize="11"
+                                        <!-- Datei-Muster (nur Excel-Export; bei der Verteilung ist die Benennung fest) -->
+                                        <StackPanel Visibility="{Binding ShowFilePattern, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="Datei" FontSize="11"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,2,0,6"/>
-                                            <TextBlock Text="2. Unterordner" FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding DateiPattern, UpdateSourceTrigger=PropertyChanged}"
                                                      Margin="0,2,0,6"/>
                                         </StackPanel>
 
-                                        <!-- Datei -->
-                                        <TextBlock Text="Datei" FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <TextBox Text="{Binding DateiPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                 Margin="0,2,0,6"/>
-
-                                        <TextBlock Text="{Binding PlatzhalterHinweis}" FontSize="10"
+                                        <TextBlock Text="{Binding Hinweis}" FontSize="10"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    TextWrapping="Wrap" Margin="0,0,0,6"/>
 
-                                        <!-- Live-Vorschau -->
+                                        <!-- Live-Vorschau (Excel: Datei; Verteilung: Ziel-Ordner) -->
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                                                 CornerRadius="4" Padding="8,6">

@@ -69,9 +69,13 @@ Row 3 (`Height="*"`) bekommt einen scrollbaren Bereich mit einer Karte pro Typ (
 
 ## 7. Verdrahtung in die Verteilung
 
-Die Verteil-Commands (`DistributeHoldingsAsync`, `DistributeShaftsAsync`, `DistributeDichtheitAsync`) nutzen künftig die konfigurierte Ziel-Wurzel statt des Zielordner-Dialogs (Dialog nur, wenn keine Wurzel gesetzt). Das 3-Ebenen-Muster wird über einen **optionalen** Parameter an die Distributor-Aufrufe durchgereicht; Default = heutiges festes Schema `Datum_Haltung` flach.
+Die Verteil-Commands (`DistributeHoldingsAsync`, `DistributeShaftsAsync`, `DistributeDichtheitAsync`) nutzen die konfigurierte Ziel-Wurzel statt des Zielordner-Dialogs (Dialog/Projektordner nur, wenn keine Wurzel gesetzt).
 
-**Codex-Koordination:** `HoldingFolderDistributor` wird gerade von Codex umgebaut. Die Änderung erfolgt **streng additiv** (ein optionaler `DistributionTargetConfig`-Parameter mit Default = bisheriges Verhalten) und als **isolierter Commit**, damit keine Konflikte mit der laufenden God-Klassen-Zerlegung entstehen. Die eigentliche Namens-/Struktur-Auflösung passiert in der neuen `DistributionPatternResolver`-Klasse, nicht im Distributor selbst.
+**Entscheidung 2026-07-14 (nach Code-Analyse des Verteilers):** Bei der Kanal-Verteilung ist die Datei-Benennung tief mit der Video-Zuordnung verwoben — PDF, Standard-Video, Gegeninspektions-Video und die Info-Dateien teilen alle das Schema `<Datum>_<Haltung>`, und die Video-Suche benutzt genau diesen Namen als Schlüssel. Ein frei wählbares Datei-Muster dort wäre kein „optionaler Parameter an einer Stelle", sondern ein breiter Eingriff in mehrere Distributor-Klassen (`HoldingFolderDistributor`, `ParsedHoldingDistributionController`, `DistributionFileTransfer`).
+
+Der Nutzer hat sich deshalb für **nur konfigurierbare Ziel-Wurzel** entschieden: Pro Typ ist der Ziel-Ordner einstellbar, die Benennung darunter bleibt beim bewährten, mit der Zuordnung verwobenen Schema. Damit ist die Verdrahtung **streng additiv** (`ResolveConfiguredDistributionRoot`: gesetzte Wurzel hat Vorrang, sonst exakt bisheriges Verhalten) und fasst den Distributor **nicht** an. Freie Datei-Muster gelten nur für den **Excel-Export** (keine Video-Kopplung), umgesetzt in `ExportPageViewModel.BuildConfiguredExcelPath` über den `DistributionPatternResolver`.
+
+**Vorgemerkt (eigenes, geprüftes Paket):** Voll konfigurierbare Ordner-/Datei-Muster auch für die Kanal-Verteilung — nur mit Regressionstests, da die ~3000 Videos an der Zuordnung hängen.
 
 ## 8. Testkonzept
 

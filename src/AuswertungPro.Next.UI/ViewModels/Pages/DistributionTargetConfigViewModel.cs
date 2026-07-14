@@ -7,10 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 /// <summary>
-/// ViewModel einer einzelnen Ziel-Ablage-Karte (Haltungen / Schaechte / Dichtheit / Excel):
-/// bindet Ziel-Wurzel und die drei Namens-/Ordner-Muster zweiseitig, aktualisiert eine
-/// Live-Vorschau des fertigen Pfads (ueber <see cref="IDistributionPatternResolver"/>) und
-/// meldet jede Aenderung ueber <c>onChanged</c> nach oben zum Speichern.
+/// ViewModel einer Ziel-Ablage-Karte auf der Export-Seite. Zwei Auspraegungen:
+///  - <b>Verteilung</b> (Haltungen/Schaechte/Dichtheit): nur die Ziel-Wurzel ist einstellbar;
+///    die Datei-Benennung bleibt fest (sie ist im Verteiler mit der Video-Zuordnung verwoben).
+///    <see cref="ShowFilePattern"/> = false.
+///  - <b>Excel-Export</b>: zusaetzlich ein freies Datei-Muster mit Live-Vorschau des fertigen
+///    Namens (ueber <see cref="IDistributionPatternResolver"/>). <see cref="ShowFilePattern"/> = true.
+/// Jede Aenderung wird ueber <c>onChanged</c> nach oben zum Speichern gemeldet.
 /// </summary>
 public sealed partial class DistributionTargetConfigViewModel : ObservableObject
 {
@@ -24,13 +27,13 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     public string Titel { get; }
     public string Untertitel { get; }
 
-    /// <summary>Excel-Export hat keine Ordner-Ebenen: dann nur Ziel-Wurzel + Datei anzeigen.</summary>
-    public bool ShowFolderLevels { get; }
-    public string PlatzhalterHinweis { get; }
+    /// <summary>true = Excel-Karte mit freiem Datei-Muster; false = Verteil-Karte (nur Ziel-Wurzel).</summary>
+    public bool ShowFilePattern { get; }
+
+    /// <summary>Erklaerender Hinweis (Excel: Platzhalter-Legende; Verteilung: festes Benennungsschema).</summary>
+    public string Hinweis { get; }
 
     [ObservableProperty] private string? _root;
-    [ObservableProperty] private string _ordnerPattern;
-    [ObservableProperty] private string _unterordnerPattern;
     [ObservableProperty] private string _dateiPattern;
     [ObservableProperty] private string _vorschau = string.Empty;
 
@@ -43,8 +46,8 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         IDistributionPatternResolver resolver,
         DistributionPatternContext sampleContext,
         string extension,
-        bool showFolderLevels,
-        string platzhalterHinweis,
+        bool showFilePattern,
+        string hinweis,
         Action onChanged,
         Func<string?> browseFolder)
     {
@@ -56,14 +59,12 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         _browseFolder = browseFolder ?? throw new ArgumentNullException(nameof(browseFolder));
         Titel = titel;
         Untertitel = untertitel;
-        ShowFolderLevels = showFolderLevels;
-        PlatzhalterHinweis = platzhalterHinweis;
+        ShowFilePattern = showFilePattern;
+        Hinweis = hinweis;
 
         // Backing-Felder direkt aus der Konfiguration setzen -> loest KEINE OnChanged-Callbacks
         // und damit kein vorzeitiges Speichern beim Aufbau aus.
         _root = config.Root;
-        _ordnerPattern = config.OrdnerPattern;
-        _unterordnerPattern = config.UnterordnerPattern;
         _dateiPattern = config.DateiPattern;
 
         BrowseRootCommand = new RelayCommand(BrowseRoot);
@@ -84,20 +85,6 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         _onChanged();
     }
 
-    partial void OnOrdnerPatternChanged(string value)
-    {
-        _config.OrdnerPattern = value ?? string.Empty;
-        UpdateVorschau();
-        _onChanged();
-    }
-
-    partial void OnUnterordnerPatternChanged(string value)
-    {
-        _config.UnterordnerPattern = value ?? string.Empty;
-        UpdateVorschau();
-        _onChanged();
-    }
-
     partial void OnDateiPatternChanged(string value)
     {
         _config.DateiPattern = value ?? string.Empty;
@@ -105,19 +92,26 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         _onChanged();
     }
 
-    /// <summary>Baut die Live-Vorschau des fertigen Zielpfads aus den aktuellen Mustern.</summary>
+    /// <summary>
+    /// Baut die Live-Vorschau. Excel: Ziel-Wurzel + aufgeloestes Datei-Muster.
+    /// Verteilung: die Ziel-Wurzel selbst (die Benennung darunter ist fest).
+    /// </summary>
     private void UpdateVorschau()
     {
-        // Excel-Karten haben keine Ordner-Ebenen -> nur Ziel-Wurzel + Datei.
-        var relativ = _resolver.ResolveRelativePath(
-            ShowFolderLevels ? OrdnerPattern : null,
-            ShowFolderLevels ? UnterordnerPattern : null,
-            DateiPattern,
-            _sampleContext,
-            _extension);
-
-        // Ohne gesetzte Ziel-Wurzel einen sichtbaren Platzhalter statt eines echten Pfads zeigen.
         var wurzel = string.IsNullOrWhiteSpace(Root) ? "<Ziel-Wurzel>" : Root!;
-        Vorschau = Path.Combine(wurzel, relativ);
+        if (ShowFilePattern)
+        {
+            var relativ = _resolver.ResolveRelativePath(
+                ordnerPattern: null,
+                unterordnerPattern: null,
+                dateiPattern: DateiPattern,
+                context: _sampleContext,
+                extension: _extension);
+            Vorschau = Path.Combine(wurzel, relativ);
+        }
+        else
+        {
+            Vorschau = wurzel;
+        }
     }
 }

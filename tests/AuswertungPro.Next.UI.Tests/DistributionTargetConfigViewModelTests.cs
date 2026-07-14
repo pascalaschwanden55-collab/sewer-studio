@@ -1,85 +1,86 @@
 using System;
-using System.IO;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
-/// Tests fuer die einzelne Ziel-Ablage-Karte (Export-/Verteil-Konfiguration, Etappe 1c):
-/// Live-Vorschau aus Ziel-Wurzel + drei Ebenen, Muster-Aenderung schreibt in die Config
-/// und meldet Speichern, und die Excel-Variante ignoriert die Ordner-Ebenen.
+/// Tests fuer die Ziel-Ablage-Karte (Export-/Verteil-Konfiguration).
+/// Excel-Karte: Live-Vorschau aus Ziel-Wurzel + Datei-Muster, Muster-Aenderung schreibt in die
+/// Config und meldet Speichern. Verteil-Karte: nur die Ziel-Wurzel bestimmt die Vorschau.
 /// </summary>
 public sealed class DistributionTargetConfigViewModelTests
 {
     private static readonly DistributionPatternContext HaltungCtx =
         new(new DateTime(2026, 6, 26), "Altdorf", "06.24341-35625");
 
-    private static DistributionTargetConfigViewModel Create(
-        DistributionTargetConfig config,
-        Action? onChanged = null,
-        bool showFolderLevels = true,
-        string extension = ".pdf")
+    private static DistributionTargetConfigViewModel CreateExcel(
+        DistributionTargetConfig config, Action? onChanged = null)
         => new(
-            titel: "Haltungen",
-            untertitel: "",
-            config: config,
-            resolver: new DistributionPatternResolver(),
-            sampleContext: HaltungCtx,
-            extension: extension,
-            showFolderLevels: showFolderLevels,
-            platzhalterHinweis: "",
-            onChanged: onChanged ?? (() => { }),
-            browseFolder: () => null);
+            titel: "Excel-Export Haltungen", untertitel: "", config: config,
+            resolver: new DistributionPatternResolver(), sampleContext: HaltungCtx,
+            extension: ".xlsx", showFilePattern: true, hinweis: "",
+            onChanged: onChanged ?? (() => { }), browseFolder: () => null);
+
+    private static DistributionTargetConfigViewModel CreateVerteil(
+        DistributionTargetConfig config, Action? onChanged = null)
+        => new(
+            titel: "Haltungen verteilen", untertitel: "", config: config,
+            resolver: new DistributionPatternResolver(), sampleContext: HaltungCtx,
+            extension: ".pdf", showFilePattern: false, hinweis: "",
+            onChanged: onChanged ?? (() => { }), browseFolder: () => null);
 
     [Fact]
-    public void Vorschau_setzt_pfad_aus_wurzel_und_drei_ebenen_zusammen()
+    public void Excel_vorschau_setzt_wurzel_und_datei_muster_zusammen()
     {
-        var vm = Create(new DistributionTargetConfig
-        {
-            Root = @"D:\Verteilt",
-            OrdnerPattern = "{Gemeinde}",
-            UnterordnerPattern = "{Haltung}",
-            DateiPattern = "{Datum}_{Haltung}",
-        });
+        var vm = CreateExcel(new DistributionTargetConfig { Root = @"D:\Export", DateiPattern = "Schaechte_{Datum}" });
 
-        Assert.Equal(@"D:\Verteilt\Altdorf\06.24341-35625\20260626_06.24341-35625.pdf", vm.Vorschau);
+        Assert.Equal(@"D:\Export\Schaechte_20260626.xlsx", vm.Vorschau);
     }
 
     [Fact]
-    public void Muster_aenderung_aktualisiert_vorschau_und_schreibt_in_config_und_speichert()
+    public void Excel_muster_aenderung_aktualisiert_vorschau_und_config_und_speichert()
     {
-        var config = new DistributionTargetConfig { Root = @"D:\V", DateiPattern = "{Datum}" };
+        var config = new DistributionTargetConfig { Root = @"D:\V", DateiPattern = "Haltungen" };
         var saves = 0;
-        var vm = Create(config, onChanged: () => saves++);
+        var vm = CreateExcel(config, onChanged: () => saves++);
 
-        vm.DateiPattern = "{Jahr}";
+        vm.DateiPattern = "Haltungen_{Jahr}";
 
-        Assert.Equal("{Jahr}", config.DateiPattern);
-        Assert.EndsWith(@"\2026.pdf", vm.Vorschau);
+        Assert.Equal("Haltungen_{Jahr}", config.DateiPattern);
+        Assert.EndsWith(@"\Haltungen_2026.xlsx", vm.Vorschau);
         Assert.True(saves >= 1);
     }
 
     [Fact]
     public void Ohne_wurzel_zeigt_vorschau_einen_platzhalter()
     {
-        var vm = Create(new DistributionTargetConfig { DateiPattern = "{Datum}" });
+        var vm = CreateExcel(new DistributionTargetConfig { DateiPattern = "Haltungen" });
 
         Assert.Contains("Ziel-Wurzel", vm.Vorschau);
     }
 
     [Fact]
-    public void Excel_karte_ignoriert_die_ordner_ebenen()
+    public void Verteil_vorschau_ist_die_ziel_wurzel_ohne_datei_muster()
     {
-        var config = new DistributionTargetConfig
-        {
-            Root = @"D:\Export",
-            OrdnerPattern = "{Gemeinde}",   // gesetzt, aber ShowFolderLevels=false -> ignoriert
-            DateiPattern = "Haltungen",
-        };
+        var config = new DistributionTargetConfig { Root = @"D:\Verteilt\Haltungen", DateiPattern = "{Datum}_{Haltung}" };
+        var vm = CreateVerteil(config);
 
-        var vm = Create(config, showFolderLevels: false, extension: ".xlsx");
+        // Verteilung: nur die Ziel-Wurzel; die Benennung darunter ist fest (nicht Teil der Vorschau).
+        Assert.Equal(@"D:\Verteilt\Haltungen", vm.Vorschau);
+    }
 
-        Assert.Equal(@"D:\Export\Haltungen.xlsx", vm.Vorschau);
+    [Fact]
+    public void Verteil_wurzel_aenderung_meldet_speichern()
+    {
+        var config = new DistributionTargetConfig();
+        var saves = 0;
+        var vm = CreateVerteil(config, onChanged: () => saves++);
+
+        vm.Root = @"E:\Ziel";
+
+        Assert.Equal(@"E:\Ziel", config.Root);
+        Assert.Equal(@"E:\Ziel", vm.Vorschau);
+        Assert.True(saves >= 1);
     }
 }

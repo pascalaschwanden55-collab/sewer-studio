@@ -113,38 +113,40 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private IReadOnlyList<DistributionTargetConfigViewModel> BuildDistributionTargets(IDistributionPatternResolver resolver)
     {
         var heute = DateTime.Today;
-        var haltungSample = new DistributionPatternContext(heute, Gemeinde: "Altdorf", Haltung: "06.24341-35625");
-        var schachtSample = new DistributionPatternContext(heute, Gemeinde: "Altdorf", Schachtnummer: "KS 60191");
+        // Excel-Vorschau nutzt nur {Datum}/{Jahr}/{Monat}; die Verteil-Vorschau ist die Ziel-Wurzel selbst.
+        var excelSample = new DistributionPatternContext(heute);
+        var verteilSample = new DistributionPatternContext(heute);
 
         void OnCfgChanged() => _settings.Save();
         string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
 
-        const string haltungHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde} {Haltung}";
-        const string schachtHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde} {Schachtnummer}";
-        const string excelHinweis = "Platzhalter: {Datum} {Jahr} {Monat} {Gemeinde}";
+        const string haltungHinweis = "Feste Benennung: je Haltung ein Ordner, Dateien als Datum_Haltung (mit Video-Zuordnung).";
+        const string schachtHinweis = "Feste Benennung: je Schacht, Dateien als Datum_Schachtnummer.";
+        const string dichtheitHinweis = "Feste Benennung: je Schacht, Dichtheitsprotokolle als Datum_Schachtnummer.";
+        const string excelHinweis = "Platzhalter: {Datum} {Jahr} {Monat}";
 
         return new[]
         {
             new DistributionTargetConfigViewModel(
                 "Haltungen verteilen", "PDF-Protokoll + Video je Haltung",
-                _settings.HaltungDistribution, resolver, haltungSample, ".pdf",
-                showFolderLevels: true, haltungHinweis, OnCfgChanged, BrowseRoot),
+                _settings.HaltungDistribution, resolver, verteilSample, ".pdf",
+                showFilePattern: false, haltungHinweis, OnCfgChanged, BrowseRoot),
             new DistributionTargetConfigViewModel(
                 "Schächte verteilen", "Schachtprotokoll je Schacht",
-                _settings.SchachtDistribution, resolver, schachtSample, ".pdf",
-                showFolderLevels: true, schachtHinweis, OnCfgChanged, BrowseRoot),
+                _settings.SchachtDistribution, resolver, verteilSample, ".pdf",
+                showFilePattern: false, schachtHinweis, OnCfgChanged, BrowseRoot),
             new DistributionTargetConfigViewModel(
                 "Dichtheitsprüfung verteilen", "DP-Protokoll je Schacht",
-                _settings.DichtheitDistribution, resolver, schachtSample, ".pdf",
-                showFolderLevels: true, schachtHinweis, OnCfgChanged, BrowseRoot),
+                _settings.DichtheitDistribution, resolver, verteilSample, ".pdf",
+                showFilePattern: false, dichtheitHinweis, OnCfgChanged, BrowseRoot),
             new DistributionTargetConfigViewModel(
                 "Excel-Export Haltungen", "Eine Datei (Haltungen.xlsx)",
-                _settings.HaltungExport, resolver, haltungSample, ".xlsx",
-                showFolderLevels: false, excelHinweis, OnCfgChanged, BrowseRoot),
+                _settings.HaltungExport, resolver, excelSample, ".xlsx",
+                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot),
             new DistributionTargetConfigViewModel(
                 "Excel-Export Schächte", "Eine Datei (Schächte.xlsx)",
-                _settings.SchachtExport, resolver, schachtSample, ".xlsx",
-                showFolderLevels: false, excelHinweis, OnCfgChanged, BrowseRoot),
+                _settings.SchachtExport, resolver, excelSample, ".xlsx",
+                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot),
         };
     }
 
@@ -312,7 +314,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
-        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
+        var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
+            ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -436,7 +439,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
+        var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
+            ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -525,7 +529,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
+        var destFolder = ResolveConfiguredDistributionRoot(_settings.DichtheitDistribution)
+            ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -652,6 +657,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var baseFolder = ResolveDistributionTargetFolder();
         return string.IsNullOrWhiteSpace(baseFolder) ? null : Path.Combine(baseFolder, subfolder);
     }
+
+    /// <summary>
+    /// Konfigurierte Ziel-Wurzel als Verteil-Ziel; null, wenn keine gesetzt ist
+    /// (dann greift der bisherige Projektordner-/Dialog-Pfad wie zuvor).
+    /// </summary>
+    private static string? ResolveConfiguredDistributionRoot(DistributionTargetConfig cfg)
+        => string.IsNullOrWhiteSpace(cfg.Root) ? null : cfg.Root;
 
     /// <summary>
     /// Excel-Zielpfad aus der Konfiguration (Ziel-Wurzel + Datei-Muster); legt den Zielordner an.
