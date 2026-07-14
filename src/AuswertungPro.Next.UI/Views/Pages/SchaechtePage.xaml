@@ -73,7 +73,7 @@
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Einzelnes Schacht-Protokoll (PDF) importieren und ins Projekt verteilen">
+                            ToolTip="Einzelne PDF oder ganzen Ordner einschliesslich Unterordner importieren">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>

@@ -18,5 +18,6 @@ public sealed class SchaechtePageProtocolToolbarTests
         Assert.Contains("Command=\"{Binding ImportProtocolCommand}\"", xaml);
         Assert.Contains("Aktualisieren", xaml);
         Assert.Contains("Protokoll importieren", xaml);
+        Assert.Contains("ganzen Ordner einschliesslich Unterordner importieren", xaml);
     }
 }

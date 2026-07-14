@@ -67,10 +67,30 @@ public sealed partial class SchaechtePageViewModel
             return;
         }
 
-        var pdfPfad = _dialogs.OpenFile("Protokoll importieren", "PDF (*.pdf)|*.pdf");
-        if (string.IsNullOrWhiteSpace(pdfPfad))
+        var quelle = _dialogs.ConfirmCancel(
+            "Quelle auswaehlen:\n\n" +
+            "Ja = einzelne PDF-Datei\n" +
+            "Nein = ganzen Ordner einschliesslich Unterordner\n" +
+            "Abbrechen = nichts importieren",
+            "Protokoll importieren");
+        if (quelle == DialogConfirm.Cancel)
             return;
 
+        if (quelle == DialogConfirm.No)
+        {
+            var ordner = _dialogs.SelectFolder("Ordner mit Schachtprotokollen auswaehlen");
+            if (!string.IsNullOrWhiteSpace(ordner))
+                await ImportProtocolFolderAsync(projektOrdner, ordner);
+            return;
+        }
+
+        var pdfPfad = _dialogs.OpenFile("Schachtprotokoll auswaehlen", "PDF (*.pdf)|*.pdf");
+        if (!string.IsNullOrWhiteSpace(pdfPfad))
+            await ImportSingleProtocolAsync(projektOrdner, pdfPfad);
+    }
+
+    private async Task ImportSingleProtocolAsync(string projektOrdner, string pdfPfad)
+    {
         var ergebnis = await ReadProtocolAsync(pdfPfad, "Protokoll importieren");
         if (ergebnis is null || !ProjectIsStillOpen(projektOrdner, "Protokoll importieren"))
             return;
