@@ -45,6 +45,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -86,6 +87,7 @@ namespace AuswertungPro.Next.UI
         public IFolderOpenService FolderOpen { get; }
         public IProgramRootLocator ProgramRootLocator { get; }
         public IRepositoryRootLocator RepositoryRootLocator { get; }
+        public IFfmpegExecutableLocator FfmpegExecutables { get; }
         public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
         public ISidecarScriptLocator SidecarScripts { get; }
         public ISidecarTokenResolver SidecarTokens { get; }
@@ -287,6 +289,8 @@ namespace AuswertungPro.Next.UI
             SettingsProgramCleanupRequestFactory.Use(ProgramRootLocator);
             RepositoryRootLocator = new RepositoryRootFileLocator();
             RepoRootLocator.Use(RepositoryRootLocator);
+            FfmpegExecutables = new FfmpegFileLocator();
+            FfmpegLocator.Use(FfmpegExecutables);
             TrainingFfmpegPaths = new TrainingFfmpegFilePathResolver();
             AuswertungPro.Next.UI.Ai.Training.TrainingFfmpegPathResolver.Use(TrainingFfmpegPaths);
             SidecarScripts = new SidecarScriptFileLocator();
@@ -723,6 +727,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
+            if (serviceType == typeof(IFfmpegExecutableLocator)) return FfmpegExecutables;
             if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
             if (serviceType == typeof(ISidecarScriptLocator)) return SidecarScripts;
             if (serviceType == typeof(ISidecarTokenResolver)) return SidecarTokens;

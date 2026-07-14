@@ -1,154 +1,33 @@
-// AuswertungPro – KI Videoanalyse Modul
-using System;
-using System.IO;
-using System.Linq;
-
+using System.Threading;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Shared;
 
-/// <summary>
-/// Lokalisiert ffmpeg und ffprobe – entweder über absoluten Pfad (Env-Variable),
-/// bekannte Installationsverzeichnisse (WinGet, Chocolatey, Scoop), oder System-PATH.
-/// </summary>
+/// <summary>Kompatibilitätsfassade für die FFmpeg- und FFprobe-Suche.</summary>
 public static class FfmpegLocator
 {
-    /// <summary>Name der Umgebungsvariable für den ffmpeg-Pfad.</summary>
-    public const string EnvKey = "SEWERSTUDIO_FFMPEG";
-    private const string EnvFfmpeg = EnvKey;
+    /// <summary>Name der Umgebungsvariable für den FFmpeg-Pfad.</summary>
+    public const string EnvKey = FfmpegFileLocator.EnvironmentVariableName;
 
-    // Cache damit nicht bei jedem Aufruf gesucht wird
-    private static string? _cachedFfmpegPath;
+    private static IFfmpegExecutableLocator _current = new FfmpegFileLocator();
 
-    /// <summary>
-    /// Gibt den aufzulösenden ffmpeg-Pfad zurück.
-    /// Reihenfolge: ENV → bekannte Installationspfade → "ffmpeg" (PATH).
-    /// </summary>
+    public static IFfmpegExecutableLocator Current => Volatile.Read(ref _current);
+
+    public static void Use(IFfmpegExecutableLocator locator)
+        => Volatile.Write(
+            ref _current,
+            locator ?? throw new ArgumentNullException(nameof(locator)));
+
     public static string ResolveFfmpeg()
-    {
-        var env = Environment.GetEnvironmentVariable(EnvFfmpeg)?.Trim();
-        if (!string.IsNullOrEmpty(env))
-            return env;
+        => Current.ResolveFfmpeg();
 
-        if (_cachedFfmpegPath is not null)
-            return _cachedFfmpegPath;
-
-        var found = FindFfmpegInKnownLocations();
-        _cachedFfmpegPath = found ?? "ffmpeg";
-        return _cachedFfmpegPath;
-    }
-
-    /// <summary>
-    /// Durchsucht bekannte Installationsverzeichnisse (WinGet, Chocolatey, Scoop).
-    /// </summary>
-    private static string? FindFfmpegInKnownLocations()
-    {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-        // WinGet: %LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe
-        var wingetDir = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
-        if (Directory.Exists(wingetDir))
-        {
-            try
-            {
-                var ffmpegDirs = Directory.GetDirectories(wingetDir, "Gyan.FFmpeg*");
-                foreach (var dir in ffmpegDirs)
-                {
-                    // Suche rekursiv nach ffmpeg.exe im bin-Verzeichnis
-                    // Gesperrte Unterordner ueberspringen + deterministische Reihenfolge
-                    // (sonst haengt das gewaehlte ffmpeg.exe von der Traversierungs-Reihenfolge ab).
-                    var binDirs = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(dir)
-                        .Where(sub => string.Equals(Path.GetFileName(sub), "bin", StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(sub => sub, StringComparer.OrdinalIgnoreCase);
-                    foreach (var bin in binDirs)
-                    {
-                        var candidate = Path.Combine(bin, "ffmpeg.exe");
-                        if (File.Exists(candidate))
-                            return candidate;
-                    }
-                }
-            }
-            catch { /* Zugriffsfehler ignorieren */ }
-        }
-
-        // Chocolatey: C:\ProgramData\chocolatey\bin\ffmpeg.exe
-        var chocoPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "chocolatey", "bin", "ffmpeg.exe");
-        if (File.Exists(chocoPath))
-            return chocoPath;
-
-        // Scoop: %USERPROFILE%\scoop\shims\ffmpeg.exe
-        var scoopPath = Path.Combine(userProfile, "scoop", "shims", "ffmpeg.exe");
-        if (File.Exists(scoopPath))
-            return scoopPath;
-
-        // Manuell: C:\ffmpeg\bin\ffmpeg.exe (haeufige manuelle Installation)
-        var manualPath = @"C:\ffmpeg\bin\ffmpeg.exe";
-        if (File.Exists(manualPath))
-            return manualPath;
-
-        // Program Files
-        var pfPath = Path.Combine(programFiles, "ffmpeg", "bin", "ffmpeg.exe");
-        if (File.Exists(pfPath))
-            return pfPath;
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gibt den aufzulösenden ffprobe-Pfad zurück.
-    /// Sucht ffprobe.exe neben ffmpeg, sonst "ffprobe" (PATH).
-    /// </summary>
     public static string ResolveFfprobe()
-    {
-        var ffmpeg = ResolveFfmpeg();
+        => Current.ResolveFfprobe();
 
-        // Absoluter Pfad: ffprobe.exe daneben suchen
-        if (Path.IsPathRooted(ffmpeg) && File.Exists(ffmpeg))
-        {
-            var dir = Path.GetDirectoryName(ffmpeg)!;
-            var ext = Path.GetExtension(ffmpeg);          // ".exe" auf Windows
-            var candidate = Path.Combine(dir, "ffprobe" + ext);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        // Aus dem Namen ableiten (z.B. "ffmpeg" → "ffprobe")
-        if (string.Equals(ffmpeg, "ffmpeg", StringComparison.OrdinalIgnoreCase))
-            return "ffprobe";
-
-        var derivedDir = Path.GetDirectoryName(ffmpeg);
-        var derivedExt = Path.GetExtension(ffmpeg);
-        return string.IsNullOrEmpty(derivedDir)
-            ? "ffprobe" + derivedExt
-            : Path.Combine(derivedDir, "ffprobe" + derivedExt);
-    }
-
-    /// <summary>
-    /// Leitet den ffprobe-Pfad rein aus dem übergebenen ffmpegPath ab – kein Dateisystem-Zugriff.
-    /// Gleiche Logik wie in MultiModelAnalysisService und VideoFullAnalysisService (konsolidiert).
-    /// </summary>
+    /// <summary>Leitet den FFprobe-Pfad ohne Datei- oder Ordnerzugriff ab.</summary>
     public static string DeriveFfprobeFrom(string ffmpegPath)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegPath) ||
-            string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase))
-            return "ffprobe";
-        var dir = Path.GetDirectoryName(ffmpegPath);
-        var ext = Path.GetExtension(ffmpegPath);
-        return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
-    }
+        => FfmpegFileLocator.DeriveFfprobeFrom(ffmpegPath);
 
-    /// <summary>
-    /// Prüft, ob ffmpeg über Process.Start erreichbar ist (absolut oder im PATH).
-    /// </summary>
     public static bool IsFfmpegAvailable()
-    {
-        var path = ResolveFfmpeg();
-        if (Path.IsPathRooted(path))
-            return File.Exists(path);
-        // PATH-basiert: Datei kann nicht via File.Exists geprüft werden
-        return true;
-    }
+        => Current.IsFfmpegAvailable();
 }
