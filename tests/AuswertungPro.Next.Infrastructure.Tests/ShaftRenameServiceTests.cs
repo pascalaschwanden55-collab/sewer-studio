@@ -9,6 +9,19 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class ShaftRenameServiceTests
 {
     [Fact]
+    public void Instanzdienst_behaelt_kompatibles_NoOp_Verhalten()
+    {
+        IShaftRenameService service = new ShaftRenameFileService();
+        var record = new SchachtRecord();
+
+        var result = service.Rename(record, "22152", "22152", projectFilePath: null);
+
+        Assert.True(result.Success);
+        Assert.False(result.FolderRenamed);
+        Assert.Equal(0, result.PathFieldsUpdated);
+    }
+
+    [Fact]
     public void Rename_NeueStruktur_RelativerPdfPath_BenenntVerteiltesPdfUm()
     {
         var oldNumber = "22152";

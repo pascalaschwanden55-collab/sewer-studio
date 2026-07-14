@@ -763,6 +763,7 @@ public partial class SchaechtePage : UserControl
 
     private bool ApplySchachtNumberChange(SchachtRecord record, string? oldValue, string? newValue)
         => SchaechteShaftRenameController.Apply(
+            Vm.ShaftRename,
             record,
             oldValue,
             newValue,

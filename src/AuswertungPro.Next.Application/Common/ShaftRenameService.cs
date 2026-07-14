@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
+using ShaftRenameResult = AuswertungPro.Next.Application.Common.ShaftRenameService.ShaftRenameResult;
 
 namespace AuswertungPro.Next.Application.Common;
 
@@ -11,6 +12,8 @@ namespace AuswertungPro.Next.Application.Common;
 /// </summary>
 public static class ShaftRenameService
 {
+    private static readonly IShaftRenameService Default = new ShaftRenameFileService();
+
     public sealed record ShaftRenameResult(
         bool Success,
         string? ErrorMessage,
@@ -25,6 +28,18 @@ public static class ShaftRenameService
     }
 
     public static ShaftRenameResult Rename(
+        SchachtRecord record,
+        string oldShaftNumber,
+        string newShaftNumber,
+        string? projectFilePath)
+        => Default.Rename(record, oldShaftNumber, newShaftNumber, projectFilePath);
+}
+
+/// <summary>Dateisystem-Implementierung der atomaren Schachtumbenennung.</summary>
+public sealed class ShaftRenameFileService : IShaftRenameService
+{
+
+    public ShaftRenameResult Rename(
         SchachtRecord record,
         string oldShaftNumber,
         string newShaftNumber,

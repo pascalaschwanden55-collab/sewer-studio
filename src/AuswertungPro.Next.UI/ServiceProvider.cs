@@ -113,6 +113,7 @@ namespace AuswertungPro.Next.UI
         public IProjectPortabilityService ProjectPortability { get; }
         public IProjectPhotoAssignmentService ProjectPhotoAssignment { get; }
         public IHoldingRenameService HoldingRename { get; }
+        public IShaftRenameService ShaftRename { get; }
         public IPlanPdfImporter PlanPdfImport { get; }
         public IProtocolRegenerationService ProtocolRegeneration { get; }
         public IProtocolSingleRegenerationService ProtocolSingleRegeneration { get; }
@@ -231,6 +232,7 @@ namespace AuswertungPro.Next.UI
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
             HoldingRename = new HoldingRenameFileService();
+            ShaftRename = new ShaftRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);

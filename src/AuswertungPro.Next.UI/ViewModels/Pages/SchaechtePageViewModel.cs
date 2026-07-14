@@ -23,6 +23,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
     private readonly IDropdownOptionsStore _dropdownOptions;
+    private readonly IShaftRenameService _shaftRename;
     private readonly ShellViewModel _shell;
     private readonly DropdownOptionGroupController _sanierenDropdownOptions;
     private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
@@ -37,6 +38,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
+    internal IShaftRenameService ShaftRename => _shaftRename;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
     public ObservableCollection<string> Columns { get; } = new();
@@ -97,7 +99,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtProtocolImport: services.SchachtProtocolImport,
             schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
             schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
-            dropdownOptions: services.DropdownOptions)
+            dropdownOptions: services.DropdownOptions,
+            shaftRename: services.ShaftRename)
     {
     }
 
@@ -108,7 +111,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         ISchachtProtocolImportService schachtProtocolImport,
         ISchachtStammdatenErgaenzungsService schachtStammdatenErgaenzung,
         ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog,
-        IDropdownOptionsStore? dropdownOptions = null)
+        IDropdownOptionsStore? dropdownOptions = null,
+        IShaftRenameService? shaftRename = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -117,6 +121,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
         _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
+        _shaftRename = shaftRename ?? new ShaftRenameFileService();
 
         var uiLayout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d

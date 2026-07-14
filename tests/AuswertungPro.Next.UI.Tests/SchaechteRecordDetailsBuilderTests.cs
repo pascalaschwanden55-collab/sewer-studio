@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
@@ -93,6 +94,7 @@ public sealed class SchaechteRecordDetailsBuilderTests
         var errors = new List<string>();
 
         var success = SchaechteShaftRenameController.Apply(
+            new ShaftRenameFileService(),
             record,
             "A-1",
             "B-2",

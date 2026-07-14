@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.UI.DataPage;
 internal static class SchaechteShaftRenameController
 {
     internal static bool Apply(
+        IShaftRenameService renameService,
         SchachtRecord record,
         string? oldValue,
         string? newValue,
@@ -16,6 +17,7 @@ internal static class SchaechteShaftRenameController
         Project? project,
         Action<string, string> showError)
     {
+        ArgumentNullException.ThrowIfNull(renameService);
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(showError);
 
@@ -24,7 +26,7 @@ internal static class SchaechteShaftRenameController
         if (string.Equals(oldNumber, newNumber, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        var renameResult = ShaftRenameService.Rename(record, oldNumber, newNumber, projectPath);
+        var renameResult = renameService.Rename(record, oldNumber, newNumber, projectPath);
         if (!renameResult.Success)
         {
             showError($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");

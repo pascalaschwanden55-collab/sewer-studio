@@ -138,9 +138,20 @@ public sealed class SchaechtePageArchitectureGuardTests
 
         Assert.Contains("private bool ApplySchachtNumberChange(", page);
         Assert.Contains("SchaechteShaftRenameController.Apply(", page);
-        Assert.Contains("ShaftRenameService.Rename(", controller);
+        Assert.Contains("Vm.ShaftRename", page);
+        Assert.Contains("IShaftRenameService renameService", controller);
+        Assert.Contains("renameService.Rename(", controller);
+        Assert.DoesNotContain("ShaftRenameService.Rename(", controller);
         Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", controller);
         Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", controller);
+
+        var provider = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "ServiceProvider.cs"));
+        Assert.Contains("public IShaftRenameService ShaftRename { get; }", provider);
+        Assert.Contains("ShaftRename = new ShaftRenameFileService();", provider);
     }
 
     [Fact]
