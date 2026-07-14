@@ -22,6 +22,7 @@ using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Infrastructure.Backup;
 using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Diagnostics;
+using AuswertungPro.Next.Infrastructure.DataPage;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -171,6 +172,7 @@ namespace AuswertungPro.Next.UI
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
         public IDichtheitProtocolFileLocator DichtheitProtocolFiles { get; }
+        public ISchachtFileTargetResolver SchachtFileTargets { get; }
         // Zieht abgeleitete Kostenfelder nach der Sanieren-Regel nach (nur Sanieren=Ja zaehlt).
         public AuswertungPro.Next.Application.DataPage.IDerivedCostFieldSynchronizer CostFieldSync { get; }
         #endregion
@@ -348,8 +350,10 @@ namespace AuswertungPro.Next.UI
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator();
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
+            SchachtFileTargets = new SchachtFileTargetPathResolver();
             DataPage.DataPageProtocolPathResolver.Use(InspectionProtocolFiles);
             DataPage.DataPageDichtheitPdfResolver.Use(DichtheitProtocolFiles);
+            DataPage.SchachtFileTargetResolver.Use(SchachtFileTargets);
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
@@ -694,6 +698,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
             if (serviceType == typeof(IInspectionProtocolFileLocator)) return InspectionProtocolFiles;
             if (serviceType == typeof(IDichtheitProtocolFileLocator)) return DichtheitProtocolFiles;
+            if (serviceType == typeof(ISchachtFileTargetResolver)) return SchachtFileTargets;
             if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;

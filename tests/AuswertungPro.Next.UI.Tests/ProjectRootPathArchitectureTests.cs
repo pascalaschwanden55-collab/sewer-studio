@@ -9,13 +9,13 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ProjectRootPathArchitectureTests
 {
     [Fact]
-    public void Ui_project_json_paths_resolve_via_ProjectFileLocator()
+    public void Project_json_paths_resolve_via_ProjectFileLocator()
     {
         var checkedFiles = new[]
         {
             "src/AuswertungPro.Next.UI/Ai/CodingProtocolPdfExportPlanner.cs",
             "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml.cs",
-            "src/AuswertungPro.Next.UI/DataPage/SchachtFileTargetResolver.cs"
+            "src/AuswertungPro.Next.Infrastructure/DataPage/SchachtFileTargetPathResolver.cs"
         };
 
         var offenders = checkedFiles

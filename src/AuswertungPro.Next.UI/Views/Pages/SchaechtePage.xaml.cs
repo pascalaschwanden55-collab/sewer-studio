@@ -913,8 +913,8 @@ public partial class SchaechtePage : UserControl
         => _massnahmenController?.Open(record);
 
     private string? ResolvePdfPath(SchachtRecord record)
-        => SchachtFileTargetResolver.ResolvePdfPath(record, Settings.LastProjectPath);
+        => Vm.SchachtFileTargets.ResolvePdfPath(record, Settings.LastProjectPath);
 
     private string? ResolveExplorerTarget(SchachtRecord record)
-        => SchachtFileTargetResolver.ResolveExplorerTarget(record, Settings.LastProjectPath);
+        => Vm.SchachtFileTargets.ResolveExplorerTarget(record, Settings.LastProjectPath);
 }

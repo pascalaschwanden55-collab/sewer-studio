@@ -134,7 +134,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 dialogs: _sp.Dialogs,
                 schachtProtocolImport: _sp.SchachtProtocolImport,
                 schachtStammdatenErgaenzung: _sp.SchachtStammdatenErgaenzung,
-                schachtMassnahmenKatalog: _sp.SchachtMassnahmenKatalog)),
+                schachtMassnahmenKatalog: _sp.SchachtMassnahmenKatalog,
+                dropdownOptions: _sp.DropdownOptions,
+                shaftRename: _sp.ShaftRename,
+                explorerReveal: _sp.ExplorerReveal,
+                templateColumnReader: _sp.SchaechteTemplateColumns,
+                schachtFileTargets: _sp.SchachtFileTargets)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(
