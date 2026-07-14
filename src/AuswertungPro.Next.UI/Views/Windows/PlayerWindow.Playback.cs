@@ -1,11 +1,4 @@
 using System;
-using System.IO;
-using System.Linq;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -41,59 +34,25 @@ public partial class PlayerWindow
     }
 
     private bool TryGetCurrentTimeInternal(out TimeSpan time)
-        => PlayerPlaybackGateway.TryGetCurrentTime(
-            () => _playerTimelineHost.TimeMilliseconds ?? 0,
-            out time);
+        => _playerPlaybackController.TryGetCurrentTime(out time);
 
     private bool TrySeekToInternal(TimeSpan time)
-        => PlayerPlaybackGateway.TrySeekTo(
-            time,
-            () => _playerTimelineHost.LengthMilliseconds ?? 0,
-            _playerTimelineHost.SeekMilliseconds,
-            EnsurePlaying,
-            UpdateUi);
+        => _playerPlaybackController.TrySeekTo(time);
 
     private void TogglePlayPause()
-        => PlayerPlaybackCommandRunner.TogglePlayPause(
-            EnsurePlaying,
-            () => _playerPlaybackControlHost.IsPlaying,
-            _playerPlaybackControlHost.SetPause);
+        => _playerPlaybackController.TogglePlayPause();
 
     private void EnsurePlaying()
-        => PlayerPlaybackStartWorkflow.EnsurePlaying(
-            new PlayerPlaybackEnsurePlayingRequest(
-                _playerPlaybackControlHost.ShouldStartPlayback,
-                _playbackContext.VideoPath),
-            new PlayerPlaybackEnsurePlayingActions(Play));
+        => _playerPlaybackController.EnsurePlaying();
 
     private void JumpSeconds(int seconds)
-        => PlayerPlaybackCommandRunner.JumpSeconds(
-            _playerTimelineHost.TimeMilliseconds ?? 0,
-            _playerTimelineHost.LengthMilliseconds ?? 0,
-            seconds,
-            _playerTimelineHost.SeekMilliseconds,
-            ClearDetectionOverlays,
-            UpdateUi);
+        => _playerPlaybackController.JumpSeconds(seconds);
 
     private void Play(string path)
-        => PlayerPlaybackStartWorkflow.Play(
-            new PlayerPlaybackStartRequest(path),
-            new PlayerPlaybackStartActions(
-                _playerPlaybackControlHost.PlayPath,
-                _playerTimerController.StartUpdateTimer,
-                _playerControlInputController.UpdateRateLabel));
+        => _playerPlaybackController.Play(path);
 
     private void UpdateUi()
-        => PlayerUiUpdateWorkflow.Execute(
-            new PlayerUiUpdateWorkflowRequest(
-                _positionSliderStateController.IsDragging,
-                _codingModeState.IsCodingMode,
-                _playerTimelineHost.TimeMilliseconds ?? 0,
-                _playerTimelineHost.LengthMilliseconds ?? 0),
-            new PlayerUiUpdateWorkflowActions(
-                _positionControls.ApplyPlaybackState,
-                _playerControlInputController.UpdateRateLabel,
-                UpdateCodingCurrentCode));
+        => _playerPlaybackController.UpdateUi();
 
     // Quick-Scan
 }

@@ -214,7 +214,9 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
         var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Controls.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackState.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs");
         var gatewayPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackGateway.cs");
         var startWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackStartWorkflow.cs");
         var sliderSeekControllerPath = Path.Combine(uiRoot, "Player", "PlayerSliderSeekController.cs");
@@ -234,8 +236,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.True(File.Exists(dialogWorkflowPath), "Playback-Dialogaufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlInputPath), "Geschwindigkeit und Bedieneinstellungen sollen ausserhalb der PlayerWindow-Partials gesteuert werden.");
         Assert.True(File.Exists(positionInputPath), "Positionsleisten-Eingaben sollen ausserhalb der PlayerWindow-Partials gesteuert werden.");
+        Assert.True(File.Exists(controllerPath), "Die zusammenhaengende Wiedergabesteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var controller = File.ReadAllText(controllerPath);
         var policy = File.ReadAllText(policyPath);
         var gateway = File.ReadAllText(gatewayPath);
         var startWorkflow = File.Exists(startWorkflowPath) ? File.ReadAllText(startWorkflowPath) : "";
@@ -248,28 +253,29 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
         var dialogWorkflow = File.Exists(dialogWorkflowPath) ? File.ReadAllText(dialogWorkflowPath) : "";
 
-        Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", playback);
-        Assert.Contains("PlayerPlaybackGateway.TrySeekTo", playback);
-        Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", playback);
-        Assert.Contains("PlayerPlaybackStartWorkflow.Play", playback);
-        Assert.Contains("PlayerPlaybackCommandRunner.TogglePlayPause", playback);
-        Assert.Contains("PlayerPlaybackCommandRunner.JumpSeconds", playback);
+        Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", controller);
+        Assert.Contains("PlayerPlaybackGateway.TrySeekTo", controller);
+        Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", controller);
+        Assert.Contains("PlayerPlaybackStartWorkflow.Play", controller);
+        Assert.Contains("PlayerPlaybackCommandRunner.TogglePlayPause", controller);
+        Assert.Contains("PlayerPlaybackCommandRunner.JumpSeconds", controller);
         Assert.Contains("PlayerSliderSeekController.SeekToSlider", positionInput);
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", positionInput);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", positionInput);
         AssertNoForbiddenTokens(
-            playback,
+            playback + controller,
             "PlayerPlaybackDialogServiceFactory.Create",
             "new PlayerPlaybackDialogWorkflowActions",
             "PlayerPlaybackDialogWorkflow.ShowUnsupportedRate",
             "PlayerSliderSeekController.",
             "_speedControls.Update");
-        Assert.Contains("_positionControls.ApplyPlaybackState", playback);
+        Assert.Contains("_actions.ApplyPlaybackState", controller);
+        Assert.Contains("_positionControls.ApplyPlaybackState", windowRoot);
         Assert.Contains("PlayerPlaybackCommandRunner.SetSpeed", controlInput);
         Assert.Contains("_speedControls.Update", controlInput);
         Assert.Contains("if (!IsEnabled)", controlInput);
         AssertNoForbiddenTokens(
-            playback,
+            playback + controller,
             "_player.SetPause(_player.IsPlaying)",
             "PlayerPlaybackState.AddSeconds",
             "PlayerPlaybackState.ResolveSliderSeekTarget",
@@ -328,6 +334,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs");
         var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
         var controlInputPath = Path.Combine(uiRoot, "Player", "PlayerControlInputController.cs");
         var positionInputPath = Path.Combine(uiRoot, "Player", "PlayerPositionInputController.cs");
@@ -344,9 +351,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.True(File.Exists(lastOpenedPlaybackWorkflowPath), "Last-opened-Playback-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlInputPath), "Player-Bedieneingaben sollen in einem eigenen Controller liegen.");
         Assert.True(File.Exists(positionInputPath), "Positionsleisten-Eingaben sollen in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(controllerPath), "Wiedergabe-Kommandos und laufende Anzeige sollen in einem eigenen Controller liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
+        var controller = File.ReadAllText(controllerPath);
         var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
         var controlInput = File.Exists(controlInputPath) ? File.ReadAllText(controlInputPath) : "";
         var positionInput = File.Exists(positionInputPath) ? File.ReadAllText(positionInputPath) : "";
@@ -361,9 +370,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "private void PositionSlider_ValueChanged",
             "private void SetSpeed",
             "private void UpdateSpeedButtons");
-        Assert.Contains("PlayerUiUpdateWorkflow.Execute", playback);
-        Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", playback);
-        Assert.Contains("PlayerPlaybackStartWorkflow.Play", playback);
+        Assert.Contains("_playerPlaybackController", playback);
+        Assert.Contains("PlayerUiUpdateWorkflow.Execute", controller);
+        Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", controller);
+        Assert.Contains("PlayerPlaybackStartWorkflow.Play", controller);
         Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TryGetCurrentTime", playback);
         Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TrySeekTo", playback);
         AssertNoForbiddenTokens(
@@ -373,9 +383,9 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "if (_playerPlaybackControlHost.ShouldStartPlayback)",
             "if (_lastOpened is null)");
         Assert.Contains("private void Play_Click", controls);
-        Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
-        Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
-        Assert.Contains("PlayerPlaybackCommandRunner.Stop", controls);
+        Assert.Contains("_playerPlaybackController.Resume", controls);
+        Assert.Contains("_playerPlaybackController.Pause", controls);
+        Assert.Contains("_playerPlaybackController.Stop", controls);
         Assert.Contains("_playerControlInputController.SetSpeed", controls);
         Assert.Contains("_playerControlInputController.SetVolume", controls);
         Assert.Contains("_playerControlInputController.SetMuted", controls);
@@ -413,6 +423,9 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("public static void Play", commandRunner);
         Assert.Contains("public static void Pause", commandRunner);
         Assert.Contains("public static void Stop", commandRunner);
+        Assert.Contains("PlayerPlaybackCommandRunner.Play", controller);
+        Assert.Contains("PlayerPlaybackCommandRunner.Pause", controller);
+        Assert.Contains("PlayerPlaybackCommandRunner.Stop", controller);
         Assert.Contains("request.IsDragging", uiUpdateWorkflow);
         Assert.Contains("actions.ApplyPlaybackState", uiUpdateWorkflow);
         Assert.Contains("actions.UpdateCodingCurrentCode", uiUpdateWorkflow);
@@ -430,27 +443,21 @@ public sealed class PlayerWindowPlaybackArchitectureTests
     public void PlayerWindow_playback_timeline_reads_through_timeline_host()
     {
         var root = FindRepositoryRoot();
+        var playerRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Player");
         var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
-        var paths = new[]
-        {
-            "PlayerWindow.Playback.cs",
-            "PlayerWindow.Playback.Snapshot.cs"
-        };
+        var controllerPath = Path.Combine(playerRoot, "PlayerPlaybackController.cs");
+        var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Snapshot.cs");
+        var controller = File.ReadAllText(controllerPath);
+        var snapshot = File.ReadAllText(snapshotPath);
 
-        foreach (var fileName in paths)
-        {
-            var path = Path.Combine(windowsRoot, fileName);
-            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
-
-            var text = File.ReadAllText(path);
-            Assert.Contains("_playerTimelineHost", text);
-            AssertNoForbiddenTokens(
-                text,
-                "_player.Time",
-                "_player.Length",
-                "_player?.Time",
-                "_player?.Length");
-        }
+        Assert.Contains("_timelineHost", controller);
+        Assert.Contains("_playerTimelineHost", snapshot);
+        AssertNoForbiddenTokens(
+            controller + snapshot,
+            "_player.Time",
+            "_player.Length",
+            "_player?.Time",
+            "_player?.Length");
 
         var positionInputPath = Path.Combine(
             root,
@@ -467,49 +474,54 @@ public sealed class PlayerWindowPlaybackArchitectureTests
     public void PlayerWindow_keyboard_slider_and_button_playback_uses_control_host()
     {
         var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
-        var paths = new[]
+        var hostPaths = new[]
         {
-            "PlayerWindow.Keyboard.cs",
-            "PlayerWindow.Wiring.PositionSlider.cs",
-            "PlayerWindow.Playback.Controls.cs",
-            "PlayerWindow.Playback.Lifecycle.cs",
-            "PlayerWindow.Playback.cs"
+            Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs"),
+            Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs")
         };
 
-        foreach (var fileName in paths)
+        foreach (var path in hostPaths)
         {
-            var path = Path.Combine(windowsRoot, fileName);
-            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss existieren.");
 
             var text = File.ReadAllText(path);
-            Assert.Contains("_playerPlaybackControlHost", text);
+            Assert.True(
+                text.Contains("_playerPlaybackControlHost", StringComparison.Ordinal)
+                || text.Contains("_playbackHost", StringComparison.Ordinal));
             AssertNoForbiddenTokens(
                 text,
                 "_player.SetPause",
                 "_player.IsPlaying",
                 "_player.Stop");
         }
+
+        var controls = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs"));
+        var playback = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Playback.cs"));
+        Assert.Contains("_playerPlaybackController", controls);
+        Assert.Contains("_playerPlaybackController", playback);
     }
 
     [Fact]
     public void PlayerWindow_playback_rate_uses_control_host()
     {
         var root = FindRepositoryRoot();
-        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var playerRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Player");
         var paths = new[]
         {
-            "PlayerWindow.Playback.cs",
-            "PlayerWindow.Playback.Controls.cs"
+            Path.Combine(playerRoot, "PlayerPlaybackController.cs"),
+            Path.Combine(playerRoot, "PlayerControlInputController.cs")
         };
 
-        foreach (var fileName in paths)
+        foreach (var path in paths)
         {
-            var path = Path.Combine(windowsRoot, fileName);
-            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss existieren.");
 
             var text = File.ReadAllText(path);
-            Assert.Contains("_playerPlaybackControlHost", text);
+            Assert.Contains("_playbackHost", text);
             AssertNoForbiddenTokens(
                 text,
                 "_player.Rate",
@@ -521,16 +533,21 @@ public sealed class PlayerWindowPlaybackArchitectureTests
     public void PlayerWindow_playback_start_uses_control_host()
     {
         var root = FindRepositoryRoot();
-        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs");
 
-        Assert.True(File.Exists(playbackPath), "Playback-Start soll im Playback-Partial bleiben, aber ueber den Host laufen.");
+        Assert.True(File.Exists(controllerPath), "Playback-Start soll ausserhalb des PlayerWindow ueber den Host laufen.");
 
         var playback = File.ReadAllText(playbackPath);
+        var controller = File.ReadAllText(controllerPath);
 
-        Assert.Contains("_playerPlaybackControlHost", playback);
+        Assert.Contains("_playerPlaybackController", playback);
+        Assert.Contains("_playbackHost", controller);
+        AssertNoForbiddenTokens(playback, "_playerPlaybackControlHost");
         AssertNoForbiddenTokens(
-            playback,
+            controller,
             "_player.State",
             "_player.Play(media)",
             "new Media(");

@@ -6,21 +6,13 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void Play_Click(object sender, RoutedEventArgs e)
-        => PlayerPlaybackCommandRunner.Play(
-            EnsurePlaying,
-            _playerPlaybackControlHost.SetPause,
-            _playerControlInputController.UpdateRateLabel,
-            ClearDetectionOverlays);
+        => _playerPlaybackController.Resume();
 
     private void Pause_Click(object sender, RoutedEventArgs e)
-        => PlayerPlaybackCommandRunner.Pause(
-            _playerPlaybackControlHost.SetPause,
-            _playerControlInputController.UpdateRateLabel);
+        => _playerPlaybackController.Pause();
 
     private void Stop_Click(object sender, RoutedEventArgs e)
-        => PlayerPlaybackCommandRunner.Stop(
-            _playerPlaybackControlHost.Stop,
-            _playerControlInputController.UpdateRateLabel);
+        => _playerPlaybackController.Stop();
 
     private void Speed05_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(0.5f);
 

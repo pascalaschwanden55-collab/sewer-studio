@@ -9,6 +9,7 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
+    private readonly PlayerPlaybackController _playerPlaybackController;
 
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;

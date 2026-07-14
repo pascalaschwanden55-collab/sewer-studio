@@ -67,6 +67,18 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _playerPlaybackController = new PlayerPlaybackController(
+            _playbackContext.VideoPath,
+            _playerPlaybackControlHost,
+            _playerTimelineHost,
+            () => _positionSliderStateController.IsDragging,
+            () => _codingModeState.IsCodingMode,
+            new PlayerPlaybackControllerActions(
+                _playerTimerController.StartUpdateTimer,
+                _playerControlInputController.UpdateRateLabel,
+                ClearDetectionOverlays,
+                _positionControls.ApplyPlaybackState,
+                UpdateCodingCurrentCode));
         _playerControlInputController.Initialize();
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
