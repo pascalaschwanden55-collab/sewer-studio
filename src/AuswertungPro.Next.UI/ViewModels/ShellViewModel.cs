@@ -161,7 +161,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                     playVideo: KarteVideoLauncher.Create(_sp),
                     inspectionProtocolFiles: _sp.InspectionProtocolFiles,
                     katasterXtfPaths: _sp.KatasterXtfPaths,
-                    offlineBasemapPaths: _sp.OfflineBasemapPaths)
+                    offlineBasemapPaths: _sp.OfflineBasemapPaths,
+                    basemapLayers: _sp.BasemapLayers)
             }),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
                 getProject: () => Project,

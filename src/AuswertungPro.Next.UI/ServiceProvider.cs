@@ -108,6 +108,7 @@ namespace AuswertungPro.Next.UI
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
         public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
         public IVsaCatalogPathResolver VsaCatalogPaths { get; }
+        public Mapping.IKarteBasemapLayerFactory BasemapLayers { get; }
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
@@ -263,6 +264,8 @@ namespace AuswertungPro.Next.UI
             Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
             OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
             Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
+            BasemapLayers = new Mapping.KarteBasemapLayerService();
+            Mapping.KarteBasemapLayerFactory.Use(BasemapLayers);
             VsaCatalogPaths = new VsaCatalogFilePathResolver();
             Services.VsaCatalogPathResolver.Use(VsaCatalogPaths);
             SettingsRestorePoints = new SettingsRestorePointStore();
@@ -697,6 +700,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
+            if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;
             if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;

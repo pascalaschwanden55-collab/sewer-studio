@@ -33,6 +33,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IOfflineBasemapPathResolver _offlineBasemapPaths;
+    private readonly IKarteBasemapLayerFactory _basemapLayers;
 
     private string XtfPath => _katasterXtfPaths.Resolve(
         _settings.AbwasserkatasterXtfPath,
@@ -103,7 +104,8 @@ public sealed partial class KarteViewModel : ObservableObject
             playVideo: KarteVideoLauncher.Create(services),
             inspectionProtocolFiles: services.InspectionProtocolFiles,
             katasterXtfPaths: services.KatasterXtfPaths,
-            offlineBasemapPaths: services.OfflineBasemapPaths)
+            offlineBasemapPaths: services.OfflineBasemapPaths,
+            basemapLayers: services.BasemapLayers)
     {
     }
 
@@ -114,7 +116,8 @@ public sealed partial class KarteViewModel : ObservableObject
         Action<string, HaltungRecord> playVideo,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         IKatasterXtfPathResolver? katasterXtfPaths = null,
-        IOfflineBasemapPathResolver? offlineBasemapPaths = null)
+        IOfflineBasemapPathResolver? offlineBasemapPaths = null,
+        IKarteBasemapLayerFactory? basemapLayers = null)
     {
         _shell = shell;
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -124,6 +127,7 @@ public sealed partial class KarteViewModel : ObservableObject
             ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _offlineBasemapPaths = offlineBasemapPaths ?? OfflineBasemapBaseResolver.CompatibilityService;
+        _basemapLayers = basemapLayers ?? KarteBasemapLayerFactory.CompatibilityService;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
         SchliesseInfoCommand = new RelayCommand(() =>
@@ -144,9 +148,9 @@ public sealed partial class KarteViewModel : ObservableObject
 
         // ── Hintergrundkarte: Satellit + AV-Karte offline (lokal) + OpenStreetMap online ──
         // Aufbau in KarteBasemapLayerFactory ausgelagert; hier nur einhaengen + auswaehlen.
-        _satellitBasemap = KarteBasemapLayerFactory.CreateOfflineSatellit(OfflineBasemapPath);
-        _avBasemap = KarteBasemapLayerFactory.CreateOfflineAv(OfflineBasemapPath);
-        _osmBasemap = KarteBasemapLayerFactory.CreateOsmOnline();
+        _satellitBasemap = _basemapLayers.CreateOfflineSatellit(OfflineBasemapPath);
+        _avBasemap = _basemapLayers.CreateOfflineAv(OfflineBasemapPath);
+        _osmBasemap = _basemapLayers.CreateOsmOnline();
         // Reihenfolge egal — es ist immer genau eine aktiv (ApplyBasemapSelection).
         if (_satellitBasemap is not null) map.Layers.Add(_satellitBasemap);
         if (_avBasemap is not null) map.Layers.Add(_avBasemap);
