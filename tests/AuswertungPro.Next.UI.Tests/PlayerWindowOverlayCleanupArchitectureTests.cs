@@ -10,6 +10,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var viewportPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Viewport.cs");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
@@ -26,6 +27,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.True(File.Exists(lifecycleWorkflowPath), "AI-Overlay-Auto-Hide/Fade-Out-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(autoHideTimerOwnerPath), "AI-Overlay-Auto-Hide-Timerbesitz soll ausserhalb der PlayerWindow-Partials liegen.");
 
+        var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var policy = File.ReadAllText(policyPath);
@@ -50,6 +52,23 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.Contains("public static bool ShouldRemoveTransientTag", policy);
         Assert.Contains("OverlayTags.ToolBadge", policy);
         Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag", cleaner);
+
+        var forbiddenPartialTokens = new[]
+        {
+            "CodingOverlayCanvasCleaner.ClearTransient",
+            "CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag",
+            ".OfType<FrameworkElement>()",
+            "tag == OverlayTags.ToolBadge ||",
+            "clearManualOverlay && tag == OverlayTags.Manual"
+        };
+
+        Assert.DoesNotContain(forbiddenPartialTokens, token => overlayInput.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenPartialTokens, token => viewport.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain("_detectionAutoHideTimer", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatcherTimer?", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearAiOverlays", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain("TimeSpan.FromMilliseconds(800)", lifecycle, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -97,5 +116,19 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.Contains("DetectionOverlayCleaner.ClearCanvas", controller);
         Assert.Contains("public static void ClearFindings", cleaner);
         Assert.Contains("public static void ClearCanvas", cleaner);
+
+        var forbiddenCleanupTokens = new[]
+        {
+            "DetectionOverlayCleaner.",
+            "DetectionCanvas.Children.Clear()"
+        };
+
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain("TimeSpan.FromSeconds(3)", lifecycle, StringComparison.Ordinal);
+        Assert.DoesNotContain(forbiddenCleanupTokens, token => lifecycle.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenCleanupTokens, token => aiEvents.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain("CodingFindingsList.ItemsSource = null", aiEvents, StringComparison.Ordinal);
+        Assert.DoesNotContain(forbiddenCleanupTokens, token => exit.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenCleanupTokens, token => liveStop.Contains(token, StringComparison.Ordinal));
     }
 }
