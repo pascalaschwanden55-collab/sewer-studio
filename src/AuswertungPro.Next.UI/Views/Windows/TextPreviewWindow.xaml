@@ -12,9 +12,9 @@
                  AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto"
-                 Background="{StaticResource CardBrush}"
-                 Foreground="{StaticResource TextBrush}"
-                 BorderBrush="{StaticResource BorderBrush}"
+                 Background="{DynamicResource CardBrush}"
+                 Foreground="{DynamicResource TextBrush}"
+                 BorderBrush="{DynamicResource BorderBrush}"
                  BorderThickness="1"
                  Padding="8"/>
     </Grid>

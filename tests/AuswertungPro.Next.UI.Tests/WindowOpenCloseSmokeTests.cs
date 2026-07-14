@@ -16,6 +16,18 @@ public sealed class WindowOpenCloseSmokeTests
         });
     }
 
+    [Fact]
+    public void Fachfenster_lassen_sich_oeffnen_und_wieder_schliessen()
+    {
+        StaTestRunner.Run(() =>
+        {
+            OpenAndClose(new HydraulikPanelWindow());
+            OpenAndClose(new FloatingGridWindow());
+            OpenAndClose(new LiveFrameWindow());
+            OpenAndClose(new TextPreviewWindow("Test", "Inhalt"));
+        });
+    }
+
     private static void OpenAndClose(Window window)
     {
         window.ShowActivated = false;
