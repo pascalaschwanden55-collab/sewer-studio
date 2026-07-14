@@ -12,6 +12,9 @@ public interface ITrainingSampleStore
     /// <summary>Laedt alle vorhandenen Trainingssamples.</summary>
     Task<List<TrainingSample>> LoadAsync();
 
+    /// <summary>Ersetzt den gespeicherten Bestand atomar.</summary>
+    Task SaveAsync(List<TrainingSample> samples);
+
     /// <summary>
     /// Aktualisiert vorhandene Samples in-place (per Signatur-Match) oder
     /// fuegt neue hinzu. Race-Condition-sicher (Load-Merge-Save unter Lock).

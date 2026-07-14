@@ -27,6 +27,13 @@ public sealed class ReviewApprovalServiceTests
         public Task<List<TrainingSample>> LoadAsync() =>
             Task.FromResult(new List<TrainingSample>(_samples));
 
+        public Task SaveAsync(List<TrainingSample> samples)
+        {
+            _samples.Clear();
+            _samples.AddRange(samples);
+            return Task.CompletedTask;
+        }
+
         public Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)
         {
             foreach (var s in samples)

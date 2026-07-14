@@ -158,6 +158,7 @@ namespace AuswertungPro.Next.UI
         public ISelfTrainingHistoryStore SelfTrainingHistory { get; }
         public ITeacherAnnotationStore TeacherAnnotations { get; }
         public IAiOptimizationSessionStore AiOptimizationSessions { get; }
+        public ITrainingSampleStore TrainingSamples { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -222,6 +223,11 @@ namespace AuswertungPro.Next.UI
             AiOptimizationSessions = new AiOptimizationSessionFileStore(
                 Path.Combine(AppSettings.AppDataDir, "ai_sanierung_sessions.json"));
             AiOptimizationSessionStore.Use(AiOptimizationSessions);
+            var trainingSamples = new TrainingSampleFileStore(
+                KnowledgeBasePaths.GetTrainingSamplesPath());
+            trainingSamples.ConfigureEvalProtection(settings.EvalSetRoot);
+            TrainingSamples = trainingSamples;
+            TrainingSamplesStore.Use(trainingSamples);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -295,7 +301,6 @@ namespace AuswertungPro.Next.UI
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
-            TrainingSamplesStore.ConfigureEvalProtection(settings.EvalSetRoot);
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();
@@ -578,6 +583,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
             if (serviceType == typeof(ITeacherAnnotationStore)) return TeacherAnnotations;
             if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
+            if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

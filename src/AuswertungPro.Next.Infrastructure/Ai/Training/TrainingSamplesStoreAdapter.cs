@@ -10,15 +10,31 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 public sealed class TrainingSamplesStoreAdapter : ITrainingSampleStore
 {
+    private readonly ITrainingSampleStore _store;
+
+    public TrainingSamplesStoreAdapter()
+        : this(TrainingSamplesStore.Current)
+    {
+    }
+
+    public TrainingSamplesStoreAdapter(ITrainingSampleStore store)
+    {
+        _store = store ?? throw new ArgumentNullException(nameof(store));
+    }
+
     /// <inheritdoc />
     public Task<List<TrainingSample>> LoadAsync() =>
-        TrainingSamplesStore.LoadAsync();
+        _store.LoadAsync();
+
+    /// <inheritdoc />
+    public Task SaveAsync(List<TrainingSample> samples) =>
+        _store.SaveAsync(samples);
 
     /// <inheritdoc />
     public Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples) =>
-        TrainingSamplesStore.MergeOrUpdateAsync(samples);
+        _store.MergeOrUpdateAsync(samples);
 
     /// <inheritdoc />
     public Task MergeAndSaveAsync(List<TrainingSample> samples) =>
-        TrainingSamplesStore.MergeAndSaveAsync(samples);
+        _store.MergeAndSaveAsync(samples);
 }
