@@ -69,6 +69,7 @@ namespace AuswertungPro.Next.UI
         public AppSettings Settings { get; }
         public ISettingsRestorePointStore SettingsRestorePoints { get; }
         public ISettingsFileStore SettingsFiles { get; }
+        public ISettingsQuarantineStore SettingsQuarantine { get; }
         public IExplorerRevealService ExplorerReveal { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -205,9 +206,25 @@ namespace AuswertungPro.Next.UI
         #endregion
 
         public ServiceProvider(AppSettings settings, DiagnosticsOptions diagnostics, ILogger logger, ILoggerFactory loggerFactory)
-                // Removed misplaced property initialization
+            : this(
+                settings,
+                diagnostics,
+                logger,
+                loggerFactory,
+                new SettingsQuarantineStore())
+        {
+        }
+
+        internal ServiceProvider(
+            AppSettings settings,
+            DiagnosticsOptions diagnostics,
+            ILogger logger,
+            ILoggerFactory loggerFactory,
+            ISettingsQuarantineStore settingsQuarantine)
         {
             Settings = settings;
+            SettingsQuarantine = settingsQuarantine
+                ?? throw new ArgumentNullException(nameof(settingsQuarantine));
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
@@ -599,6 +616,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
+            if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;

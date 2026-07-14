@@ -1,5 +1,6 @@
 using System;
-using System.IO;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Settings;
 
 namespace AuswertungPro.Next.UI;
 
@@ -9,6 +10,10 @@ namespace AuswertungPro.Next.UI;
 /// </summary>
 internal static class SettingsQuarantine
 {
+    private static readonly SettingsQuarantineStore DefaultStoreInstance = new();
+
+    internal static ISettingsQuarantineStore DefaultStore => DefaultStoreInstance;
+
     /// <summary>
     /// Berechnet den Quarantaene-Zielpfad fuer eine korrupte Settings-Datei.
     /// Reine Funktion — kein I/O.
@@ -16,10 +21,7 @@ internal static class SettingsQuarantine
     /// <param name="appDataDir">App-Daten-Verzeichnis.</param>
     /// <param name="utcNow">Zeitstempel fuer den Dateinamen (UTC).</param>
     internal static string BuildQuarantinePath(string appDataDir, DateTime utcNow)
-    {
-        var stamp = utcNow.ToString("yyyyMMdd-HHmmssfff");
-        return Path.Combine(appDataDir, $"settings.corrupt-{stamp}.json");
-    }
+        => DefaultStoreInstance.BuildQuarantinePath(appDataDir, utcNow);
 
     /// <summary>
     /// Versucht, die korrupte Settings-Datei in Quarantaene zu verschieben.
@@ -35,52 +37,9 @@ internal static class SettingsQuarantine
         string appDataDir,
         Exception originalException,
         Action<string, Exception?> logAction)
-    {
-        string? quarantinePath = null;
-
-        try
-        {
-            if (!File.Exists(settingsPath))
-            {
-                logAction("Settings-Load meldete korrupte Daten, aber settings.json wurde nicht gefunden.", originalException);
-                return;
-            }
-
-            Directory.CreateDirectory(appDataDir);
-            quarantinePath = BuildQuarantinePath(appDataDir, DateTime.UtcNow);
-
-            File.Move(settingsPath, quarantinePath, overwrite: false);
-            logAction($"Korrupte settings.json wurde nach '{quarantinePath}' verschoben.", originalException);
-        }
-        catch (Exception moveEx)
-        {
-            try
-            {
-                if (!File.Exists(settingsPath))
-                    return;
-
-                quarantinePath ??= BuildQuarantinePath(appDataDir, DateTime.UtcNow);
-                File.Copy(settingsPath, quarantinePath, overwrite: false);
-
-                try
-                {
-                    File.Delete(settingsPath);
-                }
-                catch
-                {
-                    // Best-effort-Loeschen; falls fehlgeschlagen, startet die App trotzdem mit Standardwerten.
-                }
-
-                logAction(
-                    $"Korrupte settings.json wurde nach fehlgeschlagenem Move nach '{quarantinePath}' kopiert.",
-                    new AggregateException(originalException, moveEx));
-            }
-            catch (Exception copyEx)
-            {
-                logAction(
-                    "Korrupte settings.json konnte nicht in Quarantaene verschoben werden. Es werden Standardwerte verwendet.",
-                    new AggregateException(originalException, moveEx, copyEx));
-            }
-        }
-    }
+        => DefaultStoreInstance.TryMoveToQuarantine(
+            settingsPath,
+            appDataDir,
+            originalException,
+            logAction);
 }

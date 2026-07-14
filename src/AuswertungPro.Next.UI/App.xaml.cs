@@ -20,6 +20,7 @@ using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Projects;
+using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Application.Protocol;
@@ -79,7 +80,8 @@ namespace AuswertungPro.Next.UI
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
                 // Settings
-                var settings = AppSettings.Load();
+                var settingsQuarantine = new SettingsQuarantineStore();
+                var settings = AppSettings.Load(settingsQuarantine);
                 WindowStateManager.Configure(settings);
                 ViewCustomizationStore.Configure(settings);
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
@@ -118,7 +120,12 @@ namespace AuswertungPro.Next.UI
                     ExplicitPdfToTextPath = settings.PdfToTextPath
                 };
 
-                _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
+                _services = new ServiceProvider(
+                    settings,
+                    diagnostics,
+                    logger,
+                    loggerFactory,
+                    settingsQuarantine);
                 DialogHost.Configure(_services.Dialogs);
                 var splashReadyTask = splash.SignalReadyAsync();
 

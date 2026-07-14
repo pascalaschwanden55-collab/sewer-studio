@@ -232,7 +232,12 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     private static string LogsDir => Path.Combine(AppDataDir, "logs");
 
     public static AppSettings Load()
+        => Load(SettingsQuarantine.DefaultStore);
+
+    internal static AppSettings Load(ISettingsQuarantineStore settingsQuarantine)
     {
+        ArgumentNullException.ThrowIfNull(settingsQuarantine);
+
         try
         {
             MigrateLegacySettingsIfNeeded();
@@ -248,7 +253,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         }
         catch (JsonException ex)
         {
-            TryQuarantineCorruptSettings(ex);
+            TryQuarantineCorruptSettings(ex, settingsQuarantine);
             return new AppSettings();
         }
         catch (Exception ex)
@@ -368,8 +373,14 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         ISettingsFileStore settingsFileStore)
         => settingsFileStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
 
-    private static void TryQuarantineCorruptSettings(Exception ex)
-        => SettingsQuarantine.TryMoveToQuarantine(SettingsPath, AppDataDir, ex, TryAppendSettingsLog);
+    private static void TryQuarantineCorruptSettings(
+        Exception ex,
+        ISettingsQuarantineStore settingsQuarantine)
+        => settingsQuarantine.TryMoveToQuarantine(
+            SettingsPath,
+            AppDataDir,
+            ex,
+            TryAppendSettingsLog);
 
     private static void TryAppendSettingsLog(string message, Exception? ex = null)
     {
