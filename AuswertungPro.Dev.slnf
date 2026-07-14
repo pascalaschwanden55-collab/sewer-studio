@@ -1,0 +1,15 @@
+{
+  "solution": {
+    "path": "AuswertungPro.sln",
+    "projects": [
+      "src\\AuswertungPro.Next.Application\\AuswertungPro.Next.Application.csproj",
+      "src\\AuswertungPro.Next.Domain\\AuswertungPro.Next.Domain.csproj",
+      "src\\AuswertungPro.Next.Infrastructure\\AuswertungPro.Next.Infrastructure.csproj",
+      "src\\AuswertungPro.Next.UI\\AuswertungPro.Next.UI.csproj",
+      "tests\\AuswertungPro.Next.Infrastructure.Tests\\AuswertungPro.Next.Infrastructure.Tests.csproj",
+      "tests\\AuswertungPro.Next.Pipeline.Tests\\AuswertungPro.Next.Pipeline.Tests.csproj",
+      "tests\\AuswertungPro.Next.UI.Tests\\AuswertungPro.Next.UI.Tests.csproj",
+      "tests\\ProjectModernizer.Tests\\ProjectModernizer.Tests.csproj"
+    ]
+  }
+}

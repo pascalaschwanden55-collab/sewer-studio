@@ -83,10 +83,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **IBAK-FDB-Fehler isoliert (A6-06 erledigt):** Der vollständige IBAK-Import läuft mit einer ungültigen `Arizona.fdb` und einer gültigen `Daten.txt`. Der optionale FDB-Fotozugriff fällt mit klarer Meldung auf die Dateinamenslogik zurück, die Haltung aus `Daten.txt` wird trotzdem importiert und das Kundenoriginal bleibt bytegenau unverändert. Damit sind die vier geforderten Importer-Negativpfade abgedeckt.
 - **SAM/DINO ohne GPU startgeprüft (A6-07 erledigt):** Zwei schnelle CPU-Smokes ersetzen nur die schweren Fremdmodelle, durchlaufen aber die echten SewerStudio-Lader. Sie prüfen Modell- und Konfigurationsauswahl, CPU-Weitergabe sowie den Rückgabevertrag. Die bereits vorhandenen GPU-freien Endpunkttests schützen zusätzlich das Antwortschema und die sichtbare Fehlerkennzeichnung.
 - **KB-Parallelzugriff geprüft (A6-08 erledigt):** Ein echter Zwei-Verbindungs-Test hält die Neuaufbau-Transaktion absichtlich offen. Die Suche bleibt dank WAL lesbar, sieht währenddessen den letzten vollständigen Bestand und übernimmt nach dem Commit automatisch die neuen Datensätze. Der Test ist auf zwei Sekunden begrenzt und würde eine Datenbanksperre sichtbar machen.
+- **Schneller Alltags-Build ergänzt (A8-03 erledigt):** `AuswertungPro.Dev.slnf` enthält ausdrücklich nur die vier Produkt- und vier Testprojekte. Benötigte Projektverweise werden weiterhin automatisch gebaut, die übrigen eigenständigen Hilfsprogramme aber nicht mehr. README und ein Architekturtest schützen die Nutzung und den schlanken Inhalt.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.789 Tests bestanden (2.521 Infrastruktur, 1.819 Pipeline, 4.387 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
+- **Gesamtprüfung grün:** 8.790 Tests bestanden (2.521 Infrastruktur, 1.819 Pipeline, 4.388 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 97 GPU-freie Sidecar-Tests grün.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -233,7 +234,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 |---|---|---|---|
 | A8-01 | Hoch → **erledigt** | `BestEffort.Write`, `App.xaml.cs` und `ReleaseOperationalLoggingArchitectureTests` | BestEffort-Warnungen gehen in das Tageslog, der Rückfall nutzt Release-taugliches `Trace`; `Debug.WriteLine` ist aus dem Produktionscode entfernt und der echte Dateilog ist getestet |
 | A8-02 | Mittel | `FindAncestor<T>` in ~7 Dateien dupliziert; 2× rohes `VisualTreeHelper.GetParent` | Auf zentrales `VisualTreeSafe.FindAncestor` konsolidieren |
-| A8-03 | Mittel | `AuswertungPro.sln` zieht 12 CLI-Tools in jeden Build; kein `.slnf` | Solution-Filter für den Alltag (4 src + 4 test) |
+| A8-03 | Mittel → **erledigt** | `AuswertungPro.Dev.slnf` + `DevelopmentSolutionFilterTests` | Alltagsfilter führt nur 4 Produkt- und 4 Testprojekte; notwendige Projektverweise bleiben automatisch enthalten, eigenständige Tools entfallen |
 | A8-04 | Mittel | `AGENTS.md` veraltet (beschreibt reines PDF-Tool, kein KI-Wort) | Auf Ist-Stand heben oder als Weiterleitung auf CLAUDE.md |
 | A8-05 | Niedrig | `DiagnosticsPageViewModel.cs:22-40` — nur heutiger Log-Tail, kein Export | „Log-Ordner öffnen" + „Diagnosepaket (ZIP)" ergänzen |
 | A8-06 | Niedrig | `Directory.Build.props` — keine Roslyn-Analyzer/Warnungs-Gate | `EnableNETAnalyzers=true`, `AnalysisLevel=latest-recommended` |
@@ -247,7 +248,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 2. **`A3-01`:** Token-Werte in `umgebung.txt`/`RESTORE-ANLEITUNG.txt` redigieren (Namensfilter).
 3. **`A2-01`:** ffmpeg bei Abbruch killen (`p.Kill(entireProcessTree:true)`).
 4. **`A2-05`/`A2-06`:** CTS disposen + Such-Timer im Unloaded stoppen.
-5. **`A8-03`:** `.slnf`-Solution-Filter (nur 4 src + 4 test) → schnellere Builds im Alltag.
+5. ✔ **`A8-03`:** `AuswertungPro.Dev.slnf` bietet den schlanken Alltags-Build mit 4 Produkt- und 4 Testprojekten.
 6. **`A8-06`:** Roslyn-Analyzer in `Directory.Build.props` aktivieren (ohne TreatWarningsAsErrors).
 7. **`A8-04`:** `AGENTS.md` auf CLAUDE.md umleiten (verhindert widersprüchliche Einstiegs-Doku).
 8. **`A4-02`:** NPK-Export in `Task.Run` auslagern (kein UI-Einfrieren).
@@ -296,7 +297,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 ### Release N+1 — „Sichtbarkeit & Sicherheitsnetz" (~1 Woche)
 - **Diagnose-Sichtbarkeit:** ✔ Release-Logging (`A8-01`) erledigt; Diagnosepaket (`A8-05`) und Fehler-Mapper (`A8-07`) bleiben offen.
 - **Test-Gate reparieren:** UI-Tests in den pre-push-Hook; `A1-09` (Guard je Typ); `A1-02`/`A1-03` (SchaechtePage-Fachlogik auslagern → Guard wieder grün).
-- **Quick Wins:** `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A8-06`, `A4-02`, `A5-02`/`A5-03`.
+- **Quick Wins:** ✔ `A3-01`, `A2-01`, `A2-05`, `A2-06`, `A8-03`, `A4-02`, `A5-02`/`A5-03`; offen bleibt `A8-06`.
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)

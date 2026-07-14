@@ -13,6 +13,8 @@ Windows-App (WPF) für:
   `SewerStudio.exe` aus dem erzeugten `artifacts\SewerStudio-...`-Ordner starten.
 - Entwicklung: `dotnet restore`, danach das Projekt
   `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj` starten.
+- Schneller Alltags-Build ohne die Hilfsprogramme: `dotnet build AuswertungPro.Dev.slnf`.
+  Vor einer Freigabe weiterhin die vollständige `AuswertungPro.sln` bauen und testen.
 - Neuer PC, Update und Wiederherstellung: `docs/NEUER-PC-SETUP.md`.
 
 ## pdftotext
