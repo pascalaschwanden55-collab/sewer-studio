@@ -32,6 +32,8 @@ public partial class PlayerWindow
 
     private PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner => _playerControllers.KeyboardActionControllerOwner;
 
+    private PlayerShortcutOverlayController _shortcutOverlayController => _playerControllers.ShortcutOverlayController;
+
     private PlayerWindowTimerController _playerTimerController => _playerControllers.TimerController;
 
     private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls;

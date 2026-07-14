@@ -8,22 +8,12 @@ public partial class PlayerWindow
 {
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (ShortcutOverlay.Visibility == System.Windows.Visibility.Visible)
-        {
-            if (e.Key is Key.Escape or Key.F1 or Key.OemQuestion)
-            {
-                HideShortcutOverlay();
-                e.Handled = true;
-            }
-            return;
-        }
-
-        if (e.Key is Key.F1 or Key.OemQuestion)
-        {
-            ShowShortcutOverlay();
+        var overlayOutcome = _shortcutOverlayController.HandleKey(e.Key);
+        if (overlayOutcome == PlayerShortcutOverlayKeyOutcome.Handled)
             e.Handled = true;
+
+        if (overlayOutcome != PlayerShortcutOverlayKeyOutcome.Continue)
             return;
-        }
 
         var keyboardActions = _keyboardActionControllerOwner.Ensure(
             new PlayerKeyboardActionControllerFactoryActions(
@@ -48,23 +38,17 @@ public partial class PlayerWindow
     private void ShowShortcutOverlay_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         e.Handled = true;
-        ShowShortcutOverlay();
+        _shortcutOverlayController.Show();
     }
 
     private void CloseShortcutOverlay_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         e.Handled = true;
-        HideShortcutOverlay();
+        _shortcutOverlayController.Hide();
     }
 
     private void ShortcutOverlayCard_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         => e.Handled = true;
-
-    private void ShowShortcutOverlay()
-        => ShortcutOverlay.Visibility = System.Windows.Visibility.Visible;
-
-    private void HideShortcutOverlay()
-        => ShortcutOverlay.Visibility = System.Windows.Visibility.Collapsed;
 
     private void CancelCodingOverlayShortcut()
         => PlayerCancelCodingOverlayShortcutWorkflow.Execute(

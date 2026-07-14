@@ -18,6 +18,7 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         var workflowPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardInputWorkflow.cs");
         var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionControllerFactory.cs");
+        var shortcutOverlayControllerPath = Path.Combine(uiRoot, "Player", "PlayerShortcutOverlayController.cs");
         var markToolShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolShortcutWorkflow.cs");
         var detectionShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerDetectionShortcutWorkflow.cs");
         var detectionShortcutControlsPath = Path.Combine(windowsRoot, "PlayerDetectionShortcutControls.cs");
@@ -29,6 +30,7 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         Assert.True(File.Exists(workflowPath), "Keyboard-Handled-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Keyboard-Controller-Bindings sollen ausserhalb des PlayerWindow-Partials gebaut werden.");
+        Assert.True(File.Exists(shortcutOverlayControllerPath), "Tastaturhilfe-Zustand und Tastenentscheidung sollen ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(markToolShortcutWorkflowPath), "Markierwerkzeug-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(detectionShortcutWorkflowPath), "Detection-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(detectionShortcutControlsPath), "Detection-Shortcut-Control-Actions sollen ausserhalb des PlayerWindow gebaut werden.");
@@ -41,6 +43,7 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
         var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
+        var shortcutOverlayController = File.Exists(shortcutOverlayControllerPath) ? File.ReadAllText(shortcutOverlayControllerPath) : "";
         var markToolShortcutWorkflow = File.Exists(markToolShortcutWorkflowPath) ? File.ReadAllText(markToolShortcutWorkflowPath) : "";
         var detectionShortcutWorkflow = File.Exists(detectionShortcutWorkflowPath) ? File.ReadAllText(detectionShortcutWorkflowPath) : "";
         var detectionShortcutControls = File.Exists(detectionShortcutControlsPath) ? File.ReadAllText(detectionShortcutControlsPath) : "";
@@ -60,6 +63,12 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         Assert.Contains("PlayerDetectionShortcutWorkflow.Execute", keyboard);
         Assert.Contains("PlayerDetectionShortcutControls.CreateActions", keyboard);
         Assert.Contains("PlayerCancelCodingOverlayShortcutWorkflow.Execute", keyboard);
+        Assert.Contains("_shortcutOverlayController.HandleKey", keyboard);
+        Assert.Contains("_shortcutOverlayController.Show", keyboard);
+        Assert.Contains("_shortcutOverlayController.Hide", keyboard);
+        Assert.DoesNotContain("ShortcutOverlay.Visibility", keyboard, StringComparison.Ordinal);
+        Assert.Contains("public sealed class PlayerShortcutOverlayController", shortcutOverlayController);
+        Assert.Contains("PlayerShortcutOverlayKeyOutcome.Blocked", shortcutOverlayController);
         Assert.Contains("_codingSessionHost", keyboard);
         Assert.Contains("_codingOverlayToolHost", keyboard);
         Assert.Contains("public sealed class PlayerKeyboardActionController", controller);

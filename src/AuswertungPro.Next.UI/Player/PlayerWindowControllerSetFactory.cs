@@ -12,6 +12,7 @@ public sealed record PlayerWindowControllerSet(
     PlayerPositionControls PositionControls,
     PlayerPositionSliderStateController PositionSliderStateController,
     PlayerKeyboardActionControllerOwner KeyboardActionControllerOwner,
+    PlayerShortcutOverlayController ShortcutOverlayController,
     PlayerWindowShutdownStateController ShutdownStateController,
     PlayerWindowTimerController TimerController,
     PlayerSpeedControls SpeedControls,
@@ -27,6 +28,7 @@ public sealed record PlayerWindowControllerSetControls(
     TextBlock QuickScanStatusText,
     TextBlock CurrentTimeText,
     TextBlock DurationText,
+    FrameworkElement ShortcutOverlay,
     TextBlock RateText,
     Slider SpeedSlider,
     ToggleButton Speed05Button,
@@ -103,6 +105,7 @@ public static class PlayerWindowControllerSetFactory
                 controls.DurationText),
             positionSliderStateController,
             keyboardActionControllerOwner,
+            new PlayerShortcutOverlayController(controls.ShortcutOverlay),
             shutdownStateController,
             timerController,
             new PlayerSpeedControls(

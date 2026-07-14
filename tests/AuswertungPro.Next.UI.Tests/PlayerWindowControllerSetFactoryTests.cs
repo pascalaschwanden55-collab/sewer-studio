@@ -22,6 +22,7 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 QuickScanStatusText: new TextBlock(),
                 CurrentTimeText: new TextBlock(),
                 DurationText: new TextBlock(),
+                ShortcutOverlay: new Border(),
                 RateText: new TextBlock(),
                 SpeedSlider: new Slider(),
                 Speed05Button: new ToggleButton(),
@@ -88,6 +89,10 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 typeof(PlayerWindowControllerSet).GetProperties(),
                 property => property.Name == "KeyboardActionControllerOwner"
                     && property.PropertyType == typeof(PlayerKeyboardActionControllerOwner));
+            Assert.Contains(
+                typeof(PlayerWindowControllerSet).GetProperties(),
+                property => property.Name == "ShortcutOverlayController"
+                    && property.PropertyType == typeof(PlayerShortcutOverlayController));
             Assert.Contains(
                 typeof(PlayerWindowControllerSet).GetProperties(),
                 property => property.Name == "PositionSliderStateController"

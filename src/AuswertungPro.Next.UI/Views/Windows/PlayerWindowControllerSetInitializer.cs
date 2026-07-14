@@ -20,6 +20,7 @@ public static class PlayerWindowControllerSetInitializer
                 QuickScanStatusText: window.QuickScanStatusText,
                 CurrentTimeText: window.CurrentTimeText,
                 DurationText: window.DurationText,
+                ShortcutOverlay: window.ShortcutOverlay,
                 RateText: window.RateText,
                 SpeedSlider: window.SpeedSlider,
                 Speed05Button: window.Speed05Button,
