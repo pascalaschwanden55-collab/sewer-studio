@@ -35,6 +35,7 @@ using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Projects;
+using AuswertungPro.Next.Infrastructure.Protocol;
 using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -105,6 +106,7 @@ namespace AuswertungPro.Next.UI
         public IDropdownOptionsStore DropdownOptions { get; }
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
         public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
+        public IVsaCatalogPathResolver VsaCatalogPaths { get; }
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
@@ -260,6 +262,8 @@ namespace AuswertungPro.Next.UI
             Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
             OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
             Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
+            VsaCatalogPaths = new VsaCatalogFilePathResolver();
+            Services.VsaCatalogPathResolver.Use(VsaCatalogPaths);
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
@@ -405,9 +409,14 @@ namespace AuswertungPro.Next.UI
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();
-            var catalogPaths = VsaCatalogPathResolver.Resolve(settings);
+            var catalogPaths = VsaCatalogPaths.Resolve(
+                Services.VsaCatalogPathResolver.ToRequest(settings));
             VsaCatalogResolvedPath = catalogPaths.DisplayPath;
-            CodeCatalog = CreateCodeCatalog(settings, catalogPaths.KekManifestPath, catalogPaths.XmlCatalogPaths);
+            CodeCatalog = CreateCodeCatalog(
+                settings,
+                VsaCatalogPaths,
+                catalogPaths.KekManifestPath,
+                catalogPaths.XmlCatalogPaths);
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
                 PipelineTrace,
                 () => AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
@@ -648,6 +657,7 @@ namespace AuswertungPro.Next.UI
 
         private static AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CreateCodeCatalog(
             AppSettings settings,
+            IVsaCatalogPathResolver catalogPathResolver,
             string? vsaKekManifestPath,
             IReadOnlyList<string> xmlCatalogPaths)
         {
@@ -661,9 +671,11 @@ namespace AuswertungPro.Next.UI
             providers.AddRange(xmlCatalogPaths
                 .Select(path => new AuswertungPro.Next.Application.Protocol.SourceDecoratingCodeCatalogProvider(
                     new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(
-                    path,
-                    fallbackJsonPath: null,
-                    fallbackTextXmlPath: VsaCatalogPathResolver.ResolveTextFallbackPath(settings, path)),
+                        path,
+                        fallbackJsonPath: null,
+                        fallbackTextXmlPath: catalogPathResolver.ResolveTextFallbackPath(
+                            settings.VsaCatalogSecXmlPath,
+                            path)),
                     AuswertungPro.Next.Application.Protocol.VsaKekCatalogSources.WinCanFallback))
                 .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>());
 
@@ -681,6 +693,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
+            if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
