@@ -37,6 +37,14 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
             Assert.Contains("_codingOverlayToolHost", text);
         }
+
+        var partials = ReadPlayerWindowPartials(windowsRoot);
+        Assert.DoesNotContain("_codingOverlayService?.Calibration", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService.Calibration", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService?.IsCalibrated", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService.IsCalibrated", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService?.SetCalibration", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService.SetCalibration", partials, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -72,6 +80,15 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
             Assert.Contains("_codingOverlayToolHost", text);
         }
+
+        var partials = ReadPlayerWindowPartials(windowsRoot);
+        Assert.DoesNotContain("_codingOverlayService.ActiveTool", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService!.ActiveTool", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService?.ActiveTool", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService.ActiveLevelMode", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService!.ActiveLevelMode", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService?.ActiveLevelMode", partials, StringComparison.Ordinal);
+        Assert.DoesNotContain("_codingOverlayService?.CancelDraw", partials, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -99,5 +116,19 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
             Assert.Contains("_codingOverlayToolHost", text);
         }
+
+        var overlayInputPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow.Coding.OverlayInput*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
+        Assert.DoesNotContain("_codingOverlayService", overlayInputPartials, StringComparison.Ordinal);
     }
+
+    private static string ReadPlayerWindowPartials(string windowsRoot)
+        => string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
 }

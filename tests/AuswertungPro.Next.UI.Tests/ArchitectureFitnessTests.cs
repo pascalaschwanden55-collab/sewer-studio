@@ -379,54 +379,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_partials_route_overlay_calibration_through_host()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "_codingOverlayService?.Calibration",
-            "_codingOverlayService.Calibration",
-            "_codingOverlayService?.IsCalibrated",
-            "_codingOverlayService.IsCalibrated",
-            "_codingOverlayService?.SetCalibration",
-            "_codingOverlayService.SetCalibration");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Overlay-Kalibrierung ueber CodingOverlayToolHost lesen/schreiben:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_partials_route_overlay_tool_state_through_host()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "_codingOverlayService.ActiveTool",
-            "_codingOverlayService!.ActiveTool",
-            "_codingOverlayService?.ActiveTool",
-            "_codingOverlayService.ActiveLevelMode",
-            "_codingOverlayService!.ActiveLevelMode",
-            "_codingOverlayService?.ActiveLevelMode",
-            "_codingOverlayService?.CancelDraw");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Overlay-Tool-State ueber CodingOverlayToolHost kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_overlay_input_partials_do_not_access_overlay_service_directly()
-    {
-        var offenders = FindWindowTokenOffenders(
-            "PlayerWindow.Coding.OverlayInput*.cs",
-            "_codingOverlayService");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-OverlayInput-Partials sollen Zeichen-State ueber CodingOverlayToolHost kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_transient_overlay_cleanup_partials_delegate_to_policy_controller_and_workflow()
     {
         var offenders = FindFileTokenOffenders(
