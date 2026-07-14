@@ -1,85 +1,43 @@
-using System.IO;
-using System.Text.Json;
-using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Services;
 
+/// <summary>
+/// Kompatibilitaetsfassade fuer bestehende Aufrufer. Die Dateiarbeit liegt im injizierbaren
+/// <see cref="IProtocolTrainingStore"/>.
+/// </summary>
 public static class ProtocolTrainingStore
 {
-    private static readonly JsonSerializerOptions Opt = new()
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true
-    };
+    private static IProtocolTrainingStore _current = new ProtocolTrainingFileStore();
 
-    private static string StorePath
-        => Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json");
+    public static string DefaultPath => Current.StoragePath;
 
-    public static string DefaultPath => StorePath;
+    internal static IProtocolTrainingStore Current => Volatile.Read(ref _current);
 
-    public static void AddSample(ProtocolEntry entry, string? haltungId)
-    {
-        var data = Load();
+    internal static void Use(IProtocolTrainingStore store) =>
+        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
 
-        // Duplikat-Pruefung: Code + Haltung + gerundeter Meter
-        var code = entry.Code ?? "";
-        var hid = haltungId ?? "";
-        var mStart = Math.Round(entry.MeterStart ?? 0, 1);
-        var sig = $"{hid}|{code}|{mStart:F1}";
-        if (data.Samples.Any(s =>
-            $"{s.HaltungId}|{s.Code}|{Math.Round(s.MeterStart ?? 0, 1):F1}" == sig))
-            return;
+    public static void AddSample(ProtocolEntry entry, string? haltungId) =>
+        Current.AddSample(entry, haltungId);
 
-        data.Samples.Add(new ProtocolTrainingSample
-        {
-            AtUtc = DateTime.UtcNow,
-            HaltungId = hid,
-            Code = code,
-            Beschreibung = entry.Beschreibung ?? "",
-            MeterStart = entry.MeterStart,
-            MeterEnd = entry.MeterEnd,
-            IsStreckenschaden = entry.IsStreckenschaden,
-            Parameters = entry.CodeMeta?.Parameters is null
-                ? new Dictionary<string, string>()
-                : new Dictionary<string, string>(entry.CodeMeta.Parameters, StringComparer.OrdinalIgnoreCase)
-        });
-        Save(data);
-    }
-
-    public static IReadOnlyList<ProtocolTrainingSample> LoadRecent(int maxCount)
-    {
-        var data = Load();
-        return data.Samples
-            .OrderByDescending(s => s.AtUtc)
-            .Take(Math.Max(0, maxCount))
+    public static IReadOnlyList<ProtocolTrainingSample> LoadRecent(int maxCount) =>
+        Current.LoadRecent(maxCount)
+            .Select(sample => new ProtocolTrainingSample
+            {
+                AtUtc = sample.AtUtc,
+                HaltungId = sample.HaltungId,
+                Code = sample.Code,
+                Beschreibung = sample.Beschreibung,
+                MeterStart = sample.MeterStart,
+                MeterEnd = sample.MeterEnd,
+                IsStreckenschaden = sample.IsStreckenschaden,
+                Parameters = new Dictionary<string, string>(
+                    sample.Parameters,
+                    StringComparer.OrdinalIgnoreCase)
+            })
             .ToList();
-    }
-
-    private static ProtocolTrainingData Load()
-    {
-        try
-        {
-            if (!File.Exists(StorePath))
-                return new ProtocolTrainingData();
-            var json = File.ReadAllText(StorePath);
-            return JsonSerializer.Deserialize<ProtocolTrainingData>(json, Opt) ?? new ProtocolTrainingData();
-        }
-        catch
-        {
-            return new ProtocolTrainingData();
-        }
-    }
-
-    private static void Save(ProtocolTrainingData data)
-    {
-        var dir = Path.GetDirectoryName(StorePath);
-        if (!string.IsNullOrWhiteSpace(dir))
-            Directory.CreateDirectory(dir);
-
-        var json = JsonSerializer.Serialize(data, Opt);
-        AtomicTextFileWriter.WriteAllText(StorePath, json);
-    }
 
     public sealed class ProtocolTrainingData
     {

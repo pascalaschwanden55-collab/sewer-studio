@@ -150,6 +150,7 @@ namespace AuswertungPro.Next.UI
         #region KI / Vision
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
+        public IProtocolTrainingStore ProtocolTraining { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -228,6 +229,8 @@ namespace AuswertungPro.Next.UI
             CodeUsageTrackers.Current = CodeUsage;
 
             DropdownOptions = new FileDropdownOptionsStore();
+            ProtocolTraining = new ProtocolTrainingFileStore();
+            ProtocolTrainingStore.Use(ProtocolTraining);
 
             Projects = new JsonProjectRepository();
             PdfImport = new PdfImportServiceAdapter();
@@ -374,7 +377,7 @@ namespace AuswertungPro.Next.UI
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
-            var protocolTrainingSamples = new ProtocolTrainingSampleProvider();
+            var protocolTrainingSamples = new ProtocolTrainingSampleProvider(ProtocolTraining);
 
             ProtocolAi = cfg.Enabled
                 ? new OllamaProtocolAiService(
@@ -552,6 +555,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
             if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;

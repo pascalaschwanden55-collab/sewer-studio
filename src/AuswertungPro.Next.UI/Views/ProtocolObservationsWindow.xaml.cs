@@ -339,7 +339,7 @@ public partial class ProtocolObservationsWindow : Window
             return;
         }
 
-        ProtocolTrainingStore.AddSample(entry, _record.GetFieldValue("Haltungsname"));
+        _sp.ProtocolTraining.AddSample(entry, _record.GetFieldValue("Haltungsname"));
         _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
     }
 
