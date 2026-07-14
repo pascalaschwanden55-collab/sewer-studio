@@ -133,6 +133,7 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(
                 DetectionController: _liveDetectionController,

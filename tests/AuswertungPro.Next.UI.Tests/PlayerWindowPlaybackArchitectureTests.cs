@@ -345,6 +345,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs");
         var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
         var controlInputPath = Path.Combine(uiRoot, "Player", "PlayerControlInputController.cs");
+        var sliderInputPath = Path.Combine(uiRoot, "Player", "PlayerSliderInputController.cs");
         var positionInputPath = Path.Combine(uiRoot, "Player", "PlayerPositionInputController.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiUpdateWorkflow.cs");
         var sliderValueChangedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderValueChangedWorkflow.cs");
@@ -358,6 +359,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.True(File.Exists(playbackStartWorkflowPath), "Playback-Start-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(lastOpenedPlaybackWorkflowPath), "Last-opened-Playback-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlInputPath), "Player-Bedieneingaben sollen in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(sliderInputPath), "Regler-Ereignisse sollen in einem startsicheren Controller liegen.");
         Assert.True(File.Exists(positionInputPath), "Positionsleisten-Eingaben sollen in einem eigenen Controller liegen.");
         Assert.True(File.Exists(controllerPath), "Wiedergabe-Kommandos und laufende Anzeige sollen in einem eigenen Controller liegen.");
 
@@ -366,6 +368,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var controller = File.ReadAllText(controllerPath);
         var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
         var controlInput = File.Exists(controlInputPath) ? File.ReadAllText(controlInputPath) : "";
+        var sliderInput = File.Exists(sliderInputPath) ? File.ReadAllText(sliderInputPath) : "";
         var positionInput = File.Exists(positionInputPath) ? File.ReadAllText(positionInputPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sliderValueChangedWorkflow = File.Exists(sliderValueChangedWorkflowPath) ? File.ReadAllText(sliderValueChangedWorkflowPath) : "";
@@ -395,9 +398,9 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("_playerPlaybackController.Pause", controls);
         Assert.Contains("_playerPlaybackController.Stop", controls);
         Assert.Contains("_playerControlInputController.SetSpeed", controls);
-        Assert.Contains("_playerControlInputController.SetVolume", controls);
+        Assert.Contains("_playerSliderInputController?.SetVolume", controls);
         Assert.Contains("_playerControlInputController.SetMuted", controls);
-        Assert.Contains("_playerControlInputController.SetOverlayOpacity", controls);
+        Assert.Contains("_playerSliderInputController?.SetOverlayOpacity", controls);
         AssertNoForbiddenTokens(
             controls,
             "_player.SetPause(true)",
@@ -420,7 +423,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", positionInput);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", positionInput);
         AssertNoForbiddenTokens(controls, "PlayerSliderSeekController.");
-        Assert.Contains("PlayerPositionSliderValueChangedWorkflow.Execute", controls);
+        Assert.Contains("PlayerPositionSliderValueChangedWorkflow.Execute", sliderInput);
         AssertNoForbiddenTokens(
             controls,
             "if (_isDragging)",

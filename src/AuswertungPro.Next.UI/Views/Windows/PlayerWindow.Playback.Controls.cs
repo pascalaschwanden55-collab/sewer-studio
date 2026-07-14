@@ -27,24 +27,18 @@ public partial class PlayerWindow
     private void Speed8_Click(object sender, RoutedEventArgs e) => _playerControlInputController.SetSpeed(8.0f);
 
     private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        => _playerControlInputController.SetSpeed((float)e.NewValue);
+        => _playerSliderInputController?.SetSpeed((float)e.NewValue);
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        => _playerControlInputController.SetVolume(e.NewValue);
+        => _playerSliderInputController?.SetVolume(e.NewValue);
 
     private void MuteButton_Click(object sender, RoutedEventArgs e)
         => _playerControlInputController.SetMuted(MuteButton.IsChecked == true);
 
     private void OverlayOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        => _playerControlInputController.SetOverlayOpacity(e.NewValue);
+        => _playerSliderInputController?.SetOverlayOpacity(e.NewValue);
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        => PlayerPositionSliderValueChangedWorkflow.Execute(
-            new PlayerPositionSliderValueChangedWorkflowRequest(_positionSliderStateController.IsDragging),
-            new PlayerPositionSliderValueChangedWorkflowActions(
-                () => _positionInputController.UpdateSeekPreview(
-                    _positionSliderStateController.IsDragging,
-                    _playerTimerController.IsScrubTimerEnabled,
-                    _playerTimerController.StartScrubTimer)));
+        => _playerSliderInputController?.HandlePositionChanged();
 
 }

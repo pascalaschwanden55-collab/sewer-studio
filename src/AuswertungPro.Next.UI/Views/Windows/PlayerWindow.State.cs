@@ -9,6 +9,7 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
+    private readonly PlayerSliderInputController? _playerSliderInputController;
     private readonly PlayerPlaybackController _playerPlaybackController;
     private readonly LiveDetectionConfirmationTrainingController _liveDetectionConfirmationTrainingController;
     private readonly LiveDetectionManualMarkTrainingController _liveDetectionManualMarkTrainingController;
