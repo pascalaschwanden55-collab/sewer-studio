@@ -1,11 +1,10 @@
 namespace AuswertungPro.Next.Application.Export;
 
 /// <summary>
-/// Konfiguration einer Ziel-Ablage: physische Ziel-Wurzel plus drei Namens-/Ordner-Ebenen
-/// (Ordner / Unterordner / Datei) als Platzhalter-Muster. Leere Ordner-Ebenen entfallen
-/// (flache vs. tiefe Ablage). Wird pro Typ (Haltungen / Schaechte / Dichtheit) und fuer
-/// den Excel-Export in <c>AppSettings</c> gehalten und von <see cref="IDistributionPatternResolver"/>
-/// zu einem relativen Zielpfad aufgeloest.
+/// Konfiguration einer Ziel-Ablage: physische Ziel-Wurzel, zwei optionale Ueberordner
+/// und ein Dateinamensmuster. Bei der Verteilung bleiben der letzte Objektordner und
+/// der Dateiname aus Sicherheitsgruenden fest; dort werden nur die beiden Ueberordner
+/// verwendet. Beim Excel-Export wird nur das getrennte Dateinamensmuster verwendet.
 /// </summary>
 /// <remarks>
 /// Bewusst eine veraenderliche Klasse (kein record): Die UI bindet zweiseitig direkt an die
@@ -22,6 +21,9 @@ public sealed class DistributionTargetConfig
     /// <summary>Muster fuer die 2. Ordnerebene; leer = Ebene entfaellt.</summary>
     public string UnterordnerPattern { get; set; } = string.Empty;
 
-    /// <summary>Muster fuer den Dateinamen (ohne Endung).</summary>
+    /// <summary>
+    /// Muster fuer den Dateinamen (ohne Endung). Frei nutzbar bei Excel; bei der
+    /// Verteilung nur zur Anzeige/Kompatibilitaet, weil der sichere Name fest bleibt.
+    /// </summary>
     public string DateiPattern { get; set; } = string.Empty;
 }

@@ -30,7 +30,8 @@ public sealed class DistributionTargetConfigViewModelTests
             resolver: new DistributionPatternResolver(), sampleContext: HaltungCtx,
             extension: ".pdf", showFilePattern: false, hinweis: "",
             onChanged: onChanged ?? (() => { }), browseFolder: () => null,
-            fixedPattern: "{Datum}_{Haltung}");
+            fixedPattern: "{Datum}_{Haltung}",
+            fixedObjectFolderPattern: "{Haltung}");
 
     [Fact]
     public void Excel_vorschau_setzt_wurzel_und_datei_muster_zusammen()
@@ -63,13 +64,14 @@ public sealed class DistributionTargetConfigViewModelTests
     }
 
     [Fact]
-    public void Verteil_vorschau_ist_die_ziel_wurzel_ohne_datei_muster()
+    public void Verteil_vorschau_zeigt_sicheren_objektordner_und_festen_dateinamen()
     {
         var config = new DistributionTargetConfig { Root = @"D:\Verteilt\Haltungen", DateiPattern = "{Datum}_{Haltung}" };
         var vm = CreateVerteil(config);
 
-        // Verteilung: nur die Ziel-Wurzel; die Benennung darunter ist fest (nicht Teil der Vorschau).
-        Assert.Equal(@"D:\Verteilt\Haltungen", vm.Vorschau);
+        Assert.Equal(
+            @"D:\Verteilt\Haltungen\06.24341-35625\20260626_06.24341-35625.pdf",
+            vm.Vorschau);
     }
 
     [Fact]
@@ -82,8 +84,65 @@ public sealed class DistributionTargetConfigViewModelTests
         vm.Root = @"E:\Ziel";
 
         Assert.Equal(@"E:\Ziel", config.Root);
-        Assert.Equal(@"E:\Ziel", vm.Vorschau);
+        Assert.StartsWith(@"E:\Ziel\06.24341-35625\", vm.Vorschau);
         Assert.True(saves >= 1);
+    }
+
+    [Fact]
+    public void Verteil_baum_aenderung_schreibt_config_speichert_und_aktualisiert_vorschau()
+    {
+        var config = new DistributionTargetConfig { Root = @"D:\Ziel" };
+        var saves = 0;
+        var vm = CreateVerteil(config, () => saves++);
+
+        vm.OrdnerPattern = "{Gemeinde}";
+        vm.UnterordnerPattern = "{Jahr}";
+
+        Assert.Equal("{Gemeinde}", config.OrdnerPattern);
+        Assert.Equal("{Jahr}", config.UnterordnerPattern);
+        Assert.Equal(
+            @"D:\Ziel\Altdorf\2026\06.24341-35625\20260626_06.24341-35625.pdf",
+            vm.Vorschau);
+        Assert.True(saves >= 2);
+    }
+
+    [Fact]
+    public void Nur_verteilung_zeigt_verzeichnisbaum_excel_nicht()
+    {
+        var verteilung = CreateVerteil(new DistributionTargetConfig());
+        var excel = CreateExcel(new DistributionTargetConfig());
+
+        Assert.True(verteilung.ShowDirectoryTree);
+        Assert.Equal("{Haltung}", verteilung.FixedObjectFolderPattern);
+        Assert.False(excel.ShowDirectoryTree);
+    }
+
+    [Fact]
+    public void Gemeinsamer_excel_root_aktualisiert_vorschau_ohne_eigenen_save_callback()
+    {
+        var config = new DistributionTargetConfig { DateiPattern = "Haltungen" };
+        var saves = 0;
+        var vm = CreateExcel(config, () => saves++);
+
+        vm.ApplySharedRoot(@"D:\Gemeinsam");
+
+        Assert.Equal(@"D:\Gemeinsam", config.Root);
+        Assert.Equal(@"D:\Gemeinsam\Haltungen.xlsx", vm.Vorschau);
+        Assert.Equal(0, saves);
+    }
+
+    [Fact]
+    public void Sicher_korrigierter_excel_dateiname_aktualisiert_ui_ohne_callback_schleife()
+    {
+        var config = new DistributionTargetConfig { Root = @"D:\Gemeinsam", DateiPattern = "" };
+        var saves = 0;
+        var vm = CreateExcel(config, () => saves++);
+
+        vm.ApplyFilePattern("Haltungen");
+
+        Assert.Equal("Haltungen", config.DateiPattern);
+        Assert.Equal(@"D:\Gemeinsam\Haltungen.xlsx", vm.Vorschau);
+        Assert.Equal(0, saves);
     }
 
     [Fact]

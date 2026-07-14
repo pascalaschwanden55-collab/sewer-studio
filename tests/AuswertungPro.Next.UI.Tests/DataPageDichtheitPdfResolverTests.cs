@@ -65,6 +65,37 @@ public sealed class DataPageDichtheitPdfResolverTests : IDisposable
     }
 
     [Fact]
+    public void Resolve_FindetDpProtokoll_UnterKonfiguriertenUeberordnern()
+    {
+        var dir = Path.Combine(
+            _projectDir, "Haltungen_Verteilt", "Altdorf", "2026", "58951-58950");
+        Directory.CreateDirectory(dir);
+        var erwartet = Path.Combine(dir, "20260622_58951-58950_DP.pdf");
+        File.WriteAllText(erwartet, "%PDF");
+
+        var gefunden = DataPageDichtheitPdfResolver.Resolve(Haltung("58951-58950"), _projectDir);
+
+        Assert.Equal([erwartet], gefunden);
+    }
+
+    [Fact]
+    public void Resolve_BeruecksichtigtExternesKonfiguriertesZiel()
+    {
+        var externRoot = Path.Combine(_projectDir, "Extern");
+        var dir = Path.Combine(externRoot, "Altdorf", "2026", "58951-58950");
+        Directory.CreateDirectory(dir);
+        var erwartet = Path.Combine(dir, "20260622_58951-58950_DP.pdf");
+        File.WriteAllText(erwartet, "%PDF");
+
+        var gefunden = DataPageDichtheitPdfResolver.Resolve(
+            Haltung("58951-58950"),
+            projectFolder: null,
+            configuredRoot: externRoot);
+
+        Assert.Equal([erwartet], gefunden);
+    }
+
+    [Fact]
     public void Resolve_MitNullEingaben_LiefertLeer_OhneFehler()
     {
         Assert.Empty(DataPageDichtheitPdfResolver.Resolve(null, _projectDir));

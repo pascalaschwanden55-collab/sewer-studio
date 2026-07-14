@@ -9,35 +9,47 @@ namespace AuswertungPro.Next.UI.DataPage;
 
 /// <summary>
 /// Findet die verteilten Dichtheitspruefungsprotokolle einer Haltung
-/// (Haltungen_Verteilt\&lt;H&gt;\*_DP*.pdf) — neueste zuerst (Datumspraefix im Namen).
+/// auch unter konfigurierten Ueberordnern — neueste zuerst (Datumspraefix im Namen).
 /// Grundlage fuer den Kontextmenuepunkt "Dichtheitspruefung (PDF) oeffnen".
 /// </summary>
 public static class DataPageDichtheitPdfResolver
 {
     public static IReadOnlyList<string> Resolve(HaltungRecord? record, string? projectFolder)
+        => Resolve(record, projectFolder, configuredRoot: null);
+
+    public static IReadOnlyList<string> Resolve(
+        HaltungRecord? record,
+        string? projectFolder,
+        string? configuredRoot)
     {
-        if (record is null || string.IsNullOrWhiteSpace(projectFolder))
+        if (record is null)
             return Array.Empty<string>();
 
         var haltung = (record.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
         if (haltung.Length == 0)
             return Array.Empty<string>();
 
-        var san = ProjectPathResolver.SanitizePathSegment(haltung);
-        var dir = Path.Combine(projectFolder, "Haltungen_Verteilt", san);
-        if (!Directory.Exists(dir))
+        var roots = new List<string>();
+        if (!string.IsNullOrWhiteSpace(configuredRoot))
+            roots.Add(configuredRoot.Trim());
+        if (!string.IsNullOrWhiteSpace(projectFolder))
+            roots.Add(Path.Combine(projectFolder.Trim(), "Haltungen_Verteilt"));
+        if (roots.Count == 0)
             return Array.Empty<string>();
 
-        try
-        {
-            // *_DP.pdf inkl. Duplikat-Suffixe (*_DP_01.pdf); Datumspraefix sortiert neueste nach vorne.
-            return Directory.EnumerateFiles(dir, "*_DP*.pdf", SearchOption.TopDirectoryOnly)
-                .OrderByDescending(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
+        var san = ProjectPathResolver.SanitizePathSegment(haltung);
+
+        // Der letzte Haltungsordner bleibt auch beim konfigurierten Baum fest. Deshalb
+        // reicht eine sichere rekursive Suche nach DP-Dateien in genau diesem Ordner.
+        return roots
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .SelectMany(root => SafeFileEnumeration.EnumerateFilesSafe(root, "*_DP*.pdf", recursive: true))
+            .Where(path => string.Equals(
+                Path.GetFileName(Path.GetDirectoryName(path)),
+                san,
+                StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

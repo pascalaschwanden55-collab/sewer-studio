@@ -828,32 +828,6 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    internal static IReadOnlyList<PdfTextReplacement> BuildRenameReplacements(string oldValue, string newValue)
-    {
-        if (!PdfTextLayerRewriter.CanRewrite(oldValue, newValue))
-            return Array.Empty<PdfTextReplacement>();
-
-        return new[] { new PdfTextReplacement(oldValue.Trim(), newValue.Trim()) };
-    }
-
-    internal static PdfCorrectionResult TryCorrectPdfTextLayer(
-        string sourcePdfPath,
-        IReadOnlyList<PdfTextReplacement> replacements)
-    {
-        var targets = replacements
-            .Select(item => new PdfTextReplacementTarget(item.SearchText, item.ReplacementText))
-            .ToList();
-        var rewrite = PdfTextLayerRewriter.TryRewrite(sourcePdfPath, targets);
-
-        return new PdfCorrectionResult(
-            rewrite.Success,
-            rewrite.Corrected,
-            rewrite.OutputPdfPath,
-            rewrite.MatchCount,
-            rewrite.PageCount,
-            rewrite.Message);
-    }
-
     /// <summary>
     /// Schreibt die Haltungsnummer im Text-Layer der angegebenen PDF-Dateien um (in-place).
     /// Wird beim In-App-Umbenennen einer Haltung genutzt, damit die Nummer im Protokoll-PDF

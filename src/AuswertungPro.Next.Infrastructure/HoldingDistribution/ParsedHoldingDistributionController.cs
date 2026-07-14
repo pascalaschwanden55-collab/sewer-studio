@@ -1,5 +1,6 @@
 using System.Globalization;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
 using Distributor = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor;
 
@@ -25,7 +26,8 @@ internal static class ParsedHoldingDistributionController
         IReadOnlyList<string>? videoFilesCache = null,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarVideoLinksByHolding = null,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarHoldingsByVideoLink = null,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? cdIndexVideoLinksByPhoto = null)
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? cdIndexVideoLinksByPhoto = null,
+        DistributionTargetConfig? directoryConfig = null)
     {
         var parsedHoldingRaw = parsed.Haltung ?? "UNKNOWN";
         var holdingRaw = PdfCorrectionMetadata.ResolveHolding(project, parsedHoldingRaw);
@@ -52,8 +54,11 @@ internal static class ParsedHoldingDistributionController
 
         var date = parsed.Date.Value;
         var dateStamp = date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-        var pdfReplacements = Distributor.BuildRenameReplacements(parsedHoldingRaw, holdingRaw);
-        var correctionResult = Distributor.TryCorrectPdfTextLayer(pdfToStorePath, pdfReplacements);
+        var canCorrectPdf = PdfTextLayerRewriter.CanRewrite(parsedHoldingRaw, holdingRaw);
+        var correctionResult = PdfTextLayerRewriter.TryRewriteHoldingNumber(
+            pdfToStorePath,
+            parsedHoldingRaw,
+            holdingRaw);
         var pdfSourceToStorePath = correctionResult.Corrected
             ? correctionResult.OutputPdfPath
             : pdfToStorePath;
@@ -189,7 +194,15 @@ internal static class ParsedHoldingDistributionController
 
         try
         {
-            var holdingFolder = Path.Combine(destinationMunicipalityFolder, holding);
+            var treeContext = new DistributionPatternContext(
+                Datum: date,
+                Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
+                Haltung: holding);
+            var holdingFolder = DistributionDirectoryTreeController.ResolveObjectFolder(
+                destinationMunicipalityFolder,
+                directoryConfig,
+                treeContext,
+                "{Haltung}");
             Directory.CreateDirectory(holdingFolder);
 
             var destinationPdfName = $"{dateStamp}_{holding}.pdf";
@@ -331,9 +344,12 @@ internal static class ParsedHoldingDistributionController
                             date,
                             holdingRaw,
                             candidates));
+                    var holdingParent = Directory.GetParent(holdingFolder)?.FullName
+                                        ?? destinationMunicipalityFolder;
+                    var safeUnmatchedFolderName = ProjectPathResolver.SanitizePathSegment(unmatchedFolderName);
                     var unmatchedFolder = Path.Combine(
-                        destinationMunicipalityFolder,
-                        unmatchedFolderName,
+                        holdingParent,
+                        safeUnmatchedFolderName,
                         holding);
                     Directory.CreateDirectory(unmatchedFolder);
                     VideoConflictArtifacts.CopyCandidates(
@@ -371,7 +387,7 @@ internal static class ParsedHoldingDistributionController
             {
                 message += $" [PDF korrigiert: {correctionResult.MatchCount} Treffer auf {correctionResult.PageCount} Seiten]";
             }
-            else if (pdfReplacements.Count > 0 && !string.IsNullOrWhiteSpace(correctionResult.Message))
+            else if (canCorrectPdf && !string.IsNullOrWhiteSpace(correctionResult.Message))
             {
                 message += $" [PDF-Korrektur: {correctionResult.Message}]";
             }

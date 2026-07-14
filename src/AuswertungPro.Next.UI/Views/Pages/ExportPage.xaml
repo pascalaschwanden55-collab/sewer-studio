@@ -105,7 +105,7 @@
                     <TextBlock Text="Zielverzeichnisse &amp; Namensvorlagen"
                                FontWeight="SemiBold" FontSize="13"
                                Foreground="{DynamicResource TextBrush}" Margin="2,0,0,2"/>
-                    <TextBlock Text="Ziel-Wurzel je Typ festlegen. Excel-Dateinamen mit Bausteinen zusammenstellen; Verteilnamen bleiben sicher fest."
+                    <TextBlock Text="Excel nutzt einen gemeinsamen Zielordner. Bei der Verteilung sind zwei Überordner frei; Objektordner und Dateinamen bleiben sicher fest."
                                FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                TextWrapping="Wrap" Margin="2,0,0,8"/>
 
@@ -120,22 +120,71 @@
                                         <TextBlock Text="{Binding Untertitel}" FontSize="11"
                                                    Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 
-                                        <!-- Ziel-Wurzel -->
-                                        <TextBlock Text="Ziel-Wurzel" FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <Grid Margin="0,2,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
-                                                     ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
-                                            <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
-                                                    Margin="4,0,0,0" Padding="10,0"
-                                                    ToolTip="Ziel-Wurzel waehlen">
-                                                <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                            </Button>
-                                        </Grid>
+                                        <!-- Eigene Ziel-Wurzel nur fuer die drei Verteilungen -->
+                                        <StackPanel Visibility="{Binding ShowRootEditor, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="Ziel-Wurzel" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <Grid Margin="0,2,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
+                                                         ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
+                                                <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
+                                                        Margin="4,0,0,0" Padding="10,0"
+                                                        ToolTip="Ziel-Wurzel waehlen">
+                                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Genau einmal fuer beide Excel-Exporte -->
+                                        <StackPanel Visibility="{Binding ShowSharedExcelRoot, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="Gemeinsamer Excel-Zielordner" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <Grid Margin="0,2,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Text="{Binding DataContext.ExcelExportRoot, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                                         ToolTip="Dieser Ordner gilt fuer Haltungen.xlsx und Schaechte.xlsx."/>
+                                                <Button Grid.Column="1"
+                                                        Command="{Binding DataContext.BrowseExcelExportRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Margin="4,0,0,0" Padding="10,0"
+                                                        ToolTip="Gemeinsamen Excel-Zielordner waehlen">
+                                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Zwei frei einstellbare Ueberordner; letzter Objektordner bleibt fest -->
+                                        <StackPanel Visibility="{Binding ShowDirectoryTree, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="Verzeichnisbaum" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="Mögliche Platzhalter: {Gemeinde} {Datum} {Jahr} {Monat}. Leere Ebenen entfallen."
+                                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"
+                                                       TextWrapping="Wrap" Margin="0,1,0,5"/>
+                                            <TextBlock Text="Überordner (optional)" FontSize="10"
+                                                       Foreground="{DynamicResource MutedBrush}"/>
+                                            <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,2,0,5"/>
+                                            <TextBlock Text="Unterordner (optional)" FontSize="10"
+                                                       Foreground="{DynamicResource MutedBrush}"/>
+                                            <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,2,0,5"/>
+                                            <TextBlock Text="Fester letzter Objektordner" FontSize="10"
+                                                       Foreground="{DynamicResource MutedBrush}"/>
+                                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                                    BorderThickness="1" CornerRadius="4"
+                                                    Padding="8,5" Margin="0,2,0,7">
+                                                <TextBlock Text="{Binding FixedObjectFolderPattern}"
+                                                           FontFamily="Consolas" FontSize="11"
+                                                           Foreground="{DynamicResource TextBrush}"/>
+                                            </Border>
+                                        </StackPanel>
 
                                         <!-- Grafischer Datei-Editor (nur Excel; die Verteilung bleibt sicher fest) -->
                                         <StackPanel Visibility="{Binding ShowFilePattern, Converter={StaticResource BoolToVis}}">
@@ -179,7 +228,7 @@
                                         </StackPanel>
 
                                         <!-- Sichtbare Reihenfolge: editierbar bei Excel, fest bei der Verteilung -->
-                                        <TextBlock Text="Zusammengesetzte Benennung" FontSize="11"
+                                        <TextBlock Text="Dateiname" FontSize="11"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}"
@@ -220,7 +269,7 @@
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    TextWrapping="Wrap" Margin="0,0,0,6"/>
 
-                                        <!-- Live-Vorschau (Excel: Datei; Verteilung: Ziel-Ordner) -->
+                                        <!-- Live-Vorschau des vollstaendigen Zielpfads -->
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                                                 CornerRadius="4" Padding="8,6">

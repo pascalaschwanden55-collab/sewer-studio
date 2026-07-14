@@ -82,12 +82,15 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     // Konfigurierbare Ziel-Ablage je Verteil-/Export-Typ: Ziel-Wurzel + 3 Namens-/Ordner-Ebenen
     // (Ordner/Unterordner/Datei) als Platzhalter-Muster. Leere Ordner-Ebenen entfallen.
-    // Defaults reproduzieren das bisherige flache Ablageschema (Datum_Haltung bzw. Datum_Schachtnummer).
+    // Die zwei Muster sind optionale Ueberordner. Der feste Objektordner bleibt im Verteiler erhalten.
     public DistributionTargetConfig HaltungDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Haltung}" };
     public DistributionTargetConfig SchachtDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Schachtnummer}" };
-    public DistributionTargetConfig DichtheitDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Schachtnummer}" };
+    public DistributionTargetConfig DichtheitDistribution { get; set; } = new() { DateiPattern = "{Datum}_{Haltung}_DP" };
 
-    // Excel-Export: nur Ziel-Ordner + Dateiname (keine Ordner-Ebenen).
+    // Excel-Export: ein gemeinsamer Ziel-Ordner, aber getrennte Dateinamen.
+    public string? ExcelExportRoot { get; set; }
+    // Ein abweichender alter Schacht-Zielordner bleibt bei der Zusammenfuehrung nachvollziehbar.
+    public string? LegacySchachtExportRoot { get; set; }
     public DistributionTargetConfig HaltungExport { get; set; } = new() { DateiPattern = "Haltungen" };
     public DistributionTargetConfig SchachtExport { get; set; } = new() { DateiPattern = "Schaechte" };
 
@@ -160,6 +163,95 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         // uebernehmen wir einmalig, damit ein verlorener Env-Override keine leere KB oeffnet.
         KnowledgeRootPath = LastKnownKnowledgeRoot.Trim();
         return true;
+    }
+
+    /// <summary>
+    /// Uebernimmt bei alten Einstellungen einen der bisher getrennten Excel-Zielordner.
+    /// Der Haltungs-Ordner hat Vorrang; fehlt er, wird der Schacht-Ordner verwendet.
+    /// </summary>
+    internal bool MigrateLegacyExcelExportRoot()
+    {
+        EnsureExcelExportConfigs();
+        NormalizeExcelExportFilePatterns();
+
+        var hadSharedRoot = !string.IsNullOrWhiteSpace(ExcelExportRoot);
+        if (!hadSharedRoot
+            && !string.IsNullOrWhiteSpace(HaltungExport.Root)
+            && !string.IsNullOrWhiteSpace(SchachtExport.Root)
+            && !string.Equals(
+                HaltungExport.Root.Trim(),
+                SchachtExport.Root.Trim(),
+                StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(LegacySchachtExportRoot))
+        {
+            LegacySchachtExportRoot = SchachtExport.Root.Trim();
+        }
+
+        var candidate = hadSharedRoot
+            ? ExcelExportRoot
+            : !string.IsNullOrWhiteSpace(HaltungExport.Root)
+                ? HaltungExport.Root
+                : SchachtExport.Root;
+
+        SetExcelExportRoot(candidate);
+        return !hadSharedRoot && !string.IsNullOrWhiteSpace(ExcelExportRoot);
+    }
+
+    /// <summary>
+    /// Garantiert zwei nicht-leere, verschiedene Excel-Dateinamen. So kann der zweite
+    /// Export die erste Datei im gemeinsamen Zielordner nicht versehentlich ersetzen.
+    /// </summary>
+    internal bool NormalizeExcelExportFilePatterns()
+    {
+        EnsureExcelExportConfigs();
+        var changed = false;
+
+        if (string.IsNullOrWhiteSpace(HaltungExport.DateiPattern))
+        {
+            HaltungExport.DateiPattern = "Haltungen";
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(SchachtExport.DateiPattern))
+        {
+            SchachtExport.DateiPattern = "Schaechte";
+            changed = true;
+        }
+
+        if (string.Equals(
+                HaltungExport.DateiPattern.Trim(),
+                SchachtExport.DateiPattern.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(HaltungExport.DateiPattern.Trim(), "Schaechte", StringComparison.OrdinalIgnoreCase))
+                HaltungExport.DateiPattern = "Haltungen";
+            else
+                SchachtExport.DateiPattern = "Schaechte";
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Setzt den gemeinsamen Excel-Zielordner und spiegelt ihn fuer alte Programmstaende
+    /// weiterhin in die beiden bisherigen Root-Felder.
+    /// </summary>
+    internal string? SetExcelExportRoot(string? value)
+    {
+        EnsureExcelExportConfigs();
+
+        var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        ExcelExportRoot = normalized;
+        HaltungExport.Root = normalized;
+        SchachtExport.Root = normalized;
+        return normalized;
+    }
+
+    private void EnsureExcelExportConfigs()
+    {
+        HaltungExport ??= new DistributionTargetConfig { DateiPattern = "Haltungen" };
+        SchachtExport ??= new DistributionTargetConfig { DateiPattern = "Schaechte" };
     }
 
     internal void RecordKnowledgeRootStart(
@@ -286,6 +378,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public void Save()
     {
         LastVideoFolder = LastVideoSourceFolder;
+        MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
 
         lock (SaveSync)
@@ -313,6 +406,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public void SaveImmediate()
     {
         LastVideoFolder = LastVideoSourceFolder;
+        MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
 
         lock (SaveSync)
@@ -363,6 +457,17 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
         settings.MigrateLegacyKnowledgeRootPath();
+        settings.HaltungDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Haltung}" };
+        settings.SchachtDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Schachtnummer}" };
+        settings.DichtheitDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Haltung}_DP" };
+        if (string.Equals(
+                settings.DichtheitDistribution.DateiPattern,
+                "{Datum}_{Schachtnummer}",
+                StringComparison.Ordinal))
+        {
+            settings.DichtheitDistribution.DateiPattern = "{Datum}_{Haltung}_DP";
+        }
+        settings.MigrateLegacyExcelExportRoot();
         settings.WindowStates ??= new Dictionary<string, WindowBounds>();
         settings.ViewCustomizations ??= new Dictionary<string, ViewCustomization>();
         settings.HydraulikPanel ??= new HydraulikPanelSettings();

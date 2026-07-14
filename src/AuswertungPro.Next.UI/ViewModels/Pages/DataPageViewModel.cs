@@ -839,7 +839,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void OpenDichtheitPdf(HaltungRecord? record)
     {
         record ??= Selected;
-        var pdfs = DataPageDichtheitPdfResolver.Resolve(record, _shell.GetProjectFolder());
+        var pdfs = DataPageDichtheitPdfResolver.Resolve(
+            record,
+            _shell.GetProjectFolder(),
+            _settings.DichtheitDistribution?.Root);
         if (pdfs.Count == 0)
         {
             var name = record?.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";

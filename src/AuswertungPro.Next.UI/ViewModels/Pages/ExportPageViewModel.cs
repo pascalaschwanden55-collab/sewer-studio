@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Infrastructure;
@@ -27,6 +28,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDistributionPatternResolver _patternResolver;
+    private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -34,6 +36,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     [ObservableProperty] private bool _isDistributionIndeterminate;
     [ObservableProperty] private double _distributionPercent;
     [ObservableProperty] private bool _isPageBusy;
+    [ObservableProperty] private string? _excelExportRoot;
 
     /// <summary>Lade-Overlay fuer Langlaeufer (xlsx-Export).</summary>
     public Services.BusyState Busy { get; } = new();
@@ -43,6 +46,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeHoldingsCommand { get; }
     public IAsyncRelayCommand DistributeShaftsCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
+    public IRelayCommand BrowseExcelExportRootCommand { get; }
 
     /// <summary>Konfig-Karten (Ziel-Wurzel + Namens-/Ordner-Muster) je Verteil-/Export-Typ.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
@@ -54,7 +58,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
             dialogs: sp.Dialogs,
             excelExport: sp.ExcelExport,
             toasts: sp.Toasts,
-            costFieldSync: sp.CostFieldSync)
+            costFieldSync: sp.CostFieldSync,
+            patternResolver: sp.DistributionPatterns,
+            directoryTreeResolver: sp.DistributionDirectoryTree)
     {
     }
 
@@ -65,7 +71,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IExcelExportService excelExport,
         IToastService toasts,
         IDerivedCostFieldSynchronizer costFieldSync,
-        IDistributionPatternResolver? patternResolver = null)
+        IDistributionPatternResolver? patternResolver = null,
+        IDistributionDirectoryTreeResolver? directoryTreeResolver = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -78,7 +85,11 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
         DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
+        BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
+        _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
+        _settings.MigrateLegacyExcelExportRoot();
+        _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
     }
 
@@ -88,69 +99,169 @@ public sealed partial class ExportPageViewModel : ObservableObject
     /// Rein und ohne Seiteneffekte -> testbar.
     /// </summary>
     internal static string? BuildConfiguredExcelPath(
+        string? sharedRoot,
         DistributionTargetConfig cfg,
         IDistributionPatternResolver resolver,
-        DateTime datum)
+        DateTime datum,
+        string? fallbackFilePattern = null,
+        bool forceFallback = false)
     {
-        if (string.IsNullOrWhiteSpace(cfg.Root))
+        if (string.IsNullOrWhiteSpace(sharedRoot))
             return null;
 
         // Excel ist eine einzelne Datei -> keine Ordner-Ebenen, nur Ziel-Wurzel + Datei-Muster.
+        var selectedPattern = forceFallback || string.IsNullOrWhiteSpace(cfg.DateiPattern)
+            ? fallbackFilePattern
+            : cfg.DateiPattern;
+        if (string.IsNullOrWhiteSpace(selectedPattern))
+            selectedPattern = "Export";
+
         var relativ = resolver.ResolveRelativePath(
             ordnerPattern: null,
             unterordnerPattern: null,
-            dateiPattern: cfg.DateiPattern,
+            dateiPattern: selectedPattern,
             context: new DistributionPatternContext(datum),
             extension: ".xlsx");
-        return Path.Combine(cfg.Root, relativ);
+        return Path.Combine(sharedRoot, relativ);
+    }
+
+    /// <summary>Rueckwaertskompatibler Test-/Hilfsweg fuer alte Aufrufer.</summary>
+    internal static string? BuildConfiguredExcelPath(
+        DistributionTargetConfig cfg,
+        IDistributionPatternResolver resolver,
+        DateTime datum)
+        => BuildConfiguredExcelPath(cfg.Root, cfg, resolver, datum);
+
+    /// <summary>
+    /// Verhindert, dass beide Excel-Exporte im gemeinsamen Ordner denselben Zielpfad
+    /// erhalten. Bei einer Kollision gilt fuer beide wieder ihr eindeutiger Standardname.
+    /// </summary>
+    internal static string? BuildCollisionSafeExcelPath(
+        string? sharedRoot,
+        DistributionTargetConfig cfg,
+        string fallbackFilePattern,
+        DistributionTargetConfig otherCfg,
+        string otherFallbackFilePattern,
+        IDistributionPatternResolver resolver,
+        DateTime datum)
+    {
+        var target = BuildConfiguredExcelPath(
+            sharedRoot, cfg, resolver, datum, fallbackFilePattern);
+        if (target is null)
+            return null;
+
+        var other = BuildConfiguredExcelPath(
+            sharedRoot, otherCfg, resolver, datum, otherFallbackFilePattern);
+        return string.Equals(target, other, StringComparison.OrdinalIgnoreCase)
+            ? BuildConfiguredExcelPath(
+                sharedRoot,
+                cfg,
+                resolver,
+                datum,
+                fallbackFilePattern,
+                forceFallback: true)
+            : target;
     }
 
     /// <summary>
     /// Baut die fuenf Konfig-Karten (Haltungen/Schaechte/Dichtheit verteilen + Excel-Export Haltungen/Schaechte).
-    /// Die Live-Vorschau nutzt Beispielwerte (Altdorf, Beispiel-Haltung/-Schacht, heutiges Datum);
+    /// Die Live-Vorschau nutzt die Projektgemeinde sowie Beispiel-Haltung/-Schacht und heutiges Datum;
     /// Aenderungen werden ueber den debounced <see cref="AppSettings.Save"/> persistiert.
     /// </summary>
     private IReadOnlyList<DistributionTargetConfigViewModel> BuildDistributionTargets(IDistributionPatternResolver resolver)
     {
         var heute = DateTime.Today;
-        // Excel-Vorschau nutzt nur {Datum}/{Jahr}/{Monat}; die Verteil-Vorschau ist die Ziel-Wurzel selbst.
+        var gemeinde = _shell.Project.Metadata.TryGetValue("Gemeinde", out var projektGemeinde)
+            && !string.IsNullOrWhiteSpace(projektGemeinde)
+                ? projektGemeinde.Trim()
+                : "Gemeinde";
+        // Excel-Vorschau nutzt nur {Datum}/{Jahr}/{Monat}. Die drei Verteilungen erhalten
+        // typgerechte Beispiele fuer ihren kompletten, sicheren Verzeichnisbaum.
         var excelSample = new DistributionPatternContext(heute);
-        var verteilSample = new DistributionPatternContext(heute);
+        var haltungSample = new DistributionPatternContext(heute, gemeinde, "06.24341-35625");
+        var schachtSample = new DistributionPatternContext(heute, gemeinde, Schachtnummer: "80454");
+        var dichtheitSample = new DistributionPatternContext(heute, gemeinde, "06.24341-35625");
 
-        void OnCfgChanged() => _settings.Save();
+        void OnCfgChanged()
+        {
+            if (_settings.NormalizeExcelExportFilePatterns())
+            {
+                var excelTargets = DistributionTargets.Where(x => x.ShowFilePattern).ToArray();
+                if (excelTargets.Length >= 2)
+                {
+                    excelTargets[0].ApplyFilePattern(_settings.HaltungExport.DateiPattern);
+                    excelTargets[1].ApplyFilePattern(_settings.SchachtExport.DateiPattern);
+                }
+            }
+
+            _settings.Save();
+        }
         string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
 
-        const string haltungHinweis = "Feste Benennung: je Haltung ein Ordner, Dateien als Datum_Haltung (mit Video-Zuordnung).";
-        const string schachtHinweis = "Feste Benennung: je Schacht, Dateien als Datum_Schachtnummer.";
-        const string dichtheitHinweis = "Feste Benennung: je Schacht, Dichtheitsprotokolle als Datum_Schachtnummer.";
+        const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben fuer die sichere Video-Zuordnung fest.";
+        const string schachtHinweis = "Der letzte Schachtordner und der Dateiname bleiben fest.";
+        const string dichtheitHinweis = "DP wird sicher je Haltung abgelegt; Objektordner und Dateiname bleiben fest.";
         const string excelHinweis = "Platzhalter: {Datum} {Jahr} {Monat}";
 
         return new[]
         {
             new DistributionTargetConfigViewModel(
                 "Haltungen verteilen", "PDF-Protokoll + Video je Haltung",
-                _settings.HaltungDistribution, resolver, verteilSample, ".pdf",
+                _settings.HaltungDistribution, resolver, haltungSample, ".pdf",
                 showFilePattern: false, haltungHinweis, OnCfgChanged, BrowseRoot,
-                fixedPattern: "{Datum}_{Haltung}"),
+                fixedPattern: "{Datum}_{Haltung}",
+                fixedObjectFolderPattern: "{Haltung}",
+                directoryTreeResolver: _directoryTreeResolver),
             new DistributionTargetConfigViewModel(
                 "Schächte verteilen", "Schachtprotokoll je Schacht",
-                _settings.SchachtDistribution, resolver, verteilSample, ".pdf",
+                _settings.SchachtDistribution, resolver, schachtSample, ".pdf",
                 showFilePattern: false, schachtHinweis, OnCfgChanged, BrowseRoot,
-                fixedPattern: "{Datum}_{Schachtnummer}"),
+                fixedPattern: "{Datum}_{Schachtnummer}",
+                fixedObjectFolderPattern: "{Schachtnummer}",
+                directoryTreeResolver: _directoryTreeResolver),
             new DistributionTargetConfigViewModel(
-                "Dichtheitsprüfung verteilen", "DP-Protokoll je Schacht",
-                _settings.DichtheitDistribution, resolver, verteilSample, ".pdf",
+                "Dichtheitsprüfung verteilen", "DP-Protokoll je Haltung",
+                _settings.DichtheitDistribution, resolver, dichtheitSample, ".pdf",
                 showFilePattern: false, dichtheitHinweis, OnCfgChanged, BrowseRoot,
-                fixedPattern: "{Datum}_{Schachtnummer}"),
+                fixedPattern: "{Datum}_{Haltung}_DP",
+                fixedObjectFolderPattern: "{Haltung}",
+                directoryTreeResolver: _directoryTreeResolver),
             new DistributionTargetConfigViewModel(
                 "Excel-Export Haltungen", "Eine Datei (Haltungen.xlsx)",
                 _settings.HaltungExport, resolver, excelSample, ".xlsx",
-                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot),
+                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot,
+                showRootEditor: false,
+                showSharedExcelRoot: true,
+                directoryTreeResolver: _directoryTreeResolver),
             new DistributionTargetConfigViewModel(
                 "Excel-Export Schächte", "Eine Datei (Schächte.xlsx)",
                 _settings.SchachtExport, resolver, excelSample, ".xlsx",
-                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot),
+                showFilePattern: true, excelHinweis, OnCfgChanged, BrowseRoot,
+                showRootEditor: false,
+                directoryTreeResolver: _directoryTreeResolver),
         };
+    }
+
+    private void BrowseExcelExportRoot()
+    {
+        var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner waehlen");
+        if (!string.IsNullOrWhiteSpace(selected))
+            ExcelExportRoot = selected;
+    }
+
+    partial void OnExcelExportRootChanged(string? value)
+    {
+        var normalized = _settings.SetExcelExportRoot(value);
+        if (!string.Equals(_excelExportRoot, normalized, StringComparison.Ordinal))
+        {
+            _excelExportRoot = normalized;
+            OnPropertyChanged(nameof(ExcelExportRoot));
+        }
+
+        foreach (var target in DistributionTargets.Where(x => x.ShowFilePattern))
+            target.ApplySharedRoot(normalized);
+
+        _settings.Save();
     }
 
     /// <summary>Excel-Export braucht geladenes Projekt.</summary>
@@ -182,14 +293,19 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportAsync()
     {
-        // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Speichern-Dialog wie bisher.
-        var outPath = ResolveConfiguredExcelPath(_settings.HaltungExport)
-            ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-        if (outPath is null) return;
-
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
         try
         {
+            // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Dialog wie bisher.
+            var outPath = ResolveConfiguredExcelPath(
+                    _settings.HaltungExport,
+                    "Haltungen",
+                    _settings.SchachtExport,
+                    "Schaechte")
+                ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+            if (outPath is null)
+                return;
+
             IsPageBusy = true;
             using var busy = Busy.Enter("Haltungen werden exportiert …");
 
@@ -214,6 +330,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
             else
                 _toasts.Error(res.ErrorMessage ?? "Haltungs-Export fehlgeschlagen.");
         }
+        catch (Exception ex)
+        {
+            var userMessage = UserError.DescribeAndReport(ex, "Haltungs-Excel-Export");
+            LastResult = $"Fehler: {userMessage}";
+            _shell.SetStatus("Export fehlgeschlagen");
+            _toasts.Error($"Haltungs-Export fehlgeschlagen: {userMessage}");
+        }
         finally
         {
             IsPageBusy = false;
@@ -222,21 +345,25 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportSchaechteAsync()
     {
-        // Konfigurierte Ziel-Wurzel + Datei-Muster nutzen; ohne Wurzel den Speichern-Dialog wie bisher.
-        var outPath = ResolveConfiguredExcelPath(_settings.SchachtExport)
-            ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-        if (outPath is null) return;
-
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
-        if (!File.Exists(templatePath))
-        {
-            LastResult = $"Fehler: Vorlage nicht gefunden ({templatePath})";
-            _shell.SetStatus("Export fehlgeschlagen");
-            return;
-        }
-
         try
         {
+            var outPath = ResolveConfiguredExcelPath(
+                    _settings.SchachtExport,
+                    "Schaechte",
+                    _settings.HaltungExport,
+                    "Haltungen")
+                ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+            if (outPath is null)
+                return;
+
+            if (!File.Exists(templatePath))
+            {
+                LastResult = $"Fehler: Vorlage nicht gefunden ({templatePath})";
+                _shell.SetStatus("Export fehlgeschlagen");
+                return;
+            }
+
             IsPageBusy = true;
             using var busy = Busy.Enter("Schächte werden exportiert …");
             var res = await Task.Run(() =>
@@ -247,6 +374,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
             else
                 _toasts.Error(res.ErrorMessage ?? "Schacht-Export fehlgeschlagen.");
+        }
+        catch (Exception ex)
+        {
+            var userMessage = UserError.DescribeAndReport(ex, "Schacht-Excel-Export");
+            LastResult = $"Fehler: {userMessage}";
+            _shell.SetStatus("Export fehlgeschlagen");
+            _toasts.Error($"Schacht-Export fehlgeschlagen: {userMessage}");
         }
         finally
         {
@@ -320,6 +454,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        var directoryConfig = SnapshotDistributionTree(_settings.HaltungDistribution);
 
         try
         {
@@ -351,7 +486,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
             else if (!useTxtImport)
             {
@@ -364,7 +500,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
             else if (selectedTxtFiles.Length > 0)
             {
@@ -377,7 +514,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
             else
             {
@@ -390,7 +528,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
@@ -445,6 +584,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
 
         try
         {
@@ -473,7 +613,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     moveInsteadOfCopy: false,
                     overwrite: false,
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
             else
             {
@@ -483,7 +624,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     moveInsteadOfCopy: false,
                     overwrite: false,
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    directoryConfig: directoryConfig));
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
@@ -535,6 +677,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var destFolder = ResolveConfiguredDistributionRoot(_settings.DichtheitDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        var directoryConfig = SnapshotDistributionTree(_settings.DichtheitDistribution);
 
         try
         {
@@ -578,7 +721,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     project: _shell.Project,
                     progress: progress,
-                    cadastre: cadastre));
+                    cadastre: cadastre,
+                    directoryConfig: directoryConfig));
             }
             else
             {
@@ -589,7 +733,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     project: _shell.Project,
                     progress: progress,
-                    cadastre: cadastre));
+                    cadastre: cadastre,
+                    directoryConfig: directoryConfig));
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
@@ -662,6 +807,26 @@ public sealed partial class ExportPageViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Friert die beiden Baumebenen fuer den gestarteten Lauf ein. Aenderungen in der
+    /// Oberflaeche koennen so einen bereits laufenden Kopiervorgang nicht beeinflussen.
+    /// </summary>
+    internal static DistributionTargetConfig? SnapshotDistributionTree(DistributionTargetConfig cfg)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+        if (string.IsNullOrWhiteSpace(cfg.OrdnerPattern)
+            && string.IsNullOrWhiteSpace(cfg.UnterordnerPattern))
+        {
+            return null;
+        }
+
+        return new DistributionTargetConfig
+        {
+            OrdnerPattern = cfg.OrdnerPattern ?? string.Empty,
+            UnterordnerPattern = cfg.UnterordnerPattern ?? string.Empty,
+        };
+    }
+
+    /// <summary>
     /// Konfigurierte Ziel-Wurzel als Verteil-Ziel; null, wenn keine gesetzt ist
     /// (dann greift der bisherige Projektordner-/Dialog-Pfad wie zuvor).
     /// </summary>
@@ -672,9 +837,21 @@ public sealed partial class ExportPageViewModel : ObservableObject
     /// Excel-Zielpfad aus der Konfiguration (Ziel-Wurzel + Datei-Muster); legt den Zielordner an.
     /// Null -> keine Wurzel gesetzt -> Aufrufer nutzt den Speichern-Dialog.
     /// </summary>
-    private string? ResolveConfiguredExcelPath(DistributionTargetConfig cfg)
+    private string? ResolveConfiguredExcelPath(
+        DistributionTargetConfig cfg,
+        string fallbackFilePattern,
+        DistributionTargetConfig otherCfg,
+        string otherFallbackFilePattern)
     {
-        var ziel = BuildConfiguredExcelPath(cfg, _patternResolver, DateTime.Today);
+        var datum = DateTime.Today;
+        var ziel = BuildCollisionSafeExcelPath(
+            _settings.ExcelExportRoot,
+            cfg,
+            fallbackFilePattern,
+            otherCfg,
+            otherFallbackFilePattern,
+            _patternResolver,
+            datum);
         if (ziel is null)
             return null;
 

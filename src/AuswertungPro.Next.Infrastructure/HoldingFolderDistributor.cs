@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -22,9 +23,16 @@ namespace AuswertungPro.Next.Infrastructure;
 public static partial class HoldingFolderDistributor
 {
     public static IReadOnlyList<DistributionResult> Distribute(
+        string pdfSourceFolder, string videoSourceFolder, string destGemeindeFolder,
+        bool moveInsteadOfCopy = false, bool overwrite = false, bool recursiveVideoSearch = true, string unmatchedFolderName = "__UNMATCHED",
+        AuswertungPro.Next.Domain.Models.Project? project = null, IProgress<DistributionProgress>? progress = null, string? xtfSourceFolder = null)
+        => Distribute(pdfSourceFolder, videoSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, project, progress, xtfSourceFolder);
+
+    public static IReadOnlyList<DistributionResult> Distribute(
         string pdfSourceFolder,
         string videoSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         bool recursiveVideoSearch = true,
@@ -53,13 +61,21 @@ public static partial class HoldingFolderDistributor
             unmatchedFolderName: unmatchedFolderName,
             project: project,
             progress: progress,
-            xtfSourceFolder: xtfSourceFolder ?? pdfSourceFolder);
+            xtfSourceFolder: xtfSourceFolder ?? pdfSourceFolder,
+            directoryConfig: directoryConfig);
     }
+
+    public static IReadOnlyList<DistributionResult> DistributeFiles(
+        IEnumerable<string> pdfFiles, string videoSourceFolder, string destGemeindeFolder,
+        bool moveInsteadOfCopy = false, bool overwrite = false, bool recursiveVideoSearch = true, string unmatchedFolderName = "__UNMATCHED",
+        AuswertungPro.Next.Domain.Models.Project? project = null, IProgress<DistributionProgress>? progress = null, string? xtfSourceFolder = null)
+        => DistributeFiles(pdfFiles, videoSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, project, progress, xtfSourceFolder);
 
     public static IReadOnlyList<DistributionResult> DistributeFiles(
         IEnumerable<string> pdfFiles,
         string videoSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         bool recursiveVideoSearch = true,
@@ -95,13 +111,21 @@ public static partial class HoldingFolderDistributor
             unmatchedFolderName: unmatchedFolderName,
             project: project,
             progress: progress,
-            xtfSourceFolder: derivedXtfFolder);
+            xtfSourceFolder: derivedXtfFolder,
+            directoryConfig: directoryConfig);
     }
+
+    public static IReadOnlyList<DistributionResult> DistributeTxt(
+        string txtSourceFolder, string videoSourceFolder, string destGemeindeFolder,
+        bool moveInsteadOfCopy = false, bool overwrite = false, bool recursiveVideoSearch = true, string unmatchedFolderName = "__UNMATCHED",
+        AuswertungPro.Next.Domain.Models.Project? project = null, IProgress<DistributionProgress>? progress = null)
+        => DistributeTxt(txtSourceFolder, videoSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, project, progress);
 
     public static IReadOnlyList<DistributionResult> DistributeTxt(
         string txtSourceFolder,
         string videoSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         bool recursiveVideoSearch = true,
@@ -137,13 +161,21 @@ public static partial class HoldingFolderDistributor
             recursiveVideoSearch: recursiveVideoSearch,
             unmatchedFolderName: unmatchedFolderName,
             project: project,
-            progress: progress);
+            progress: progress,
+            directoryConfig: directoryConfig);
     }
+
+    public static IReadOnlyList<DistributionResult> DistributeTxtFiles(
+        IEnumerable<string> txtFiles, string videoSourceFolder, string destGemeindeFolder,
+        bool moveInsteadOfCopy = false, bool overwrite = false, bool recursiveVideoSearch = true, string unmatchedFolderName = "__UNMATCHED",
+        AuswertungPro.Next.Domain.Models.Project? project = null, IProgress<DistributionProgress>? progress = null)
+        => DistributeTxtFiles(txtFiles, videoSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, project, progress);
 
     public static IReadOnlyList<DistributionResult> DistributeTxtFiles(
         IEnumerable<string> txtFiles,
         string videoSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         bool recursiveVideoSearch = true,
@@ -176,7 +208,8 @@ public static partial class HoldingFolderDistributor
             recursiveVideoSearch: recursiveVideoSearch,
             unmatchedFolderName: unmatchedFolderName,
             project: project,
-            progress: progress);
+            progress: progress,
+            directoryConfig: directoryConfig);
     }
 
     private static IReadOnlyList<DistributionResult> DistributeTxtCore(
@@ -188,7 +221,8 @@ public static partial class HoldingFolderDistributor
         bool recursiveVideoSearch,
         string unmatchedFolderName,
         AuswertungPro.Next.Domain.Models.Project? project,
-        IProgress<DistributionProgress>? progress)
+        IProgress<DistributionProgress>? progress,
+        DistributionTargetConfig? directoryConfig)
     {
         var results = new List<DistributionResult>();
 
@@ -221,7 +255,15 @@ public static partial class HoldingFolderDistributor
                 var date = section.Date;
                 var dateStamp = date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
 
-                var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                var treeContext = new DistributionPatternContext(
+                    Datum: date,
+                    Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
+                    Haltung: haltung);
+                var holdingFolder = DistributionDirectoryTreeController.ResolveObjectFolder(
+                    destGemeindeFolder,
+                    directoryConfig,
+                    treeContext,
+                    "{Haltung}");
                 Directory.CreateDirectory(holdingFolder);
 
                 var destTxtName = $"{dateStamp}_{haltung}.txt";
@@ -288,7 +330,9 @@ public static partial class HoldingFolderDistributor
                     var infoName = $"{dateStamp}_{haltung}_VIDEO_AMBIGUOUS.txt";
                     infoPath = DistributionFileTransfer.EnsureUniquePath(Path.Combine(holdingFolder, infoName), overwrite);
                     AtomicTextFileWriter.WriteAllText(infoPath, VideoConflictArtifacts.BuildAmbiguousInfo(section.SourceTxtPath, section.VideoFileName, date, haltungRaw, videoFind.Candidates));
-                    var unmatchedFolder = Path.Combine(destGemeindeFolder, unmatchedFolderName, haltung);
+                    var holdingParent = Directory.GetParent(holdingFolder)?.FullName ?? destGemeindeFolder;
+                    var safeUnmatchedFolderName = ProjectPathResolver.SanitizePathSegment(unmatchedFolderName);
+                    var unmatchedFolder = Path.Combine(holdingParent, safeUnmatchedFolderName, haltung);
                     Directory.CreateDirectory(unmatchedFolder);
                     VideoConflictArtifacts.CopyCandidates(unmatchedFolder, dateStamp, haltung, videoFind.Candidates);
                 }
@@ -345,7 +389,8 @@ public static partial class HoldingFolderDistributor
         string unmatchedFolderName,
         AuswertungPro.Next.Domain.Models.Project? project,
         IProgress<DistributionProgress>? progress,
-        string? xtfSourceFolder = null)
+        string? xtfSourceFolder = null,
+        DistributionTargetConfig? directoryConfig = null)
     {
         var results = new List<DistributionResult>();
 
@@ -385,7 +430,7 @@ public static partial class HoldingFolderDistributor
                         continue;
                     }
 
-                    var result = ParsedHoldingDistributionController.Distribute(parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                    var result = ParsedHoldingDistributionController.Distribute(parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig);
                     results.Add(result);
                     if (result.Success && result.HoldingFolder is not null && parsed.Haltung is not null)
                         distributedHoldings[NormalizeHaltungId(parsed.Haltung)] = result.HoldingFolder;
@@ -394,7 +439,7 @@ public static partial class HoldingFolderDistributor
 
                 if (chunks.Count == 1 && pages.Count == chunks[0].Pages.Count)
                 {
-                    var result = ParsedHoldingDistributionController.Distribute(chunks[0].Parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                    var result = ParsedHoldingDistributionController.Distribute(chunks[0].Parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig);
                     results.Add(result);
                     if (result.Success && result.HoldingFolder is not null && chunks[0].Parsed.Haltung is not null)
                         distributedHoldings[NormalizeHaltungId(chunks[0].Parsed.Haltung)] = result.HoldingFolder;
@@ -414,7 +459,7 @@ public static partial class HoldingFolderDistributor
                     try
                     {
                         WritePdfPages(pdfPath, chunk.Pages, tempPdfPath);
-                        var result = ParsedHoldingDistributionController.Distribute(chunk.Parsed, pdfPath, tempPdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, recursiveVideoSearch, unmatchedFolderName, pageRange, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                        var result = ParsedHoldingDistributionController.Distribute(chunk.Parsed, pdfPath, tempPdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, recursiveVideoSearch, unmatchedFolderName, pageRange, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig);
                         results.Add(result);
                         if (result.Success && result.HoldingFolder is not null && chunk.Parsed.Haltung is not null)
                             distributedHoldings[NormalizeHaltungId(chunk.Parsed.Haltung)] = result.HoldingFolder;
@@ -491,8 +536,14 @@ public static partial class HoldingFolderDistributor
     }
 
     public static IReadOnlyList<DistributionResult> DistributeShafts(
+        string pdfSourceFolder, string destGemeindeFolder, bool moveInsteadOfCopy = false, bool overwrite = false,
+        Project? project = null, IProgress<DistributionProgress>? progress = null)
+        => DistributeShafts(pdfSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, project, progress);
+
+    public static IReadOnlyList<DistributionResult> DistributeShafts(
         string pdfSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
@@ -508,12 +559,18 @@ public static partial class HoldingFolderDistributor
         if (pdfFiles.Count == 0)
             return new[] { new DistributionResult(false, $"No PDF files found (recursive) in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeShaftCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+        return DistributeShaftCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig);
     }
+
+    public static IReadOnlyList<DistributionResult> DistributeShaftFiles(
+        IEnumerable<string> pdfFiles, string destGemeindeFolder, bool moveInsteadOfCopy = false, bool overwrite = false,
+        Project? project = null, IProgress<DistributionProgress>? progress = null)
+        => DistributeShaftFiles(pdfFiles, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, project, progress);
 
     public static IReadOnlyList<DistributionResult> DistributeShaftFiles(
         IEnumerable<string> pdfFiles,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
@@ -533,7 +590,7 @@ public static partial class HoldingFolderDistributor
         if (validPdfFiles.Count == 0)
             return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeShaftCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+        return DistributeShaftCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig);
     }
 
     private static IReadOnlyList<DistributionResult> DistributeShaftCore(
@@ -542,7 +599,8 @@ public static partial class HoldingFolderDistributor
         bool moveInsteadOfCopy,
         bool overwrite,
         Project? project,
-        IProgress<DistributionProgress>? progress)
+        IProgress<DistributionProgress>? progress,
+        DistributionTargetConfig? directoryConfig)
     {
         var results = new List<DistributionResult>();
         var shaftOutputPathByKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -564,13 +622,13 @@ public static partial class HoldingFolderDistributor
                         continue;
                     }
 
-                    results.Add(HandleParsedShaftDistribution(parsed, pdfPath, pdfPath, destGemeindeFolder, moveInsteadOfCopy, overwrite, null, shaftOutputPathByKey, project));
+                    results.Add(ParsedShaftDistributionController.Distribute(parsed, pdfPath, pdfPath, destGemeindeFolder, moveInsteadOfCopy, overwrite, null, shaftOutputPathByKey, project, directoryConfig));
                     continue;
                 }
 
                 if (chunks.Count == 1 && pages.Count == chunks[0].Pages.Count)
                 {
-                    results.Add(HandleParsedShaftDistribution(chunks[0].Parsed, pdfPath, pdfPath, destGemeindeFolder, moveInsteadOfCopy, overwrite, null, shaftOutputPathByKey, project));
+                    results.Add(ParsedShaftDistributionController.Distribute(chunks[0].Parsed, pdfPath, pdfPath, destGemeindeFolder, moveInsteadOfCopy, overwrite, null, shaftOutputPathByKey, project, directoryConfig));
                     continue;
                 }
 
@@ -587,7 +645,7 @@ public static partial class HoldingFolderDistributor
                     try
                     {
                         WritePdfPages(pdfPath, chunk.Pages, tempPdfPath);
-                        results.Add(HandleParsedShaftDistribution(chunk.Parsed, pdfPath, tempPdfPath, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, pageRange, shaftOutputPathByKey, project));
+                        results.Add(ParsedShaftDistributionController.Distribute(chunk.Parsed, pdfPath, tempPdfPath, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, pageRange, shaftOutputPathByKey, project, directoryConfig));
                     }
                     finally
                     {
@@ -617,8 +675,14 @@ public static partial class HoldingFolderDistributor
     /// um die Haltung zu ermitteln.
     /// </summary>
     public static IReadOnlyList<DistributionResult> DistributeDichtheit(
+        string pdfSourceFolder, string destGemeindeFolder, bool moveInsteadOfCopy = false, bool overwrite = false,
+        Project? project = null, IProgress<DistributionProgress>? progress = null, IHaltungCadastreResolver? cadastre = null)
+        => DistributeDichtheit(pdfSourceFolder, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, project, progress, cadastre);
+
+    public static IReadOnlyList<DistributionResult> DistributeDichtheit(
         string pdfSourceFolder,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
@@ -635,7 +699,7 @@ public static partial class HoldingFolderDistributor
         if (pdfFiles.Count == 0)
             return new[] { new DistributionResult(false, $"No PDF files found in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre);
+        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig);
     }
 
     /// <summary>
@@ -643,8 +707,14 @@ public static partial class HoldingFolderDistributor
     /// Haltungsordner-Struktur.
     /// </summary>
     public static IReadOnlyList<DistributionResult> DistributeDichtheitFiles(
+        IEnumerable<string> pdfFiles, string destGemeindeFolder, bool moveInsteadOfCopy = false, bool overwrite = false,
+        Project? project = null, IProgress<DistributionProgress>? progress = null, IHaltungCadastreResolver? cadastre = null)
+        => DistributeDichtheitFiles(pdfFiles, destGemeindeFolder, null, moveInsteadOfCopy, overwrite, project, progress, cadastre);
+
+    public static IReadOnlyList<DistributionResult> DistributeDichtheitFiles(
         IEnumerable<string> pdfFiles,
         string destGemeindeFolder,
+        DistributionTargetConfig? directoryConfig,
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
@@ -662,7 +732,7 @@ public static partial class HoldingFolderDistributor
         if (validPdfFiles.Count == 0)
             return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre);
+        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig);
     }
 
     private static IReadOnlyList<DistributionResult> DistributeDichtheitCore(
@@ -672,7 +742,8 @@ public static partial class HoldingFolderDistributor
         bool overwrite,
         Project? project,
         IProgress<DistributionProgress>? progress,
-        IHaltungCadastreResolver? cadastre = null)
+        IHaltungCadastreResolver? cadastre = null,
+        DistributionTargetConfig? directoryConfig = null)
     {
         var results = new List<DistributionResult>();
         var processed = 0;
@@ -721,7 +792,21 @@ public static partial class HoldingFolderDistributor
                             destGemeindeFolder,
                             pr.HaltungId,
                             cadastre);
-                        var holdingFolder = Path.Combine(destRoot, haltung);
+                        var hasTreeDate = DateTime.TryParseExact(
+                            pr.DateStamp,
+                            "yyyyMMdd",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None,
+                            out var treeDate);
+                        var treeContext = new DistributionPatternContext(
+                            Datum: hasTreeDate ? treeDate : null,
+                            Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
+                            Haltung: haltung);
+                        var holdingFolder = DistributionDirectoryTreeController.ResolveObjectFolder(
+                            destRoot,
+                            directoryConfig,
+                            treeContext,
+                            "{Haltung}");
                         Directory.CreateDirectory(holdingFolder);
 
                         var suffix = pr.IsSchacht ? "SP" : "DP";
@@ -778,6 +863,18 @@ public static partial class HoldingFolderDistributor
                     }
 
                     var date = TryFindInspectionDate(pdfText);
+                    if (date is null
+                        && directoryConfig is not null
+                        && pageResults.Count > 0
+                        && DateTime.TryParseExact(
+                            pageResults[0].DateStamp,
+                            "yyyyMMdd",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None,
+                            out var pageDate))
+                    {
+                        date = pageDate;
+                    }
                     var dateStamp = date?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
 
                     var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
@@ -787,7 +884,15 @@ public static partial class HoldingFolderDistributor
                         destGemeindeFolder,
                         haltungId,
                         cadastre);
-                    var holdingFolder = Path.Combine(destRoot, haltung);
+                    var treeContext = new DistributionPatternContext(
+                        Datum: date,
+                        Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
+                        Haltung: haltung);
+                    var holdingFolder = DistributionDirectoryTreeController.ResolveObjectFolder(
+                        destRoot,
+                        directoryConfig,
+                        treeContext,
+                        "{Haltung}");
                     Directory.CreateDirectory(holdingFolder);
 
                     var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
@@ -811,130 +916,5 @@ public static partial class HoldingFolderDistributor
         }
 
         return results;
-    }
-    private static DistributionResult HandleParsedShaftDistribution(
-        ParsedShaftPdf parsed,
-        string sourcePdfPath,
-        string pdfToStorePath,
-        string destGemeindeFolder,
-        bool moveInsteadOfCopy,
-        bool overwrite,
-        string? pageRange,
-        Dictionary<string, string> shaftOutputPathByKey,
-        Project? project = null)
-    {
-        if (string.IsNullOrWhiteSpace(parsed.ShaftNumber))
-            return new DistributionResult(false, "Schachtnummer nicht gefunden", sourcePdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked);
-        if (parsed.Date is null)
-            return new DistributionResult(false, "Datum nicht gefunden", sourcePdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked);
-
-        var parsedShaftRaw = parsed.ShaftNumber.Trim();
-        var shaftRaw = PdfCorrectionMetadata.ResolveShaft(project, parsedShaftRaw);
-        if (string.IsNullOrWhiteSpace(shaftRaw))
-            shaftRaw = parsedShaftRaw;
-
-        var shaft = SanitizePathSegment(shaftRaw);
-        var dateStamp = parsed.Date.Value.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-        var pdfReplacements = BuildRenameReplacements(parsedShaftRaw, shaftRaw);
-        var correctionResult = TryCorrectPdfTextLayer(pdfToStorePath, pdfReplacements);
-        var pdfSourceToStorePath = correctionResult.Corrected ? correctionResult.OutputPdfPath : pdfToStorePath;
-        var removeOriginalAfterStore = moveInsteadOfCopy
-            && correctionResult.Corrected
-            && !string.Equals(pdfToStorePath, pdfSourceToStorePath, StringComparison.OrdinalIgnoreCase);
-
-        try
-        {
-            var shaftFolder = Path.Combine(destGemeindeFolder, shaft);
-            Directory.CreateDirectory(shaftFolder);
-
-            var destPdfName = $"{dateStamp}_{shaft}.pdf";
-            var shaftKey = $"{dateStamp}|{shaft}";
-            string destPdfPath;
-            var appendedToExisting = false;
-
-            if (shaftOutputPathByKey.TryGetValue(shaftKey, out var existingPath)
-                && !string.IsNullOrWhiteSpace(existingPath)
-                && File.Exists(existingPath))
-            {
-                try
-                {
-                    AppendPdfFile(existingPath, pdfSourceToStorePath, moveInsteadOfCopy);
-                    destPdfPath = existingPath;
-                    appendedToExisting = true;
-                }
-                catch (Exception ex)
-                {
-                    return new DistributionResult(
-                        false,
-                        $"Konnte PDF nicht zusammenführen: {ex.Message}",
-                        sourcePdfPath,
-                        null,
-                        null,
-                        null,
-                        null,
-                        shaftFolder,
-                        VideoMatchStatus.NotChecked);
-                }
-            }
-            else
-            {
-                destPdfPath = DistributionFileTransfer.EnsureUniquePath(Path.Combine(shaftFolder, destPdfName), overwrite);
-                DistributionFileTransfer.MoveOrCopy(pdfSourceToStorePath, destPdfPath, moveInsteadOfCopy, overwrite);
-                shaftOutputPathByKey[shaftKey] = destPdfPath;
-            }
-
-            if (removeOriginalAfterStore
-                && File.Exists(pdfToStorePath)
-                && !string.Equals(pdfToStorePath, pdfSourceToStorePath, StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    File.Delete(pdfToStorePath);
-                }
-                catch
-                {
-                    // Best-effort cleanup for move semantics.
-                }
-            }
-
-            var message = "OK (Schachtprotokoll)";
-            if (appendedToExisting)
-                message += " + Seite angehängt";
-            if (correctionResult.Corrected)
-                message += $" [PDF korrigiert: {correctionResult.MatchCount} Treffer auf {correctionResult.PageCount} Seiten]";
-            else if (pdfReplacements.Count > 0 && !string.IsNullOrWhiteSpace(correctionResult.Message))
-                message += $" [PDF-Korrektur: {correctionResult.Message}]";
-            if (!string.IsNullOrWhiteSpace(pageRange))
-                message = $"Split Seiten {pageRange} - {message}";
-
-            return new DistributionResult(
-                true,
-                message,
-                sourcePdfPath,
-                null,
-                destPdfPath,
-                null,
-                null,
-                shaftFolder,
-                VideoMatchStatus.NotChecked,
-                PdfCorrected: correctionResult.Corrected,
-                PdfCorrectionMessage: correctionResult.Message);
-        }
-        finally
-        {
-            if (correctionResult.Corrected
-                && !string.Equals(correctionResult.OutputPdfPath, pdfToStorePath, StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    if (File.Exists(correctionResult.OutputPdfPath))
-                        File.Delete(correctionResult.OutputPdfPath);
-                }
-                catch
-                {
-                    // Best-effort cleanup.
-                }
-            }
-        }
     }
 }

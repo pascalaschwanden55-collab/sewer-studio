@@ -9,8 +9,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 /// <summary>
 /// ViewModel einer Ziel-Ablage-Karte auf der Export-Seite. Zwei Auspraegungen:
-///  - <b>Verteilung</b> (Haltungen/Schaechte/Dichtheit): nur die Ziel-Wurzel ist einstellbar;
-///    die Datei-Benennung bleibt fest (sie ist im Verteiler mit der Video-Zuordnung verwoben).
+///  - <b>Verteilung</b> (Haltungen/Schaechte/Dichtheit): Ziel-Wurzel und zwei sichere
+///    Ueberordner sind einstellbar. Der letzte Objektordner und die Datei-Benennung bleiben fest,
+///    weil Video-Zuordnung und Projektpfade darauf angewiesen sind.
 ///    <see cref="ShowFilePattern"/> = false.
 ///  - <b>Excel-Export</b>: zusaetzlich ein freies Datei-Muster mit Live-Vorschau des fertigen
 ///    Namens (ueber <see cref="IDistributionPatternResolver"/>). <see cref="ShowFilePattern"/> = true.
@@ -20,11 +21,15 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
 {
     private readonly DistributionTargetConfig _config;
     private readonly IDistributionPatternResolver _resolver;
+    private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly DistributionPatternContext _sampleContext;
     private readonly string _extension;
     private readonly string? _fixedPattern;
+    private readonly string? _fixedObjectFolderPattern;
     private readonly Action _onChanged;
     private readonly Func<string?> _browseFolder;
+    private bool _suppressRootSave;
+    private bool _suppressFilePatternSave;
 
     public string Titel { get; }
     public string Untertitel { get; }
@@ -32,17 +37,33 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     /// <summary>true = Excel-Karte mit freiem Datei-Muster; false = Verteil-Karte (nur Ziel-Wurzel).</summary>
     public bool ShowFilePattern { get; }
 
+    /// <summary>true = diese Karte besitzt ein eigenes Ziel-Wurzel-Feld.</summary>
+    public bool ShowRootEditor { get; }
+
+    /// <summary>true = diese Karte zeigt einmalig den gemeinsamen Excel-Zielordner.</summary>
+    public bool ShowSharedExcelRoot { get; }
+
+    /// <summary>true = Verteilkarte mit zwei konfigurierbaren Ueberordnern.</summary>
+    public bool ShowDirectoryTree => !ShowFilePattern;
+
     /// <summary>Fuer Verteil-Karten wird das feste, sichere Benennungsschema nur angezeigt.</summary>
     public bool ShowFixedPattern => !ShowFilePattern;
 
     /// <summary>Erklaerender Hinweis (Excel: Platzhalter-Legende; Verteilung: festes Benennungsschema).</summary>
     public string Hinweis { get; }
 
+    /// <summary>Der feste letzte Ordner: Haltung oder Schachtnummer.</summary>
+    public string FixedObjectFolderPattern => _fixedObjectFolderPattern ?? string.Empty;
+
+    public IReadOnlyList<DistributionPatternPart> ObjectFolderPatternParts { get; }
+
     /// <summary>Anklickbare Bausteine fuer den Excel-Dateinamen.</summary>
     public IReadOnlyList<DistributionPatternBlock> AvailablePatternBlocks { get; } =
         DistributionPatternBlockComposer.AvailableExcelBlocks;
 
     [ObservableProperty] private string? _root;
+    [ObservableProperty] private string _ordnerPattern;
+    [ObservableProperty] private string _unterordnerPattern;
     [ObservableProperty] private string _dateiPattern;
     [ObservableProperty] private IReadOnlyList<DistributionPatternPart> _dateiPatternParts =
         Array.Empty<DistributionPatternPart>();
@@ -64,24 +85,35 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         string hinweis,
         Action onChanged,
         Func<string?> browseFolder,
-        string? fixedPattern = null)
+        string? fixedPattern = null,
+        bool showRootEditor = true,
+        bool showSharedExcelRoot = false,
+        string? fixedObjectFolderPattern = null,
+        IDistributionDirectoryTreeResolver? directoryTreeResolver = null)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_resolver);
         _sampleContext = sampleContext ?? throw new ArgumentNullException(nameof(sampleContext));
         _extension = extension;
         _fixedPattern = fixedPattern;
+        _fixedObjectFolderPattern = fixedObjectFolderPattern;
         _onChanged = onChanged ?? throw new ArgumentNullException(nameof(onChanged));
         _browseFolder = browseFolder ?? throw new ArgumentNullException(nameof(browseFolder));
         Titel = titel;
         Untertitel = untertitel;
         ShowFilePattern = showFilePattern;
+        ShowRootEditor = showRootEditor;
+        ShowSharedExcelRoot = showSharedExcelRoot;
         Hinweis = hinweis;
 
         // Backing-Felder direkt aus der Konfiguration setzen -> loest KEINE OnChanged-Callbacks
         // und damit kein vorzeitiges Speichern beim Aufbau aus.
         _root = config.Root;
+        _ordnerPattern = config.OrdnerPattern ?? string.Empty;
+        _unterordnerPattern = config.UnterordnerPattern ?? string.Empty;
         _dateiPattern = config.DateiPattern;
+        ObjectFolderPatternParts = DistributionPatternBlockComposer.Parse(FixedObjectFolderPattern);
 
         BrowseRootCommand = new RelayCommand(BrowseRoot);
         AddPatternBlockCommand = new RelayCommand<DistributionPatternBlock>(AddPatternBlock);
@@ -102,6 +134,21 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
     {
         _config.Root = value;
         UpdateVorschau();
+        if (!_suppressRootSave)
+            _onChanged();
+    }
+
+    partial void OnOrdnerPatternChanged(string value)
+    {
+        _config.OrdnerPattern = value ?? string.Empty;
+        UpdateVorschau();
+        _onChanged();
+    }
+
+    partial void OnUnterordnerPatternChanged(string value)
+    {
+        _config.UnterordnerPattern = value ?? string.Empty;
+        UpdateVorschau();
         _onChanged();
     }
 
@@ -110,7 +157,53 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         _config.DateiPattern = value ?? string.Empty;
         UpdateDateiPatternParts();
         UpdateVorschau();
-        _onChanged();
+        if (!_suppressFilePatternSave)
+            _onChanged();
+    }
+
+    /// <summary>
+    /// Aktualisiert den gemeinsamen Excel-Zielordner ohne einen zweiten Speichervorgang auszuloesen.
+    /// Der Besitzer der gemeinsamen Einstellung speichert anschliessend genau einmal.
+    /// </summary>
+    internal void ApplySharedRoot(string? value)
+    {
+        if (string.Equals(Root, value, StringComparison.Ordinal))
+        {
+            _config.Root = value;
+            UpdateVorschau();
+            return;
+        }
+
+        _suppressRootSave = true;
+        try
+        {
+            Root = value;
+        }
+        finally
+        {
+            _suppressRootSave = false;
+        }
+    }
+
+    /// <summary>Uebernimmt einen sicher korrigierten Excel-Dateinamen ohne Callback-Schleife.</summary>
+    internal void ApplyFilePattern(string value)
+    {
+        var normalized = value ?? string.Empty;
+        if (string.Equals(DateiPattern, normalized, StringComparison.Ordinal))
+        {
+            _config.DateiPattern = normalized;
+            return;
+        }
+
+        _suppressFilePatternSave = true;
+        try
+        {
+            DateiPattern = normalized;
+        }
+        finally
+        {
+            _suppressFilePatternSave = false;
+        }
     }
 
     private void AddPatternBlock(DistributionPatternBlock? block)
@@ -143,7 +236,8 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
 
     /// <summary>
     /// Baut die Live-Vorschau. Excel: Ziel-Wurzel + aufgeloestes Datei-Muster.
-    /// Verteilung: die Ziel-Wurzel selbst (die Benennung darunter ist fest).
+    /// Verteilung: kompletter Beispielpfad mit optionalen Ueberordnern, festem
+    /// Objektordner und festem Dateinamen.
     /// </summary>
     private void UpdateVorschau()
     {
@@ -160,7 +254,24 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         }
         else
         {
-            Vorschau = wurzel;
+            var objektPattern = string.IsNullOrWhiteSpace(_fixedObjectFolderPattern)
+                ? string.IsNullOrWhiteSpace(_sampleContext.Schachtnummer)
+                    ? "{Haltung}"
+                    : "{Schachtnummer}"
+                : _fixedObjectFolderPattern;
+            var objektOrdner = _directoryTreeResolver.ResolveObjectDirectory(
+                wurzel,
+                OrdnerPattern,
+                UnterordnerPattern,
+                objektPattern,
+                _sampleContext);
+            var datei = _resolver.ResolveRelativePath(
+                ordnerPattern: null,
+                unterordnerPattern: null,
+                dateiPattern: _fixedPattern ?? DateiPattern,
+                context: _sampleContext,
+                extension: _extension);
+            Vorschau = Path.Combine(objektOrdner, datei);
         }
     }
 }

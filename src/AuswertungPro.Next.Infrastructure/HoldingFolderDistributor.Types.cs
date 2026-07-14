@@ -43,12 +43,4 @@ public static partial class HoldingFolderDistributor
         DateTime Date,
         string SectionText);
 
-    internal sealed record PdfTextReplacement(string SearchText, string ReplacementText);
-    internal sealed record PdfCorrectionResult(
-        bool Success,
-        bool Corrected,
-        string OutputPdfPath,
-        int MatchCount,
-        int PageCount,
-        string Message);
 }

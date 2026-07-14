@@ -156,6 +156,8 @@ namespace AuswertungPro.Next.UI
         #region Export / Protokoll
         // Export-Dienste und Protokollerzeugung
         public IExcelExportService ExcelExport { get; }
+        public IDistributionPatternResolver DistributionPatterns { get; }
+        public IDistributionDirectoryTreeResolver DistributionDirectoryTree { get; }
         public IProtocolService Protocols { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
@@ -337,6 +339,8 @@ namespace AuswertungPro.Next.UI
             ImportSourceArchiver = new ImportSourceArchiveService();
             DichtheitImportDistributor = new DichtheitImportDistributionService();
             KanalImportDistributor = new KanalImportDistributionService();
+            DistributionPatterns = new DistributionPatternResolver();
+            DistributionDirectoryTree = new DistributionDirectoryTreeResolver(DistributionPatterns);
             ExcelExport = new ExcelTemplateExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
@@ -654,6 +658,8 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
+            if (serviceType == typeof(IDistributionPatternResolver)) return DistributionPatterns;
+            if (serviceType == typeof(IDistributionDirectoryTreeResolver)) return DistributionDirectoryTree;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
