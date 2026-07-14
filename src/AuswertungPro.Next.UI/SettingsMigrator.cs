@@ -1,4 +1,5 @@
-using System.IO;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Settings;
 
 namespace AuswertungPro.Next.UI;
 
@@ -9,6 +10,11 @@ namespace AuswertungPro.Next.UI;
 /// </summary>
 internal static class SettingsMigrator
 {
+    private static readonly ISettingsMigrationService DefaultServiceInstance =
+        new SettingsMigrationService();
+
+    internal static ISettingsMigrationService DefaultService => DefaultServiceInstance;
+
     /// <summary>
     /// Kopiert die Legacy-Settings-Datei an den neuen Pfad, sofern der neue Pfad noch nicht belegt ist.
     /// Fehler werden still ignoriert (Migrations-Fehler sollen den Start nicht blockieren).
@@ -17,21 +23,8 @@ internal static class SettingsMigrator
     /// <param name="legacySettingsPath">Quell-Pfad der alten Settings-Datei.</param>
     /// <param name="appDataDir">App-Daten-Verzeichnis; wird erstellt, falls nicht vorhanden.</param>
     internal static void MigrateLegacyIfNeeded(string settingsPath, string legacySettingsPath, string appDataDir)
-    {
-        try
-        {
-            if (File.Exists(settingsPath))
-                return;
-
-            if (!File.Exists(legacySettingsPath))
-                return;
-
-            Directory.CreateDirectory(appDataDir);
-            File.Copy(legacySettingsPath, settingsPath, overwrite: false);
-        }
-        catch
-        {
-            // Migrations-Fehler werden ignoriert.
-        }
-    }
+        => DefaultServiceInstance.MigrateLegacyIfNeeded(
+            settingsPath,
+            legacySettingsPath,
+            appDataDir);
 }

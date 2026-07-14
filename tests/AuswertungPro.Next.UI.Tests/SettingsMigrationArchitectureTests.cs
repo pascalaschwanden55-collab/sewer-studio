@@ -3,33 +3,29 @@ using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class SettingsQuarantineArchitectureTests
+public sealed class SettingsMigrationArchitectureTests
 {
     [Fact]
-    public void SettingsQuarantineUsesStartupInstanceAndKeepsStaticFacadeThin()
+    public void SettingsMigrationUsesStartupInstanceAndKeepsStaticFacadeThin()
     {
         var root = FindRepositoryRoot();
         var app = Read(root, "src", "AuswertungPro.Next.UI", "App.xaml.cs");
         var appSettings = Read(root, "src", "AuswertungPro.Next.UI", "AppSettings.cs");
         var provider = Read(root, "src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
-        var facade = Read(root, "src", "AuswertungPro.Next.UI", "SettingsQuarantine.cs");
+        var facade = Read(root, "src", "AuswertungPro.Next.UI", "SettingsMigrator.cs");
 
-        Assert.Contains("var settingsQuarantine = new SettingsQuarantineStore()", app);
-        Assert.Contains("AppSettings.Load(", app);
-        Assert.Contains("settingsQuarantine,", app);
-        Assert.Contains(
-            "internal static AppSettings Load(ISettingsQuarantineStore settingsQuarantine)",
-            appSettings);
-        Assert.Contains("settingsQuarantine.TryMoveToQuarantine", appSettings);
-        Assert.DoesNotContain("SettingsQuarantine.TryMoveToQuarantine", appSettings);
-        Assert.Contains(
-            "public ISettingsQuarantineStore SettingsQuarantine",
-            provider);
-        Assert.Contains("SettingsQuarantine = settingsQuarantine", provider);
-        Assert.DoesNotContain("File.Move", facade);
+        Assert.Contains("var settingsMigration = new SettingsMigrationService()", app);
+        Assert.Contains("settingsMigration);", app);
+        Assert.Contains("ISettingsMigrationService settingsMigration", appSettings);
+        Assert.Contains("settingsMigration.MigrateLegacyIfNeeded", appSettings);
+        Assert.Contains("migrationResult.Error", appSettings);
+        Assert.Contains("TryAppendSettingsLog", appSettings);
+        Assert.DoesNotContain("SettingsMigrator.MigrateLegacyIfNeeded", appSettings);
+        Assert.Contains("public ISettingsMigrationService SettingsMigration", provider);
+        Assert.Contains("SettingsMigration = settingsMigration", provider);
         Assert.DoesNotContain("File.Copy", facade);
-        Assert.DoesNotContain("File.Delete", facade);
         Assert.DoesNotContain("Directory.CreateDirectory", facade);
+        Assert.DoesNotContain("catch", facade);
     }
 
     private static string Read(string root, params string[] segments)

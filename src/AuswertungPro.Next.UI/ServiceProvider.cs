@@ -70,6 +70,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsRestorePointStore SettingsRestorePoints { get; }
         public ISettingsFileStore SettingsFiles { get; }
         public ISettingsQuarantineStore SettingsQuarantine { get; }
+        public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -211,7 +212,8 @@ namespace AuswertungPro.Next.UI
                 diagnostics,
                 logger,
                 loggerFactory,
-                new SettingsQuarantineStore())
+                new SettingsQuarantineStore(),
+                new SettingsMigrationService())
         {
         }
 
@@ -220,11 +222,14 @@ namespace AuswertungPro.Next.UI
             DiagnosticsOptions diagnostics,
             ILogger logger,
             ILoggerFactory loggerFactory,
-            ISettingsQuarantineStore settingsQuarantine)
+            ISettingsQuarantineStore settingsQuarantine,
+            ISettingsMigrationService settingsMigration)
         {
             Settings = settings;
             SettingsQuarantine = settingsQuarantine
                 ?? throw new ArgumentNullException(nameof(settingsQuarantine));
+            SettingsMigration = settingsMigration
+                ?? throw new ArgumentNullException(nameof(settingsMigration));
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
@@ -617,6 +622,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
+            if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;

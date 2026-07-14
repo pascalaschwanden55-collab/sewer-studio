@@ -81,7 +81,10 @@ namespace AuswertungPro.Next.UI
 
                 // Settings
                 var settingsQuarantine = new SettingsQuarantineStore();
-                var settings = AppSettings.Load(settingsQuarantine);
+                var settingsMigration = new SettingsMigrationService();
+                var settings = AppSettings.Load(
+                    settingsQuarantine,
+                    settingsMigration);
                 WindowStateManager.Configure(settings);
                 ViewCustomizationStore.Configure(settings);
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
@@ -125,7 +128,8 @@ namespace AuswertungPro.Next.UI
                     diagnostics,
                     logger,
                     loggerFactory,
-                    settingsQuarantine);
+                    settingsQuarantine,
+                    settingsMigration);
                 DialogHost.Configure(_services.Dialogs);
                 var splashReadyTask = splash.SignalReadyAsync();
 

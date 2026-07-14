@@ -232,15 +232,23 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     private static string LogsDir => Path.Combine(AppDataDir, "logs");
 
     public static AppSettings Load()
-        => Load(SettingsQuarantine.DefaultStore);
+        => Load(
+            SettingsQuarantine.DefaultStore,
+            SettingsMigrator.DefaultService);
 
     internal static AppSettings Load(ISettingsQuarantineStore settingsQuarantine)
+        => Load(settingsQuarantine, SettingsMigrator.DefaultService);
+
+    internal static AppSettings Load(
+        ISettingsQuarantineStore settingsQuarantine,
+        ISettingsMigrationService settingsMigration)
     {
         ArgumentNullException.ThrowIfNull(settingsQuarantine);
+        ArgumentNullException.ThrowIfNull(settingsMigration);
 
         try
         {
-            MigrateLegacySettingsIfNeeded();
+            MigrateLegacySettingsIfNeeded(settingsMigration);
 
             Directory.CreateDirectory(AppDataDir);
             if (!File.Exists(SettingsPath))
@@ -325,8 +333,20 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
             pending.SettingsFileStore);
     }
 
-    private static void MigrateLegacySettingsIfNeeded()
-        => SettingsMigrator.MigrateLegacyIfNeeded(SettingsPath, LegacySettingsPath, AppDataDir);
+    private static void MigrateLegacySettingsIfNeeded(
+        ISettingsMigrationService settingsMigration)
+    {
+        var migrationResult = settingsMigration.MigrateLegacyIfNeeded(
+            SettingsPath,
+            LegacySettingsPath,
+            AppDataDir);
+        if (migrationResult.Error is not null)
+        {
+            TryAppendSettingsLog(
+                "Alte Einstellungen konnten nicht uebernommen werden.",
+                migrationResult.Error);
+        }
+    }
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
