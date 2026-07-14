@@ -102,6 +102,7 @@ namespace AuswertungPro.Next.UI
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         public IDropdownOptionsStore DropdownOptions { get; }
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
+        public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
         // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
         // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
         public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
@@ -254,6 +255,8 @@ namespace AuswertungPro.Next.UI
                 ?? throw new ArgumentNullException(nameof(settingsMigration));
             KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
             Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
+            OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
+            Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
@@ -669,6 +672,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
             if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
+            if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;

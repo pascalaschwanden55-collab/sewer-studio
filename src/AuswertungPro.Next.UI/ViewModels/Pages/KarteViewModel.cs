@@ -32,6 +32,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly Action<string, HaltungRecord> _playVideo;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
+    private readonly IOfflineBasemapPathResolver _offlineBasemapPaths;
 
     private string XtfPath => _katasterXtfPaths.Resolve(
         _settings.AbwasserkatasterXtfPath,
@@ -40,7 +41,7 @@ public sealed partial class KarteViewModel : ObservableObject
     // Offline-Hintergrundkarten (Satellit/AV im Programmordner). Resolver toleriert einen
     // veralteten gespeicherten Pfad (z.B. "...\basemap_tiles\uri") und nimmt dann den
     // Elternordner, der die Unterordner satellit/av enthaelt.
-    private string? OfflineBasemapPath => OfflineBasemapBaseResolver.Resolve(_settings.OfflineBasemapPath);
+    private string? OfflineBasemapPath => _offlineBasemapPaths.Resolve(_settings.OfflineBasemapPath);
 
     // Skalierung: false = VSA-Skala (0=gut); true = EZ-Skala (0=schlecht/4=gut)
     private bool _invertiert = true;
@@ -101,7 +102,8 @@ public sealed partial class KarteViewModel : ObservableObject
             networkFeatures: services.NetworkFeatures,
             playVideo: KarteVideoLauncher.Create(services),
             inspectionProtocolFiles: services.InspectionProtocolFiles,
-            katasterXtfPaths: services.KatasterXtfPaths)
+            katasterXtfPaths: services.KatasterXtfPaths,
+            offlineBasemapPaths: services.OfflineBasemapPaths)
     {
     }
 
@@ -111,7 +113,8 @@ public sealed partial class KarteViewModel : ObservableObject
         NetworkFeatureCache networkFeatures,
         Action<string, HaltungRecord> playVideo,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IKatasterXtfPathResolver? katasterXtfPaths = null)
+        IKatasterXtfPathResolver? katasterXtfPaths = null,
+        IOfflineBasemapPathResolver? offlineBasemapPaths = null)
     {
         _shell = shell;
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -120,6 +123,7 @@ public sealed partial class KarteViewModel : ObservableObject
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
+        _offlineBasemapPaths = offlineBasemapPaths ?? OfflineBasemapBaseResolver.CompatibilityService;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
         OpenDetailCommand = new RelayCommand(OpenDetail);
         SchliesseInfoCommand = new RelayCommand(() =>

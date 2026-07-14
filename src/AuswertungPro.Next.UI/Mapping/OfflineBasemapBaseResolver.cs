@@ -1,4 +1,7 @@
-using System.IO;
+using System;
+using System.Threading;
+using AuswertungPro.Next.Application.Map;
+using AuswertungPro.Next.Infrastructure.Map;
 
 namespace AuswertungPro.Next.UI.Mapping;
 
@@ -12,23 +15,19 @@ namespace AuswertungPro.Next.UI.Mapping;
 /// </summary>
 public static class OfflineBasemapBaseResolver
 {
-    public static string? Resolve(string? configuredPath)
+    private static IOfflineBasemapPathResolver _current = new OfflineBasemapDirectoryResolver();
+
+    internal static IOfflineBasemapPathResolver CompatibilityService
+        => Volatile.Read(ref _current);
+
+    internal static void Use(IOfflineBasemapPathResolver resolver)
     {
-        if (string.IsNullOrWhiteSpace(configuredPath))
-            return configuredPath;
-
-        if (HatKartenordner(configuredPath))
-            return configuredPath;
-
-        var parent = Path.GetDirectoryName(
-            configuredPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        if (!string.IsNullOrWhiteSpace(parent) && HatKartenordner(parent))
-            return parent;
-
-        return configuredPath; // nichts gefunden -> unveraendert (Verhalten wie bisher)
+        ArgumentNullException.ThrowIfNull(resolver);
+        Volatile.Write(ref _current, resolver);
     }
 
-    private static bool HatKartenordner(string basePath)
-        => Directory.Exists(Path.Combine(basePath, KarteBasemapLayerFactory.SatellitSubfolder))
-        || Directory.Exists(Path.Combine(basePath, KarteBasemapLayerFactory.AvSubfolder));
+    public static string? Resolve(string? configuredPath)
+    {
+        return CompatibilityService.Resolve(configuredPath);
+    }
 }
