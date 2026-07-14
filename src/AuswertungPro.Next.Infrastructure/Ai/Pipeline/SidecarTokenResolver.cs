@@ -1,59 +1,27 @@
-using System;
-using System.IO;
+using System.Threading;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
-/// Loest das gemeinsame Vision-Sidecar-Token fuer C#-Clients auf.
-/// Kanonischer Env-Name ist SEWERSTUDIO_SIDECAR_TOKEN; Legacy-Aliase bleiben gueltig.
+/// Kompatibilitätsfassade für die gemeinsame Sidecar-Token-Auflösung.
 /// </summary>
 public static class SidecarTokenResolver
 {
     public const string HeaderName = "X-Sidecar-Token";
 
-    private static readonly string[] EnvironmentVariableNames =
-    [
-        "SEWERSTUDIO_SIDECAR_TOKEN",
-        "AUSWERTUNGPRO_SIDECAR_TOKEN",
-        "SEWER_SIDECAR_AUTH_TOKEN",
-        "SEWER_SIDECAR_TOKEN"
-    ];
+    private static ISidecarTokenResolver _current = new SidecarTokenFileResolver();
+
+    public static ISidecarTokenResolver Current => Volatile.Read(ref _current);
+
+    public static void Use(ISidecarTokenResolver resolver)
+        => Volatile.Write(
+            ref _current,
+            resolver ?? throw new ArgumentNullException(nameof(resolver)));
 
     public static string? Resolve(string? configuredToken = null)
-    {
-        var explicitToken = Normalize(configuredToken);
-        if (explicitToken is not null)
-            return explicitToken;
-
-        foreach (var name in EnvironmentVariableNames)
-        {
-            var token = Normalize(Environment.GetEnvironmentVariable(name));
-            if (token is not null)
-                return token;
-        }
-
-        return TryReadTokenFile();
-    }
+        => Current.Resolve(configuredToken);
 
     public static string? Normalize(string? token)
-        => string.IsNullOrWhiteSpace(token) ? null : token.Trim();
-
-    private static string? TryReadTokenFile()
-    {
-        try
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(localAppData))
-                return null;
-
-            var path = Path.Combine(localAppData, "SewerStudio", ".sidecar_token");
-            return File.Exists(path)
-                ? Normalize(File.ReadAllText(path))
-                : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+        => SidecarTokenFileResolver.Normalize(token);
 }
