@@ -123,7 +123,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 settings: _sp.Settings,
                 dashboardRefresh: _sp.DashboardRefresh,
                 dialogs: _sp.Dialogs,
-                projects: _sp.Projects), canOpenWithoutProject: true),
+                projects: _sp.Projects,
+                projectFileDiscovery: _sp.ProjectFileDiscovery,
+                projectDropPaths: _sp.ProjectDropPaths), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, dropdownOptions: _sp.DropdownOptions), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(
@@ -461,7 +463,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             settings: _sp.Settings,
             dashboardRefresh: _sp.DashboardRefresh,
             dialogs: _sp.Dialogs,
-            projects: _sp.Projects));
+            projects: _sp.Projects,
+            projectFileDiscovery: _sp.ProjectFileDiscovery,
+            projectDropPaths: _sp.ProjectDropPaths));
     }
 
     /// <summary>„Neues Projekt": leeres Projekt + Infoblatt im Draft-Modus.</summary>

@@ -120,6 +120,7 @@ namespace AuswertungPro.Next.UI
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
         public IProjectFileDiscovery ProjectFileDiscovery { get; }
+        public IProjectDropPathResolver ProjectDropPaths { get; }
         #endregion
 
         #region Import
@@ -327,6 +328,8 @@ namespace AuswertungPro.Next.UI
 
             Projects = new JsonProjectRepository();
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
+            ProjectDropPaths = new ProjectDropFilePathResolver();
+            ViewModels.Pages.ProjectDropPathResolver.Use(ProjectDropPaths);
             ProjectStructure = new ProjectStructureInitializer();
             KanalExportDetection = new KanalExportDetectionService();
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
@@ -665,6 +668,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
+            if (serviceType == typeof(IProjectDropPathResolver)) return ProjectDropPaths;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
             if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
             if (serviceType == typeof(ISchaechteTemplateColumnReader)) return SchaechteTemplateColumns;

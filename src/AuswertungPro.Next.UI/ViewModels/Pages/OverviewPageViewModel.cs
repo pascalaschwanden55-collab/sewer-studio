@@ -38,6 +38,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly IDialogService _dialogs;
         private readonly IProjectRepository _projects;
         private readonly IProjectFileDiscovery _projectFileDiscovery;
+        private readonly IProjectDropPathResolver _projectDropPaths;
         private readonly DispatcherTimer _dashboardRefreshTimer;
         private readonly DispatcherTimer _previewRefreshTimer;
         private readonly ProjectCostStoreRepository _haltungCostRepo = new();
@@ -95,7 +96,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.DashboardRefresh,
                 sp.Dialogs,
                 sp.Projects,
-                sp.ProjectFileDiscovery)
+                sp.ProjectFileDiscovery,
+                sp.ProjectDropPaths)
         {
         }
 
@@ -111,7 +113,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 dashboardRefresh,
                 dialogs,
                 projects,
-                ProjectFileDiscovery.CompatibilityService)
+                ProjectFileDiscovery.CompatibilityService,
+                ProjectDropPathResolver.CompatibilityService)
         {
         }
 
@@ -121,7 +124,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             DashboardRefreshNotifier dashboardRefresh,
             IDialogService dialogs,
             IProjectRepository projects,
-            IProjectFileDiscovery projectFileDiscovery)
+            IProjectFileDiscovery projectFileDiscovery,
+            IProjectDropPathResolver? projectDropPaths = null)
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -130,6 +134,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
             _projectFileDiscovery = projectFileDiscovery
                 ?? throw new ArgumentNullException(nameof(projectFileDiscovery));
+            _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
             _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
             _previewRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -590,7 +595,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     public bool OpenProjectFromPath(string path)
     {
         // Drag&Drop bleibt synchron (seltener Pfad, bool-Rueckgabe fuer den Drop-Handler).
-        var projectFile = ProjectDropPathResolver.ResolveProjectFile(path);
+        var projectFile = _projectDropPaths.ResolveProjectFile(path);
         if (string.IsNullOrWhiteSpace(projectFile))
             return false;
 
