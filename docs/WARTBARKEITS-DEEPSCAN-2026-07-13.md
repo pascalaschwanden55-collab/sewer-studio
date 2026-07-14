@@ -75,10 +75,11 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 - **Testarten getrennt (A6-03, Teilpaket):** Maschinengebundene Tests tragen die Kategorie `Integration`; zukünftige Nachtlauftests verwenden `Endurance`. Der pre-push-Hook führt weiterhin alle drei großen Testprojekte aus, schließt diese zwei langsamen Kategorien aber ausdrücklich aus. Ein Regressionstest schützt den Filter in allen drei Befehlen.
 - **Sidecar-Prozess messbar (A6-03, Vorbereitung):** Der token-geschützte lokale Health-Endpunkt liefert zusätzlich die tatsächliche Python-Prozess-ID. C#-Vertrag und E2E-Report übernehmen sie optional; ältere Sidecars bleiben kompatibel. Damit kann der Nachtlauf RAM und Handles des richtigen Prozesses statt des PowerShell-Starters messen.
 - **KI-Nachtlauf fahrbar (A6-03, Teilpaket):** `tools/NightlySoakRunner` wiederholt den echten Video-/Sidecar-Golden-Test über ein oder mehrere Videos. Jede Runde schreibt Laufzeit, Python-Prozess-RAM, Handles, Health-VRAM und – wenn `nvidia-smi` verfügbar ist – den prozessbezogenen GPU-Speicher sofort in eine CSV. Feste Ober- und Wachstumsgrenzen, P95-Prüfung, `GC.Collect`, Strg+C und eine gehaltene Sidecar-Lebensdauer verhindern stille Fehler und unbeabsichtigte Prozessreste. Sechs Verhaltenstests schützen Optionen, Loopback-Grenze, Video-Wechsel, CSV, Leak- und Latenzabbruch. Der echte achtstündige Lauf auf der Zielmaschine ist weiterhin eine offene Freigabeprüfung.
+- **QGIS-Brückenvertrag geprüft (A6-04 erledigt):** Der Pfad-Router ist von UI-Dispatcher und HTTP-Host getrennt. Vierzehn C#-Fälle prüfen alle Status-/GeoJSON-Endpunkte, Query-Strings, 404-Vertrag und den serialisierten Antwortcache. Fünf Python-Smokes rufen einen echten lokalen Testserver ab und prüfen Accept-Header, JSON/GeoJSON, stilles 404, sichtbares 503 sowie die Ablehnung nichtlokaler oder fehlerhafter Bridge-URLs. Dafür ist weder QGIS noch ein externes Python-Paket nötig.
 - **Erster echter WPF-Fenster-Smoke (A6-01, Teilpaket):** Karten- und Maßnahmendialog werden auf einem echten STA-Oberflächen-Thread unsichtbar geöffnet, bis zum Leerlauf verarbeitet und wieder geschlossen. Ein 15-Sekunden-Wächter verhindert, dass ein hängendes Fenster den Testlauf blockiert. Hauptfenster und komplexe Fachfenster bleiben offen.
 - **Druckcenter entkoppelt (A1-05, Teilpaket):** Das ViewModel erhält Einstellungen, Dialoge, PDF-Ausgabe und Kostenabgleich gezielt. Es speichert den zentralen Container nicht mehr. Zwölf fokussierte Tests schützen Hintergrund-Aktualisierung, Filter, Auswahl und Leistungsverzeichnis-Aufbau.
 - **Push-Schutz repariert:** Der pre-push-Hook prüft jetzt Infrastruktur-, Pipeline- und UI-Tests. Ein roter UI- oder Wartbarkeitstest blockiert damit den Push.
-- **Gesamtprüfung grün:** 8.767 Tests bestanden (2.514 Infrastruktur, 1.819 Pipeline, 4.372 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen.
+- **Gesamtprüfung grün:** 8.782 Tests bestanden (2.514 Infrastruktur, 1.819 Pipeline, 4.387 UI und 62 ProjectModernizer). Zwei maschinengebundene Tests wurden planmäßig übersprungen. Der Release-Build endet mit 0 Fehlern und 0 Warnungen. Zusätzlich sind 5 QGIS-Python-Smokes und 95 GPU-freie Sidecar-Tests grün.
 
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
@@ -213,7 +214,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 | A6-01 | Hoch → **teilweise erledigt** | Kein öffentliches ViewModel ist mehr völlig ohne Testbezug; weiterhin bestehen viele Quelltext-Guards, und erst zwei einfache Fenster besitzen einen echten Öffnen-/Schließen-Smoke | 15 zuvor unberücksichtigte ViewModels werden mit 23 Verhaltenstests direkt ausgeführt; Smokes der Haupt- und Fachfenster bleiben offen |
 | A6-02 | Hoch → **erledigt** | `tools/SidecarE2eSmoke` + `SidecarRealVideoIntegrationTests` | Echter Sidecar, reales Video, YOLO/DINO/SAM, Quantifizierung und Golden-Vertrag sind umgesetzt und auf der Zielmaschine grün |
 | A6-03 | Hoch → **teilweise erledigt** | Kategorien und Push-Filter sind geschützt; `tools/NightlySoakRunner` fährt mehrere echte Videos im Wechsel und misst Zeit, Python-RAM, Handles, P95 sowie optional prozessbezogenen VRAM in CSV | Echten 8-Stunden-Lauf auf der Zielmaschine durchführen; Import, PDF-Export, KB und QGIS sind noch nicht Teil der Schleife |
-| A6-04 | Mittel | `integrations/qgis/sewerstudio_bridge/` — keine Tests | Python-Smoke für Bridge-Endpunkte (TestClient) + C#-Vertragstest |
+| A6-04 | Mittel → **erledigt** | `QgisBridgeEndpointRouterTests` + `integrations/qgis/tests/test_bridge_http.py` | Alle C#-Endpunkte und der echte lokale Python-HTTP-Abruf sind ohne QGIS testbar; nichtlokale Ziele werden abgewiesen |
 | A6-05 | Mittel | `KnowledgeBaseContext.cs:176-186` — KB-Schema-Migration (ADD COLUMN) im Bestand ungetestet | Test mit Alt-DB (ohne neue Spalten) → Upgrade + Datenerhalt prüfen |
 | A6-06 | Mittel | Nur `DbfTableTests` prüft kaputte Dateien; PDF/XTF/WinCan/FDB nicht | Je Importer 1 Negativtest (truncated/leer/gesperrt) → Skip statt Crash |
 | A6-07 | Mittel | `sidecar/tests/test_sam.py:24` — SAM/DINO nur mit `pytest -m gpu` | CPU-Smoke (Loader + Antwortschema) oder `-m gpu` verpflichtend vor Batch |
@@ -271,7 +272,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - ✔ **Headless Pipeline-Treiber** (`tools/SidecarE2eSmoke`): startet bei Bedarf einen echten Sidecar, dekodiert drei Videobilder, fährt YOLO/DINO/SAM→Quantifizierung durch und prüft den Vertrag gegen `golden/pipeline-contract.v1.json`. Als `[Trait("Category","Integration")]` maschinengebunden ausführbar.
 - **Negativtests je Importer** (truncated/leer/gesperrt) → Skip statt Crash (`A6-06`).
 - **KB-Migrationstest** mit Alt-DB → Upgrade + Datenerhalt (`A6-05`).
-- **QGIS-Bridge-Smoke** (Python-TestClient + C#-Vertragstest) (`A6-04`).
+- ✔ **QGIS-Bridge-Smoke:** echter lokaler Python-HTTP-Server + C#-Vertragstest für alle Endpunkte (`A6-04`).
 - **SAM/DINO CPU-Smoke** oder `pytest -m gpu` verpflichtend vor jedem Batch (`A6-07`).
 
 **Stufe C — Nachtlauf / Belastung (`tools/NightlySoakRunner`, 8 h, maschinengebunden):**
@@ -292,7 +293,7 @@ Die 1.072 „UI-Tests" sind zu großen Teilen Quelltext-Guards (137 Dateien lese
 - **Ergebnis:** Fehler werden im Feld sichtbar, Architektur-Guards laufen automatisch, Build schneller.
 
 ### Release N+2 — „Belastbarkeit & Entkopplung" (~2 Wochen)
-- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`) und messbarer KI-Nachtlauf (`A6-03`, Werkzeug) erledigt; offen bleiben der echte 8-Stunden-Lauf, die restliche Anwendungskette, Importer-Negativtests (`A6-06`), KB-Migrationstest (`A6-05`) und QGIS-Smoke (`A6-04`).
+- **Teststrategie Stufe B + C:** ✔ Headless Pipeline-Treiber (`A6-02`), messbarer KI-Nachtlauf (`A6-03`, Werkzeug) und QGIS-Brücken-Smoke (`A6-04`) erledigt; offen bleiben der echte 8-Stunden-Lauf, die restliche Anwendungskette, Importer-Negativtests (`A6-06`) und der KB-Migrationstest (`A6-05`).
 - **God-Class-Abbau (testgeschützt):** PlayerWindow-Partials in Services überführen (`A1-01`); der ProtocolEntryEditorDialog ist bei KI und VSA-Validierung erledigt (`A1-04`).
 - **DI-Hygiene:** ViewModels auf Interface-Konstruktoren umstellen (`A1-05`, `A1-07`), beginnend bei den am häufigsten geänderten.
 - **KI-Resilienz:** ✔ Prozess-Lebenszyklus (`A5-01`), CUDA-Fehler-Klassifizierung (`A5-04`) und Schutz der IBAK-Originaldatei (`A4-01`) sind erledigt.

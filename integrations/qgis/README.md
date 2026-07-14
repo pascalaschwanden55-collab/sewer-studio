@@ -42,6 +42,12 @@ Das Plugin kann lokale Exportdaten laden und ist gleichzeitig auf einen Live-Bri
 Feed vorbereitet. Es nutzt keine externen Python-Pakete, nur PyQGIS und die Python-
 Standardbibliothek.
 
+Der reine HTTP-Vertrag kann auch ohne installiertes QGIS geprüft werden:
+
+```powershell
+python -m unittest discover integrations\qgis\tests -v
+```
+
 ## Datenvertrag
 
 Lokale Dateien im Datenordner:
@@ -58,6 +64,10 @@ HTTP-Bridge (liefert SewerStudio ab Version 4.5 live auf `http://127.0.0.1:8765`
   bevorzugt, importierte VSA-Feststellungen als Fallback), verortet ueber den Meterstand
   entlang der Kataster-Geometrie
 - `GET /qgis/network.geojson` — ganzes Netz mit Zustandsklasse/-farbe
+- `GET /qgis/sanierungstyp.geojson` — Haltungen nach `Ausgefuehrt durch`
+- `GET /qgis/schaechte.geojson` — alle Kataster-Schächte mit Projektbezug
+- `GET /qgis/current_schacht.geojson` — aktuell gewählter Schacht
+- `GET /qgis/schacht_sanierungstyp.geojson` — Schächte nach `Ausgefuehrt durch`
 
 Hinweise zum Bridge-Server:
 
@@ -68,6 +78,8 @@ Hinweise zum Bridge-Server:
   die Steuer-Endpunkte bleiben Token-geschuetzt.
 - Die "aktuelle Haltung" folgt der Auswahl auf der Haltungen-Seite und in der Karte
   (auch im separaten Kartenfenster) und bleibt beim Seitenwechsel erhalten.
+- Auch das QGIS-Plugin akzeptiert als Bridge-Ziel nur lokale HTTP-Adressen
+  (`127.0.0.1`, `localhost` oder `::1`).
 
 ### Sicherheitsgrenze
 

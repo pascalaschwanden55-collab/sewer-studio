@@ -1,10 +1,9 @@
 import hashlib
-import json
 import os
 import tempfile
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+from .bridge_http import fetch_bridge_bytes, fetch_bridge_json
 
 try:
     from qgis.PyQt.QtGui import QAction
@@ -592,31 +591,18 @@ class SewerStudioBridgeDock(QDockWidget):
             self._set_status(f"{loaded} lokale Layer geladen.")
 
     def _fetch_json(self, endpoint):
-        data = self._fetch_bytes(endpoint)
-        if data is None:
-            return None
-        try:
-            return json.loads(data.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self._log_warning(f"Ungueltiges JSON von {endpoint}")
-            return None
+        base = (self.url_edit.text().strip() or DEFAULT_BRIDGE_URL).rstrip("/")
+        result = fetch_bridge_json(base, endpoint)
+        if result.warning:
+            self._log_warning(result.warning)
+        return result.value
 
     def _fetch_bytes(self, endpoint):
         base = (self.url_edit.text().strip() or DEFAULT_BRIDGE_URL).rstrip("/")
-        url = f"{base}{endpoint}"
-        try:
-            request = Request(url, headers={"Accept": "application/json, application/geo+json"})
-            with urlopen(request, timeout=1.5) as response:
-                if response.status != 200:
-                    return None
-                return response.read()
-        except HTTPError as ex:
-            if ex.code != 404:
-                self._log_warning(f"Bridge-Request fehlgeschlagen ({ex.code}): {url}")
-            return None
-        except (URLError, TimeoutError, OSError) as ex:
-            self._log_warning(f"Bridge nicht erreichbar: {url} ({ex})")
-            return None
+        result = fetch_bridge_bytes(base, endpoint)
+        if result.warning:
+            self._log_warning(result.warning)
+        return result.value
 
     def _update_or_create_layer(self, layer_name, file_path):
         # WICHTIG: Bestehende Layer werden NIE entfernt und neu angelegt.

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AuswertungPro.Next.UI.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -15,26 +14,15 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 /// </summary>
 internal sealed class QgisBridgeRequestProcessor
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
-
     private readonly System.Windows.Application _app;
     private readonly ILogger _logger;
-    private readonly QgisBridgeSnapshotBuilder _builder;
-
-    // Speichercache: fertige GeoJSON-Bytes je Endpunkt. Solange sich Projektdaten
-    // (Fingerprint) und XTF-Stand nicht aendern, wird nichts neu gebaut/serialisiert.
-    private readonly object _cacheGate = new();
-    private readonly Dictionary<string, (QgisPayloadFingerprint Fingerprint, QgisBridgeResponse Response)> _payloadCache = new();
+    private readonly QgisBridgeEndpointRouter _router;
 
     public QgisBridgeRequestProcessor(System.Windows.Application app, AppSettings settings, ILogger logger)
     {
         _app = app;
         _logger = logger;
-        _builder = new QgisBridgeSnapshotBuilder(settings);
+        _router = new QgisBridgeEndpointRouter(new QgisBridgeSnapshotBuilder(settings));
     }
 
     /// <summary>Pfade, die die QGIS-Bridge beantwortet (inkl. Status unter "/").</summary>
@@ -44,20 +32,15 @@ internal sealed class QgisBridgeRequestProcessor
 
     public async Task<QgisBridgeResponse> HandleAsync(string path)
     {
-        // Query-String abschneiden (der Live-Control-Host reicht Pfade ungefiltert durch).
-        var queryIndex = path.IndexOf('?');
-        if (queryIndex >= 0)
-            path = path[..queryIndex];
-
         try
         {
             var snapshot = await CaptureSnapshotAsync().ConfigureAwait(false);
-            return await Task.Run(() => BuildResponse(path, snapshot)).ConfigureAwait(false);
+            return await Task.Run(() => _router.Route(path, snapshot)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "QGIS-Bridge Payload fehlgeschlagen fuer {Path}.", path);
-            return Error(500, ex.Message);
+            return QgisBridgeEndpointRouter.Error(500, ex.Message);
         }
     }
 
@@ -73,88 +56,6 @@ internal sealed class QgisBridgeRequestProcessor
                 currentSchacht, QgisBridgeSelection.SchachtStamp);
         }).Task;
 
-    private QgisBridgeResponse BuildResponse(string path, QgisProjectSnapshot snapshot)
-    {
-        switch (path)
-        {
-            case "/" or "/qgis" or "/qgis/" or "/qgis/status.json":
-                // Status ist billig (nur Zaehler) und soll immer frisch sein.
-                return Json(200, _builder.BuildStatus(snapshot));
-
-            case "/qgis/current.geojson":
-                return GetOrBuildGeoJson(
-                    "current",
-                    snapshot.CurrentFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildCurrentGeoJson(snapshot));
-
-            case "/qgis/damages.geojson":
-                return GetOrBuildGeoJson(
-                    "damages",
-                    snapshot.DamagesFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildDamagesGeoJson(snapshot));
-
-            case "/qgis/network.geojson":
-                return GetOrBuildGeoJson(
-                    "network",
-                    snapshot.NetworkFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildNetworkGeoJson(snapshot));
-
-            case "/qgis/sanierungstyp.geojson":
-                return GetOrBuildGeoJson(
-                    "sanierungstyp",
-                    snapshot.SanierungstypFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildSanierungstypGeoJson(snapshot));
-
-            case "/qgis/schaechte.geojson":
-                return GetOrBuildGeoJson(
-                    "schaechte",
-                    snapshot.SchaechteFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildSchaechteGeoJson(snapshot));
-
-            case "/qgis/current_schacht.geojson":
-                return GetOrBuildGeoJson(
-                    "current_schacht",
-                    snapshot.CurrentSchachtFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildCurrentSchachtGeoJson(snapshot));
-
-            case "/qgis/schacht_sanierungstyp.geojson":
-                return GetOrBuildGeoJson(
-                    "schacht_sanierungstyp",
-                    snapshot.SchachtSanierungstypFingerprint(_builder.GetNetworkStampTicks()),
-                    () => _builder.BuildSchachtSanierungstypGeoJson(snapshot));
-
-            default:
-                return Error(404, "Unbekannter QGIS-Bridge-Endpunkt.");
-        }
-    }
-
-    private QgisBridgeResponse GetOrBuildGeoJson(
-        string cacheKey,
-        QgisPayloadFingerprint fingerprint,
-        Func<object> build)
-    {
-        lock (_cacheGate)
-        {
-            if (_payloadCache.TryGetValue(cacheKey, out var hit) && hit.Fingerprint.Equals(fingerprint))
-                return hit.Response;
-        }
-
-        var response = GeoJson(build());
-        lock (_cacheGate)
-            _payloadCache[cacheKey] = (fingerprint, response);
-        return response;
-    }
-
-    private static QgisBridgeResponse Json(int statusCode, object payload)
-        => new(statusCode, "application/json; charset=utf-8",
-            JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions));
-
-    private static QgisBridgeResponse GeoJson(object payload)
-        => new(200, "application/geo+json; charset=utf-8",
-            JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions));
-
-    private static QgisBridgeResponse Error(int statusCode, string message)
-        => Json(statusCode, new { ok = false, error = message });
 }
 
 /// <summary>Fertige HTTP-Antwort der QGIS-Bridge (Body bereits serialisiert).</summary>
