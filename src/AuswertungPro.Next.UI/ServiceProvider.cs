@@ -146,6 +146,7 @@ namespace AuswertungPro.Next.UI
         #region Import
         // Alle Import-Adapter für externe Datenformate
         public IPdfTextExtractor PdfTextExtraction { get; }
+        public IPdfOcrExtractor PdfOcrExtraction { get; }
         public IPdfImportService PdfImport { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
@@ -396,7 +397,9 @@ namespace AuswertungPro.Next.UI
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
             PdfTextExtraction = new PdfTextExtractionService();
             PdfTextExtractor.Use(PdfTextExtraction);
-            PdfImport = new PdfImportServiceAdapter(PdfTextExtraction);
+            PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction);
+            PdfOcrExtractor.Use(PdfOcrExtraction);
+            PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
@@ -777,6 +780,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
+            if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;

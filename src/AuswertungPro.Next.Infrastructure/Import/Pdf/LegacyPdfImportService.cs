@@ -2,12 +2,12 @@ using System.Text.Json.Nodes;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
+using IPdfOcrExtractor = AuswertungPro.Next.Application.Import.IPdfOcrExtractor;
 using IPdfTextExtractor = AuswertungPro.Next.Application.Import.IPdfTextExtractor;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure;
-using UglyToad.PdfPig;
 
 
 
@@ -16,16 +16,23 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 public sealed class LegacyPdfImportService
 {
     private readonly PdfParser _parser = new();
+    private readonly IPdfOcrExtractor _ocrExtractor;
     private readonly IPdfTextExtractor _textExtractor;
 
     public LegacyPdfImportService()
-        : this(PdfTextExtractor.Current)
+        : this(PdfTextExtractor.Current, PdfOcrExtractor.Current)
     {
     }
 
     internal LegacyPdfImportService(IPdfTextExtractor textExtractor)
+        : this(textExtractor, PdfOcrExtractor.Current)
+    {
+    }
+
+    internal LegacyPdfImportService(IPdfTextExtractor textExtractor, IPdfOcrExtractor ocrExtractor)
     {
         _textExtractor = textExtractor ?? throw new ArgumentNullException(nameof(textExtractor));
+        _ocrExtractor = ocrExtractor ?? throw new ArgumentNullException(nameof(ocrExtractor));
     }
 
     public ImportStats ImportPdf(string pdfPath, Project project, string? explicitPdfToTextPath = null, bool fillMissingOnly = false, ImportRunContext? ctx = null)
@@ -404,47 +411,10 @@ public sealed class LegacyPdfImportService
     }
     private sealed record OcrImportFallback(IReadOnlyList<string> Pages, string? Message);
 
-    private static OcrImportFallback TryExtractAllPagesWithOcr(string pdfPath)
+    private OcrImportFallback TryExtractAllPagesWithOcr(string pdfPath)
     {
-        var pageCount = TryGetPdfPageCount(pdfPath);
-        if (pageCount <= 0)
-            return new OcrImportFallback(Array.Empty<string>(), "Keine Seiten fuer OCR erkannt.");
-
-        var pages = new List<string>();
-        string? firstError = null;
-
-        for (var pageNumber = 1; pageNumber <= pageCount; pageNumber++)
-        {
-            var ocr = PdfOcrExtractor.TryExtractPageText(pdfPath, pageNumber);
-            if (ocr.Success && !string.IsNullOrWhiteSpace(ocr.Text))
-            {
-                pages.Add(ocr.Text.Replace("\r\n", "\n").Trim());
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(firstError) && !string.IsNullOrWhiteSpace(ocr.Message))
-                firstError = ocr.Message;
-        }
-
-        if (pages.Count == 0)
-            return new OcrImportFallback(Array.Empty<string>(), firstError ?? "OCR lieferte keinen verwertbaren Text.");
-
-        return new OcrImportFallback(pages, firstError);
-    }
-
-    private static int TryGetPdfPageCount(string pdfPath)
-    {
-        try
-        {
-            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
-            using var document = PdfDocument.Open(pdfPath);
-            PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
-            return document.NumberOfPages;
-        }
-        catch
-        {
-            return 0;
-        }
+        var result = _ocrExtractor.TryExtractAllPages(pdfPath);
+        return new OcrImportFallback(result.Pages, result.Message);
     }
 
     private static string? TryResolveHoldingKey(

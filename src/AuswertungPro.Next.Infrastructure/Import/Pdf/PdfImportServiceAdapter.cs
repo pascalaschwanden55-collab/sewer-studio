@@ -9,13 +9,18 @@ public sealed class PdfImportServiceAdapter : IPdfImportService
     private readonly LegacyPdfImportService _svc;
 
     public PdfImportServiceAdapter()
-        : this(PdfTextExtractor.Current)
+        : this(PdfTextExtractor.Current, PdfOcrExtractor.Current)
     {
     }
 
     public PdfImportServiceAdapter(IPdfTextExtractor textExtractor)
+        : this(textExtractor, PdfOcrExtractor.Current)
     {
-        _svc = new LegacyPdfImportService(textExtractor);
+    }
+
+    public PdfImportServiceAdapter(IPdfTextExtractor textExtractor, IPdfOcrExtractor ocrExtractor)
+    {
+        _svc = new LegacyPdfImportService(textExtractor, ocrExtractor);
     }
 
     public Result<ImportStats> ImportPdf(string pdfPath, Project project, string? pdfToTextPath, bool fillMissingOnly = false, ImportRunContext? ctx = null)

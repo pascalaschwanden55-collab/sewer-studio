@@ -8,7 +8,7 @@ public sealed class PdfExternalProcessSafetyTests
     public void PdfExtractorsUseSharedAsyncTimeoutProcessRunner()
     {
         var textExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfTextExtractionService.cs"));
-        var ocrExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfOcrExtractor.cs"));
+        var ocrExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfOcrExtractionService.cs"));
 
         Assert.Contains("ExternalProcessRunner.RunAsync", textExtractor);
         Assert.Contains("ExternalProcessRunner.RunAsync", ocrExtractor);

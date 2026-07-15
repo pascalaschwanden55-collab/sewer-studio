@@ -1,201 +1,23 @@
-using System.Diagnostics;
-using System.Text;
-using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 internal sealed record OcrPageExtractionResult(bool Success, string? Text, string? Message);
 
-internal static class PdfOcrExtractor
+/// <summary>Kompatible interne API; Datei- und Prozessarbeit liegt im Instanzdienst.</summary>
+public static class PdfOcrExtractor
 {
-    public static OcrPageExtractionResult TryExtractPageText(string pdfPath, int pageNumber)
+    private static IPdfOcrExtractor _current =
+        new PdfOcrExtractionService(PdfTextExtractor.Current);
+
+    public static IPdfOcrExtractor Current => Volatile.Read(ref _current);
+
+    public static void Use(IPdfOcrExtractor extractor)
+        => Volatile.Write(ref _current, extractor ?? throw new ArgumentNullException(nameof(extractor)));
+
+    internal static OcrPageExtractionResult TryExtractPageText(string pdfPath, int pageNumber)
     {
-        if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
-            return new OcrPageExtractionResult(false, null, "PDF wurde nicht gefunden.");
-        try
-        {
-            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
-        }
-        catch (Exception ex)
-        {
-            return new OcrPageExtractionResult(false, null, ex.Message);
-        }
-        if (pageNumber <= 0)
-            return new OcrPageExtractionResult(false, null, "Ungueltige Seitennummer.");
-
-        var pdftoppm = FindPdfToPpmPath();
-        if (string.IsNullOrWhiteSpace(pdftoppm))
-            return new OcrPageExtractionResult(
-                false,
-                null,
-                "pdftoppm.exe wurde nicht gefunden. Poppler muss installiert oder im App-Ordner tools vorhanden sein.");
-
-        var tesseract = FindTesseractPath();
-        if (string.IsNullOrWhiteSpace(tesseract))
-            return new OcrPageExtractionResult(
-                false,
-                null,
-                "tesseract.exe wurde nicht gefunden. Tesseract muss installiert oder im App-Ordner tools vorhanden sein.");
-
-        var tempBase = Path.Combine(Path.GetTempPath(), $"pdf_ocr_{Guid.NewGuid():N}");
-        var pngPath = $"{tempBase}.png";
-
-        try
-        {
-            var render = RunProcess(pdftoppm,
-                ["-f", pageNumber.ToString(), "-l", pageNumber.ToString(),
-                 "-r", "300", "-gray", "-singlefile", "-png", pdfPath, tempBase],
-                timeoutMs: 45_000);
-            if (!render.Success)
-                return new OcrPageExtractionResult(false, null, $"PDF-Seite konnte nicht in ein Bild umgewandelt werden: {render.Message}");
-            if (!File.Exists(pngPath))
-                return new OcrPageExtractionResult(false, null, "pdftoppm hat kein Seitenbild erzeugt.");
-
-            var ocr = RunProcess(tesseract,
-                [pngPath, "stdout", "-l", "deu+eng", "--oem", "1", "--psm", "6"],
-                timeoutMs: 60_000);
-            if (!ocr.Success)
-                return new OcrPageExtractionResult(false, null, $"Tesseract-Texterkennung fehlgeschlagen: {ocr.Message}");
-
-            var text = NormalizeText(ocr.StdOut);
-            if (string.IsNullOrWhiteSpace(text))
-                return new OcrPageExtractionResult(false, null, "Die Texterkennung lieferte keinen Text.");
-
-            return new OcrPageExtractionResult(true, text, null);
-        }
-        catch (Exception ex)
-        {
-            return new OcrPageExtractionResult(false, null, ex.Message);
-        }
-        finally
-        {
-            try
-            {
-                var tempDir = Path.GetDirectoryName(tempBase);
-                if (!string.IsNullOrWhiteSpace(tempDir) && Directory.Exists(tempDir))
-                {
-                    var prefix = Path.GetFileName(tempBase);
-                    foreach (var path in Directory.EnumerateFiles(tempDir, $"{prefix}*"))
-                    {
-                        AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.Delete(path), "PDF-OCR: Temp-Datei loeschen");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                    $"[PdfOcr] Temp-Cleanup uebersprungen: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
+        var result = Current.TryExtractPageText(pdfPath, pageNumber);
+        return new OcrPageExtractionResult(result.Success, result.Text, result.Message);
     }
-
-    private static string NormalizeText(string? text)
-        => (text ?? string.Empty).Replace("\r\n", "\n");
-
-    private static string? FindPdfToPpmPath()
-    {
-        // Prefer sibling of configured/discovered pdftotext.exe.
-        try
-        {
-            var pdfToText = PdfTextExtractor.FindPdfToTextPath();
-            var sibling = Path.Combine(Path.GetDirectoryName(pdfToText) ?? string.Empty, "pdftoppm.exe");
-            if (File.Exists(sibling))
-                return sibling;
-        }
-        catch
-        {
-            // Best effort only.
-        }
-
-        var appTools = Path.Combine(AppContext.BaseDirectory, "tools", "pdftoppm.exe");
-        if (File.Exists(appTools))
-            return appTools;
-
-        var besideApp = Path.Combine(AppContext.BaseDirectory, "pdftoppm.exe");
-        if (File.Exists(besideApp))
-            return besideApp;
-
-        return FindExecutable("pdftoppm.exe");
-    }
-
-    private static string? FindTesseractPath()
-    {
-        var fromEnv = Environment.GetEnvironmentVariable("TESSERACT_PATH");
-        if (!string.IsNullOrWhiteSpace(fromEnv) && File.Exists(fromEnv))
-            return fromEnv;
-
-        var appTools = Path.Combine(AppContext.BaseDirectory, "tools", "tesseract.exe");
-        if (File.Exists(appTools))
-            return appTools;
-
-        var besideApp = Path.Combine(AppContext.BaseDirectory, "tesseract.exe");
-        if (File.Exists(besideApp))
-            return besideApp;
-
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var pfCandidate = Path.Combine(programFiles, "Tesseract-OCR", "tesseract.exe");
-        if (File.Exists(pfCandidate))
-            return pfCandidate;
-
-        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        var pfx86Candidate = Path.Combine(programFilesX86, "Tesseract-OCR", "tesseract.exe");
-        if (File.Exists(pfx86Candidate))
-            return pfx86Candidate;
-
-        return FindExecutable("tesseract.exe");
-    }
-
-    private static string? FindExecutable(string executableName)
-    {
-        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        foreach (var raw in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            try
-            {
-                var dir = raw.Trim();
-                if (string.IsNullOrWhiteSpace(dir))
-                    continue;
-                var candidate = Path.Combine(dir, executableName);
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-            catch
-            {
-                // Keep searching.
-            }
-        }
-
-        try
-        {
-            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var winget = Path.Combine(local, "Microsoft", "WinGet", "Packages");
-            if (Directory.Exists(winget))
-            {
-                return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
-                    .EnumerateFilesSafe(winget, executableName, recursive: true)
-                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                    .FirstOrDefault();
-            }
-        }
-        catch
-        {
-            // Keep fallback null.
-        }
-
-        return null;
-    }
-
-    private static ProcessRunResult RunProcess(string exePath, string[] args, int timeoutMs)
-    {
-        var result = ExternalProcessRunner.RunAsync(
-            exePath,
-            args,
-            TimeSpan.FromMilliseconds(timeoutMs),
-            Encoding.UTF8,
-            Encoding.UTF8).GetAwaiter().GetResult();
-
-        return new ProcessRunResult(result.Success, result.Message, result.StdOut);
-    }
-
-    private sealed record ProcessRunResult(bool Success, string? Message, string StdOut);
 }
