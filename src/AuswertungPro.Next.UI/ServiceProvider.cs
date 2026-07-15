@@ -179,6 +179,7 @@ namespace AuswertungPro.Next.UI
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IXtfStammdatenSourceReader XtfStammdatenSources { get; }
+        public IIbakPdfStammdatenSourceReader IbakPdfStammdatenSources { get; }
         public IIbakFdbConnectionOptions IbakConnections { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
@@ -482,6 +483,8 @@ namespace AuswertungPro.Next.UI
             WinCanImport = new WinCanDbImportService();
             XtfStammdatenSources = new XtfStammdatenSourceReader();
             XtfStammdatenExtractor.UseSourceReader(XtfStammdatenSources);
+            IbakPdfStammdatenSources = new IbakPdfStammdatenSourceReader(PdfTextExtraction);
+            IbakPdfStammdatenExtractor.UseSourceReader(IbakPdfStammdatenSources);
             IbakConnections = new IbakFdbConnectionOptionsService();
             IbakFdbConnectionOptions.Use(IbakConnections);
             IbakImport = new IbakExportImportService(IbakConnections);
@@ -901,6 +904,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IXtfStammdatenSourceReader)) return XtfStammdatenSources;
+            if (serviceType == typeof(IIbakPdfStammdatenSourceReader)) return IbakPdfStammdatenSources;
             if (serviceType == typeof(IIbakFdbConnectionOptions)) return IbakConnections;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;

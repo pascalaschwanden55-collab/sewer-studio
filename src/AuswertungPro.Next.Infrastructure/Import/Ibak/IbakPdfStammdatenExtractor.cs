@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using AuswertungPro.Next.Infrastructure.Common;
+using System.Threading;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
@@ -28,6 +27,17 @@ namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 /// </summary>
 public static class IbakPdfStammdatenExtractor
 {
+    private static IIbakPdfStammdatenSourceReader _sourceReader =
+        new IbakPdfStammdatenSourceReader(PdfTextExtractor.Current);
+
+    public static IIbakPdfStammdatenSourceReader CurrentSourceReader =>
+        Volatile.Read(ref _sourceReader);
+
+    public static void UseSourceReader(IIbakPdfStammdatenSourceReader sourceReader) =>
+        Volatile.Write(
+            ref _sourceReader,
+            sourceReader ?? throw new ArgumentNullException(nameof(sourceReader)));
+
     public sealed record StammdatenResult(
         string? Haltungsname,
         string? Material,
@@ -93,22 +103,14 @@ public static class IbakPdfStammdatenExtractor
     /// keine Felder gefunden werden konnten.
     /// </summary>
     public static StammdatenResult? Extract(string pdfPath)
+        => Extract(pdfPath, CurrentSourceReader);
+
+    internal static StammdatenResult? Extract(
+        string pdfPath,
+        IIbakPdfStammdatenSourceReader sourceReader)
     {
-        if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
-            return null;
-
-        string text;
-        try
-        {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
-            // Nur erste 2 Seiten - Stammdatenblock liegt vorne.
-            text = string.Join("\n", extraction.Pages.Take(2));
-        }
-        catch
-        {
-            return null;
-        }
-
+        ArgumentNullException.ThrowIfNull(sourceReader);
+        var text = sourceReader.TryReadFirstPagesText(pdfPath, maxPages: 2);
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
@@ -181,15 +183,21 @@ public static class IbakPdfStammdatenExtractor
     /// (Wert aus erster PDF gewinnt, fehlende Felder werden aus weiteren ergaenzt).
     /// </summary>
     public static Dictionary<string, StammdatenResult> BuildIndex(string exportRoot)
+        => BuildIndex(exportRoot, CurrentSourceReader);
+
+    internal static Dictionary<string, StammdatenResult> BuildIndex(
+        string exportRoot,
+        IIbakPdfStammdatenSourceReader sourceReader)
     {
+        ArgumentNullException.ThrowIfNull(sourceReader);
         var result = new Dictionary<string, StammdatenResult>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
+        if (string.IsNullOrWhiteSpace(exportRoot))
             return result;
 
-        var pdfFiles = SafeEnumeratePdfs(exportRoot);
+        var pdfFiles = sourceReader.EnumeratePdfFiles(exportRoot);
         foreach (var pdf in pdfFiles)
         {
-            var data = Extract(pdf);
+            var data = Extract(pdf, sourceReader);
             if (data is null) continue;
 
             // Haltungsname aus PDF oder aus Dateiname ableiten (H_36262-36275.pdf)
@@ -203,23 +211,6 @@ public static class IbakPdfStammdatenExtractor
                 result[key] = data;
         }
         return result;
-    }
-
-    private static IEnumerable<string> SafeEnumeratePdfs(string root)
-    {
-        try
-        {
-            // Bevorzuge Report-Unterordner, falle sonst auf alles im Root zurueck.
-            var report = Path.Combine(root, "Report");
-            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration ueberspringt gesperrte Unterordner.
-            if (Directory.Exists(report))
-                return SafeFileEnumeration.EnumerateFilesSafe(report, "*.pdf", recursive: true);
-            return SafeFileEnumeration.EnumerateFilesSafe(root, "*.pdf", recursive: true);
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
     }
 
     private static string? HaltungFromFilename(string pdfPath)

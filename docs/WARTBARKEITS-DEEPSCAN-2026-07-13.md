@@ -221,6 +221,8 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 
 - **Verteil-PDF-Seitenleser instanzbasiert (A1-10, Teilpaket):** Begrenzte PDF-Textextraktion, PdfPig-Rueckfall und das Erhalten leerer Bildseiten liegen im `DistributionPdfPageReadingService` hinter `IDistributionPdfPageReader`. Haltungs-, Schacht- und Dichtheitsverteilung verwenden ueber ihre kompatible Fassade dieselbe zentral aufgebaute Instanz. Vier bestehende PDF-Verhaltenstests, eine direkte Injektionspruefung und eine Verdrahtungspruefung schuetzen Seitenzahl, Reihenfolge, Textnormalisierung, Bild-PDF-Rueckfall und zentrale Nutzung.
 
+- **IBAK-/KIAS-PDF-Stammdatenquelle instanzbasiert (A1-10, Teilpaket):** Report-Ordnerwahl, rekursive PDF-Suche, Dateipruefung und begrenzte Textauslese liegen im `IbakPdfStammdatenSourceReader` hinter `IIbakPdfStammdatenSourceReader`. `IbakPdfStammdatenExtractor` behaelt seine oeffentlichen Signaturen als kompatible Fassade; seine Feldregeln und Quellenzusammenfuehrung bleiben bewusst statisch. Sieben Text-, Datei-, PDF- und Injektionstests sowie eine Verdrahtungspruefung schuetzen Zwei-Seiten-Grenze, Report-Vorrang, Fehlerfall, Feldwerte, Mehrdatei-Merge und zentrale Nutzung.
+
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
 > Stand: 2026-07-13 · Methode: 7 spezialisierte KI-Agenten (parallel, rein lesende Code-Analyse) auf Basis des committeten Standes. Kritische Funde wurden zur Gegenprüfung vorgesehen — **es trat kein Fund der Stufe „Kritisch" auf**, daher waren keine Gegenprüfungen nötig. Kein Framework-/Plattformwechsel vorgeschlagen.
