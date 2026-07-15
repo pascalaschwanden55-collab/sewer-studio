@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -51,5 +52,14 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         Assert.Contains("IPlayerShellProjectContext", service);
         Assert.Contains("IPlayerShellProjectContext", shell);
         Assert.Contains("App.Current", factory);
+
+        var offenders = FindFileTokenOffenders(protocolPath, "App.Current")
+            .Concat(FindFileTokenOffenders(applyPath, "App.Current"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Coding-Partials sollen Projektzugriff ueber PlayerShellProjectService kapseln:\n"
+            + string.Join("\n", offenders));
     }
 }

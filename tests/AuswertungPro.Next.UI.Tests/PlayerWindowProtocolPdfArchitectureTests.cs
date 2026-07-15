@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -105,5 +106,51 @@ public sealed class PlayerWindowProtocolPdfArchitectureTests
         Assert.Contains("ProtocolObservationsWindow", previewWindowService);
         Assert.Contains("ShowDialog", previewWindowService);
         Assert.Contains("new CodingProtocolPreviewWindowService", previewWindowServiceFactory);
+
+        var protocolOffenders = FindFileTokenOffenders(
+            protocolPath,
+            "if (_dependencies.ProtocolPdfExporter == null || _haltungRecord == null)",
+            "if (_haltungRecord == null || _dependencies.LegacyServiceProvider == null)",
+            ".TryOfferPdfExport(",
+            "CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow",
+            "CodingProtocolPdfExportPlanner.Build",
+            "CodingProtocolPdfExportServiceFactory.Create",
+            "CodingProtocolPdfSavePathDialogFactory.Create",
+            "CodingProtocolPdfFileServiceFactory.Create",
+            "CodingProjectFolderResolver.ResolveNullable",
+            "CodingProtocolDialogServiceFactory.Create",
+            "CodingProtocolPreviewWorkflowServiceFactory.Create",
+            "new CodingProtocolPreviewDisplayWorkflowActions",
+            "CodingProtocolPreviewWindowServiceFactory.Create",
+            "DialogHost.Current",
+            "PlayerShellProjectServiceFactory.Create",
+            "new Views.ProtocolObservationsWindow",
+            "ShowDialog",
+            "dlg.Owner",
+            "PDF konnte nicht erstellt werden",
+            "Protokoll jetzt anzeigen",
+            "PDF-Protokoll mit Grafik",
+            "HaltungsprotokollPdfOptions",
+            "LogoPathAbs",
+            "IncludeHaltungsgrafik",
+            "SaveFileDialog",
+            "BuildHaltungsprotokollPdf",
+            "Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)",
+            "File.WriteAllBytes",
+            "SafeShellOpen.TryOpen");
+
+        Assert.True(
+            protocolOffenders.Length == 0,
+            "PlayerWindow.Coding.Protocol soll PDF-Export, Preview, Dialoge und Datei-IO ueber Workflows/Services kapseln:\n"
+            + string.Join("\n", protocolOffenders));
+
+        var plannerOffenders = FindFileTokenOffenders(
+            plannerPath,
+            "Path.GetDirectoryName(lastProjectPath)");
+
+        Assert.True(
+            plannerOffenders.Length == 0,
+            "CodingProtocolPdfExportPlanner soll projekt.json unter Projektdateien ueber ProjectFileLocator korrekt auf den Projektroot aufloesen:\n"
+            + string.Join("\n", plannerOffenders));
     }
 }

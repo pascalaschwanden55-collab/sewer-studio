@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -216,5 +217,28 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         Assert.Contains("public bool HasCodeCatalog", protocolContext);
         Assert.Contains("public ServiceProvider? LegacyServiceProvider", dependencies);
         Assert.Contains("public string? LastProjectPath", dependencies);
+
+        var dependencyOffenders = FindPlayerWindowPartialTokenOffenders("_protocolContext.Dependencies.");
+
+        Assert.True(
+            dependencyOffenders.Length == 0,
+            "PlayerWindow-Partials sollen konkrete Services ueber PlayerWindowProtocolContext-APIs statt Dependencies-Bag nutzen:\n"
+            + string.Join("\n", dependencyOffenders));
+
+        var bridgeOffenders = FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.State.cs"),
+                "private readonly ServiceProvider? _serviceProvider")
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"),
+                "_serviceProvider = serviceProvider"))
+            .Concat(FindFileTokenOffenders(
+                protocolContextPath,
+                "public PlayerWindowDependencies Dependencies"))
+            .ToArray();
+
+        Assert.True(
+            bridgeOffenders.Length == 0,
+            "PlayerWindow soll den Legacy-ServiceProvider nicht wieder als Feld/Dependencies-Bag freilegen:\n"
+            + string.Join("\n", bridgeOffenders));
     }
 }

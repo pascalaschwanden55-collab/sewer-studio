@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -37,6 +38,19 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         Assert.Contains("CodingProtocolTrainingSnapshotStoreFactory.Create", workflowFactory);
         Assert.Contains("File.Copy", snapshotStore);
         Assert.Contains("BestEffort.Try", snapshotStore);
+
+        var offenders = FindFileTokenOffenders(
+            trainingPath,
+            "Guid.TryParse(pair.Gt.RefId",
+            "_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId",
+            "File.Exists",
+            "File.Copy",
+            "File.Delete");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Protokolltraining soll Import-Event-Aufloesung und Snapshot-IO ueber Resolver/Runner kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -64,6 +78,16 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", workflow);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
         Assert.Contains("target.Add", appender);
+
+        var offenders = FindFileTokenOffenders(
+            protocolPath,
+            "new CodingEvent",
+            "OrderBy(e => e.MeterStart ?? 0)");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Protokoll-Partial soll bestehende ProtocolEntry-Mappings ueber CodingProtocolEventMapper kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -94,5 +118,16 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", importWorkflow);
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", importWorkflow);
         Assert.Contains("actions.SetImportCount(totalCount)", importWorkflow);
+
+        var offenders = FindFileTokenOffenders(
+            importPath,
+            "_codingImportEvents.Add",
+            "new CodingEvent",
+            "!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Protokoll-Import-Partial soll Import-Event-Mapping ueber Workflow/Mapper kapseln:\n"
+            + string.Join("\n", offenders));
     }
 }
