@@ -136,6 +136,7 @@ namespace AuswertungPro.Next.UI
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
         public IBackupTargetMarkerGuard BackupTargetMarkers { get; }
         public ISqliteSnapshotCopier SqliteSnapshots { get; }
+        public IFullBackupSourcesProvider BackupSources { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -506,10 +507,10 @@ namespace AuswertungPro.Next.UI
             BackupTargetMarkers = new BackupTargetMarkerGuardService();
             BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
             SqliteSnapshots = new SqliteSnapshotCopyService();
+            BackupSources = new FullBackupSourcesProvider(RepositoryRootLocator);
+            FullBackupSourcesFactory.Use(BackupSources);
             FullBackup = new FullBackupService(
-                () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(
-                    settings,
-                    RepositoryRootLocator),
+                () => BackupSources.Resolve(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
                 ct => OllamaListAsync(ct),
                 availableBytes: null,
@@ -802,6 +803,7 @@ namespace AuswertungPro.Next.UI
         public object? GetService(Type serviceType)
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
+            if (serviceType == typeof(IFullBackupSourcesProvider)) return BackupSources;
             if (serviceType == typeof(IBackupTargetMarkerGuard)) return BackupTargetMarkers;
             if (serviceType == typeof(ISqliteSnapshotCopier)) return SqliteSnapshots;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
