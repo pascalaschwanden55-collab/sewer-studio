@@ -88,6 +88,24 @@ public sealed class VsaMediaPathResolverTests : IDisposable
         Assert.Equal(absolute, VsaMediaPathResolver.ResolvePhoto("export.xtf", null, absolute));
     }
 
+    [Fact]
+    public void InstanceService_FindetVideoWieDieFassade()
+    {
+        var documents = Path.Combine(_root, "Dokumente");
+        var video = Path.Combine(_root, "Video", "film.mp4");
+        Directory.CreateDirectory(documents);
+        Directory.CreateDirectory(Path.GetDirectoryName(video)!);
+        File.WriteAllText(video, "video");
+        var resolver = new VsaMediaPathFileResolver();
+
+        var result = resolver.ResolveVideo(
+            Path.Combine(documents, "export.xtf"),
+            relativeFolder: null,
+            "film.mp4");
+
+        Assert.Equal(video, result, ignoreCase: true);
+    }
+
     public void Dispose()
     {
         try

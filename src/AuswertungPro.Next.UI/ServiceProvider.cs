@@ -148,6 +148,7 @@ namespace AuswertungPro.Next.UI
         public IPdfImportService PdfImport { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
+        public IVsaMediaPathResolver VsaMediaPaths { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakImportService IbakImport { get; }
@@ -394,7 +395,8 @@ namespace AuswertungPro.Next.UI
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
             PdfImport = new PdfImportServiceAdapter();
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
-            XtfImport = new XtfImportServiceAdapter();
+            VsaMediaPaths = new VsaMediaPathFileResolver();
+            XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
             WinCanImport = new WinCanDbImportService();
             IbakImport = new IbakExportImportService();
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
@@ -773,6 +775,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
+            if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;

@@ -5,10 +5,9 @@ using System.Text.Json.Nodes;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
 using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
+using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
-
-
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -16,14 +15,21 @@ public sealed class LegacyXtfImportService
 {
     private readonly string? _archiveRoot;
     private readonly string? _legacyArchiveRoot;
+    private readonly IVsaMediaPathResolver _mediaPaths;
 
     public LegacyXtfImportService()
     {
         // Direkte Parser-Nutzung (vor allem Tests) schreibt keine Dateien neben das Programm.
         // Die App verwendet CreateForApplication() und bekommt den sicheren LocalAppData-Pfad.
+        _mediaPaths = VsaMediaPathResolver.Current;
     }
 
     public LegacyXtfImportService(string archiveRoot, string? legacyArchiveRoot = null)
+        : this(archiveRoot, legacyArchiveRoot, VsaMediaPathResolver.Current)
+    {
+    }
+
+    internal LegacyXtfImportService(string archiveRoot, string? legacyArchiveRoot, IVsaMediaPathResolver mediaPaths)
     {
         _archiveRoot = string.IsNullOrWhiteSpace(archiveRoot)
             ? throw new ArgumentException("Der XTF-Archivordner fehlt.", nameof(archiveRoot))
@@ -31,16 +37,17 @@ public sealed class LegacyXtfImportService
         _legacyArchiveRoot = string.IsNullOrWhiteSpace(legacyArchiveRoot)
             ? null
             : Path.GetFullPath(legacyArchiveRoot);
+        _mediaPaths = mediaPaths ?? throw new ArgumentNullException(nameof(mediaPaths));
     }
 
     public static LegacyXtfImportService CreateForApplication()
-        => new(
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SewerStudio",
-                "Rohdaten",
-                "xtf_imports"),
-            Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports"));
+        => CreateForApplication(VsaMediaPathResolver.Current);
+
+    internal static LegacyXtfImportService CreateForApplication(IVsaMediaPathResolver mediaPaths) => new(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio", "Rohdaten", "xtf_imports"),
+            Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports"),
+            mediaPaths);
 
     public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
     {
@@ -95,7 +102,7 @@ public sealed class LegacyXtfImportService
                     continue;
                 }
 
-                ImportXtf(path, project, stats, ctx);
+                ImportXtf(path, project, stats, _mediaPaths, ctx);
             }
             catch (Exception ex)
             {
@@ -177,7 +184,8 @@ public sealed class LegacyXtfImportService
         }
     }
 
-    private static void ImportXtf(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
+    private static void ImportXtf(string path, Project project, ImportStats stats,
+        IVsaMediaPathResolver mediaPaths, ImportRunContext? ctx = null)
     {
         // Format-Erkennung via kleinem Puffer statt ganzer Datei in den Speicher
         bool isSia405 = false, isVsa = false;
@@ -225,7 +233,7 @@ public sealed class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var records = ParseVsaKek(doc, path, out _);
+            var records = ParseVsaKek(doc, path, mediaPaths, out _);
             stats.Found += records.Count;
 
             foreach (var rec in records)
@@ -688,7 +696,9 @@ public sealed class LegacyXtfImportService
         public double LL { get; set; }
     }
 
-    private static List<HaltungRecord> ParseVsaKek(XDocument doc, string sourcePath, out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
+    private static List<HaltungRecord> ParseVsaKek(XDocument doc, string sourcePath,
+        IVsaMediaPathResolver mediaPaths,
+        out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
     {
         var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
         findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
@@ -866,7 +876,7 @@ public sealed class LegacyXtfImportService
                                || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
                 if (istVideo)
                 {
-                    var videoPfad = VsaMediaPathResolver.ResolveVideo(sourcePath, relativpfad, bezeichnung);
+                    var videoPfad = mediaPaths.ResolveVideo(sourcePath, relativpfad, bezeichnung);
                     if (!string.IsNullOrWhiteSpace(videoPfad)
                         && !videoByUntersuchungTid.ContainsKey(objekt))
                     {
@@ -886,7 +896,7 @@ public sealed class LegacyXtfImportService
                      || findingsByTid.TryGetValue(objekt, out finding)))
                 continue;
 
-            var fotoPath = VsaMediaPathResolver.ResolvePhoto(sourcePath, relativpfad, bezeichnung);
+            var fotoPath = mediaPaths.ResolvePhoto(sourcePath, relativpfad, bezeichnung);
             if (string.IsNullOrWhiteSpace(fotoPath))
                 continue;
 

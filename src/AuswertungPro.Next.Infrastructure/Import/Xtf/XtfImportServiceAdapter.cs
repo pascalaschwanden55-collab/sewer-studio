@@ -14,6 +14,12 @@ public sealed class XtfImportServiceAdapter : IXtfImportService
     {
     }
 
+    public XtfImportServiceAdapter(IVsaMediaPathResolver mediaPaths)
+        : this(LegacyXtfImportService.CreateForApplication(
+            mediaPaths ?? throw new ArgumentNullException(nameof(mediaPaths))))
+    {
+    }
+
     internal XtfImportServiceAdapter(LegacyXtfImportService service)
     {
         _svc = service ?? throw new ArgumentNullException(nameof(service));
