@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -51,6 +52,15 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
         Assert.Contains("Core.Initialize", runtimeFactory);
         Assert.Contains("new LibVLC(args)", factory);
         Assert.Contains("new LibVLC()", factory);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders(
+            "new MediaPlayer",
+            "Core.Initialize");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen LibVLC/MediaPlayer-Erzeugung ueber PlayerMediaRuntimeFactory kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -86,5 +96,20 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
         Assert.Contains("public sealed class PlayerMediaRuntime", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", runtime);
+
+        var offenders = FindFileTokenOffenders(
+            windowRootPath,
+            "_options",
+            "new PlayerTimelineHost",
+            "new PlayerPlaybackControlHost",
+            "new PlayerMarqueeOverlayHost",
+            "new PlayerSnapshotCaptureHost",
+            "new MediaPlayer",
+            "VideoView.MediaPlayer");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Root soll Media-Host-Verkabelung ueber PlayerMediaRuntime kapseln:\n"
+            + string.Join("\n", offenders));
     }
 }

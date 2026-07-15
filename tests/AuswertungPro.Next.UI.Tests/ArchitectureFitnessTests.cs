@@ -763,38 +763,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_partials_do_not_create_libvlc_or_media_player_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "new MediaPlayer",
-            "Core.Initialize");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen LibVLC/MediaPlayer-Erzeugung ueber PlayerMediaRuntimeFactory kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_root_does_not_own_media_host_wiring()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
-            "_options",
-            "new PlayerTimelineHost",
-            "new PlayerPlaybackControlHost",
-            "new PlayerMarqueeOverlayHost",
-            "new PlayerSnapshotCaptureHost",
-            "new MediaPlayer",
-            "VideoView.MediaPlayer");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Root soll Media-Host-Verkabelung ueber PlayerMediaRuntime kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_coding_photo_capture_partial_does_not_block_on_frame_extraction()
     {
         var offenders = FindFileTokenOffenders(
