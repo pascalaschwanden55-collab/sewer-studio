@@ -46,8 +46,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
-    public IAsyncRelayCommand DistributeHoldingsCommand { get; }
-    public IAsyncRelayCommand DistributeShaftsCommand { get; }
+    public IAsyncRelayCommand DistributeHoldingsNormalCommand { get; }
+    public IAsyncRelayCommand DistributeHoldingsSanierungCommand { get; }
+    public IAsyncRelayCommand DistributeShaftsNormalCommand { get; }
+    public IAsyncRelayCommand DistributeShaftsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
     public IRelayCommand BrowseExcelExportRootCommand { get; }
 
@@ -89,8 +91,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
-        DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
-        DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
+        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
+        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
+        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
+        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
@@ -222,14 +226,16 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 showFilePattern: false, haltungHinweis, OnCfgChanged, BrowseRoot,
                 fixedPattern: "{Datum}_{Haltung}",
                 fixedObjectFolderPattern: "{Haltung}",
-                directoryTreeResolver: _directoryTreeResolver),
+                directoryTreeResolver: _directoryTreeResolver,
+                supportsSanierung: true),
             new DistributionTargetConfigViewModel(
                 "Schächte verteilen", "Schachtprotokoll je Schacht",
                 _settings.SchachtDistribution, resolver, schachtSample, ".pdf",
                 showFilePattern: false, schachtHinweis, OnCfgChanged, BrowseRoot,
                 fixedPattern: "{Datum}_{Schachtnummer}",
                 fixedObjectFolderPattern: "{Schachtnummer}",
-                directoryTreeResolver: _directoryTreeResolver),
+                directoryTreeResolver: _directoryTreeResolver,
+                supportsSanierung: true),
             new DistributionTargetConfigViewModel(
                 "Dichtheitsprüfung verteilen", "DP-Protokoll je Haltung",
                 _settings.DichtheitDistribution, resolver, dichtheitSample, ".pdf",
@@ -281,8 +287,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
         ExportCommand.NotifyCanExecuteChanged();
         ExportSchaechteCommand.NotifyCanExecuteChanged();
-        DistributeHoldingsCommand.NotifyCanExecuteChanged();
-        DistributeShaftsCommand.NotifyCanExecuteChanged();
+        DistributeHoldingsNormalCommand.NotifyCanExecuteChanged();
+        DistributeHoldingsSanierungCommand.NotifyCanExecuteChanged();
+        DistributeShaftsNormalCommand.NotifyCanExecuteChanged();
+        DistributeShaftsSanierungCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
     }
 
@@ -377,7 +385,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     // ─── Distribution: Haltungen ───────────────────────────────────────────
 
-    private async Task DistributeHoldingsAsync()
+    private async Task DistributeHoldingsAsync(DistributionVariant variant)
     {
         var sourceMode = _dialogs.ConfirmCancel(
             "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
@@ -474,7 +482,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
                     progress: progress,
-                    directoryConfig: directoryConfig));
+                    directoryConfig: directoryConfig,
+                    variant: variant));
             }
             else if (!useTxtImport)
             {
@@ -488,7 +497,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     unmatchedFolderName: "__UNMATCHED",
                     project: _shell.Project,
                     progress: progress,
-                    directoryConfig: directoryConfig));
+                    directoryConfig: directoryConfig,
+                    variant: variant));
             }
             else if (selectedTxtFiles.Length > 0)
             {
@@ -545,7 +555,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     // ─── Distribution: Schaechte ───────────────────────────────────────────
 
-    private async Task DistributeShaftsAsync()
+    private async Task DistributeShaftsAsync(DistributionVariant variant)
     {
         var mode = _dialogs.ConfirmCancel(
             "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
@@ -601,7 +611,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     project: _shell.Project,
                     progress: progress,
-                    directoryConfig: directoryConfig));
+                    directoryConfig: directoryConfig,
+                    variant: variant));
             }
             else
             {
@@ -612,7 +623,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     project: _shell.Project,
                     progress: progress,
-                    directoryConfig: directoryConfig));
+                    directoryConfig: directoryConfig,
+                    variant: variant));
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert

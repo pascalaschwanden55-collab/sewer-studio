@@ -77,6 +77,19 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         Array.Empty<DistributionPatternPart>();
     [ObservableProperty] private string _vorschau = string.Empty;
 
+    /// <summary>true = Haltung/Schacht (mit Sanierungs-Variante); false = DP/Excel.</summary>
+    public bool SupportsSanierung { get; }
+
+    /// <summary>Aktuell in der Vorschau gezeigte Variante (schaltet nur die Anzeige um).</summary>
+    [ObservableProperty] private DistributionVariant _previewVariant = DistributionVariant.Normal;
+
+    /// <summary>true = der Baustein-Baukasten ("Erweitert") ist aufgeklappt.</summary>
+    [ObservableProperty] private bool _isAdvancedExpanded;
+
+    /// <summary>Grafische Ordnerbaum-Vorschau der aktuellen Variante.</summary>
+    [ObservableProperty] private IReadOnlyList<DistributionTreeNode> _treeNodes =
+        Array.Empty<DistributionTreeNode>();
+
     public IRelayCommand BrowseRootCommand { get; }
     public IRelayCommand<DistributionPatternBlock> AddPatternBlockCommand { get; }
     public IRelayCommand RemoveLastPatternBlockCommand { get; }
@@ -103,7 +116,8 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         bool showRootEditor = true,
         bool showSharedExcelRoot = false,
         string? fixedObjectFolderPattern = null,
-        IDistributionDirectoryTreeResolver? directoryTreeResolver = null)
+        IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
+        bool supportsSanierung = false)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
@@ -120,6 +134,7 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         ShowRootEditor = showRootEditor;
         ShowSharedExcelRoot = showSharedExcelRoot;
         Hinweis = hinweis;
+        SupportsSanierung = supportsSanierung;
 
         // Backing-Felder direkt aus der Konfiguration setzen -> loest KEINE OnChanged-Callbacks
         // und damit kein vorzeitiges Speichern beim Aufbau aus.
@@ -182,6 +197,13 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
         UpdateVorschau();
         if (!_suppressFilePatternSave)
             _onChanged();
+    }
+
+    partial void OnPreviewVariantChanged(DistributionVariant value)
+    {
+        _ = value;
+        // Umschalter aendert nur die Anzeige (Vorschau + Ordnerbaum), keine Persistenz.
+        UpdateVorschau();
     }
 
     /// <summary>
@@ -324,12 +346,15 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
                     ? "{Haltung}"
                     : "{Schachtnummer}"
                 : _fixedObjectFolderPattern;
+            var variant = SupportsSanierung ? PreviewVariant : DistributionVariant.Normal;
             var objektOrdner = _directoryTreeResolver.ResolveObjectDirectory(
                 wurzel,
                 OrdnerPattern,
                 UnterordnerPattern,
                 objektPattern,
-                _sampleContext);
+                _sampleContext,
+                variant,
+                _fixedPattern);
             var datei = _resolver.ResolveRelativePath(
                 ordnerPattern: null,
                 unterordnerPattern: null,
@@ -338,5 +363,57 @@ public sealed partial class DistributionTargetConfigViewModel : ObservableObject
                 extension: _extension);
             Vorschau = Path.Combine(objektOrdner, datei);
         }
+
+        UpdateTreeNodes();
+    }
+
+    /// <summary>
+    /// Baut die grafische Ordnerbaum-Vorschau: freie Ebenen, fester Objektordner,
+    /// bei Sanierung die Zwischen-Ebene, dann die PDF (und bei Haltungen das Video).
+    /// </summary>
+    private void UpdateTreeNodes()
+    {
+        if (ShowFilePattern)
+        {
+            TreeNodes = Array.Empty<DistributionTreeNode>();
+            return;
+        }
+
+        var nodes = new List<DistributionTreeNode>();
+        var depth = 0;
+
+        var ordner = _resolver.ResolveSegment(OrdnerPattern, _sampleContext);
+        if (!string.IsNullOrWhiteSpace(ordner))
+            nodes.Add(new DistributionTreeNode(ordner, DistributionTreeNodeKind.Ordner, depth++));
+
+        var unterordner = _resolver.ResolveSegment(UnterordnerPattern, _sampleContext);
+        if (!string.IsNullOrWhiteSpace(unterordner))
+            nodes.Add(new DistributionTreeNode(unterordner, DistributionTreeNodeKind.Ordner, depth++));
+
+        var objektPattern = string.IsNullOrWhiteSpace(_fixedObjectFolderPattern)
+            ? string.IsNullOrWhiteSpace(_sampleContext.Schachtnummer) ? "{Haltung}" : "{Schachtnummer}"
+            : _fixedObjectFolderPattern;
+        var objekt = _resolver.ResolveSegment(objektPattern, _sampleContext);
+        nodes.Add(new DistributionTreeNode(objekt, DistributionTreeNodeKind.Ordner, depth++));
+
+        if (SupportsSanierung && PreviewVariant == DistributionVariant.Sanierung)
+        {
+            var basis = _resolver.ResolveSegment(_fixedPattern, _sampleContext);
+            var jahr = _resolver.ResolveSegment("{Jahr}", _sampleContext);
+            var sanierung = string.IsNullOrWhiteSpace(basis)
+                ? $"Saniert {jahr}".TrimEnd()
+                : $"{basis}_Saniert {jahr}".TrimEnd();
+            nodes.Add(new DistributionTreeNode(sanierung, DistributionTreeNodeKind.Ordner, depth++));
+        }
+
+        var datei = _resolver.ResolveSegment(_fixedPattern ?? DateiPattern, _sampleContext);
+        nodes.Add(new DistributionTreeNode(datei + _extension, DistributionTreeNodeKind.Pdf, depth));
+
+        var istSchacht = !string.IsNullOrWhiteSpace(_sampleContext.Schachtnummer);
+        var istDp = _fixedPattern?.EndsWith("_DP", StringComparison.Ordinal) ?? false;
+        if (!istSchacht && !istDp)
+            nodes.Add(new DistributionTreeNode(datei + " (Video)", DistributionTreeNodeKind.Video, depth));
+
+        TreeNodes = nodes;
     }
 }
