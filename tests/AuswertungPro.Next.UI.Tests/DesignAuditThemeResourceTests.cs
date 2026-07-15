@@ -245,6 +245,23 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Header=\"%\"", windowXaml);
     }
 
+    [Fact]
+    public void Photo_measurement_and_hydraulics_use_fluent_icons_and_readable_status_text()
+    {
+        var photoXaml = ReadUiFile("Views", "Windows", "PhotoMeasurementWindow.xaml");
+        var hydraulicsXaml = ReadUiFile("Views", "Windows", "HydraulikPanelWindow.xaml");
+        var rendering = ReadUiFile("Views", "Windows", "PhotoMeasurementWindow.Rendering.cs");
+
+        Assert.Contains("Glyph=\"&#xE73E;\"", photoXaml);
+        Assert.Contains("Glyph=\"&#xE7A7;\"", photoXaml);
+        Assert.Contains("Glyph=\"&#xE74D;\"", photoXaml);
+        Assert.Contains("Glyph=\"&#xEB42;\"", hydraulicsXaml);
+        Assert.DoesNotContain("&#x1F4A7;", hydraulicsXaml);
+        Assert.DoesNotContain(" | ", rendering);
+        Assert.DoesNotContain(" @ ", rendering);
+        Assert.Contains("LevelMode.Water => \"Wasser\"", rendering);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

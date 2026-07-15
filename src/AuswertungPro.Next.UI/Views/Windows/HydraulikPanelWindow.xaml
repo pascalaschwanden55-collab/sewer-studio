@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="SewerStudio — Hydraulik-Panel"
         Width="920" Height="780"
         MinWidth="800" MinHeight="650"
@@ -137,7 +138,8 @@
             <StackPanel Orientation="Horizontal">
                 <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0"
                         Background="{DynamicResource AccentBrush}">
-                    <TextBlock Text="&#x1F4A7;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <ui:FluentIcon Glyph="&#xEB42;" FontSize="18" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="SewerStudio — Hydraulik-Panel"

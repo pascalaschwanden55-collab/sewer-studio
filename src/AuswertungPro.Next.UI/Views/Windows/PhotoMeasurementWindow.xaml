@@ -1,6 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.PhotoMeasurementWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="PhotoAssistant — Foto vermessen"
         Width="1100" Height="750"
         MinWidth="900" MinHeight="650"
@@ -372,18 +373,33 @@
                     <Border Height="1" Margin="0,12" Background="{DynamicResource BorderBrush}"/>
 
                     <!-- OK / Abbrechen -->
-                    <Button x:Name="BtnOk" Content="OK &#x2714;" Style="{StaticResource ActionBtn}"
-                            Background="#22C55E" Click="BtnOk_Click"/>
+                    <Button x:Name="BtnOk" Style="{StaticResource ActionBtn}"
+                            Background="#22C55E" Click="BtnOk_Click">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <ui:FluentIcon Glyph="&#xE73E;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>
+                            <TextBlock Text="OK"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="BtnCancel" Content="Abbrechen" Style="{StaticResource ActionBtn}"
                             Background="#EF4444" Click="BtnCancel_Click"/>
 
                     <!-- Undo -->
-                    <Button x:Name="BtnUndo" Content="&#x21B6; Undo" Style="{StaticResource ActionBtn}"
+                    <Button x:Name="BtnUndo" Style="{StaticResource ActionBtn}"
                             Background="#6366F1" Click="BtnUndo_Click" Margin="0,8,0,0"
-                            Visibility="Collapsed"/>
-                    <Button x:Name="BtnDelete" Content="&#x2716; Löschen" Style="{StaticResource ActionBtn}"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <ui:FluentIcon Glyph="&#xE7A7;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>
+                            <TextBlock Text="Rückgängig"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="BtnDelete" Style="{StaticResource ActionBtn}"
                             Background="#EF4444" Click="BtnDelete_Click" Margin="0,4,0,0"
-                            Visibility="Collapsed"/>
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <ui:FluentIcon Glyph="&#xE74D;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>
+                            <TextBlock Text="Löschen"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
         </Grid>

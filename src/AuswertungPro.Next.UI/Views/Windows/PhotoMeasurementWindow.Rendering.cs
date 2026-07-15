@@ -104,7 +104,14 @@ public partial class PhotoMeasurementWindow
         AddCanvasLabel(labelText, plan.LabelPosition.X, plan.LabelPosition.Y, TagOverlay);
 
         TxtMeasureInfo.Text = $"{fillPercent:F1}%";
-        TxtStatus.Text = $"{_activeLevelMode}: {fillPercent:F1}% | Mausrad: Kreis | Drag: Position";
+        var levelLabel = _activeLevelMode switch
+        {
+            LevelMode.Water => "Wasser",
+            LevelMode.Deposit => "Ablagerung",
+            LevelMode.Obstacle => "Hindernis",
+            _ => _activeLevelMode.ToString()
+        };
+        TxtStatus.Text = $"{levelLabel}: {fillPercent:F1}% · Mausrad: Kreis · Ziehen: Position";
     }
 
     // ═══════════════════════════════════════════════
@@ -234,7 +241,7 @@ public partial class PhotoMeasurementWindow
 
         _undoFrames.Push(frame);
 
-        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte | Doppelklick = schließen";
+        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte · Doppelklick = schließen";
     }
 
     private void ClosePolygon()
@@ -341,7 +348,7 @@ public partial class PhotoMeasurementWindow
 
         _currentGeometry = anglePlan.Geometry;
 
-        TxtMeasureInfo.Text = $"{angleDeg:F0}° @ {anglePlan.ClockHour:F1}h";
+        TxtMeasureInfo.Text = $"{angleDeg:F0}° · {anglePlan.ClockHour:F1} Uhr";
         TxtStatus.Text = _activeTool == PhotoTool.Lateral
             ? $"Abzweig: {angleDeg:F0}° bei {anglePlan.ClockHour:F1} Uhr"
             : $"Bogen: {angleDeg:F0}° bei {anglePlan.ClockHour:F1} Uhr";
