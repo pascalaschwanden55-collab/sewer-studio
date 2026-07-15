@@ -430,6 +430,27 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task MirrorSourceAsync_VerwendetDenInjiziertenSqliteDienst()
+    {
+        var source = Path.Combine(_root, "injected-source");
+        var backupRoot = Path.Combine(_root, "injected-backup");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "data.db"), "quelle");
+        var sqlite = new RecordingSqliteSnapshotCopier();
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await new DirectoryMirror(null, null, sqlite).MirrorSourceAsync(
+            new BackupSource(source, "Daten"),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.Equal(1, sqlite.SnapshotCalls);
+        Assert.Equal("snapshot", File.ReadAllText(Path.Combine(backupRoot, "Daten", "data.db")));
+        Assert.Equal(1, stats.DatabasesSnapshotted);
+    }
+
+    [Fact]
     public async Task MirrorSourceAsync_AktiveSqliteDatenbank_ErstelltKonsistentenSchnappschuss()
     {
         var source = Path.Combine(_root, "source");
@@ -511,5 +532,32 @@ public sealed class DirectoryMirrorTests : IDisposable
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM Items;";
         return Convert.ToInt64(command.ExecuteScalar());
+    }
+
+    private sealed class RecordingSqliteSnapshotCopier : ISqliteSnapshotCopier
+    {
+        public int SnapshotCalls { get; private set; }
+
+        public bool IsSqliteDatabase(string path)
+            => path.EndsWith(".db", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsCompanionOfSqliteDatabase(string path)
+            => false;
+
+        public long GetConservativeSnapshotBytes(string databasePath)
+            => new FileInfo(databasePath).Length;
+
+        public Task CreateVerifiedSnapshotAsync(
+            string sourcePath,
+            string targetPath,
+            Action<string>? afterSnapshotWritten,
+            CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            SnapshotCalls++;
+            File.WriteAllText(targetPath, "snapshot");
+            afterSnapshotWritten?.Invoke(targetPath);
+            return Task.CompletedTask;
+        }
     }
 }

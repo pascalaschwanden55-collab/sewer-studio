@@ -29,6 +29,7 @@ public sealed class FullBackupService : IFullBackupService
     private readonly Func<string, long?> _availableBytes;
     private readonly IGitCommitResolver _gitCommitResolver;
     private readonly IBackupTargetMarkerGuard _targetMarkerGuard;
+    private readonly ISqliteSnapshotCopier _sqliteSnapshots;
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
@@ -42,7 +43,8 @@ public sealed class FullBackupService : IFullBackupService
             ollamaListe,
             availableBytes,
             gitCommitResolver,
-            BackupTargetGuard.MarkerGuard)
+            BackupTargetGuard.MarkerGuard,
+            SqliteSnapshotCopier.Current)
     {
     }
 
@@ -55,7 +57,8 @@ public sealed class FullBackupService : IFullBackupService
             ollamaListe: null,
             availableBytes: null,
             gitCommitResolver: null,
-            targetMarkerGuard: targetMarkerGuard)
+            targetMarkerGuard: targetMarkerGuard,
+            sqliteSnapshots: SqliteSnapshotCopier.Current)
     {
     }
 
@@ -66,6 +69,25 @@ public sealed class FullBackupService : IFullBackupService
         Func<string, long?>? availableBytes,
         IGitCommitResolver? gitCommitResolver,
         IBackupTargetMarkerGuard targetMarkerGuard)
+        : this(
+            quellenFactory,
+            walCheckpoint,
+            ollamaListe,
+            availableBytes,
+            gitCommitResolver,
+            targetMarkerGuard,
+            SqliteSnapshotCopier.Current)
+    {
+    }
+
+    public FullBackupService(
+        Func<FullBackupSources> quellenFactory,
+        Action? walCheckpoint,
+        Func<CancellationToken, Task<string?>>? ollamaListe,
+        Func<string, long?>? availableBytes,
+        IGitCommitResolver? gitCommitResolver,
+        IBackupTargetMarkerGuard targetMarkerGuard,
+        ISqliteSnapshotCopier sqliteSnapshots)
     {
         _sourcesFactory = quellenFactory ?? throw new ArgumentNullException(nameof(quellenFactory));
         _walCheckpoint = walCheckpoint;
@@ -73,6 +95,7 @@ public sealed class FullBackupService : IFullBackupService
         _availableBytes = availableBytes ?? BackupDiskSpaceGuard.GetAvailableBytes;
         _gitCommitResolver = gitCommitResolver ?? GitCommitResolver.DefaultResolver;
         _targetMarkerGuard = targetMarkerGuard ?? throw new ArgumentNullException(nameof(targetMarkerGuard));
+        _sqliteSnapshots = sqliteSnapshots ?? throw new ArgumentNullException(nameof(sqliteSnapshots));
     }
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
@@ -105,7 +128,10 @@ public sealed class FullBackupService : IFullBackupService
 
             // Pro Lauf ein datierter Versions-Stand: ersetzte/entfallene Dateien
             // wandern dorthin statt endgueltig zu verschwinden.
-            var mirror = new DirectoryMirror(BackupVersionRetention.BuildStandName(DateTime.Now));
+            var mirror = new DirectoryMirror(
+                BackupVersionRetention.BuildStandName(DateTime.Now),
+                afterTemporaryFileWritten: null,
+                sqliteSnapshots: _sqliteSnapshots);
 
             var sizeReport = Analyze(sources, progress: null, ct);
             var bytesToWrite = await EstimateRequiredCopyBytesAsync(plan, backupRoot, ct)
@@ -298,7 +324,7 @@ public sealed class FullBackupService : IFullBackupService
         }
     }
 
-    private static IEnumerable<string> EnumerateFiles(string root, Func<string, bool>? isDirExcluded)
+    private IEnumerable<string> EnumerateFiles(string root, Func<string, bool>? isDirExcluded)
     {
         if (!Directory.Exists(root))
             yield break;
@@ -328,7 +354,7 @@ public sealed class FullBackupService : IFullBackupService
 
             foreach (var file in files)
             {
-                if (!SqliteSnapshotCopier.IsCompanionOfSqliteDatabase(file))
+                if (!_sqliteSnapshots.IsCompanionOfSqliteDatabase(file))
                     yield return file;
             }
 
@@ -359,7 +385,7 @@ public sealed class FullBackupService : IFullBackupService
             ct).ConfigureAwait(false);
     }
 
-    private static async Task<long> EstimateRequiredCopyBytesAsync(
+    private async Task<long> EstimateRequiredCopyBytesAsync(
         IReadOnlyList<BackupComponent> plan,
         string backupRoot,
         CancellationToken ct)
@@ -400,13 +426,13 @@ public sealed class FullBackupService : IFullBackupService
         return required;
     }
 
-    private static async Task<long> EstimateFileBytesAsync(
+    private async Task<long> EstimateFileBytesAsync(
         string sourceFile,
         string targetFile,
         CancellationToken ct)
     {
-        if (SqliteSnapshotCopier.IsSqliteDatabase(sourceFile))
-            return SqliteSnapshotCopier.GetConservativeSnapshotBytes(sourceFile);
+        if (_sqliteSnapshots.IsSqliteDatabase(sourceFile))
+            return _sqliteSnapshots.GetConservativeSnapshotBytes(sourceFile);
 
         var sourceInfo = new FileInfo(sourceFile);
         var targetInfo = new FileInfo(targetFile);

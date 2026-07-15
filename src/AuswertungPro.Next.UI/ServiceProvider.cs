@@ -132,6 +132,7 @@ namespace AuswertungPro.Next.UI
         public IKnowledgeWalCheckpoint KnowledgeWalCheckpoint { get; }
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
         public IBackupTargetMarkerGuard BackupTargetMarkers { get; }
+        public ISqliteSnapshotCopier SqliteSnapshots { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -483,6 +484,7 @@ namespace AuswertungPro.Next.UI
             GitCommit = new GitCommitFileResolver();
             BackupTargetMarkers = new BackupTargetMarkerGuardService();
             BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
+            SqliteSnapshots = new SqliteSnapshotCopyService();
             FullBackup = new FullBackupService(
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(
                     settings,
@@ -491,7 +493,8 @@ namespace AuswertungPro.Next.UI
                 ct => OllamaListAsync(ct),
                 availableBytes: null,
                 gitCommitResolver: GitCommit,
-                targetMarkerGuard: BackupTargetMarkers);
+                targetMarkerGuard: BackupTargetMarkers,
+                sqliteSnapshots: SqliteSnapshots);
             KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
@@ -779,6 +782,7 @@ namespace AuswertungPro.Next.UI
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IBackupTargetMarkerGuard)) return BackupTargetMarkers;
+            if (serviceType == typeof(ISqliteSnapshotCopier)) return SqliteSnapshots;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;

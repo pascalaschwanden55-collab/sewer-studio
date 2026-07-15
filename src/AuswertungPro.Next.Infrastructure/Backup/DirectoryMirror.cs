@@ -27,6 +27,7 @@ public sealed class DirectoryMirror
 
     private readonly string? _versionsStandName;
     private readonly Action<string>? _afterTemporaryFileWritten;
+    private readonly ISqliteSnapshotCopier _sqliteSnapshots;
 
     /// <param name="versionsStandName">
     /// Stand-Name dieses Laufs (aus <see cref="BackupVersionRetention.BuildStandName"/>):
@@ -34,14 +35,26 @@ public sealed class DirectoryMirror
     /// null = endgueltig loeschen/ueberschreiben (bewusste Entscheidung des Aufrufers).
     /// </param>
     public DirectoryMirror(string? versionsStandName)
-        : this(versionsStandName, afterTemporaryFileWritten: null)
+        : this(
+            versionsStandName,
+            afterTemporaryFileWritten: null,
+            sqliteSnapshots: SqliteSnapshotCopier.Current)
     {
     }
 
     internal DirectoryMirror(string? versionsStandName, Action<string>? afterTemporaryFileWritten)
+        : this(versionsStandName, afterTemporaryFileWritten, SqliteSnapshotCopier.Current)
+    {
+    }
+
+    internal DirectoryMirror(
+        string? versionsStandName,
+        Action<string>? afterTemporaryFileWritten,
+        ISqliteSnapshotCopier sqliteSnapshots)
     {
         _versionsStandName = versionsStandName;
         _afterTemporaryFileWritten = afterTemporaryFileWritten;
+        _sqliteSnapshots = sqliteSnapshots ?? throw new ArgumentNullException(nameof(sqliteSnapshots));
     }
 
     /// <summary>Laufende Zaehler eines Spiegel-Laufs (ueber alle Quellen geteilt).</summary>
@@ -83,7 +96,7 @@ public sealed class DirectoryMirror
 
             // Eine Online-Sicherung der Hauptdatenbank enthaelt bereits den konsistenten
             // WAL-Stand. Live-WAL/SHM-Dateien duerfen nicht daneben kopiert werden.
-            if (SqliteSnapshotCopier.IsCompanionOfSqliteDatabase(file))
+            if (_sqliteSnapshots.IsCompanionOfSqliteDatabase(file))
                 continue;
 
             var targetRel = Path.Combine(source.TargetRelativeRoot, relToSource);
@@ -168,7 +181,7 @@ public sealed class DirectoryMirror
             var sourceInfo = new FileInfo(sourceFile);
             var targetInfo = new FileInfo(targetFile);
 
-            if (SqliteSnapshotCopier.IsSqliteDatabase(sourceFile))
+            if (_sqliteSnapshots.IsSqliteDatabase(sourceFile))
             {
                 await CopySqliteSnapshotAsync(
                         sourceFile, sourceInfo, backupRoot, targetRel, targetFile,
@@ -264,7 +277,7 @@ public sealed class DirectoryMirror
         var tempFile = targetFile + TempSuffix;
         try
         {
-            await SqliteSnapshotCopier.CreateVerifiedSnapshotAsync(
+            await _sqliteSnapshots.CreateVerifiedSnapshotAsync(
                     sourceFile, tempFile, _afterTemporaryFileWritten, ct)
                 .ConfigureAwait(false);
 
