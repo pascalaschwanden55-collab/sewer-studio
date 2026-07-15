@@ -143,12 +143,14 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     }
 
     private static ProjectImportOrchestrator ErzeugeOrchestrator(
-        IKinsDvdTextEnricher? kinsDvdTextEnricher = null)
+        IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
+        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null)
         => new(
             new XtfImportServiceAdapter(),
             new WinCanDbImportService(),
             new KinsImportService(new WinCanDbImportService(), new FakeIbak()),
-            kinsDvdTextEnricher: kinsDvdTextEnricher);
+            kinsDvdTextEnricher: kinsDvdTextEnricher,
+            kinsDbfWhitelistEnricher: kinsDbfWhitelistEnricher);
 
     private static void WritePdf(string path, params string[] lines)
     {
@@ -190,6 +192,26 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
                 LaengenGesetzt: 8,
                 DatumGesetzt: 9,
                 Messages: ["KINS-TXT-Testdienst verwendet."]);
+        }
+    }
+
+    private sealed class RecordingKinsDbfWhitelistEnricher : IKinsDbfWhitelistEnricher
+    {
+        public int Calls { get; private set; }
+        public string? LastSourceFolder { get; private set; }
+
+        public KinsDbfEnrichmentResult Apply(
+            Project project,
+            string sourceFolder,
+            ImportRunContext? context = null)
+        {
+            Calls++;
+            LastSourceFolder = sourceFolder;
+            return new KinsDbfEnrichmentResult(
+                HaltungsfelderGesetzt: 4,
+                SchaechteNeu: 5,
+                SchaechteAktualisiert: 6,
+                Messages: ["KINS-DBF-Testdienst verwendet."]);
         }
     }
 
@@ -245,6 +267,24 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Assert.Contains("KINS-TXT-Testdienst verwendet.", result.Messages);
         Assert.Contains(
             "KINS-TXT: 7 Timecodes, 8 Laengen, 9 Daten gesetzt.",
+            result.Messages);
+    }
+
+    [Fact]
+    public void Import_Kins_UsesInjectedDbfWhitelistEnricher()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+        var project = new Project();
+        var enricher = new RecordingKinsDbfWhitelistEnricher();
+
+        var result = ErzeugeOrchestrator(kinsDbfWhitelistEnricher: enricher)
+            .Import(sourceDir, projectDir, project);
+
+        Assert.Equal(1, enricher.Calls);
+        Assert.Equal(sourceDir, enricher.LastSourceFolder);
+        Assert.Contains("KINS-DBF-Testdienst verwendet.", result.Messages);
+        Assert.Contains(
+            "KINS-DBF: 4 Haltungsfelder, 5 Schaechte neu, 6 aktualisiert.",
             result.Messages);
     }
 

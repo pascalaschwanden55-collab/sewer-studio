@@ -84,6 +84,23 @@ public sealed class KinsDbfWhitelistEnricherTests : IDisposable
     }
 
     [Fact]
+    public void InstanceService_LegtSchachtlisteWieDieFassadeAn()
+    {
+        SchreibeSchachtDbf();
+        var project = new Project();
+        var service = new KinsDbfWhitelistEnrichmentService();
+
+        var result = service.Apply(project, _dir);
+
+        Assert.Equal(2, result.SchaechteNeu);
+        Assert.Equal(2, project.SchaechteData.Count);
+        Assert.Contains(
+            project.SchaechteData,
+            s => s.GetFieldValue("Schachtnummer") == "58951"
+                 && s.GetFieldValue("Schachttiefe") == "2.50");
+    }
+
+    [Fact]
     public void Apply_IstIdempotent_LegtKeineDoppeltenSchaechteAn()
     {
         SchreibeSchachtDbf();
@@ -168,5 +185,24 @@ public sealed class KinsDbfWhitelistEnricherTests : IDisposable
         Assert.Equal(0, result.HaltungsfelderGesetzt);
         Assert.Equal(0, result.SchaechteNeu);
         Assert.NotEmpty(result.Messages);
+    }
+
+    [Fact]
+    public void Apply_FehlenderQuellordner_LiefertKlareMeldungOhneAenderung()
+    {
+        var project = new Project();
+        var fehlenderOrdner = Path.Combine(_dir, "nicht-vorhanden");
+
+        var result = KinsDbfWhitelistEnricher.Apply(project, fehlenderOrdner);
+
+        Assert.Equal(0, result.HaltungsfelderGesetzt);
+        Assert.Equal(0, result.SchaechteNeu);
+        Assert.Equal(0, result.SchaechteAktualisiert);
+        Assert.Equal(
+            ["KINS-DBF: Quellordner nicht gefunden \u2014 Anreicherung uebersprungen."],
+            result.Messages);
+        Assert.Empty(project.Data);
+        Assert.Empty(project.SchaechteData);
+        Assert.False(Directory.Exists(fehlenderOrdner));
     }
 }

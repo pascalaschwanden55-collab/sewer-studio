@@ -56,6 +56,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IProjectStructureInitializer _projectStructure;
     private readonly IKanalExportDetectionService _exportDetector;
     private readonly IKinsDvdTextEnricher _kinsDvdTextEnricher;
+    private readonly IKinsDbfWhitelistEnricher _kinsDbfWhitelistEnricher;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -71,7 +72,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IKanalImportDistributor? kanalDistributor = null,
         IProjectStructureInitializer? projectStructure = null,
         IKanalExportDetectionService? exportDetector = null,
-        IKinsDvdTextEnricher? kinsDvdTextEnricher = null)
+        IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
+        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -87,6 +89,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _projectStructure = projectStructure ?? new ProjectStructureInitializer();
         _exportDetector = exportDetector ?? new KanalExportDetectionService();
         _kinsDvdTextEnricher = kinsDvdTextEnricher ?? Kins.KinsDvdTextEnricher.Current;
+        _kinsDbfWhitelistEnricher = kinsDbfWhitelistEnricher ?? Kins.KinsDbfWhitelistEnricher.Current;
     }
 
     /// <summary>
@@ -302,7 +305,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 }
 
                 // 3. FoxPro-DBF: Schachtliste + Whitelist fuer leere Stammdaten
-                var dbfResult = Kins.KinsDbfWhitelistEnricher.Apply(project, sourceFolder, ctx);
+                var dbfResult = _kinsDbfWhitelistEnricher.Apply(project, sourceFolder, ctx);
                 messages.AddRange(dbfResult.Messages);
                 messages.Add($"KINS-DBF: {dbfResult.HaltungsfelderGesetzt} Haltungsfelder, {dbfResult.SchaechteNeu} Schaechte neu, {dbfResult.SchaechteAktualisiert} aktualisiert.");
             }
