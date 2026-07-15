@@ -97,7 +97,7 @@ public partial class PlayerWindow
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
                 DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
-                StopCodingAiPulse: StopCodingAiPulse,
+                StopCodingAiPulse: _liveDetectionPulseController.Stop,
                 CancelQuickScan: _quickScanController.Cancel,
                 StopLiveDetection: StopLiveDetection,
                 StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,

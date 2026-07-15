@@ -79,23 +79,27 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_live_detection_pulse_partial_does_not_own_state_or_animation_details()
+    public void Live_detection_pulse_controller_uses_state_and_controls_without_raw_details()
     {
-        var offenders = FindWindowTokenOffenders(
-                "PlayerWindow.LiveDetection.Status.Pulse.cs",
-                "_codingAiPulseRunning",
-                "if (_codingAiPulseRunning)",
-                "_codingAiPulseRunning = true;",
-                "DoubleAnimation")
-            .Concat(FindWindowTokenOffenders(
-                "PlayerWindow.Coding.State.cs",
-                "private bool _codingAiPulseRunning"))
-            .ToArray();
+        var oldPartialPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.LiveDetection.Status.Pulse.cs");
+        var controllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Player",
+            "LiveDetectionPulseController.cs");
 
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Pulse-Partials sollen Running-State und Animation ueber Controller/Controls kapseln:\n"
-            + string.Join("\n", offenders));
+        Assert.False(File.Exists(oldPartialPath), "Pulssteuerung soll kein PlayerWindow-Partial mehr sein.");
+        var controller = File.ReadAllText(controllerPath);
+        Assert.Contains("LiveDetectionPulseStateController", controller);
+        Assert.Contains("LiveDetectionPulseWorkflow.Start", controller);
+        Assert.Contains("LiveDetectionPulseWorkflow.Stop", controller);
+        Assert.DoesNotContain("_codingAiPulseRunning", controller);
+        Assert.DoesNotContain("DoubleAnimation", controller);
     }
 
     [Fact]

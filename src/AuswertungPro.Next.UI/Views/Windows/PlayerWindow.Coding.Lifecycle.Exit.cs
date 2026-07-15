@@ -39,7 +39,7 @@ public partial class PlayerWindow
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
                 StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop,
-                StopCodingAiPulse: StopCodingAiPulse,
+                StopCodingAiPulse: _liveDetectionPulseController.Stop,
                 StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
                 DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
                 ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportReferenceEvents.Events),

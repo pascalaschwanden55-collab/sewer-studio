@@ -63,6 +63,11 @@ public partial class PlayerWindow : Window
                 RefreshCodingEventsList));
 
         InitializeComponent();
+        _liveDetectionPulseController = new LiveDetectionPulseController(
+            _codingAiPulseStateController,
+            new LiveDetectionPulseControllerActions(
+                StartAnimation: () => LiveDetectionPulseControls.Start(CodingAiPulseRing),
+                StopAnimation: () => LiveDetectionPulseControls.Stop(CodingAiPulseRing)));
         _liveDetectionStatusController = new LiveDetectionStatusController(
             new LiveDetectionStatusControllerActions(
                 HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher),
@@ -90,8 +95,8 @@ public partial class PlayerWindow : Window
                     status,
                     color,
                     stage),
-                StartPulse: StartCodingAiPulse,
-                StopPulse: StopCodingAiPulse,
+                StartPulse: _liveDetectionPulseController.Start,
+                StopPulse: _liveDetectionPulseController.Stop,
                 ShowDetectionStatus: result => LiveDetectionStatusControls.ShowDetectionStatus(
                     LiveDetectionStatusText,
                     FindingSummaryPanel,

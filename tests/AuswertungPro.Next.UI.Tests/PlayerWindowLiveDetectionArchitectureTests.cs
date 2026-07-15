@@ -139,6 +139,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
+        var pulseControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionPulseController.cs");
         var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionErrorWorkflow.cs");
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
         var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
@@ -152,7 +153,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
 
         Assert.False(File.Exists(statusPath), "LiveDetection-Status-UI soll kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(statusControllerPath), "LiveDetection-Status-UI soll im eigenen Controller liegen.");
-        Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
+        Assert.False(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(pulseControllerPath), "Coding-AI-Pulsanimation soll im eigenen Controller liegen.");
         Assert.True(File.Exists(errorWorkflowPath), "LiveDetection-Fehlerentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -167,7 +169,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var statusController = File.ReadAllText(statusControllerPath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
-        var pulse = File.ReadAllText(pulsePath);
+        var pulseController = File.ReadAllText(pulseControllerPath);
         var codingState = File.ReadAllText(codingStatePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
         var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
@@ -189,12 +191,16 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("public void SetYoloStatus", statusController);
         Assert.Contains("public void SetCodingAiState", statusController);
         Assert.Contains("public void UpdateDetectionStatus", statusController);
-        Assert.Contains("LiveDetectionPulseWorkflow.Start", pulse);
-        Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulse);
+        Assert.Contains("public interface ILiveDetectionPulseController", pulseController);
+        Assert.Contains("public sealed class LiveDetectionPulseController", pulseController);
+        Assert.Contains("public void Start", pulseController);
+        Assert.Contains("public void Stop", pulseController);
+        Assert.Contains("LiveDetectionPulseWorkflow.Start", pulseController);
+        Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulseController);
         Assert.Contains("private LiveDetectionPulseStateController _codingAiPulseStateController => _codingAiStates.PulseState", codingState);
-        Assert.Contains("_codingAiPulseStateController.IsRunning", pulse);
-        Assert.Contains("_codingAiPulseStateController.CreateStartActions", pulse);
-        Assert.Contains("_codingAiPulseStateController.CreateStopActions", pulse);
+        Assert.Contains("_state.IsRunning", pulseController);
+        Assert.Contains("_state.CreateStartActions", pulseController);
+        Assert.Contains("_state.CreateStopActions", pulseController);
         Assert.Contains("public sealed class LiveDetectionPulseStateController", pulseState);
         Assert.Contains("public bool IsRunning", pulseState);
         Assert.Contains("if (request.IsRunning)", pulseWorkflow);
@@ -232,19 +238,21 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("public static void ShowDetectionStatus", controls);
         Assert.Contains("LiveDetectionDisplayPolicy.BuildDetectionStatusText", controls);
         Assert.Contains("LiveDetectionDisplayPolicy.BuildFindingSummaryText", controls);
-        Assert.Contains("private void StartCodingAiPulse", pulse);
-        Assert.Contains("private void StopCodingAiPulse", pulse);
-        Assert.Contains("LiveDetectionPulseControls.Start(CodingAiPulseRing)", pulse);
-        Assert.Contains("LiveDetectionPulseControls.Stop(CodingAiPulseRing)", pulse);
+        Assert.Contains("LiveDetectionPulseControls.Start(CodingAiPulseRing)", windowRoot);
+        Assert.Contains("LiveDetectionPulseControls.Stop(CodingAiPulseRing)", windowRoot);
         Assert.Contains("DoubleAnimation", pulseControls);
         Assert.Contains("public static void Start", pulseControls);
         Assert.Contains("public static void Stop", pulseControls);
         Assert.Contains("private readonly ILiveDetectionStatusController _liveDetectionStatusController", state);
+        Assert.Contains("private readonly ILiveDetectionPulseController _liveDetectionPulseController", state);
         Assert.Contains("new LiveDetectionStatusController", windowRoot);
+        Assert.Contains("new LiveDetectionPulseController", windowRoot);
         Assert.DoesNotContain("private void SetLiveDetectionBadge", playerWindowPartials);
         Assert.DoesNotContain("private void SetYoloStatus", playerWindowPartials);
         Assert.DoesNotContain("private void SetCodingAiState", playerWindowPartials);
         Assert.DoesNotContain("private void UpdateDetectionStatus", playerWindowPartials);
+        Assert.DoesNotContain("private void StartCodingAiPulse", playerWindowPartials);
+        Assert.DoesNotContain("private void StopCodingAiPulse", playerWindowPartials);
     }
 
     [Fact]
