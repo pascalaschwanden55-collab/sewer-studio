@@ -57,6 +57,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IKanalExportDetectionService _exportDetector;
     private readonly IKinsDvdTextEnricher _kinsDvdTextEnricher;
     private readonly IKinsDbfWhitelistEnricher _kinsDbfWhitelistEnricher;
+    private readonly IKinsGesamtprotokollLocator _kinsGesamtprotokollLocator;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -73,7 +74,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IProjectStructureInitializer? projectStructure = null,
         IKanalExportDetectionService? exportDetector = null,
         IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
-        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null)
+        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null,
+        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -90,6 +92,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _exportDetector = exportDetector ?? new KanalExportDetectionService();
         _kinsDvdTextEnricher = kinsDvdTextEnricher ?? Kins.KinsDvdTextEnricher.Current;
         _kinsDbfWhitelistEnricher = kinsDbfWhitelistEnricher ?? Kins.KinsDbfWhitelistEnricher.Current;
+        _kinsGesamtprotokollLocator = kinsGesamtprotokollLocator ?? Kins.KinsGesamtprotokollLocator.Current;
     }
 
     /// <summary>
@@ -398,7 +401,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             //     KINS: Der Seiten-Split laeuft auf dem expliziten Gesamtprotokoll aus der Quelle
             //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
             var kinsGesamtprotokoll = det.Format == KanalExportFormat.Kins
-                ? Kins.KinsGesamtprotokollLocator.Finde(sourceFolder)
+                ? _kinsGesamtprotokollLocator.Finde(sourceFolder)
                 : null;
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
             var recordCountBeforeDistribution = project.Data.Count;

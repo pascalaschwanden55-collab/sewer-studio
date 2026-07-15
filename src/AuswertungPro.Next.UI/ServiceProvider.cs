@@ -154,6 +154,7 @@ namespace AuswertungPro.Next.UI
         public IKinsImportService KinsImport { get; }
         public IKinsDvdTextEnricher KinsDvdTextEnrichment { get; }
         public IKinsDbfWhitelistEnricher KinsDbfWhitelistEnrichment { get; }
+        public IKinsGesamtprotokollLocator KinsGesamtprotokolle { get; }
         public IPhotoImportService PhotoImport { get; }
         public AuswertungPro.Next.Infrastructure.Media.BatchMediaSearchService BatchMediaSearch { get; } = new();
         public AuswertungPro.Next.Infrastructure.Media.MediaConflictCenterService MediaConflictCenter { get; } = new();
@@ -401,6 +402,8 @@ namespace AuswertungPro.Next.UI
             KinsDvdTextEnricher.Use(KinsDvdTextEnrichment);
             KinsDbfWhitelistEnrichment = new KinsDbfWhitelistEnrichmentService();
             KinsDbfWhitelistEnricher.Use(KinsDbfWhitelistEnrichment);
+            KinsGesamtprotokolle = new KinsGesamtprotokollFileLocator();
+            KinsGesamtprotokollLocator.Use(KinsGesamtprotokolle);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
             HoldingRename = new HoldingRenameFileService();
@@ -644,7 +647,8 @@ namespace AuswertungPro.Next.UI
                 ProjectStructure,
                 KanalExportDetection,
                 KinsDvdTextEnrichment,
-                KinsDbfWhitelistEnrichment);
+                KinsDbfWhitelistEnrichment,
+                KinsGesamtprotokolle);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();
@@ -775,6 +779,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
             if (serviceType == typeof(IKinsDvdTextEnricher)) return KinsDvdTextEnrichment;
             if (serviceType == typeof(IKinsDbfWhitelistEnricher)) return KinsDbfWhitelistEnrichment;
+            if (serviceType == typeof(IKinsGesamtprotokollLocator)) return KinsGesamtprotokolle;
             if (serviceType == typeof(IImportRunReportExporter)) return ImportRunReports;
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;

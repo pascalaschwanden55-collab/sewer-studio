@@ -144,13 +144,15 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
 
     private static ProjectImportOrchestrator ErzeugeOrchestrator(
         IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
-        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null)
+        IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null,
+        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null)
         => new(
             new XtfImportServiceAdapter(),
             new WinCanDbImportService(),
             new KinsImportService(new WinCanDbImportService(), new FakeIbak()),
             kinsDvdTextEnricher: kinsDvdTextEnricher,
-            kinsDbfWhitelistEnricher: kinsDbfWhitelistEnricher);
+            kinsDbfWhitelistEnricher: kinsDbfWhitelistEnricher,
+            kinsGesamtprotokollLocator: kinsGesamtprotokollLocator);
 
     private static void WritePdf(string path, params string[] lines)
     {
@@ -212,6 +214,19 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
                 SchaechteNeu: 5,
                 SchaechteAktualisiert: 6,
                 Messages: ["KINS-DBF-Testdienst verwendet."]);
+        }
+    }
+
+    private sealed class RecordingKinsGesamtprotokollLocator : IKinsGesamtprotokollLocator
+    {
+        public int Calls { get; private set; }
+        public string? LastSourceFolder { get; private set; }
+
+        public string? Finde(string sourceFolder)
+        {
+            Calls++;
+            LastSourceFolder = sourceFolder;
+            return null;
         }
     }
 
@@ -289,6 +304,20 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     }
 
     [Fact]
+    public void Import_Kins_UsesInjectedGesamtprotokollLocator()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+        var project = new Project();
+        var locator = new RecordingKinsGesamtprotokollLocator();
+
+        ErzeugeOrchestrator(kinsGesamtprotokollLocator: locator)
+            .Import(sourceDir, projectDir, project);
+
+        Assert.Equal(1, locator.Calls);
+        Assert.Equal(sourceDir, locator.LastSourceFolder);
+    }
+
+    [Fact]
     public void Import_Kins_ZweiterLauf_IstIdempotent()
     {
         var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
@@ -320,6 +349,18 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     }
 
     [Fact]
+    public void FindeGesamtprotokoll_InstanceService_LiefertDasselbeProtokoll()
+    {
+        var (sourceDir, _) = ErstelleMiniKinsFixture();
+        var locator = new KinsGesamtprotokollFileLocator();
+
+        var gefunden = locator.Finde(sourceDir);
+
+        Assert.NotNull(gefunden);
+        Assert.EndsWith("048473_Protokoll.pdf", gefunden);
+    }
+
+    [Fact]
     public void FindeGesamtprotokoll_OhneProtokollPdf_LiefertNull()
     {
         var dir = Path.Combine(_root, "leer-quelle");
@@ -327,6 +368,22 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         File.WriteAllText(Path.Combine(dir, "irgendwas.pdf"), "%PDF");
 
         Assert.Null(KinsGesamtprotokollLocator.Finde(dir));
+    }
+
+    [Fact]
+    public void FindeGesamtprotokoll_NimmtGroessteDatei_UndBeiGleichstandAlphabetisch()
+    {
+        var dir = Path.Combine(_root, "mehrere-protokolle");
+        Directory.CreateDirectory(dir);
+        var erwartet = Path.Combine(dir, "A_Protokoll.pdf");
+        File.WriteAllBytes(erwartet, new byte[20]);
+        File.WriteAllBytes(Path.Combine(dir, "B_Protokoll.pdf"), new byte[20]);
+        File.WriteAllBytes(Path.Combine(dir, "C_Protokoll.pdf"), new byte[10]);
+        File.WriteAllBytes(Path.Combine(dir, "Z_Protokoll_Deckblatt.pdf"), new byte[100]);
+
+        var gefunden = KinsGesamtprotokollLocator.Finde(dir);
+
+        Assert.Equal(erwartet, gefunden);
     }
 
     [Fact]
