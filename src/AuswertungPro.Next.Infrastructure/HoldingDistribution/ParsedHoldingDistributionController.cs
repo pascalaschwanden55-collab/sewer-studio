@@ -27,7 +27,8 @@ internal static class ParsedHoldingDistributionController
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarVideoLinksByHolding = null,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarHoldingsByVideoLink = null,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? cdIndexVideoLinksByPhoto = null,
-        DistributionTargetConfig? directoryConfig = null)
+        DistributionTargetConfig? directoryConfig = null,
+        DistributionVariant variant = DistributionVariant.Normal)
     {
         var parsedHoldingRaw = parsed.Haltung ?? "UNKNOWN";
         var holdingRaw = PdfCorrectionMetadata.ResolveHolding(project, parsedHoldingRaw);
@@ -202,7 +203,9 @@ internal static class ParsedHoldingDistributionController
                 destinationMunicipalityFolder,
                 directoryConfig,
                 treeContext,
-                "{Haltung}");
+                "{Haltung}",
+                variant,
+                "{Datum}_{Haltung}");
             Directory.CreateDirectory(holdingFolder);
 
             var destinationPdfName = $"{dateStamp}_{holding}.pdf";

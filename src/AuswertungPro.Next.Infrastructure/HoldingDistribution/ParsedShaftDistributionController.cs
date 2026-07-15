@@ -22,7 +22,8 @@ internal static class ParsedShaftDistributionController
         string? pageRange,
         Dictionary<string, string> shaftOutputPathByKey,
         Project? project = null,
-        DistributionTargetConfig? directoryConfig = null)
+        DistributionTargetConfig? directoryConfig = null,
+        DistributionVariant variant = DistributionVariant.Normal)
     {
         if (string.IsNullOrWhiteSpace(parsed.ShaftNumber))
         {
@@ -81,7 +82,9 @@ internal static class ParsedShaftDistributionController
                 destinationMunicipalityFolder,
                 directoryConfig,
                 treeContext,
-                "{Schachtnummer}");
+                "{Schachtnummer}",
+                variant,
+                "{Datum}_{Schachtnummer}");
             Directory.CreateDirectory(shaftFolder);
 
             var destinationPdfName = $"{dateStamp}_{shaft}.pdf";

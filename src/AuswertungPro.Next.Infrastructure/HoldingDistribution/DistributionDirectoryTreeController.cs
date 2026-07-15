@@ -16,13 +16,17 @@ internal static class DistributionDirectoryTreeController
         string destinationRoot,
         DistributionTargetConfig? directoryConfig,
         DistributionPatternContext context,
-        string fixedObjectFolderPattern)
+        string fixedObjectFolderPattern,
+        DistributionVariant variant = DistributionVariant.Normal,
+        string? sanierungDateiPattern = null)
         => Resolver.ResolveObjectDirectory(
             destinationRoot,
             directoryConfig?.OrdnerPattern,
             directoryConfig?.UnterordnerPattern,
             fixedObjectFolderPattern,
-            context);
+            context,
+            variant,
+            sanierungDateiPattern);
 
     internal static string? GetMunicipality(Project? project)
         => project?.Metadata.TryGetValue("Gemeinde", out var value) == true
