@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -45,6 +46,23 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         Assert.Contains("TimeSpan.FromSeconds(2.5)", toastWorkflow);
         Assert.Contains("actions.ScheduleHideStatus(HideDelay, actions.HideStatus)", toastWorkflow);
         Assert.Contains("catch", toastWorkflow);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders(
+                "DllImport",
+                "BitBlt",
+                "WindowClipboardCaptureService.TryCopyWindowToClipboard",
+                "if (WindowClipboardCaptureService.TryCopyWindowToClipboard")
+            .Concat(FindFileTokenOffenders(
+                toolsPath,
+                "TimeSpan.FromSeconds(2.5)",
+                "new System.Windows.Threading.DispatcherTimer",
+                "catch { }"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen Win32-Screenshot-Capture und Toast-Timer ueber Controls/Workflows kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -75,6 +93,23 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         Assert.Contains("OverlayTags.BendMarker", renderer);
         Assert.Contains("Text = \"Bogen erkannt\"", renderer);
         Assert.Contains("canvas.Children.Add", renderer);
+
+        var offenders = FindFileTokenOffenders(
+                markingPath,
+                "OverlayTags.BendMarker",
+                "\"bend_marker\"",
+                "BendMarkerRenderer.Clear")
+            .Concat(FindFileTokenOffenders(
+                segmentationPath,
+                "OverlayTags.BendMarker",
+                "\"bend_marker\"",
+                "BendMarkerRenderer.Show"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Markierung soll Bend-Marker-Rendering ueber Controller/Renderer kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -98,6 +133,19 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         Assert.Contains("CodingToolBadgeRenderer.Update", controller);
         Assert.Contains("public static void Update", renderer);
         Assert.Contains("OverlayTags.ToolBadge", renderer);
+
+        var offenders = FindFileTokenOffenders(
+            codingPath,
+            "CodingToolBadgeTextPolicy.BuildText",
+            "CodingToolBadgeRenderer.Update",
+            "var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()",
+            "var badge = new Border",
+            "Tag = OverlayTags.ToolBadge");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow.Coding soll Werkzeug-Badge-Text und Rendering ueber Controller/Renderer kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -117,6 +165,18 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.Contains("PlayerStatusColors", playerWindowText);
         Assert.Contains("Success => Color.FromRgb(0x22, 0xC5, 0x5E)", statusColors);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders(
+            "Color.FromRgb(0x22, 0xC5, 0x5E)",
+            "Color.FromRgb(0xF5, 0x9E, 0x0B)",
+            "Color.FromRgb(0xEF, 0x44, 0x44)",
+            "Color.FromRgb(0x94, 0xA3, 0xB8)",
+            "Color.FromRgb(0x3B, 0x82, 0xF6)");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen Statusfarben ueber PlayerStatusColors statt Inline-RGB nutzen:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
