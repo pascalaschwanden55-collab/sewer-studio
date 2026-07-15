@@ -170,6 +170,7 @@ namespace AuswertungPro.Next.UI
         public IVsaMediaPathResolver VsaMediaPaths { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
+        public IIbakFdbConnectionOptions IbakConnections { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
         public IKinsDvdTextEnricher KinsDvdTextEnrichment { get; }
@@ -453,7 +454,9 @@ namespace AuswertungPro.Next.UI
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
             WinCanImport = new WinCanDbImportService();
-            IbakImport = new IbakExportImportService();
+            IbakConnections = new IbakFdbConnectionOptionsService();
+            IbakFdbConnectionOptions.Use(IbakConnections);
+            IbakImport = new IbakExportImportService(IbakConnections);
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             KinsDvdTextEnrichment = new KinsDvdTextEnrichmentService();
             KinsDvdTextEnricher.Use(KinsDvdTextEnrichment);
@@ -857,6 +860,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
+            if (serviceType == typeof(IIbakFdbConnectionOptions)) return IbakConnections;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
             if (serviceType == typeof(IKinsDvdTextEnricher)) return KinsDvdTextEnrichment;

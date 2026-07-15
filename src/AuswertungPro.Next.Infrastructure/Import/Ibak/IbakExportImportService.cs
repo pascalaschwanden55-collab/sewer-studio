@@ -18,6 +18,8 @@ namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
 public sealed class IbakExportImportService : IIbakImportService
 {
+    private readonly IIbakFdbConnectionOptions _connectionOptions;
+
     private static readonly HashSet<string> MediaExtensions = new(
         MediaFileTypes.VideoExtensions
             .Concat(new[] { ".jpg", ".jpeg", ".png", ".bmp", ".pdf", ".txt" }),
@@ -28,6 +30,11 @@ public sealed class IbakExportImportService : IIbakImportService
 
     // Zeilen ohne Zeitstempel (Header-Einträge wie AEC, AED, AEF)
     private static readonly Regex HeaderLineRegex = IbakDatenTxtLineParser.HeaderLineRegex;
+
+    public IbakExportImportService(IIbakFdbConnectionOptions? connectionOptions = null)
+    {
+        _connectionOptions = connectionOptions ?? IbakFdbConnectionOptions.Current;
+    }
 
     public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
@@ -300,7 +307,7 @@ public sealed class IbakExportImportService : IIbakImportService
         return holdings;
     }
 
-    private static Dictionary<string, List<string>> LoadPhotoMap(
+    private Dictionary<string, List<string>> LoadPhotoMap(
         string exportRoot,
         Dictionary<string, List<string>> fileIndex,
         List<string> messages)
@@ -454,7 +461,7 @@ public sealed class IbakExportImportService : IIbakImportService
         return 1;
     }
 
-    private static Dictionary<string, List<string>> TryLoadPhotoMapFromFdb(string exportRoot, List<string> messages)
+    private Dictionary<string, List<string>> TryLoadPhotoMapFromFdb(string exportRoot, List<string> messages)
     {
         var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var fdbPath = FindFdb(exportRoot);
@@ -464,7 +471,7 @@ public sealed class IbakExportImportService : IIbakImportService
         try
         {
             using var workingCopy = IbakFdbWorkingCopy.Create(fdbPath);
-            var cs = IbakFdbConnectionOptions.CreatePhotoMap(
+            var cs = _connectionOptions.CreatePhotoMap(
                 workingCopy.DatabasePath,
                 TryFindFbClient(exportRoot));
 

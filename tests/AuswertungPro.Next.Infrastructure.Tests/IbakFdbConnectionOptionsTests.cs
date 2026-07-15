@@ -85,6 +85,25 @@ public sealed class IbakFdbConnectionOptionsTests
         Assert.Equal("server_password", builder.Password);
     }
 
+    [Fact]
+    public void Instanzdienst_liest_Zugangsdaten_aus_injizierter_Umgebung()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            [IbakFdbConnectionOptions.UserEnvVar] = "  injected_user  ",
+            [IbakFdbConnectionOptions.PasswordEnvVar] = "  injected_password  "
+        };
+        var options = new IbakFdbConnectionOptionsService(values.GetValueOrDefault);
+
+        var credentials = options.LoadCredentials();
+        var server = options.CreatePhotoMap(@"dbserver:C:\IBAK\Arizona.fdb", null);
+
+        Assert.Equal("injected_user", credentials.User);
+        Assert.Equal("  injected_password  ", credentials.Password);
+        Assert.Equal("injected_user", server.UserID);
+        Assert.Equal("  injected_password  ", server.Password);
+    }
+
     [Theory]
     [InlineData(@"C:\tmp\Arizona.fdb", false)]
     [InlineData(@"D:\Daten\Arizona.fdb", false)]

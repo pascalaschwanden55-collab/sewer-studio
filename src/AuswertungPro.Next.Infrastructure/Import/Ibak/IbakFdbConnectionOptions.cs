@@ -2,16 +2,29 @@ using FirebirdSql.Data.FirebirdClient;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
-public static class IbakFdbConnectionOptions
+public interface IIbakFdbConnectionOptions
 {
-    public const string UserEnvVar = "IBAK_FDB_USER";
-    public const string PasswordEnvVar = "IBAK_FDB_PASSWORD";
-    public const string DefaultUser = "SYSDBA";
-    public const string DefaultPassword = "masterkey";
+    FbConnectionStringBuilder CreateEmbedded(string databasePath, string charset = "NONE");
 
-    public static FbConnectionStringBuilder CreateEmbedded(string databasePath, string charset = "NONE")
+    FbConnectionStringBuilder CreatePhotoMap(string databasePath, string? clientLibrary);
+
+    (string User, string Password) LoadCredentials();
+}
+
+/// <summary>Erzeugt Firebird-Verbindungswerte aus injizierbarer Umgebung.</summary>
+public sealed class IbakFdbConnectionOptionsService : IIbakFdbConnectionOptions
+{
+    private readonly Func<string, string?> _getEnvironmentVariable;
+
+    public IbakFdbConnectionOptionsService(
+        Func<string, string?>? getEnvironmentVariable = null)
     {
-        var credentials = LoadCredentials();
+        _getEnvironmentVariable = getEnvironmentVariable ?? Environment.GetEnvironmentVariable;
+    }
+
+    public FbConnectionStringBuilder CreateEmbedded(string databasePath, string charset = "NONE")
+    {
+        var credentials = LoadCredentials(requireExplicit: false);
         return new FbConnectionStringBuilder
         {
             Database = databasePath,
@@ -22,9 +35,10 @@ public static class IbakFdbConnectionOptions
         };
     }
 
-    public static FbConnectionStringBuilder CreatePhotoMap(string databasePath, string? clientLibrary)
+    public FbConnectionStringBuilder CreatePhotoMap(string databasePath, string? clientLibrary)
     {
-        var credentials = LoadCredentials(requireExplicit: IsServerDatabasePath(databasePath));
+        var credentials = LoadCredentials(
+            requireExplicit: IbakFdbConnectionOptions.IsServerDatabasePath(databasePath));
         var builder = new FbConnectionStringBuilder
         {
             Database = databasePath,
@@ -41,27 +55,58 @@ public static class IbakFdbConnectionOptions
         return builder;
     }
 
-    public static (string User, string Password) LoadCredentials()
-        => LoadCredentials(requireExplicit: false);
+    public (string User, string Password) LoadCredentials() =>
+        LoadCredentials(requireExplicit: false);
 
-    private static (string User, string Password) LoadCredentials(bool requireExplicit)
+    private (string User, string Password) LoadCredentials(bool requireExplicit)
     {
-        var user = Environment.GetEnvironmentVariable(UserEnvVar);
-        var password = Environment.GetEnvironmentVariable(PasswordEnvVar);
+        var user = _getEnvironmentVariable(IbakFdbConnectionOptions.UserEnvVar);
+        var password = _getEnvironmentVariable(IbakFdbConnectionOptions.PasswordEnvVar);
 
         if (requireExplicit
             && (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password)))
         {
             throw new InvalidOperationException(
                 "Firebird-Serverzugriff benoetigt ausdrueckliche Zugangsdaten. " +
-                $"Setze {UserEnvVar} und {PasswordEnvVar}; die lokalen Embedded-Standardwerte " +
-                "werden fuer Serverpfade nicht verwendet.");
+                $"Setze {IbakFdbConnectionOptions.UserEnvVar} und {IbakFdbConnectionOptions.PasswordEnvVar}; " +
+                "die lokalen Embedded-Standardwerte werden fuer Serverpfade nicht verwendet.");
         }
 
         return (
-            string.IsNullOrWhiteSpace(user) ? DefaultUser : user.Trim(),
-            string.IsNullOrWhiteSpace(password) ? DefaultPassword : password);
+            string.IsNullOrWhiteSpace(user) ? IbakFdbConnectionOptions.DefaultUser : user.Trim(),
+            string.IsNullOrWhiteSpace(password) ? IbakFdbConnectionOptions.DefaultPassword : password);
     }
+}
+
+/// <summary>Kompatibilitaetsfassade; nur die reine Serverpfadregel bleibt statisch.</summary>
+public static class IbakFdbConnectionOptions
+{
+    public const string UserEnvVar = "IBAK_FDB_USER";
+    public const string PasswordEnvVar = "IBAK_FDB_PASSWORD";
+    public const string DefaultUser = "SYSDBA";
+    public const string DefaultPassword = "masterkey";
+
+    private static IIbakFdbConnectionOptions _current = new IbakFdbConnectionOptionsService();
+
+    public static IIbakFdbConnectionOptions Current => Volatile.Read(ref _current);
+
+    public static void Use(IIbakFdbConnectionOptions options) =>
+        Volatile.Write(
+            ref _current,
+            options ?? throw new ArgumentNullException(nameof(options)));
+
+    public static FbConnectionStringBuilder CreateEmbedded(
+        string databasePath,
+        string charset = "NONE") =>
+        Current.CreateEmbedded(databasePath, charset);
+
+    public static FbConnectionStringBuilder CreatePhotoMap(
+        string databasePath,
+        string? clientLibrary) =>
+        Current.CreatePhotoMap(databasePath, clientLibrary);
+
+    public static (string User, string Password) LoadCredentials() =>
+        Current.LoadCredentials();
 
     internal static bool IsServerDatabasePath(string? databasePath)
     {
