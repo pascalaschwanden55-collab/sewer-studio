@@ -20,7 +20,6 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var paths = new[]
         {
-            "PlayerWindow.Coding.EventDetails.Actions.cs",
             "PlayerWindow.Coding.Eingabemarker.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
@@ -187,7 +186,6 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         {
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs"),
-            Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs")
         };
 

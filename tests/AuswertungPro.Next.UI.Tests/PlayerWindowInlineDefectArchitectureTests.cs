@@ -179,13 +179,17 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_inline_defect_actions_live_in_actions_partial()
+    public void PlayerWindow_inline_defect_actions_use_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var detailPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var accessorsPath = Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingInlineDefectController.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDecisionWorkflow.cs");
@@ -193,7 +197,8 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectEditCommandWorkflow.cs");
         var rejectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectRejectCommandWorkflow.cs");
 
-        Assert.True(File.Exists(actionsPath), "Inline-Defekt-Aktionshandler sollen aus dem allgemeinen EventDetails-Partial heraus.");
+        Assert.False(File.Exists(actionsPath), "Inline-Defekt-Aktionen dürfen nicht wieder als PlayerWindow-Partial erscheinen.");
+        Assert.True(File.Exists(controllerPath), "Inline-Defekt-Aktionen brauchen einen eigenen Controller.");
         Assert.True(File.Exists(deleteApplierPath), "Inline-Defekt-Ablehnen muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
         Assert.True(File.Exists(editApplierPath), "Inline-Defekt-Bearbeiten muss die gemeinsame Coding-Event-Edit-Anwendung nutzen.");
         Assert.True(File.Exists(workflowPath), "Inline-Defekt-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
@@ -202,7 +207,10 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         Assert.True(File.Exists(rejectCommandWorkflowPath), "Inline-Defekt-Reject-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var detail = File.ReadAllText(detailPath);
-        var actions = File.ReadAllText(actionsPath);
+        var controller = File.ReadAllText(controllerPath);
+        var state = File.ReadAllText(statePath);
+        var accessors = File.ReadAllText(accessorsPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
         var workflow = File.ReadAllText(workflowPath);
@@ -215,16 +223,19 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
             "private void CodingAcceptDefect_Click",
             "private void CodingEditDefect_Click",
             "private void CodingRejectDefect_Click");
-        Assert.Contains("private void CodingAcceptDefect_Click", actions);
-        Assert.Contains("private void CodingEditDefect_Click", actions);
-        Assert.Contains("private void CodingRejectDefect_Click", actions);
-        Assert.Contains("CodingInlineDefectAcceptCommandWorkflow.Execute", actions);
-        Assert.Contains("CodingInlineDefectEditCommandWorkflow.Execute", actions);
-        Assert.Contains("CodingInlineDefectRejectCommandWorkflow.Execute", actions);
-        Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", actions);
-        Assert.Contains("_codingSessionHost", actions);
+        Assert.Contains("public interface ICodingInlineDefectController", controller);
+        Assert.Contains("public sealed class CodingInlineDefectController", controller);
+        Assert.Contains("CodingInlineDefectAcceptCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingInlineDefectEditCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingInlineDefectRejectCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", controller);
+        Assert.Contains("private readonly ICodingInlineDefectController _codingInlineDefectController", state);
+        Assert.Contains("_codingInlineDefectController.Accept()", accessors);
+        Assert.Contains("_codingInlineDefectController.Edit()", accessors);
+        Assert.Contains("_codingInlineDefectController.Reject()", accessors);
+        Assert.Contains("_codingSessionHost", windowRoot);
         AssertNoForbiddenTokens(
-            actions,
+            controller,
             "CodingEventEditApplier.Apply",
             "CodingEventDeleteApplier.Apply",
             "_codingSessionService?.UpdateEvent",

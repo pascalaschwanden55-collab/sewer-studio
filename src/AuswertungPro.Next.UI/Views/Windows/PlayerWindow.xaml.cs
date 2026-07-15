@@ -376,6 +376,35 @@ public partial class PlayerWindow : Window
                 ConfirmUnappliedChanges: applyChanges => CodingUnappliedChangesCloseDialogWorkflow.Execute(
                     runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
                     applyChanges: applyChanges)));
+        _codingInlineDefectController = new CodingInlineDefectController(
+            new CodingInlineDefectControllerBindings(
+                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
+                ResolveSelectedDefect: () => _codingSessionHost.SelectedDefect,
+                ResolveSelectedListEvent: () => LstCodingEvents.SelectedItem as CodingEvent,
+                ExecuteAcceptDefect: () => { _codingSessionHost.ExecuteAcceptDefect(); },
+                SelectDefect: _codingSessionHost.SelectDefect,
+                PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
+                TryEdit: codingEvent => CodingCodeExplorerEditWorkflow.Execute(
+                    new CodingCodeExplorerEditWorkflowRequest(
+                        codingEvent,
+                        _codingSessionHost.VideoPath,
+                        _codingSessionHost.CurrentVideoTime,
+                        this),
+                    CreateCodingCodeExplorerEditActions()),
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                ExecuteEditDefect: () => { _codingSessionHost.ExecuteEditDefect(); },
+                ResolveEventCollection: () => _codingSessionHost.EventCollection,
+                ClearSelectedDefect: _codingSessionHost.ClearSelectedDefect,
+                PersistAcceptedTrainingSample: codingEvent =>
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync(codingEvent)
+                        .SafeFireAndForget("TrainingSaveAcceptInline"),
+                PersistEditedTrainingSample: codingEvent =>
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync(codingEvent)
+                        .SafeFireAndForget("TrainingSaveEditInline"),
+                UpdateInlineDefectDetail: UpdateInlineDefectDetail,
+                HideInlineDefectDetail: HideInlineDefectDetail,
+                RefreshEvents: RefreshCodingEventsList,
+                FadeOutAiOverlayAfterAction: FadeOutAiOverlayAfterAction));
         _codingProtocolMatchController = new CodingProtocolMatchController(
             new CodingProtocolMatchControllerBindings(
                 ResolveSelectedImportEvent: () => LstImportEvents.SelectedItem,

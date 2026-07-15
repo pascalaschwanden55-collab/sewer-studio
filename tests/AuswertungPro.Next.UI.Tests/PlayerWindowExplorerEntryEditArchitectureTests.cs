@@ -13,7 +13,7 @@ public sealed class PlayerWindowExplorerEntryEditArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var eventActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
-        var detailsActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
         var editWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerEditWorkflow.cs");
@@ -24,14 +24,14 @@ public sealed class PlayerWindowExplorerEntryEditArchitectureTests
 
         var events = File.ReadAllText(eventsPath);
         var eventActions = File.ReadAllText(eventActionsPath);
-        var detailsActions = File.ReadAllText(detailsActionsPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var markCatalog = File.ReadAllText(markCatalogPath);
         var workflow = File.ReadAllText(workflowPath);
         var editWorkflow = File.Exists(editWorkflowPath) ? File.ReadAllText(editWorkflowPath) : "";
         var copier = File.ReadAllText(copierPath);
 
         Assert.Contains("CodingCodeExplorerEditWorkflow.Execute", eventActions);
-        Assert.Contains("CodingCodeExplorerEditWorkflow.Execute", detailsActions);
+        Assert.Contains("CodingCodeExplorerEditWorkflow.Execute", windowRoot);
         Assert.Contains(".TryEdit(", editWorkflow);
         Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", workflow);
         Assert.Contains("public static void CopyEditableValues", copier);

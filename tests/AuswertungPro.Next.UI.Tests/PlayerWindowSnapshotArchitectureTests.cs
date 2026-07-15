@@ -11,16 +11,12 @@ public sealed class PlayerWindowSnapshotArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var detailActionsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Actions.cs");
         var codeExplorerDialogPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.CodeExplorer.Dialog.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingLiveSnapshotPathPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfade fuer Live-Snapshots muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(codeExplorerDialogPath), "Live-Snapshot-Provider fuer den Code-Explorer muss gebuendelt bleiben.");
 
-        var events = File.ReadAllText(eventsPath);
-        var detailActions = File.ReadAllText(detailActionsPath);
         var codeExplorerDialog = File.ReadAllText(codeExplorerDialogPath);
         var policy = File.ReadAllText(policyPath);
 
