@@ -40,6 +40,55 @@ public sealed class FullBackupServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_Verwendet_Injizierte_ManifestIntegritaet()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target-manifest-service");
+        var manifestIntegrity = new RecordingManifestIntegrityService();
+        var service = new FullBackupService(
+            () => sources,
+            walCheckpoint: null,
+            ollamaListe: null,
+            availableBytes: null,
+            gitCommitResolver: null,
+            targetMarkerGuard: BackupTargetGuard.MarkerGuard,
+            sqliteSnapshots: SqliteSnapshotCopier.Current,
+            manifestIntegrity: manifestIntegrity);
+
+        var result = await service.RunAsync(targetParent);
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(1, manifestIntegrity.CreateEntriesCalls);
+        var manifestPath = Path.Combine(
+            targetParent,
+            BackupPlanBuilder.TargetFolderName,
+            "manifest.json");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        var entry = Assert.Single(manifest.RootElement.GetProperty("Files").EnumerateArray());
+        Assert.Equal("injiziert.bin", entry.GetProperty("Path").GetString());
+    }
+
+    [Fact]
+    public async Task ManifestIntegritaetsdienst_Erzeugt_und_Prueft_Echte_Hashes()
+    {
+        var backupRoot = Path.Combine(_root, "direct-manifest-service");
+        Write(Path.Combine(backupRoot, "Daten", "wert.txt"), "sicher");
+        var service = new BackupManifestIntegrityService();
+
+        var entries = await service.CreateEntriesAsync(backupRoot);
+        File.WriteAllText(
+            Path.Combine(backupRoot, "manifest.json"),
+            JsonSerializer.Serialize(new { Files = entries }));
+        var report = await service.VerifyAsync(backupRoot);
+
+        Assert.True(report.IsValid, string.Join(Environment.NewLine, report.Issues));
+        var entry = Assert.Single(entries);
+        Assert.Equal("Daten/wert.txt", entry.Path);
+        Assert.Equal(6, entry.Length);
+        Assert.Equal(64, entry.Sha256.Length);
+    }
+
+    [Fact]
     public async Task RunAsync_SpiegeltUnersetzliches_GeneriertExtrasUndManifest_UndLaeuftInkrementell()
     {
         var sources = CreateSourceTree();
@@ -133,6 +182,31 @@ public sealed class FullBackupServiceTests : IDisposable
             LastRepoRoot = repoRoot;
             return commit;
         }
+    }
+
+    private sealed class RecordingManifestIntegrityService : IBackupManifestIntegrityService
+    {
+        public int CreateEntriesCalls { get; private set; }
+
+        public Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+            string backupRoot,
+            CancellationToken ct = default)
+            => CreateEntriesAsync(backupRoot, onFileHashed: null, ct);
+
+        public Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+            string backupRoot,
+            Action<string>? onFileHashed,
+            CancellationToken ct = default)
+        {
+            CreateEntriesCalls++;
+            return Task.FromResult<IReadOnlyList<BackupManifestFileEntry>>(
+                [new BackupManifestFileEntry("injiziert.bin", 123, "ABC")]);
+        }
+
+        public Task<BackupIntegrityReport> VerifyAsync(
+            string backupRoot,
+            CancellationToken ct = default)
+            => Task.FromResult(new BackupIntegrityReport(0, []));
     }
 
     [Fact]

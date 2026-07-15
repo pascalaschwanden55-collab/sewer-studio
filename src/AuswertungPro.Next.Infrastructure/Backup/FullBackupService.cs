@@ -30,6 +30,7 @@ public sealed class FullBackupService : IFullBackupService
     private readonly IGitCommitResolver _gitCommitResolver;
     private readonly IBackupTargetMarkerGuard _targetMarkerGuard;
     private readonly ISqliteSnapshotCopier _sqliteSnapshots;
+    private readonly IBackupManifestIntegrityService _manifestIntegrity;
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
@@ -87,7 +88,8 @@ public sealed class FullBackupService : IFullBackupService
         Func<string, long?>? availableBytes,
         IGitCommitResolver? gitCommitResolver,
         IBackupTargetMarkerGuard targetMarkerGuard,
-        ISqliteSnapshotCopier sqliteSnapshots)
+        ISqliteSnapshotCopier sqliteSnapshots,
+        IBackupManifestIntegrityService? manifestIntegrity = null)
     {
         _sourcesFactory = quellenFactory ?? throw new ArgumentNullException(nameof(quellenFactory));
         _walCheckpoint = walCheckpoint;
@@ -96,6 +98,7 @@ public sealed class FullBackupService : IFullBackupService
         _gitCommitResolver = gitCommitResolver ?? GitCommitResolver.DefaultResolver;
         _targetMarkerGuard = targetMarkerGuard ?? throw new ArgumentNullException(nameof(targetMarkerGuard));
         _sqliteSnapshots = sqliteSnapshots ?? throw new ArgumentNullException(nameof(sqliteSnapshots));
+        _manifestIntegrity = manifestIntegrity ?? BackupManifestIntegrity.Current;
     }
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
@@ -195,7 +198,7 @@ public sealed class FullBackupService : IFullBackupService
 
             var skipped = stats.Errors.Take(200).ToArray();
             var hashProgressThrottle = Stopwatch.StartNew();
-            var manifestFiles = await BackupManifestIntegrity.CreateEntriesAsync(
+            var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(
                     backupRoot,
                     file =>
                     {

@@ -14,17 +14,33 @@ public sealed record BackupIntegrityReport(
     public bool IsValid => Issues.Count == 0;
 }
 
+public interface IBackupManifestIntegrityService
+{
+    Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+        string backupRoot,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+        string backupRoot,
+        Action<string>? onFileHashed,
+        CancellationToken ct = default);
+
+    Task<BackupIntegrityReport> VerifyAsync(
+        string backupRoot,
+        CancellationToken ct = default);
+}
+
 /// <summary>Erzeugt und prueft die Inhaltsnachweise einer Datensicherung.</summary>
-public static class BackupManifestIntegrity
+public sealed class BackupManifestIntegrityService : IBackupManifestIntegrityService
 {
     private static readonly string[] ManifestFiles = ["manifest.json", "manifest.json.bak"];
 
-    public static async Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+    public async Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
         string backupRoot,
         CancellationToken ct = default)
         => await CreateEntriesAsync(backupRoot, onFileHashed: null, ct).ConfigureAwait(false);
 
-    public static async Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+    public async Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
         string backupRoot,
         Action<string>? onFileHashed,
         CancellationToken ct = default)
@@ -59,7 +75,7 @@ public static class BackupManifestIntegrity
             .ToArray();
     }
 
-    public static async Task<BackupIntegrityReport> VerifyAsync(
+    public async Task<BackupIntegrityReport> VerifyAsync(
         string backupRoot,
         CancellationToken ct = default)
     {
@@ -265,4 +281,36 @@ public static class BackupManifestIntegrity
             useAsync: true);
         return await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false);
     }
+}
+
+/// <summary>
+/// Kompatible statische Fassade. Dateisuche, Hashing und Manifestpruefung liegen
+/// im injizierbaren <see cref="IBackupManifestIntegrityService"/>.
+/// </summary>
+public static class BackupManifestIntegrity
+{
+    private static IBackupManifestIntegrityService _current = new BackupManifestIntegrityService();
+
+    public static IBackupManifestIntegrityService Current => Volatile.Read(ref _current);
+
+    public static void Use(IBackupManifestIntegrityService service) =>
+        Volatile.Write(
+            ref _current,
+            service ?? throw new ArgumentNullException(nameof(service)));
+
+    public static Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+        string backupRoot,
+        CancellationToken ct = default)
+        => Current.CreateEntriesAsync(backupRoot, ct);
+
+    public static Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
+        string backupRoot,
+        Action<string>? onFileHashed,
+        CancellationToken ct = default)
+        => Current.CreateEntriesAsync(backupRoot, onFileHashed, ct);
+
+    public static Task<BackupIntegrityReport> VerifyAsync(
+        string backupRoot,
+        CancellationToken ct = default)
+        => Current.VerifyAsync(backupRoot, ct);
 }

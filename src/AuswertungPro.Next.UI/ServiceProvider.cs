@@ -136,6 +136,7 @@ namespace AuswertungPro.Next.UI
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
         public IBackupTargetMarkerGuard BackupTargetMarkers { get; }
         public ISqliteSnapshotCopier SqliteSnapshots { get; }
+        public IBackupManifestIntegrityService BackupManifestIntegrity { get; }
         public IFullBackupSourcesProvider BackupSources { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
@@ -516,6 +517,8 @@ namespace AuswertungPro.Next.UI
             BackupTargetMarkers = new BackupTargetMarkerGuardService();
             BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
             SqliteSnapshots = new SqliteSnapshotCopyService();
+            BackupManifestIntegrity = new BackupManifestIntegrityService();
+            Infrastructure.Backup.BackupManifestIntegrity.Use(BackupManifestIntegrity);
             BackupSources = new FullBackupSourcesProvider(RepositoryRootLocator);
             FullBackupSourcesFactory.Use(BackupSources);
             FullBackup = new FullBackupService(
@@ -525,7 +528,8 @@ namespace AuswertungPro.Next.UI
                 availableBytes: null,
                 gitCommitResolver: GitCommit,
                 targetMarkerGuard: BackupTargetMarkers,
-                sqliteSnapshots: SqliteSnapshots);
+                sqliteSnapshots: SqliteSnapshots,
+                manifestIntegrity: BackupManifestIntegrity);
             KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
@@ -816,6 +820,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IFullBackupSourcesProvider)) return BackupSources;
             if (serviceType == typeof(IBackupTargetMarkerGuard)) return BackupTargetMarkers;
             if (serviceType == typeof(ISqliteSnapshotCopier)) return SqliteSnapshots;
+            if (serviceType == typeof(IBackupManifestIntegrityService)) return BackupManifestIntegrity;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
