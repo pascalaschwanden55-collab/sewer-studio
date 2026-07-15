@@ -171,6 +171,7 @@ namespace AuswertungPro.Next.UI
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
+        public IM150MdbRowReader M150MdbRows { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakFdbConnectionOptions IbakConnections { get; }
@@ -462,6 +463,8 @@ namespace AuswertungPro.Next.UI
             ShaftPdfSelectionExpander.Use(ShaftPdfSelectionExpansion);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             VsaMediaPaths = new VsaMediaPathFileResolver();
+            M150MdbRows = new PowerShellM150MdbRowReader();
+            M150MdbRowReader.Use(M150MdbRows);
             XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
             WinCanImport = new WinCanDbImportService();
             IbakConnections = new IbakFdbConnectionOptionsService();
@@ -875,6 +878,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
+            if (serviceType == typeof(IM150MdbRowReader)) return M150MdbRows;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakFdbConnectionOptions)) return IbakConnections;

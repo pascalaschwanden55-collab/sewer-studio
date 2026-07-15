@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AuswertungPro.Next.Application.Common;
@@ -129,7 +128,7 @@ internal static class M150MdbImportHelper
         warnings = new List<string>();
         error = null;
 
-        if (!TryDumpMdbRows(path, out var rows, out error))
+        if (!M150MdbRowReader.Current.TryReadRows(path, out var rows, out error))
             return false;
 
         var entries = new List<ImportEntry>();
@@ -732,133 +731,6 @@ internal static class M150MdbImportHelper
     private static string NormalizeKey(string? key)
         => M150ValueExtractor.NormalizeKey(key);
 
-    private static bool TryDumpMdbRows(string mdbPath, out List<Dictionary<string, string>> rows, out string? error)
-    {
-        rows = new List<Dictionary<string, string>>();
-        error = null;
-
-        var tempScript = Path.Combine(Path.GetTempPath(), $"mdb_dump_{Guid.NewGuid():N}.ps1");
-        var tempJson = Path.Combine(Path.GetTempPath(), $"mdb_dump_{Guid.NewGuid():N}.json");
-
-        try
-        {
-            var script = """
-param(
-    [Parameter(Mandatory=$true)][string]$MdbPath,
-    [Parameter(Mandatory=$true)][string]$OutPath
-)
-$ErrorActionPreference = "Stop"
-
-function Open-Db([string]$provider, [string]$path) {
-    $cs = "Provider=$provider;Data Source=$path;Persist Security Info=False;"
-    $conn = New-Object System.Data.OleDb.OleDbConnection($cs)
-    $conn.Open()
-    return $conn
-}
-
-$conn = $null
-try {
-    try {
-        $conn = Open-Db -provider "Microsoft.ACE.OLEDB.12.0" -path $MdbPath
-    } catch {
-        $conn = Open-Db -provider "Microsoft.Jet.OLEDB.4.0" -path $MdbPath
-    }
-
-    $schema = $conn.GetOleDbSchemaTable([System.Data.OleDb.OleDbSchemaGuid]::Tables, $null)
-    $tables = @($schema | Where-Object { $_.TABLE_TYPE -eq "TABLE" } | ForEach-Object { [string]$_.TABLE_NAME })
-
-    $result = New-Object System.Collections.Generic.List[object]
-
-    foreach ($table in $tables) {
-        try {
-            $cmd = $conn.CreateCommand()
-            $cmd.CommandText = "SELECT * FROM [$table]"
-            $adapter = New-Object System.Data.OleDb.OleDbDataAdapter($cmd)
-            $dt = New-Object System.Data.DataTable
-            [void]$adapter.Fill($dt)
-
-            foreach ($row in $dt.Rows) {
-                $values = @{}
-                foreach ($col in $dt.Columns) {
-                    $name = [string]$col.ColumnName
-                    $val = $row[$name]
-                    if ($null -eq $val -or $val -is [System.DBNull]) {
-                        $values[$name] = ""
-                    } else {
-                        $values[$name] = [string]$val
-                    }
-                }
-
-                $result.Add([PSCustomObject]@{
-                    table = $table
-                    row = $values
-                })
-            }
-        } catch {
-            # keep going: one broken table should not stop import
-        }
-    }
-
-    $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutPath -Encoding UTF8
-}
-finally {
-    if ($conn -ne $null) { $conn.Close() }
-}
-""";
-
-            File.WriteAllText(tempScript, script, new UTF8Encoding(false));
-
-            var result = ExternalProcessRunner.RunAsync(
-                "powershell",
-                ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tempScript, "-MdbPath", mdbPath, "-OutPath", tempJson],
-                TimeSpan.FromSeconds(120),
-                Encoding.UTF8,
-                Encoding.UTF8).GetAwaiter().GetResult();
-
-            if (!result.Success)
-            {
-                error = string.IsNullOrWhiteSpace(result.StdErr) ? result.StdOut : result.StdErr;
-                if (string.IsNullOrWhiteSpace(error))
-                    error = result.Message ?? "MDB-Import fehlgeschlagen.";
-                return false;
-            }
-
-            if (!File.Exists(tempJson))
-            {
-                error = "MDB-Ausgabe konnte nicht erstellt werden.";
-                return false;
-            }
-
-            var json = File.ReadAllText(tempJson);
-            if (string.IsNullOrWhiteSpace(json))
-                return true;
-
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in doc.RootElement.EnumerateArray())
-                    TryAppendJsonRow(item, rows);
-            }
-            else if (doc.RootElement.ValueKind == JsonValueKind.Object)
-            {
-                // ConvertTo-Json emits an object (not array) for a single row.
-                TryAppendJsonRow(doc.RootElement, rows);
-            }
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-        finally
-        {
-            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempScript)) File.Delete(tempScript); }, "M150-Import: Temp-Skript loeschen");
-            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempJson)) File.Delete(tempJson); }, "M150-Import: Temp-JSON loeschen");
-        }
-    }
-
     private sealed record ImportEntry(
         string Holding,
         string? Date,
@@ -880,18 +752,4 @@ finally {
         string Date,
         string PipeWidth = "");
 
-    private static void TryAppendJsonRow(JsonElement item, List<Dictionary<string, string>> rows)
-    {
-        if (!item.TryGetProperty("row", out var rowElement) || rowElement.ValueKind != JsonValueKind.Object)
-            return;
-
-        var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (item.TryGetProperty("table", out var table))
-            row["__table"] = table.GetString() ?? "";
-
-        foreach (var p in rowElement.EnumerateObject())
-            row[p.Name] = p.Value.GetString() ?? "";
-
-        rows.Add(row);
-    }
 }
