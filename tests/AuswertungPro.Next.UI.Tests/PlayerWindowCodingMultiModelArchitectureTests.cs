@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -20,6 +21,24 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", commandWorkflow);
         Assert.Contains("start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready", commandWorkflow);
         Assert.Contains("actions.RunInferenceAsync", commandWorkflow);
+
+        var offenders = FindFileTokenOffenders(
+                multiModelPath,
+                "if (!runtimeGate.Ready)",
+                "if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)")
+            .Concat(FindFileTokenOffenders(
+                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs"),
+                "private void AddMultiModelFindingsAsEvents"))
+            .Concat(FindFileTokenOffenders(
+                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs"),
+                "if (!_codingSessionHost.HasViewModel || codingSessionService == null) return",
+                "double meter = ResolveCodingMeterForFrame"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-MultiModel-Partials sollen Command-Sequenz, Session-Guards und Meter-Aufloesung an Workflows delegieren:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -57,6 +76,24 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addDecision);
         Assert.Contains("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", addDecision);
         Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", addDecision);
+
+        var offenders = FindFileTokenOffenders(
+            multiModelPath,
+            "CodingSegmentedFindingFrameMapper.Build",
+            "new LiveFrameFinding(",
+            "QuantificationSeverityPolicy.Estimate(",
+            "dino.X1 / imageWidth",
+            "CodingMultiModelFindingAddDecisionPolicy.Decide",
+            "CodingFindingCoveragePolicy.FindCoveringEvent",
+            "CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding)",
+            "CodingMultiModelQualityGatePolicy.Evaluate",
+            "new EvidenceVector(",
+            "new QualityGateResult(dinoConf");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-MultiModel-Event-Partial soll Projektion, Coverage und QualityGate-Details an Mapper/Policies delegieren:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -165,5 +202,28 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         Assert.Contains("actions.SetVideoAspect", workflow);
         Assert.Contains("actions.RenderCandidates", workflow);
         Assert.Contains("actions.ShowReferenceDn()", workflow);
+
+        var offenders = FindFileTokenOffenders(
+                renderingPath,
+                "new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate",
+                "if (mmResult.SamResponse != null)",
+                "var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates",
+                "_codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight",
+                "_codingVideoAspect",
+                "_showReferenceDn",
+                "SamMaskRenderer.RenderCandidates")
+            .Concat(FindFileTokenOffenders(
+                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs"),
+                "private void ShowMultiModelResults"))
+            .Concat(FindFileTokenOffenders(
+                statePath,
+                "_codingVideoAspect",
+                "_showReferenceDn"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details ueber Workflows/Controller kapseln:\n"
+            + string.Join("\n", offenders));
     }
 }
