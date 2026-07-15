@@ -31,6 +31,7 @@ using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -150,6 +151,7 @@ namespace AuswertungPro.Next.UI
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
         public IPdfImportService PdfImport { get; }
+        public IShaftPdfSelectionExpander ShaftPdfSelectionExpansion { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
@@ -406,6 +408,8 @@ namespace AuswertungPro.Next.UI
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
             PdfOcrExtractor.Use(PdfOcrExtraction);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
+            ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
+            ShaftPdfSelectionExpander.Use(ShaftPdfSelectionExpansion);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
@@ -790,6 +794,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
+            if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;

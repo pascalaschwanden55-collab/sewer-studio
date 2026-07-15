@@ -48,6 +48,20 @@ public sealed class ShaftPdfSelectionExpanderTests : IDisposable
         Assert.Equal([selected], result);
     }
 
+    [Fact]
+    public void Instanzdienst_ergaenzt_zusammengehoerige_Schacht_Pdf()
+    {
+        Directory.CreateDirectory(_root);
+        var protocol = Create("Gemeinde_Schachtprotokoll.pdf");
+        var photos = Create("Gemeinde_Schachtfotos.pdf");
+        var service = new ShaftPdfSelectionExpansionService();
+
+        var result = service.Expand([protocol]);
+
+        Assert.Contains(protocol, result, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(photos, result, StringComparer.OrdinalIgnoreCase);
+    }
+
     private string Create(string name)
     {
         var path = Path.Combine(_root, name);
