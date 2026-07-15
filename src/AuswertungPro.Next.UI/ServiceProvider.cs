@@ -152,6 +152,7 @@ namespace AuswertungPro.Next.UI
         public IAtomicPdfFileReplacer PdfFileReplacement { get; }
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
+        public IPdfTextPrefixReader PdfTextPrefixes { get; }
         public IPdfImportService PdfImport { get; }
         public IDistributionFileTransfer DistributionFileTransfers { get; }
         public IVideoConflictCandidateCopier VideoConflictCandidates { get; }
@@ -414,6 +415,8 @@ namespace AuswertungPro.Next.UI
             PdfTextExtractor.Use(PdfTextExtraction);
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
             PdfOcrExtractor.Use(PdfOcrExtraction);
+            PdfTextPrefixes = new PdfTextPrefixReaderService();
+            PdfDokumentTypErkennung.UseTextPrefixReader(PdfTextPrefixes);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             DistributionFileTransfers = new DistributionFileTransferService();
             DistributionFileTransfer.Use(DistributionFileTransfers);
@@ -806,6 +809,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAtomicPdfFileReplacer)) return PdfFileReplacement;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
+            if (serviceType == typeof(IPdfTextPrefixReader)) return PdfTextPrefixes;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;
             if (serviceType == typeof(IVideoConflictCandidateCopier)) return VideoConflictCandidates;

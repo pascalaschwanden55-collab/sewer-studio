@@ -1,7 +1,6 @@
 using System;
 using System.IO;
-using System.Linq;
-using UglyToad.PdfPig;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -21,6 +20,15 @@ public enum PdfDokumentTyp
 /// </summary>
 public static class PdfDokumentTypErkennung
 {
+    private static IPdfTextPrefixReader _textPrefixReader = new PdfTextPrefixReaderService();
+
+    public static IPdfTextPrefixReader TextPrefixReader => Volatile.Read(ref _textPrefixReader);
+
+    public static void UseTextPrefixReader(IPdfTextPrefixReader reader)
+        => Volatile.Write(
+            ref _textPrefixReader,
+            reader ?? throw new ArgumentNullException(nameof(reader)));
+
     public static PdfDokumentTyp ErkenneDatei(string path, int maxPages = 6)
     {
         var text = ReadPdfTextPrefix(path, maxPages);
@@ -49,28 +57,7 @@ public static class PdfDokumentTypErkennung
     }
 
     public static string? ReadPdfTextPrefix(string path, int maxPages = 6)
-    {
-        try
-        {
-            using var document = PdfDocument.Open(path);
-            return string.Join(
-                "\n",
-                document.GetPages()
-                    .Take(Math.Max(1, maxPages))
-                    .Select(page => page.Text));
-        }
-        catch
-        {
-            try
-            {
-                return File.ReadAllText(path);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
+        => TextPrefixReader.ReadPdfTextPrefix(path, maxPages);
 
     private static bool LooksLikeDichtheitspruefung(string? text, string? fileName)
     {
