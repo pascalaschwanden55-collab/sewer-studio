@@ -112,6 +112,9 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);
         Assert.Contains("combo.IsDropDownOpen = true;", code);
         Assert.Contains("e.Handled = true;", code);
+        Assert.DoesNotContain("Header=\"Hauptarbeit\"", xaml);
+        Assert.DoesNotContain("DataContext.GroupedMeasureOptions", xaml);
+        Assert.DoesNotContain("<ComboBox.GroupStyle>", xaml);
     }
 
     [Fact]
@@ -132,6 +135,8 @@ public sealed class DesignAuditThemeResourceTests
         Assert.True(singleModeReturnIndex > singleModeIndex, "Single-holding navigation branch has no return.");
         var singleModeBlock = shell[singleModeIndex..singleModeReturnIndex];
         Assert.Contains("SelectedNavItem = null;", singleModeBlock);
+        Assert.DoesNotContain("SelectedNavItem = target;", singleModeBlock);
+        Assert.DoesNotContain("OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator)", viewModel);
     }
 
     [Fact]

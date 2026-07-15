@@ -77,49 +77,4 @@ public sealed class ArchitectureFitnessTests
             + string.Join("\n", offenders));
     }
 
-    [Fact]
-    public void Sanierungs_matrix_detail_ui_does_not_reintroduce_removed_grouped_measure_layout()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SanierungsMatrixPage.xaml"),
-            "Header=\"Hauptarbeit\"",
-            "DataContext.GroupedMeasureOptions",
-            "<ComboBox.GroupStyle>");
-
-        Assert.True(
-            offenders.Length == 0,
-            "SanierungsMatrixPage soll die Massnahmen-Spalte und das Lesedetail ohne altes GroupedMeasure-Layout behalten:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void DataPage_measure_entry_uses_matrix_navigation_without_old_sanierung_window_path()
-    {
-        var shell = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs"));
-        var singleModeBlock = ExtractBlockUntilReturn(shell, "if (singleHoldingMode)");
-        var offenders = new List<string>();
-        if (singleModeBlock.Contains("SelectedNavItem = target;", StringComparison.Ordinal))
-            offenders.Add("ShellViewModel.cs singleHoldingMode: SelectedNavItem = target;");
-
-        offenders.AddRange(FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "DataPageViewModel.cs"),
-            "OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator)"));
-
-        Assert.True(
-            offenders.Count == 0,
-            "DataPage-Sanierungseinstieg soll direkt in die Matrix navigieren und den alten Fensterpfad nicht reaktivieren:\n"
-            + string.Join("\n", offenders));
-    }
-
-    private static string ExtractBlockUntilReturn(string source, string marker)
-    {
-        var start = source.IndexOf(marker, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Block-Marker wurde nicht gefunden: {marker}");
-
-        var end = source.IndexOf("return;", start, StringComparison.Ordinal);
-        Assert.True(end > start, $"Block-Ende wurde nicht gefunden: {marker}");
-
-        return source[start..end];
-    }
-
 }
