@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -86,5 +87,57 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         Assert.Contains("request.IsMouseCaptured", cancelOverlayShortcutWorkflow);
         Assert.Contains("request.HasCodingViewModel", cancelOverlayShortcutWorkflow);
         Assert.Contains("request.IsCodingOverlayOpen", cancelOverlayShortcutWorkflow);
+
+        var playbackOffenders = FindFileTokenOffenders(
+            Path.Combine(windowsRoot, "PlayerWindow.Playback.cs"),
+            "PlayerWindow_PreviewKeyDown");
+
+        Assert.True(
+            playbackOffenders.Length == 0,
+            "PlayerWindow.Playback soll PreviewKeyDown-Wiring im Keyboard-Partial belassen:\n"
+            + string.Join("\n", playbackOffenders));
+
+        var actionOffenders = FindFileTokenOffenders(
+                keyboardPath,
+                "private PlayerKeyboardActionController? _keyboardActions",
+                "PlayerKeyboardActionControllerFactory.Create",
+                "new PlayerKeyboardActionController(",
+                "new PlayerKeyboardActionBindings",
+                "if (_keyboardActions.Execute(action))",
+                "case PlayerKeyboardAction.",
+                "PlayerKeyboardPlaybackCommandRunner.Stop",
+                "PlayerKeyboardPlaybackCommandRunner.Pause",
+                "PlayerKeyboardPlaybackCommandRunner.Resume")
+            .Concat(FindFileTokenOffenders(
+                statePath,
+                "private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();"))
+            .ToArray();
+
+        Assert.True(
+            actionOffenders.Length == 0,
+            "PlayerWindow.Keyboard soll Action-Erzeugung/Ausfuehrung ueber Owner, Factory und Controller kapseln:\n"
+            + string.Join("\n", actionOffenders));
+
+        var shortcutOffenders = FindFileTokenOffenders(
+            keyboardPath,
+            "MarkToolPopup.IsOpen",
+            "new RoutedEventArgs",
+            "=> BtnCodingLiveAi.IsChecked =",
+            "=> LiveDetectionButton.IsChecked =",
+            "if (_isCodingMode)",
+            "BtnCodingLiveAi.IsChecked = !",
+            "LiveDetectionButton.IsChecked = !",
+            "if (CodingOverlayCanvas.IsMouseCaptured)",
+            "if (CodingOverlayPopup.IsOpen)",
+            "_codingVm",
+            "_codingOverlayService",
+            "_player.Stop()",
+            "_player.SetPause(true)",
+            "_player.SetPause(false)");
+
+        Assert.True(
+            shortcutOffenders.Length == 0,
+            "PlayerWindow.Keyboard soll Shortcut-UI-Details ueber spezialisierte Workflows/Controls kapseln:\n"
+            + string.Join("\n", shortcutOffenders));
     }
 }
