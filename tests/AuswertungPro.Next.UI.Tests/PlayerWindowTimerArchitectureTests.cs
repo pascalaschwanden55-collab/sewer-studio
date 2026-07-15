@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -46,6 +47,41 @@ public sealed class PlayerWindowTimerArchitectureTests
         Assert.Contains("request.IsClosing", tickWorkflow);
         Assert.Contains("request.IsPlaybackDisposed", tickWorkflow);
         Assert.Contains("request.IsDragging", tickWorkflow);
+
+        var stateOffenders = FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs"),
+                "PlayerWindowTimerController.Create")
+            .Concat(FindFileTokenOffenders(
+                statePath,
+                "private readonly PlayerWindowTimerController _playerTimerController",
+                "private readonly DispatcherTimer _timer",
+                "private readonly DispatcherTimer _scrubTimer"))
+            .Concat(FindPlayerWindowPartialTokenOffenders(
+                "_scrubTimer",
+                "_timer",
+                "new DispatcherTimer"))
+            .ToArray();
+
+        Assert.True(
+            stateOffenders.Length == 0,
+            "PlayerWindow-Partials sollen Playback-/Scrub-Timerzustand und Timer-Erzeugung ueber PlayerWindowTimerController/Factories kapseln:\n"
+            + string.Join("\n", stateOffenders));
+
+        var wiringOffenders = FindFileTokenOffenders(
+            Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs"),
+            "PlayerWindowTimerSetFactory.Create",
+            "PlayerWindowTimerFactory.Create",
+            "PlayerWindowTimerTickWorkflow.ExecuteUpdate",
+            "PlayerWindowTimerTickWorkflow.ExecuteScrub",
+            "if (_closing || _playbackDisposed)",
+            "if (_isDragging)",
+            "TimeSpan.FromMilliseconds(250)",
+            "TimeSpan.FromMilliseconds(60)");
+
+        Assert.True(
+            wiringOffenders.Length == 0,
+            "PlayerWindow.Wiring soll Timer-Erzeugung und Tick-Gates an TimerFactory/TimerSetFactory/TimerTickWorkflow delegieren:\n"
+            + string.Join("\n", wiringOffenders));
     }
 
     [Fact]
@@ -78,6 +114,40 @@ public sealed class PlayerWindowTimerArchitectureTests
         Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", liveController);
         Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", osdController);
         Assert.Contains("public static DispatcherTimer? StopAndClear", stopper);
+
+        var offenders = FindFileTokenOffenders(
+                playbackLifecyclePath,
+                "PlayerWindowTimerStopper.StopPlaybackTimers")
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs"),
+                "_detectionTimer?.Stop();",
+                "_detectionTimer = null;",
+                "_codingOsdTimer?.Stop();",
+                "_codingOsdTimer = null;"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Timer.cs"),
+                "_detectionTimer?.Stop();",
+                "_detectionTimer = null;",
+                "_codingOsdTimer?.Stop();",
+                "_codingOsdTimer = null;"))
+            .Concat(FindFileTokenOffenders(
+                liveControllerPath,
+                "_detectionTimer?.Stop();",
+                "_detectionTimer = null;",
+                "_codingOsdTimer?.Stop();",
+                "_codingOsdTimer = null;"))
+            .Concat(FindFileTokenOffenders(
+                osdControllerPath,
+                "_detectionTimer?.Stop();",
+                "_detectionTimer = null;",
+                "_codingOsdTimer?.Stop();",
+                "_codingOsdTimer = null;"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Timer-Shutdown soll ueber PlayerWindowTimerStopper und Controller-APIs laufen, nicht ueber direkte Timerfelder:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -109,5 +179,27 @@ public sealed class PlayerWindowTimerArchitectureTests
         Assert.Contains("new CodingOsdTimerContext", osdController);
         Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", osdController);
         Assert.Contains("public static bool ShouldReadMeter", policy);
+
+        var offenders = FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs"),
+                "private void StartCodingOsdTimer",
+                "private void StopCodingOsdTimer")
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Osd.cs"),
+                "private void StartCodingOsdTimer",
+                "private void StopCodingOsdTimer"))
+            .Concat(FindFileTokenOffenders(
+                timerPath,
+                "new CodingOsdTimerContext",
+                "PlayerWindowTimerFactory.CreateCodingOsdTimer",
+                "new DispatcherTimer",
+                "!_isCodingMode || _codingOsdReading || _codingIsAnalyzing",
+                "_codingLiveDetection == null) return"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Coding-OSD-Timer-Partial soll nur an CodingOsdMeterController/Policy delegieren und keine Factory-/Gate-Details enthalten:\n"
+            + string.Join("\n", offenders));
     }
 }
