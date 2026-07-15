@@ -70,7 +70,8 @@ public sealed record TrainingBatchImportRunRequestFactoryDefaults(
 public static class TrainingBatchImportRunRequestFactory
 {
     public static TrainingBatchImportRunWorkflowRequest CreateWithDefaults(
-        TrainingBatchImportRunDefaultRequestFactoryRequest request)
+        TrainingBatchImportRunDefaultRequestFactoryRequest request,
+        ITrainingPreviewFrameExtractor? previewFrameExtractor = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.ScanInputsAsync);
@@ -85,7 +86,8 @@ public static class TrainingBatchImportRunRequestFactory
             Cases: request.Cases,
             CodeCatalog: request.CodeCatalog,
             SaveStateAsync: request.SaveStateAsync,
-            ExtractPreviewFrameAsync: TrainingPreviewFrameExtractor.ExtractPreviewFrameAsync,
+            ExtractPreviewFrameAsync: (previewFrameExtractor ?? TrainingPreviewFrameExtractor.Current)
+                .ExtractPreviewFrameAsync,
             GetSelfTrainingResultCount: request.GetSelfTrainingResultCount,
             SetBusy: request.SetBusy,
             SetLogText: request.SetLogText,

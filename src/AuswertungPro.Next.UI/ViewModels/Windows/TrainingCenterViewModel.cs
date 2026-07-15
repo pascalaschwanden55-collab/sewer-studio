@@ -580,7 +580,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Samples: Samples,
                 RefreshKbStatusAsync: RefreshKbStatusAsync,
                 ClearLivePreview: ClearLivePreview,
-                ResetSelfTrainingVisuals: () => ResetSelfTrainingVisuals()))).ConfigureAwait(false);
+                ResetSelfTrainingVisuals: () => ResetSelfTrainingVisuals()),
+            previewFrameExtractor: _trainingPreviewFrames)).ConfigureAwait(false);
     }
 
     [RelayCommand]

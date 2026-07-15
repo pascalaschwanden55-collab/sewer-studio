@@ -17,6 +17,7 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
             VideoPath: "batch-video.mp4",
             ProtocolPath: "batch-protocol.pdf",
             InspectionDate: inspectionDate);
+        var previewExtractor = new PreviewFrameExtractorFake();
 
         var request = TrainingBatchImportRunRequestFactory.CreateWithDefaults(
             new TrainingBatchImportRunDefaultRequestFactoryRequest(
@@ -41,7 +42,8 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
                 Samples: [],
                 RefreshKbStatusAsync: () => Task.CompletedTask,
                 ClearLivePreview: () => { },
-                ResetSelfTrainingVisuals: () => { }));
+                ResetSelfTrainingVisuals: () => { }),
+            previewExtractor);
 
         var cases = await request.ScanFolderAsync(@"D:\Training");
 
@@ -52,7 +54,10 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
         Assert.Equal("batch-protocol.pdf", item.ProtocolPath);
         Assert.Equal(inspectionDate, item.InspectionDate);
         Assert.Equal(TrainingCaseStatus.New, item.Status);
-        Assert.NotNull(request.ExtractPreviewFrameAsync);
+        Assert.Equal(
+            "injected-preview.png",
+            await request.ExtractPreviewFrameAsync(item, RuntimeSettings(), CancellationToken.None));
+        Assert.Same(item, previewExtractor.LastCase);
     }
 
     [Fact]
@@ -223,5 +228,19 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
     private sealed class TrackingDisposable(List<string> calls) : IDisposable
     {
         public void Dispose() => calls.Add("activity-dispose");
+    }
+
+    private sealed class PreviewFrameExtractorFake : ITrainingPreviewFrameExtractor
+    {
+        public TrainingCase? LastCase { get; private set; }
+
+        public Task<string?> ExtractPreviewFrameAsync(
+            TrainingCase trainingCase,
+            AiRuntimeSettings settings,
+            CancellationToken cancellationToken)
+        {
+            LastCase = trainingCase;
+            return Task.FromResult<string?>("injected-preview.png");
+        }
     }
 }

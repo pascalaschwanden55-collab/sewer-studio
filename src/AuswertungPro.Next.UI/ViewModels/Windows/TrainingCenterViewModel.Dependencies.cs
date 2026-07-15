@@ -12,6 +12,7 @@ public partial class TrainingCenterViewModel
 {
     private readonly IKnowledgeBackupService _knowledgeBackup;
     private readonly ITrainingSampleStore _trainingSamples;
+    private readonly ITrainingPreviewFrameExtractor _trainingPreviewFrames;
 
     public TrainingCenterViewModel(
         TrainingCenterStore store,
@@ -39,7 +40,8 @@ public partial class TrainingCenterViewModel
         AppSettings? settings,
         IUiThread? uiThread,
         IKnowledgeBackupService knowledgeBackup,
-        ITrainingSampleStore? trainingSamples = null)
+        ITrainingSampleStore? trainingSamples = null,
+        ITrainingPreviewFrameExtractor? trainingPreviewFrames = null)
     {
         _store = store;
         _import = import;
@@ -49,6 +51,7 @@ public partial class TrainingCenterViewModel
         _uiThread = uiThread ?? UiThreadDispatcher.Instance;
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
         _trainingSamples = trainingSamples ?? TrainingSamplesStore.Current;
+        _trainingPreviewFrames = trainingPreviewFrames ?? TrainingPreviewFrameExtractor.Current;
         _kbDashboard = CreateKnowledgeBaseDashboard(kbDiagnostics);
     }
 }

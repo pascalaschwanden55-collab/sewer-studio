@@ -1,21 +1,42 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
-public static class TrainingPreviewFrameExtractor
+public interface ITrainingPreviewFrameExtractor
 {
-    public static async Task<string?> ExtractPreviewFrameAsync(
+    Task<string?> ExtractPreviewFrameAsync(
         TrainingCase trainingCase,
         AiRuntimeSettings settings,
-        CancellationToken ct)
+        CancellationToken cancellationToken);
+}
+
+/// <summary>Erzeugt Trainingsvorschauen ueber den zentralen Frame-Speicher.</summary>
+public sealed class TrainingPreviewFrameExtractionService : ITrainingPreviewFrameExtractor
+{
+    private readonly ITrainingFrameStore _frameStore;
+    private readonly Func<string, bool> _fileExists;
+
+    public TrainingPreviewFrameExtractionService(
+        ITrainingFrameStore frameStore,
+        Func<string, bool>? fileExists = null)
+    {
+        _frameStore = frameStore ?? throw new ArgumentNullException(nameof(frameStore));
+        _fileExists = fileExists ?? File.Exists;
+    }
+
+    public async Task<string?> ExtractPreviewFrameAsync(
+        TrainingCase trainingCase,
+        AiRuntimeSettings settings,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(trainingCase);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (string.IsNullOrEmpty(trainingCase.VideoPath) || !File.Exists(trainingCase.VideoPath))
+        if (string.IsNullOrEmpty(trainingCase.VideoPath) || !_fileExists(trainingCase.VideoPath))
             return null;
 
         var ffmpeg = settings.FfmpegPath ?? "ffmpeg";
@@ -23,17 +44,37 @@ public static class TrainingPreviewFrameExtractor
 
         try
         {
-            return await FrameStore.ExtractAndStoreAsync(
+            return await _frameStore.ExtractAndStoreAsync(
                 ffmpeg,
                 trainingCase.VideoPath,
                 2.0,
                 sampleId,
                 null,
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
         }
         catch
         {
             return null;
         }
     }
+}
+
+/// <summary>Kompatibilitaetsfassade fuer bestehende Aufrufer.</summary>
+public static class TrainingPreviewFrameExtractor
+{
+    private static ITrainingPreviewFrameExtractor _current =
+        new TrainingPreviewFrameExtractionService(FrameStore.Current);
+
+    public static ITrainingPreviewFrameExtractor Current => Volatile.Read(ref _current);
+
+    public static void Use(ITrainingPreviewFrameExtractor extractor) =>
+        Volatile.Write(
+            ref _current,
+            extractor ?? throw new ArgumentNullException(nameof(extractor)));
+
+    public static Task<string?> ExtractPreviewFrameAsync(
+        TrainingCase trainingCase,
+        AiRuntimeSettings settings,
+        CancellationToken ct) =>
+        Current.ExtractPreviewFrameAsync(trainingCase, settings, ct);
 }

@@ -100,7 +100,8 @@ public static class TrainingBatchImportCommandRequestFactory
     public static TrainingBatchImportCommandWorkflowRequest CreateWithDefaults(
         TrainingBatchImportCommandRunDefaultRequestFactoryRequest request,
         IDialogService? dialogs = null,
-        Func<TrainingBatchImportRunWorkflowRequest, CancellationToken, Task>? runBatchImportAsync = null)
+        Func<TrainingBatchImportRunWorkflowRequest, CancellationToken, Task>? runBatchImportAsync = null,
+        ITrainingPreviewFrameExtractor? previewFrameExtractor = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.ScanInputsAsync);
@@ -140,7 +141,8 @@ public static class TrainingBatchImportCommandRequestFactory
                                 Samples: request.Samples,
                                 RefreshKbStatusAsync: request.RefreshKbStatusAsync,
                                 ClearLivePreview: request.ClearLivePreview,
-                                ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals)),
+                                ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals),
+                            previewFrameExtractor),
                         ct).ConfigureAwait(false);
                 }),
             dialogs);

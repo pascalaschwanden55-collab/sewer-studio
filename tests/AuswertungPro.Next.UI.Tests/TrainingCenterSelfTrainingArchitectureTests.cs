@@ -2143,7 +2143,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("new TrainingBatchImportCommandRunDefaultRequestFactoryRequest(", batchMethod, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportRunRequestFactory.CreateWithDefaults(", factorySource, StringComparison.Ordinal);
         Assert.Contains("new TrainingBatchImportRunDefaultRequestFactoryRequest(", factorySource, StringComparison.Ordinal);
-        Assert.Contains("TrainingPreviewFrameExtractor.ExtractPreviewFrameAsync", runFactorySource, StringComparison.Ordinal);
+        Assert.Contains("previewFrameExtractor ?? TrainingPreviewFrameExtractor.Current", runFactorySource, StringComparison.Ordinal);
+        Assert.Contains("previewFrameExtractor: _trainingPreviewFrames", batchMethod, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             batchMethod,
             "new TrainingBatchImportRunWorkflowRequest(",
@@ -2154,7 +2155,6 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterRuntimeHelpers.ToTrainingCase",
             "Select(TrainingCenterRuntimeHelpers.ToTrainingCase)",
             "TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync",
-            "ExtractPreviewFrameAsync:",
             "DirectoryExists: Directory.Exists",
             "LoadRuntimeSettings: () => PlayerAiSettingsLoader.LoadRuntimeSettings()",
             "LoadSettingsAsync: TrainingCenterSettingsStore.LoadAsync",

@@ -54,6 +54,7 @@ using AuswertungPro.Next.Infrastructure.Reports;
 
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.Application.Ai;
@@ -238,6 +239,7 @@ namespace AuswertungPro.Next.UI
         public IAiOptimizationSessionStore AiOptimizationSessions { get; }
         public ITrainingSampleStore TrainingSamples { get; }
         public ITrainingFrameStore TrainingFrames { get; }
+        public ITrainingPreviewFrameExtractor TrainingPreviewFrames { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
@@ -373,6 +375,8 @@ namespace AuswertungPro.Next.UI
             TrainingSamplesStore.Use(trainingSamples);
             TrainingFrames = new TrainingFrameFileStore();
             FrameStore.Use(TrainingFrames);
+            TrainingPreviewFrames = new TrainingPreviewFrameExtractionService(TrainingFrames);
+            TrainingPreviewFrameExtractor.Use(TrainingPreviewFrames);
             CodingFramePhotos = new CodingFramePhotoFileStore();
             CodingDefectPreviews = new CodingDefectPreviewRenderer();
             CodingDefectPreviewService.Use(CodingDefectPreviews);
@@ -869,6 +873,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
             if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
             if (serviceType == typeof(ITrainingFrameStore)) return TrainingFrames;
+            if (serviceType == typeof(ITrainingPreviewFrameExtractor)) return TrainingPreviewFrames;
             if (serviceType == typeof(ICodingFramePhotoStore)) return CodingFramePhotos;
             if (serviceType == typeof(ICodingDefectPreviewRenderer)) return CodingDefectPreviews;
             if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
