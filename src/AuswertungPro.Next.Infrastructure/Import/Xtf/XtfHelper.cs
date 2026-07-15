@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using AuswertungPro.Next.Application.Common;
+using System.Threading;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf
 {
@@ -17,52 +15,27 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf
 
     public static class XtfHelper
     {
-        // Sucht im XTF nach Haltungseinträgen und gibt eine Liste mit Haltungsnummer und Schacht oben/unten zurück
-        public static List<XtfHoldingInfo> ParseHoldingsFromXtf(string xtfPath)
-        {
-            var result = new List<XtfHoldingInfo>();
-            if (!File.Exists(xtfPath)) return result;
+        private static IXtfHoldingFileReader _holdingReader = new XtfHoldingFileReader();
 
-            XDocument doc;
-            try
-            {
-                // SafeXmlLoader: DTD prohibited + XmlResolver=null (XXE-Schutz fuer fremde XTF). (Audit)
-                doc = SafeXmlLoader.Load(xtfPath);
-            }
-            catch (Exception)
-            {
-                // Eine kaputte/ungueltige .xtf darf den Import einer gueltigen PDF nicht abbrechen. (Audit)
-                return result;
-            }
-            XNamespace ns = doc.Root?.Name.Namespace ?? "";
+        public static IXtfHoldingFileReader CurrentHoldingReader =>
+            Volatile.Read(ref _holdingReader);
 
-            // SIA405: <SIA405_Abwasser.SIA405_Abwasser.Kanal ... Haltung="11111-2222" SchachtOben="..." SchachtUnten="..." />
-            var kanalElements = doc.Descendants().Where(e => e.Name.LocalName.EndsWith("Kanal"));
-            foreach (var kanal in kanalElements)
-            {
-                var haltung = kanal.Attribute("Haltung")?.Value ?? string.Empty;
-                var schachtOben = kanal.Attribute("SchachtOben")?.Value ?? string.Empty;
-                var schachtUnten = kanal.Attribute("SchachtUnten")?.Value ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(haltung))
-                {
-                    result.Add(new XtfHoldingInfo
-                    {
-                        HaltungId = haltung,
-                        SchachtOben = schachtOben,
-                        SchachtUnten = schachtUnten
-                    });
-                }
-            }
-            return result;
-        }
+        public static void UseHoldingReader(IXtfHoldingFileReader holdingReader) =>
+            Volatile.Write(
+                ref _holdingReader,
+                holdingReader ?? throw new ArgumentNullException(nameof(holdingReader)));
 
-        // Findet das XTF mit gleichem Basisnamen wie das PDF (im gleichen oder bekannten Ordner)
+        // Sucht im XTF nach Haltungseintraegen und gibt Haltungsnummer und Schaechte zurueck.
+        public static List<XtfHoldingInfo> ParseHoldingsFromXtf(string xtfPath) =>
+            CurrentHoldingReader.ParseHoldingsFromXtf(xtfPath);
+
+        // Findet das XTF mit gleichem Basisnamen wie das PDF.
         public static string? FindMatchingXtf(string pdfPath, IEnumerable<string> xtfFiles)
         {
             var pdfName = Path.GetFileNameWithoutExtension(pdfPath);
-            // Suche nach XTF mit gleichem Namen (ggf. mit Suffixen)
-            var match = xtfFiles.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x).Contains(pdfName, StringComparison.OrdinalIgnoreCase));
-            return match;
+            return xtfFiles.FirstOrDefault(xtf =>
+                Path.GetFileNameWithoutExtension(xtf)
+                    .Contains(pdfName, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

@@ -171,6 +171,7 @@ namespace AuswertungPro.Next.UI
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
+        public IXtfHoldingFileReader XtfHoldingFiles { get; }
         public IM150SourceFileReader M150SourceFiles { get; }
         public IM150MdbRowReader M150MdbRows { get; }
         public IXtfImportService XtfImport { get; }
@@ -464,6 +465,8 @@ namespace AuswertungPro.Next.UI
             ShaftPdfSelectionExpander.Use(ShaftPdfSelectionExpansion);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             VsaMediaPaths = new VsaMediaPathFileResolver();
+            XtfHoldingFiles = new XtfHoldingFileReader();
+            XtfHelper.UseHoldingReader(XtfHoldingFiles);
             M150SourceFiles = new M150XmlTextFileReader();
             M150SourceFileReader.Use(M150SourceFiles);
             M150MdbRows = new PowerShellM150MdbRowReader();
@@ -881,6 +884,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
+            if (serviceType == typeof(IXtfHoldingFileReader)) return XtfHoldingFiles;
             if (serviceType == typeof(IM150SourceFileReader)) return M150SourceFiles;
             if (serviceType == typeof(IM150MdbRowReader)) return M150MdbRows;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;

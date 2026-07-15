@@ -214,6 +214,8 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 
 - **M150-XML-/Textquelle instanzbasiert (A1-10, Teilpaket):** Sicheres XML-Laden mit Leerraumtreue und der nur bei Bedarf verwendete UTF-8-Text-Rueckfall liegen im `M150XmlTextFileReader` hinter `IM150SourceFileReader`. Der statische M150-Parser behaelt seine Signaturen, verarbeitet aber nur noch gelieferte Inhalte und enthaelt keinen Dateizugriff mehr. Vier neue Quellen-/Rueckfalltests, die vier bestehenden M150-Importfaelle und eine Verdrahtungspruefung schuetzen XML-Zaehler, Warnung, Umlaute, verzoegertes Textlesen und zentrale Nutzung.
 
+- **XTF-Haltungsleser instanzbasiert (A1-10, Teilpaket):** Dateipruefung, geschuetztes XML-Laden und die Zuordnung von Haltung sowie oberem und unterem Schacht liegen im `XtfHoldingFileReader` hinter `IXtfHoldingFileReader`. `XtfHelper` behaelt seine oeffentlichen Signaturen als kleine Fassade; die reine Dateinamenszuordnung bleibt statisch. Drei bestehende Verhaltensfaelle und eine Verdrahtungspruefung schuetzen Namespaces, kaputte und fehlende Dateien, Suchreihenfolge sowie zentrale Nutzung bei der PDF-Verteilung.
+
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
 > Stand: 2026-07-13 · Methode: 7 spezialisierte KI-Agenten (parallel, rein lesende Code-Analyse) auf Basis des committeten Standes. Kritische Funde wurden zur Gegenprüfung vorgesehen — **es trat kein Fund der Stufe „Kritisch" auf**, daher waren keine Gegenprüfungen nötig. Kein Framework-/Plattformwechsel vorgeschlagen.
