@@ -12,6 +12,7 @@ public partial class PlayerWindow
     private readonly PlayerWindowControllerSet _playerControllers;
     private readonly PlayerSliderInputController? _playerSliderInputController;
     private readonly PlayerPlaybackController _playerPlaybackController;
+    private readonly ILiveDetectionLifecycleController _liveDetectionLifecycleController;
     private readonly ILiveDetectionPulseController _liveDetectionPulseController;
     private readonly ILiveDetectionStatusController _liveDetectionStatusController;
     private readonly LiveDetectionConfirmationTrainingController _liveDetectionConfirmationTrainingController;

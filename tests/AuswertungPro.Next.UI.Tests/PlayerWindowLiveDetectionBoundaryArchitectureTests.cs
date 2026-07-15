@@ -195,13 +195,21 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_live_detection_lifecycle_partial_does_not_own_runtime_startup_details()
+    public void PlayerWindow_live_detection_lifecycle_controller_does_not_own_runtime_startup_details()
     {
-        var offenders = FindWindowTokenOffenders(
-            "PlayerWindow.LiveDetection.Lifecycle.cs",
-            "private async void LiveDetection_Click",
-            "if (_liveDetectionController.IsDetecting)",
-            "private void StopLiveDetection",
+        var oldLifecyclePath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.LiveDetection.Lifecycle.cs");
+        var controllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Player",
+            "LiveDetectionLifecycleController.cs");
+        var offenders = FindFileTokenOffenders(
+            controllerPath,
             "PlayerWindowTimerFactory.CreateLiveDetectionTimer",
             "LiveDetectionStatusText.Text = \"Warte auf Frame...\"",
             "LiveDetectionStatusText.Visibility = Visibility.Visible",
@@ -222,9 +230,12 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
             "\"Aktiv\"",
             "LiveDetectionDisplayPolicy.CompactModelName");
 
+        Assert.False(
+            File.Exists(oldLifecyclePath),
+            "Der LiveDetection-Start-Lebenszyklus darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection.Lifecycle soll Runtime-Startup ueber Startup-/Display-Workflows kapseln:\n"
+            "LiveDetectionLifecycleController soll Runtime-Details an vorhandene Workflows delegieren:\n"
             + string.Join("\n", offenders));
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -8,6 +9,9 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private void LiveDetection_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionLifecycleController.HandleClickAsync().SafeFireAndForget("LiveDetectionClick");
+
     private void DetectionTimer_Tick(object? sender, EventArgs e)
         => LiveDetectionTimerDispatchWorkflow.Execute(
             new LiveDetectionTimerDispatchWorkflowRequest(

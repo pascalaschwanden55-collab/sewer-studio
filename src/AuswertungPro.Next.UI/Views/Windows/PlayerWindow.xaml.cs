@@ -234,6 +234,28 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _liveDetectionLifecycleController = new LiveDetectionLifecycleController(
+            new LiveDetectionLifecycleControllerActions(
+                IsDetecting: () => _liveDetectionController.IsDetecting,
+                StopLiveDetection: StopLiveDetection,
+                UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
+                StartWithDisplayAsync: LiveDetectionStartupDisplayWorkflow.StartAsync,
+                StartRuntime: _liveDetectionController.StartRuntime,
+                ShowOverlay: () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
+                ApplyActiveStatus: status =>
+                {
+                    _liveDetectionStatusController.SetLiveDetectionBadge(
+                        status.BadgeText,
+                        status.StatusColor,
+                        status.BadgeDetails);
+                    _liveDetectionStatusController.SetYoloStatus(
+                        status.YoloText,
+                        status.StatusColor,
+                        status.ModelLabel);
+                },
+                ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
+                TimerTick: DetectionTimer_Tick,
+                RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(
