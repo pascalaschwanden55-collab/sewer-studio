@@ -43,9 +43,9 @@ public partial class PlayerWindow
                             CodingFindingsList,
                             code,
                             label),
-                        EnsureRohranfangExistsAsync,
+                        (meter, _, frameBytes) => _codingBoundaryContext.EnsureStartAsync(meter, frameBytes),
                         CloseTrackedStreckenschaeden,
-                        (meterEnd, endTime, frameBytes) => EnsureRohrendeExists(meterEnd, endTime, frameBytes),
+                        (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes),
                         () => _codingSessionHost.EventCollection?.Count ?? 0,
                         (status, color, detail) => SetCodingAiState(status, color, detail)))));
         return result.Handled;

@@ -9,15 +9,26 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
     public void PlayerWindow_boundary_presence_lives_in_policy()
     {
         var boundariesPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryContext.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var playerRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventCommandWorkflow.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryPresencePolicy.cs");
 
+        Assert.False(File.Exists(boundariesPath), "Boundary-Adapter sollen kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(contextPath), "Boundary-Adapter sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Boundary-Event-Guards sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(workflowPath), "Boundary-Event-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(policyPath), "Boundary-Praesenzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var boundaries = File.ReadAllText(boundariesPath);
+        var boundaries = File.ReadAllText(contextPath);
+        var state = File.ReadAllText(statePath);
+        var playerRoot = File.ReadAllText(playerRootPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(Path.GetDirectoryName(playerRootPath)!, "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
         var commandWorkflow = File.ReadAllText(commandWorkflowPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
@@ -31,7 +42,11 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
         Assert.Contains("request.ViewEvents == null", commandWorkflow);
         Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", workflow);
         Assert.Contains("CodingBoundaryPresencePolicy.ExistsInView", workflow);
-        Assert.Contains("_codingSessionHost", boundaries);
+        Assert.Contains("private readonly Ai.CodingBoundaryContext _codingBoundaryContext", state);
+        Assert.Contains("_codingBoundaryContext = new CodingBoundaryContext", playerRoot);
+        Assert.Contains("_codingSessionHost", playerRoot);
+        Assert.DoesNotContain("EnsureRohranfangExistsAsync", playerWindowPartials);
+        Assert.DoesNotContain("private void EnsureRohrendeExists", playerWindowPartials);
         Assert.Contains("public static CodingBoundaryPresence CountExisting", policy);
     }
 
@@ -39,15 +54,18 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
     public void PlayerWindow_boundary_import_reference_lives_in_policy()
     {
         var boundariesPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryContext.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventCommandWorkflow.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryImportReferencePolicy.cs");
 
+        Assert.False(File.Exists(boundariesPath), "Boundary-Adapter sollen kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(contextPath), "Boundary-Adapter sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Boundary-Event-Requestaufbau soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(workflowPath), "Boundary-Event-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(policyPath), "Import-Referenzlogik fuer BCD/BCE muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var boundaries = File.ReadAllText(boundariesPath);
+        var boundaries = File.ReadAllText(contextPath);
         var commandWorkflow = File.ReadAllText(commandWorkflowPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);

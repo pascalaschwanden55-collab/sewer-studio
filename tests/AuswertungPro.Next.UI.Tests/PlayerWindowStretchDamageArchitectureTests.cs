@@ -11,7 +11,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var boundaryContextPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryContext.cs");
         var closePromptPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Streckenschaden.ClosePrompt.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptBuilder.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePolicy.cs");
@@ -30,7 +30,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         Assert.True(File.Exists(dialogWorkflowPath), "Dialogaufruf fuer offene Streckenschaeden soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(commandWorkflowPath), "Offene-Streckenschaden-Dialogfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
-        var boundaries = File.ReadAllText(boundariesPath);
+        var boundaryContext = File.ReadAllText(boundaryContextPath);
         var closePrompt = File.ReadAllText(closePromptPath);
         var policy = File.ReadAllText(policyPath);
         var closePolicy = File.ReadAllText(closePolicyPath);
@@ -40,7 +40,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var dialogWorkflow = File.Exists(dialogWorkflowPath) ? File.ReadAllText(dialogWorkflowPath) : "";
         var commandWorkflow = File.ReadAllText(commandWorkflowPath);
 
-        AssertNoForbiddenTokens(boundaries, "private bool CloseOpenStreckenschaeden");
+        AssertNoForbiddenTokens(boundaryContext, "private bool CloseOpenStreckenschaeden");
         Assert.Contains("private bool CloseOpenStreckenschaeden", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePromptCommandWorkflow.Execute", closePrompt);
         Assert.Contains("CodingOpenStretchDamageDialogWorkflow.ConfirmClose", closePrompt);

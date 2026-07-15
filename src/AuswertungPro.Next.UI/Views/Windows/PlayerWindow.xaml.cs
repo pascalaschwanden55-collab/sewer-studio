@@ -43,6 +43,24 @@ public partial class PlayerWindow : Window
             () => _codingOverlayToolHost.Calibration,
             () => _codingOverlayRenderState.VideoAspect,
             path => TakeSnapshotSafe(path));
+        _codingBoundaryContext = new CodingBoundaryContext(
+            new CodingBoundaryContextSources(
+                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
+                ViewEvents: () => _codingSessionHost.EventCollection,
+                SessionEvents: () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events ?? [],
+                ImportEvents: () => _codingImportReferenceEvents.Events,
+                CodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                FirstCleanFrameSeconds: () => _codingFrameReadinessController.FirstCleanFrameSeconds,
+                OsdMeter: () => _codingOsdMeterController.LastMeter,
+                ViewModelEndMeter: () => _codingSessionHost.EndMeter,
+                FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero),
+            new CodingBoundaryEventWorkflowActions(
+                VsaCodeResolver.LookupLabel,
+                message => PlayerTrace.WriteLine(message),
+                TryExtractFrameAtSecondsAsync,
+                (entry, frameBytes) => AttachBoundaryAnalyzedFramePhoto(entry, frameBytes),
+                () => TryAutoCalibrationFromCurrentFrame().SafeFireAndForget("TryAutoCalibration"),
+                RefreshCodingEventsList));
 
         InitializeComponent();
         _codingSchemaOverlayController = new CodingSchemaOverlayController(

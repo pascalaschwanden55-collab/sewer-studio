@@ -261,8 +261,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", boundaryBody);
         Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
-        Assert.Contains("EnsureRohranfangExistsAsync", boundaryBody);
-        Assert.Contains("EnsureRohrendeExists(meterEnd, endTime, frameBytes)", boundaryBody);
+        Assert.Contains("_codingBoundaryContext.EnsureStartAsync", boundaryBody);
+        Assert.Contains("_codingBoundaryContext.EnsureEnd", boundaryBody);
     }
 
     [Fact]
@@ -404,7 +404,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingBoundaryEventWorkflow.cs");
-        var boundariesBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var boundariesBody = ReadUiFile("Ai", "CodingBoundaryContext.cs");
         var startAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes)", StringComparison.Ordinal);
         var startAddIndex = workflow.IndexOf("CodingBoundaryEventAppender.Apply", startAttachIndex, StringComparison.Ordinal);
         var endAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes)", StringComparison.Ordinal);

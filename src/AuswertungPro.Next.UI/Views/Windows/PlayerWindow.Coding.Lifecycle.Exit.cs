@@ -27,7 +27,7 @@ public partial class PlayerWindow
             new CodingModeExitFinalizationWorkflowActions(
                 CloseTrackedStreckenschaeden,
                 CloseOpenStreckenschaeden,
-                EnsureRohrendeExists));
+                (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes)));
 
     private void TeardownCodingModeExit()
         => CodingModeExitTeardownWorkflow.Execute(
