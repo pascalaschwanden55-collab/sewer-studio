@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Xml.Linq;
-using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -17,6 +17,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 /// </summary>
 public static class XtfStammdatenExtractor
 {
+    private static IXtfStammdatenSourceReader _sourceReader = new XtfStammdatenSourceReader();
+
+    public static IXtfStammdatenSourceReader CurrentSourceReader =>
+        Volatile.Read(ref _sourceReader);
+
+    public static void UseSourceReader(IXtfStammdatenSourceReader sourceReader) =>
+        Volatile.Write(
+            ref _sourceReader,
+            sourceReader ?? throw new ArgumentNullException(nameof(sourceReader)));
+
     public sealed record StammdatenResult(
         string Haltungsname,
         string? Material,
@@ -32,12 +42,19 @@ public static class XtfStammdatenExtractor
     /// (erster Treffer gewinnt, fehlende Felder aus weiteren ergaenzt).
     /// </summary>
     public static Dictionary<string, StammdatenResult> BuildIndex(string exportRoot, List<string>? messages = null)
+        => BuildIndex(exportRoot, CurrentSourceReader, messages);
+
+    internal static Dictionary<string, StammdatenResult> BuildIndex(
+        string exportRoot,
+        IXtfStammdatenSourceReader sourceReader,
+        List<string>? messages = null)
     {
+        ArgumentNullException.ThrowIfNull(sourceReader);
         var result = new Dictionary<string, StammdatenResult>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
+        if (string.IsNullOrWhiteSpace(exportRoot))
             return result;
 
-        var xtfFiles = SafeEnumerateXtf(exportRoot);
+        var xtfFiles = sourceReader.EnumerateXtfFiles(exportRoot);
         if (xtfFiles.Count == 0)
             return result;
 
@@ -45,7 +62,7 @@ public static class XtfStammdatenExtractor
         {
             try
             {
-                var per = ExtractFromFile(path);
+                var per = ExtractFromFile(path, sourceReader);
                 foreach (var (key, stamm) in per)
                 {
                     if (result.TryGetValue(key, out var existing))
@@ -68,14 +85,17 @@ public static class XtfStammdatenExtractor
 
     /// <summary>Extrahiert Stammdaten aus einer einzelnen XTF-Datei.</summary>
     public static Dictionary<string, StammdatenResult> ExtractFromFile(string xtfPath)
-    {
-        var result = new Dictionary<string, StammdatenResult>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
-            return result;
+        => ExtractFromFile(xtfPath, CurrentSourceReader);
 
-        XDocument doc;
-        try { doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(xtfPath); }
-        catch { return result; }
+    internal static Dictionary<string, StammdatenResult> ExtractFromFile(
+        string xtfPath,
+        IXtfStammdatenSourceReader sourceReader)
+    {
+        ArgumentNullException.ThrowIfNull(sourceReader);
+        var result = new Dictionary<string, StammdatenResult>(StringComparer.OrdinalIgnoreCase);
+        var doc = sourceReader.TryLoadXml(xtfPath);
+        if (doc is null)
+            return result;
 
         // Sammle Kanal-Daten (Nutzungsart) und Haltung-Daten (Geometrie/Material/Laenge).
         var kanalNutzung = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -147,19 +167,6 @@ public static class XtfStammdatenExtractor
         }
 
         return result;
-    }
-
-    private static IReadOnlyList<string> SafeEnumerateXtf(string root)
-    {
-        try
-        {
-            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
-            return SafeFileEnumeration.EnumerateFilesSafe(root, "*.xtf", recursive: true).ToList();
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
     }
 
     private static bool IsLocalName(XElement e, string name)

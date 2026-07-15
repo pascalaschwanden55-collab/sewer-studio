@@ -216,6 +216,8 @@ Die wichtigsten Sofortmaßnahmen aus diesem Bericht sind umgesetzt und geprüft:
 
 - **XTF-Haltungsleser instanzbasiert (A1-10, Teilpaket):** Dateipruefung, geschuetztes XML-Laden und die Zuordnung von Haltung sowie oberem und unterem Schacht liegen im `XtfHoldingFileReader` hinter `IXtfHoldingFileReader`. `XtfHelper` behaelt seine oeffentlichen Signaturen als kleine Fassade; die reine Dateinamenszuordnung bleibt statisch. Drei bestehende Verhaltensfaelle und eine Verdrahtungspruefung schuetzen Namespaces, kaputte und fehlende Dateien, Suchreihenfolge sowie zentrale Nutzung bei der PDF-Verteilung.
 
+- **XTF-Stammdatenquelle instanzbasiert (A1-10, Teilpaket):** Rekursive XTF-Suche, Dateipruefung und geschuetztes XML-Laden liegen im `XtfStammdatenSourceReader` hinter `IXtfStammdatenSourceReader`. `XtfStammdatenExtractor` behaelt seine oeffentlichen Signaturen als kompatible Fassade und verarbeitet nur noch gelieferte XML-Dokumente; Material-, Laengen-, DN- und Nutzungsartregeln bleiben bewusst statisch. Vier Verhaltenstests und eine Verdrahtungspruefung schuetzen Namespaces, Dezimalwerte, Rundung, kaputte und fehlende Dateien, Mehrdatei-Merge, Injektion und zentrale Nutzung.
+
 Die nachfolgenden Fundstellen beschreiben weiterhin den Zustand **vor** dieser Umsetzung und bleiben als nachvollziehbares Audit erhalten. Noch offene mittel- und langfristige Punkte stehen in der Roadmap dieses Berichts.
 
 > Stand: 2026-07-13 · Methode: 7 spezialisierte KI-Agenten (parallel, rein lesende Code-Analyse) auf Basis des committeten Standes. Kritische Funde wurden zur Gegenprüfung vorgesehen — **es trat kein Fund der Stufe „Kritisch" auf**, daher waren keine Gegenprüfungen nötig. Kein Framework-/Plattformwechsel vorgeschlagen.

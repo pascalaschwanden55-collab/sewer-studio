@@ -176,6 +176,7 @@ namespace AuswertungPro.Next.UI
         public IM150MdbRowReader M150MdbRows { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
+        public IXtfStammdatenSourceReader XtfStammdatenSources { get; }
         public IIbakFdbConnectionOptions IbakConnections { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
@@ -473,6 +474,8 @@ namespace AuswertungPro.Next.UI
             M150MdbRowReader.Use(M150MdbRows);
             XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
             WinCanImport = new WinCanDbImportService();
+            XtfStammdatenSources = new XtfStammdatenSourceReader();
+            XtfStammdatenExtractor.UseSourceReader(XtfStammdatenSources);
             IbakConnections = new IbakFdbConnectionOptionsService();
             IbakFdbConnectionOptions.Use(IbakConnections);
             IbakImport = new IbakExportImportService(IbakConnections);
@@ -889,6 +892,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IM150MdbRowReader)) return M150MdbRows;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
+            if (serviceType == typeof(IXtfStammdatenSourceReader)) return XtfStammdatenSources;
             if (serviceType == typeof(IIbakFdbConnectionOptions)) return IbakConnections;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
