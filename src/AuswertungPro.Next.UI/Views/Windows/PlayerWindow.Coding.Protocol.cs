@@ -70,7 +70,7 @@ public partial class PlayerWindow
                     _protocolContext.LegacyServiceProvider!,
                     _playbackContext.VideoPath,
                     _protocolContext.LastProjectPath,
-                    MarkProjectDirtyForCoding),
+                    _codingApplyController.MarkProjectDirty),
                 GetCurrentProtocol: () => _protocolContext.HaltungRecord?.Protocol,
                 SyncPrimaryDamages: SyncCodingToPrimaryDamages,
                 OfferPdfExport: CodingOfferPdfExport));

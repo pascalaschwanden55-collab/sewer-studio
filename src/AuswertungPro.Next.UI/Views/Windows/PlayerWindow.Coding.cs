@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -8,6 +9,9 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private void CodingApply_Click(object sender, RoutedEventArgs e)
+        => _codingApplyController.Apply(showOverlay: true);
+
     /// <summary>
     /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.
     /// Wichtig fÃ¼r Popup-Overlay Ã¼ber VLC (HwndHost/Airspace).

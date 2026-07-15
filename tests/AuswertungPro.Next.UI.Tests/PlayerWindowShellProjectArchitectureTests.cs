@@ -12,7 +12,8 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
-        var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
+        var applyControllerPath = Path.Combine(uiRoot, "Player", "CodingApplyController.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var previewWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
         var codingProjectPersistencePath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceService.cs");
         var codingProjectPersistenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceWorkflow.cs");
@@ -28,7 +29,8 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         Assert.True(File.Exists(codingProjectPersistenceFactoryPath), "Coding-Projektpersistenz soll ueber eine Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
-        var apply = File.ReadAllText(applyPath);
+        var applyController = File.ReadAllText(applyControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var previewWorkflowFactory = File.ReadAllText(previewWorkflowFactoryPath);
         var codingProjectPersistence = File.ReadAllText(codingProjectPersistencePath);
         var codingProjectPersistenceWorkflow = File.Exists(codingProjectPersistenceWorkflowPath) ? File.ReadAllText(codingProjectPersistenceWorkflowPath) : "";
@@ -38,10 +40,10 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         var shell = File.ReadAllText(shellPath);
 
         Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowFactory);
-        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", apply);
-        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", apply);
-        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty(_protocolContext.HaltungRecord)", apply);
-        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady()", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", windowRoot);
+        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", windowRoot);
+        Assert.Contains("_bindings.MarkProjectDirty(_bindings.GetHaltungRecord())", applyController);
+        Assert.Contains("SaveProjectAfterCoding: _bindings.SaveProjectAfterCoding", applyController);
         Assert.Contains("CodingProjectPersistenceServiceFactory.Create", codingProjectPersistenceWorkflow);
         Assert.Contains("new CodingProjectPersistenceWorkflowActions", codingProjectPersistenceWorkflow);
         Assert.Contains("service.MarkProjectDirty(record)", codingProjectPersistenceWorkflow);
@@ -54,7 +56,8 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         Assert.Contains("App.Current", factory);
 
         var offenders = FindFileTokenOffenders(protocolPath, "App.Current")
-            .Concat(FindFileTokenOffenders(applyPath, "App.Current"))
+            .Concat(FindFileTokenOffenders(applyControllerPath, "App.Current"))
+            .Concat(FindFileTokenOffenders(windowRootPath, "App.Current"))
             .ToArray();
 
         Assert.True(

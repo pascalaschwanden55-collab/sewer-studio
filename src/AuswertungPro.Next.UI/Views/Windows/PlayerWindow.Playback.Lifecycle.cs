@@ -10,7 +10,7 @@ public partial class PlayerWindow
         var result = PlayerWindowClosingWorkflow.Execute(
             new PlayerWindowClosingWorkflowRequest(_shutdownState.IsClosing),
             new PlayerWindowClosingWorkflowActions(
-                ConfirmCanClose: ConfirmUnappliedCodingChangesOnClose,
+                ConfirmCanClose: _codingApplyController.ConfirmCanClose,
                 MarkClosing: _shutdownState.MarkClosing,
                 ClearLastOpened: () => PlayerLastOpenedClearWorkflow.Execute(
                     new PlayerLastOpenedClearRequest(LastOpenedWindow.IsCurrent(this)),

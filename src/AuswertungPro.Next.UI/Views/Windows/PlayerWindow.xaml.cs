@@ -348,6 +348,26 @@ public partial class PlayerWindow : Window
                     quantifications,
                     rect),
                 TraceError: message => PlayerTrace.WriteLine(message)));
+        _codingApplyController = new CodingApplyController(
+            new CodingApplyControllerBindings(
+                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
+                GetHaltungRecord: () => _protocolContext.HaltungRecord,
+                GetEventCollection: () => _codingSessionHost.EventCollection,
+                GetEvents: () => _codingSessionHost.Events,
+                IsCodingMode: () => _codingModeState.IsCodingMode,
+                GetBaselineSignature: () => _codingBaselineSignatureState.BaselineSignature,
+                ConfirmEmptyProtocol: CodingApplyEmptyProtocolDialogWorkflow.Execute,
+                AssignProtocol: document => _protocolContext.HaltungRecord!.Protocol = document,
+                MarkProjectDirty: CodingProjectPersistenceWorkflow.MarkProjectDirty,
+                SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
+                PersistCodingEventsAsTrainingSamples: _codingTrainingPersistenceContext.PersistEvents,
+                SetBaselineSignature: _codingBaselineSignatureState.Set,
+                // Ohne Projektpfad darf beim Codieren kein Speichern-unter-Dialog erscheinen.
+                SaveProjectAfterCoding: CodingProjectPersistenceWorkflow.TrySaveProjectIfReady,
+                ShowOverlay: ShowOverlay,
+                ConfirmUnappliedChanges: applyChanges => CodingUnappliedChangesCloseDialogWorkflow.Execute(
+                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
+                    applyChanges: applyChanges)));
         _codingModeExitController = new CodingModeExitController(
             new CodingModeExitControllerBindings(
                 IsCodingMode: () => _codingModeState.IsCodingMode,

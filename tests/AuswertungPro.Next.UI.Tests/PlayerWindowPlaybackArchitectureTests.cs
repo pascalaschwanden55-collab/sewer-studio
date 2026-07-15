@@ -139,7 +139,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PlayerWindowCleanupWorkflow.Execute", lifecycle);
         Assert.Contains("PlayerLastOpenedClearWorkflow.Execute", lifecycle);
         AssertNoForbiddenTokens(lifecycle, "if (ReferenceEquals(_lastOpened, this))");
-        Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
+        Assert.Contains("ConfirmCanClose: _codingApplyController.ConfirmCanClose", lifecycle);
         Assert.Contains("_playerMediaRuntime.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
         Assert.Contains("_playerMediaRuntime.DisposeMediaPlayer", lifecycle);

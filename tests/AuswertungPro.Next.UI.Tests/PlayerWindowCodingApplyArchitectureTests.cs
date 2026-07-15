@@ -6,9 +6,15 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingApplyArchitectureTests
 {
     [Fact]
-    public void PlayerWindow_protocol_revision_update_lives_in_policy()
+    public void Coding_apply_and_close_lifecycle_lives_in_controller()
     {
         var applyPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingApplyController.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var windowStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.State.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
+        var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
+        var protocolPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolRevisionUpdater.cs");
         var updateBuilderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyProtocolUpdateBuilder.cs");
         var emptyGuardPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyEmptyProtocolGuard.cs");
@@ -20,6 +26,8 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyDialogService.cs");
         var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyDialogServiceFactory.cs");
 
+        Assert.False(File.Exists(applyPath), "Der uebernommene Codierungsablauf darf nicht wieder als PlayerWindow-Partial erscheinen.");
+        Assert.True(File.Exists(controllerPath), "Uebernehmen und Schliessschutz brauchen einen eigenen Controller.");
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(updateBuilderPath), "Protokoll-Dokumentvorbereitung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -31,7 +39,12 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Apply-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var apply = File.ReadAllText(applyPath);
+        var controller = File.ReadAllText(controllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var windowState = File.ReadAllText(windowStatePath);
+        var coding = File.ReadAllText(codingPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);
         var updateBuilder = File.ReadAllText(updateBuilderPath);
         var emptyGuard = File.ReadAllText(emptyGuardPath);
@@ -44,12 +57,24 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
         Assert.Contains("CodingApplyProtocolUpdateBuilder.Create", applyWorkflow);
-        Assert.Contains("CodingApplyChangesWorkflow.Execute", apply);
-        Assert.Contains("CodingUnappliedChangesCloseWorkflow.Execute", apply);
-        Assert.Contains("CodingApplyEmptyProtocolDialogWorkflow.Execute", apply);
-        Assert.Contains("CodingUnappliedChangesCloseDialogWorkflow.Execute", apply);
-        Assert.Contains("_codingSessionHost", apply);
-        Assert.Contains("ConfirmEmptyProtocol", apply);
+        Assert.Contains("public interface ICodingApplyController", controller);
+        Assert.Contains("public sealed class CodingApplyController", controller);
+        Assert.Contains("CodingApplyChangesWorkflow.Execute", controller);
+        Assert.Contains("CodingUnappliedChangesCloseWorkflow.Execute", controller);
+        Assert.Contains("_bindings.ConfirmEmptyProtocol", controller);
+        Assert.Contains("_bindings.ConfirmUnappliedChanges(() => Apply(showOverlay: false))", controller);
+        Assert.Contains("private readonly ICodingApplyController _codingApplyController", windowState);
+        Assert.Contains("new CodingApplyController(", windowRoot);
+        Assert.Contains("_codingSessionHost", windowRoot);
+        Assert.Contains("CodingApplyEmptyProtocolDialogWorkflow.Execute", windowRoot);
+        Assert.Contains("CodingUnappliedChangesCloseDialogWorkflow.Execute", windowRoot);
+        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", windowRoot);
+        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", windowRoot);
+        Assert.Contains("_codingApplyController.Apply(showOverlay: true)", coding);
+        Assert.Contains("ConfirmCanClose: _codingApplyController.ConfirmCanClose", lifecycle);
+        Assert.Contains("_codingApplyController.MarkProjectDirty", protocol);
+        Assert.DoesNotContain("private bool ApplyCodingChanges", windowRoot);
+        Assert.DoesNotContain("private bool ConfirmUnappliedCodingChangesOnClose", windowRoot);
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", applyWorkflow);
         Assert.Contains("CodingApplyEmptyProtocolGuard.Build", applyWorkflow);
         Assert.Contains("actions.AssignProtocol(update.Document)", applyWorkflow);
