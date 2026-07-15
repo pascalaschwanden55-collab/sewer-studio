@@ -118,14 +118,8 @@ public sealed class CodingEvent
     // Frame-Zeitstempel im Video
     public TimeSpan VideoTimestamp { get; set; }
 
-    /// <summary>Foto-Indicator fuer die Ereignis-Liste (z.B. "📷1" oder "📷2").</summary>
-    public string PhotoIndicator =>
-        Entry.FotoPaths.Count switch
-        {
-            0 => "",
-            1 => "\U0001F4F7\u0031",  // Kamera + 1
-            _ => "\U0001F4F7\u0032"   // Kamera + 2
-        };
+    /// <summary>Anzahl der Fotos. Das Symbol dafuer gehoert ausschliesslich in die UI.</summary>
+    public int PhotoCount => Entry.FotoPaths.Count;
 }
 
 /// <summary>

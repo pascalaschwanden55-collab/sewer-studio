@@ -304,6 +304,23 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Text=\"Enter &#x2714;\"", xaml);
     }
 
+    [Fact]
+    public void Coding_panel_keeps_photo_and_status_symbols_in_the_ui_layer()
+    {
+        var panel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
+        var domain = ReadUiFile("..", "AuswertungPro.Next.Domain", "Models", "CodingSession.cs");
+
+        Assert.Contains("Glyph=\"&#xE722;\"", panel);
+        Assert.Contains("Glyph=\"&#xE707;\"", panel);
+        Assert.Contains("FontFamily=\"{DynamicResource FontIcon}\"", panel);
+        Assert.DoesNotContain("&#x1F4F7;", panel);
+        Assert.DoesNotContain("&#x1F4CD;", panel);
+        Assert.DoesNotContain("PhotoIndicator", panel);
+        Assert.Contains("public int PhotoCount", domain);
+        Assert.DoesNotContain("PhotoIndicator", domain);
+        Assert.DoesNotContain("\\U0001F4F7", domain);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

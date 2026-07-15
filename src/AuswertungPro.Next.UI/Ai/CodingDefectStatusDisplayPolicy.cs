@@ -40,12 +40,12 @@ public static class CodingDefectStatusDisplayPolicy
     public static string StatusIcon(DefectStatus status)
         => status switch
         {
-            DefectStatus.AutoAccepted => "\u2713",
-            DefectStatus.Accepted => "\u2713",
-            DefectStatus.AcceptedWithEdit => "\u270E",
-            DefectStatus.Pending => "\u23F3",
-            DefectStatus.ReviewRequired => "\u26A0",
-            DefectStatus.Rejected => "\u2717",
+            DefectStatus.AutoAccepted => "\uE73E",
+            DefectStatus.Accepted => "\uE73E",
+            DefectStatus.AcceptedWithEdit => "\uE70F",
+            DefectStatus.Pending => "\uE823",
+            DefectStatus.ReviewRequired => "\uE7BA",
+            DefectStatus.Rejected => "\uE711",
             _ => ""
         };
 

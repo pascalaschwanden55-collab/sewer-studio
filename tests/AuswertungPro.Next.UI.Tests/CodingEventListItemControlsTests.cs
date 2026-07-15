@@ -36,7 +36,7 @@ public sealed class CodingEventListItemControlsTests
             Assert.Equal(Color.FromRgb(0x3B, 0x82, 0xF6), BrushColor(zoneDot.Fill));
             Assert.Equal("88%", confidence.Text);
             Assert.Equal(BrushColor(CodingSessionViewModel.GetConfidenceBrush(0.876)), BrushColor(confidence.Foreground));
-            Assert.Equal("\u270E", statusIcon.Text);
+            Assert.Equal("\uE70F", statusIcon.Text);
             Assert.Equal(
                 BrushColor(CodingSessionViewModel.GetStatusBrush(DefectStatus.AcceptedWithEdit)),
                 BrushColor(statusIcon.Foreground));
@@ -60,7 +60,7 @@ public sealed class CodingEventListItemControlsTests
 
             Assert.Equal(Color.FromRgb(0x94, 0xA3, 0xB8), BrushColor(zoneDot.Fill));
             Assert.Equal("", confidence.Text);
-            Assert.Equal("\u23F3", statusIcon.Text);
+            Assert.Equal("\uE823", statusIcon.Text);
             Assert.Equal(
                 BrushColor(CodingSessionViewModel.GetStatusBrush(DefectStatus.Pending)),
                 BrushColor(statusIcon.Foreground));

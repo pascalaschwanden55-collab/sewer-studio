@@ -9,12 +9,12 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingDefectStatusDisplayPolicyTests
 {
     [Theory]
-    [InlineData(DefectStatus.AutoAccepted, "KI-Kriterien erfüllt", "\u2713")]
-    [InlineData(DefectStatus.Pending, "Review empfohlen (Yellow Zone)", "\u23F3")]
-    [InlineData(DefectStatus.ReviewRequired, "Manuell erforderlich (Red Zone)", "\u26A0")]
-    [InlineData(DefectStatus.Accepted, "Akzeptiert", "\u2713")]
-    [InlineData(DefectStatus.AcceptedWithEdit, "Bearbeitet", "\u270E")]
-    [InlineData(DefectStatus.Rejected, "Abgelehnt", "\u2717")]
+    [InlineData(DefectStatus.AutoAccepted, "KI-Kriterien erfüllt", "\uE73E")]
+    [InlineData(DefectStatus.Pending, "Review empfohlen (Yellow Zone)", "\uE823")]
+    [InlineData(DefectStatus.ReviewRequired, "Manuell erforderlich (Red Zone)", "\uE7BA")]
+    [InlineData(DefectStatus.Accepted, "Akzeptiert", "\uE73E")]
+    [InlineData(DefectStatus.AcceptedWithEdit, "Bearbeitet", "\uE70F")]
+    [InlineData(DefectStatus.Rejected, "Abgelehnt", "\uE711")]
     public void Text_and_icon_mappings_match_existing_status_contract(
         DefectStatus status,
         string text,
