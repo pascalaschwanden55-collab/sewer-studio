@@ -260,28 +260,32 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         var submissionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
         var stateControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerStateController.cs");
         var interactionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerInteractionController.cs");
+        var submissionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerSubmissionController.cs");
 
         Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht in einem PlayerWindow-Partial liegen.");
+        Assert.False(File.Exists(submissionPath), "Die Eingabemarker-Übernahme soll nicht in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(stateControllerPath), "Eingabemarker-Zustand soll nicht mehr als Rohfelder im PlayerWindow liegen.");
         Assert.True(File.Exists(interactionControllerPath), "Eingabemarker-Interaktion soll ein eigener Controller sein.");
+        Assert.True(File.Exists(submissionControllerPath), "Eingabemarker-Übernahme soll ein eigener Controller sein.");
 
         var state = File.ReadAllText(statePath);
         var overlayInput = File.ReadAllText(overlayInputPath);
-        var submission = File.ReadAllText(submissionPath);
         var stateController = File.ReadAllText(stateControllerPath);
         var interactionController = File.ReadAllText(interactionControllerPath);
+        var submissionController = File.ReadAllText(submissionControllerPath);
 
         AssertNoForbiddenTokens(
             state,
             "private enum EingabemarkerPhase");
         AssertNoForbiddenTokens(
-            state + overlayInput + submission,
+            state + overlayInput + submissionController,
             "_eingabemarkerPhase",
             "_eingabemarkerDragStart",
             "_eingabemarkerRectNorm",
             "_eingabemarkerPreviewRect",
             "CodingEingabemarkerStateController _eingabemarkerState");
         Assert.Contains("private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;", state);
+        Assert.Contains("private readonly ICodingEingabemarkerSubmissionController _codingEingabemarkerSubmissionController;", state);
         Assert.Contains("private readonly CodingEingabemarkerStateController _state = new();", interactionController);
         Assert.Contains("public sealed class CodingEingabemarkerStateController", stateController);
         Assert.Contains("public CodingEingabemarkerPhase Phase", stateController);

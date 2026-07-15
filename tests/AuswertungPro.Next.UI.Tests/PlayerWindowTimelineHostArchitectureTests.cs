@@ -51,7 +51,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.AiEvents.Live.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",
             "PlayerWindow.Coding.Ai.Streckenschaden.cs",
-            "PlayerWindow.Coding.Eingabemarker.Submission.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs"
@@ -133,7 +132,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.AiEvents.Live.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",
             "PlayerWindow.Coding.Ai.Streckenschaden.cs",
-            "PlayerWindow.Coding.Eingabemarker.Submission.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs",

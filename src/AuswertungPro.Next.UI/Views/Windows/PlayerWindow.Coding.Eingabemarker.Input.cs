@@ -17,7 +17,9 @@ public partial class PlayerWindow
             new CodingEingabemarkerKeyInputWorkflowActions(
                 CancelMarker: () => _codingEingabemarkerInteractionController.Cancel(),
                 ClearDetectionOverlays: ClearDetectionOverlays,
-                Submit: () => SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker")));
+                Submit: () => _codingEingabemarkerSubmissionController
+                    .SubmitAsync(TxtEingabemarker.Text)
+                    .SafeFireAndForget("SubmitEingabemarker")));
     }
 
     private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -30,7 +32,9 @@ public partial class PlayerWindow
                 ApplyQuickSelection: text => CodingEingabemarkerPopupControls.ApplyQuickSelection(
                     TxtEingabemarker,
                     text),
-                Submit: () => SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker")));
+                Submit: () => _codingEingabemarkerSubmissionController
+                    .SubmitAsync(TxtEingabemarker.Text)
+                    .SafeFireAndForget("SubmitEingabemarker")));
     }
 
     private static string? ResolveEingabemarkerCodeHint(string? keyword)

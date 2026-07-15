@@ -368,6 +368,46 @@ public partial class PlayerWindow : Window
                     "Beschreibung eingeben oder Stichwort wÃ¤hlen, dann Enter",
                     PlayerStatusColors.Info,
                     "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));
+        _codingEingabemarkerSubmissionController = new CodingEingabemarkerSubmissionController(
+            new CodingEingabemarkerSubmissionControllerBindings(
+                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
+                SetAnalyzingPhase: _codingEingabemarkerInteractionController.SetAnalyzingPhase,
+                ResolveCodeHint: ResolveEingabemarkerCodeHint,
+                ResolveEvents: () => _codingSessionHost.Events,
+                ShowDuplicateStatus: (codeHint, meter) => _liveDetectionStatusController.SetCodingAiState(
+                    $"{codeHint} bereits vorhanden bei {meter:F2}m - Duplikat",
+                    PlayerStatusColors.Warning,
+                    ""),
+                ResolveCurrentOverlay: () => _codingSessionHost.CurrentOverlay,
+                ResolveMeter: () => _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
+                ResolveVideoTime: () => _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero,
+                LookupLabel: _codingFindingContext.LookupLabel,
+                CapturePhoto: CodingCaptureSnapshot,
+                RefreshEvents: RefreshCodingEventsList,
+                UpdateToolBadge: UpdateToolBadge,
+                PersistTraining: ev => _codingTrainingPersistenceContext
+                    .PersistSingleEventAsync(ev)
+                    .SafeFireAndForget("TrainingSaveSingle"),
+                ShowSuccessStatus: (code, label, meter) => _liveDetectionStatusController.SetCodingAiState(
+                    $"{code} {label} bei {meter:F2}m eingetragen",
+                    PlayerStatusColors.Success,
+                    ""),
+                ShowAiFallbackStatus: keyword => _liveDetectionStatusController.SetCodingAiState(
+                    $"KI analysiert: \"{keyword}\" ...",
+                    PlayerStatusColors.Warning,
+                    "Qwen analysiert"),
+                RunAiFallbackAsync: keyword => RunCodingAnalysisAsync(
+                    $"Eingabemarker: {keyword}",
+                    disableAnalyzeButton: true,
+                    keywordHint: keyword,
+                    codeHint: null),
+                ShowErrorStatus: message => _liveDetectionStatusController.SetCodingAiState(
+                    $"Fehler: {message}",
+                    PlayerStatusColors.Error,
+                    ""),
+                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel()));
         _liveDetectionMarkSegmentationController = new LiveDetectionMarkSegmentationController(
             new LiveDetectionMarkSegmentationControllerBindings(
                 HasBoxSegmentation: () => _codingAiRuntimeOwner.Controller.BoxSegmentation is not null,

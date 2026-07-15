@@ -520,7 +520,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("private void CmbEingabemarker_KeyDown", input);
         Assert.Contains("private void CmbEingabemarker_SelectionChanged", input);
         Assert.Contains("private static string? ResolveEingabemarkerCodeHint", input);
-        Assert.Contains("SubmitEingabemarker().SafeFireAndForget", input);
+        Assert.Contains("_codingEingabemarkerSubmissionController", input);
+        Assert.Contains(".SubmitAsync(TxtEingabemarker.Text)", input);
         Assert.Contains("public static void ShowInput", popupControls);
         Assert.Contains("public static void Hide", popupControls);
         Assert.Contains("public static bool IsVisible", popupControls);
@@ -597,48 +598,48 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_eingabemarker_submission_lives_in_submission_partial()
+    public void PlayerWindow_eingabemarker_submission_lives_in_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
-        var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
+        var submissionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerSubmissionController.cs");
+        var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
         var directEventWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerDirectEventWorkflow.cs");
 
-        Assert.True(File.Exists(submissionPath), "Eingabemarker-Submission muss in einer eigenen PlayerWindow-Partial liegen.");
+        Assert.False(File.Exists(submissionPath), "Eingabemarker-Übernahme soll nicht mehr in einem PlayerWindow-Partial liegen.");
+        Assert.True(File.Exists(submissionControllerPath), "Eingabemarker-Übernahme soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(submissionWorkflowPath), "Eingabemarker-Submission-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(directEventWorkflowPath), "Eingabemarker-Direkt-Event-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht mehr in einem PlayerWindow-Partial liegen.");
 
-        var interactionController = File.ReadAllText(interactionControllerPath);
-        var submission = File.ReadAllText(submissionPath);
+        var submissionController = File.ReadAllText(submissionControllerPath);
+        var input = File.ReadAllText(inputPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
         var directEventWorkflow = File.Exists(directEventWorkflowPath) ? File.ReadAllText(directEventWorkflowPath) : "";
 
         AssertNoForbiddenTokens(
-            interactionController,
+            input,
             "private async Task SubmitEingabemarker",
             "CodingEingabemarkerDuplicatePolicy.FindDuplicate");
-        Assert.Contains("private async Task SubmitEingabemarker", submission);
-        Assert.Contains("CodingEingabemarkerSubmissionWorkflow.ExecuteAsync", submission);
-        Assert.Contains("CodingEingabemarkerDirectEventWorkflow.Execute", submission);
-        Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
+        Assert.Contains("CodingEingabemarkerSubmissionWorkflow.ExecuteAsync", submissionController);
+        Assert.Contains("CodingEingabemarkerDirectEventWorkflow.Execute", submissionController);
+        Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submissionController);
         AssertNoForbiddenTokens(
-            submission,
+            submissionController,
             "CodingEingabemarkerEventFactory.CreateAccepted",
             "CodingProtocolEntryPhotoPathAppender.AddIfPresent",
             "CodingEingabemarkerEventAppender.Apply");
-        Assert.Contains("_codingSessionHost", submission);
-        AssertNoForbiddenTokens(submission, "_codingSessionService.AddEvent(draft.Entry");
-        Assert.Contains("CodingEingabemarkerPopupControls.Hide", submission);
-        AssertNoForbiddenTokens(submission, "EingabemarkerPopup.Visibility = Visibility.Collapsed");
-        Assert.Contains("RunCodingAnalysisAsync", submission);
+        Assert.Contains("_codingEingabemarkerSubmissionController", input);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", windowRoot);
+        AssertNoForbiddenTokens(windowRoot, "EingabemarkerPopup.Visibility = Visibility.Collapsed");
+        Assert.Contains("RunCodingAnalysisAsync", windowRoot);
         AssertNoForbiddenTokens(
-            submission,
+            submissionController,
             "if (string.IsNullOrEmpty(keyword))",
             "if (_codingSessionHost.HasViewModel && codeHint != null)",
             "if (codeHint != null && _codingSessionHost.HasViewModel",

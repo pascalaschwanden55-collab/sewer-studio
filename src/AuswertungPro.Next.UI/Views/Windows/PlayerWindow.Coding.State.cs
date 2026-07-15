@@ -31,6 +31,7 @@ public partial class PlayerWindow
     private readonly CodingEventsRefreshController _codingEventsRefreshController;
     private readonly ICodingProtocolMatchController _codingProtocolMatchController;
     private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;
+    private readonly ICodingEingabemarkerSubmissionController _codingEingabemarkerSubmissionController;
     private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
     private readonly CodingNavigationController _codingNavigationController;
 
