@@ -262,6 +262,18 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("LevelMode.Water => \"Wasser\"", rendering);
     }
 
+    [Fact]
+    public void Media_conflict_actions_use_accent_and_success_icons()
+    {
+        var xaml = ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml");
+
+        Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
+        Assert.Contains("Glyph=\"&#xE73E;\" FontSize=\"12\" Foreground=\"{DynamicResource SuccessBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE768;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE8A5;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Background=\"{DynamicResource SurfaceSubtleBrush}\"", xaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
