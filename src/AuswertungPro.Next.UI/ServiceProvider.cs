@@ -89,6 +89,7 @@ namespace AuswertungPro.Next.UI
         public IProgramRootLocator ProgramRootLocator { get; }
         public IRepositoryRootLocator RepositoryRootLocator { get; }
         public IFfmpegExecutableLocator FfmpegExecutables { get; }
+        public IProcessOutputReader ProcessOutputs { get; }
         public ITrainingFfmpegPathResolver TrainingFfmpegPaths { get; }
         public ISidecarScriptLocator SidecarScripts { get; }
         public ISidecarTokenResolver SidecarTokens { get; }
@@ -309,6 +310,8 @@ namespace AuswertungPro.Next.UI
             RepoRootLocator.Use(RepositoryRootLocator);
             FfmpegExecutables = new FfmpegFileLocator();
             FfmpegLocator.Use(FfmpegExecutables);
+            ProcessOutputs = new ProcessOutputReaderService();
+            ProcessOutputReader.Use(ProcessOutputs);
             TrainingFfmpegPaths = new TrainingFfmpegFilePathResolver();
             AuswertungPro.Next.UI.Ai.Training.TrainingFfmpegPathResolver.Use(TrainingFfmpegPaths);
             SidecarScripts = new SidecarScriptFileLocator();
@@ -777,6 +780,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
             if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
             if (serviceType == typeof(IFfmpegExecutableLocator)) return FfmpegExecutables;
+            if (serviceType == typeof(IProcessOutputReader)) return ProcessOutputs;
             if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
             if (serviceType == typeof(ISidecarScriptLocator)) return SidecarScripts;
             if (serviceType == typeof(ISidecarTokenResolver)) return SidecarTokens;
