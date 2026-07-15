@@ -1,4 +1,7 @@
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Telemetry;
+using AuswertungPro.Next.Infrastructure.Vsa;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -42,6 +45,26 @@ public sealed class TelemetryPathResolverTests
         Assert.Null(TelemetryPathResolver.ResolveFile("  "));
     }
 
+    [Fact]
+    public void Telemetrie_Schreiber_verwenden_injizierten_Pfadaufloeser()
+    {
+        var paths = new RecordingTelemetryPathResolver();
+
+        Assert.Equal("sidecar.jsonl", new SidecarTelemetryFileWriter(paths).ResolvePath());
+        Assert.Equal("pipeline_trace_run-23.jsonl", new PipelineTraceFileWriter(paths).ResolvePath("run-23"));
+        Assert.Equal("pipeline_summary_run-23.json", new PipelineTraceFileWriter(paths).ResolveSummaryPath("run-23"));
+        Assert.Equal("vsa_shadow.jsonl", new VsaShadowTelemetryFileWriter(paths).ResolvePath());
+
+        Assert.Equal(
+            [
+                "sidecar.jsonl",
+                "pipeline_trace_run-23.jsonl",
+                "pipeline_summary_run-23.json",
+                "vsa_shadow.jsonl"
+            ],
+            paths.FileNames);
+    }
+
     private sealed class TelemetryEnvScope : IDisposable
     {
         private readonly string? _previous;
@@ -55,6 +78,17 @@ public sealed class TelemetryPathResolverTests
         public void Dispose()
         {
             Environment.SetEnvironmentVariable(TelemetryPathResolver.TelemetryDirEnvVar, _previous);
+        }
+    }
+
+    private sealed class RecordingTelemetryPathResolver : ITelemetryPathResolver
+    {
+        public List<string> FileNames { get; } = [];
+
+        public string? ResolveFile(string fileName)
+        {
+            FileNames.Add(fileName);
+            return fileName;
         }
     }
 }

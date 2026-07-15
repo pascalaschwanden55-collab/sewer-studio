@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Infrastructure.Telemetry;
 
@@ -12,6 +13,17 @@ public sealed class VsaShadowTelemetryFileWriter : IVsaShadowTelemetryWriter
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
+    private readonly ITelemetryPathResolver _paths;
+
+    public VsaShadowTelemetryFileWriter()
+        : this(TelemetryPathResolver.Current)
+    {
+    }
+
+    public VsaShadowTelemetryFileWriter(ITelemetryPathResolver paths)
+    {
+        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+    }
 
     public void Write(VsaShadowTelemetryEntry entry, string? pathOverride = null)
     {
@@ -36,5 +48,5 @@ public sealed class VsaShadowTelemetryFileWriter : IVsaShadowTelemetryWriter
     }
 
     public string? ResolvePath()
-        => TelemetryPathResolver.ResolveFile("vsa_shadow.jsonl");
+        => _paths.ResolveFile("vsa_shadow.jsonl");
 }

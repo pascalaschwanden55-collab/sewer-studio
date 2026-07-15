@@ -38,6 +38,7 @@ using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Protocol;
 using AuswertungPro.Next.Infrastructure.Settings;
+using AuswertungPro.Next.Infrastructure.Telemetry;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
@@ -230,6 +231,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolAiService ProtocolAi { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
+        public ITelemetryPathResolver TelemetryPaths { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
         public IPipelineTraceWriter PipelineTrace { get; }
         public IProtocolTrainingStore ProtocolTraining { get; }
@@ -334,9 +336,11 @@ namespace AuswertungPro.Next.UI
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
-            SidecarTelemetry = new SidecarTelemetryFileWriter();
+            TelemetryPaths = new TelemetryFilePathResolver();
+            TelemetryPathResolver.Use(TelemetryPaths);
+            SidecarTelemetry = new SidecarTelemetryFileWriter(TelemetryPaths);
             SidecarTelemetryWriter.Use(SidecarTelemetry);
-            PipelineTrace = new PipelineTraceFileWriter();
+            PipelineTrace = new PipelineTraceFileWriter(TelemetryPaths);
             PipelineTraceWriter.Use(PipelineTrace);
             VideoStartErrorLogs = new VideoStartErrorLogFileWriter();
             var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
@@ -636,7 +640,7 @@ namespace AuswertungPro.Next.UI
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
             var v2ChannelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_channels.json");
             var v2ManholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
-            VsaShadowTelemetry = new VsaShadowTelemetryFileWriter();
+            VsaShadowTelemetry = new VsaShadowTelemetryFileWriter(TelemetryPaths);
             VsaShadowTelemetryWriter.Use(VsaShadowTelemetry);
             Vsa = new VsaEvaluationService(
                 channelsTable,
@@ -860,6 +864,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
+            if (serviceType == typeof(ITelemetryPathResolver)) return TelemetryPaths;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;

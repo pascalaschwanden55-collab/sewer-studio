@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -15,6 +16,17 @@ public sealed class PipelineTraceFileWriter : IPipelineTraceWriter
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
+    private readonly ITelemetryPathResolver _paths;
+
+    public PipelineTraceFileWriter()
+        : this(TelemetryPathResolver.Current)
+    {
+    }
+
+    public PipelineTraceFileWriter(ITelemetryPathResolver paths)
+    {
+        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+    }
 
     public async Task WriteAsync(PipelineTraceEntry entry)
     {
@@ -72,7 +84,7 @@ public sealed class PipelineTraceFileWriter : IPipelineTraceWriter
     public string? ResolveSummaryPath(string runId)
         => ResolveFile(runId, "pipeline_summary_", ".json");
 
-    private static string? ResolveFile(string runId, string prefix, string extension)
+    private string? ResolveFile(string runId, string prefix, string extension)
     {
         if (string.IsNullOrWhiteSpace(runId))
             return null;
@@ -80,6 +92,6 @@ public sealed class PipelineTraceFileWriter : IPipelineTraceWriter
         foreach (var character in Path.GetInvalidFileNameChars())
             runId = runId.Replace(character, '_');
 
-        return TelemetryPathResolver.ResolveFile($"{prefix}{runId}{extension}");
+        return _paths.ResolveFile($"{prefix}{runId}{extension}");
     }
 }

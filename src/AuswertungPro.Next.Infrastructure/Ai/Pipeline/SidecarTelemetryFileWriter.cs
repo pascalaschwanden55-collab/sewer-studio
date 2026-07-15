@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -13,6 +14,17 @@ public sealed class SidecarTelemetryFileWriter : ISidecarTelemetryWriter
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
+    private readonly ITelemetryPathResolver _paths;
+
+    public SidecarTelemetryFileWriter()
+        : this(TelemetryPathResolver.Current)
+    {
+    }
+
+    public SidecarTelemetryFileWriter(ITelemetryPathResolver paths)
+    {
+        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+    }
 
     public async Task WriteAsync(SidecarTelemetryEntry entry)
     {
@@ -43,7 +55,7 @@ public sealed class SidecarTelemetryFileWriter : ISidecarTelemetryWriter
     }
 
     public string? ResolvePath()
-        => TelemetryPathResolver.ResolveFile("sidecar.jsonl");
+        => _paths.ResolveFile("sidecar.jsonl");
 
     private static void RotateIfTooLarge(string path)
     {
