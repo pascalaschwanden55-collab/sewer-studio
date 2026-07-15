@@ -185,7 +185,7 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
 
         AblagerungOk = r.AblagerungOk;
         AblagerungText = r.AblagerungOk
-            ? $"Ablagerungsfrei — v_T ({Fmt(r.V_T, 3)} m/s) >= v_c ({Fmt(r.Abl.Vc, 3)} m/s)"
+            ? $"Ablagerungsfrei — v_T ({Fmt(r.V_T, 3)} m/s) ≥ v_c ({Fmt(r.Abl.Vc, 3)} m/s)"
             : $"Ablagerungsgefahr — v_T ({Fmt(r.V_T, 3)} m/s) < v_c ({Fmt(r.Abl.Vc, 3)} m/s)";
 
         // Auslastung

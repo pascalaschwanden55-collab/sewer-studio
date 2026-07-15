@@ -33,7 +33,7 @@ public sealed class ReviewCardViewModel
             ? "—"
             : IsNoFindings
                 ? "nichts erkannt"
-                : (item.SelfTrainingSuggestedCode ?? "?");
+                : (item.SelfTrainingSuggestedCode ?? "Unbekannt");
     }
 
     /// <summary>Pfad zum Frame-Bild (kann null sein).</summary>

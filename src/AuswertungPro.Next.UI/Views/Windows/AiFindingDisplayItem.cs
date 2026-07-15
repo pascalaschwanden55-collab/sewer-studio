@@ -50,7 +50,7 @@ public sealed class AiFindingDisplayItem
             detailParts.Add($"B:{f.WidthMm}mm");
         if (f.IntrusionPercent is > 0)
             detailParts.Add($"Einragung {f.IntrusionPercent}%");
-        DetailText = detailParts.Count > 0 ? string.Join("  |  ", detailParts) : "Keine Details";
+        DetailText = detailParts.Count > 0 ? string.Join(" · ", detailParts) : "Keine Details";
 
         // Sicherheit nur aus ECHTEM Modellwert — Schadensgrad ist keine Confidence
         // (Fehlerpruefung 11.07., Kritisch 3: Severity*20 wurde als gruene Prozent-

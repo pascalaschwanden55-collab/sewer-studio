@@ -32,6 +32,19 @@ public sealed class AiFindingDisplayItemConfidenceTests
         Assert.Equal("1", item.SeverityText);
     }
 
+    [Fact]
+    public void Details_werden_mit_lesbaren_Mittelpunkten_getrennt()
+    {
+        var item = new AiFindingDisplayItem(new LiveFrameFinding(
+            Label: "Riss",
+            Severity: 2,
+            PositionClock: "6:00",
+            ExtentPercent: 25,
+            VsaCodeHint: "BAB"));
+
+        Assert.Equal("Uhr 6:00 · Umfang 25%", item.DetailText);
+    }
+
     private static LiveFrameFinding Finding(int severity, double? modelConfidence = null)
         => new(
             Label: "Riss",

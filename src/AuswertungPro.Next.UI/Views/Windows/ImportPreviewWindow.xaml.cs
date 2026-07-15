@@ -17,7 +17,7 @@ public partial class ImportPreviewWindow : Window
 
         SubHeaderText.Text = $"Import-Typ: {label}";
         if (preview.MediaFilesFound > 0 || preview.MediaUnmatched > 0)
-            SubHeaderText.Text += $" | Medien: {preview.MediaFilesFound} gefunden, {preview.MediaUnmatched} nicht zugeordnet";
+            SubHeaderText.Text += $" · Medien: {preview.MediaFilesFound} gefunden, {preview.MediaUnmatched} nicht zugeordnet";
 
         ChangesGrid.ItemsSource = preview.Changes;
         ConflictsGrid.ItemsSource = preview.ConflictDetails;

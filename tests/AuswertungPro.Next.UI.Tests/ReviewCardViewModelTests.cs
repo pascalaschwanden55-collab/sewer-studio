@@ -51,6 +51,14 @@ public sealed class ReviewCardViewModelTests
     }
 
     [Fact]
+    public void Fehlender_KI_Code_wird_verstaendlich_beschriftet()
+    {
+        var vm = new ReviewCardViewModel(Item("Mismatch", "BAB", null));
+
+        Assert.Equal("Unbekannt", vm.KiAussage);
+    }
+
+    [Fact]
     public void ProtocolStartdata_zeigt_Strich_und_Startdaten_Label()
     {
         // Protokoll-Startdaten: kein KI-Durchlauf, Code identisch (SelfTrainingSuggestedCode = ProtocolCode)

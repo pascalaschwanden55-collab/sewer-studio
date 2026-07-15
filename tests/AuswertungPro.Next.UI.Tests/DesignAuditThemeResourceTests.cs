@@ -338,6 +338,25 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Value=\"○\"", pipeline);
     }
 
+    [Fact]
+    public void Vsa_explorer_and_status_texts_use_readable_symbols_and_separators()
+    {
+        var vsa = ReadUiFile("Views", "Windows", "VsaCodeExplorerWindow.xaml");
+        var importPreview = ReadUiFile("Views", "Windows", "ImportPreviewWindow.xaml.cs");
+        var hydraulics = ReadUiFile("ViewModels", "Windows", "HydraulikPanelViewModel.cs");
+
+        Assert.Contains("Glyph=\"&#xE72A;\"", vsa);
+        Assert.Contains("Glyph=\"&#xE76B;\"", vsa);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(vsa, "Glyph=\\\"&#xE721;\\\"").Count);
+        Assert.DoesNotContain("&#x2190;", vsa);
+        Assert.DoesNotContain("&#x2192;", vsa);
+        Assert.DoesNotContain("&#x2316;", vsa);
+        Assert.Contains(" · Medien:", importPreview);
+        Assert.DoesNotContain(" | Medien:", importPreview);
+        Assert.Contains(" m/s) ≥ v_c", hydraulics);
+        Assert.DoesNotContain(" m/s) >= v_c", hydraulics);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
