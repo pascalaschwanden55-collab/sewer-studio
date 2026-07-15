@@ -21,7 +21,7 @@ public partial class PlayerWindow
                 CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent,
                 CancelCodingAnalysis: _codingAiRuntimeOwner.Controller.CancelAnalysisIfPresent,
                 StopLiveDetection: StopLiveDetection,
-                StopPipelineHealthMonitor: StopPipelineHealthMonitor,
+                StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
                 DetachVideoView: () => _playerMediaRuntime.DetachVideoView(VideoView),
                 StopPlayer: () => PlayerPlaybackResourceCleaner.StopPlayer(_playerPlaybackControlHost.Stop),
                 Cleanup: Cleanup,

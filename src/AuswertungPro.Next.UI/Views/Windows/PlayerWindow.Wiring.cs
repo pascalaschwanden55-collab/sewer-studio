@@ -100,7 +100,7 @@ public partial class PlayerWindow
                 StopCodingAiPulse: StopCodingAiPulse,
                 CancelQuickScan: _quickScanController.Cancel,
                 StopLiveDetection: StopLiveDetection,
-                StopPipelineHealthMonitor: StopPipelineHealthMonitor,
+                StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
                 Cleanup: Cleanup,
                 RestoreMainWindow: () => PlayerChromeControls.RestoreNormal(main!),
                 ActivateMainWindow: () => PlayerFocusControls.ActivateWindow(main!)));

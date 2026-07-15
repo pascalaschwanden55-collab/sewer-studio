@@ -140,6 +140,32 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
+        _codingPipelineHealthController = new CodingPipelineHealthController(
+            _codingAiRuntimeOwner.Controller,
+            new CodingPipelineHealthControllerActions(
+                CreateRuntime: () => CodingAiRuntimeCreationWorkflow.Create(
+                    CodeCatalog,
+                    _protocolContext.PipelineConfig),
+                CreateHealthMonitor: runtime => CodingAiHealthMonitorCreationWorkflow.Create(
+                    runtime,
+                    aiEnabled: () => _codingAiRuntimeOwner.Controller.AiEnabled,
+                    qwenAvailable: () => _codingAiRuntimeOwner.Controller.QwenAvailable),
+                IsClosing: () => _shutdownState.IsClosing,
+                DispatcherHasShutdownStarted: () => PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher),
+                HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher),
+                IsCodingMode: () => _codingModeState.IsCodingMode,
+                DispatchToUi: action => PlayerDispatcherScheduler.ScheduleNormal(Dispatcher, action),
+                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
+                SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
+                SetYoloStatus: (status, color, model) => SetYoloStatus(status, color, model),
+                UpdatePipelineHealthDetails: details => LiveDetectionStatusControls.ShowPipelineHealthDetails(
+                    Hd_Sidecar,
+                    Hd_Token,
+                    Hd_Yolo,
+                    Hd_Dino,
+                    Hd_Sam,
+                    Hd_Mode,
+                    details)));
         var playerSettings = _protocolContext.Settings ?? AppSettings.Load();
         WireCodingPhotoHoverPreview();
         _codingTrainingPersistenceContext = CodingTrainingPersistenceContext.CreateDefault(

@@ -54,7 +54,7 @@ public partial class PlayerWindow
     {
         CodingModeBackgroundServicesWorkflow.Execute(
             new CodingModeBackgroundServicesWorkflowActions(
-                StartCodingAiInitialization: () => InitCodingAi().SafeFireAndForget("InitCodingAi"),
+                StartCodingAiInitialization: () => _codingPipelineHealthController.InitializeAsync().SafeFireAndForget("InitCodingAi"),
                 StartCodingOsdTimer: StartCodingOsdTimer,
                 ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter)));
     }

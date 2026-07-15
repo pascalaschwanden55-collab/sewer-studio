@@ -10,6 +10,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     {
         var healthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.cs");
         var monitoringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPipelineHealthController.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeFactory.cs");
         var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiInitializationWorkflow.cs");
         var creationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeCreationWorkflow.cs");
@@ -23,9 +25,12 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.True(File.Exists(healthMonitorCreationWorkflowPath), "Coding-AI-Health-Monitor-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelEnsureWorkflowPath), "Coding-AI-MultiModel-Service-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.False(File.Exists(healthPath), "Coding-AI-Initialisierung soll kein PlayerWindow-Partial mehr sein.");
+        Assert.False(File.Exists(monitoringPath), "Pipeline-Health-Ueberwachung soll kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(controllerPath), "Coding-AI-Initialisierung und Health-Ueberwachung sollen im eigenen Controller liegen.");
 
-        var health = File.ReadAllText(healthPath);
-        var monitoring = File.ReadAllText(monitoringPath);
+        var controller = File.ReadAllText(controllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var factory = File.ReadAllText(factoryPath);
         var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
         var creationWorkflow = File.Exists(creationWorkflowPath) ? File.ReadAllText(creationWorkflowPath) : string.Empty;
@@ -33,16 +38,16 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var multiModelEnsureWorkflow = File.Exists(multiModelEnsureWorkflowPath) ? File.ReadAllText(multiModelEnsureWorkflowPath) : string.Empty;
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
-        Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", health);
-        Assert.Contains("CodingAiRuntimeCreationWorkflow.Create", health);
+        Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", controller);
+        Assert.Contains("CodingAiRuntimeCreationWorkflow.Create", windowRoot);
         Assert.Contains("runtime.RuntimeSettings", initializationWorkflow);
         Assert.Contains("runtime.MultiModelAvailable", initializationWorkflow);
         Assert.Contains("runtime.MultiModelError", initializationWorkflow);
         Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", creationWorkflow);
         Assert.Contains("CodingAiRuntimeFactory.Create(", creationWorkflow);
-        Assert.Contains("CodingAiHealthMonitorCreationWorkflow.Create", health);
+        Assert.Contains("CodingAiHealthMonitorCreationWorkflow.Create", windowRoot);
         Assert.Contains("CodingAiRuntimeFactory.CreateHealthMonitor", healthMonitorCreationWorkflow);
-        Assert.Contains("CodingAiMultiModelEnsureWorkflow.Ensure", monitoring);
+        Assert.Contains("CodingAiMultiModelEnsureWorkflow.Ensure", controller);
         Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", multiModelEnsureWorkflow);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new VisionPipelineClient", factory);
@@ -212,18 +217,27 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial()
+    public void PlayerWindow_coding_health_monitoring_lives_in_controller()
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var healthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.cs");
         var monitoringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPipelineHealthController.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var lifecycleUiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var lifecycleExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var playbackLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
+        var wiringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Wiring.cs");
         var statusControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "LiveDetectionStatusControls.cs");
         var analyzeButtonControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalyzeButtonControls.cs");
         var codingAiControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingAiController.cs");
         var healthChangeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthChangeWorkflow.cs");
         var healthApplyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthApplyWorkflow.cs");
 
-        Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
+        Assert.False(File.Exists(healthPath), "Pipeline-Health-Initialisierung soll kein PlayerWindow-Partial mehr sein.");
+        Assert.False(File.Exists(monitoringPath), "Pipeline-Health-Ueberwachung soll kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(controllerPath), "Pipeline-Health-Ueberwachung soll im eigenen Controller liegen.");
         Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(analyzeButtonControlsPath), "Coding-Analyse-Button-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(codingAiControllerPath), "Pipeline-Health-Monitor-Zustand soll im CodingAiController liegen.");
@@ -231,37 +245,59 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.True(File.Exists(healthApplyWorkflowPath), "Pipeline-Health-Anwendung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
-        var health = File.ReadAllText(healthPath);
-        var monitoring = File.ReadAllText(monitoringPath);
+        var controller = File.ReadAllText(controllerPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var lifecycleUi = File.ReadAllText(lifecycleUiPath);
+        var lifecycleExit = File.ReadAllText(lifecycleExitPath);
+        var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
+        var wiring = File.ReadAllText(wiringPath);
         var statusControls = File.ReadAllText(statusControlsPath);
         var analyzeButtonControls = File.Exists(analyzeButtonControlsPath) ? File.ReadAllText(analyzeButtonControlsPath) : "";
         var codingAiController = File.ReadAllText(codingAiControllerPath);
         var healthChangeWorkflow = File.ReadAllText(healthChangeWorkflowPath);
         var healthApplyWorkflow = File.ReadAllText(healthApplyWorkflowPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(
+                    RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows"),
+                    "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
 
-        Assert.Contains("private async Task InitCodingAi", health);
-        Assert.Contains("private void OnPipelineHealthChanged", monitoring);
-        Assert.Contains("private void ApplyPipelineHealth", monitoring);
-        Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
-        Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
-        Assert.Contains("CodingPipelineHealthChangeWorkflow.Execute", monitoring);
-        Assert.Contains("CodingPipelineHealthApplyWorkflow.Execute", monitoring);
-        Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", monitoring);
-        Assert.Contains("PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher)", monitoring);
-        Assert.Contains("PlayerDispatcherScheduler.HasAccess(Dispatcher)", monitoring);
+        Assert.Contains("public interface ICodingPipelineHealthController", controller);
+        Assert.Contains("public sealed class CodingPipelineHealthController", controller);
+        Assert.Contains("public Task InitializeAsync", controller);
+        Assert.Contains("internal void HandleStatusChanged", controller);
+        Assert.Contains("private void ApplyPipelineHealth", controller);
+        Assert.Contains("public void Stop", controller);
+        Assert.Contains("CodingPipelineHealthChangeWorkflow.Execute", controller);
+        Assert.Contains("CodingPipelineHealthApplyWorkflow.Execute", controller);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", windowRoot);
+        Assert.Contains("PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher)", windowRoot);
+        Assert.Contains("PlayerDispatcherScheduler.HasAccess(Dispatcher)", windowRoot);
         Assert.Contains("actions.DispatchToUi", healthChangeWorkflow);
         Assert.Contains("PipelineHealthUiStateFactory.Create", healthApplyWorkflow);
-        Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);
+        Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", windowRoot);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", ai);
-        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", health);
-        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", monitoring);
+        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", windowRoot);
         Assert.Contains("public static void SetEnabled", analyzeButtonControls);
         Assert.Contains("public static void ShowPipelineHealthDetails", statusControls);
         Assert.Contains("details.Sidecar", statusControls);
-        Assert.Contains(".StopHealthMonitor()", monitoring);
-        Assert.Contains(".SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
+        Assert.Contains(".StopHealthMonitor()", controller);
+        Assert.Contains(".SafeFireAndForget(\"PipelineHealthMonitorStop\")", controller);
         Assert.Contains("_healthMonitor.StatusChanged -= _healthStatusChanged", codingAiController);
         Assert.Contains("_healthMonitor.StopAsync()", codingAiController);
+        Assert.Contains("private readonly ICodingPipelineHealthController _codingPipelineHealthController", state);
+        Assert.Contains("new CodingPipelineHealthController", windowRoot);
+        Assert.Contains("_codingPipelineHealthController.InitializeAsync()", lifecycleUi);
+        Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", lifecycleExit);
+        Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", playbackLifecycle);
+        Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", wiring);
+        Assert.DoesNotContain("private async Task InitCodingAi", playerWindowPartials);
+        Assert.DoesNotContain("private void OnPipelineHealthChanged", playerWindowPartials);
+        Assert.DoesNotContain("private void ApplyPipelineHealth", playerWindowPartials);
+        Assert.DoesNotContain("private void UpdatePipelineHealthDetails", playerWindowPartials);
+        Assert.DoesNotContain("private void StopPipelineHealthMonitor", playerWindowPartials);
     }
 
     [Fact]
