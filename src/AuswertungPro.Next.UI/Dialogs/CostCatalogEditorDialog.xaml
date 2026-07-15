@@ -1,6 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Dialogs.CostCatalogEditorDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="SewerStudio — Positionen bearbeiten"
         Width="1240" Height="720" MinWidth="980" MinHeight="540"
         WindowStartupLocation="CenterOwner"
@@ -84,7 +85,12 @@
                         </DataGrid>
 
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Content="+ DN" Command="{Binding AddDnCommand}" Padding="12,6" Margin="0,0,6,0"/>
+                            <Button Command="{Binding AddDnCommand}" Padding="12,6" Margin="0,0,6,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                    <TextBlock Text="DN"/>
+                                </StackPanel>
+                            </Button>
                             <Button Command="{Binding RemoveDnCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
@@ -103,7 +109,12 @@
 
         <DockPanel Grid.Row="2" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="+ Position" Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0"/>
+                <Button Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                        <TextBlock Text="Position"/>
+                    </StackPanel>
+                </Button>
                 <Button Command="{Binding RemoveCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>

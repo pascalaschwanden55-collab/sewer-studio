@@ -211,6 +211,23 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Text=\"V\"", mainWindow);
     }
 
+    [Fact]
+    public void Editor_dialogs_use_fluent_icons_instead_of_ascii_action_symbols()
+    {
+        var editorXaml = string.Join(
+            "\n",
+            ReadUiFile("Dialogs", "OptionsEditorWindow.xaml"),
+            ReadUiFile("Dialogs", "OptionsEditorDialog.xaml"),
+            ReadUiFile("Dialogs", "CostCatalogEditorDialog.xaml"),
+            ReadUiFile("Dialogs", "PositionTemplateEditorDialog.xaml"),
+            ReadUiFile("Views", "Windows", "MeasureTemplateEditorWindow.xaml"));
+
+        Assert.Contains("<ui:FluentIcon", editorXaml);
+        Assert.DoesNotContain("Content=\"+", editorXaml);
+        Assert.DoesNotContain("Content=\"- Entfernen\"", editorXaml);
+        Assert.DoesNotContain("Foreground=\"Red\"", editorXaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
