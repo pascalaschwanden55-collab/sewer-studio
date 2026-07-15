@@ -6,7 +6,17 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 public sealed class PdfImportServiceAdapter : IPdfImportService
 {
-    private readonly LegacyPdfImportService _svc = new();
+    private readonly LegacyPdfImportService _svc;
+
+    public PdfImportServiceAdapter()
+        : this(PdfTextExtractor.Current)
+    {
+    }
+
+    public PdfImportServiceAdapter(IPdfTextExtractor textExtractor)
+    {
+        _svc = new LegacyPdfImportService(textExtractor);
+    }
 
     public Result<ImportStats> ImportPdf(string pdfPath, Project project, string? pdfToTextPath, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {

@@ -7,13 +7,13 @@ public sealed class PdfBudgetUsageTests
     [Fact]
     public void CorePdfImportPathsUsePdfImportSafetyPolicy()
     {
-        var textExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfTextExtractor.cs"));
+        var textExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfTextExtractionService.cs"));
         var protocolExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"));
         var holdingParser = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "HoldingFolderDistributor.PdfParsing.cs"));
 
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfFileTooLarge", textExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", textExtractor);
-        Assert.Contains("PdfPageBudgetValidator.ThrowIfExceeded", textExtractor);
+        Assert.Contains("ThrowIfPageBudgetExceeded(pdfPath)", textExtractor);
         Assert.Contains("PdfExtractedTextBudget.ReadUtf8AtMost", textExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfFileTooLarge", protocolExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", protocolExtractor);

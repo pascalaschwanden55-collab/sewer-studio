@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
+using IPdfTextExtractor = AuswertungPro.Next.Application.Import.IPdfTextExtractor;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Vsa;
@@ -14,8 +15,18 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 public sealed class LegacyPdfImportService
 {
-
     private readonly PdfParser _parser = new();
+    private readonly IPdfTextExtractor _textExtractor;
+
+    public LegacyPdfImportService()
+        : this(PdfTextExtractor.Current)
+    {
+    }
+
+    internal LegacyPdfImportService(IPdfTextExtractor textExtractor)
+    {
+        _textExtractor = textExtractor ?? throw new ArgumentNullException(nameof(textExtractor));
+    }
 
     public ImportStats ImportPdf(string pdfPath, Project project, string? explicitPdfToTextPath = null, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
@@ -23,7 +34,8 @@ public sealed class LegacyPdfImportService
 
         try
         {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath, explicitPdfToTextPath);
+            var extracted = _textExtractor.ExtractPages(pdfPath, explicitPdfToTextPath);
+            var extraction = new PdfTextExtraction(extracted.Pages, extracted.FullText);
             var usedOcrFallback = false;
             var effectivePages = extraction.Pages
                 .Select(page => (page ?? string.Empty).Replace("\r\n", "\n").Trim())
