@@ -103,39 +103,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void System_monitor_external_commands_use_shared_timeout_process_runner()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Services", "SystemMonitorService.cs"),
-            ".ReadToEnd()",
-            "WaitForExit(");
-
-        Assert.True(
-            offenders.Length == 0,
-            "SystemMonitorService soll externe Prozesse ueber ExternalProcessRunner mit Timeout ausfuehren:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void System_monitor_panel_uses_compact_modern_copy_without_removed_sensor_status_card()
-    {
-        var offenders = FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "MainWindow.xaml"),
-                "Text=\"LEISTUNGSMONITOR\"")
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Controls", "SystemMonitorPanel.xaml"),
-                "Text=\"Sensorstatus\"",
-                "CpuTempStatusText",
-                "Text=\"LEISTUNGSMONITOR\""))
-            .ToArray();
-
-        Assert.True(
-            offenders.Length == 0,
-            "SystemMonitorPanel soll die kompakte moderne Darstellung ohne entfernte Sensorstatus-Karte verwenden:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void Sanierungs_matrix_detail_ui_does_not_reintroduce_removed_grouped_measure_layout()
     {
         var offenders = FindFileTokenOffenders(

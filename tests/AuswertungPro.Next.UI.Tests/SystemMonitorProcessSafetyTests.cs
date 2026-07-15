@@ -26,6 +26,8 @@ public sealed class SystemMonitorProcessSafetyTests
         var source = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Services", "SystemMonitorService.cs"));
 
         Assert.Contains("ExternalProcessRunner.RunAsync", source);
+        Assert.DoesNotContain(".ReadToEnd()", source);
+        Assert.DoesNotContain("WaitForExit(", source);
     }
 
     [Fact]
@@ -100,6 +102,10 @@ public sealed class SystemMonitorProcessSafetyTests
         Assert.Contains("Text=\"RAM Arbeitsspeicher\"", panelXaml);
         Assert.Contains("Text=\"GPU Grafikprozessor\"", panelXaml);
         Assert.Contains("Text=\"VRAM Videospeicher\"", panelXaml);
+        Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", mainWindowXaml);
+        Assert.DoesNotContain("Text=\"Sensorstatus\"", panelXaml);
+        Assert.DoesNotContain("CpuTempStatusText", panelXaml);
+        Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", panelXaml);
     }
 
 }
