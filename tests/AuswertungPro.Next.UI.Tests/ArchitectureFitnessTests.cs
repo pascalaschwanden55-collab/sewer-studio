@@ -365,33 +365,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void PlayerWindow_partials_do_not_access_runtime_owner_fields_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "_codingOverlayService",
-            "_codingAiController",
-            "_codingSessionService");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Runtime-Services ueber Owner/Hosts statt direkte Felder nutzen:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_partials_do_not_manage_coding_analysis_cts_directly()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders(
-            "_codingAnalysisCts?.Cancel();",
-            "_codingAnalysisCts?.Dispose();");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Partials sollen Coding-Analyse-CTS ueber CodingAiController/Lifecycle-Helfer kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void PlayerWindow_partials_do_not_own_win32_screenshot_capture_details()
     {
         var offenders = FindPlayerWindowPartialTokenOffenders(
@@ -506,34 +479,6 @@ public sealed class ArchitectureFitnessTests
         Assert.True(
             offenders.Length == 0,
             "PlayerWindow-Coding-Navigation soll Badge-, Sync- und UI-Update-Details an Workflows/Controller delegieren:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_coding_session_state_and_host_ownership_stay_out_of_window_partials()
-    {
-        var offenders = FindPlayerWindowPartialTokenOffenders("_codingVm")
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
-                "new CodingSessionViewModelOwner",
-                "new CodingSessionHost"))
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs"),
-                "_codingNavPending"))
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs"),
-                "_codingNavPending"))
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs"),
-                "_codingNavPending"))
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionHost.cs"),
-                "public sealed class CodingSessionViewModelOwner"))
-            .ToArray();
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Coding soll Session-VM-Zugriff, Pending-State und Host-Besitz ueber Player-Services kapseln:\n"
             + string.Join("\n", offenders));
     }
 

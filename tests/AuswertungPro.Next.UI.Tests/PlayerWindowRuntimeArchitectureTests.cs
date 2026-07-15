@@ -131,6 +131,15 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         Assert.Contains("public static void CancelIfPresent", helper);
         Assert.Contains("public static CancellationTokenSource CancelPreviousAndCreate", helper);
         Assert.Contains("public static CancellationTokenSource? CancelDisposeAndClear", helper);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders(
+            "_codingAnalysisCts?.Cancel();",
+            "_codingAnalysisCts?.Dispose();");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen Coding-Analyse-CTS ueber CodingAiController/Lifecycle-Helfer kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -144,6 +153,16 @@ public sealed class PlayerWindowRuntimeArchitectureTests
 
         var owner = File.ReadAllText(ownerPath);
         Assert.Contains("public sealed class CodingSessionServiceOwner", owner);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders(
+            "_codingOverlayService",
+            "_codingAiController",
+            "_codingSessionService");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen Runtime-Services ueber Owner/Hosts statt direkte Felder nutzen:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -170,6 +189,30 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         Assert.Contains("new OverlayToolService", factory);
         Assert.Contains("new CodingSessionViewModel", factory);
         Assert.Contains("new CodingFeedbackRecorder", factory);
+
+        var offenders = FindPlayerWindowPartialTokenOffenders("_codingVm")
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs"),
+                "new CodingSessionViewModelOwner",
+                "new CodingSessionHost"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs"),
+                "_codingNavPending"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs"),
+                "_codingNavPending"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs"),
+                "_codingNavPending"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(uiRoot, "Player", "CodingSessionHost.cs"),
+                "public sealed class CodingSessionViewModelOwner"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Coding soll Session-VM-Zugriff, Pending-State und Host-Besitz ueber Player-Services kapseln:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
