@@ -374,7 +374,7 @@ public partial class PlayerWindow : Window
                 ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
                 HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
                 SetAnalyzingPhase: _codingEingabemarkerInteractionController.SetAnalyzingPhase,
-                ResolveCodeHint: ResolveEingabemarkerCodeHint,
+                ResolveCodeHint: PlayerVsaCodeHintResolver.ResolveKeyword,
                 ResolveEvents: () => _codingSessionHost.Events,
                 ShowDuplicateStatus: (codeHint, meter) => _liveDetectionStatusController.SetCodingAiState(
                     $"{codeHint} bereits vorhanden bei {meter:F2}m - Duplikat",
@@ -408,6 +408,16 @@ public partial class PlayerWindow : Window
                     PlayerStatusColors.Error,
                     ""),
                 CancelMarker: () => _codingEingabemarkerInteractionController.Cancel()));
+        _codingEingabemarkerInputController = new CodingEingabemarkerInputController(
+            new CodingEingabemarkerInputControllerBindings(
+                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel(),
+                ClearDetectionOverlays: ClearDetectionOverlays,
+                Submit: () => _codingEingabemarkerSubmissionController
+                    .SubmitAsync(TxtEingabemarker.Text)
+                    .SafeFireAndForget("SubmitEingabemarker"),
+                ApplyQuickSelection: text => CodingEingabemarkerPopupControls.ApplyQuickSelection(
+                    TxtEingabemarker,
+                    text)));
         _liveDetectionMarkSegmentationController = new LiveDetectionMarkSegmentationController(
             new LiveDetectionMarkSegmentationControllerBindings(
                 HasBoxSegmentation: () => _codingAiRuntimeOwner.Controller.BoxSegmentation is not null,

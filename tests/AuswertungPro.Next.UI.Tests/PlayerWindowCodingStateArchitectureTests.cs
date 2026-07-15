@@ -116,6 +116,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         Assert.Contains("private CodingActiveToolNameStateController _codingActiveToolNameState => _codingOverlayStates.ActiveToolNameState", state);
         Assert.Contains("public sealed class CodingOverlayStateControllerSet", overlayStateControllerSet);
         Assert.Contains("private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;", state);
+        Assert.Contains("private readonly ICodingEingabemarkerInputController _codingEingabemarkerInputController;", state);
         Assert.Contains("private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();", state);
         Assert.Contains("private CodingImportReferenceEventsOwner _codingImportReferenceEvents => _codingProtocolStates.ImportReferenceEvents", state);
         Assert.Contains("private CodingNavigationPendingState _codingNavigationPendingState => _codingProtocolStates.NavigationPendingState", state);
@@ -261,12 +262,14 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         var stateControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerStateController.cs");
         var interactionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerInteractionController.cs");
         var submissionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerSubmissionController.cs");
+        var inputControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEingabemarkerInputController.cs");
 
         Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht in einem PlayerWindow-Partial liegen.");
         Assert.False(File.Exists(submissionPath), "Die Eingabemarker-Übernahme soll nicht in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(stateControllerPath), "Eingabemarker-Zustand soll nicht mehr als Rohfelder im PlayerWindow liegen.");
         Assert.True(File.Exists(interactionControllerPath), "Eingabemarker-Interaktion soll ein eigener Controller sein.");
         Assert.True(File.Exists(submissionControllerPath), "Eingabemarker-Übernahme soll ein eigener Controller sein.");
+        Assert.True(File.Exists(inputControllerPath), "Eingabemarker-Eingabe soll ein eigener Controller sein.");
 
         var state = File.ReadAllText(statePath);
         var overlayInput = File.ReadAllText(overlayInputPath);
@@ -286,6 +289,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
             "CodingEingabemarkerStateController _eingabemarkerState");
         Assert.Contains("private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;", state);
         Assert.Contains("private readonly ICodingEingabemarkerSubmissionController _codingEingabemarkerSubmissionController;", state);
+        Assert.Contains("private readonly ICodingEingabemarkerInputController _codingEingabemarkerInputController;", state);
         Assert.Contains("private readonly CodingEingabemarkerStateController _state = new();", interactionController);
         Assert.Contains("public sealed class CodingEingabemarkerStateController", stateController);
         Assert.Contains("public CodingEingabemarkerPhase Phase", stateController);

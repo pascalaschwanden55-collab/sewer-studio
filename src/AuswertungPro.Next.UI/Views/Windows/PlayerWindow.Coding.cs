@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -24,6 +26,16 @@ public partial class PlayerWindow
     private void Eingabemarker_Click(object sender, RoutedEventArgs e)
         => _codingEingabemarkerInteractionController.Toggle(
             PlayerToggleButtonControls.IsChecked(BtnEingabemarker));
+
+    private void CmbEingabemarker_KeyDown(object sender, KeyEventArgs e)
+        => _codingEingabemarkerInputController.HandleKey(
+            isEscape: e.Key == Key.Escape,
+            isEnter: e.Key == Key.Enter);
+
+    private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => _codingEingabemarkerInputController.HandleSelection(
+            CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup),
+            CodingEingabemarkerPopupControls.ResolveSelectedText(CmbEingabemarker.SelectedItem));
 
     /// <summary>
     /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.
