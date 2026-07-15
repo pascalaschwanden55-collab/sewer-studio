@@ -166,6 +166,7 @@ namespace AuswertungPro.Next.UI
         public IPdfTextPrefixReader PdfTextPrefixes { get; }
         public IPdfImportService PdfImport { get; }
         public IPdfTextLayerRewriter PdfTextLayerRewrite { get; }
+        public IDistributionPdfPageReader DistributionPdfPages { get; }
         public IDistributionFileTransfer DistributionFileTransfers { get; }
         public IVideoConflictCandidateCopier VideoConflictCandidates { get; }
         public IShaftPdfSelectionExpander ShaftPdfSelectionExpansion { get; }
@@ -461,6 +462,8 @@ namespace AuswertungPro.Next.UI
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             PdfTextLayerRewrite = new PdfTextLayerRewriteService();
             PdfTextLayerRewriter.Use(PdfTextLayerRewrite);
+            DistributionPdfPages = new DistributionPdfPageReadingService(PdfTextExtraction, PdfFileSafety);
+            DistributionPdfPageReader.Use(DistributionPdfPages);
             DistributionFileTransfers = new DistributionFileTransferService();
             DistributionFileTransfer.Use(DistributionFileTransfers);
             VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
@@ -886,6 +889,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPdfTextPrefixReader)) return PdfTextPrefixes;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IPdfTextLayerRewriter)) return PdfTextLayerRewrite;
+            if (serviceType == typeof(IDistributionPdfPageReader)) return DistributionPdfPages;
             if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;
             if (serviceType == typeof(IVideoConflictCandidateCopier)) return VideoConflictCandidates;
             if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;

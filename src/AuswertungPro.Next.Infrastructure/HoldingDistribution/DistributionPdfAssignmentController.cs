@@ -1,14 +1,11 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Map;
-using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
-
-internal sealed record DistributionPdfPage(int PageNumber, string Text, string SourcePath);
 
 internal sealed record DichtheitPageAssignment(
     int MainPage,
@@ -33,20 +30,7 @@ internal static class DistributionPdfAssignmentController
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     internal static IReadOnlyList<DistributionPdfPage> ReadPages(string pdfPath)
-    {
-        try
-        {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
-            if (extraction.Pages.Count == 0)
-                return ReadPagesWithPdfPig(pdfPath);
-
-            return CreatePages(extraction.Pages, pdfPath);
-        }
-        catch
-        {
-            return ReadPagesWithPdfPig(pdfPath);
-        }
-    }
+        => DistributionPdfPageReader.Current.ReadPages(pdfPath);
 
     internal static IReadOnlyList<DichtheitPageAssignment> ExtractDichtheitPerPage(
         IReadOnlyList<DistributionPdfPage> pages,
@@ -306,37 +290,6 @@ internal static class DistributionPdfAssignmentController
         }
 
         return labeledPhotoKeys.Count > 0 ? labeledPhotoKeys : genericPhotoKeys;
-    }
-
-    private static IReadOnlyList<DistributionPdfPage> ReadPagesWithPdfPig(string pdfPath)
-    {
-        var pages = new List<DistributionPdfPage>();
-        PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
-        using var document = PdfDocument.Open(pdfPath);
-        PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
-        var pageNumber = 0;
-        foreach (var page in document.GetPages())
-        {
-            pageNumber++;
-            var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
-            // Leere Seiten muessen erhalten bleiben. Bei reinen Bild-PDFs braucht
-            // der nachfolgende Verteiler die Seitennummer, um OCR zu starten.
-            pages.Add(new DistributionPdfPage(pageNumber, text, pdfPath));
-        }
-        return pages;
-    }
-
-    private static IReadOnlyList<DistributionPdfPage> CreatePages(
-        IReadOnlyList<string> extractedPages,
-        string pdfPath)
-    {
-        var pages = new List<DistributionPdfPage>(extractedPages.Count);
-        for (var index = 0; index < extractedPages.Count; index++)
-        {
-            var text = (extractedPages[index] ?? "").Replace("\r\n", "\n").Trim();
-            pages.Add(new DistributionPdfPage(index + 1, text, pdfPath));
-        }
-        return pages;
     }
 
     private static bool Matches(string normalized, string stripped, string candidate)

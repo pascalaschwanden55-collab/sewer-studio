@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using UglyToad.PdfPig.Content;
@@ -51,6 +53,26 @@ public sealed class DistributionPdfAssignmentControllerTests
             Assert.Equal("", page.Text);
             Assert.Equal(pdfPath, page.SourcePath);
         });
+    }
+
+    [Fact]
+    public void PageReadingService_verwendet_injizierten_Textleser()
+    {
+        var reader = new DistributionPdfPageReadingService(
+            new FixedTextExtractor(["  Erste Seite\r\nZeile 2  ", "Zweite Seite"]),
+            new UnexpectedFileSafetyChecker());
+
+        var pages = reader.ReadPages("virtuell.pdf");
+
+        Assert.Collection(
+            pages,
+            first =>
+            {
+                Assert.Equal(1, first.PageNumber);
+                Assert.Equal("Erste Seite\nZeile 2", first.Text);
+                Assert.Equal("virtuell.pdf", first.SourcePath);
+            },
+            second => Assert.Equal("Zweite Seite", second.Text));
     }
 
     [Fact]
@@ -151,5 +173,30 @@ public sealed class DistributionPdfAssignmentControllerTests
             if (Directory.Exists(Path))
                 Directory.Delete(Path, recursive: true);
         }
+    }
+
+    private sealed class FixedTextExtractor(IReadOnlyList<string> pages) : IPdfTextExtractor
+    {
+        public string FindPdfToTextPath(string? explicitPath = null) => "virtuell";
+
+        public PdfTextExtractionResult ExtractPages(
+            string pdfPath,
+            string? explicitPdfToTextPath = null) =>
+            new(pages, string.Join("\n", pages));
+
+        public void ThrowIfPageBudgetExceeded(string pdfPath, int? maxPages = null)
+        {
+        }
+    }
+
+    private sealed class UnexpectedFileSafetyChecker : IPdfFileSafetyChecker
+    {
+        public long ResolveMaxBytes() => throw new InvalidOperationException("Dateipruefung war nicht erwartet.");
+
+        public PdfFileSafetyResult CheckFileBudget(string pdfPath, long? maxBytes = null) =>
+            throw new InvalidOperationException("Dateipruefung war nicht erwartet.");
+
+        public void ThrowIfFileTooLarge(string pdfPath, long? maxBytes = null) =>
+            throw new InvalidOperationException("Dateipruefung war nicht erwartet.");
     }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -556,7 +557,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static void PreWarmXtfCache(IReadOnlyList<HoldingDistribution.DistributionPdfPage> pages)
+    private static void PreWarmXtfCache(IReadOnlyList<DistributionPdfPage> pages)
     {
         var sourcePath = pages.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.SourcePath))?.SourcePath;
         if (string.IsNullOrWhiteSpace(sourcePath))
