@@ -154,6 +154,7 @@ namespace AuswertungPro.Next.UI
         public IAtomicPdfFileReplacer PdfFileReplacement { get; }
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
+        public ISchachtProtocolOcrReader SchachtProtocolOcr { get; }
         public IPdfTextPrefixReader PdfTextPrefixes { get; }
         public IPdfImportService PdfImport { get; }
         public IDistributionFileTransfer DistributionFileTransfers { get; }
@@ -417,6 +418,7 @@ namespace AuswertungPro.Next.UI
             PdfTextExtractor.Use(PdfTextExtraction);
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
             PdfOcrExtractor.Use(PdfOcrExtraction);
+            SchachtProtocolOcr = new SchachtProtocolOcrReaderService(PdfFileSafety, PdfOcrExtraction);
             PdfTextPrefixes = new PdfTextPrefixReaderService();
             PdfDokumentTypErkennung.UseTextPrefixReader(PdfTextPrefixes);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
@@ -473,7 +475,9 @@ namespace AuswertungPro.Next.UI
             // Register protocol/photo/pdf services
             Protocols = new ProtocolService();
             PhotoImport = new PhotoImportService();
-            SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService();
+            SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService(
+                PdfTextExtraction,
+                SchachtProtocolOcr);
             SchachtStammdatenErgaenzung = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtStammdatenErgaenzungsService(
                 SchachtProtocolImport);
 
@@ -819,6 +823,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAtomicPdfFileReplacer)) return PdfFileReplacement;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
+            if (serviceType == typeof(ISchachtProtocolOcrReader)) return SchachtProtocolOcr;
             if (serviceType == typeof(IPdfTextPrefixReader)) return PdfTextPrefixes;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;

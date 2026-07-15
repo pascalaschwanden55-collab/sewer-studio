@@ -2,7 +2,6 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
-using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Protocols;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -96,7 +95,7 @@ public sealed class SchachtProtocolImportServiceTests
             () =>
             {
                 ocrCalls++;
-                return new OcrDocumentExtractionResult(
+                return new SchachtProtocolOcrReadResult(
                     true,
                     "Zustandsaufnahme Schacht Nr. 80454\nSchachttyp Kontrollschacht\nDimension 1100/900\nTiefe 2.12\n20/09/2024",
                     3,
@@ -128,7 +127,7 @@ public sealed class SchachtProtocolImportServiceTests
     {
         var result = SchachtProtocolImportService.ParseWithOcrFallback(
             "",
-            () => new OcrDocumentExtractionResult(
+            () => new SchachtProtocolOcrReadResult(
                 false,
                 "",
                 3,
@@ -145,7 +144,7 @@ public sealed class SchachtProtocolImportServiceTests
     {
         var result = SchachtProtocolImportService.ParseWithOcrFallback(
             "",
-            () => new OcrDocumentExtractionResult(
+            () => new SchachtProtocolOcrReadResult(
                 true,
                 "Gesamtauszug Gemeinde ohne passende Protokollfelder",
                 1,
@@ -154,6 +153,21 @@ public sealed class SchachtProtocolImportServiceTests
 
         Assert.False(result.IstSchachtprotokoll);
         Assert.Contains("Texterkennung wurde ausgefuehrt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Parse_NutztEingespritzteTextausleseUndSchachtOcr()
+    {
+        var textExtractor = new EmptyPdfTextExtractor();
+        var ocrReader = new SuccessfulSchachtOcrReader();
+        var service = new SchachtProtocolImportService(textExtractor, ocrReader);
+
+        var result = service.Parse("scan.pdf");
+
+        Assert.True(result.IstSchachtprotokoll);
+        Assert.Equal("80454", result.Schachtnummer);
+        Assert.Equal(1, textExtractor.Calls);
+        Assert.Equal(1, ocrReader.Calls);
     }
 
     [Fact]
@@ -225,4 +239,39 @@ public sealed class SchachtProtocolImportServiceTests
             try { Directory.Delete(root, recursive: true); } catch { /* Best effort. */ }
         }
     }
+
+    private sealed class EmptyPdfTextExtractor : IPdfTextExtractor
+    {
+        public int Calls { get; private set; }
+
+        public string FindPdfToTextPath(string? explicitPath = null)
+            => string.Empty;
+
+        public PdfTextExtractionResult ExtractPages(string pdfPath, string? explicitPdfToTextPath = null)
+        {
+            Calls++;
+            return new PdfTextExtractionResult(Array.Empty<string>(), string.Empty);
+        }
+
+        public void ThrowIfPageBudgetExceeded(string pdfPath, int? maxPages = null)
+        {
+        }
+    }
+
+    private sealed class SuccessfulSchachtOcrReader : ISchachtProtocolOcrReader
+    {
+        public int Calls { get; private set; }
+
+        public SchachtProtocolOcrReadResult TryRead(string pdfPath, int maxPages = 40)
+        {
+            Calls++;
+            return new SchachtProtocolOcrReadResult(
+                true,
+                "Schachtprotokoll Nr. 80454\nSchachttyp Kontrollschacht",
+                1,
+                1,
+                null);
+        }
+    }
+
 }

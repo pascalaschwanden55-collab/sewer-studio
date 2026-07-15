@@ -1,27 +1,32 @@
+using AuswertungPro.Next.Application.Import;
 using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
-internal sealed record OcrDocumentExtractionResult(
-    bool Success,
-    string Text,
-    int TotalPages,
-    int ExtractedPages,
-    string? Message);
-
 /// <summary>
-/// Liest kleine Bild-PDFs seitenweise per OCR. Die Begrenzung verhindert,
-/// dass ein versehentlich gewaehlter Gesamtauszug die Anwendung lange blockiert.
+/// Liest gescannte Schachtprotokolle seitenweise per OCR. Die engere
+/// Seitengrenze schuetzt den manuellen Einzelimport vor sehr langen Laeufen.
 /// </summary>
-internal static class PdfDocumentOcrExtractor
+public sealed class SchachtProtocolOcrReaderService : ISchachtProtocolOcrReader
 {
-    internal const int DefaultMaxOcrPages = 40;
+    public const int DefaultMaxOcrPages = 40;
 
-    public static OcrDocumentExtractionResult TryExtract(
+    private readonly IPdfFileSafetyChecker _fileSafety;
+    private readonly IPdfOcrExtractor _ocrExtractor;
+
+    public SchachtProtocolOcrReaderService(
+        IPdfFileSafetyChecker fileSafety,
+        IPdfOcrExtractor ocrExtractor)
+    {
+        _fileSafety = fileSafety ?? throw new ArgumentNullException(nameof(fileSafety));
+        _ocrExtractor = ocrExtractor ?? throw new ArgumentNullException(nameof(ocrExtractor));
+    }
+
+    public SchachtProtocolOcrReadResult TryRead(
         string pdfPath,
         int maxPages = DefaultMaxOcrPages)
     {
-        var fileBudget = PdfImportSafetyPolicy.CheckFileBudget(pdfPath);
+        var fileBudget = _fileSafety.CheckFileBudget(pdfPath);
         if (!fileBudget.Allowed)
             return Failed(fileBudget.Message);
 
@@ -38,14 +43,21 @@ internal static class PdfDocumentOcrExtractor
 
         var pageBudget = PdfImportSafetyPolicy.CheckPageBudget(pageCount, maxPages);
         if (!pageBudget.Allowed)
-            return new OcrDocumentExtractionResult(false, "", pageCount, 0, pageBudget.Message);
+        {
+            return new SchachtProtocolOcrReadResult(
+                false,
+                string.Empty,
+                pageCount,
+                0,
+                pageBudget.Message);
+        }
 
         var pages = new List<string>();
         string? firstError = null;
 
         for (var pageNumber = 1; pageNumber <= pageCount; pageNumber++)
         {
-            var page = PdfOcrExtractor.TryExtractPageText(pdfPath, pageNumber);
+            var page = _ocrExtractor.TryExtractPageText(pdfPath, pageNumber);
             if (page.Success && !string.IsNullOrWhiteSpace(page.Text))
             {
                 pages.Add(page.Text.Replace("\r\n", "\n").Trim());
@@ -58,15 +70,15 @@ internal static class PdfDocumentOcrExtractor
 
         if (pages.Count == 0)
         {
-            return new OcrDocumentExtractionResult(
+            return new SchachtProtocolOcrReadResult(
                 false,
-                "",
+                string.Empty,
                 pageCount,
                 0,
                 firstError ?? "Die Texterkennung lieferte keinen lesbaren Text.");
         }
 
-        return new OcrDocumentExtractionResult(
+        return new SchachtProtocolOcrReadResult(
             true,
             string.Join("\n\n", pages),
             pageCount,
@@ -74,6 +86,11 @@ internal static class PdfDocumentOcrExtractor
             firstError);
     }
 
-    private static OcrDocumentExtractionResult Failed(string? message)
-        => new(false, "", 0, 0, message ?? "Die Texterkennung konnte nicht gestartet werden.");
+    private static SchachtProtocolOcrReadResult Failed(string? message)
+        => new(
+            false,
+            string.Empty,
+            0,
+            0,
+            message ?? "Die Texterkennung konnte nicht gestartet werden.");
 }

@@ -12,17 +12,37 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
 {
+    private readonly IPdfTextExtractor _pdfTextExtractor;
+    private readonly ISchachtProtocolOcrReader _ocrReader;
+
+    public SchachtProtocolImportService()
+        : this(
+            PdfTextExtractor.Current,
+            new SchachtProtocolOcrReaderService(
+                PdfImportSafetyPolicy.Current,
+                PdfOcrExtractor.Current))
+    {
+    }
+
+    public SchachtProtocolImportService(
+        IPdfTextExtractor pdfTextExtractor,
+        ISchachtProtocolOcrReader ocrReader)
+    {
+        _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
+        _ocrReader = ocrReader ?? throw new ArgumentNullException(nameof(ocrReader));
+    }
+
     public SchachtProtocolParseResult Parse(string pdfPfad)
     {
-        var extraction = PdfTextExtractor.ExtractPages(pdfPfad);
+        var extraction = _pdfTextExtractor.ExtractPages(pdfPfad);
         return ParseWithOcrFallback(
             extraction.FullText,
-            () => PdfDocumentOcrExtractor.TryExtract(pdfPfad));
+            () => _ocrReader.TryRead(pdfPfad));
     }
 
     internal static SchachtProtocolParseResult ParseWithOcrFallback(
         string? extractedText,
-        Func<OcrDocumentExtractionResult> readWithOcr)
+        Func<SchachtProtocolOcrReadResult> readWithOcr)
     {
         ArgumentNullException.ThrowIfNull(readWithOcr);
 
