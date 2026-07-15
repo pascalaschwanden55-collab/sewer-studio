@@ -5,6 +5,13 @@ namespace AuswertungPro.Next.UI.Services;
 
 public sealed class AppSettingsAiSettingsProvider : IAiSettingsProvider
 {
+    private readonly IAiPlatformSettingsResolver? _resolver;
+
+    public AppSettingsAiSettingsProvider(IAiPlatformSettingsResolver? resolver = null)
+    {
+        _resolver = resolver;
+    }
+
     public AiPlatformSettings Load()
     {
         AppSettings? settings = null;
@@ -17,7 +24,7 @@ public sealed class AppSettingsAiSettingsProvider : IAiSettingsProvider
             settings = null;
         }
 
-        return AiSettingsFactory.Load(ToSource(settings));
+        return (_resolver ?? AiSettingsFactory.Current).Load(ToSource(settings));
     }
 
     public static AiSettingsSource ToSource(AppSettings? settings)

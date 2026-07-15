@@ -82,3 +82,9 @@ public interface IAiSettingsProvider
 {
     AiPlatformSettings Load();
 }
+
+/// <summary>Fuehrt gespeicherte KI-Werte, Umgebung und Laufzeit-Fallbacks zusammen.</summary>
+public interface IAiPlatformSettingsResolver
+{
+    AiPlatformSettings Load(AiSettingsSource? source = null);
+}

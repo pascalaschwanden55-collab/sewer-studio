@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using AuswertungPro.Next.Application.Ai;
@@ -7,9 +5,24 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Configuration;
 
-public static class AiSettingsFactory
+/// <summary>Liest KI-Laufzeitwerte ueber injizierbare Systemquellen.</summary>
+public sealed class AiPlatformSettingsResolver : IAiPlatformSettingsResolver
 {
-    public static AiPlatformSettings Load(AiSettingsSource? source = null)
+    private readonly IGpuModelSelector _gpuModels;
+    private readonly Func<string, string?> _getEnvironmentVariable;
+    private readonly Action<string> _writeTrace;
+
+    public AiPlatformSettingsResolver(
+        IGpuModelSelector gpuModels,
+        Func<string, string?>? getEnvironmentVariable = null,
+        Action<string>? writeTrace = null)
+    {
+        _gpuModels = gpuModels ?? throw new ArgumentNullException(nameof(gpuModels));
+        _getEnvironmentVariable = getEnvironmentVariable ?? Environment.GetEnvironmentVariable;
+        _writeTrace = writeTrace ?? (message => Trace.WriteLine(message));
+    }
+
+    public AiPlatformSettings Load(AiSettingsSource? source = null)
     {
         source ??= new AiSettingsSource();
 
@@ -22,12 +35,12 @@ public static class AiSettingsFactory
 
         if (GpuModelSelector.IsAutoMode(configuredVision))
         {
-            var gpuProfile = GpuModelSelector.DetectAndSelect();
+            var gpuProfile = _gpuModels.DetectAndSelect();
             if (gpuProfile is not null)
             {
                 vision = gpuProfile.ResolvedModel;
                 numCtxDefault = gpuProfile.ResolvedNumCtx;
-                Trace.WriteLine($"[AiSettingsFactory] GPU Auto-Select: {gpuProfile.Reason}");
+                _writeTrace($"[AiSettingsFactory] GPU Auto-Select: {gpuProfile.Reason}");
             }
             else
             {
@@ -47,10 +60,8 @@ public static class AiSettingsFactory
             ["BBA"] = 0.20,
             ["BBB"] = 0.25,
             ["BBC"] = 0.25,
-            // BCA von 0.35 auf 0.30 gesenkt (2026-06-18): Die 0.35 (eingefuehrt mit 0df63f16)
-            // verwarf Anschluss-Frames mit YOLO-Confidence 0.30-0.34 komplett -> IsRelevant=false
-            // -> DINO/SAM liefen gar nicht -> SAM bekam keine Box (Regression "frueher saubere
-            // Masken, jetzt nicht"). 0.30 = konsistent mit den anderen Struktur-Codes.
+            // Seit 2026-06-18: 0.30 laesst relevante Anschluss-Frames mit
+            // Confidence 0.30-0.34 weiterhin in DINO/SAM einlaufen.
             ["BCA"] = 0.30,
             ["BCC"] = 0.30,
             ["BCD"] = 0.30,
@@ -58,32 +69,81 @@ public static class AiSettingsFactory
         };
 
         return new AiPlatformSettings(
-            Enabled: source.Enabled ?? ParseBool(Env("SEWERSTUDIO_AI_ENABLED")),
+            Enabled: source.Enabled ?? AiSettingsFactory.ParseBool(Env("SEWERSTUDIO_AI_ENABLED")),
             OllamaBaseUri: new Uri(FirstNonEmpty(source.OllamaUrl, Env("SEWERSTUDIO_OLLAMA_URL")) ?? "http://localhost:11434"),
             VisionModel: vision,
             TextModel: FirstNonEmpty(source.TextModel, Env("SEWERSTUDIO_AI_TEXT_MODEL")) ?? OllamaConfig.DefaultTextModel,
             EmbedModel: FirstNonEmpty(source.EmbedModel, Env("SEWERSTUDIO_AI_EMBED_MODEL")) ?? OllamaConfig.DefaultEmbedModel,
-            OllamaRequestTimeout: TimeSpan.FromMinutes(source.OllamaTimeoutMin ?? ParseInt(Env("SEWERSTUDIO_AI_TIMEOUT_MIN")) ?? 5),
+            OllamaRequestTimeout: TimeSpan.FromMinutes(source.OllamaTimeoutMin ?? AiSettingsFactory.ParseInt(Env("SEWERSTUDIO_AI_TIMEOUT_MIN")) ?? 5),
             OllamaKeepAlive: FirstNonEmpty(source.OllamaKeepAlive, Env("SEWERSTUDIO_OLLAMA_KEEP_ALIVE")) ?? OllamaConfig.DefaultKeepAlive,
-            OllamaNumCtx: source.OllamaNumCtx ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX")) ?? numCtxDefault,
-            MultiModelEnabled: source.MultiModelEnabled ?? ParseBool(Env("SEWERSTUDIO_MULTIMODEL_ENABLED")),
+            OllamaNumCtx: source.OllamaNumCtx ?? AiSettingsFactory.ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX")) ?? numCtxDefault,
+            MultiModelEnabled: source.MultiModelEnabled ?? AiSettingsFactory.ParseBool(Env("SEWERSTUDIO_MULTIMODEL_ENABLED")),
             SidecarUrl: new Uri(FirstNonEmpty(source.SidecarUrl, Env("SEWERSTUDIO_SIDECAR_URL")) ?? "http://localhost:8100"),
             SidecarToken: FirstNonEmpty(
                 source.SidecarToken,
                 Env("SEWERSTUDIO_SIDECAR_TOKEN"),
                 RawEnv("SEWER_SIDECAR_AUTH_TOKEN"),
                 RawEnv("SEWER_SIDECAR_TOKEN")),
-            PipelineMode: ParsePipelineMode(FirstNonEmpty(source.PipelineMode, Env("SEWERSTUDIO_PIPELINE_MODE"))),
-            YoloConfidence: source.YoloConfidence ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE")) ?? 0.25,
+            PipelineMode: AiSettingsFactory.ParsePipelineMode(FirstNonEmpty(source.PipelineMode, Env("SEWERSTUDIO_PIPELINE_MODE"))),
+            YoloConfidence: source.YoloConfidence ?? AiSettingsFactory.ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE")) ?? 0.25,
             YoloClassConfidence: yoloClassConf,
-            // 0.25/0.20 statt 0.30/0.25 seit A/B auf 57er-clean (2026-06-10): Befund-Frames
-            // ohne DINO-Box 3->0, Grundgeruest 15->5; LEER-Boxen moderat hoeher (max 7).
-            DinoBoxThreshold: source.DinoBoxThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD")) ?? 0.25,
-            DinoTextThreshold: source.DinoTextThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_TEXT_THRESHOLD")) ?? 0.20,
-            SidecarTimeoutSec: ParseInt(Env("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC")) ?? 300,
-            PipeDiameterMmOverride: source.PipeDiameterMm ?? ParseInt(Env("SEWERSTUDIO_PIPE_DIAMETER_MM")),
+            // Seit dem A/B-Lauf 2026-06-10 bewusst 0.25/0.20, damit
+            // Befund-Frames ohne erste DINO-Box nicht vorschnell entfallen.
+            DinoBoxThreshold: source.DinoBoxThreshold ?? AiSettingsFactory.ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD")) ?? 0.25,
+            DinoTextThreshold: source.DinoTextThreshold ?? AiSettingsFactory.ParseDouble(Env("SEWERSTUDIO_DINO_TEXT_THRESHOLD")) ?? 0.20,
+            SidecarTimeoutSec: AiSettingsFactory.ParseInt(Env("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC")) ?? 300,
+            PipeDiameterMmOverride: source.PipeDiameterMm ?? AiSettingsFactory.ParseInt(Env("SEWERSTUDIO_PIPE_DIAMETER_MM")),
             FfmpegPath: FirstNonEmpty(source.FfmpegPath, Env("SEWERSTUDIO_FFMPEG")) ?? "ffmpeg");
     }
+
+    private string? Env(string name)
+    {
+        var value = _getEnvironmentVariable(name)?.Trim();
+        if (!string.IsNullOrEmpty(value))
+            return value;
+
+        if (name.StartsWith("SEWERSTUDIO_", StringComparison.Ordinal))
+        {
+            return _getEnvironmentVariable(
+                "AUSWERTUNGPRO_" + name["SEWERSTUDIO_".Length..])?.Trim();
+        }
+
+        return null;
+    }
+
+    private string? RawEnv(string name)
+    {
+        var value = _getEnvironmentVariable(name)?.Trim();
+        return string.IsNullOrEmpty(value) ? null : value;
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+
+        return null;
+    }
+}
+
+/// <summary>Kompatibilitaetsfassade; reine Parser bleiben statisch.</summary>
+public static class AiSettingsFactory
+{
+    private static IAiPlatformSettingsResolver _current =
+        new AiPlatformSettingsResolver(GpuModelSelector.Current);
+
+    public static IAiPlatformSettingsResolver Current => Volatile.Read(ref _current);
+
+    public static void Use(IAiPlatformSettingsResolver resolver) =>
+        Volatile.Write(
+            ref _current,
+            resolver ?? throw new ArgumentNullException(nameof(resolver)));
+
+    public static AiPlatformSettings Load(AiSettingsSource? source = null) =>
+        Current.Load(source);
 
     public static PipelineMode ParsePipelineMode(string? value)
     {
@@ -112,36 +172,4 @@ public static class AiSettingsFactory
 
     public static int? ParseInt(string? value) =>
         int.TryParse(value?.Trim(), out var parsed) ? parsed : null;
-
-    private static string? Env(string name)
-    {
-        var value = Environment.GetEnvironmentVariable(name)?.Trim();
-        if (!string.IsNullOrEmpty(value))
-            return value;
-
-        if (name.StartsWith("SEWERSTUDIO_", StringComparison.Ordinal))
-        {
-            return Environment.GetEnvironmentVariable(
-                "AUSWERTUNGPRO_" + name["SEWERSTUDIO_".Length..])?.Trim();
-        }
-
-        return null;
-    }
-
-    private static string? RawEnv(string name)
-    {
-        var value = Environment.GetEnvironmentVariable(name)?.Trim();
-        return string.IsNullOrEmpty(value) ? null : value;
-    }
-
-    private static string? FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                return value.Trim();
-        }
-
-        return null;
-    }
 }

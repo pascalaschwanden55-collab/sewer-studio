@@ -231,6 +231,7 @@ namespace AuswertungPro.Next.UI
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
         public IGpuModelSelector GpuModels { get; }
+        public IAiPlatformSettingsResolver AiSettings { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
         public ITelemetryPathResolver TelemetryPaths { get; }
@@ -249,7 +250,7 @@ namespace AuswertungPro.Next.UI
         public string? VsaCatalogResolvedPath { get; }
 
         /// <summary>Gibt bei jedem Zugriff eine frische PipelineConfig zurück (1x laden, projizieren).</summary>
-        public PipelineConfig PipelineCfg => AiSettingsFactory
+        public PipelineConfig PipelineCfg => AiSettings
             .Load(AppSettingsAiSettingsProvider.ToSource(Settings))
             .ToPipelineConfig();
 
@@ -336,6 +337,8 @@ namespace AuswertungPro.Next.UI
             AiStartedProcessLifetime.Use(AiStartedProcesses);
             GpuModels = new GpuModelSelectionService();
             GpuModelSelector.Use(GpuModels);
+            AiSettings = new AiPlatformSettingsResolver(GpuModels);
+            AiSettingsFactory.Use(AiSettings);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -522,7 +525,7 @@ namespace AuswertungPro.Next.UI
 
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
-            var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
+            var aiPlatform = AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings));
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();
@@ -536,7 +539,7 @@ namespace AuswertungPro.Next.UI
                 catalogPaths.XmlCatalogPaths);
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
                 PipelineTrace,
-                () => AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
+                () => AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
                 CodeCatalog,
                 LoggerFactory);
             SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
@@ -687,7 +690,7 @@ namespace AuswertungPro.Next.UI
         /// </summary>
         public AuswertungPro.Next.Application.Schatten.ISchattenAuswertungService CreateSchattenAuswertung()
         {
-            var cfg = new Services.AppSettingsAiSettingsProvider().Load().ToRuntimeSettings();
+            var cfg = new Services.AppSettingsAiSettingsProvider(AiSettings).Load().ToRuntimeSettings();
             var ki = cfg.Enabled ? CreateSanierungOptimization(cfg) : null;
             return new AuswertungPro.Next.Infrastructure.Schatten.SchattenAuswertungService(
                 Vsa, MeasureRecommendation, ki, cfg.Enabled ? cfg.TextModel : null);
@@ -719,7 +722,7 @@ namespace AuswertungPro.Next.UI
         {
             try
             {
-                var platform = AiSettingsFactory.Load(
+                var platform = AiSettings.Load(
                     AppSettingsAiSettingsProvider.ToSource(Settings));
                 if (!platform.Enabled)
                     return null;
@@ -871,6 +874,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(ITelemetryPathResolver)) return TelemetryPaths;
             if (serviceType == typeof(IGpuModelSelector)) return GpuModels;
+            if (serviceType == typeof(IAiPlatformSettingsResolver)) return AiSettings;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
