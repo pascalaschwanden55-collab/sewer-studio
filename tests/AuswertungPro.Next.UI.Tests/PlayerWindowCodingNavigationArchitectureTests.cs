@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -132,6 +133,32 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
         Assert.Contains("CodingSessionRuntimeFactory.Create", windowCode);
         Assert.Contains("new CodingNavigationController", windowCode);
+
+        var offenders = FindFileTokenOffenders(
+                navigationPath,
+                "CodingCurrentCodeBadgePolicy.Build",
+                "=> !_codingSessionHost.HasViewModel",
+                "TxtCodingCurrentCode.Text",
+                "CodingCurrentCodeBadge.Visibility",
+                "Dispatcher.InvokeAsync",
+                "if (!_codingSessionHost.HasViewModel) return;",
+                "catch (Exception",
+                "CodingStatisticsRefreshPolicy.ShouldRefresh",
+                "_codingSessionHost.HasViewModel ? _codingSessionHost : null",
+                "CodingCurrentMeterResolver.Resolve",
+                "CodingVideoSyncPolicy.TryResolveTargetTimeMs",
+                "Action<CodingSessionViewModel>")
+            .Concat(FindFileTokenOffenders(
+                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs"),
+                "private async void CodingNext_Click",
+                "private async void CodingPrevious_Click",
+                "private void SyncVideoToCodingMeter"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Coding-Navigation soll Badge-, Sync- und UI-Update-Details an Workflows/Controller delegieren:\n"
+            + string.Join("\n", offenders));
     }
 
 }

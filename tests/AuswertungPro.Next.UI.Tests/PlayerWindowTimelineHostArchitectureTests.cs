@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -120,6 +121,52 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             Path.Combine(uiRoot, "Player", "LiveDetectionConfirmationTrainingController.cs"));
         Assert.Contains("PlayerTimelineHost", confirmationController);
         Assert.Contains("_timelineHost", confirmationController);
+
+        var guardedFiles = new[]
+        {
+            "PlayerWindow.Coding.Osd.cs",
+            "PlayerWindow.Coding.Osd.Reading.cs",
+            "PlayerWindow.Coding.Ai.cs",
+            "PlayerWindow.Coding.AiEvents.cs",
+            "PlayerWindow.Coding.AiEvents.Live.cs",
+            "PlayerWindow.Coding.AiEvents.MultiModel.cs",
+            "PlayerWindow.Coding.Ai.Streckenschaden.cs",
+            "PlayerWindow.Coding.Boundaries.cs",
+            "PlayerWindow.Coding.Eingabemarker.Submission.cs",
+            "PlayerWindow.Coding.Events.cs",
+            "PlayerWindow.Coding.Events.Actions.cs",
+            "PlayerWindow.Coding.FrameReadiness.cs",
+            "PlayerWindow.Coding.ProtocolMatch.cs",
+            "PlayerWindow.Coding.Navigation.cs",
+            "PlayerWindow.Coding.Lifecycle.Exit.cs",
+            "PlayerWindow.Coding.Photos.Capture.cs",
+            "PlayerWindow.LiveDetection.Confirmation.cs",
+            "PlayerWindow.LiveDetection.Confirmation.Training.cs",
+            "PlayerWindow.LiveDetection.Marking.cs",
+            "PlayerWindow.LiveDetection.Marking.Catalog.cs"
+        };
+
+        var offenders = guardedFiles
+            .SelectMany(file => FindFileTokenOffenders(
+                Path.Combine(windowsRoot, file),
+                "_player.Time",
+                "_player.Length",
+                "_player?.Time",
+                "_player?.Length"))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs"),
+                "_player.",
+                "_player?."))
+            .Concat(FindFileTokenOffenders(
+                Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs"),
+                "_player.",
+                "_player?."))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Timeline-Leser sollen Zeit/Dauer ueber PlayerTimelineHost statt roh ueber _player lesen:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]
@@ -149,5 +196,21 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             Assert.Contains("PlayerTimelineHost", text);
             Assert.Contains("PlayerPlaybackControlHost", text);
         }
+
+        var offenders = paths
+            .SelectMany(path => FindFileTokenOffenders(
+                path,
+                "MediaPlayer",
+                "_player.SetPause",
+                "_player.Time",
+                "_player.Length",
+                "_player?.Time",
+                "_player?.Length"))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Timeline-Overlay-Controller sollen ueber PlayerTimelineHost/PlayerPlaybackControlHost statt MediaPlayer arbeiten:\n"
+            + string.Join("\n", offenders));
     }
 }
