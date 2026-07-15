@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -48,7 +49,7 @@ public sealed record KanalExportDetection(
 /// WinCan-Kriterium:  *.db3 in einem Unterordner namens "DB" (rekursiv);
 ///                    *_Meta.db3 werden ignoriert; bei mehreren nimmt man die groesste.
 ///
-/// IKAS-Kriterium:    KiasExportPattern.Detect(root).IsKias == true
+/// IKAS-Kriterium:    IKiasExportPatternDetector.Detect(root).IsKias == true
 ///                    ODER eine .xtf-Datei enthaelt "VSA_KEK_2020_LV95".
 ///
 /// Treffen beide zu → Ambiguous; keins → Unknown.
@@ -57,6 +58,18 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
 {
     // Anzahl Bytes die beim XTF-Header-Scan gelesen werden (erste ~64 KB reichen)
     private const int XtfHeaderBytes = 65_536;
+    private readonly IKiasExportPatternDetector _kiasExportPatternDetector;
+
+    public KanalExportDetectionService()
+        : this(KiasExportPattern.Current)
+    {
+    }
+
+    public KanalExportDetectionService(IKiasExportPatternDetector kiasExportPatternDetector)
+    {
+        _kiasExportPatternDetector = kiasExportPatternDetector
+            ?? throw new ArgumentNullException(nameof(kiasExportPatternDetector));
+    }
 
     /// <summary>
     /// Analysiert <paramref name="sourceFolder"/> und liefert das erkannte Format
@@ -79,7 +92,7 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
         // --- IKAS-Suche ---
         var (vsaKekPath, sia405Path, vsaKekAnyPath) = FindXtfFiles(sourceFolder);
         var isIkasByXtf = vsaKekPath is not null;
-        var isIbakByPattern = KiasExportPattern.Detect(sourceFolder).IsKias;
+        var isIbakByPattern = _kiasExportPatternDetector.Detect(sourceFolder).IsKias;
         var isIkasOrIbak = isIkasByXtf || isIbakByPattern;
 
         // --- Format bestimmen ---

@@ -61,7 +61,9 @@ public sealed class ProjektmanagerReconcileGuardTests
             "ProjectImportOrchestrator.cs");
 
         Assert.Contains("public IKanalExportDetectionService KanalExportDetection", provider);
-        Assert.Contains("KanalExportDetection = new KanalExportDetectionService()", provider);
+        Assert.Contains(
+            "KanalExportDetection = new KanalExportDetectionService(KiasExportPatterns)",
+            provider);
         Assert.Contains("_exportDetector.Detect(sourceFolder)", orchestrator);
         Assert.DoesNotContain("KanalExportDetector.Detect(sourceFolder)", orchestrator);
     }

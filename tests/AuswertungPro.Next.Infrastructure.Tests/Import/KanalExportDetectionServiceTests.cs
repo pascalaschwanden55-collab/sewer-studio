@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
@@ -41,6 +42,20 @@ public sealed class KanalExportDetectionServiceTests : IDisposable
         Assert.Equal(sourceDirectory, detector.LastSourceFolder);
     }
 
+    [Fact]
+    public void InstanceService_UsesInjectedKiasPatternDetector()
+    {
+        Directory.CreateDirectory(_tempDirectory);
+        var kiasDetector = new RecordingKiasPatternDetector();
+        var detector = new KanalExportDetectionService(kiasDetector);
+
+        var result = detector.Detect(_tempDirectory);
+
+        Assert.Equal(KanalExportFormat.Ibak, result.Format);
+        Assert.Equal(1, kiasDetector.Calls);
+        Assert.Equal(_tempDirectory, kiasDetector.LastSourceFolder);
+    }
+
     public void Dispose()
     {
         try
@@ -69,6 +84,29 @@ public sealed class KanalExportDetectionServiceTests : IDisposable
                 null,
                 null,
                 "Test-Ergebnis");
+        }
+    }
+
+    private sealed class RecordingKiasPatternDetector : IKiasExportPatternDetector
+    {
+        public int Calls { get; private set; }
+        public string? LastSourceFolder { get; private set; }
+
+        public KiasExportDetectionResult Detect(string exportRoot)
+        {
+            Calls++;
+            LastSourceFolder = exportRoot;
+            return new KiasExportDetectionResult(
+                IsKias: true,
+                HasArizonaFdb: true,
+                HasFilmFolder: true,
+                HasReportFolder: false,
+                HasDatenTxt: true,
+                HoldingPdfCount: 0,
+                LateralPdfCount: 0,
+                GegenrichtungVideoCount: 0,
+                RepeatTakeVideoCount: 0,
+                Reason: "Test-KIAS");
         }
     }
 }

@@ -167,6 +167,7 @@ namespace AuswertungPro.Next.UI
         public IStoredImportFileService StoredImportFiles { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
         public IProjectStructureInitializer ProjectStructure { get; }
+        public IKiasExportPatternDetector KiasExportPatterns { get; }
         public IKanalExportDetectionService KanalExportDetection { get; }
         public ISchaechteTemplateColumnReader SchaechteTemplateColumns { get; }
         public IProjectRecoveryService ProjectRecovery { get; }
@@ -382,7 +383,9 @@ namespace AuswertungPro.Next.UI
             ProjectDropPaths = new ProjectDropFilePathResolver();
             ViewModels.Pages.ProjectDropPathResolver.Use(ProjectDropPaths);
             ProjectStructure = new ProjectStructureInitializer();
-            KanalExportDetection = new KanalExportDetectionService();
+            KiasExportPatterns = new KiasExportPatternDetectionService();
+            KiasExportPattern.Use(KiasExportPatterns);
+            KanalExportDetection = new KanalExportDetectionService(KiasExportPatterns);
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
             PdfImport = new PdfImportServiceAdapter();
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
@@ -748,6 +751,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
             if (serviceType == typeof(IProjectDropPathResolver)) return ProjectDropPaths;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
+            if (serviceType == typeof(IKiasExportPatternDetector)) return KiasExportPatterns;
             if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
             if (serviceType == typeof(ISchaechteTemplateColumnReader)) return SchaechteTemplateColumns;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
