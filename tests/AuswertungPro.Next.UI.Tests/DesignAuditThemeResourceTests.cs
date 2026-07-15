@@ -197,6 +197,20 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("TargetType=\"{x:Type GridViewColumnHeader}\"", controls);
     }
 
+    [Fact]
+    public void Navigation_uses_one_stroke_chevron_and_no_vsa_letter_overlay()
+    {
+        var controls = ReadUiFile("Theme", "Controls.xaml");
+        var mainWindow = ReadUiFile("MainWindow.xaml");
+
+        Assert.Contains("x:Key=\"ChevronGeometry\"", controls);
+        Assert.Equal(
+            3,
+            controls.Split("Data=\"{StaticResource ChevronGeometry}\"", StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("Data=\"M0,0 L4,4 L8,0 Z\"", controls);
+        Assert.DoesNotContain("Text=\"V\"", mainWindow);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

@@ -449,9 +449,6 @@
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                         <Ellipse Canvas.Left="22.8" Canvas.Top="10.8" Width="2.2" Height="2.2"
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                                        <TextBlock Canvas.Left="12.5" Canvas.Top="12.5" Text="V"
-                                                   FontSize="10" FontWeight="SemiBold"
-                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     </Canvas>
                                 </Grid>
                                 <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="13.5"
