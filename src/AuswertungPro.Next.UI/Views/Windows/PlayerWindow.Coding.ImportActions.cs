@@ -31,7 +31,7 @@ public partial class PlayerWindow
         // Bearbeiten oeffnet den modernen VSA-Explorer; dort ist der PhotoAssistant mit
         // dem Rechteck/MarkRect-Werkzeug (BBox ziehen). Danach Abgleich neu rechnen.
         if (LstImportEvents.SelectedItem is CodingEvent ev && TryEditCodingEvent(ev))
-            RunCodingProtocolMatch();
+            _codingProtocolMatchController.RunMatch();
     }
 
     private void ImportConfirmToBrain_Click(object sender, RoutedEventArgs e)
@@ -49,6 +49,6 @@ public partial class PlayerWindow
                 ShowSuccess: () => ShowOverlay(
                     "Ins KI-Brain uebernommen.",
                     TimeSpan.FromSeconds(2)),
-                RefreshProtocolMatch: RunCodingProtocolMatch));
+                RefreshProtocolMatch: () => _codingProtocolMatchController.RunMatch()));
     }
 }

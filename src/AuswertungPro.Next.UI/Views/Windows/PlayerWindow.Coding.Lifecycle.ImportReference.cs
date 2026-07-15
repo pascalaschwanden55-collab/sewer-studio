@@ -15,7 +15,7 @@ public partial class PlayerWindow
                 HasEventCollection: eventCollection is not null),
             new CodingImportReferenceInitializationWorkflowActions(
                 ResetProtocolMatchState: _codingProtocolMatchState.Reset,
-                UpdateProtocolMatchSummary: UpdateCodingProtocolMatchSummary,
+                UpdateProtocolMatchSummary: _codingProtocolMatchController.UpdateSummary,
                 MoveExistingEventsToImportReference: () => CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
                     eventCollection!,
                     _codingImportReferenceEvents.Events),
@@ -69,6 +69,6 @@ public partial class PlayerWindow
 
         RefreshCodingEventsList();
         CodingImportReferenceControls.SetCount(RunImportDefectCount, import.Count);
-        RunCodingProtocolMatch();
+        _codingProtocolMatchController.RunMatch();
     }
 }

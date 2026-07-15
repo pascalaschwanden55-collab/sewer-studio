@@ -54,8 +54,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.Eingabemarker.Submission.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
-            "PlayerWindow.Coding.FrameReadiness.cs",
-            "PlayerWindow.Coding.ProtocolMatch.cs"
+            "PlayerWindow.Coding.FrameReadiness.cs"
         };
 
         foreach (var fileName in paths)
@@ -69,6 +68,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         Assert.Contains("FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);
+        Assert.Contains("SeekMilliseconds: _playerTimelineHost.SeekMilliseconds", windowRoot);
     }
 
     [Fact]
@@ -137,7 +137,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs",
-            "PlayerWindow.Coding.ProtocolMatch.cs",
             "PlayerWindow.Coding.Navigation.cs",
             "PlayerWindow.xaml.cs",
             "PlayerWindow.Coding.Photos.Capture.cs",

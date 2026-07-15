@@ -213,6 +213,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
     {
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
         var highlightPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
@@ -222,7 +223,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         Assert.True(File.Exists(protocolStatePath), "Coding-Protocol-Match-State soll nicht mehr als Rohfelder im PlayerWindow liegen.");
 
         var state = File.ReadAllText(statePath);
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var controller = File.ReadAllText(controllerPath);
         var highlight = File.ReadAllText(highlightPath);
         var training = File.ReadAllText(trainingPath);
         var exit = File.ReadAllText(exitPath);
@@ -234,8 +235,10 @@ public sealed class PlayerWindowCodingStateArchitectureTests
             "private CodingMatchRouting? _lastCodingMatch;",
             "private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets");
         Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", state);
-        Assert.Contains("_codingProtocolMatchState.Buckets", protocolMatch);
-        Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", protocolMatch);
+        Assert.Contains("private readonly ICodingProtocolMatchController _codingProtocolMatchController", state);
+        Assert.False(File.Exists(protocolMatchPath), "Der Protokollabgleich darf nicht wieder als PlayerWindow-Partial erscheinen.");
+        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", controller);
+        Assert.Contains("StoreMatch: _bindings.StoreMatch", controller);
         Assert.Contains("_codingProtocolMatchState.TryGetBucket", highlight);
         Assert.Contains("_codingProtocolMatchState.LastMatch", training);
         Assert.Contains("_codingProtocolMatchState.Reset", exit);

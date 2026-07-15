@@ -18,7 +18,7 @@ public partial class PlayerWindow
                 _codingSessionHost.HasViewModel,
                 _codingProtocolMatchState.LastMatch),
             new CodingAcceptGreenMatchesCommandActions(
-                RunProtocolMatch: RunCodingProtocolMatch,
+                RunProtocolMatch: () => _codingProtocolMatchController.RunMatch(),
                 GetCurrentRouting: () => _codingProtocolMatchState.LastMatch,
                 AcceptGreenMatchesAsync: routing => CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
                     routing,
@@ -41,7 +41,7 @@ public partial class PlayerWindow
     {
         var result = await CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync(
             importEvent,
-            SeekToImportEvent,
+            importEventToSeek => _codingProtocolMatchController.SeekImportEvent(importEventToSeek),
             () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null,
             CodingProtocolGuidedVerificationAdapter.Create(_codingAiRuntimeOwner.Controller.ProtocolVerifier));
         return CodingImportTrainingResultWorkflow.Execute(

@@ -50,6 +50,9 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     public void PlayerWindow_protocol_match_summary_uses_controls_adapter()
     {
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var importSeekWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportEventSeekCommandWorkflow.cs");
         var matchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchCommandWorkflow.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchSummaryControls.cs");
@@ -57,18 +60,25 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.True(File.Exists(importSeekWorkflowPath), "Import-Event-Seek-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchCommandWorkflowPath), "Protocol-Match-Ausfuehrungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Protocol-Match-Summary-Control-Zuweisung soll ausserhalb des PlayerWindow-Partials liegen.");
+        Assert.False(File.Exists(protocolMatchPath), "Der Protokollabgleich darf nicht wieder als PlayerWindow-Partial erscheinen.");
+        Assert.True(File.Exists(controllerPath), "Der Protokollabgleich braucht einen eigenen Controller.");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var controller = File.ReadAllText(controllerPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var importSeekWorkflow = File.Exists(importSeekWorkflowPath) ? File.ReadAllText(importSeekWorkflowPath) : "";
         var matchCommandWorkflow = File.Exists(matchCommandWorkflowPath) ? File.ReadAllText(matchCommandWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
-        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", protocolMatch);
-        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", protocolMatch);
-        Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
-        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", protocolMatch);
-        Assert.Contains("_codingSessionHost", protocolMatch);
+        Assert.Contains("public interface ICodingProtocolMatchController", controller);
+        Assert.Contains("public sealed class CodingProtocolMatchController", controller);
+        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", controller);
+        Assert.Contains("private readonly ICodingProtocolMatchController _codingProtocolMatchController", state);
+        Assert.Contains("CodingProtocolMatchSummaryControls.Apply", windowRoot);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", windowRoot);
+        Assert.Contains("_codingSessionHost", windowRoot);
         AssertNoForbiddenTokens(
-            protocolMatch,
+            controller,
             "Dispatcher.InvokeAsync",
             "if (!_codingSessionHost.HasViewModel) return",
             "_lastCodingMatch = CodingProtocolMatchRunner.Run",
@@ -96,6 +106,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     public void PlayerWindow_protocol_match_training_lives_in_training_partial()
     {
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var acceptGreenCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportConfirmCommandWorkflow.cs");
@@ -112,7 +123,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Trainingsworkflow soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll ueber Factory verdrahtet werden.");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        Assert.False(File.Exists(protocolMatchPath), "Der alte Match-Partial muss entfernt bleiben.");
+        var controller = File.ReadAllText(controllerPath);
         var training = File.ReadAllText(trainingPath);
         var acceptGreenCommandWorkflow = File.Exists(acceptGreenCommandWorkflowPath) ? File.ReadAllText(acceptGreenCommandWorkflowPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
@@ -121,7 +133,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
         AssertNoForbiddenTokens(
-            protocolMatch,
+            controller,
             "private async void CodingAcceptGreenMatches_Click",
             "private async void ImportConfirm_Click",
             "private async Task<bool> ConfirmImportAsTrainingAsync");
@@ -147,6 +159,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains(".SafeFireAndForget(\"CodingAcceptGreenMatches\")", training);
         Assert.Contains(".SafeFireAndForget(\"ImportConfirm\")", training);
         Assert.Contains("private async Task HandleCodingAcceptGreenMatchesAsync", training);
+        Assert.Contains("RunProtocolMatch: () => _codingProtocolMatchController.RunMatch()", training);
         Assert.Contains("CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync", training);
         Assert.Contains("if (!request.HasCodingViewModel)", acceptGreenCommandWorkflow);
         Assert.Contains("actions.RunProtocolMatch()", acceptGreenCommandWorkflow);
@@ -161,6 +174,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
         Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmWorkflow);
         Assert.Contains("CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync", training);
+        Assert.Contains("_codingProtocolMatchController.SeekImportEvent", training);
         Assert.Contains("CodingProtocolGuidedVerificationAdapter.Create", training);
         Assert.Contains("_codingAiRuntimeOwner.Controller.ProtocolVerifier", training);
         Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);
@@ -180,6 +194,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     public void PlayerWindow_protocol_match_highlighting_lives_in_highlighting_partial()
     {
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
         var highlightingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchHighlightControls.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchListHighlightWorkflow.cs");
@@ -188,13 +203,14 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.True(File.Exists(controlsPath), "ProtocolMatch-Listenhighlighting-Control-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Listenhighlighting-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        Assert.False(File.Exists(protocolMatchPath), "Der alte Match-Partial muss entfernt bleiben.");
+        var controller = File.ReadAllText(controllerPath);
         var highlighting = File.ReadAllText(highlightingPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         AssertNoForbiddenTokens(
-            protocolMatch,
+            controller,
             "private void ApplyCodingProtocolMatchListHighlights()",
             "private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)");
         Assert.Contains("private void ApplyCodingProtocolMatchListHighlights()", highlighting);

@@ -433,7 +433,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingImportEventSeekCommandWorkflow.cs");
-        var seekBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var seekBody = ReadUiFile("Player", "CodingProtocolMatchController.cs");
 
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", workflow);
@@ -495,14 +495,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingProtocolMatchCommandWorkflow.cs");
-        var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var runBody = ReadUiFile("Player", "CodingProtocolMatchController.cs");
+        var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
-        Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
+        Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", runBody);
         Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", coding);
-        Assert.Contains("_codingProtocolMatchState.Buckets", runBody);
-        Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", runBody);
+        Assert.Contains("_codingProtocolMatchState.Buckets", windowRoot);
+        Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", windowRoot);
         Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
-        Assert.Contains("CodingProtocolMatchRunner.Run", runBody);
+        Assert.Contains("CodingProtocolMatchRunner.Run", windowRoot);
         AssertNoForbiddenTokens(
             runBody,
             "CodingProtocolMatchService.Match",

@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -375,6 +376,28 @@ public partial class PlayerWindow : Window
                 ConfirmUnappliedChanges: applyChanges => CodingUnappliedChangesCloseDialogWorkflow.Execute(
                     runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
                     applyChanges: applyChanges)));
+        _codingProtocolMatchController = new CodingProtocolMatchController(
+            new CodingProtocolMatchControllerBindings(
+                ResolveSelectedImportEvent: () => LstImportEvents.SelectedItem,
+                HasCodingSessionService: () => _codingSessionRuntimeOwner.Service is not null,
+                SeekMilliseconds: _playerTimelineHost.SeekMilliseconds,
+                MoveToMeter: meter => _codingSessionRuntimeOwner.Service!.MoveToMeter(meter),
+                MarkNavigationPending: _codingNavigationPendingState.MarkPending,
+                SyncVideoToCodingMeter: SyncVideoToCodingMeter,
+                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
+                RunMatch: () => CodingProtocolMatchRunner.Run(
+                    _codingImportReferenceEvents.Events,
+                    _codingSessionHost.Events,
+                    _codingProtocolMatchState.Buckets),
+                StoreMatch: _codingProtocolMatchState.Store,
+                ApplySummary: routing => CodingProtocolMatchSummaryControls.Apply(
+                    TxtCodingProtocolMatchSummary,
+                    BtnAcceptGreenCodingMatches,
+                    routing),
+                RefreshEvents: RefreshCodingEventsList,
+                ScheduleHighlights: () => PlayerDispatcherScheduler.ScheduleLoaded(
+                    Dispatcher,
+                    ApplyCodingProtocolMatchListHighlights)));
         _codingModeExitController = new CodingModeExitController(
             new CodingModeExitControllerBindings(
                 IsCodingMode: () => _codingModeState.IsCodingMode,
@@ -405,7 +428,7 @@ public partial class PlayerWindow : Window
                     {
                         _codingProtocolMatchState.Reset();
                     },
-                    UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_codingProtocolMatchState.LastMatch),
+                    UpdateProtocolMatchSummary: () => _codingProtocolMatchController.UpdateSummary(_codingProtocolMatchState.LastMatch),
                     ClearImportEventsListSource: () => CodingImportReferenceControls.ClearItemsSource(LstImportEvents),
                     HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
                         CodingConfirmationPanel,
