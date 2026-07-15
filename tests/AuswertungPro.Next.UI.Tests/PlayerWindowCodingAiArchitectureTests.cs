@@ -265,11 +265,14 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial()
+    public void PlayerWindow_coding_ai_shared_adapters_live_in_analysis_context()
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
         var helpersPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var preflightWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var multiModelCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
@@ -279,7 +282,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var endMeterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEndMeterResolveWorkflow.cs");
         var segmentedFindingsWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
 
-        Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
+        Assert.False(File.Exists(helpersPath), "Gemeinsame Coding-AI-Adapter sollen kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(contextPath), "Gemeinsame Coding-AI-Adapter sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelCommandWorkflowPath), "Coding-AI-Multi-Model-Sequenz soll ausserhalb von PlayerWindow liegen.");
@@ -291,7 +295,9 @@ public sealed class PlayerWindowCodingAiArchitectureTests
 
         var ai = File.ReadAllText(aiPath);
         var multiModel = File.ReadAllText(multiModelPath);
-        var helpers = File.ReadAllText(helpersPath);
+        var context = File.ReadAllText(contextPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
         var multiModelCommandWorkflow = File.Exists(multiModelCommandWorkflowPath) ? File.ReadAllText(multiModelCommandWorkflowPath) : "";
@@ -300,6 +306,12 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var multiModelInferenceWorkflow = File.ReadAllText(multiModelInferenceWorkflowPath);
         var endMeterResolveWorkflow = File.Exists(endMeterResolveWorkflowPath) ? File.ReadAllText(endMeterResolveWorkflowPath) : "";
         var segmentedFindingsWorkflow = File.ReadAllText(segmentedFindingsWorkflowPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(
+                    RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows"),
+                    "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
 
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("SafeFireAndForget", ai);
@@ -307,17 +319,23 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("private async Task RunCodingAnalysisAsync", ai);
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", ai);
         Assert.Contains("CodingSingleModelAnalysisWorkflow.ExecuteAsync", ai);
-        Assert.Contains("private bool IsCodingAfterTerminalBoundary", helpers);
-        Assert.Contains("private bool IsFindingTooFarAhead", helpers);
-        Assert.Contains("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", helpers);
-        Assert.Contains("private Task<byte[]?> CaptureSnapshotAsync", helpers);
-        Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
-        Assert.Contains("CodingSegmentedFindingsBuildWorkflow.Execute", helpers);
-        Assert.Contains("SegmentedFindingBuilder.Build", helpers);
+        Assert.Contains("_codingAnalysisContext.IsAfterTerminalBoundary", ai);
+        Assert.Contains("_codingAnalysisContext.CaptureSnapshotAsync", ai);
+        Assert.Contains("_codingAnalysisContext.BuildSegmentedFindings", multiModel);
+        Assert.Contains("private readonly Ai.CodingAnalysisContext _codingAnalysisContext", state);
+        Assert.Contains("_codingAnalysisContext = CodingAnalysisContext.CreateDefault", windowRoot);
+        Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", context);
+        Assert.Contains("CodingFindingProximityPolicy.IsTooFarAhead", context);
+        Assert.Contains("CodingSegmentedFindingsBuildWorkflow.Execute", context);
+        Assert.Contains("SegmentedFindingBuilder.Build", context);
+        Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", context);
+        Assert.DoesNotContain("private bool IsCodingAfterTerminalBoundary", playerWindowPartials);
+        Assert.DoesNotContain("private bool IsFindingTooFarAhead", playerWindowPartials);
+        Assert.DoesNotContain("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", playerWindowPartials);
+        Assert.DoesNotContain("private Task<byte[]?> CaptureSnapshotAsync", playerWindowPartials);
         Assert.Contains("if (samResponse == null)", segmentedFindingsWorkflow);
         Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", segmentedFindingsWorkflow);
         Assert.Contains("actions.BuildSegmentedFindings", segmentedFindingsWorkflow);
-        Assert.Contains("_codingSessionHost", helpers);
         Assert.Contains("actions.IsAfterTerminalBoundary(framePosition)", preflightWorkflow);
         Assert.Contains("\"Rohrende erreicht - KI-Analyse gestoppt\"", preflightWorkflow);
         Assert.Contains("actions.CaptureSnapshotAsync", singleModelWorkflow);
@@ -347,7 +365,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     public void PlayerWindow_coding_osd_reading_lives_in_reading_partial()
     {
         var osdPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
-        var helpersPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
+        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
         var readingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
         var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSnapshotCaptureFactory.cs");
         var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterReadWorkflow.cs");
@@ -363,7 +381,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
-        var helpers = File.ReadAllText(helpersPath);
+        var analysisContext = File.ReadAllText(analysisContextPath);
         var reading = File.ReadAllText(readingPath);
         var factory = File.ReadAllText(factoryPath);
         var readWorkflow = File.ReadAllText(readWorkflowPath);
@@ -390,7 +408,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("ResolveTimestampSeconds", snapshotWorkflow);
         Assert.Contains("catch", snapshotWorkflow);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", reading);
-        Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", helpers);
+        Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", analysisContext);
         Assert.Contains("new CodingSnapshotCaptureService", factory);
     }
 

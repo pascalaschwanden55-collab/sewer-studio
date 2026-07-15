@@ -47,7 +47,7 @@ public partial class PlayerWindow
                                 ResolveCodingMeterForFrame(timestamp),
                                 TimeSpan.FromSeconds(timestamp));
                         },
-                        IsAfterTerminalBoundary: framePosition => IsCodingAfterTerminalBoundary(
+                        IsAfterTerminalBoundary: framePosition => _codingAnalysisContext.IsAfterTerminalBoundary(
                             framePosition.CurrentMeter,
                             framePosition.VideoTime),
                         ClearDetectionOverlays: ClearDetectionOverlays,
@@ -62,7 +62,7 @@ public partial class PlayerWindow
                         cancellationToken),
                     new CodingSingleModelAnalysisWorkflowActions(
                         SetCodingAiState: SetCodingAiState,
-                        CaptureSnapshotAsync: CaptureSnapshotAsync,
+                        CaptureSnapshotAsync: _codingAnalysisContext.CaptureSnapshotAsync,
                         StoreAnalyzedFrame: (frameBytes, timestamp) => _liveDetectionController.StoreAnalyzedFrame(
                             frameBytes,
                             timestamp),

@@ -12,6 +12,8 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "CodingOverlayToolHost.cs");
+        var analysisContextPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisContext.cs");
+        var playerRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var schemaControllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
         var manualCalibrationControllerPath = Path.Combine(uiRoot, "Player", "CodingManualCalibrationController.cs");
 
@@ -21,9 +23,14 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         Assert.Contains("bool IsCalibrated", host);
         Assert.Contains("bool SetCalibration(PipeCalibration calibration)", host);
 
+        var analysisContext = File.ReadAllText(analysisContextPath);
+        var playerRoot = File.ReadAllText(playerRootPath);
+        Assert.Contains("Func<PipeCalibration?> calibration", analysisContext);
+        Assert.Contains("_calibration()", analysisContext);
+        Assert.Contains("() => _codingOverlayToolHost.Calibration", playerRoot);
+
         var calibrationConsumerFiles = new[]
         {
-            "PlayerWindow.Coding.Ai.Helpers.cs",
             "PlayerWindow.Coding.Ai.MultiModel.cs",
             "PlayerWindow.Coding.AiOverlayRendering.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",

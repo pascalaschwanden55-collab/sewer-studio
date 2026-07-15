@@ -36,7 +36,7 @@ public partial class PlayerWindow
                 ExecuteFindingWorkflow: request => CodingLiveFindingEventWorkflow.Execute(
                     request,
                     new CodingLiveFindingEventWorkflowActions(
-                        IsFindingTooFarAhead,
+                        _codingAnalysisContext.IsFindingTooFarAhead,
                         _codingFindingContext.LookupLabel,
                         entry => AttachAnalyzedFramePhoto(entry),
                         message => PlayerTrace.WriteLine(message),

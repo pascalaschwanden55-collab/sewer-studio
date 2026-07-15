@@ -147,7 +147,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_stops_ai_analysis_before_snapshot_after_rohrende()
     {
-        var coding = ReadCodingPartials();
+        var analysisContext = ReadUiFile("Ai", "CodingAnalysisContext.cs");
         var preflightWorkflow = ReadUiFile("Ai", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.cs");
@@ -162,7 +162,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(preflightIndex < singleModelIndex, "Stop-Pruefung muss vor Snapshot/SAM laufen.");
         Assert.True(stopIndex >= 0, "Preflight muss nach BCE/BDC stoppen.");
         Assert.True(captureIndex >= 0, "Single-Model-Workflow muss Frames mit Analyse-Cancellation capturen koennen.");
-        Assert.Contains("CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode", coding);
+        Assert.Contains("CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode", analysisContext);
     }
 
     [Fact]

@@ -8,21 +8,21 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
     [Fact]
     public void PlayerWindow_segmented_finding_calibration_lives_in_policy()
     {
-        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
+        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipeProximityCalibrationPolicy.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "SegmentedFinding-Build soll die Kalibrierableitung ausserhalb der PlayerWindow-Partials orchestrieren.");
 
-        var ai = File.ReadAllText(aiPath);
+        var analysisContext = File.ReadAllText(analysisContextPath);
         var policy = File.ReadAllText(policyPath);
         var workflow = File.ReadAllText(workflowPath);
 
-        AssertNoForbiddenTokens(ai, "CodingPipeProximityCalibrationPolicy.Resolve");
+        AssertNoForbiddenTokens(analysisContext, "CodingPipeProximityCalibrationPolicy.Resolve");
         Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", workflow);
         AssertNoForbiddenTokens(
-            ai,
+            analysisContext,
             "cal?.PipeCenter.X",
             "cal.NormalizedDiameter / 2.0");
         Assert.Contains("public static CodingPipeProximityCalibration Resolve", policy);

@@ -20,7 +20,7 @@ public partial class PlayerWindow
                         cancellationToken),
                     new CodingMultiModelAnalysisStartWorkflowActions(
                         SetCodingAiState: SetCodingAiState,
-                        CaptureSnapshotAsync: CaptureSnapshotAsync,
+                        CaptureSnapshotAsync: _codingAnalysisContext.CaptureSnapshotAsync,
                         StoreAnalyzedFrame: (frameBytes, timestamp) => _liveDetectionController.StoreAnalyzedFrame(
                             frameBytes,
                             timestamp),
@@ -58,7 +58,7 @@ public partial class PlayerWindow
                             new CodingMultiModelAnalysisResultWorkflowActions(
                                 SetCodingAiState,
                                 () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
-                                BuildCodingSegmentedFindings,
+                                _codingAnalysisContext.BuildSegmentedFindings,
                                 ShowMultiModelResults,
                                 (findings, imageWidth, imageHeight, yoloMaxConfidence) => AddMultiModelFindingsAsEvents(
                                     findings,

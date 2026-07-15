@@ -36,6 +36,13 @@ public partial class PlayerWindow : Window
             () => _codingSessionHost.Events,
             () => _codingImportReferenceEvents.Events,
             message => PlayerTrace.WriteLine(message));
+        _codingAnalysisContext = CodingAnalysisContext.CreateDefault(
+            () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
+            () => _codingSessionHost.Events,
+            () => _codingImportReferenceEvents.Events,
+            () => _codingOverlayToolHost.Calibration,
+            () => _codingOverlayRenderState.VideoAspect,
+            path => TakeSnapshotSafe(path));
 
         InitializeComponent();
         _codingSchemaOverlayController = new CodingSchemaOverlayController(
