@@ -228,6 +228,23 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Foreground=\"Red\"", editorXaml);
     }
 
+    [Fact]
+    public void Measure_windows_use_fluent_icons_instead_of_text_symbols()
+    {
+        var windowXaml = string.Join(
+            "\n",
+            ReadUiFile("Views", "Windows", "SanierungsmassnahmenWindow.xaml"),
+            ReadUiFile("Views", "Windows", "SchachtMassnahmenWindow.xaml"),
+            ReadUiFile("Views", "Windows", "SchachtMassnahmenKatalogEditorWindow.xaml"));
+
+        Assert.Contains("<ui:FluentIcon", windowXaml);
+        Assert.DoesNotContain("Content=\"＋", windowXaml);
+        Assert.DoesNotContain("Content=\"✕", windowXaml);
+        Assert.DoesNotContain("Content=\"In Kalkulation >>\"", windowXaml);
+        Assert.DoesNotContain("Content=\"KI übernehmen >>\"", windowXaml);
+        Assert.DoesNotContain("Header=\"%\"", windowXaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

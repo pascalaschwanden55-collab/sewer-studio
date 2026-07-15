@@ -103,11 +103,15 @@
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OptimizationVm.RuleEstimatedCost}"
                                            Foreground="{StaticResource TextBrush}"/>
                             </Grid>
-                            <Button Content="In Kalkulation >>"
-                                    Command="{Binding ApplyRuleToCalcCommand}"
+                            <Button Command="{Binding ApplyRuleToCalcCommand}"
                                     Height="28" Margin="0,8,0,0"
                                     HorizontalAlignment="Left" Padding="12,2"
-                                    ToolTip="Regelbasierte Maßnahmen in den Kostenrechner übernehmen"/>
+                                    ToolTip="Regelbasierte Maßnahmen in den Kostenrechner übernehmen">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="In Kalkulation"/>
+                                    <ui:FluentIcon Glyph="&#xE72A;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="6,0,0,0"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
 
@@ -200,10 +204,14 @@
                                            TextWrapping="Wrap" FontSize="10" Margin="0,0,0,6"/>
 
                                 <Button Grid.Row="4" Grid.ColumnSpan="2"
-                                        Content="KI übernehmen >>"
                                         Command="{Binding ApplyAiToCalcCommand}"
                                         Height="28" HorizontalAlignment="Left" Padding="12,2"
-                                        ToolTip="KI-Vorschlag als Maßnahmen in den Kostenrechner übernehmen"/>
+                                        ToolTip="KI-Vorschlag als Maßnahmen in den Kostenrechner übernehmen">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="KI übernehmen"/>
+                                        <ui:FluentIcon Glyph="&#xE72A;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="6,0,0,0"/>
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -434,7 +442,7 @@
                                             <StackPanel>
                                                 <DockPanel>
                                                     <Button DockPanel.Dock="Right" Width="28" Height="28"
-                                                            Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" Style="{x:Null}"
+                                                            Foreground="{DynamicResource DangerBrush}" Style="{x:Null}"
                                                             Command="{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}"
                                                             ToolTip="Maßnahme entfernen" Margin="8,0,0,0">
@@ -444,12 +452,12 @@
                                                         <Button Width="28" Height="28" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding}" ToolTip="Nach oben">
-                                                            <ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/>
+                                                            <ui:FluentIcon Glyph="&#xE70E;" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </Button>
                                                         <Button Width="28" Height="28" Margin="6,0,0,0" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding}" ToolTip="Nach unten">
-                                                            <ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/>
+                                                            <ui:FluentIcon Glyph="&#xE70D;" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </Button>
                                                     </StackPanel>
                                                     <Button DockPanel.Dock="Right" Content="Vorlage speichern" Height="28"
@@ -485,7 +493,12 @@
                                                         </Style>
                                                     </DataGrid.RowStyle>
                                                     <DataGrid.Columns>
-                                                        <DataGridCheckBoxColumn Header="%" Binding="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="40"/>
+                                                        <DataGridCheckBoxColumn Binding="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="40">
+                                                            <DataGridCheckBoxColumn.Header>
+                                                                <ui:FluentIcon Glyph="&#xE73A;" FontSize="12" Foreground="{DynamicResource AccentBrush}"
+                                                                               ToolTip="In Übertrag übernehmen"/>
+                                                            </DataGridCheckBoxColumn.Header>
+                                                        </DataGridCheckBoxColumn>
                                                         <DataGridTextColumn Header="Gruppe" Binding="{Binding Group}" IsReadOnly="True" Width="130"/>
                                                         <DataGridTextColumn Header="Position" Binding="{Binding Text}" IsReadOnly="True" Width="*"/>
                                                         <DataGridTextColumn Header="Einheit" Binding="{Binding Unit}" IsReadOnly="True" Width="60"/>
@@ -500,16 +513,16 @@
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                                                 CommandParameter="{Binding}" ToolTip="Nach oben">
-                                                                            <ui:FluentIcon Glyph="&#xE74A;" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                                                                            <ui:FluentIcon Glyph="&#xE70E;" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                                         </Button>
                                                                         <Button Width="22" Height="22" Padding="0" Margin="0,0,2,0"
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                                                 CommandParameter="{Binding}" ToolTip="Nach unten">
-                                                                            <ui:FluentIcon Glyph="&#xE74B;" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                                                                            <ui:FluentIcon Glyph="&#xE70D;" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                                         </Button>
                                                                         <Button Width="22" Height="22" Padding="0"
-                                                                                Style="{x:Null}" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold"
+                                                                                Style="{x:Null}" Foreground="{DynamicResource DangerBrush}"
                                                                                 Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                                                 CommandParameter="{Binding}" ToolTip="Position entfernen">
                                                                             <ui:FluentIcon Glyph="&#xE74D;" FontSize="11" Foreground="{DynamicResource DangerBrush}"/>
