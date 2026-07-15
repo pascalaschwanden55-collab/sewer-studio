@@ -30,7 +30,7 @@ public sealed class EvidenceFrameRendererTests
                     WriteSolidPng(rawPath, width: 80, height: 60);
                     var rawHashBefore = Sha256(rawPath);
 
-                    var saved = EvidenceFrameRenderer.SaveAnnotatedFrame(
+                    var saved = new EvidenceFrameImageRenderer().SaveAnnotatedFrame(
                         rawPath,
                         annotatedPath,
                         new EvidenceFrameAnnotation(

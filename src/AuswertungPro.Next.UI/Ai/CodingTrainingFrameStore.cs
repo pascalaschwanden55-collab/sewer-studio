@@ -14,7 +14,7 @@ public sealed class CodingTrainingFrameStore
     private readonly Func<string, string, EvidenceFrameAnnotation, bool> _saveAnnotatedFrame;
 
     public CodingTrainingFrameStore()
-        : this(() => KnowledgeBasePaths.GetRoot(), EvidenceFrameRenderer.SaveAnnotatedFrame)
+        : this(() => KnowledgeBasePaths.GetRoot(), new EvidenceFrameImageRenderer().SaveAnnotatedFrame)
     {
     }
 
@@ -23,7 +23,7 @@ public sealed class CodingTrainingFrameStore
         Func<string, string, EvidenceFrameAnnotation, bool>? saveAnnotatedFrame = null)
     {
         _knowledgeRootProvider = knowledgeRootProvider ?? throw new ArgumentNullException(nameof(knowledgeRootProvider));
-        _saveAnnotatedFrame = saveAnnotatedFrame ?? EvidenceFrameRenderer.SaveAnnotatedFrame;
+        _saveAnnotatedFrame = saveAnnotatedFrame ?? new EvidenceFrameImageRenderer().SaveAnnotatedFrame;
     }
 
     public async Task<CodingTrainingFrameSaveResult> SaveGoldFrameAsync(

@@ -15,6 +15,39 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingDefectPreviewServiceTests
 {
     [Fact]
+    public void BuildPreviewImagePath_NutztInjiziertenBildRenderer()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sewerstudio-preview-injected-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var rawPath = Path.Combine(root, "raw.png");
+            File.WriteAllBytes(rawPath, [1]);
+            var previewRoot = Path.Combine(root, "preview");
+            var renderer = new RecordingEvidenceFrameRenderer();
+            var service = new CodingDefectPreviewRenderer(renderer);
+            var ev = new CodingEvent
+            {
+                EventId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                Entry = new ProtocolEntry { Code = "BCA" }
+            };
+            ev.Entry.FotoPaths.Add(rawPath);
+
+            var previewPath = service.BuildPreviewImagePath(ev, previewRoot);
+
+            var expectedPath = Path.Combine(previewRoot, "33333333333333333333333333333333_preview.png");
+            Assert.Equal(expectedPath, previewPath);
+            Assert.Equal(rawPath, renderer.SourcePath);
+            Assert.Equal(expectedPath, renderer.OutputPath);
+            Assert.Equal("BCA", renderer.Annotation?.Code);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void BuildPreviewImagePath_ErzeugtMarkierteVorschauAusBefundfoto()
     {
         Exception? threadError = null;
@@ -207,5 +240,25 @@ public sealed class CodingDefectPreviewServiceTests
         var pixel = new byte[4];
         converted.CopyPixels(new System.Windows.Int32Rect(x, y, 1, 1), pixel, 4, 0);
         return Color.FromArgb(pixel[3], pixel[2], pixel[1], pixel[0]);
+    }
+
+    private sealed class RecordingEvidenceFrameRenderer : IEvidenceFrameRenderer
+    {
+        public string? SourcePath { get; private set; }
+
+        public string? OutputPath { get; private set; }
+
+        public EvidenceFrameAnnotation? Annotation { get; private set; }
+
+        public bool SaveAnnotatedFrame(
+            string sourceImagePath,
+            string outputImagePath,
+            EvidenceFrameAnnotation annotation)
+        {
+            SourcePath = sourceImagePath;
+            OutputPath = outputImagePath;
+            Annotation = annotation;
+            return true;
+        }
     }
 }

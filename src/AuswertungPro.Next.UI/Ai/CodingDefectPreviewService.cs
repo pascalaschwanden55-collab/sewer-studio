@@ -24,6 +24,18 @@ public static class CodingDefectPreviewService
 
 public sealed class CodingDefectPreviewRenderer : ICodingDefectPreviewRenderer
 {
+    private readonly IEvidenceFrameRenderer _frameRenderer;
+
+    public CodingDefectPreviewRenderer()
+        : this(new EvidenceFrameImageRenderer())
+    {
+    }
+
+    public CodingDefectPreviewRenderer(IEvidenceFrameRenderer frameRenderer)
+    {
+        _frameRenderer = frameRenderer ?? throw new ArgumentNullException(nameof(frameRenderer));
+    }
+
     public string? BuildPreviewImagePath(CodingEvent codingEvent, string? previewRoot = null)
     {
         ArgumentNullException.ThrowIfNull(codingEvent);
@@ -36,7 +48,7 @@ public sealed class CodingDefectPreviewRenderer : ICodingDefectPreviewRenderer
         Directory.CreateDirectory(previewRoot);
 
         var previewPath = Path.Combine(previewRoot, $"{codingEvent.EventId:N}_preview.png");
-        var saved = EvidenceFrameRenderer.SaveAnnotatedFrame(
+        var saved = _frameRenderer.SaveAnnotatedFrame(
             rawFramePath,
             previewPath,
             CodingEvidenceAnnotationBuilder.Build(codingEvent));
