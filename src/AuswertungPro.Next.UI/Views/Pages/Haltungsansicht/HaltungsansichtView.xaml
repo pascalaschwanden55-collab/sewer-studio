@@ -125,18 +125,18 @@
                                 <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{DynamicResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                 <!-- Marker: Gegeninspektion (2. Video Link_G) vorhanden. -->
-                                <TextBlock Text="⇄" FontSize="13" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource AccentBrush}"
-                                           ToolTip="Diese Haltung hat 2 Videos / Inspektionen">
-                                    <TextBlock.Visibility>
+                                <ui:FluentIcon Glyph="&#xE8AB;" FontSize="12" Margin="6,0,0,0"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               ToolTip="Diese Haltung hat 2 Videos / Inspektionen">
+                                    <ui:FluentIcon.Visibility>
                                         <MultiBinding Converter="{StaticResource GegenVideoVis}">
                                             <Binding Path="Fields[Link_G]"/>
                                             <Binding ElementName="Root" Path="HaltungLastProjectPath"/>
                                             <Binding Path="Fields[Haltungsname]"/>
                                             <Binding ElementName="Root" Path="MehrfachInspektionsBasen"/>
                                         </MultiBinding>
-                                    </TextBlock.Visibility>
-                                </TextBlock>
+                                    </ui:FluentIcon.Visibility>
+                                </ui:FluentIcon>
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                        TextTrimming="CharacterEllipsis" Margin="0,2,0,0">

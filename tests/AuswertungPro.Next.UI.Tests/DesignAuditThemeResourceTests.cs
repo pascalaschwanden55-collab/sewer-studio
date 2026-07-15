@@ -274,6 +274,18 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Background=\"{DynamicResource SurfaceSubtleBrush}\"", xaml);
     }
 
+    [Fact]
+    public void Map_and_counter_inspection_markers_use_fluent_icons()
+    {
+        var map = ReadUiFile("Views", "Pages", "KartePage.xaml");
+        var holdings = ReadUiFile("Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml");
+
+        Assert.Contains("Glyph=\"&#xE91F;\"", map);
+        Assert.DoesNotContain("Text=\"&#x25CF;\"", map);
+        Assert.Contains("Glyph=\"&#xE8AB;\"", holdings);
+        Assert.DoesNotContain("Text=\"⇄\"", holdings);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
