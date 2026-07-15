@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
@@ -11,23 +13,15 @@ using UglyToad.PdfPig.Writer;
 
 namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
-internal sealed record PdfTextLayerRewriteResult(
-    bool Success,
-    bool Corrected,
-    string OutputPdfPath,
-    int MatchCount,
-    int PageCount,
-    string Message);
-
 /// <summary>
 /// Erstellt eine korrigierte PDF-Kopie. Das Ersetzen der Originaldatei bleibt beim Aufrufer.
 /// </summary>
-internal static class PdfTextLayerRewriter
+public sealed class PdfTextLayerRewriteService : IPdfTextLayerRewriter
 {
-    internal static bool CanRewrite(string? oldValue, string? newValue)
+    public bool CanRewrite(string? oldValue, string? newValue)
         => BuildRenameReplacements(oldValue, newValue).Count > 0;
 
-    internal static PdfTextLayerRewriteResult TryRewriteHoldingNumber(
+    public PdfTextLayerRewriteResult TryRewriteHoldingNumber(
         string sourcePdfPath,
         string? oldValue,
         string? newValue)
@@ -47,7 +41,7 @@ internal static class PdfTextLayerRewriter
         return new[] { new PdfTextReplacementTarget(oldToken, newToken) };
     }
 
-    internal static PdfTextLayerRewriteResult TryRewrite(
+    private static PdfTextLayerRewriteResult TryRewrite(
         string sourcePdfPath,
         IReadOnlyList<PdfTextReplacementTarget> replacements)
     {
@@ -183,4 +177,24 @@ internal static class PdfTextLayerRewriter
             // Best-effort cleanup.
         }
     }
+}
+
+/// <summary>Kompatible Fassade für bestehende Verteiler-Aufrufe.</summary>
+public static class PdfTextLayerRewriter
+{
+    private static IPdfTextLayerRewriter _current = new PdfTextLayerRewriteService();
+
+    public static IPdfTextLayerRewriter Current => Volatile.Read(ref _current);
+
+    public static void Use(IPdfTextLayerRewriter rewriter) =>
+        Volatile.Write(ref _current, rewriter ?? throw new ArgumentNullException(nameof(rewriter)));
+
+    internal static bool CanRewrite(string? oldValue, string? newValue) =>
+        Current.CanRewrite(oldValue, newValue);
+
+    internal static PdfTextLayerRewriteResult TryRewriteHoldingNumber(
+        string sourcePdfPath,
+        string? oldValue,
+        string? newValue) =>
+        Current.TryRewriteHoldingNumber(sourcePdfPath, oldValue, newValue);
 }
