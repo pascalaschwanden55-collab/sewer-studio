@@ -18,7 +18,7 @@ public sealed class AtomicPersistenceArchitectureTests
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Export", "CsvExcelExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "HoldingFolderDistributor.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Import", "ImportSummaryExporter.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "HaltungCadastreExtractor.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "HaltungCadastreTableFileStore.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "NetworkGeometryCache.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "YoloDatasetExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"),

@@ -32,12 +32,13 @@ public sealed class HaltungCadastreTableFileTests
                 """,
                 new UTF8Encoding(false));
 
-            var index = new HaltungCadastreIndexProvider().EnsureAndLoad(xtfPath, tablePath);
-            var rows = HaltungCadastreExtractor.ReadTable(tablePath);
+            var tables = new HaltungCadastreTableFileStore();
+            var index = new HaltungCadastreIndexProvider(tables).EnsureAndLoad(xtfPath, tablePath);
+            var rows = tables.ReadTable(tablePath);
 
             Assert.Equal(2, index.Count);
             Assert.True(index.PairExists("865", "864"));
-            Assert.True(HaltungCadastreExtractor.IsTableFresh(tablePath, xtfPath));
+            Assert.True(tables.IsTableFresh(tablePath, xtfPath));
             Assert.Collection(
                 rows,
                 first => Assert.Equal(

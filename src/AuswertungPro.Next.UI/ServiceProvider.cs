@@ -122,6 +122,7 @@ namespace AuswertungPro.Next.UI
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         public IDropdownOptionsStore DropdownOptions { get; }
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
+        public IHaltungCadastreTableStore HaltungCadastreTables { get; }
         public IHaltungCadastreIndexProvider HaltungCadastreIndexes { get; }
         public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
         public IVsaCatalogPathResolver VsaCatalogPaths { get; }
@@ -308,7 +309,9 @@ namespace AuswertungPro.Next.UI
                 ?? throw new ArgumentNullException(nameof(settingsMigration));
             KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
             Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
-            HaltungCadastreIndexes = new HaltungCadastreIndexProvider();
+            HaltungCadastreTables = new HaltungCadastreTableFileStore();
+            HaltungCadastreExtractor.Use(HaltungCadastreTables);
+            HaltungCadastreIndexes = new HaltungCadastreIndexProvider(HaltungCadastreTables);
             HaltungCadastreIndex.UseProvider(HaltungCadastreIndexes);
             OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
             Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
@@ -842,6 +845,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAiStartedProcessLifetime)) return AiStartedProcesses;
             if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
+            if (serviceType == typeof(IHaltungCadastreTableStore)) return HaltungCadastreTables;
             if (serviceType == typeof(IHaltungCadastreIndexProvider)) return HaltungCadastreIndexes;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;

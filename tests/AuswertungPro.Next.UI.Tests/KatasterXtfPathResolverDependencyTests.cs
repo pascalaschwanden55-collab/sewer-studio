@@ -38,6 +38,10 @@ public sealed class KatasterXtfPathResolverDependencyTests
             loggerFactory);
 
         Assert.Same(services.HaltungCadastreIndexes, HaltungCadastreIndex.CurrentProvider);
+        Assert.Same(services.HaltungCadastreTables, HaltungCadastreExtractor.Current);
+        Assert.Same(
+            services.HaltungCadastreTables,
+            services.GetService(typeof(IHaltungCadastreTableStore)));
         Assert.Same(
             services.HaltungCadastreIndexes,
             services.GetService(typeof(IHaltungCadastreIndexProvider)));

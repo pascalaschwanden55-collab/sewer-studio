@@ -15,6 +15,18 @@ public interface IHaltungCadastreIndexProvider
 /// </summary>
 public sealed class HaltungCadastreIndexProvider : IHaltungCadastreIndexProvider
 {
+    private readonly IHaltungCadastreTableStore _tables;
+
+    public HaltungCadastreIndexProvider()
+        : this(HaltungCadastreExtractor.Current)
+    {
+    }
+
+    public HaltungCadastreIndexProvider(IHaltungCadastreTableStore tables)
+    {
+        _tables = tables ?? throw new ArgumentNullException(nameof(tables));
+    }
+
     public HaltungCadastreIndex EnsureAndLoad(string? xtfPath, string? tablePath = null)
     {
         var table = string.IsNullOrWhiteSpace(tablePath)
@@ -23,9 +35,9 @@ public sealed class HaltungCadastreIndexProvider : IHaltungCadastreIndexProvider
 
         if (!string.IsNullOrWhiteSpace(xtfPath)
             && File.Exists(xtfPath)
-            && !HaltungCadastreExtractor.IsTableFresh(table, xtfPath))
+            && !_tables.IsTableFresh(table, xtfPath))
         {
-            HaltungCadastreExtractor.BuildTable(xtfPath, table);
+            _tables.BuildTable(xtfPath, table);
         }
 
         return File.Exists(table)
@@ -34,5 +46,5 @@ public sealed class HaltungCadastreIndexProvider : IHaltungCadastreIndexProvider
     }
 
     public HaltungCadastreIndex Load(string tablePath)
-        => HaltungCadastreIndex.Create(HaltungCadastreExtractor.ReadTable(tablePath));
+        => HaltungCadastreIndex.Create(_tables.ReadTable(tablePath));
 }
