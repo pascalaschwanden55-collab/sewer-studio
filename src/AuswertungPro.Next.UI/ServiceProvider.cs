@@ -229,6 +229,7 @@ namespace AuswertungPro.Next.UI
         #region KI / Vision
         // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
+        public IGpuModelSelector GpuModels { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
         public ITelemetryPathResolver TelemetryPaths { get; }
@@ -332,6 +333,8 @@ namespace AuswertungPro.Next.UI
             SidecarTokenResolver.Use(SidecarTokens);
             AiStartedProcesses = new AiStartedProcessLifetimeService();
             AiStartedProcessLifetime.Use(AiStartedProcesses);
+            GpuModels = new GpuModelSelectionService();
+            GpuModelSelector.Use(GpuModels);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -865,6 +868,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
             if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
             if (serviceType == typeof(ITelemetryPathResolver)) return TelemetryPaths;
+            if (serviceType == typeof(IGpuModelSelector)) return GpuModels;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;

@@ -1,88 +1,59 @@
-using System;
 using System.Globalization;
-using System.IO;
 using System.Text;
 using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
-/// <summary>
-/// Erkennt verfuegbaren GPU-VRAM via nvidia-smi und waehlt
-/// automatisch das passende Qwen-Modell.
-///
-/// Profil-Logik:
-///   >= 24 GB VRAM → qwen3-vl:8b-q8  (Workstation, ~11.7 GB — laesst Platz fuer YOLO/DINO/SAM)
-///   >=  8 GB VRAM → qwen3-vl:2b     (Laptop, ~2 GB)
-///   sonst         → kleines Modell, KI-Vision evtl. eingeschraenkt
-///
-/// A/B Juni 2026: Qwen2.5-VL lieferte 0% (Parse-Fehler) — der Auto-Modus darf
-/// NIE wieder still auf die 2.5-Familie zurueckfallen.
-/// </summary>
-public static class GpuModelSelector
+public interface IGpuModelSelector
 {
-    /// <summary>Modell fuer grosse GPUs (RTX 5090, 4090, A6000 etc.).
-    /// Bewusst 8B-Q8 statt 32B: das 32B laeuft nur als RAM-Referenz, und auf der GPU
-    /// muss neben dem VLM der Sidecar-Stack (YOLO/DINO/SAM) Platz haben (VRAM-Budget 29 GB).</summary>
-    public const string LargeModel = "qwen3-vl:8b-q8";
+    GpuModelSelector.GpuProfile? DetectAndSelect();
+}
 
-    /// <summary>Modell fuer kleinere GPUs (RTX 4070, 3060 12GB etc.)</summary>
-    public const string SmallModel = "qwen3-vl:2b";
+/// <summary>Erkennt NVIDIA-GPUs und waehlt das passende lokale Modell.</summary>
+public sealed class GpuModelSelectionService : IGpuModelSelector
+{
+    private readonly Func<string, bool> _fileExists;
+    private readonly Func<Environment.SpecialFolder, string> _getFolderPath;
+    private readonly Func<string, IReadOnlyList<string>, TimeSpan, ExternalProcessRunResult> _runProcess;
 
-    /// <summary>VRAM-Schwelle in MB ab der das grosse Modell verwendet wird.</summary>
-    public const long LargeModelThresholdMb = 24_000;
+    public GpuModelSelectionService()
+        : this(File.Exists, Environment.GetFolderPath, RunProcess)
+    {
+    }
 
-    /// <summary>VRAM-Schwelle in MB ab der das kleine Modell verwendet wird.</summary>
-    public const long SmallModelThresholdMb = 8_000;
+    public GpuModelSelectionService(
+        Func<string, bool> fileExists,
+        Func<Environment.SpecialFolder, string> getFolderPath,
+        Func<string, IReadOnlyList<string>, TimeSpan, ExternalProcessRunResult> runProcess)
+    {
+        _fileExists = fileExists ?? throw new ArgumentNullException(nameof(fileExists));
+        _getFolderPath = getFolderPath ?? throw new ArgumentNullException(nameof(getFolderPath));
+        _runProcess = runProcess ?? throw new ArgumentNullException(nameof(runProcess));
+    }
 
-    /// <summary>NumCtx fuer das grosse Modell.</summary>
-    public const int LargeModelNumCtx = 12288;
-
-    /// <summary>NumCtx fuer das kleine Modell (weniger RAM-Verbrauch).</summary>
-    public const int SmallModelNumCtx = 4096;
-
-    /// <summary>
-    /// Ergebnis der GPU-Erkennung.
-    /// </summary>
-    public sealed record GpuProfile(
-        string ResolvedModel,
-        int ResolvedNumCtx,
-        long VramTotalMb,
-        string GpuName,
-        string Reason);
-
-    /// <summary>
-    /// Prueft ob der uebergebene Modellname eine automatische Aufloesung erfordert.
-    /// </summary>
-    public static bool IsAutoMode(string? modelName)
-        => string.IsNullOrWhiteSpace(modelName)
-           || modelName.Equals("auto", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Erkennt GPU-VRAM und waehlt passendes Modell.
-    /// Gibt null zurueck wenn nvidia-smi nicht verfuegbar ist.
-    /// </summary>
-    public static GpuProfile? DetectAndSelect()
+    public GpuModelSelector.GpuProfile? DetectAndSelect()
     {
         var nvidiaSmi = FindNvidiaSmi();
         if (nvidiaSmi is null)
-            return new GpuProfile(
-                SmallModel, SmallModelNumCtx, 0, "Unbekannt",
+        {
+            return new GpuModelSelector.GpuProfile(
+                GpuModelSelector.SmallModel,
+                GpuModelSelector.SmallModelNumCtx,
+                0,
+                "Unbekannt",
                 "nvidia-smi nicht gefunden — verwende kleines Modell als Fallback");
+        }
 
         try
         {
-            var result = ExternalProcessRunner.RunAsync(
+            var result = _runProcess(
                 nvidiaSmi,
                 ["--query-gpu=memory.total,name", "--format=csv,noheader,nounits"],
-                TimeSpan.FromSeconds(5),
-                Encoding.UTF8,
-                Encoding.UTF8).GetAwaiter().GetResult();
+                TimeSpan.FromSeconds(5));
             if (!result.Success)
                 return null;
 
-            var output = result.StdOut;
-
-            // Format: "32768, NVIDIA GeForce RTX 5090"
-            var parts = output.Trim().Split(',', StringSplitOptions.TrimEntries);
+            var parts = result.StdOut.Trim().Split(',', StringSplitOptions.TrimEntries);
             if (parts.Length < 1)
                 return null;
 
@@ -91,22 +62,31 @@ public static class GpuModelSelector
 
             var gpuName = parts.Length >= 2 ? parts[1] : "NVIDIA GPU";
 
-            if (vramMb >= LargeModelThresholdMb)
+            if (vramMb >= GpuModelSelector.LargeModelThresholdMb)
             {
-                return new GpuProfile(
-                    LargeModel, LargeModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende grosses Modell ({LargeModel})");
+                return new GpuModelSelector.GpuProfile(
+                    GpuModelSelector.LargeModel,
+                    GpuModelSelector.LargeModelNumCtx,
+                    vramMb,
+                    gpuName,
+                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende grosses Modell ({GpuModelSelector.LargeModel})");
             }
 
-            if (vramMb >= SmallModelThresholdMb)
+            if (vramMb >= GpuModelSelector.SmallModelThresholdMb)
             {
-                return new GpuProfile(
-                    SmallModel, SmallModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende kleines Modell ({SmallModel})");
+                return new GpuModelSelector.GpuProfile(
+                    GpuModelSelector.SmallModel,
+                    GpuModelSelector.SmallModelNumCtx,
+                    vramMb,
+                    gpuName,
+                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende kleines Modell ({GpuModelSelector.SmallModel})");
             }
 
-            return new GpuProfile(
-                SmallModel, SmallModelNumCtx, vramMb, gpuName,
+            return new GpuModelSelector.GpuProfile(
+                GpuModelSelector.SmallModel,
+                GpuModelSelector.SmallModelNumCtx,
+                vramMb,
+                gpuName,
                 $"GPU {gpuName} mit nur {vramMb} MB VRAM — KI-Vision evtl. eingeschraenkt");
         }
         catch
@@ -115,34 +95,94 @@ public static class GpuModelSelector
         }
     }
 
-    // ── nvidia-smi Suche (gleiche Logik wie SystemMonitorService) ─────
-
-    private static string? FindNvidiaSmi()
+    private string? FindNvidiaSmi()
     {
         var sys32 = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System), "nvidia-smi.exe");
-        if (File.Exists(sys32))
+            _getFolderPath(Environment.SpecialFolder.System),
+            "nvidia-smi.exe");
+        if (_fileExists(sys32))
             return sys32;
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFiles = _getFolderPath(Environment.SpecialFolder.ProgramFiles);
         var nvsmi = Path.Combine(programFiles, "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe");
-        if (File.Exists(nvsmi))
+        if (_fileExists(nvsmi))
             return nvsmi;
 
-        // Fallback: PATH
         try
         {
-            var result = ExternalProcessRunner.RunAsync(
+            var result = _runProcess(
                 "nvidia-smi",
                 ["--version"],
-                TimeSpan.FromSeconds(3),
-                Encoding.UTF8,
-                Encoding.UTF8).GetAwaiter().GetResult();
+                TimeSpan.FromSeconds(3));
             if (result.Success)
                 return "nvidia-smi";
         }
-        catch { /* nicht im PATH */ }
+        catch
+        {
+            // Nicht im PATH.
+        }
 
         return null;
     }
+
+    private static ExternalProcessRunResult RunProcess(
+        string fileName,
+        IReadOnlyList<string> arguments,
+        TimeSpan timeout) =>
+        ExternalProcessRunner.RunAsync(
+            fileName,
+            arguments,
+            timeout,
+            Encoding.UTF8,
+            Encoding.UTF8).GetAwaiter().GetResult();
+}
+
+/// <summary>
+/// Erkennt verfuegbaren GPU-VRAM via nvidia-smi und waehlt automatisch das
+/// passende Qwen-Modell. Die Hardware-Erkennung liegt im Instanzdienst; diese
+/// Klasse behaelt die oeffentliche API und die reinen Modellregeln.
+/// </summary>
+public static class GpuModelSelector
+{
+    private static IGpuModelSelector _current = new GpuModelSelectionService();
+
+    /// <summary>Modell fuer grosse GPUs mit Platz fuer den Sidecar-Stack.</summary>
+    public const string LargeModel = "qwen3-vl:8b-q8";
+
+    /// <summary>Modell fuer kleinere GPUs.</summary>
+    public const string SmallModel = "qwen3-vl:2b";
+
+    /// <summary>VRAM-Schwelle in MB fuer das grosse Modell.</summary>
+    public const long LargeModelThresholdMb = 24_000;
+
+    /// <summary>VRAM-Schwelle in MB fuer das kleine Modell.</summary>
+    public const long SmallModelThresholdMb = 8_000;
+
+    /// <summary>Kontextgroesse fuer das grosse Modell.</summary>
+    public const int LargeModelNumCtx = 12288;
+
+    /// <summary>Kontextgroesse fuer das kleine Modell.</summary>
+    public const int SmallModelNumCtx = 4096;
+
+    /// <summary>Ergebnis der GPU-Erkennung und Modellwahl.</summary>
+    public sealed record GpuProfile(
+        string ResolvedModel,
+        int ResolvedNumCtx,
+        long VramTotalMb,
+        string GpuName,
+        string Reason);
+
+    public static IGpuModelSelector Current => Volatile.Read(ref _current);
+
+    public static void Use(IGpuModelSelector selector) =>
+        Volatile.Write(
+            ref _current,
+            selector ?? throw new ArgumentNullException(nameof(selector)));
+
+    /// <summary>Prueft, ob der Modellname automatisch aufgeloest werden soll.</summary>
+    public static bool IsAutoMode(string? modelName)
+        => string.IsNullOrWhiteSpace(modelName)
+           || modelName.Equals("auto", StringComparison.OrdinalIgnoreCase);
+
+    public static GpuProfile? DetectAndSelect() => Current.DetectAndSelect();
 }
