@@ -321,6 +321,23 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("\\U0001F4F7", domain);
     }
 
+    [Fact]
+    public void Training_and_pipeline_status_use_fluent_icons_and_shape_dots()
+    {
+        var training = ReadUiFile("Views", "Windows", "TrainingCenterWindow.xaml");
+        var pipeline = ReadUiFile("Views", "Windows", "VideoAnalysisPipelineWindow.xaml");
+
+        Assert.Contains("Glyph=\"&#xE896;\"", training);
+        Assert.Contains("Text=\"Box ziehen\"", training);
+        Assert.Contains("Text=\"SAM segmentieren\"", training);
+        Assert.Contains("Glyph=\"&#xE710;\"", training);
+        Assert.DoesNotContain("Text=\"&#xE736;\"", training);
+        Assert.Contains("<Ellipse Width=\"10\" Height=\"10\"", pipeline);
+        Assert.Contains("Glyph=\"&#xE73E;\"", pipeline);
+        Assert.DoesNotContain("Value=\"●\"", pipeline);
+        Assert.DoesNotContain("Value=\"○\"", pipeline);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

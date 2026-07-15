@@ -67,9 +67,14 @@
                 <Button Grid.Column="7" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
                         ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="8" Content="&#x2B07; Gold in KB nachholen" Command="{Binding ReconcileGoldToKbCommand}"
+                <Button Grid.Column="8" Command="{Binding ReconcileGoldToKbCommand}"
                         ToolTip="Bestätigte Gold-Befunde, die noch nicht in der Knowledge Base stehen, nachträglich indexieren (legt vorher ein Backup an)"
-                        FontWeight="SemiBold" Margin="0,0,8,0"/>
+                        FontWeight="SemiBold" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                        <TextBlock Text="Gold in KB nachholen"/>
+                    </StackPanel>
+                </Button>
                 <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
@@ -804,9 +809,13 @@
                                     </StackPanel>
 
                                     <!-- Hinweis Box-Zeichnen (B5) -->
-                                    <TextBlock Text="Box ziehen -> SAM segmentieren -> Akzeptieren. Esc löscht Box und Maske."
-                                               Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"
-                                               Margin="0,8,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <TextBlock Text="Box ziehen" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"/>
+                                        <ui:FluentIcon Glyph="&#xE72A;" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="5,0"/>
+                                        <TextBlock Text="SAM segmentieren" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"/>
+                                        <ui:FluentIcon Glyph="&#xE72A;" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="5,0"/>
+                                        <TextBlock Text="Akzeptieren. Esc löscht Box und Maske." Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"/>
+                                    </StackPanel>
                                     <TextBlock Text="Optional: Box ziehen (nur für YOLO) · Esc löscht"
                                                Visibility="Collapsed"
                                                Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"
@@ -890,7 +899,22 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Match-Rate Trend (letzte Läufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
                                     <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
-                                               Foreground="{DynamicResource SuccessBrush}" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
+                                               FontFamily="{DynamicResource FontIcon}" FontSize="16"
+                                               Margin="8,0,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding KbTrendDirection}" Value="&#xE70E;">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding KbTrendDirection}" Value="&#xE70D;">
+                                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
                                 <ctrl:Sparkline Values="{Binding KbTrendSeries, Mode=OneWay}"
                                                 Stroke="{DynamicResource AccentBrush}"
@@ -948,9 +972,8 @@
                                         Click="TeacherAddToFewShot_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="12" IsEnabled="False">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE736;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="FewShot"/>
+                                        <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Zu FewShot"/>
                                     </StackPanel>
                                 </Button>
                                 <Button x:Name="BtnTeacherDelete"

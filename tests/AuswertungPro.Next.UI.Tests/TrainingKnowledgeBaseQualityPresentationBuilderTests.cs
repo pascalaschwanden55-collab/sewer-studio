@@ -28,12 +28,12 @@ public sealed class TrainingKnowledgeBaseQualityPresentationBuilderTests
                 $"Exact: {r.ExactPercent:P0} | Partial: {r.PartialPercent:P0} | " +
                 $"Miss: {r.MismatchPercent:P0} | Leer: {r.NoFindingsPercent:P0}"));
         Assert.Equal(expectedTrendText, result.TrendText);
-        Assert.Equal("\u2191", result.TrendDirection);
+        Assert.Equal("\uE70E", result.TrendDirection);
     }
 
     [Theory]
-    [InlineData(0.52, 0.50, "\u2192")]
-    [InlineData(0.47, 0.50, "\u2193")]
+    [InlineData(0.52, 0.50, "\uE72A")]
+    [InlineData(0.47, 0.50, "\uE70D")]
     public void Build_keeps_existing_trend_direction_threshold(double latestExact, double previousExact, string expected)
     {
         var runs = new[]

@@ -39,8 +39,8 @@ public static class TrainingKnowledgeBaseQualityPresentationBuilder
             const double trendThreshold = 0.02;
             const double tolerance = 0.000000001;
             direction = delta > trendThreshold + tolerance
-                ? "\u2191"
-                : delta < -trendThreshold - tolerance ? "\u2193" : "\u2192";
+                ? "\uE70E"
+                : delta < -trendThreshold - tolerance ? "\uE70D" : "\uE72A";
         }
 
         var logLines = new List<string>();
