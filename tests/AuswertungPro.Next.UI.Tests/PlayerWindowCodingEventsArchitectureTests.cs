@@ -62,7 +62,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         var importControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
         var relevantPartialPaths = new[]
         {
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs"),

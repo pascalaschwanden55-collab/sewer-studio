@@ -167,7 +167,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     public void PlayerWindow_live_ai_status_text_uses_display_policy()
     {
         var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
-        var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
+        var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
         var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationResumeWorkflow.cs");
         var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");

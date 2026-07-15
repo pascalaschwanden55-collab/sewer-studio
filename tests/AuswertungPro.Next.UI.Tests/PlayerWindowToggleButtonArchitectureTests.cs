@@ -17,7 +17,7 @@ public sealed class PlayerWindowToggleButtonArchitectureTests
         var relevantPartials = new[]
         {
             "PlayerWindow.Coding.Ai.Live.cs",
-            "PlayerWindow.Coding.Confirmation.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.Coding.Eingabemarker.cs",
             "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",

@@ -169,7 +169,14 @@ public partial class PlayerWindow : Window
             new CodingEventsRefreshControllerActions(
                 ScheduleLoaded: action => PlayerDispatcherScheduler.ScheduleLoaded(Dispatcher, action),
                 ColorizeListItems: ColorizeCodingEventListItems));
-        InitializeCodingConfirmationPanelControls();
+        PlayerCodingConfirmationPanelInitializer.Initialize(
+            _codingConfirmationPanelControls,
+            CodingConfirmationPanel,
+            ConfirmAmpel,
+            TxtConfirmCode,
+            TxtConfirmConfidence,
+            TxtConfirmDescription,
+            TxtConfirmDetail);
         PlayerWindowStateControls.Track(this);
 
         _playbackContext = PlayerWindowPlaybackContext.From(videoInfo, initialOverlayText, damageOverlay);
@@ -461,7 +468,7 @@ public partial class PlayerWindow : Window
                 ResumeDetection: ResumeDetection));
         _liveDetectionConfirmationTrainingController = liveDetectionTrainingControllers.Confirmation;
         _liveDetectionManualMarkTrainingController = liveDetectionTrainingControllers.ManualMark;
-        _codingConfirmationDecisionController = new CodingConfirmationDecisionController(
+        var codingConfirmationDecisionController = new CodingConfirmationDecisionController(
             _codingPendingConfirmationState,
             new CodingConfirmationDecisionControllerActions(
                 ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
@@ -478,6 +485,18 @@ public partial class PlayerWindow : Window
                     status.StatusText,
                     PlayerStatusColors.Success,
                     status.DetailText)));
+        _codingConfirmationController = new CodingConfirmationController(
+            _codingPendingConfirmationState,
+            new CodingConfirmationControllerBindings(
+                ResolveCurrentStatusText: () => TxtCodingAiStatus.Text,
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply,
+                ShowStatus: (status, color, detail) =>
+                    _liveDetectionStatusController.SetCodingAiState(status, color, detail),
+                Accept: codingConfirmationDecisionController.Accept,
+                Edit: codingConfirmationDecisionController.Edit,
+                Reject: codingConfirmationDecisionController.Reject));
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,

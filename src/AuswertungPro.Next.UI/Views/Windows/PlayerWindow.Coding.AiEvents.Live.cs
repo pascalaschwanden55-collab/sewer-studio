@@ -47,6 +47,6 @@ public partial class PlayerWindow
                             new CodingCurrentOverlayRenderWorkflowActions(
                                 (OverlayGeometry overlay) => RenderOverlayGeometry(overlay, isPreview: false))),
                         UpdateToolBadge,
-                        PauseAndAskConfirmation))));
+                        _codingConfirmationController.PauseAndAsk))));
     }
 }

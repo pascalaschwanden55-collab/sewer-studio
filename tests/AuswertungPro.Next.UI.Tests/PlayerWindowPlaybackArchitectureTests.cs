@@ -14,12 +14,12 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackControlHost.cs");
         var navigationControllerPath = Path.Combine(uiRoot, "Player", "CodingNavigationController.cs");
+        var confirmationControllerPath = Path.Combine(uiRoot, "Player", "CodingConfirmationController.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var paths = new[]
         {
-            "PlayerWindow.Coding.Confirmation.cs",
             "PlayerWindow.Coding.EventDetails.Actions.cs",
             "PlayerWindow.Coding.Eingabemarker.cs",
             "PlayerWindow.Coding.Events.cs",
@@ -37,6 +37,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var host = File.ReadAllText(hostPath);
         var navigationController = File.ReadAllText(navigationControllerPath);
+        var confirmationController = File.ReadAllText(confirmationControllerPath);
         var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
         Assert.Contains("private PlayerPlaybackControlHost _playerPlaybackControlHost => _playerMediaHosts.PlaybackControlHost", state);
@@ -45,6 +46,8 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
         Assert.Contains("PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause)", windowRoot);
         Assert.Contains("_actions.PausePlayback", navigationController);
+        Assert.Contains("SetPause: _playerPlaybackControlHost.SetPause", windowRoot);
+        Assert.Contains("SetPause: _bindings.SetPause", confirmationController);
 
         foreach (var fileName in paths)
         {

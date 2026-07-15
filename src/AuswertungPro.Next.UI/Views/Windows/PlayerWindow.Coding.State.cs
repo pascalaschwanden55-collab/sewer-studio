@@ -16,7 +16,7 @@ public partial class PlayerWindow
     private readonly Ai.CodingTrainingPersistenceContext _codingTrainingPersistenceContext;
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
-    private readonly CodingConfirmationDecisionController _codingConfirmationDecisionController;
+    private readonly ICodingConfirmationController _codingConfirmationController;
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;

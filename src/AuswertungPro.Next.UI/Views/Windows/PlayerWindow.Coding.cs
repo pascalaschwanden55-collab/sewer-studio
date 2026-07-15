@@ -12,6 +12,15 @@ public partial class PlayerWindow
     private void CodingApply_Click(object sender, RoutedEventArgs e)
         => _codingApplyController.Apply(showOverlay: true);
 
+    private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
+        => _codingConfirmationController.Accept();
+
+    private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
+        => _codingConfirmationController.Edit();
+
+    private void ConfirmReject_Click(object sender, RoutedEventArgs e)
+        => _codingConfirmationController.Reject();
+
     /// <summary>
     /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.
     /// Wichtig fÃ¼r Popup-Overlay Ã¼ber VLC (HwndHost/Airspace).
