@@ -120,19 +120,24 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_coding_visual_tree_helper_lives_in_visual_tree_partial()
+    public void PlayerWindow_coding_visual_tree_uses_shared_safe_helper()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var visualTreePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.VisualTree.cs");
+        var helperPath = Path.Combine(uiRoot, "Behaviors", "VisualTreeSafe.cs");
+        var codingFiles = new[]
+        {
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs")
+        };
 
-        Assert.True(File.Exists(visualTreePath), "Gemeinsame Coding-VisualTree-Helfer sollen nicht in EventDetails liegen.");
+        var coding = string.Join(Environment.NewLine, codingFiles.Select(File.ReadAllText));
+        var helper = File.ReadAllText(helperPath);
 
-        var visualTree = File.ReadAllText(visualTreePath);
-
-        Assert.Contains("private static T? FindCodingChild", visualTree);
-        Assert.Contains("VisualTreeHelper.GetChildrenCount", visualTree);
-        Assert.Contains("where T : FrameworkElement", visualTree);
+        Assert.Contains("VisualTreeSafe.FindNamedDescendant", coding);
+        Assert.DoesNotContain("FindCodingChild", coding);
+        Assert.Contains("public static T? FindNamedDescendant<T>", helper);
+        Assert.Contains("VisualTreeHelper.GetChildrenCount", helper);
     }
 }

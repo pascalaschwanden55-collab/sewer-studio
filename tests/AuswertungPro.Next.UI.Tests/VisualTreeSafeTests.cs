@@ -62,6 +62,36 @@ public sealed class VisualTreeSafeTests
     public void GetParentSafe_ist_null_bei_null()
         => Assert.Null(VisualTreeSafe.GetParentSafe(null));
 
+    [Fact]
+    public void FindNamedDescendant_findet_verschachteltes_benanntes_element()
+    {
+        RunOnStaThread(() =>
+        {
+            var expected = new TextBlock { Name = "Treffer" };
+            var root = new Border
+            {
+                Child = new Grid
+                {
+                    Children = { new TextBlock { Name = "Andere" }, expected }
+                }
+            };
+
+            var found = VisualTreeSafe.FindNamedDescendant<TextBlock>(root, "Treffer");
+
+            Assert.Same(expected, found);
+        });
+    }
+
+    [Fact]
+    public void FindNamedDescendant_ist_fuer_null_und_content_element_sicher()
+    {
+        RunOnStaThread(() =>
+        {
+            Assert.Null(VisualTreeSafe.FindNamedDescendant<TextBlock>(null, "Treffer"));
+            Assert.Null(VisualTreeSafe.FindNamedDescendant<TextBlock>(new Run("Text"), "Treffer"));
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

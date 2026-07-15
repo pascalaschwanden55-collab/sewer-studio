@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -25,13 +26,13 @@ public partial class PlayerWindow
                     if (listBox.Items[index] is not CodingEvent ev
                         || !_codingProtocolMatchState.TryGetBucket(ev.Entry.EntryId, out var bucket))
                     {
-                        var emptyBadge = FindCodingChild<Border>(container, "CodingMatchBadge");
+                        var emptyBadge = VisualTreeSafe.FindNamedDescendant<Border>(container, "CodingMatchBadge");
                         CodingProtocolMatchHighlightControls.Clear(container, emptyBadge);
                         return CodingProtocolMatchListHighlightItemOutcome.Cleared;
                     }
 
-                    var badge = FindCodingChild<Border>(container, "CodingMatchBadge");
-                    var badgeText = FindCodingChild<TextBlock>(container, "TxtCodingMatchBadge");
+                    var badge = VisualTreeSafe.FindNamedDescendant<Border>(container, "CodingMatchBadge");
+                    var badgeText = VisualTreeSafe.FindNamedDescendant<TextBlock>(container, "TxtCodingMatchBadge");
                     CodingProtocolMatchHighlightControls.Apply(container, badge, badgeText, bucket);
                     return CodingProtocolMatchListHighlightItemOutcome.Highlighted;
                 }));

@@ -19,13 +19,16 @@ public sealed class VisualTreeConsolidationTests
             .Where(file =>
                 file.Source.Contains("VisualTreeHelper.GetParent(", StringComparison.Ordinal)
                 || file.Source.Contains("LogicalTreeHelper.GetParent(", StringComparison.Ordinal)
-                || file.Source.Contains("private static T? FindAncestor<", StringComparison.Ordinal))
+                || file.Source.Contains("private static T? FindAncestor<", StringComparison.Ordinal)
+                || file.Source.Contains("FindCodingChild<", StringComparison.Ordinal)
+                || (Path.GetFileName(file.Path).StartsWith("PlayerWindow", StringComparison.Ordinal)
+                    && file.Source.Contains("VisualTreeHelper.GetChildrenCount(", StringComparison.Ordinal)))
             .Select(file => Path.GetRelativePath(root, file.Path))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
 
         Assert.True(
             violations.Length == 0,
-            "VisualTree-Elternsuche ausserhalb von VisualTreeSafe gefunden: " + string.Join(", ", violations));
+            "VisualTree-Suche ausserhalb von VisualTreeSafe gefunden: " + string.Join(", ", violations));
     }
 }

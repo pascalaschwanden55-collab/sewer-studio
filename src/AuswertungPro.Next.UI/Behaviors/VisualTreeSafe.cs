@@ -35,4 +35,26 @@ public static class VisualTreeSafe
         }
         return null;
     }
+
+    /// <summary>Findet das erste benannte Kind im visuellen Baum.</summary>
+    public static T? FindNamedDescendant<T>(DependencyObject? node, string childName)
+        where T : FrameworkElement
+    {
+        if (node is not (Visual or Visual3D))
+            return null;
+
+        var count = VisualTreeHelper.GetChildrenCount(node);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(node, index);
+            if (child is T match && string.Equals(match.Name, childName, StringComparison.Ordinal))
+                return match;
+
+            var nested = FindNamedDescendant<T>(child, childName);
+            if (nested is not null)
+                return nested;
+        }
+
+        return null;
+    }
 }

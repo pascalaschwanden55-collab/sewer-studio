@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -19,9 +20,9 @@ public partial class PlayerWindow
                     if (LstCodingEvents.Items[index] is not CodingEvent ev)
                         return false;
 
-                    var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
-                    var confText = FindCodingChild<TextBlock>(container, "TxtConfidence");
-                    var statusIcon = FindCodingChild<TextBlock>(container, "TxtStatusIcon");
+                    var zoneDot = VisualTreeSafe.FindNamedDescendant<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
+                    var confText = VisualTreeSafe.FindNamedDescendant<TextBlock>(container, "TxtConfidence");
+                    var statusIcon = VisualTreeSafe.FindNamedDescendant<TextBlock>(container, "TxtStatusIcon");
 
                     CodingEventListItemControls.Apply(zoneDot, confText, statusIcon, ev);
                     return true;
