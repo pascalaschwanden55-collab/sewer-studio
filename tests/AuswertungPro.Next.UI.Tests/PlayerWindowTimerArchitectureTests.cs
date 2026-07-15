@@ -119,7 +119,7 @@ public sealed class PlayerWindowTimerArchitectureTests
                 playbackLifecyclePath,
                 "PlayerWindowTimerStopper.StopPlaybackTimers")
             .Concat(FindFileTokenOffenders(
-                Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs"),
+                Path.Combine(uiRoot, "Player", "LiveDetectionStopController.cs"),
                 "_detectionTimer?.Stop();",
                 "_detectionTimer = null;",
                 "_codingOsdTimer?.Stop();",

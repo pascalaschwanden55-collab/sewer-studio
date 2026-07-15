@@ -72,7 +72,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "PlayerWindow.Coding.Osd.Timer.cs",
             "PlayerWindow.LiveDetection.cs",
             "PlayerWindow.LiveDetection.Confirmation.cs",
-            "PlayerWindow.LiveDetection.Lifecycle.Stop.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.Playback.Overlay.cs",
             "PlayerWindow.Wiring.cs"
         };

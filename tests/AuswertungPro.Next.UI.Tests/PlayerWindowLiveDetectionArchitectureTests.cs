@@ -108,22 +108,22 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerLiveDetectionStopPlayback.cs");
+        var stopControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionStopController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
-        var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
 
         Assert.True(File.Exists(helperPath), "LiveDetection-Stop-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(stopControllerPath), "LiveDetection-Stop soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "LiveDetection-Stop-Pause soll im Stop-UI-Workflow verdrahtet werden.");
 
         var helper = File.ReadAllText(helperPath);
+        var stopController = File.ReadAllText(stopControllerPath);
         var workflow = File.ReadAllText(workflowPath);
-        var stop = File.ReadAllText(stopPath);
 
         Assert.Contains("public static class PlayerLiveDetectionStopPlayback", helper);
         Assert.Contains("PauseIfRunning", helper);
         Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", workflow);
-        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stopController);
     }
 
     [Fact]
@@ -265,6 +265,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var lifecycleControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionLifecycleController.cs");
+        var stopControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionStopController.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionClickWorkflow.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
@@ -278,14 +279,18 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var lifecycleField = typeof(PlayerWindow).GetField(
             "_liveDetectionLifecycleController",
             BindingFlags.Instance | BindingFlags.NonPublic);
+        var stopField = typeof(PlayerWindow).GetField(
+            "_liveDetectionStopController",
+            BindingFlags.Instance | BindingFlags.NonPublic);
         var playerWindowMethodNames = typeof(PlayerWindow)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
             .Select(method => method.Name)
             .ToArray();
 
         Assert.False(File.Exists(lifecyclePath), "LiveDetection-Start-Wiring soll nicht mehr in einem PlayerWindow-Partial liegen.");
+        Assert.False(File.Exists(stopPath), "LiveDetection-Stop-Wiring soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(lifecycleControllerPath), "LiveDetection-Start/Stop-Wiring soll in einem eigenen Controller liegen.");
-        Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
+        Assert.True(File.Exists(stopControllerPath), "LiveDetection-Stop/Cleanup soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(clickWorkflowPath), "LiveDetection-Klick-Start/Stop-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
@@ -298,11 +303,13 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.NotNull(lifecycleField);
         Assert.Equal(typeof(ILiveDetectionLifecycleController), lifecycleField.FieldType);
+        Assert.NotNull(stopField);
+        Assert.Equal(typeof(ILiveDetectionStopController), stopField.FieldType);
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycleController = File.ReadAllText(lifecycleControllerPath);
-        var stop = File.ReadAllText(stopPath);
+        var stopController = File.ReadAllText(stopControllerPath);
         var factory = File.ReadAllText(factoryPath);
         var clickWorkflow = File.Exists(clickWorkflowPath) ? File.ReadAllText(clickWorkflowPath) : "";
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
@@ -323,6 +330,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("new LiveDetectionStartupActions", lifecycleController);
         Assert.Contains("new LiveDetectionControllerStartActions", lifecycleController);
         Assert.Contains("new LiveDetectionLifecycleController", windowRoot);
+        Assert.Contains("new LiveDetectionStopController", windowRoot);
+        Assert.Contains("_liveDetectionStopController.Stop", windowRoot);
         Assert.Contains("LiveDetectionStartupDisplayWorkflow.StartAsync", windowRoot);
         Assert.Contains("LiveDetectionToggleControls.Uncheck", windowRoot);
         Assert.Contains("_liveDetectionController.StartRuntime", windowRoot);
@@ -331,6 +340,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.DoesNotContain("StartLiveDetectionAsync", playerWindowMethodNames);
         Assert.DoesNotContain("StartLiveDetectionRuntime", playerWindowMethodNames);
         Assert.DoesNotContain("ApplyLiveDetectionRuntimeStartStatus", playerWindowMethodNames);
+        Assert.DoesNotContain("StopLiveDetection", playerWindowMethodNames);
         Assert.Contains("LiveDetectionRuntimeStartWorkflow.Start", liveController);
         Assert.Contains("new LiveDetectionRuntimeStartActions", liveController);
         Assert.Contains("actions.StopLiveDetection()", clickWorkflow);
@@ -355,17 +365,18 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new LiveDetectionService", factory);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
-        Assert.Contains("private void StopLiveDetection", stop);
-        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
-        Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", stop);
-        Assert.Contains("_codingSessionHost", stop);
+        Assert.Contains("public interface ILiveDetectionStopController", stopController);
+        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stopController);
+        Assert.Contains("new LiveDetectionHideStatusTimerDisplayActions", stopController);
+        Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", windowRoot);
+        Assert.Contains("_codingSessionHost", windowRoot);
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("public static class LiveDetectionHideStatusTimerWorkflow", hideStatusTimerWorkflow);
         Assert.Contains("TimeSpan.FromSeconds(5)", hideStatusTimerWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", hideStatusTimerWorkflow);
         Assert.Contains("actions.HideDetectionStatus()", hideStatusTimerWorkflow);
-        Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
-        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
+        Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", windowRoot);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", windowRoot);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", liveController);
         Assert.Contains("_client = DisposableReferenceLifecycle.DisposeAndClear(_client)", liveController);

@@ -99,7 +99,7 @@ public partial class PlayerWindow
                 DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
                 StopCodingAiPulse: _liveDetectionPulseController.Stop,
                 CancelQuickScan: _quickScanController.Cancel,
-                StopLiveDetection: StopLiveDetection,
+                StopLiveDetection: _liveDetectionStopController.Stop,
                 StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
                 Cleanup: Cleanup,
                 RestoreMainWindow: () => PlayerChromeControls.RestoreNormal(main!),

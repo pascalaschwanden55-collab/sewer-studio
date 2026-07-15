@@ -234,10 +234,36 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        _liveDetectionStopController = new LiveDetectionStopController(
+            new LiveDetectionStopControllerSources(
+                StopRuntime: _liveDetectionController.Stop,
+                ShouldUpdateUi: () => !_shutdownState.IsUnavailable,
+                HideOverlay: () => !_liveDetectionController.IsManualMarkMode,
+                GetTotalEvents: () => _codingSessionHost.EventCollection?.Count ?? 0,
+                HasPlayer: () => !_shutdownState.IsPlaybackDisposed,
+                IsPlaybackDisposed: () => _shutdownState.IsPlaybackDisposed,
+                IsPlayerPlaying: () => !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying,
+                IsDetecting: () => _liveDetectionController.IsDetecting),
+            new LiveDetectionStopControllerActions(
+                SetStoppedStatus: () => _liveDetectionStatusController.SetYoloStatus(
+                    "Gestoppt",
+                    PlayerStatusColors.Muted),
+                ClearOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
+                    DetectionCanvas,
+                    DetectionOverlayGrid,
+                    hideOverlay),
+                ShowStoppedDetectionStatus: totalEvents => LiveDetectionStatusControls.ShowStoppedDetectionStatus(
+                    AiStatusBadge,
+                    FindingSummaryPanel,
+                    LiveDetectionStatusText,
+                    totalEvents),
+                SetPause: _playerPlaybackControlHost.SetPause,
+                ScheduleHideStatusTimer: actions => LiveDetectionHideStatusTimerWorkflow.Schedule(actions),
+                HideDetectionStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
         _liveDetectionLifecycleController = new LiveDetectionLifecycleController(
             new LiveDetectionLifecycleControllerActions(
                 IsDetecting: () => _liveDetectionController.IsDetecting,
-                StopLiveDetection: StopLiveDetection,
+                StopLiveDetection: _liveDetectionStopController.Stop,
                 UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
                 StartWithDisplayAsync: LiveDetectionStartupDisplayWorkflow.StartAsync,
                 StartRuntime: _liveDetectionController.StartRuntime,

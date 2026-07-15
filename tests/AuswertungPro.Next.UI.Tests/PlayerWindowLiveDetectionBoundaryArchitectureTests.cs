@@ -251,20 +251,34 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_live_detection_stop_partial_does_not_own_playback_or_timer_details()
+    public void PlayerWindow_live_detection_stop_controller_delegates_playback_and_timer_details()
     {
-        var offenders = FindWindowTokenOffenders(
-            "PlayerWindow.LiveDetection.Lifecycle.Stop.cs",
+        var oldStopPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+        var stopControllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Player",
+            "LiveDetectionStopController.cs");
+        var offenders = FindFileTokenOffenders(
+            stopControllerPath,
             "PlayerLiveDetectionStopPlayback.PauseIfRunning",
             "_player.SetPause(true)",
             "_player.SetPause(false)",
-            "if (!_liveDetectionController.IsDetecting)",
+            "if (!_sources.IsDetecting())",
             "PlayerWindowTimerFactory.CreateOneShotTimer",
             "TimeSpan.FromSeconds(5)");
 
+        Assert.False(
+            File.Exists(oldStopPath),
+            "Der LiveDetection-Stop darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection.Lifecycle.Stop soll Playback-Pause und Hide-Timer ueber Workflows kapseln:\n"
+            "LiveDetectionStopController soll Playback-Pause und Hide-Timer ueber Workflows kapseln:\n"
             + string.Join("\n", offenders));
     }
 

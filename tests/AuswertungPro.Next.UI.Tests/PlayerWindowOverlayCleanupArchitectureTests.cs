@@ -79,7 +79,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var aiEventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
         var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var liveStopPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+        var liveStopWiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleanupController.cs");
         var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayLifecycleWorkflow.cs");
@@ -91,7 +91,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var lifecycle = File.ReadAllText(lifecyclePath);
         var aiEvents = File.ReadAllText(aiEventsPath);
         var exit = File.ReadAllText(exitPath);
-        var liveStop = File.ReadAllText(liveStopPath);
+        var liveStopWiring = File.ReadAllText(liveStopWiringPath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var lifecycleWorkflow = File.Exists(lifecycleWorkflowPath) ? File.ReadAllText(lifecycleWorkflowPath) : "";
@@ -106,7 +106,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.Contains("DetectionOverlayCleanupController.ClearFindings", aiEvents);
         Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", aiEvents);
         Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", exit);
-        Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", liveStop);
+        Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", liveStopWiring);
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
         Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);
@@ -129,6 +129,6 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.DoesNotContain(forbiddenCleanupTokens, token => aiEvents.Contains(token, StringComparison.Ordinal));
         Assert.DoesNotContain("CodingFindingsList.ItemsSource = null", aiEvents, StringComparison.Ordinal);
         Assert.DoesNotContain(forbiddenCleanupTokens, token => exit.Contains(token, StringComparison.Ordinal));
-        Assert.DoesNotContain(forbiddenCleanupTokens, token => liveStop.Contains(token, StringComparison.Ordinal));
+        Assert.DoesNotContain(forbiddenCleanupTokens, token => liveStopWiring.Contains(token, StringComparison.Ordinal));
     }
 }

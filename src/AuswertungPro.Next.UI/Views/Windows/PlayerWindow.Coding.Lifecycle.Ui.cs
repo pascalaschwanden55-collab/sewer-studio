@@ -15,7 +15,7 @@ public partial class PlayerWindow
             new CodingModePreparePlaybackWorkflowRequest(_liveDetectionController.IsDetecting),
             new CodingModePreparePlaybackWorkflowActions(
                 SetPause: _playerPlaybackControlHost.SetPause,
-                StopLiveDetection: StopLiveDetection,
+                StopLiveDetection: _liveDetectionStopController.Stop,
                 UncheckLiveDetectionToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
                 HideLiveDetectionEntry: () => CodingModeChromeControls.HideLiveDetectionEntry(
                     LiveDetectionButton,
