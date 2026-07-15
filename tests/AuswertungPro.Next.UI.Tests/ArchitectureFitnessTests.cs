@@ -136,24 +136,6 @@ public sealed class ArchitectureFitnessTests
             + string.Join("\n", offenders));
     }
 
-    [Fact]
-    public void Top_dialog_hotspots_do_not_call_message_box_directly()
-    {
-        var offenders = FindDataPagePartialTokenOffenders("MessageBox.Show")
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingCenterWindow.xaml.cs"),
-                "MessageBox.Show"))
-            .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "ProtocolObservationsWindow.xaml.cs"),
-                "MessageBox.Show"))
-            .ToArray();
-
-        Assert.True(
-            offenders.Length == 0,
-            "Top-Dialog-Hotspots sollen DialogService statt direkter MessageBox.Show-Aufrufe nutzen:\n"
-            + string.Join("\n", offenders));
-    }
-
     private static string ReadXamlRootTag(string path)
     {
         var xaml = File.ReadAllText(path);

@@ -21,6 +21,7 @@ public sealed class DesignAuditDialogMigrationTests
         foreach (var code in hotspotCode)
         {
             Assert.Contains(".Dialogs", code);
+            Assert.DoesNotContain("MessageBox.Show", code);
         }
     }
 
