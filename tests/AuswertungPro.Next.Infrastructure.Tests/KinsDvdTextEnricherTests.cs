@@ -174,4 +174,42 @@ public sealed class KinsDvdTextEnricherTests : IDisposable
 
         Assert.Equal("24.06.2026", record.GetFieldValue("Datum_Jahr"));
     }
+
+    [Fact]
+    public void Apply_FehlendeKiDvDaten_LiefertKlareMeldungOhneAenderung()
+    {
+        var project = new Project();
+        var record = ErzeugeXtfRecord("58951-58950", "58951", "58950");
+        project.Data.Add(record);
+        var fehlenderPfad = Path.Combine(_dir, "fehlt", "kiDVDaten.txt");
+
+        var result = KinsDvdTextEnricher.Apply(project, fehlenderPfad);
+
+        Assert.Equal(0, result.TimecodesGesetzt);
+        Assert.Equal(0, result.LaengenGesetzt);
+        Assert.Equal(0, result.DatumGesetzt);
+        Assert.Equal(
+            ["kiDVDaten.txt nicht gefunden — Anreicherung uebersprungen."],
+            result.Messages);
+        Assert.Equal("0", record.GetFieldValue("Haltungslaenge_m"));
+        Assert.False(File.Exists(fehlenderPfad));
+    }
+
+    [Fact]
+    public void InstanceService_SetztTimecodeUndLaengeWieDieFassade()
+    {
+        var pfad = SchreibeKiDvDaten(StandardTxt);
+        var project = new Project();
+        var record = ErzeugeXtfRecord("58951-58950", "58951", "58950");
+        record.Protocol!.Current.Entries.Add(ImportierterEintrag(20.5, "BBBA"));
+        project.Data.Add(record);
+        var enricher = new KinsDvdTextEnrichmentService();
+
+        var result = enricher.Apply(project, pfad);
+
+        Assert.Equal(1, result.TimecodesGesetzt);
+        Assert.Equal(1, result.LaengenGesetzt);
+        Assert.Equal("0:06:07", record.Protocol.Current.Entries[0].Mpeg);
+        Assert.Equal("30.4", record.GetFieldValue("Haltungslaenge_m"));
+    }
 }

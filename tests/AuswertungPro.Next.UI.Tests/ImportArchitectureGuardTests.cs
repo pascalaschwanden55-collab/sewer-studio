@@ -253,7 +253,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("DichtheitImportDistributor,", provider);
         Assert.Contains("KanalImportDistributor,", provider);
         Assert.Contains("ProjectStructure,", provider);
-        Assert.Contains("KanalExportDetection);", provider);
+        Assert.Contains("KanalExportDetection,", provider);
+        Assert.Contains("KinsDvdTextEnrichment);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);

@@ -152,6 +152,7 @@ namespace AuswertungPro.Next.UI
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
+        public IKinsDvdTextEnricher KinsDvdTextEnrichment { get; }
         public IPhotoImportService PhotoImport { get; }
         public AuswertungPro.Next.Infrastructure.Media.BatchMediaSearchService BatchMediaSearch { get; } = new();
         public AuswertungPro.Next.Infrastructure.Media.MediaConflictCenterService MediaConflictCenter { get; } = new();
@@ -395,6 +396,8 @@ namespace AuswertungPro.Next.UI
             WinCanImport = new WinCanDbImportService();
             IbakImport = new IbakExportImportService();
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
+            KinsDvdTextEnrichment = new KinsDvdTextEnrichmentService();
+            KinsDvdTextEnricher.Use(KinsDvdTextEnrichment);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
             HoldingRename = new HoldingRenameFileService();
@@ -636,7 +639,8 @@ namespace AuswertungPro.Next.UI
                 DichtheitImportDistributor,
                 KanalImportDistributor,
                 ProjectStructure,
-                KanalExportDetection);
+                KanalExportDetection,
+                KinsDvdTextEnrichment);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();
@@ -765,6 +769,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
             if (serviceType == typeof(IIbakImportService)) return IbakImport;
             if (serviceType == typeof(IKinsImportService)) return KinsImport;
+            if (serviceType == typeof(IKinsDvdTextEnricher)) return KinsDvdTextEnrichment;
             if (serviceType == typeof(IImportRunReportExporter)) return ImportRunReports;
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;

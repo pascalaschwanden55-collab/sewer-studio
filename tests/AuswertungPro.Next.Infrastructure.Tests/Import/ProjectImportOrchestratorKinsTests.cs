@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
@@ -141,11 +142,13 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         return (sourceDir, projectDir);
     }
 
-    private static ProjectImportOrchestrator ErzeugeOrchestrator()
+    private static ProjectImportOrchestrator ErzeugeOrchestrator(
+        IKinsDvdTextEnricher? kinsDvdTextEnricher = null)
         => new(
             new XtfImportServiceAdapter(),
             new WinCanDbImportService(),
-            new KinsImportService(new WinCanDbImportService(), new FakeIbak()));
+            new KinsImportService(new WinCanDbImportService(), new FakeIbak()),
+            kinsDvdTextEnricher: kinsDvdTextEnricher);
 
     private static void WritePdf(string path, params string[] lines)
     {
@@ -171,6 +174,23 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
             AuswertungPro.Next.Application.Import.ImportRunContext? ctx = null)
             => AuswertungPro.Next.Application.Common.Result<AuswertungPro.Next.Application.Import.ImportStats>.Fail(
                 "FAKE", "nicht implementiert");
+    }
+
+    private sealed class RecordingKinsDvdTextEnricher : IKinsDvdTextEnricher
+    {
+        public int Calls { get; private set; }
+        public string? LastPath { get; private set; }
+
+        public KinsDvdTextEnrichmentResult Apply(Project project, string kiDvDatenPath)
+        {
+            Calls++;
+            LastPath = kiDvDatenPath;
+            return new KinsDvdTextEnrichmentResult(
+                TimecodesGesetzt: 7,
+                LaengenGesetzt: 8,
+                DatumGesetzt: 9,
+                Messages: ["KINS-TXT-Testdienst verwendet."]);
+        }
     }
 
     [Fact]
@@ -209,6 +229,23 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Assert.True(
             Directory.EnumerateFiles(projectDir, "*.XTF", SearchOption.AllDirectories).Any(),
             "XTF nicht archiviert");
+    }
+
+    [Fact]
+    public void Import_Kins_UsesInjectedDvdTextEnricher()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+        var project = new Project();
+        var enricher = new RecordingKinsDvdTextEnricher();
+
+        var result = ErzeugeOrchestrator(enricher).Import(sourceDir, projectDir, project);
+
+        Assert.Equal(1, enricher.Calls);
+        Assert.Equal(Path.Combine(sourceDir, "kiDVDaten.txt"), enricher.LastPath);
+        Assert.Contains("KINS-TXT-Testdienst verwendet.", result.Messages);
+        Assert.Contains(
+            "KINS-TXT: 7 Timecodes, 8 Laengen, 9 Daten gesetzt.",
+            result.Messages);
     }
 
     [Fact]

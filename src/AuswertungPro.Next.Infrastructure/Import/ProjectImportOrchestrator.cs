@@ -55,6 +55,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IKanalImportDistributor _kanalDistributor;
     private readonly IProjectStructureInitializer _projectStructure;
     private readonly IKanalExportDetectionService _exportDetector;
+    private readonly IKinsDvdTextEnricher _kinsDvdTextEnricher;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -69,7 +70,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IDichtheitImportDistributor? dichtheitDistributor = null,
         IKanalImportDistributor? kanalDistributor = null,
         IProjectStructureInitializer? projectStructure = null,
-        IKanalExportDetectionService? exportDetector = null)
+        IKanalExportDetectionService? exportDetector = null,
+        IKinsDvdTextEnricher? kinsDvdTextEnricher = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -84,6 +86,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _kanalDistributor = kanalDistributor ?? new KanalImportDistributionService();
         _projectStructure = projectStructure ?? new ProjectStructureInitializer();
         _exportDetector = exportDetector ?? new KanalExportDetectionService();
+        _kinsDvdTextEnricher = kinsDvdTextEnricher ?? Kins.KinsDvdTextEnricher.Current;
     }
 
     /// <summary>
@@ -293,7 +296,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 // 2. kiDVDaten.txt: Video-Timecodes je Beobachtung + inspizierte Laenge + Datum
                 if (det.KinsDataTxtPath is not null)
                 {
-                    var txtResult = Kins.KinsDvdTextEnricher.Apply(project, det.KinsDataTxtPath);
+                    var txtResult = _kinsDvdTextEnricher.Apply(project, det.KinsDataTxtPath);
                     messages.AddRange(txtResult.Messages);
                     messages.Add($"KINS-TXT: {txtResult.TimecodesGesetzt} Timecodes, {txtResult.LaengenGesetzt} Laengen, {txtResult.DatumGesetzt} Daten gesetzt.");
                 }
