@@ -8,6 +8,52 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class ProtocolPdfAssetResolverTests
 {
+    private readonly IProtocolPdfAssetResolver _resolver = new ProtocolPdfAssetFileResolver();
+
+    [Fact]
+    public void ResolveLogoBytes_bevorzugt_explizites_Logo()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "sewerlogo_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        try
+        {
+            var explicitLogo = Path.Combine(temp, "eigenes-logo.png");
+            File.WriteAllBytes(explicitLogo, [1, 2, 3]);
+            File.WriteAllBytes(Path.Combine(temp, "logo.png"), [9, 9, 9]);
+
+            var bytes = _resolver.ResolveLogoBytes(
+                new HaltungsprotokollPdfOptions { LogoPathAbs = explicitLogo },
+                temp);
+
+            Assert.Equal([1, 2, 3], bytes);
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveLogoBytes_faellt_auf_Projektlogo_zurueck()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "sewerlogo_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(temp, "logo.jpg"), [4, 5, 6]);
+
+            var bytes = _resolver.ResolveLogoBytes(
+                new HaltungsprotokollPdfOptions { LogoPathAbs = Path.Combine(temp, "fehlt.png") },
+                temp);
+
+            Assert.Equal([4, 5, 6], bytes);
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
     [Fact]
     public void ResolvePhotoPath_uses_preferred_folder_when_stored_path_is_dead()
     {
@@ -22,7 +68,7 @@ public sealed class ProtocolPdfAssetResolverTests
             var deadRooted = Path.Combine(temp, "Importdateien", "XTF", "Foto", "L_H1_001.jpg");
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(temp, deadRooted, cache, preferredFolder: haltungDir);
+            var resolved = _resolver.ResolvePhotoPath(temp, deadRooted, cache, preferredFolder: haltungDir);
 
             Assert.Equal(real, resolved);
         }
@@ -46,7 +92,7 @@ public sealed class ProtocolPdfAssetResolverTests
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
             // Ohne bevorzugten Ordner: projektweite Suche findet die Datei unter dem Root.
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(temp, deadRooted, cache);
+            var resolved = _resolver.ResolvePhotoPath(temp, deadRooted, cache);
 
             Assert.Equal(real, resolved);
         }
@@ -67,7 +113,7 @@ public sealed class ProtocolPdfAssetResolverTests
         {
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(temp, real, cache);
+            var resolved = _resolver.ResolvePhotoPath(temp, real, cache);
 
             Assert.Equal(real, resolved);
         }
@@ -91,7 +137,7 @@ public sealed class ProtocolPdfAssetResolverTests
             var archived = Path.Combine(temp, "Importdateien", "XTF", "Foto", "L_H1_001.jpg");
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPaths(
+            var resolved = _resolver.ResolvePhotoPaths(
                 new[] { relative, archived },
                 temp,
                 maxPhotos: 3,
@@ -125,7 +171,7 @@ public sealed class ProtocolPdfAssetResolverTests
             var relativeCentral = Path.Combine("Fotos", "Haltungen", "22147-22151", "H_22147-22151_116.jpg");
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPaths(
+            var resolved = _resolver.ResolvePhotoPaths(
                 new[] { relativeCentral, archivedOld },
                 temp,
                 maxPhotos: 3,
@@ -155,7 +201,7 @@ public sealed class ProtocolPdfAssetResolverTests
             var stored = "Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg";
             var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(temp, stored, cache, preferredFolder: newDir);
+            var resolved = _resolver.ResolvePhotoPath(temp, stored, cache, preferredFolder: newDir);
 
             Assert.Equal(real, resolved);
         }

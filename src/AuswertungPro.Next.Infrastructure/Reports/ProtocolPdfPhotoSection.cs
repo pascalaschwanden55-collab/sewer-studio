@@ -3,7 +3,6 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using static AuswertungPro.Next.Application.Reports.ProtocolPdfAssetResolver;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfObservationText;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
 
@@ -17,6 +16,7 @@ internal static class ProtocolPdfPhotoSection
     internal sealed record PhotoItem(ProtocolEntry Entry, string Path);
 
     internal static List<PhotoItem> BuildItems(
+        IProtocolPdfAssetResolver assets,
         IReadOnlyList<ProtocolEntry> entries,
         string projectRootAbs,
         int maxPhotosPerEntry,
@@ -30,7 +30,7 @@ internal static class ProtocolPdfPhotoSection
             if (entry.FotoPaths is null || entry.FotoPaths.Count == 0)
                 continue;
 
-            var resolved = ResolvePhotoPaths(
+            var resolved = assets.ResolvePhotoPaths(
                 entry.FotoPaths,
                 projectRootAbs,
                 maxPhotosPerEntry,
@@ -85,6 +85,7 @@ internal static class ProtocolPdfPhotoSection
         string inspectionDate,
         string holdingLabel,
         HaltungsprotokollPdfOptions options,
+        IProtocolPdfAssetResolver assets,
         string brand = "#7A8A94",
         string? pageTitle = null)
     {
@@ -130,7 +131,7 @@ internal static class ProtocolPdfPhotoSection
                         {
                             var item = pageItems[cellIndex];
                             var currentIndex = photoIndex++;
-                            table.Cell().Element(cell => ComposePhotoCell(cell, item, currentIndex, options));
+                            table.Cell().Element(cell => ComposePhotoCell(cell, item, currentIndex, options, assets));
                             cellIndex++;
                         }
                         else
@@ -198,12 +199,13 @@ internal static class ProtocolPdfPhotoSection
         IContainer container,
         PhotoItem item,
         int index,
-        HaltungsprotokollPdfOptions options)
+        HaltungsprotokollPdfOptions options,
+        IProtocolPdfAssetResolver assets)
     {
         var photoWidth = Math.Max(220f, Math.Min(options.PhotoWidth, 500f));
         container.AlignCenter().Width(photoWidth).Padding(4).Column(column =>
         {
-            var bytes = SafeReadAllBytes(item.Path);
+            var bytes = assets.ReadAllBytes(item.Path);
             var imageAdded = false;
             if (bytes is { Length: > 0 })
             {

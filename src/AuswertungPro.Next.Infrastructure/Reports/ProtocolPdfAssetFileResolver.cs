@@ -1,47 +1,29 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.Application.Reports;
 
-internal static class ProtocolPdfAssetResolver
+/// <summary>
+/// Loest Logo- und Fotodateien innerhalb eines Projekts auf und liest deren Inhalt.
+/// Einzelne fehlende oder defekte Dateien werden wie bisher uebersprungen.
+/// </summary>
+public sealed class ProtocolPdfAssetFileResolver : IProtocolPdfAssetResolver
 {
-    internal static byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
+    public byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
     {
         foreach (var path in BuildLogoCandidates(options.LogoPathAbs, projectRootAbs))
         {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-            if (!File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 continue;
 
-            try
-            {
-                return File.ReadAllBytes(path);
-            }
-            catch
-            {
-                // try next candidate
-            }
+            var bytes = ReadAllBytes(path);
+            if (bytes is not null)
+                return bytes;
         }
 
         return null;
     }
 
-    internal static IEnumerable<string> BuildLogoCandidates(string? explicitLogo, string projectRootAbs)
-    {
-        if (!string.IsNullOrWhiteSpace(explicitLogo))
-            yield return explicitLogo;
-
-        if (string.IsNullOrWhiteSpace(projectRootAbs))
-            yield break;
-
-        yield return Path.Combine(projectRootAbs, "Assets", "Brand", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "Brand", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "Dokumente", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "logo.png");
-        yield return Path.Combine(projectRootAbs, "logo.jpg");
-        yield return Path.Combine(projectRootAbs, "logo.jpeg");
-    }
-
-    internal static List<string> ResolvePhotoPaths(
+    public IReadOnlyList<string> ResolvePhotoPaths(
         IReadOnlyList<string> photoPaths,
         string projectRootAbs,
         int maxPhotos,
@@ -59,8 +41,7 @@ internal static class ProtocolPdfAssetResolver
             if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
                 continue;
 
-            var key = NormalizeResolvedPhotoKey(resolved);
-            if (!seen.Add(key))
+            if (!seen.Add(NormalizeResolvedPhotoKey(resolved)))
                 continue;
 
             list.Add(resolved);
@@ -69,6 +50,98 @@ internal static class ProtocolPdfAssetResolver
         }
 
         return list;
+    }
+
+    public string ResolvePhotoPath(
+        string projectRootAbs,
+        string raw,
+        Dictionary<string, string?> resolveCache,
+        string? preferredFolder = null)
+    {
+        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
+        var fileName = Path.GetFileName(normalized);
+
+        if (!string.IsNullOrWhiteSpace(preferredFolder) && !string.IsNullOrWhiteSpace(fileName))
+        {
+            var preferred = Path.Combine(preferredFolder, fileName);
+            if (File.Exists(preferred))
+                return preferred;
+
+            var renamedPreferred = FindUniquePhotoBySuffix(preferredFolder, fileName, resolveCache);
+            if (!string.IsNullOrWhiteSpace(renamedPreferred))
+                return renamedPreferred;
+        }
+
+        if (Path.IsPathRooted(normalized) && File.Exists(normalized))
+            return normalized;
+
+        if (string.IsNullOrWhiteSpace(projectRootAbs))
+            return normalized;
+
+        if (!Path.IsPathRooted(normalized))
+        {
+            var direct = Path.Combine(projectRootAbs, normalized);
+            if (File.Exists(direct))
+                return direct;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            foreach (var subDirectory in KnownPhotoDirectories)
+            {
+                var candidate = Path.Combine(projectRootAbs, subDirectory, fileName);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            var projectMatch = FindFileByName(projectRootAbs, fileName, resolveCache);
+            if (!string.IsNullOrWhiteSpace(projectMatch))
+                return projectMatch;
+
+            var renamedHoldingPhoto = FindUniqueRenamedHoldingPhoto(
+                projectRootAbs,
+                normalized,
+                fileName,
+                resolveCache);
+            if (!string.IsNullOrWhiteSpace(renamedHoldingPhoto))
+                return renamedHoldingPhoto;
+        }
+
+        return Path.IsPathRooted(normalized)
+            ? normalized
+            : Path.Combine(projectRootAbs, normalized);
+    }
+
+    public byte[]? ReadAllBytes(string path)
+    {
+        try
+        {
+            return File.ReadAllBytes(path);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static readonly string[] KnownPhotoDirectories =
+        ["Fotos", "Photos", "Bilder", "Images", "Fotos_TV", "TV_Fotos", "Foto", "Photo"];
+
+    private static IEnumerable<string> BuildLogoCandidates(string? explicitLogo, string projectRootAbs)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitLogo))
+            yield return explicitLogo;
+
+        if (string.IsNullOrWhiteSpace(projectRootAbs))
+            yield break;
+
+        yield return Path.Combine(projectRootAbs, "Assets", "Brand", "abwasser-uri-logo.png");
+        yield return Path.Combine(projectRootAbs, "Brand", "abwasser-uri-logo.png");
+        yield return Path.Combine(projectRootAbs, "Dokumente", "abwasser-uri-logo.png");
+        yield return Path.Combine(projectRootAbs, "abwasser-uri-logo.png");
+        yield return Path.Combine(projectRootAbs, "logo.png");
+        yield return Path.Combine(projectRootAbs, "logo.jpg");
+        yield return Path.Combine(projectRootAbs, "logo.jpeg");
     }
 
     private static string NormalizeResolvedPhotoKey(string path)
@@ -81,72 +154,6 @@ internal static class ProtocolPdfAssetResolver
         {
             return path.Replace('/', Path.DirectorySeparatorChar);
         }
-    }
-
-    internal static string ResolvePhotoPath(
-        string projectRootAbs,
-        string raw,
-        Dictionary<string, string?> resolveCache,
-        string? preferredFolder = null)
-    {
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-        var fileName = Path.GetFileName(normalized);
-
-        // 1) Bevorzugter (Verteil-)Ordner der Haltung, z.B. Fotos\Haltungen\<H>. Greift auch dann,
-        //    wenn der gespeicherte Foto-Pfad auf einen veralteten Import-Ort zeigt (haeufig nach
-        //    Medienverteilung: Datei liegt im Haltungsordner, nicht mehr am Original-Pfad).
-        if (!string.IsNullOrWhiteSpace(preferredFolder) && !string.IsNullOrWhiteSpace(fileName))
-        {
-            var preferred = Path.Combine(preferredFolder, fileName);
-            if (File.Exists(preferred))
-                return preferred;
-
-            var renamedPreferred = FindUniquePhotoBySuffix(preferredFolder, fileName, resolveCache);
-            if (!string.IsNullOrWhiteSpace(renamedPreferred))
-                return renamedPreferred;
-        }
-
-        // 2) Absoluter Pfad, falls die Datei dort noch liegt.
-        if (Path.IsPathRooted(normalized) && File.Exists(normalized))
-            return normalized;
-
-        if (string.IsNullOrWhiteSpace(projectRootAbs))
-            return normalized;
-
-        // 3) Relativ zum Projekt-Root.
-        if (!Path.IsPathRooted(normalized))
-        {
-            var direct = Path.Combine(projectRootAbs, normalized);
-            if (File.Exists(direct))
-                return direct;
-        }
-
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            // 4) Bekannte Foto-Unterordner direkt unter dem Root.
-            var candidates = new[] { "Fotos", "Photos", "Bilder", "Images", "Fotos_TV", "TV_Fotos", "Foto", "Photo" };
-            foreach (var sub in candidates)
-            {
-                var candidate = Path.Combine(projectRootAbs, sub, fileName);
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-
-            // 5) Projektweite Suche nach Dateiname — NUR innerhalb des Projekt-Roots.
-            //    KEIN Hochlaufen bis zum Laufwerk (das war ein potenzieller Voll-Scan von D:\).
-            var projectMatch = FindFileByName(projectRootAbs, fileName, resolveCache);
-            if (!string.IsNullOrWhiteSpace(projectMatch))
-                return projectMatch;
-
-            // Rename-Fallback fuer alte Projekte: Der Haltungsname wurde im Datagrid geaendert,
-            // aber der Foto-Ordner bzw. die Foto-Dateien wurden damals noch nicht mitbenannt.
-            // Nur bei eindeutiger Foto-Nummer innerhalb Fotos\Haltungen verwenden.
-            var renamedHoldingPhoto = FindUniqueRenamedHoldingPhoto(projectRootAbs, normalized, fileName, resolveCache);
-            if (!string.IsNullOrWhiteSpace(renamedHoldingPhoto))
-                return renamedHoldingPhoto;
-        }
-
-        return Path.IsPathRooted(normalized) ? normalized : Path.Combine(projectRootAbs, normalized);
     }
 
     private static string? FindUniquePhotoBySuffix(
@@ -167,10 +174,10 @@ internal static class ProtocolPdfAssetResolver
         if (cache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        string? found = null;
+        string? found;
         try
         {
-            var matches = Common.SafeFileEnumeration
+            var matches = SafeFileEnumeration
                 .EnumerateFilesSafe(preferredFolder, "*" + suffix, recursive: false)
                 .Where(path => Path.GetFileName(path).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 .Take(2)
@@ -187,25 +194,25 @@ internal static class ProtocolPdfAssetResolver
         return found;
     }
 
-    internal static string? FindFileByName(
+    private static string? FindFileByName(
         string? searchRoot,
         string fileName,
         Dictionary<string, string?> cache)
     {
-        if (string.IsNullOrWhiteSpace(searchRoot) || string.IsNullOrWhiteSpace(fileName))
-            return null;
-        if (!Directory.Exists(searchRoot))
+        if (string.IsNullOrWhiteSpace(searchRoot)
+            || string.IsNullOrWhiteSpace(fileName)
+            || !Directory.Exists(searchRoot))
             return null;
 
         var cacheKey = $"{searchRoot}|{fileName}";
         if (cache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        string? found = null;
+        string? found;
         try
         {
-            found = Common.SafeFileEnumeration.EnumerateFilesSafe(searchRoot, fileName, recursive: true)
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            found = SafeFileEnumeration.EnumerateFilesSafe(searchRoot, fileName, recursive: true)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         }
         catch
@@ -233,19 +240,19 @@ internal static class ProtocolPdfAssetResolver
         if (string.IsNullOrWhiteSpace(suffix))
             return null;
 
-        var fotoRoot = Path.Combine(projectRootAbs, "Fotos", "Haltungen");
-        if (!Directory.Exists(fotoRoot))
+        var photoRoot = Path.Combine(projectRootAbs, "Fotos", "Haltungen");
+        if (!Directory.Exists(photoRoot))
             return null;
 
-        var cacheKey = $"renamed-holding-photo|{fotoRoot}|{suffix}";
+        var cacheKey = $"renamed-holding-photo|{photoRoot}|{suffix}";
         if (cache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        string? found = null;
+        string? found;
         try
         {
-            var matches = Common.SafeFileEnumeration
-                .EnumerateFilesSafe(fotoRoot, "*" + suffix, recursive: true)
+            var matches = SafeFileEnumeration
+                .EnumerateFilesSafe(photoRoot, "*" + suffix, recursive: true)
                 .Where(path => Path.GetFileName(path).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 .Take(2)
                 .ToList();
@@ -264,13 +271,13 @@ internal static class ProtocolPdfAssetResolver
     private static bool LooksLikeGroupedHoldingPhotoPath(string normalizedPath)
     {
         var parts = normalizedPath.Split(
-            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
 
-        for (var i = 0; i < parts.Length - 1; i++)
+        for (var index = 0; index < parts.Length - 1; index++)
         {
-            if (string.Equals(parts[i], "Fotos", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(parts[i + 1], "Haltungen", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(parts[index], "Fotos", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parts[index + 1], "Haltungen", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -280,30 +287,35 @@ internal static class ProtocolPdfAssetResolver
     private static string? TryExtractTrailingPhotoSuffix(string fileName)
     {
         var stem = Path.GetFileNameWithoutExtension(fileName);
-        var ext = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(stem) || string.IsNullOrWhiteSpace(ext))
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(stem) || string.IsNullOrWhiteSpace(extension))
             return null;
 
-        var idx = stem.LastIndexOf('_');
-        if (idx < 0 || idx == stem.Length - 1)
+        var separatorIndex = stem.LastIndexOf('_');
+        if (separatorIndex < 0 || separatorIndex == stem.Length - 1)
             return null;
 
-        var number = stem[(idx + 1)..];
-        if (number.Length == 0 || number.Any(ch => ch < '0' || ch > '9'))
+        var number = stem[(separatorIndex + 1)..];
+        if (number.Length == 0 || number.Any(character => character is < '0' or > '9'))
             return null;
 
-        return "_" + number + ext;
+        return "_" + number + extension;
     }
+}
 
-    internal static byte[]? SafeReadAllBytes(string path)
-    {
-        try
-        {
-            return File.ReadAllBytes(path);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+/// <summary>Kompatibilitaetsfassade fuer bestehende interne PDF-Renderer.</summary>
+internal static class ProtocolPdfAssetResolver
+{
+    internal static IProtocolPdfAssetResolver CompatibilityService { get; } =
+        new ProtocolPdfAssetFileResolver();
+
+    internal static byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
+        => CompatibilityService.ResolveLogoBytes(options, projectRootAbs);
+
+    internal static string ResolvePhotoPath(
+        string projectRootAbs,
+        string raw,
+        Dictionary<string, string?> resolveCache,
+        string? preferredFolder = null)
+        => CompatibilityService.ResolvePhotoPath(projectRootAbs, raw, resolveCache, preferredFolder);
 }

@@ -33,6 +33,15 @@ public sealed class ProtocolPdfExporterInterfaceTests
     }
 
     [Fact]
+    public void Datei_AssetResolver_liegt_hinter_Vertrag_in_der_Infrastructure_Schicht()
+    {
+        IProtocolPdfAssetResolver resolver = new ProtocolPdfAssetFileResolver();
+
+        Assert.Equal(typeof(ProtocolPdfExporter).Assembly, resolver.GetType().Assembly);
+        Assert.NotEqual(typeof(IProtocolPdfAssetResolver).Assembly, resolver.GetType().Assembly);
+    }
+
+    [Fact]
     public void Application_Schicht_hat_keine_QuestPdf_Abhaengigkeit()
     {
         var applicationRoot = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.Application");

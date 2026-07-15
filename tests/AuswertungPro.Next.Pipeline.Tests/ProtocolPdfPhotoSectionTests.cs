@@ -26,6 +26,7 @@ public sealed class ProtocolPdfPhotoSectionTests
             var second = new ProtocolEntry { FotoPaths = ["anderer-ort/a.png", "anderer-ort/c.png"] };
 
             var items = ProtocolPdfPhotoSection.BuildItems(
+                new ProtocolPdfAssetFileResolver(),
                 [first, second],
                 root,
                 maxPhotosPerEntry: 2,
@@ -41,6 +42,38 @@ public sealed class ProtocolPdfPhotoSectionTests
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public void BuildHaltungsprotokollPdf_verwendet_injizierten_AssetResolver()
+    {
+        var assets = new RecordingAssetResolver();
+        var entry = CreatePhotoEntry("nicht-auf-der-platte.png", meter: 1, description: "Injiziertes Foto");
+        var document = new ProtocolDocument
+        {
+            HaltungId = "100-200",
+            Current = new ProtocolRevision { Entries = [entry] }
+        };
+        var record = new HaltungRecord { Protocol = document };
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Manual, userEdited: true);
+
+        var pdf = new ProtocolPdfExporter(assets).BuildHaltungsprotokollPdf(
+            new Project { Name = "Injektionstest" },
+            record,
+            document,
+            projectRootAbs: "virtuelles-projekt",
+            new HaltungsprotokollPdfOptions
+            {
+                IncludePhotos = true,
+                IncludeHaltungsgrafik = false,
+                IncludeObservationTable = false
+            });
+
+        Assert.Equal(1, assets.ResolvePhotoPathsCalls);
+        Assert.Equal(1, assets.ReadAllBytesCalls);
+        Assert.Equal(1, assets.ResolveLogoBytesCalls);
+        Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
     }
 
     [Fact]
@@ -234,6 +267,43 @@ public sealed class ProtocolPdfPhotoSectionTests
             FotoPaths = [path],
             Source = ProtocolEntrySource.Imported
         };
+
+    private sealed class RecordingAssetResolver : IProtocolPdfAssetResolver
+    {
+        public int ResolveLogoBytesCalls { get; private set; }
+        public int ResolvePhotoPathsCalls { get; private set; }
+        public int ReadAllBytesCalls { get; private set; }
+
+        public byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
+        {
+            ResolveLogoBytesCalls++;
+            return null;
+        }
+
+        public IReadOnlyList<string> ResolvePhotoPaths(
+            IReadOnlyList<string> photoPaths,
+            string projectRootAbs,
+            int maxPhotos,
+            Dictionary<string, string?> resolveCache,
+            string? preferredFolder = null)
+        {
+            ResolvePhotoPathsCalls++;
+            return ["virtuelles-foto.png"];
+        }
+
+        public string ResolvePhotoPath(
+            string projectRootAbs,
+            string raw,
+            Dictionary<string, string?> resolveCache,
+            string? preferredFolder = null)
+            => throw new NotSupportedException();
+
+        public byte[]? ReadAllBytes(string path)
+        {
+            ReadAllBytesCalls++;
+            return TransparentPng;
+        }
+    }
 
     private static string CreateTempDirectory()
     {

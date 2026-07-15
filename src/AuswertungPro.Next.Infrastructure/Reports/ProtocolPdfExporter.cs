@@ -12,7 +12,6 @@ using QuestPDF.Infrastructure;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using static AuswertungPro.Next.Application.Reports.ProtocolPdfAssetResolver;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfObservationText;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
 
@@ -20,6 +19,15 @@ namespace AuswertungPro.Next.Application.Reports;
 
 public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
+    private readonly IProtocolPdfAssetResolver _assets;
+
+    public ProtocolPdfExporter()
+        : this(new ProtocolPdfAssetFileResolver())
+    {
+    }
+
+    public ProtocolPdfExporter(IProtocolPdfAssetResolver assets)
+        => _assets = assets ?? throw new ArgumentNullException(nameof(assets));
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)
         => BuildPdf(projectTitle, doc, projectRootAbs, new ProtocolPdfExportOptions());
@@ -157,7 +165,12 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             : Path.Combine(projectRootAbs, "Fotos", "Haltungen", fotoSan);
 
         var photoItems = options.IncludePhotos
-            ? ProtocolPdfPhotoSection.BuildItems(entries, projectRootAbs, options.MaxPhotosPerEntry, haltungFotoDir)
+            ? ProtocolPdfPhotoSection.BuildItems(
+                _assets,
+                entries,
+                projectRootAbs,
+                options.MaxPhotosPerEntry,
+                haltungFotoDir)
             : new List<ProtocolPdfPhotoSection.PhotoItem>();
         var photoNumberMap = ProtocolPdfPhotoSection.BuildNumberMap(photoItems);
         var (startNode, endNode) = SplitHoldingNodes(holdingLabel);
@@ -169,7 +182,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             : null;
 
         var headerItems = BuildHaltungsprotokollHeaderTable(project, record, inspectionDate, length, holdingLabel);
-        var logoBytes = ResolveLogoBytes(options, projectRootAbs);
+        var logoBytes = _assets.ResolveLogoBytes(options, projectRootAbs);
 
         return Document.Create(container =>
         {
@@ -237,6 +250,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                             inspectionDate,
                             holdingLabel,
                             options,
+                            _assets,
                             brand,
                             title);
 
