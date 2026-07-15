@@ -39,20 +39,16 @@ public partial class PlayerWindow
 
     private async Task HandleImportConfirmToBrainAsync()
     {
-        if (LstImportEvents.SelectedItem is not CodingEvent importEvent)
-            return;
-        if (string.IsNullOrWhiteSpace(importEvent.Entry.Code))
-        {
-            ShowOverlay("Kein VSA-Code — bitte zuerst 'Bearbeiten'.", TimeSpan.FromSeconds(3));
-            return;
-        }
-
-        // Entscheidung auf Accepted setzen -> der Mapper vergibt Status=Approved -> die
-        // Persist-Kette indexiert Foto+Code in die KnowledgeBase (KI-Brain), genau wie links.
-        CodingEventDecisionPolicy.ApplyManualReviewDecision(
-            importEvent, CodingUserDecision.Accepted, "Import bestaetigt (ins Brain)");
-        await PersistSingleEventAsTrainingSample(importEvent);
-        ShowOverlay("Ins KI-Brain uebernommen.", TimeSpan.FromSeconds(2));
-        RunCodingProtocolMatch();
+        await _codingImportReferenceConfirmationController.ExecuteAsync(
+            LstImportEvents.SelectedItem as CodingEvent,
+            new CodingImportReferenceConfirmationActions(
+                ShowMissingCode: () => ShowOverlay(
+                    "Kein VSA-Code — bitte zuerst 'Bearbeiten'.",
+                    TimeSpan.FromSeconds(3)),
+                PersistTrainingSampleAsync: PersistSingleEventAsTrainingSample,
+                ShowSuccess: () => ShowOverlay(
+                    "Ins KI-Brain uebernommen.",
+                    TimeSpan.FromSeconds(2)),
+                RefreshProtocolMatch: RunCodingProtocolMatch));
     }
 }

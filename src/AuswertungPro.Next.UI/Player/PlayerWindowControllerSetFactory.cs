@@ -21,6 +21,7 @@ public sealed record PlayerWindowControllerSet(
     PlayerMarkToolControls MarkToolControls,
     CodingOverlayRenderController CodingOverlayRenderController,
     CodingImportReferenceDropController CodingImportReferenceDropController,
+    CodingImportReferenceConfirmationController CodingImportReferenceConfirmationController,
     LiveDetectionController LiveDetectionController);
 
 public sealed record PlayerWindowControllerSetControls(
@@ -166,6 +167,7 @@ public static class PlayerWindowControllerSetFactory
                 new CanvasOverlaySurface(controls.CodingOverlayCanvas),
                 new DelegateOverlayCoordinateMapper(dependencies.MapCodingOverlayPoint)),
             new CodingImportReferenceDropController(),
+            new CodingImportReferenceConfirmationController(),
             new LiveDetectionController());
     }
 }

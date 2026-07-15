@@ -51,6 +51,8 @@ public partial class PlayerWindow
 
     private CodingImportReferenceDropController _codingImportReferenceDropController => _playerControllers.CodingImportReferenceDropController;
 
+    private CodingImportReferenceConfirmationController _codingImportReferenceConfirmationController => _playerControllers.CodingImportReferenceConfirmationController;
+
     private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController;
 
     private PlayerWindowShutdownStateController _shutdownState => _playerControllers.ShutdownStateController;
