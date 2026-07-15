@@ -36,4 +36,30 @@ public sealed class KnowledgeBaseHealthCheckerTests : IDisposable
         Assert.False(result.IsHealthy);
         Assert.False(string.IsNullOrWhiteSpace(result.Error));
     }
+
+    [Fact]
+    public void Check_MissingDatabase_IsHealthyAndDoesNotCreateFile()
+    {
+        var path = Path.Combine(_root, "missing", "KnowledgeBase.db");
+
+        var result = KnowledgeBaseHealthChecker.Check(path);
+
+        Assert.True(result.IsHealthy, result.Error);
+        Assert.Null(result.Error);
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public void InspectionService_ValidDatabase_ReportsExistingAndHealthy()
+    {
+        var path = Path.Combine(_root, "KnowledgeBase-direct.db");
+        using (var context = new KnowledgeBaseContext(path)) { }
+        var inspector = new KnowledgeBaseHealthInspectionService();
+
+        var result = inspector.Inspect(path);
+
+        Assert.True(result.DatabaseExists);
+        Assert.True(result.IsHealthy, result.Error);
+        Assert.Null(result.Error);
+    }
 }

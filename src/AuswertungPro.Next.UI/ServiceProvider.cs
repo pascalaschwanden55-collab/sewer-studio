@@ -128,6 +128,7 @@ namespace AuswertungPro.Next.UI
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
         public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
         public IKnowledgeWalCheckpoint KnowledgeWalCheckpoint { get; }
+        public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -266,7 +267,8 @@ namespace AuswertungPro.Next.UI
             ILoggerFactory loggerFactory,
             ISettingsQuarantineStore settingsQuarantine,
             ISettingsMigrationService settingsMigration,
-            IKatasterXtfPathResolver? katasterXtfPaths = null)
+            IKatasterXtfPathResolver? katasterXtfPaths = null,
+            IKnowledgeBaseHealthInspector? knowledgeBaseHealth = null)
         {
             Settings = settings;
             SettingsQuarantine = settingsQuarantine
@@ -434,6 +436,8 @@ namespace AuswertungPro.Next.UI
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
+            KnowledgeBaseHealth = knowledgeBaseHealth ?? new KnowledgeBaseHealthInspectionService();
+            KnowledgeBaseHealthChecker.Use(KnowledgeBaseHealth);
             GitCommit = new GitCommitFileResolver();
             FullBackup = new FullBackupService(
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(
@@ -474,10 +478,8 @@ namespace AuswertungPro.Next.UI
             // AP-06: Zustand der Wissensdatenbank VOR der Init erfassen (existiert die DB-Datei,
             // bevor der Context sie ggf. neu/leer anlegt?). Schuetzt gegen stillen Split-Brain,
             // wenn die Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT verloren geht.
-            var knowledgeDbExisted = File.Exists(KnowledgeDbPath);
-            var knowledgeHealth = knowledgeDbExisted
-                ? KnowledgeBaseHealthChecker.Check(KnowledgeDbPath)
-                : KnowledgeBaseHealthResult.Ok;
+            var knowledgeHealth = KnowledgeBaseHealth.Inspect(KnowledgeDbPath);
+            var knowledgeDbExisted = knowledgeHealth.DatabaseExists;
             var knowledgeSampleCount = 0;
             var knowledgeSampleCountRead = false;
 
@@ -756,6 +758,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISchaechteTemplateColumnReader)) return SchaechteTemplateColumns;
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
+            if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
