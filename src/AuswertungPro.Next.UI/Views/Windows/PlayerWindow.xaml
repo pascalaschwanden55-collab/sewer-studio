@@ -4,6 +4,7 @@
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
         xmlns:win="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="Video"
         Width="1180"
         Height="760"
@@ -195,7 +196,7 @@
                                 Style="{StaticResource ToolbarButton}"
                                 Click="ShowShortcutOverlay_Click"
                                 ToolTip="Tastenkürzel anzeigen">
-                            <TextBlock Text="?" FontSize="13" FontWeight="Bold"/>
+                            <ui:FluentIcon Glyph="&#xE897;" FontSize="13" Foreground="{DynamicResource AccentBrush}"/>
                         </Button>
                     </StackPanel>
                 </Border>
@@ -310,14 +311,29 @@
 
                         <!-- Aktionen -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="&#x2713; Übernehmen" Click="ConfirmAccept_Click"
-                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
-                            <Button Content="&#x270E; Code ändern" Click="ConfirmEdit_Click"
+                            <Button Click="ConfirmAccept_Click"
+                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="White" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Übernehmen"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="ConfirmEdit_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="{DynamicResource AccentBrush}"/>
-                            <Button Content="&#x2717; Verwerfen" Click="ConfirmReject_Click"
+                                    Foreground="{DynamicResource AccentBrush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Code ändern"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="ConfirmReject_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6"
-                                    Foreground="#EF4444"/>
+                                    Foreground="{DynamicResource DangerBrush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE711;" Foreground="{DynamicResource DangerBrush}" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Verwerfen"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -336,13 +352,28 @@
                                    Foreground="#94A3B8" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="&#x2713; Akzeptieren" Click="DetectionAccept_Click"
-                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
-                            <Button Content="&#x270E; Korrigieren" Click="DetectionCorrect_Click"
+                            <Button Click="DetectionAccept_Click"
+                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="White" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Akzeptieren"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="DetectionCorrect_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="#F59E0B"/>
-                            <Button Content="&#x25B6; Weiter" Click="DetectionSkip_Click"
-                                    Style="{StaticResource PlayerButton}" Padding="12,6"/>
+                                    Foreground="#F59E0B">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE70F;" Foreground="#F59E0B" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Korrigieren"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="DetectionSkip_Click"
+                                    Style="{StaticResource PlayerButton}" Padding="12,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE76C;" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Weiter"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -419,15 +450,19 @@
 
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button Style="{StaticResource PlayerButton}" Content="&#x25C0;" Padding="8,6"
-                            Click="CodingPrevious_Click" ToolTip="Zurück (Step)"/>
+                    <Button Style="{StaticResource PlayerButton}" Padding="8,6"
+                            Click="CodingPrevious_Click" ToolTip="Zurück (Step)">
+                        <ui:FluentIcon Glyph="&#xE76B;" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
+                    </Button>
                     <TextBlock x:Name="TxtCodingMeter"
                                FontFamily="Consolas, Cascadia Mono" FontSize="15" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
-                    <Button Style="{StaticResource PlayerButton}" Content="&#x25B6;" Padding="8,6"
-                            Click="CodingNext_Click" ToolTip="Weiter (Step)"/>
+                    <Button Style="{StaticResource PlayerButton}" Padding="8,6"
+                            Click="CodingNext_Click" ToolTip="Weiter (Step)">
+                        <ui:FluentIcon Glyph="&#xE76C;" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
+                    </Button>
                     <TextBlock x:Name="TxtCodingRange"
                                FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -464,12 +499,20 @@
                             <StackPanel>
                                 <!-- Kalibrieren -->
                                 <Button x:Name="BtnCodingCalibrate" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x2295;  Rohr kalibrieren (DN)"
-                                        Click="CodingCalibrate_Click"/>
+                                        Click="CodingCalibrate_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xECC8;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Rohr kalibrieren (DN)"/>
+                                    </StackPanel>
+                                </Button>
                                 <!-- Markieren fuer KI -->
                                 <Button x:Name="BtnCodingRect" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x25A2;  Bereich markieren"
-                                        Click="CodingToolRect_Click"/>
+                                        Click="CodingToolRect_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Bereich markieren"/>
+                                    </StackPanel>
+                                </Button>
                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
                                 <!-- Hinweis -->
                                 <TextBlock Text="Alle Messwerkzeuge im PhotoAssistant"
@@ -549,7 +592,10 @@
                             Padding="8,5" FontSize="11" Margin="6,0,0,0"
                             Click="CodingClearOverlays_Click"
                             ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
-                        <TextBlock Text="&#x2716; Overlays aus" FontSize="11"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:FluentIcon Glyph="&#xED1A;" FontSize="12" Foreground="{DynamicResource DangerBrush}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Overlays aus" FontSize="11"/>
+                        </StackPanel>
                     </Button>
 
                     <!-- Eingabemarker: Klick auf Stelle + Stichwort → KI analysiert -->
@@ -558,7 +604,7 @@
                                   ToolTip="Eingabemarker: Video pausiert, Stelle markieren, Stichwort eingeben → KI bestimmt Code"
                                   Click="Eingabemarker_Click">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x1F4CD;" FontSize="14" Margin="0,0,4,0"/>
+                            <ui:FluentIcon Glyph="&#xE707;" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,4,0"/>
                             <TextBlock Text="Eingabemarker" FontSize="11"/>
                         </StackPanel>
                     </ToggleButton>
@@ -607,8 +653,12 @@
                                 <ComboBoxItem Content="Wasserstand"/>
                                 <ComboBoxItem Content="Abbruch"/>
                             </ComboBox>
-                            <TextBlock Text="Enter &#x2714;" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
-                                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="4" Padding="5,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="Enter" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="10"/>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -865,18 +915,35 @@
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1" CornerRadius="8" Padding="6">
                                 <StackPanel>
-                                    <Button Click="MarkTool_Punkt_Click"
-                                            Content="&#x25CF; Punkt (Klick)" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
-                                    <Button Click="MarkTool_Ellipse_Click"
-                                            Content="&#x2B2D; Ellipse" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
-                                    <Button Click="MarkTool_Freihand_Click"
-                                            Content="&#x270E; Freihand" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
-                                    <Button Click="MarkTool_Rechteck_Click"
-                                            Content="&#x25A2; Rechteck" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
+                                    <Button Click="MarkTool_Punkt_Click" Padding="12,6"
+                                            Style="{StaticResource MarkToolPopupButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Margin="0,0,14,0"/>
+                                            <TextBlock Text="Punkt (Klick)"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="MarkTool_Ellipse_Click" Padding="12,6"
+                                            Style="{StaticResource MarkToolPopupButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="16" Height="10" Stroke="{DynamicResource AccentBrush}"
+                                                     StrokeThickness="1.5" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Ellipse"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="MarkTool_Freihand_Click" Padding="12,6"
+                                            Style="{StaticResource MarkToolPopupButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Freihand"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="MarkTool_Rechteck_Click" Padding="12,6"
+                                            Style="{StaticResource MarkToolPopupButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Rechteck"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </Border>
                         </Popup>

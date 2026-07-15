@@ -286,6 +286,24 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain("Text=\"⇄\"", holdings);
     }
 
+    [Fact]
+    public void Player_actions_use_fluent_icons_instead_of_text_symbols_and_emoji()
+    {
+        var xaml = ReadUiFile("Views", "Windows", "PlayerWindow.xaml");
+
+        Assert.Contains("Glyph=\"&#xE897;\"", xaml);
+        Assert.Contains("Glyph=\"&#xECC8;\"", xaml);
+        Assert.Contains("Glyph=\"&#xED1A;\"", xaml);
+        Assert.Contains("Glyph=\"&#xE707;\"", xaml);
+        Assert.DoesNotContain("Content=\"&#x2713;", xaml);
+        Assert.DoesNotContain("Content=\"&#x270E;", xaml);
+        Assert.DoesNotContain("Content=\"&#x25B6;", xaml);
+        Assert.DoesNotContain("Content=\"&#x25C0;", xaml);
+        Assert.DoesNotContain("Content=\"&#x2B2D;", xaml);
+        Assert.DoesNotContain("Text=\"&#x1F4CD;\"", xaml);
+        Assert.DoesNotContain("Text=\"Enter &#x2714;\"", xaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
