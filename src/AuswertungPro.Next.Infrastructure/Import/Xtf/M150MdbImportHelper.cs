@@ -1,8 +1,6 @@
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -67,14 +65,21 @@ internal static class M150MdbImportHelper
     ];
 
     public static List<HaltungRecord> ParseM150File(string path, out List<string> warnings)
+        => ParseM150File(path, M150SourceFileReader.Current, out warnings);
+
+    internal static List<HaltungRecord> ParseM150File(
+        string path,
+        IM150SourceFileReader sourceReader,
+        out List<string> warnings)
     {
+        ArgumentNullException.ThrowIfNull(sourceReader);
         warnings = new List<string>();
         var entries = new List<ImportEntry>();
         XDocument? winCanDoc = null;
 
         try
         {
-            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);   // XXE-Schutz (Audit)
+            var doc = sourceReader.LoadXml(path);
 
             // WinCan Viewer XML: Root=NewDataSet with S_T children → parse as WinCan, not M150
             if (IsWinCanViewerXml(doc))
@@ -94,7 +99,7 @@ internal static class M150MdbImportHelper
 
         if (entries.Count == 0)
         {
-            var text = File.ReadAllText(path, Encoding.UTF8);
+            var text = sourceReader.ReadUtf8Text(path);
             entries.AddRange(ExtractEntriesFromRawText(text));
         }
 
@@ -108,10 +113,16 @@ internal static class M150MdbImportHelper
     }
 
     public static (int HgCount, int HiCount) GetM150XmlNodeCounts(string path)
+        => GetM150XmlNodeCounts(path, M150SourceFileReader.Current);
+
+    internal static (int HgCount, int HiCount) GetM150XmlNodeCounts(
+        string path,
+        IM150SourceFileReader sourceReader)
     {
+        ArgumentNullException.ThrowIfNull(sourceReader);
         try
         {
-            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);   // XXE-Schutz (Audit)
+            var doc = sourceReader.LoadXml(path);
             var hgCount = doc.Descendants().Count(e => e.Name.LocalName.Equals("HG", StringComparison.OrdinalIgnoreCase));
             var hiCount = doc.Descendants().Count(e => e.Name.LocalName.Equals("HI", StringComparison.OrdinalIgnoreCase));
             return (hgCount, hiCount);
