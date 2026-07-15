@@ -325,6 +325,29 @@ public partial class PlayerWindow : Window
                     CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
                     SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
                     DeactivateCodingOverlay: _markToolControls.DeactivateCodingOverlay)));
+        _liveDetectionMarkSegmentationController = new LiveDetectionMarkSegmentationController(
+            new LiveDetectionMarkSegmentationControllerBindings(
+                HasBoxSegmentation: () => _codingAiRuntimeOwner.Controller.BoxSegmentation is not null,
+                SegmentBoxAsync: (frameBytes, box, dn, calibration) =>
+                    _codingAiRuntimeOwner.Controller.BoxSegmentation!.SegmentBoxAsync(
+                        frameBytes,
+                        box,
+                        dn,
+                        calibration,
+                        System.Threading.CancellationToken.None),
+                GetCalibration: () => _codingOverlayToolHost.Calibration,
+                GetContentRect: GetCodingContentRect,
+                ShowBendMarker: (x, y, rect) => CodingBendMarkerOverlayController.Show(
+                    CodingOverlayCanvas,
+                    x,
+                    y,
+                    rect),
+                RenderMasks: (samResponse, quantifications, rect) => CodingSamMaskOverlayController.RenderMasks(
+                    CodingOverlayCanvas,
+                    samResponse,
+                    quantifications,
+                    rect),
+                TraceError: message => PlayerTrace.WriteLine(message)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(

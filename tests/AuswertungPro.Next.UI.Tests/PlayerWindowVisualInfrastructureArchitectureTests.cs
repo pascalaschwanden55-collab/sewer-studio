@@ -71,7 +71,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
-        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "BendMarkerRenderer.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingBendMarkerOverlayController.cs");
         var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
@@ -80,13 +80,13 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         Assert.True(File.Exists(controllerPath), "Bend-Marker-Aufrufe sollen ueber einen Controller laufen.");
 
         var marking = File.ReadAllText(markingPath);
-        var segmentation = File.Exists(segmentationPath) ? File.ReadAllText(segmentationPath) : string.Empty;
+        var windowRoot = File.ReadAllText(windowRootPath);
         var renderer = File.ReadAllText(rendererPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : string.Empty;
         var tags = File.ReadAllText(tagsPath);
 
         Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
-        Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
+        Assert.Contains("CodingBendMarkerOverlayController.Show", windowRoot);
         Assert.Contains("CodingBendMarkerOverlayController.Clear", marking);
         Assert.Contains("BendMarkerRenderer.Show", controller);
         Assert.Contains("BendMarkerRenderer.Clear", controller);
@@ -100,7 +100,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
                 "\"bend_marker\"",
                 "BendMarkerRenderer.Clear")
             .Concat(FindFileTokenOffenders(
-                segmentationPath,
+                windowRootPath,
                 "OverlayTags.BendMarker",
                 "\"bend_marker\"",
                 "BendMarkerRenderer.Show"))

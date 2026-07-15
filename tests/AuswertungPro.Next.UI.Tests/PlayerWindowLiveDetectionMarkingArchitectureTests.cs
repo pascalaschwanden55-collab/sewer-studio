@@ -16,14 +16,14 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+        var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "LiveDetectionGeometryMapper.cs");
 
-        var segmentation = File.ReadAllText(segmentationPath);
+        var segmentationController = File.ReadAllText(segmentationControllerPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", segmentation);
-        AssertNoForbiddenTokens(segmentation, "NormalizedBoundingBox.FromPoints");
+        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", segmentationController);
+        AssertNoForbiddenTokens(segmentationController, "NormalizedBoundingBox.FromPoints");
         Assert.Contains("public static NormalizedBoundingBox BBoxFromOverlay", mapper);
     }
 
@@ -32,17 +32,17 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+        var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingMarkBoxQuantificationOverlayPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "SAM-Quantifizierung-zu-Overlay-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var segmentation = File.ReadAllText(segmentationPath);
+        var segmentationController = File.ReadAllText(segmentationControllerPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
+        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentationController);
         AssertNoForbiddenTokens(
-            segmentation,
+            segmentationController,
             "result.Quant.HeightMm.HasValue",
             "double.TryParse(result.Quant.ClockPosition");
         Assert.Contains("public static void Apply", policy);
@@ -50,25 +50,38 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_mark_segmentation_lives_in_segmentation_partial()
+    public void PlayerWindow_mark_segmentation_lives_in_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
-        var segmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
-        var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
+        var oldSegmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+        var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
+        var maskOverlayControllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
         var segmentWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkBoxSegmentationWorkflow.cs");
         var renderWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkSamMaskRenderWorkflow.cs");
+        var controllerField = typeof(PlayerWindow).GetField(
+            "_liveDetectionMarkSegmentationController",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        var playerWindowMethodNames = typeof(PlayerWindow)
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+            .Select(method => method.Name)
+            .ToArray();
 
-        Assert.True(File.Exists(segmentationPath), "SAM-Segmentierung und Maskenrendering sollen aus dem Marking-Orchestrator heraus.");
-        Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
+        Assert.False(File.Exists(oldSegmentationPath), "SAM-Segmentierung darf nicht als PlayerWindow-Partial zurueckkehren.");
+        Assert.True(File.Exists(segmentationControllerPath), "SAM-Segmentierung und Maskensteuerung sollen in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(maskOverlayControllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
         Assert.True(File.Exists(segmentWorkflowPath), "SAM-Segmentierungsentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(renderWorkflowPath), "SAM-Masken-Renderentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.NotNull(controllerField);
+        Assert.Equal(typeof(ILiveDetectionMarkSegmentationController), controllerField.FieldType);
 
+        var windowRoot = File.ReadAllText(windowRootPath);
         var marking = File.ReadAllText(markingPath);
-        var segmentation = File.ReadAllText(segmentationPath);
-        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var segmentationController = File.ReadAllText(segmentationControllerPath);
+        var maskOverlayController = File.Exists(maskOverlayControllerPath) ? File.ReadAllText(maskOverlayControllerPath) : "";
         var segmentWorkflow = File.Exists(segmentWorkflowPath) ? File.ReadAllText(segmentWorkflowPath) : "";
         var renderWorkflow = File.Exists(renderWorkflowPath) ? File.ReadAllText(renderWorkflowPath) : "";
 
@@ -76,19 +89,22 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             marking,
             "private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync",
             "private void ShowMarkSamMask");
-        Assert.Contains("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", segmentation);
-        Assert.Contains("private void ShowMarkSamMask", segmentation);
-        Assert.Contains("LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync", segmentation);
-        Assert.Contains("LiveDetectionMarkSamMaskRenderWorkflow.Execute", segmentation);
-        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
-        Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentation);
+        Assert.DoesNotContain("TrySegmentMarkBoxAsync", playerWindowMethodNames);
+        Assert.DoesNotContain("ShowMarkSamMask", playerWindowMethodNames);
+        Assert.Contains("_liveDetectionMarkSegmentationController.TrySegmentAsync", marking);
+        Assert.Contains("_liveDetectionMarkSegmentationController.ShowMask", marking);
+        Assert.Contains("public interface ILiveDetectionMarkSegmentationController", segmentationController);
+        Assert.Contains("LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync", segmentationController);
+        Assert.Contains("LiveDetectionMarkSamMaskRenderWorkflow.Execute", segmentationController);
+        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentationController);
+        Assert.Contains("CodingSamMaskOverlayController.RenderMasks", windowRoot);
         AssertNoForbiddenTokens(
-            segmentation,
+            segmentationController,
             "var result = await boxSegmentation.SegmentBoxAsync",
             "new Infrastructure.Ai.Pipeline.SamResponse",
             "Ai.Pipeline.SamMaskRenderer.RenderMasks");
-        Assert.Contains("SamMaskRenderer.RenderMasks", controller);
-        Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
+        Assert.Contains("SamMaskRenderer.RenderMasks", maskOverlayController);
+        Assert.Contains("CodingBendMarkerOverlayController.Show", windowRoot);
         Assert.Contains("actions.SegmentBoxAsync", segmentWorkflow);
         Assert.Contains("actions.ApplyQuantification", segmentWorkflow);
         Assert.Contains("actions.RenderMasks", renderWorkflow);

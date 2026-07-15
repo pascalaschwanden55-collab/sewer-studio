@@ -35,7 +35,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             "PlayerWindow.Coding.AiOverlayRendering.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",
             "PlayerWindow.Coding.AutoCalibration.cs",
-            "PlayerWindow.LiveDetection.Marking.Segmentation.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.OverlayRendering.cs",
             "PlayerWindow.OverlayRendering.Schema.cs"
         };
