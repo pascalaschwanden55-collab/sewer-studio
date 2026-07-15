@@ -155,6 +155,7 @@ namespace AuswertungPro.Next.UI
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
         public ISchachtProtocolOcrReader SchachtProtocolOcr { get; }
+        public IPdfFormFieldReader PdfFormFields { get; }
         public IPdfTextPrefixReader PdfTextPrefixes { get; }
         public IPdfImportService PdfImport { get; }
         public IDistributionFileTransfer DistributionFileTransfers { get; }
@@ -419,6 +420,8 @@ namespace AuswertungPro.Next.UI
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
             PdfOcrExtractor.Use(PdfOcrExtraction);
             SchachtProtocolOcr = new SchachtProtocolOcrReaderService(PdfFileSafety, PdfOcrExtraction);
+            PdfFormFields = new PdfFormFieldReaderService();
+            PdfFormFieldExtractor.Use(PdfFormFields);
             PdfTextPrefixes = new PdfTextPrefixReaderService();
             PdfDokumentTypErkennung.UseTextPrefixReader(PdfTextPrefixes);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
@@ -824,6 +827,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(ISchachtProtocolOcrReader)) return SchachtProtocolOcr;
+            if (serviceType == typeof(IPdfFormFieldReader)) return PdfFormFields;
             if (serviceType == typeof(IPdfTextPrefixReader)) return PdfTextPrefixes;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;

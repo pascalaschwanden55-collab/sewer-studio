@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using AuswertungPro.Next.Infrastructure.Import.Pdf;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 

@@ -1,5 +1,5 @@
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
-using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
