@@ -325,7 +325,7 @@ public sealed partial class BuilderPageViewModel
         {
             await BackgroundFileExportRunner.RunAsync(() =>
             {
-                var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+                var bytes = _npkExcelExporter.BuildWorkbook(
                     positions,
                     "CHF",
                     vatRate,

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using ClosedXML.Excel;
@@ -18,6 +19,22 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         => new(npk, "600", "key-" + npk, "Position " + npk, "m", 250, qty, net, 2, false, ep, "");
 
     private static XLWorkbook Open(byte[] bytes) => new(new MemoryStream(bytes));
+
+    [Fact]
+    public void Instanz_erzeugt_dieselbe_geschuetzte_Arbeitsmappe()
+    {
+        INpkLeistungsverzeichnisExcelExporter exporter =
+            new NpkLeistungsverzeichnisExcelExportService();
+
+        var bytes = exporter.BuildWorkbook(
+            new[] { Fixed("612.113", 10m, 200m, 2000m) });
+
+        using var workbook = Open(bytes);
+        Assert.Contains(
+            workbook.Worksheets,
+            sheet => sheet.Name.StartsWith("Zum Ausf", System.StringComparison.Ordinal));
+        Assert.Contains("Kalkulation (intern)", workbook.Worksheets.Select(sheet => sheet.Name));
+    }
 
     [Fact]
     public void BuildWorkbook_hat_reiter_zum_ausfuellen_und_intern()

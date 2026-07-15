@@ -40,6 +40,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IPdfMergeService _pdfMerge;
+    private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -133,7 +134,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             protocolPdfExporter: services.ProtocolPdfExporter,
             costFieldSync: services.CostFieldSync,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
-            inspectionProtocolFiles: services.InspectionProtocolFiles)
+            inspectionProtocolFiles: services.InspectionProtocolFiles,
+            npkExcelExporter: services.NpkExcelExport)
     {
         _pdfMerge = services.PdfMerge;
     }
@@ -145,7 +147,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         ProtocolPdfExporter protocolPdfExporter,
         IDerivedCostFieldSynchronizer costFieldSync,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -156,6 +159,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             ?? DataPage.DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPage.DataPageProtocolPathResolver.CompatibilityService;
+        _npkExcelExporter = npkExcelExporter
+            ?? NpkLeistungsverzeichnisExcelExporter.Current;
         _pdfMerge = PdfMergeHelper.Current;
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };

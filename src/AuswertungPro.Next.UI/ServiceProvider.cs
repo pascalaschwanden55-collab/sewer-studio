@@ -14,6 +14,7 @@ using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Map;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
@@ -21,6 +22,7 @@ using AuswertungPro.Next.Application.Vsa;
 
 using AuswertungPro.Next.Infrastructure.Backup;
 using AuswertungPro.Next.Infrastructure.Common;
+using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Diagnostics;
 using AuswertungPro.Next.Infrastructure.DataPage;
 using AuswertungPro.Next.Infrastructure.Export;
@@ -219,6 +221,7 @@ namespace AuswertungPro.Next.UI
         #region Export / Protokoll
         // Export-Dienste und Protokollerzeugung
         public IExcelExportService ExcelExport { get; }
+        public INpkLeistungsverzeichnisExcelExporter NpkExcelExport { get; }
         public IDistributionPatternResolver DistributionPatterns { get; }
         public IDistributionDirectoryTreeResolver DistributionDirectoryTree { get; }
         public IProtocolService Protocols { get; }
@@ -528,6 +531,8 @@ namespace AuswertungPro.Next.UI
             DistributionPatterns = new DistributionPatternResolver();
             DistributionDirectoryTree = new DistributionDirectoryTreeResolver(DistributionPatterns);
             ExcelExport = new ExcelTemplateExportService();
+            NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService();
+            NpkLeistungsverzeichnisExcelExporter.Use(NpkExcelExport);
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
             // Register protocol/photo/pdf services
@@ -919,6 +924,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
             if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
+            if (serviceType == typeof(INpkLeistungsverzeichnisExcelExporter)) return NpkExcelExport;
             if (serviceType == typeof(IDistributionPatternResolver)) return DistributionPatterns;
             if (serviceType == typeof(IDistributionDirectoryTreeResolver)) return DistributionDirectoryTree;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;

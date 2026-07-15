@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using ClosedXML.Excel;
 
@@ -20,7 +21,7 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 /// Logo + Absenderblock im Kopf, dezente Grau-Blau-Akzente (#7A8A94), A4-Druckformat
 /// hochkant mit wiederholter Kopfzeile und Fusszeile "Seite X von Y".
 /// </summary>
-public static class NpkLeistungsverzeichnisExcelExporter
+public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsverzeichnisExcelExporter
 {
     private const int ColNpk = 1;
     // D/16-Praxisnummer (heutige Ausgabe) direkt neben der Revisions-Nummer,
@@ -52,7 +53,7 @@ public static class NpkLeistungsverzeichnisExcelExporter
     private const string SenderLine1 = "Abwasser Uri — Zentrale Dienste — Giessenstrasse 46 — 6460 Altdorf";
     private const string SenderLine2 = "info@abwasser-uri.ch — T 041 875 00 90";
 
-    public static byte[] BuildWorkbook(
+    public byte[] BuildWorkbook(
         IReadOnlyList<AggregatedPosition> positions,
         string currency = "CHF",
         decimal vatRate = 0.081m,
@@ -344,4 +345,37 @@ public static class NpkLeistungsverzeichnisExcelExporter
         if (t.Length == 0) return h;
         return t.IndexOf(h, StringComparison.OrdinalIgnoreCase) >= 0 ? t : $"{t} ({h})";
     }
+}
+
+/// <summary>Kompatible statische API fuer bestehende Aufrufer.</summary>
+public static class NpkLeistungsverzeichnisExcelExporter
+{
+    private static INpkLeistungsverzeichnisExcelExporter _current =
+        new NpkLeistungsverzeichnisExcelExportService();
+
+    public static INpkLeistungsverzeichnisExcelExporter Current =>
+        Volatile.Read(ref _current);
+
+    public static void Use(INpkLeistungsverzeichnisExcelExporter exporter)
+    {
+        ArgumentNullException.ThrowIfNull(exporter);
+        Volatile.Write(ref _current, exporter);
+    }
+
+    public static byte[] BuildWorkbook(
+        IReadOnlyList<AggregatedPosition> positions,
+        string currency = "CHF",
+        decimal vatRate = 0.081m,
+        string projectName = "",
+        decimal excludedPauschaleTotal = 0m,
+        int excludedPauschaleCount = 0,
+        string? logoPathAbs = null) =>
+        Current.BuildWorkbook(
+            positions,
+            currency,
+            vatRate,
+            projectName,
+            excludedPauschaleTotal,
+            excludedPauschaleCount,
+            logoPathAbs);
 }
