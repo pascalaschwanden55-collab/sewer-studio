@@ -8,6 +8,18 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 /// <summary>Fuehrt die begrenzte PDF-Textextraktion und den externen pdftotext-Aufruf aus.</summary>
 public sealed class PdfTextExtractionService : IPdfTextExtractor
 {
+    private readonly IPdfFileSafetyChecker _fileSafety;
+
+    public PdfTextExtractionService()
+        : this(PdfImportSafetyPolicy.Current)
+    {
+    }
+
+    public PdfTextExtractionService(IPdfFileSafetyChecker fileSafety)
+    {
+        _fileSafety = fileSafety ?? throw new ArgumentNullException(nameof(fileSafety));
+    }
+
     public string FindPdfToTextPath(string? explicitPath = null)
     {
         if (!string.IsNullOrWhiteSpace(explicitPath))
@@ -69,7 +81,7 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
         if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
             throw new FileNotFoundException($"PDF nicht gefunden: {pdfPath}");
 
-        PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
+        _fileSafety.ThrowIfFileTooLarge(pdfPath);
         try
         {
             return ExtractPagesWithPdfToText(pdfPath, explicitPdfToTextPath);

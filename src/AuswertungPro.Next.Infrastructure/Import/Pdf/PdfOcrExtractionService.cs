@@ -8,11 +8,20 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 /// <summary>Fuehrt den begrenzten Poppler-/Tesseract-Rueckfall fuer Bild-PDFs aus.</summary>
 public sealed class PdfOcrExtractionService : IPdfOcrExtractor
 {
+    private readonly IPdfFileSafetyChecker _fileSafety;
     private readonly IPdfTextExtractor _pdfTextExtractor;
 
     public PdfOcrExtractionService(IPdfTextExtractor pdfTextExtractor)
+        : this(pdfTextExtractor, PdfImportSafetyPolicy.Current)
+    {
+    }
+
+    public PdfOcrExtractionService(
+        IPdfTextExtractor pdfTextExtractor,
+        IPdfFileSafetyChecker fileSafety)
     {
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
+        _fileSafety = fileSafety ?? throw new ArgumentNullException(nameof(fileSafety));
     }
 
     public PdfOcrPageExtractionResult TryExtractPageText(string pdfPath, int pageNumber)
@@ -22,7 +31,7 @@ public sealed class PdfOcrExtractionService : IPdfOcrExtractor
 
         try
         {
-            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
+            _fileSafety.ThrowIfFileTooLarge(pdfPath);
         }
         catch (Exception ex)
         {
@@ -139,7 +148,7 @@ public sealed class PdfOcrExtractionService : IPdfOcrExtractor
     {
         try
         {
-            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
+            _fileSafety.ThrowIfFileTooLarge(pdfPath);
             using var document = PdfDocument.Open(pdfPath);
             PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
             return document.NumberOfPages;

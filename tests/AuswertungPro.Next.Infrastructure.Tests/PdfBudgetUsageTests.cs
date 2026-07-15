@@ -11,7 +11,7 @@ public sealed class PdfBudgetUsageTests
         var protocolExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"));
         var holdingParser = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "HoldingFolderDistributor.PdfParsing.cs"));
 
-        Assert.Contains("PdfImportSafetyPolicy.ThrowIfFileTooLarge", textExtractor);
+        Assert.Contains("_fileSafety.ThrowIfFileTooLarge", textExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", textExtractor);
         Assert.Contains("ThrowIfPageBudgetExceeded(pdfPath)", textExtractor);
         Assert.Contains("PdfExtractedTextBudget.ReadUtf8AtMost", textExtractor);

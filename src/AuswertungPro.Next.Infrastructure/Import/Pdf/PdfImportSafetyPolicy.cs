@@ -1,4 +1,5 @@
 using System.Globalization;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -6,6 +7,8 @@ public sealed record PdfSafetyCheck(bool Allowed, string? Message);
 
 public static class PdfImportSafetyPolicy
 {
+    private static IPdfFileSafetyChecker _current = new PdfFileSafetyService();
+
     // Workstation-tauglicher Default (2 GB): grosse GEP-/SchachtPro-Gesamtauszuege mit
     // Vollbild-Fotos (~1 GB) muessen in voller Qualitaet importierbar sein. Bleibt eine
     // vorsorgliche Obergrenze gegen pathologische Dateien (Stabilitaets-Audit K10/S3) und
@@ -26,11 +29,16 @@ public static class PdfImportSafetyPolicy
     /// </summary>
     public const string MaxPagesEnvVar = "SEWERSTUDIO_MAX_PDF_PAGES";
 
+    public static IPdfFileSafetyChecker Current => Volatile.Read(ref _current);
+
+    public static void Use(IPdfFileSafetyChecker checker)
+        => Volatile.Write(ref _current, checker ?? throw new ArgumentNullException(nameof(checker)));
+
     /// <summary>
     /// Aufgeloestes Byte-Budget: Override aus <see cref="MaxBytesEnvVar"/> (in MB), sonst Default.
     /// </summary>
     public static long ResolveMaxBytes()
-        => ResolveMaxBytes(Environment.GetEnvironmentVariable(MaxBytesEnvVar));
+        => Current.ResolveMaxBytes();
 
     internal static long ResolveMaxBytes(string? rawMegabytes)
     {
@@ -60,25 +68,8 @@ public static class PdfImportSafetyPolicy
 
     public static PdfSafetyCheck CheckFileBudget(string pdfPath, long? maxBytes = null)
     {
-        if (string.IsNullOrWhiteSpace(pdfPath))
-            return new PdfSafetyCheck(false, "PDF-Pfad fehlt.");
-
-        var limit = maxBytes ?? ResolveMaxBytes();
-        if (limit <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxBytes), "Maximale PDF-Groesse muss positiv sein.");
-
-        var file = new FileInfo(pdfPath);
-        if (!file.Exists)
-            return new PdfSafetyCheck(false, $"PDF nicht gefunden: {pdfPath}");
-
-        if (file.Length > limit)
-        {
-            var actualMb = file.Length / 1024d / 1024d;
-            var maxMb = limit / 1024d / 1024d;
-            return new PdfSafetyCheck(false, $"PDF ist zu gross ({actualMb:F1} MB, Limit {maxMb:F1} MB): {pdfPath}");
-        }
-
-        return new PdfSafetyCheck(true, null);
+        var result = Current.CheckFileBudget(pdfPath, maxBytes);
+        return new PdfSafetyCheck(result.Allowed, result.Message);
     }
 
     public static PdfSafetyCheck CheckPageBudget(int pageCount, int? maxPages = null)
@@ -93,11 +84,7 @@ public static class PdfImportSafetyPolicy
     }
 
     public static void ThrowIfFileTooLarge(string pdfPath, long? maxBytes = null)
-    {
-        var check = CheckFileBudget(pdfPath, maxBytes);
-        if (!check.Allowed)
-            throw new InvalidDataException(check.Message);
-    }
+        => Current.ThrowIfFileTooLarge(pdfPath, maxBytes);
 
     public static void ThrowIfTooManyPages(int pageCount, int? maxPages = null)
     {

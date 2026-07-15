@@ -86,4 +86,23 @@ public sealed class PdfImportSafetyPolicyTests
             try { File.Delete(temp); } catch { }
         }
     }
+
+    [Fact]
+    public void Instanzdienst_behaelt_Groessenpruefung_und_Meldung()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pdf_budget_{Guid.NewGuid():N}.pdf");
+        try
+        {
+            File.WriteAllBytes(temp, new byte[4]);
+
+            var check = new PdfFileSafetyService().CheckFileBudget(temp, maxBytes: 3);
+
+            Assert.False(check.Allowed);
+            Assert.Contains("zu gross", check.Message);
+        }
+        finally
+        {
+            try { File.Delete(temp); } catch { }
+        }
+    }
 }

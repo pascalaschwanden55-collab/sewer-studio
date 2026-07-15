@@ -145,6 +145,7 @@ namespace AuswertungPro.Next.UI
 
         #region Import
         // Alle Import-Adapter für externe Datenformate
+        public IPdfFileSafetyChecker PdfFileSafety { get; }
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
         public IPdfImportService PdfImport { get; }
@@ -395,9 +396,11 @@ namespace AuswertungPro.Next.UI
             KiasExportPattern.Use(KiasExportPatterns);
             KanalExportDetection = new KanalExportDetectionService(KiasExportPatterns);
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
-            PdfTextExtraction = new PdfTextExtractionService();
+            PdfFileSafety = new PdfFileSafetyService();
+            PdfImportSafetyPolicy.Use(PdfFileSafety);
+            PdfTextExtraction = new PdfTextExtractionService(PdfFileSafety);
             PdfTextExtractor.Use(PdfTextExtraction);
-            PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction);
+            PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
             PdfOcrExtractor.Use(PdfOcrExtraction);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
@@ -779,6 +782,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
+            if (serviceType == typeof(IPdfFileSafetyChecker)) return PdfFileSafety;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
