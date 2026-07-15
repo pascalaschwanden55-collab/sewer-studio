@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -7,16 +8,27 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
     private readonly string _xmlPath;
     private readonly string? _fallbackJsonPath;
     private readonly string? _fallbackTextXmlPath;
+    private readonly ISafeXmlDocumentLoader _xmlLoader;
     private readonly List<CodeDefinition> _codes = new();
     private readonly Dictionary<string, CodeDefinition> _byCode = new(StringComparer.OrdinalIgnoreCase);
     private bool _loaded;
     public IReadOnlyList<string> LastLoadWarnings { get; private set; } = Array.Empty<string>();
 
     public XmlCodeCatalogProvider(string xmlPath, string? fallbackJsonPath = null, string? fallbackTextXmlPath = null)
+        : this(xmlPath, fallbackJsonPath, fallbackTextXmlPath, new SafeXmlDocumentLoader())
+    {
+    }
+
+    public XmlCodeCatalogProvider(
+        string xmlPath,
+        string? fallbackJsonPath,
+        string? fallbackTextXmlPath,
+        ISafeXmlDocumentLoader xmlLoader)
     {
         _xmlPath = xmlPath;
         _fallbackJsonPath = fallbackJsonPath;
         _fallbackTextXmlPath = fallbackTextXmlPath;
+        _xmlLoader = xmlLoader ?? throw new ArgumentNullException(nameof(xmlLoader));
         // Lazy Loading: Load() wird beim ersten Zugriff aufgerufen (nicht im Konstruktor)
     }
 
@@ -97,7 +109,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         var fallbackTexts = LoadFallbackTextMap(_fallbackTextXmlPath);
         var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(_xmlPath);   // XXE-Schutz (Audit)
+        var doc = _xmlLoader.Load(_xmlPath);
         var root = doc.Root ?? throw new InvalidOperationException("XML-Katalog ohne Root-Element.");
 
         if (string.Equals(root.Name.LocalName, "WCCat", StringComparison.OrdinalIgnoreCase))
@@ -475,7 +487,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         return dict;
     }
 
-    private static Dictionary<string, FallbackText> LoadFallbackTextMap(string? path)
+    private Dictionary<string, FallbackText> LoadFallbackTextMap(string? path)
     {
         var map = new Dictionary<string, FallbackText>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -483,7 +495,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
 
         try
         {
-            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path);   // XXE-Schutz (Audit)
+            var doc = _xmlLoader.Load(path);
             var root = doc.Root;
             if (root is null)
                 return map;

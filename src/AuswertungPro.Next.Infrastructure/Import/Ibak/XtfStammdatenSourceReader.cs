@@ -17,6 +17,18 @@ public interface IXtfStammdatenSourceReader
 /// </summary>
 public sealed class XtfStammdatenSourceReader : IXtfStammdatenSourceReader
 {
+    private readonly ISafeXmlDocumentLoader _xmlLoader;
+
+    public XtfStammdatenSourceReader()
+        : this(new SafeXmlDocumentLoader())
+    {
+    }
+
+    public XtfStammdatenSourceReader(ISafeXmlDocumentLoader xmlLoader)
+    {
+        _xmlLoader = xmlLoader ?? throw new ArgumentNullException(nameof(xmlLoader));
+    }
+
     public IReadOnlyList<string> EnumerateXtfFiles(string exportRoot)
     {
         if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
@@ -41,7 +53,7 @@ public sealed class XtfStammdatenSourceReader : IXtfStammdatenSourceReader
 
         try
         {
-            return SafeXmlLoader.Load(xtfPath);
+            return _xmlLoader.Load(xtfPath);
         }
         catch
         {

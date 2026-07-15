@@ -17,8 +17,20 @@ public interface IM150SourceFileReader
 /// </summary>
 public sealed class M150XmlTextFileReader : IM150SourceFileReader
 {
+    private readonly ISafeXmlDocumentLoader _xmlLoader;
+
+    public M150XmlTextFileReader()
+        : this(new SafeXmlDocumentLoader())
+    {
+    }
+
+    public M150XmlTextFileReader(ISafeXmlDocumentLoader xmlLoader)
+    {
+        _xmlLoader = xmlLoader ?? throw new ArgumentNullException(nameof(xmlLoader));
+    }
+
     public XDocument LoadXml(string path)
-        => SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);
+        => _xmlLoader.Load(path, LoadOptions.PreserveWhitespace);
 
     public string ReadUtf8Text(string path)
         => File.ReadAllText(path, Encoding.UTF8);

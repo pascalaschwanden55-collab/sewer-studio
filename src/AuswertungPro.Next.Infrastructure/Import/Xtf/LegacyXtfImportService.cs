@@ -6,6 +6,7 @@ using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
 using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
 using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -16,6 +17,7 @@ public sealed class LegacyXtfImportService
     private readonly string? _archiveRoot;
     private readonly string? _legacyArchiveRoot;
     private readonly IVsaMediaPathResolver _mediaPaths;
+    private readonly LegacyXtfSourceReader _sourceReader = new(new SafeXmlDocumentLoader());
 
     public LegacyXtfImportService()
     {
@@ -29,7 +31,11 @@ public sealed class LegacyXtfImportService
     {
     }
 
-    internal LegacyXtfImportService(string archiveRoot, string? legacyArchiveRoot, IVsaMediaPathResolver mediaPaths)
+    internal LegacyXtfImportService(
+        string archiveRoot,
+        string? legacyArchiveRoot,
+        IVsaMediaPathResolver mediaPaths,
+        ISafeXmlDocumentLoader? xmlLoader = null)
     {
         _archiveRoot = string.IsNullOrWhiteSpace(archiveRoot)
             ? throw new ArgumentException("Der XTF-Archivordner fehlt.", nameof(archiveRoot))
@@ -38,6 +44,7 @@ public sealed class LegacyXtfImportService
             ? null
             : Path.GetFullPath(legacyArchiveRoot);
         _mediaPaths = mediaPaths ?? throw new ArgumentNullException(nameof(mediaPaths));
+        _sourceReader = new LegacyXtfSourceReader(xmlLoader ?? new SafeXmlDocumentLoader());
     }
 
     public static LegacyXtfImportService CreateForApplication()
@@ -184,20 +191,10 @@ public sealed class LegacyXtfImportService
         }
     }
 
-    private static void ImportXtf(string path, Project project, ImportStats stats,
+    private void ImportXtf(string path, Project project, ImportStats stats,
         IVsaMediaPathResolver mediaPaths, ImportRunContext? ctx = null)
     {
-        // Format-Erkennung via kleinem Puffer statt ganzer Datei in den Speicher
-        bool isSia405 = false, isVsa = false;
-        using (var sr = new StreamReader(path, Encoding.UTF8))
-        {
-            var buf = new char[4096];
-            var read = sr.Read(buf, 0, buf.Length);
-            var header = new string(buf, 0, read);
-            isSia405 = header.Contains("SIA405", StringComparison.OrdinalIgnoreCase);
-            isVsa = header.Contains("VSA_KEK", StringComparison.OrdinalIgnoreCase);
-        }
-        var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);   // XXE-Schutz (Audit)
+        var (doc, isSia405, isVsa) = _sourceReader.Read(path);
 
         // SIA405 und VSA_KEK koennen beide im Header stehen (VSA_KEK referenziert SIA405_Abwasser als Dependency).
         // Primaeres Modell bestimmen: wenn VSA_KEK-Daten vorhanden, diese bevorzugen.

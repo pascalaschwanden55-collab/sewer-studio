@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -30,6 +31,17 @@ public sealed class WinCanCatalogInfo
 public sealed class WinCanCatalogDiscoveryService
 {
     private static readonly XNamespace WcNs = "CDLAB.WinCan.WinCanCatalog_2011-04-04_2";
+    private readonly ISafeXmlDocumentLoader _xmlLoader;
+
+    public WinCanCatalogDiscoveryService()
+        : this(new SafeXmlDocumentLoader())
+    {
+    }
+
+    public WinCanCatalogDiscoveryService(ISafeXmlDocumentLoader xmlLoader)
+    {
+        _xmlLoader = xmlLoader ?? throw new ArgumentNullException(nameof(xmlLoader));
+    }
 
     /// <summary>
     /// Scans a single directory for WCCat XML catalogs.
@@ -128,7 +140,7 @@ public sealed class WinCanCatalogDiscoveryService
                 return null;
 
             // Read the document just far enough to find the CATALOG element
-            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(filePath);   // XXE-Schutz (Audit)
+            var doc = _xmlLoader.Load(filePath);
             var root = doc.Root;
             if (root is null)
                 return null;

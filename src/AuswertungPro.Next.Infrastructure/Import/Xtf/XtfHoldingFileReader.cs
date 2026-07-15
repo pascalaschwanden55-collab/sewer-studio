@@ -14,6 +14,18 @@ public interface IXtfHoldingFileReader
 /// </summary>
 public sealed class XtfHoldingFileReader : IXtfHoldingFileReader
 {
+    private readonly ISafeXmlDocumentLoader _xmlLoader;
+
+    public XtfHoldingFileReader()
+        : this(new SafeXmlDocumentLoader())
+    {
+    }
+
+    public XtfHoldingFileReader(ISafeXmlDocumentLoader xmlLoader)
+    {
+        _xmlLoader = xmlLoader ?? throw new ArgumentNullException(nameof(xmlLoader));
+    }
+
     public List<XtfHoldingInfo> ParseHoldingsFromXtf(string xtfPath)
     {
         var result = new List<XtfHoldingInfo>();
@@ -23,7 +35,7 @@ public sealed class XtfHoldingFileReader : IXtfHoldingFileReader
         XDocument document;
         try
         {
-            document = SafeXmlLoader.Load(xtfPath);
+            document = _xmlLoader.Load(xtfPath);
         }
         catch (Exception)
         {
