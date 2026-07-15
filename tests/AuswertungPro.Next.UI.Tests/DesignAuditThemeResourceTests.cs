@@ -424,6 +424,8 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
     }
 
     private static void AssertPageTitleBinding(string xaml, string binding)
@@ -438,6 +440,8 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
     }
 
     private static string ReadUiFile(params string[] relativeParts)
