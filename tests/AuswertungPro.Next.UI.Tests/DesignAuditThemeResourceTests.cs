@@ -378,6 +378,26 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("new(\"\\uE9D9\", \"Diagnose\"", navBlock);
     }
 
+    [Fact]
+    public void Player_and_measurement_status_colors_follow_the_active_theme()
+    {
+        var xaml = string.Join(
+            "\n",
+            ReadUiFile("Controls", "PipeGraphTimeline.xaml"),
+            ReadUiFile("Views", "Windows", "PhotoMeasurementWindow.xaml"),
+            ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml"),
+            ReadUiFile("Views", "Windows", "PlayerWindow.xaml"));
+
+        Assert.Contains("{DynamicResource DangerBrush}", xaml);
+        Assert.Contains("{DynamicResource SuccessBrush}", xaml);
+        Assert.Contains("{DynamicResource WarningBrush}", xaml);
+        Assert.DoesNotContain("#EF4444", xaml);
+        Assert.DoesNotContain("#22C55E", xaml);
+        Assert.DoesNotContain("#F59E0B", xaml);
+        Assert.DoesNotContain("#6366F1", xaml);
+        Assert.DoesNotContain("#94A3B8", xaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

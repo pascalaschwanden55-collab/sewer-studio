@@ -262,7 +262,7 @@
                             BorderThickness="1" Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse x:Name="AiStatusDot" Width="8" Height="8"
-                                     Fill="#22C55E" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                     Fill="{DynamicResource SuccessBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock x:Name="AiStatusText" Text="KI aktiv"
                                        Foreground="White" FontSize="11" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -302,11 +302,11 @@
                             <TextBlock x:Name="TxtConfirmCode" FontSize="16" FontWeight="Bold"
                                        Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtConfirmConfidence" FontSize="12" Margin="8,0,0,0"
-                                       Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock x:Name="TxtConfirmDescription" Foreground="White" FontSize="13"
                                    TextWrapping="Wrap" Margin="0,0,0,4"/>
-                        <TextBlock x:Name="TxtConfirmDetail" Foreground="#94A3B8" FontSize="11"
+                        <TextBlock x:Name="TxtConfirmDetail" Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                         <!-- Aktionen -->
@@ -342,14 +342,14 @@
                 <Border x:Name="DetectionConfirmationPanel" Visibility="Collapsed"
                         HorizontalAlignment="Center" VerticalAlignment="Bottom"
                         Margin="0,0,0,24" Background="#EE111318" CornerRadius="12"
-                        Padding="20,12" BorderBrush="#F59E0B" BorderThickness="1.5"
+                        Padding="20,12" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1.5"
                         Panel.ZIndex="30">
                     <StackPanel MaxWidth="480">
                         <TextBlock x:Name="TxtDetectionFinding" FontSize="14" FontWeight="Bold"
-                                   Foreground="#F59E0B" TextAlignment="Center" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource WarningBrush}" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="TxtDetectionDetail" FontSize="12"
-                                   Foreground="#94A3B8" TextAlignment="Center" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Click="DetectionAccept_Click"
@@ -361,9 +361,9 @@
                             </Button>
                             <Button Click="DetectionCorrect_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="#F59E0B">
+                                    Foreground="{DynamicResource WarningBrush}">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE70F;" Foreground="#F59E0B" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource WarningBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Korrigieren"/>
                                 </StackPanel>
                             </Button>
@@ -391,22 +391,22 @@
                 <!-- KI-Scan-Overlay: wandernde Linie + Rahmen waehrend Analyse -->
                 <Border x:Name="CodingScanOverlay" Visibility="Collapsed"
                         IsHitTestVisible="False"
-                        BorderBrush="#F59E0B" BorderThickness="2"
+                        BorderBrush="{DynamicResource WarningBrush}" BorderThickness="2"
                         CornerRadius="0" Opacity="0.6">
                     <Grid>
                         <!-- Wandernde Scan-Linie -->
                         <Rectangle x:Name="CodingScanLine" Width="2" Height="Auto"
-                                   Fill="#F59E0B" HorizontalAlignment="Left"
+                                   Fill="{DynamicResource WarningBrush}" HorizontalAlignment="Left"
                                    VerticalAlignment="Stretch" Opacity="0.8"/>
                         <!-- Analyse-Badge oben rechts -->
                         <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                                 Margin="8" Padding="8,4" CornerRadius="6"
                                 Background="#DD111318">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#F59E0B" Margin="0,0,5,0"
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource WarningBrush}" Margin="0,0,5,0"
                                          VerticalAlignment="Center"/>
                                 <TextBlock x:Name="TxtScanStatus" Text="KI scannt..."
-                                           Foreground="#F59E0B" FontSize="10" FontWeight="SemiBold"/>
+                                           Foreground="{DynamicResource WarningBrush}" FontSize="10" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -415,7 +415,7 @@
                 <!-- Flash-Effekt bei Fund (kurzes gruenes/gelbes Aufblitzen) -->
                 <Border x:Name="CodingFlashOverlay" Visibility="Collapsed"
                         IsHitTestVisible="False"
-                        Background="#22C55E" Opacity="0"/>
+                        Background="{DynamicResource SuccessBrush}" Opacity="0"/>
 
                 <!-- OSD-Meter Anzeige (KI-gelesener Meterstand, immer sichtbar im Codier-Modus) -->
                 <Border x:Name="OsdMeterBadge"
@@ -535,7 +535,7 @@
                     <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
                         <!-- Puls-Ring (sichtbar waehrend Analyse) -->
                         <Ellipse x:Name="CodingAiPulseRing" Width="10" Height="10"
-                                 Stroke="#F59E0B" StrokeThickness="2" Fill="Transparent"
+                                 Stroke="{DynamicResource WarningBrush}" StrokeThickness="2" Fill="Transparent"
                                  Opacity="0" RenderTransformOrigin="0.5,0.5">
                             <Ellipse.RenderTransform>
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
@@ -751,7 +751,7 @@
                         <TextBlock Text="Übernehmen" FontSize="11" FontWeight="SemiBold"/>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}"
-                            Foreground="#EF4444" Margin="6,0,0,0"
+                            Foreground="{DynamicResource DangerBrush}" Margin="6,0,0,0"
                             Click="CodingModeExit_Click"
                             ToolTip="Codier-Modus beenden ohne Übernahme">
                         <TextBlock Text="Beenden" FontSize="11"/>
@@ -770,7 +770,7 @@
                     Padding="10,4" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal">
                     <Ellipse x:Name="YoloDot" Width="8" Height="8"
-                             Fill="#94A3B8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                             Fill="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TxtYoloStatus" Text="YOLO: Bereit"
                                FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>

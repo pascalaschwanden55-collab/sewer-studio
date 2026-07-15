@@ -15,12 +15,12 @@
             <!-- Titel-Zeile -->
             <Grid Grid.Row="0" Margin="0,0,0,4">
                 <TextBlock Text="Pipe Graph Timeline"
-                           FontSize="11" Foreground="#94A3B8"
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="TxtTotalLength"
                            HorizontalAlignment="Right"
-                           FontSize="11" Foreground="#94A3B8"
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}"
                            FontFamily="Consolas"/>
             </Grid>
 

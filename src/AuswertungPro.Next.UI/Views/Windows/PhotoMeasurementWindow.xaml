@@ -204,7 +204,7 @@
                               ToolTip="Ablagerung: Sedimenthöhe in % vom Querschnitt">
                     <StackPanel>
                         <Grid Width="24" Height="24">
-                            <Ellipse Width="22" Height="22" Stroke="#F59E0B" StrokeThickness="1.5"
+                            <Ellipse Width="22" Height="22" Stroke="{DynamicResource WarningBrush}" StrokeThickness="1.5"
                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <Border Height="8" VerticalAlignment="Bottom" Margin="3,0,3,1"
                                     Background="#80F59E0B" CornerRadius="0,0,8,8"/>
@@ -374,18 +374,18 @@
 
                     <!-- OK / Abbrechen -->
                     <Button x:Name="BtnOk" Style="{StaticResource ActionBtn}"
-                            Background="#22C55E" Click="BtnOk_Click">
+                            Background="{DynamicResource SuccessBrush}" Click="BtnOk_Click">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <ui:FluentIcon Glyph="&#xE73E;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>
                             <TextBlock Text="OK"/>
                         </StackPanel>
                     </Button>
                     <Button x:Name="BtnCancel" Content="Abbrechen" Style="{StaticResource ActionBtn}"
-                            Background="#EF4444" Click="BtnCancel_Click"/>
+                            Background="{DynamicResource DangerBrush}" Click="BtnCancel_Click"/>
 
                     <!-- Undo -->
                     <Button x:Name="BtnUndo" Style="{StaticResource ActionBtn}"
-                            Background="#6366F1" Click="BtnUndo_Click" Margin="0,8,0,0"
+                            Background="{DynamicResource AccentBrush}" Click="BtnUndo_Click" Margin="0,8,0,0"
                             Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <ui:FluentIcon Glyph="&#xE7A7;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>
@@ -393,7 +393,7 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="BtnDelete" Style="{StaticResource ActionBtn}"
-                            Background="#EF4444" Click="BtnDelete_Click" Margin="0,4,0,0"
+                            Background="{DynamicResource DangerBrush}" Click="BtnDelete_Click" Margin="0,4,0,0"
                             Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <ui:FluentIcon Glyph="&#xE74D;" FontSize="14" Foreground="White" Margin="0,0,6,0"/>

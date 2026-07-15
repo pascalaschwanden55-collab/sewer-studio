@@ -21,18 +21,18 @@
                         <!-- == 1. Legende: Punkt = Pruef-Status, % = Konfidenz == -->
                         <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="Punkt:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="#94A3B8" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource MutedBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="offen" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="#22C55E" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource SuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="akzeptiert" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="#3B82F6" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource AccentBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="bearbeitet" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="#EF4444" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource DangerBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="abgelehnt" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                             <TextBlock Text="%=Konfidenz:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#x2265;85" FontSize="10" FontWeight="SemiBold" Foreground="#22C55E" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="60-85" FontSize="10" FontWeight="SemiBold" Foreground="#F59E0B" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&lt;60" FontSize="10" FontWeight="SemiBold" Foreground="#EF4444" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#x2265;85" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="60-85" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&lt;60" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtQualityGateStatus" FontSize="10" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </WrapPanel>
@@ -410,7 +410,7 @@
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsSelected" Value="True">
                                                                     <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
-                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#6366F1"/>
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                                     <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
                                                                 </Trigger>
                                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -434,7 +434,7 @@
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Width="7" Height="7"
                                                                 CornerRadius="4"
-                                                                Background="#6366F1"
+                                                                Background="{DynamicResource AccentBrush}"
                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
@@ -543,7 +543,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAiCriteriaMet"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#22C55E"/>
+                                                       Foreground="{DynamicResource SuccessBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource StatTile}">
@@ -561,7 +561,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatHumanCorrected"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#F59E0B"/>
+                                                       Foreground="{DynamicResource WarningBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource StatTile}">
@@ -570,7 +570,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatRejected"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#EF4444"/>
+                                                       Foreground="{DynamicResource DangerBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="4" Grid.Column="0" Style="{DynamicResource StatTile}">
@@ -579,7 +579,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatOpen"
                                                        Text="0" FontSize="20" FontWeight="Bold"
-                                                       Foreground="#64748B"/>
+                                                       Foreground="{DynamicResource MutedBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="4" Grid.Column="2" Style="{DynamicResource StatTile}">
