@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -46,9 +47,12 @@ public partial class PlayerWindow
                 ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_protocolContext.HaltungRecord!),
                 HasActiveSession: () => _codingSessionRuntimeOwner.Service!.ActiveSession != null,
                 ShowSessionStartFailed: CodingModeDialogWorkflow.ShowSessionStartFailed,
-                ExitCodingMode: ExitCodingMode,
+                ExitCodingMode: _codingModeExitController.Exit,
                 PauseSession: () => _codingSessionRuntimeOwner.Service!.PauseSession(),
                 SetRangeText: endMeter => CodingSessionHeaderControls.SetRangeText(TxtCodingRange, endMeter),
                 SetMeterText: meter => CodingMeterTimelineControls.SetText(TxtCodingMeter, meter)));
     }
+
+    private void CodingModeExit_Click(object sender, RoutedEventArgs e)
+        => _codingModeExitController.Exit();
 }

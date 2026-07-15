@@ -63,7 +63,7 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         var relevantPartialPaths = new[]
         {
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs"),
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs")

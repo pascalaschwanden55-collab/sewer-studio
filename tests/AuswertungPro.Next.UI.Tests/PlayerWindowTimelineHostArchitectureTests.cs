@@ -79,7 +79,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var paths = new[]
         {
-            "PlayerWindow.Coding.Lifecycle.Exit.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.Coding.Photos.Capture.cs"
         };
 
@@ -139,7 +139,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.FrameReadiness.cs",
             "PlayerWindow.Coding.ProtocolMatch.cs",
             "PlayerWindow.Coding.Navigation.cs",
-            "PlayerWindow.Coding.Lifecycle.Exit.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.Coding.Photos.Capture.cs",
             "PlayerWindow.LiveDetection.Confirmation.cs",
             "PlayerWindow.LiveDetection.Confirmation.Training.cs",

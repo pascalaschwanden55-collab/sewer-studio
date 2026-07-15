@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Views.Windows;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -12,7 +15,9 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     {
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var oldExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var exitControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingModeExitController.cs");
         var importPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var importReferencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
@@ -30,7 +35,8 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var sessionStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionStartWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
-        Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
+        Assert.False(File.Exists(oldExitPath), "Codiermodus-Exit darf nicht als PlayerWindow-Partial zurueckkehren.");
+        Assert.True(File.Exists(exitControllerPath), "Codiermodus-Exit soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll aus dem allgemeinen Lifecycle-Partial heraus.");
         Assert.True(File.Exists(sessionPath), "Codiermodus-Session-Aufbau soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(importReferencePath), "Codiermodus-Importreferenz-Aufbau soll aus dem Enter-Partial heraus.");
@@ -49,7 +55,8 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
-        var exit = File.ReadAllText(exitPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var exitController = File.ReadAllText(exitControllerPath);
         var import = File.ReadAllText(importPath);
         var session = File.ReadAllText(sessionPath);
         var importReference = File.ReadAllText(importReferencePath);
@@ -88,11 +95,22 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("CodingModeEnterWorkflow.Execute", lifecycle);
         Assert.Contains("if (request.IsCodingMode || !request.HasHaltungRecord)", enterWorkflow);
         Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
-        Assert.Contains("private void ExitCodingMode", exit);
-        Assert.Contains("CodingModeExitCommandWorkflow.Execute", exit);
-        Assert.Contains("private void CodingModeExit_Click", exit);
+        var exitControllerField = typeof(PlayerWindow).GetField(
+            "_codingModeExitController",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(exitControllerField);
+        Assert.Equal(typeof(ICodingModeExitController), exitControllerField.FieldType);
+        Assert.Null(typeof(PlayerWindow).GetMethod(
+            "ExitCodingMode",
+            BindingFlags.Instance | BindingFlags.NonPublic));
+        Assert.Contains("public interface ICodingModeExitController", exitController);
+        Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitController);
+        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", exitController);
+        Assert.Contains("CodingModeExitTeardownWorkflow.Execute", exitController);
+        Assert.Contains("private void CodingModeExit_Click", session);
+        Assert.Contains("_codingModeExitController.Exit", session);
         AssertNoForbiddenTokens(
-            exit,
+            windowRoot + exitController,
             "if (!_isCodingMode) return",
             "_isCodingMode = false",
             "_isCodingMode = true",
@@ -173,21 +191,21 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("InitializeCodingImportReferences: InitializeCodingImportReferences", lifecycle);
         Assert.Contains("actions.CreateCodingSessionState()", enterWorkflow);
         Assert.Contains("actions.InitializeCodingImportReferences()", enterWorkflow);
-        Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
-        Assert.Contains("_codingProtocolMatchState.Reset", exit);
-        Assert.Contains("_codingSessionHost.EventCollection", exit);
-        Assert.Contains("_codingSessionHost.EndMeter", exit);
-        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", exit);
+        Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", windowRoot);
+        Assert.Contains("_codingProtocolMatchState.Reset", windowRoot);
+        Assert.Contains("_codingSessionHost.EventCollection", windowRoot);
+        Assert.Contains("_codingSessionHost.EndMeter", windowRoot);
+        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", windowRoot);
         Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
         Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", preparePlaybackWorkflow);
         Assert.Contains("actions.StopLiveDetection()", preparePlaybackWorkflow);
         Assert.Contains("CodingModeChromeControls.HideLiveDetectionEntry", ui);
-        Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", exit);
-        Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", exit);
-        Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", exit);
-        Assert.Contains("CodingModeChromeControls.HideCodingSurface", exit);
+        Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", windowRoot);
+        Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", windowRoot);
+        Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", windowRoot);
+        Assert.Contains("CodingModeChromeControls.HideCodingSurface", windowRoot);
         Assert.Contains("CodingModeChromeControls.ShowCodingSurface", ui);
         Assert.Contains("public static int ClearEvents", importReferenceResetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
@@ -196,26 +214,30 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_terminal_exit_boundary_check_lives_in_policy()
     {
-        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var oldExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingModeExitController.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitFinalizationWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
 
-        Assert.True(File.Exists(codingPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
+        Assert.False(File.Exists(oldExitPath), "Coding-Exit-Cleanup darf nicht als PlayerWindow-Partial zurueckkehren.");
+        Assert.True(File.Exists(controllerPath), "Coding-Exit-Cleanup soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Exit-Finalisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var coding = File.ReadAllText(codingPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var controller = File.ReadAllText(controllerPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", coding);
-        Assert.Contains("_codingSessionHost.EventCollection", coding);
-        Assert.Contains("_codingSessionHost.EndMeter", coding);
-        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", coding);
-        AssertNoForbiddenTokens(coding, "CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode");
+        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", controller);
+        Assert.Contains("_codingSessionHost.EventCollection", windowRoot);
+        Assert.Contains("_codingSessionHost.EndMeter", windowRoot);
+        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", windowRoot);
+        AssertNoForbiddenTokens(windowRoot + controller, "CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode");
         Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", workflow);
         AssertNoForbiddenTokens(
-            coding + workflow,
+            windowRoot + controller + workflow,
             "string.Equals(e.Entry.Code, \"BCE\"",
             "string.Equals(e.Entry.Code, \"BDC\"");
         Assert.Contains("public static bool HasEndOrAbortCode", policy);

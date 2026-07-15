@@ -348,6 +348,79 @@ public partial class PlayerWindow : Window
                     quantifications,
                     rect),
                 TraceError: message => PlayerTrace.WriteLine(message)));
+        _codingModeExitController = new CodingModeExitController(
+            new CodingModeExitControllerBindings(
+                IsCodingMode: () => _codingModeState.IsCodingMode,
+                SetCodingMode: _codingModeState.Set,
+                CreateFinalizationRequest: () => new CodingModeExitFinalizationWorkflowRequest(
+                    _codingSessionHost.EventCollection,
+                    _codingOsdMeterController.LastMeter,
+                    _codingSessionHost.EndMeter,
+                    _playerTimelineHost.DurationTimeOrZero,
+                    _liveDetectionController.PendingConfirmationFrameBytes),
+                FinalizationActions: new CodingModeExitFinalizationWorkflowActions(
+                    CloseTrackedStreckenschaeden,
+                    CloseOpenStreckenschaeden,
+                    (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes)),
+                CreateTeardownRequest: () => new CodingModeExitTeardownWorkflowRequest(
+                    HasCodingLiveAiTimers: _codingLiveAiTimerOwner.HasController,
+                    HasCodingViewModel: _codingSessionHost.HasViewModel,
+                    IsLiveDetectionRunning: _liveDetectionController.IsDetecting),
+                TeardownActions: new CodingModeExitTeardownWorkflowActions(
+                    StopCodingOsdTimer: StopCodingOsdTimer,
+                    DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
+                    StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop,
+                    StopCodingAiPulse: _liveDetectionPulseController.Stop,
+                    StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
+                    DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
+                    ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportReferenceEvents.Events),
+                    ResetProtocolMatchState: () =>
+                    {
+                        _codingProtocolMatchState.Reset();
+                    },
+                    UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_codingProtocolMatchState.LastMatch),
+                    ClearImportEventsListSource: () => CodingImportReferenceControls.ClearItemsSource(LstImportEvents),
+                    HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
+                        CodingConfirmationPanel,
+                        DetectionConfirmationPanel),
+                    ClearPendingConfirmation: _codingPendingConfirmationState.Clear,
+                    ClearDetectionConfirmationBuffer: _liveDetectionController.ClearConfirmationBuffer,
+                    ClearDetectionOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
+                        DetectionCanvas,
+                        DetectionOverlayGrid,
+                        hideOverlay),
+                    HideCodingSurface: () => CodingModeChromeControls.HideCodingSurface(
+                        CodingOverlayPopup,
+                        CodingOverlayCanvas,
+                        CodingSidePanel,
+                        CodingSidePanelColumn,
+                        CodingToolbar,
+                        CodingTimelinePanel,
+                        CodingCalibrationHint,
+                        CodingMeasurementPanel),
+                    HideInlineDefectDetail: HideInlineDefectDetail,
+                    HideOsdBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge),
+                    ShowLiveDetectionEntry: isDetecting => CodingModeChromeControls.ShowLiveDetectionEntry(
+                        LiveDetectionButton,
+                        LiveDetectionStatusText,
+                        isDetecting),
+                    ClearActiveCodingToolName: _codingActiveToolNameState.Clear,
+                    ResetCodingIndicators: () => CodingModeChromeControls.ResetCodingIndicators(
+                        TxtActiveToolLabel,
+                        BtnCodingLiveAi,
+                        TxtCodingAiStage),
+                    CancelCodingSchema: _codingSchemaManager.Cancel,
+                    ClearCodingSchemaType: _codingSchemaTypeState.Clear,
+                    DetachCodingViewModelPropertyChanged: _codingSessionViewModelOwner.DetachPropertyChanged,
+                    ClearCodingSessionReferences: () =>
+                    {
+                        _codingSessionViewModelOwner.Clear();
+                        _codingSessionRuntimeOwner.Clear();
+                        _codingOverlayRuntimeOwner.Clear();
+                    },
+                    ClearCodingCalibrationState: _codingCalibrationState.Reset,
+                    ResetFrameReadiness: ResetFrameReadiness,
+                    ResetCodingOverlaySuspendState: _codingOverlayInputVisibilityState.ResetSuspendState)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(
