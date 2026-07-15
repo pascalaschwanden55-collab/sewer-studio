@@ -45,6 +45,8 @@ public interface IHaltungCadastreResolver
 /// </summary>
 public sealed class HaltungCadastreIndex : IHaltungCadastreResolver
 {
+    private static IHaltungCadastreIndexProvider _currentProvider = new HaltungCadastreIndexProvider();
+
     // pairKey ("864|865") -> distinkte amtliche Bezeichnungen ("865-864")
     private readonly Dictionary<string, HashSet<string>> _byPair;
 
@@ -61,29 +63,30 @@ public sealed class HaltungCadastreIndex : IHaltungCadastreResolver
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SewerStudio", "map", "abwasserkataster_haltungen.tsv");
 
+    public static IHaltungCadastreIndexProvider CurrentProvider
+        => Volatile.Read(ref _currentProvider);
+
+    public static void UseProvider(IHaltungCadastreIndexProvider provider) =>
+        Volatile.Write(
+            ref _currentProvider,
+            provider ?? throw new ArgumentNullException(nameof(provider)));
+
     /// <summary>
     /// Stellt die feste Tabelle sicher (baut/aktualisiert sie aus der XTF, wenn sie fehlt
     /// oder veraltet ist) und laedt den Index. xtfPath darf null sein, wenn die Tabelle
     /// bereits existiert.
     /// </summary>
     public static HaltungCadastreIndex EnsureAndLoad(string? xtfPath, string? tablePath = null)
-    {
-        var table = string.IsNullOrWhiteSpace(tablePath) ? DefaultTablePath : tablePath!;
-
-        if (!string.IsNullOrWhiteSpace(xtfPath) && File.Exists(xtfPath)
-            && !HaltungCadastreExtractor.IsTableFresh(table, xtfPath!))
-        {
-            HaltungCadastreExtractor.BuildTable(xtfPath!, table);
-        }
-
-        return File.Exists(table) ? Load(table) : new HaltungCadastreIndex(new());
-    }
+        => CurrentProvider.EnsureAndLoad(xtfPath, tablePath);
 
     /// <summary>Laedt den Index aus einer bereits gebauten TSV-Tabelle.</summary>
     public static HaltungCadastreIndex Load(string tablePath)
+        => CurrentProvider.Load(tablePath);
+
+    internal static HaltungCadastreIndex Create(IEnumerable<CadastreHaltung> rows)
     {
         var byPair = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var h in HaltungCadastreExtractor.ReadTable(tablePath))
+        foreach (var h in rows)
         {
             if (string.IsNullOrWhiteSpace(h.ShaftA) || string.IsNullOrWhiteSpace(h.ShaftB))
                 continue;

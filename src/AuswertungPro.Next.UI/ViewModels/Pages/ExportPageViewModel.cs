@@ -31,6 +31,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IDistributionPatternResolver _patternResolver;
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
+    private readonly IHaltungCadastreIndexProvider _haltungCadastreIndexes;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -63,7 +64,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
             costFieldSync: sp.CostFieldSync,
             patternResolver: sp.DistributionPatterns,
             directoryTreeResolver: sp.DistributionDirectoryTree,
-            katasterXtfPaths: sp.KatasterXtfPaths)
+            katasterXtfPaths: sp.KatasterXtfPaths,
+            haltungCadastreIndexes: sp.HaltungCadastreIndexes)
     {
     }
 
@@ -76,7 +78,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDerivedCostFieldSynchronizer costFieldSync,
         IDistributionPatternResolver? patternResolver = null,
         IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
-        IKatasterXtfPathResolver? katasterXtfPaths = null)
+        IKatasterXtfPathResolver? katasterXtfPaths = null,
+        IHaltungCadastreIndexProvider? haltungCadastreIndexes = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -93,6 +96,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
+        _haltungCadastreIndexes = haltungCadastreIndexes ?? HaltungCadastreIndex.CurrentProvider;
         _settings.MigrateLegacyExcelExportRoot();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
@@ -689,7 +693,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     _settings.AbwasserkatasterXtfPath,
                     _settings.KantonUriXtfDirectory);
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
-                    cadastre = await Task.Run(() => HaltungCadastreIndex.EnsureAndLoad(katasterPfad));
+                    cadastre = await Task.Run(() => _haltungCadastreIndexes.EnsureAndLoad(katasterPfad));
             }
             catch
             {

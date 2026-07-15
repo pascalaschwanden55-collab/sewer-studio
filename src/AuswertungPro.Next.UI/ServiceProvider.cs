@@ -122,6 +122,7 @@ namespace AuswertungPro.Next.UI
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         public IDropdownOptionsStore DropdownOptions { get; }
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
+        public IHaltungCadastreIndexProvider HaltungCadastreIndexes { get; }
         public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
         public IVsaCatalogPathResolver VsaCatalogPaths { get; }
         public Mapping.IKarteBasemapLayerFactory BasemapLayers { get; }
@@ -307,6 +308,8 @@ namespace AuswertungPro.Next.UI
                 ?? throw new ArgumentNullException(nameof(settingsMigration));
             KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
             Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
+            HaltungCadastreIndexes = new HaltungCadastreIndexProvider();
+            HaltungCadastreIndex.UseProvider(HaltungCadastreIndexes);
             OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
             Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
             BasemapLayers = new Mapping.KarteBasemapLayerService();
@@ -839,6 +842,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IAiStartedProcessLifetime)) return AiStartedProcesses;
             if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
             if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
+            if (serviceType == typeof(IHaltungCadastreIndexProvider)) return HaltungCadastreIndexes;
             if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
             if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;
             if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;

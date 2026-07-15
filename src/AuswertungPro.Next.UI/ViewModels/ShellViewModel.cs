@@ -151,7 +151,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 costFieldSync: _sp.CostFieldSync,
                 patternResolver: _sp.DistributionPatterns,
                 directoryTreeResolver: _sp.DistributionDirectoryTree,
-                katasterXtfPaths: _sp.KatasterXtfPaths), canOpenWithoutProject: true),
+                katasterXtfPaths: _sp.KatasterXtfPaths,
+                haltungCadastreIndexes: _sp.HaltungCadastreIndexes), canOpenWithoutProject: true),
             new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
             {
                 DataContext = new Pages.KarteViewModel(

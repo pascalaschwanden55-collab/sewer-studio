@@ -1,6 +1,7 @@
 using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Map;
+using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.QgisBridge;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -24,6 +25,28 @@ public sealed class KatasterXtfPathResolverDependencyTests
         Assert.Same(
             services.KatasterXtfPaths,
             services.GetService(typeof(IKatasterXtfPathResolver)));
+    }
+
+    [Fact]
+    public void Kataster_Index_und_Exportseite_verwenden_den_zentralen_Dienst()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+
+        Assert.Same(services.HaltungCadastreIndexes, HaltungCadastreIndex.CurrentProvider);
+        Assert.Same(
+            services.HaltungCadastreIndexes,
+            services.GetService(typeof(IHaltungCadastreIndexProvider)));
+
+        var field = typeof(ExportPageViewModel).GetField(
+            "_haltungCadastreIndexes",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        Assert.Equal(typeof(IHaltungCadastreIndexProvider), field!.FieldType);
     }
 
     [Theory]
