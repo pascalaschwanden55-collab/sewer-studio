@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -83,5 +84,16 @@ public sealed class PlayerWindowSnapshotArchitectureTests
         Assert.Contains("actions.DisableMarqueeOverlay()", snapshotWorkflow);
         Assert.Contains("public static PlayerSnapshotTarget Build", policy);
         Assert.Contains("public static PlayerSnapshotTarget Create", policy);
+
+        var offenders = FindFileTokenOffenders(
+            snapshotPath,
+            "_player.TakeSnapshot",
+            "Thread.Sleep",
+            "_player.SetPause(true)");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Snapshot-Partial soll Capture/Pause-Details ueber Snapshot-Services kapseln:\n"
+            + string.Join("\n", offenders));
     }
 }

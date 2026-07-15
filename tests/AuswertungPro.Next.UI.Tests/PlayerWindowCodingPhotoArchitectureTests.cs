@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -74,6 +75,15 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.Contains("CodingFrameExtractionServiceFactory.Create", captureServices);
         Assert.Contains("FfmpegLocator.ResolveFfmpeg", service);
         Assert.Contains("VideoFrameExtractor.TryExtractFramePngAsync", service);
+
+        var offenders = FindFileTokenOffenders(
+            capturePath,
+            ".GetAwaiter().GetResult()");
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Coding-Foto-Capture soll Frame-Extraktion nicht synchron blockierend abwarten:\n"
+            + string.Join("\n", offenders));
     }
 
     [Fact]

@@ -762,34 +762,6 @@ public sealed class ArchitectureFitnessTests
             + string.Join("\n", offenders));
     }
 
-    [Fact]
-    public void PlayerWindow_coding_photo_capture_partial_does_not_block_on_frame_extraction()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs"),
-            ".GetAwaiter().GetResult()");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Coding-Foto-Capture soll Frame-Extraktion nicht synchron blockierend abwarten:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
-    public void PlayerWindow_snapshot_partial_does_not_capture_or_pause_player_directly()
-    {
-        var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Snapshot.cs"),
-            "_player.TakeSnapshot",
-            "Thread.Sleep",
-            "_player.SetPause(true)");
-
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow-Snapshot-Partial soll Capture/Pause-Details ueber Snapshot-Services kapseln:\n"
-            + string.Join("\n", offenders));
-    }
-
     private static string ReadXamlRootTag(string path)
     {
         var xaml = File.ReadAllText(path);
