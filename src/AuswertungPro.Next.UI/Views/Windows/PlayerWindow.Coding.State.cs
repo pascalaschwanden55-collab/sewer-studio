@@ -20,6 +20,7 @@ public partial class PlayerWindow
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
+    private readonly Ai.CodingFindingContext _codingFindingContext;
     private readonly CodingSchemaOverlayController _codingSchemaOverlayController;
     private readonly CodingManualCalibrationController _codingManualCalibrationController;
     private readonly CodingCalibrationPointerController _codingCalibrationPointerController;

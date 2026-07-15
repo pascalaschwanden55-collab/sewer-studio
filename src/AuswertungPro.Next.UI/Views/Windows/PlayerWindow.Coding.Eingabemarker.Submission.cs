@@ -60,7 +60,7 @@ public partial class PlayerWindow
             new CodingEingabemarkerDirectEventWorkflowActions(
                 ResolveMeter: () => _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
                 ResolveVideoTime: () => _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero,
-                LookupLabel: LookupVsaLabel,
+                LookupLabel: _codingFindingContext.LookupLabel,
                 CapturePhoto: CodingCaptureSnapshot,
                 RefreshEvents: RefreshCodingEventsList,
                 UpdateToolBadge: UpdateToolBadge,

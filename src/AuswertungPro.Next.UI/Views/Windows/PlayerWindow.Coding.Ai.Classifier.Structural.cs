@@ -27,8 +27,8 @@ public partial class PlayerWindow
                 ExecuteResultWorkflow: request => CodingStructuralClassifierResultWorkflow.Execute(
                     request,
                     new CodingStructuralClassifierResultWorkflowActions(
-                        LookupVsaLabel,
-                        ResolveFindingCodeForCoding,
+                        _codingFindingContext.LookupLabel,
+                        _codingFindingContext.ResolveCode,
                         ClearDetectionOverlays,
                         () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                         (finding, resolvedCode) => CodingFindingsListControls.ShowResolvedFinding(

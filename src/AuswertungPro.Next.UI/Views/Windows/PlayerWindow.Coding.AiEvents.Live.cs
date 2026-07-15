@@ -11,7 +11,7 @@ public partial class PlayerWindow
 {
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen - mit QualityGate-Ampelsystem.
-    /// Erwartet bereits gefilterte Findings (aus FilterValidFindings).
+    /// Erwartet bereits gefilterte Findings (aus CodingFindingContext.FilterValid).
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
@@ -37,7 +37,7 @@ public partial class PlayerWindow
                     request,
                     new CodingLiveFindingEventWorkflowActions(
                         IsFindingTooFarAhead,
-                        LookupVsaLabel,
+                        _codingFindingContext.LookupLabel,
                         entry => AttachAnalyzedFramePhoto(entry),
                         message => PlayerTrace.WriteLine(message),
                         RefreshCodingEventsList,

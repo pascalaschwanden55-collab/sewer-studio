@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 ExecuteResultWorkflowAsync: request => CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
                     request,
                     new CodingBoundaryClassifierResultWorkflowActions(
-                        LookupVsaLabel,
+                        _codingFindingContext.LookupLabel,
                         message => PlayerTrace.WriteLine(message),
                         ClearDetectionOverlays,
                         () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),

@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 BuildObservations: (items, currentMeter) => CodingStreckenschadenObservationBuilder.Build(
                     items,
                     currentMeter,
-                    ResolveFindingCodeForCoding),
+                    _codingFindingContext.ResolveCode),
                 UpdateTracker: _streckenschadenTracker.Update,
                 ApplyActions: TryApplyStreckenschadenActions,
                 RefreshEvents: RefreshCodingEventsList));
@@ -56,7 +56,7 @@ public partial class PlayerWindow
                     codingEvents!,
                     codingSessionService!,
                     videoTime,
-                    LookupVsaLabel,
+                    _codingFindingContext.LookupLabel,
                     entry => AttachAnalyzedFramePhoto(entry))))
             .Changed;
     }

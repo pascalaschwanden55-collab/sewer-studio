@@ -62,11 +62,14 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_coding_ai_finding_filtering_lives_in_filtering_partial()
+    public void PlayerWindow_coding_ai_finding_filtering_lives_in_context()
     {
         var aiEventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
         var resultWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiResultWorkflow.cs");
         var filteringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.Filtering.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingFindingContext.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var meterPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingResultMeterReadingPolicy.cs");
         var osdStateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterStateWorkflow.cs");
         var warmupPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingWarmupResultBufferPolicy.cs");
@@ -74,7 +77,8 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         var overlaySelectorPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingNewFindingOverlaySelector.cs");
         var findingsControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "CodingFindingsListControls.cs");
 
-        Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.False(File.Exists(filteringPath), "KI-Finding-Kontext soll kein PlayerWindow-Partial mehr sein.");
+        Assert.True(File.Exists(contextPath), "KI-Finding-Filterung und -Aufloesung sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(resultWorkflowPath), "Coding-AI-Result-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(osdStateWorkflowPath), "OSD-Meteruebernahme soll als State-Workflow ausserhalb der PlayerWindow-Partials angewendet werden.");
@@ -85,13 +89,21 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var resultWorkflow = File.ReadAllText(resultWorkflowPath);
-        var filtering = File.ReadAllText(filteringPath);
+        var context = File.ReadAllText(contextPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
         var osdStateWorkflow = File.ReadAllText(osdStateWorkflowPath);
         var warmupPolicy = File.ReadAllText(warmupPolicyPath);
         var frameReadinessController = File.ReadAllText(frameReadinessControllerPath);
         var overlaySelector = File.ReadAllText(overlaySelectorPath);
         var findingsControls = File.ReadAllText(findingsControlsPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(
+                    RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows"),
+                    "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
 
         Assert.Contains("CodingAiResultWorkflow.Execute", aiEvents);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
@@ -105,14 +117,18 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         Assert.Contains("CodingFindingsListControls.ShowFindings(CodingFindingsList, findings)", aiEvents);
         Assert.Contains("ShowFindings", resultWorkflow);
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings", findingsControls);
-        Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
-        Assert.Contains("private static string? LookupVsaLabel", filtering);
-        Assert.Contains("private string? ResolveFindingCodeForCoding", filtering);
-        Assert.Contains("private bool IsFindingAlreadyKnown", filtering);
-        Assert.Contains("CodingFindingFilterPolicy.FilterValid", filtering);
-        Assert.Contains("CodingFindingCodeResolver.Resolve", filtering);
-        Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
-        Assert.Contains("_codingSessionHost", filtering);
+        Assert.Contains("_codingFindingContext.FilterValid", aiEvents);
+        Assert.Contains("_codingFindingContext.IsKnown", aiEvents);
+        Assert.Contains("private readonly Ai.CodingFindingContext _codingFindingContext", state);
+        Assert.Contains("_codingFindingContext = CodingFindingContext.CreateDefault", windowRoot);
+        Assert.Contains("CodingFindingFilterPolicy.FilterValid", context);
+        Assert.Contains("CodingFindingCodeResolver.Resolve", context);
+        Assert.Contains("CodingKnownFindingPolicy.IsKnown", context);
+        Assert.Contains("VsaCodeResolver.LookupLabel", context);
+        Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", playerWindowPartials);
+        Assert.DoesNotContain("private static string? LookupVsaLabel", playerWindowPartials);
+        Assert.DoesNotContain("private string? ResolveFindingCodeForCoding", playerWindowPartials);
+        Assert.DoesNotContain("private bool IsFindingAlreadyKnown", playerWindowPartials);
         Assert.Contains("public static bool TryAccept", meterPolicy);
         Assert.Contains("public static CodingWarmupResultSelection Select", warmupPolicy);
         Assert.Contains("public static IReadOnlyList<LiveFrameFinding> Select", overlaySelector);

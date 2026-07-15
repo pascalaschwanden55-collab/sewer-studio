@@ -31,6 +31,11 @@ public partial class PlayerWindow : Window
         _codingSessionViewModelOwner = codingSessionRuntime.ViewModelOwner;
         _codingSessionHost = codingSessionRuntime.SessionHost;
         _codingOverlayToolHost = codingSessionRuntime.OverlayToolHost;
+        _codingFindingContext = CodingFindingContext.CreateDefault(
+            () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
+            () => _codingSessionHost.Events,
+            () => _codingImportReferenceEvents.Events,
+            message => PlayerTrace.WriteLine(message));
 
         InitializeComponent();
         _codingSchemaOverlayController = new CodingSchemaOverlayController(

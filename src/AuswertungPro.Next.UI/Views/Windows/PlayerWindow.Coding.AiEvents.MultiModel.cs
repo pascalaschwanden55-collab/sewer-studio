@@ -43,8 +43,8 @@ public partial class PlayerWindow
                 ExecuteFindingWorkflow: request => CodingMultiModelFindingEventWorkflow.Execute(
                     request,
                     new CodingMultiModelFindingEventWorkflowActions(
-                        ResolveFindingCodeForCoding,
-                        LookupVsaLabel,
+                        _codingFindingContext.ResolveCode,
+                        _codingFindingContext.LookupLabel,
                         entry => AttachAnalyzedFramePhoto(entry),
                         message => PlayerTrace.WriteLine(message),
                         RefreshCodingEventsList,
