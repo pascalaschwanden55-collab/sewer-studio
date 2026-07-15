@@ -146,6 +146,7 @@ namespace AuswertungPro.Next.UI
         #region Import
         // Alle Import-Adapter für externe Datenformate
         public IPdfFileSafetyChecker PdfFileSafety { get; }
+        public IAtomicPdfFileReplacer PdfFileReplacement { get; }
         public IPdfTextExtractor PdfTextExtraction { get; }
         public IPdfOcrExtractor PdfOcrExtraction { get; }
         public IPdfImportService PdfImport { get; }
@@ -398,6 +399,8 @@ namespace AuswertungPro.Next.UI
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
             PdfFileSafety = new PdfFileSafetyService();
             PdfImportSafetyPolicy.Use(PdfFileSafety);
+            PdfFileReplacement = new AtomicPdfFileReplacementService(PdfFileSafety);
+            AtomicPdfFileReplacer.Use(PdfFileReplacement);
             PdfTextExtraction = new PdfTextExtractionService(PdfFileSafety);
             PdfTextExtractor.Use(PdfTextExtraction);
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
@@ -783,6 +786,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
             if (serviceType == typeof(IPdfFileSafetyChecker)) return PdfFileSafety;
+            if (serviceType == typeof(IAtomicPdfFileReplacer)) return PdfFileReplacement;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
