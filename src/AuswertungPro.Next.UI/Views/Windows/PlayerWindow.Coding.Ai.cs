@@ -52,7 +52,7 @@ public partial class PlayerWindow
                             framePosition.VideoTime),
                         ClearDetectionOverlays: ClearDetectionOverlays,
                         ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
-                        SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail))),
+                        SetCodingAiState: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail))),
                 RunSingleModelAnalysisAsync: (captureTimestampSec, cancellationToken) => CodingSingleModelAnalysisWorkflow.ExecuteAsync(
                     new CodingSingleModelAnalysisWorkflowRequest(
                         activityText,
@@ -61,7 +61,7 @@ public partial class PlayerWindow
                         _codingAiRuntimeOwner.Controller.EnhancedVision != null,
                         cancellationToken),
                     new CodingSingleModelAnalysisWorkflowActions(
-                        SetCodingAiState: SetCodingAiState,
+                        SetCodingAiState: _liveDetectionStatusController.SetCodingAiState,
                         CaptureSnapshotAsync: _codingAnalysisContext.CaptureSnapshotAsync,
                         StoreAnalyzedFrame: (frameBytes, timestamp) => _liveDetectionController.StoreAnalyzedFrame(
                             frameBytes,
@@ -84,7 +84,7 @@ public partial class PlayerWindow
                                 cancellationToken),
                         ShowCodingAiResults: ShowCodingAiResults)),
                 RunMultiModelAnalysisAsync: captureTimestampSec => RunCodingMultiModelAnalysisAsync(activityText, captureTimestampSec),
-                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
+                SetCodingAiState: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail),
                 EndAnalysis: _codingAiRuntimeOwner.Controller.EndAnalysis,
                 SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled)));
     }

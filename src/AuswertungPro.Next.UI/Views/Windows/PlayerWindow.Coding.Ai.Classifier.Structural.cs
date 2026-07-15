@@ -37,7 +37,7 @@ public partial class PlayerWindow
                             resolvedCode),
                         entry => AttachAnalyzedFramePhoto(entry),
                         RefreshCodingEventsList,
-                        (status, color, detail) => SetCodingAiState(status, color, detail)))));
+                        (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)))));
         return result.Handled;
     }
 }

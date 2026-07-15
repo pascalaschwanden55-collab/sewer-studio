@@ -40,7 +40,7 @@ public partial class PlayerWindow
 
     private void ApplyLiveDetectionRuntimeStartStatus(LiveDetectionRuntimeStartStatus status)
     {
-        SetLiveDetectionBadge(status.BadgeText, status.StatusColor, status.BadgeDetails);
-        SetYoloStatus(status.YoloText, status.StatusColor, status.ModelLabel);
+        _liveDetectionStatusController.SetLiveDetectionBadge(status.BadgeText, status.StatusColor, status.BadgeDetails);
+        _liveDetectionStatusController.SetYoloStatus(status.YoloText, status.StatusColor, status.ModelLabel);
     }
 }

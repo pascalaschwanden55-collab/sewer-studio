@@ -51,7 +51,7 @@ public partial class PlayerWindow
                     _playerTimelineHost.CurrentTimeOrZero),
                 ShowRequiresLaterMeterPrompt: CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter,
                 RefreshEvents: RefreshCodingEventsList,
-                ShowSuccessStatus: status => SetCodingAiState(status, PlayerStatusColors.Success, "")));
+                ShowSuccessStatus: status => _liveDetectionStatusController.SetCodingAiState(status, PlayerStatusColors.Success, "")));
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)

@@ -41,8 +41,8 @@ public partial class PlayerWindow
                 InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action),
                 ApplyDetectionResult: _liveDetectionController.ApplyDetectionResult,
                 RenderDetectionOverlay: RenderDetectionOverlay,
-                UpdateDetectionStatus: UpdateDetectionStatus,
-                SetLiveDetectionBadge: SetLiveDetectionBadge,
+                UpdateDetectionStatus: _liveDetectionStatusController.UpdateDetectionStatus,
+                SetLiveDetectionBadge: _liveDetectionStatusController.SetLiveDetectionBadge,
                 StoreFindings: (findings, frameBytes, timestamp) => _liveDetectionController.StoreConfirmationFindings(
                     findings,
                     frameBytes,

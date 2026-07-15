@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 SetPause: _playerPlaybackControlHost.SetPause,
                 StorePendingConfirmation: _codingPendingConfirmationState.Store,
                 ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply,
-                ShowStatus: (status, color, detail) => SetCodingAiState(status, color, detail)));
+                ShowStatus: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)));
     }
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)

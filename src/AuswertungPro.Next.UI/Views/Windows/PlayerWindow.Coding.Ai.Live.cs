@@ -23,7 +23,7 @@ public partial class PlayerWindow
             new CodingLiveAiToggleWorkflowActions(
                 StartTimers: timers.Start,
                 StopTimers: resetButton => timers.Stop(resetButton),
-                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail)));
+                SetCodingAiState: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)));
     }
 
     private void CodingLiveAiTimer_Tick(object? sender, EventArgs e)

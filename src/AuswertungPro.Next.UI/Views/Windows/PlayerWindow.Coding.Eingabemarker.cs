@@ -24,7 +24,7 @@ public partial class PlayerWindow
             OpenCodingOverlayPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
             UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
             EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),
-            ShowDrawingStatus: () => SetCodingAiState(
+            ShowDrawingStatus: () => _liveDetectionStatusController.SetCodingAiState(
                 "Eingabemarker: Rechteck um die Beobachtung ziehen",
                 PlayerStatusColors.Info,
                 "Klicken + Ziehen = Bereich markieren"),
@@ -83,7 +83,7 @@ public partial class PlayerWindow
                 FocusInput: () => PlayerDispatcherScheduler.ScheduleInput(
                     Dispatcher,
                     () => PlayerFocusControls.FocusElement(TxtEingabemarker)),
-                ShowInputStatus: () => SetCodingAiState(
+                ShowInputStatus: () => _liveDetectionStatusController.SetCodingAiState(
                     "Beschreibung eingeben oder Stichwort wählen, dann Enter",
                     PlayerStatusColors.Info,
                     "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));

@@ -32,7 +32,7 @@ public partial class PlayerWindow
                 CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup),
                 _playerTimelineHost.CurrentSecondsOrZero),
             new CodingAiResultWorkflowActions(
-                (status, color, detail) => SetCodingAiState(status, color, detail),
+                (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail),
                 () => DetectionOverlayCleanupController.ClearFindings(CodingFindingsList),
                 () => DetectionOverlayCleanupController.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList),
                 () => DetectionOverlayCleanupController.ClearVisuals(DetectionCanvas, DetectionOverlayGrid),

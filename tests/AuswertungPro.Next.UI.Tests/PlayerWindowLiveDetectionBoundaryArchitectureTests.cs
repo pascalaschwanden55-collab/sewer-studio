@@ -1,3 +1,4 @@
+using System.IO;
 using static AuswertungPro.Next.UI.Tests.ArchitectureSourceGuard;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -55,18 +56,26 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_live_detection_status_partial_does_not_own_pulse_decision_details()
+    public void Live_detection_status_controller_delegates_pulse_decision_details()
     {
-        var offenders = FindWindowTokenOffenders(
-            "PlayerWindow.LiveDetection.Status.cs",
-            "private void StartCodingAiPulse",
-            "private void StopCodingAiPulse",
-            "if (pulse)");
+        var oldPartialPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.LiveDetection.Status.cs");
+        var controllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Player",
+            "LiveDetectionStatusController.cs");
 
-        Assert.True(
-            offenders.Length == 0,
-            "PlayerWindow.LiveDetection.Status soll Pulse-Entscheidungen an Coding-AI-State-Workflow delegieren:\n"
-            + string.Join("\n", offenders));
+        Assert.False(File.Exists(oldPartialPath), "Statusanzeige soll kein PlayerWindow-Partial mehr sein.");
+        var controller = File.ReadAllText(controllerPath);
+        Assert.Contains("LiveDetectionCodingAiStateWorkflow.Execute", controller);
+        Assert.DoesNotContain("private void StartCodingAiPulse", controller);
+        Assert.DoesNotContain("private void StopCodingAiPulse", controller);
+        Assert.DoesNotContain("if (pulse)", controller);
     }
 
     [Fact]

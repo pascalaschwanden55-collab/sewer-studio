@@ -47,7 +47,7 @@ public partial class PlayerWindow
                         CloseTrackedStreckenschaeden,
                         (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes),
                         () => _codingSessionHost.EventCollection?.Count ?? 0,
-                        (status, color, detail) => SetCodingAiState(status, color, detail)))));
+                        (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)))));
         return result.Handled;
     }
 }

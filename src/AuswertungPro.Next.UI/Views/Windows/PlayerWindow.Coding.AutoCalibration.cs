@@ -22,7 +22,7 @@ public partial class PlayerWindow
                 TryAutoCalibrate: (frameBytes, nominalDn) =>
                     CodingAutoCalibrationFrameService.TryAutoCalibrate(frameBytes, nominalDn),
                 ApplyCalibration: calibration => { _codingOverlayToolHost.SetCalibration(calibration); },
-                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
+                SetCodingAiState: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail),
                 TraceApplied: message => PlayerTrace.WriteLine(message),
                 TraceError: message => PlayerTrace.WriteLine($"[AutoCalib] Fehlgeschlagen: {message}")));
     }

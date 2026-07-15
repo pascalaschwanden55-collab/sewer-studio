@@ -31,12 +31,12 @@ public partial class PlayerWindow
                         ? null
                         : new CodingEingabemarkerDuplicateMatch(duplicate.MeterAtCapture);
                 },
-                ShowDuplicateStatus: (codeHint, meter) => SetCodingAiState(
+                ShowDuplicateStatus: (codeHint, meter) => _liveDetectionStatusController.SetCodingAiState(
                     $"{codeHint} bereits vorhanden bei {meter:F2}m - Duplikat",
                     PlayerStatusColors.Warning,
                     ""),
                 AddDirectEvent: AddDirectEingabemarkerEvent,
-                ShowAiFallbackStatus: keyword => SetCodingAiState(
+                ShowAiFallbackStatus: keyword => _liveDetectionStatusController.SetCodingAiState(
                     $"KI analysiert: \"{keyword}\" ...",
                     PlayerStatusColors.Warning,
                     "Qwen analysiert"),
@@ -45,7 +45,7 @@ public partial class PlayerWindow
                     disableAnalyzeButton: true,
                     keywordHint: keyword,
                     codeHint: null),
-                ShowErrorStatus: message => SetCodingAiState($"Fehler: {message}", PlayerStatusColors.Error, ""),
+                ShowErrorStatus: message => _liveDetectionStatusController.SetCodingAiState($"Fehler: {message}", PlayerStatusColors.Error, ""),
                 CancelMarker: CancelEingabemarker));
     }
 
@@ -65,7 +65,7 @@ public partial class PlayerWindow
                 RefreshEvents: RefreshCodingEventsList,
                 UpdateToolBadge: UpdateToolBadge,
                 PersistTraining: ev => _codingTrainingPersistenceContext.PersistSingleEventAsync(ev).SafeFireAndForget("TrainingSaveSingle"),
-                ShowSuccessStatus: (code, label, meter) => SetCodingAiState(
+                ShowSuccessStatus: (code, label, meter) => _liveDetectionStatusController.SetCodingAiState(
                     $"{code} {label} bei {meter:F2}m eingetragen",
                     PlayerStatusColors.Success,
                     "")));

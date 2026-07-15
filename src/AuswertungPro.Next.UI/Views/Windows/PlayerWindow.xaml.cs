@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -63,6 +63,40 @@ public partial class PlayerWindow : Window
                 RefreshCodingEventsList));
 
         InitializeComponent();
+        _liveDetectionStatusController = new LiveDetectionStatusController(
+            new LiveDetectionStatusControllerActions(
+                HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher),
+                DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action),
+                ShowLiveDetectionBadge: (status, color, stage) =>
+                    LiveDetectionStatusControls.ShowLiveDetectionBadge(
+                        AiStatusBadge,
+                        AiStatusText,
+                        AiStatusDot,
+                        status,
+                        color,
+                        stage),
+                ShowYoloStatus: (status, color, model) => LiveDetectionStatusControls.ShowYoloStatus(
+                    YoloStatusBar,
+                    TxtYoloStatus,
+                    YoloDot,
+                    TxtYoloModel,
+                    status,
+                    color,
+                    model),
+                ShowCodingAiState: (status, color, stage) => LiveDetectionStatusControls.ShowCodingAiState(
+                    TxtCodingAiStatus,
+                    TxtCodingAiStage,
+                    CodingAiDot,
+                    status,
+                    color,
+                    stage),
+                StartPulse: StartCodingAiPulse,
+                StopPulse: StopCodingAiPulse,
+                ShowDetectionStatus: result => LiveDetectionStatusControls.ShowDetectionStatus(
+                    LiveDetectionStatusText,
+                    FindingSummaryPanel,
+                    FindingSummaryText,
+                    result)));
         _codingSchemaOverlayController = new CodingSchemaOverlayController(
             _codingSchemaManager,
             _codingSchemaTypeState,
@@ -155,9 +189,9 @@ public partial class PlayerWindow : Window
                 HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher),
                 IsCodingMode: () => _codingModeState.IsCodingMode,
                 DispatchToUi: action => PlayerDispatcherScheduler.ScheduleNormal(Dispatcher, action),
-                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
+                SetCodingAiState: (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail),
                 SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
-                SetYoloStatus: (status, color, model) => SetYoloStatus(status, color, model),
+                SetYoloStatus: (status, color, model) => _liveDetectionStatusController.SetYoloStatus(status, color, model),
                 UpdatePipelineHealthDetails: details => LiveDetectionStatusControls.ShowPipelineHealthDetails(
                     Hd_Sidecar,
                     Hd_Token,
@@ -228,7 +262,7 @@ public partial class PlayerWindow : Window
                 IsLiveAiEnabled: () => PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
                 ResolveModelName: () => _codingAiRuntimeOwner.Controller.ModelName,
                 SetPause: _playerPlaybackControlHost.SetPause,
-                ApplyResumeStatus: status => SetCodingAiState(
+                ApplyResumeStatus: status => _liveDetectionStatusController.SetCodingAiState(
                     status.StatusText,
                     PlayerStatusColors.Success,
                     status.DetailText)));

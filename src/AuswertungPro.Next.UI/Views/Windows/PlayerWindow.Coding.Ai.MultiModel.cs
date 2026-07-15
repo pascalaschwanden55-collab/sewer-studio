@@ -19,7 +19,7 @@ public partial class PlayerWindow
                         captureTimestampSec,
                         cancellationToken),
                     new CodingMultiModelAnalysisStartWorkflowActions(
-                        SetCodingAiState: SetCodingAiState,
+                        SetCodingAiState: _liveDetectionStatusController.SetCodingAiState,
                         CaptureSnapshotAsync: _codingAnalysisContext.CaptureSnapshotAsync,
                         StoreAnalyzedFrame: (frameBytes, timestamp) => _liveDetectionController.StoreAnalyzedFrame(
                             frameBytes,
@@ -50,13 +50,13 @@ public partial class PlayerWindow
                             inferenceCancellationToken,
                             classifierInput.CurrentMeter,
                             classifierInput.ReachLength),
-                        SetCodingAiState: SetCodingAiState,
+                        SetCodingAiState: _liveDetectionStatusController.SetCodingAiState,
                         TryHandleBoundaryClassifierResultAsync: TryHandleBoundaryClassifierResultAsync,
                         TryHandleStructuralClassifierResult: TryHandleStructuralClassifierResult,
                         HandleAnalysisResult: result => CodingMultiModelAnalysisResultWorkflow.Execute(
                             new CodingMultiModelAnalysisResultWorkflowRequest(result, activityText),
                             new CodingMultiModelAnalysisResultWorkflowActions(
-                                SetCodingAiState,
+                                _liveDetectionStatusController.SetCodingAiState,
                                 () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                                 _codingAnalysisContext.BuildSegmentedFindings,
                                 ShowMultiModelResults,

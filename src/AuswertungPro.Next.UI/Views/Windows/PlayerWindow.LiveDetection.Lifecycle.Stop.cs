@@ -18,7 +18,7 @@ public partial class PlayerWindow
                 IsPlaybackDisposed: _shutdownState.IsPlaybackDisposed,
                 IsPlayerPlaying: !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying),
             new LiveDetectionStopUiWorkflowActions(
-                SetStoppedStatus: () => SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
+                SetStoppedStatus: () => _liveDetectionStatusController.SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
                 ClearOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
                     DetectionCanvas,
                     DetectionOverlayGrid,
