@@ -195,7 +195,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 dashboardRefresh: _sp.DashboardRefresh,
                 holding: null,
                 singleHoldingMode: false)),
-            new("\uE7F4", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
+            new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
                 getProject: () => Project,
                 getProjectPath: () => _sp.Settings.LastProjectPath,
                 dialogs: _sp.Dialogs,
@@ -206,7 +206,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 store: _sp.SchattenStore,
                 createService: _sp.CreateSchattenAuswertung,
                 getProjectPath: () => _sp.Settings.LastProjectPath)),
-            new("\uE128", "VSA", () => new Pages.VsaPageViewModel(
+            new("\uE73E", "VSA", () => new Pages.VsaPageViewModel(
                 getProject: () => Project,
                 collectionLock: CollectionLock,
                 getProjectPath: () => _sp.Settings.LastProjectPath,
@@ -218,7 +218,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 setStatus: SetStatus,
                 createImportRestorePoint: TryCreateImportRestorePoint,
                 refreshTitleAndDirty: RefreshTitleAndDirty)),
-            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(
+            new("\uE9D9", "Diagnose", () => new Pages.DiagnosticsPageViewModel(
                 _sp.LogTailReader,
                 _sp.DiagnosticsPackages,
                 _sp.Dialogs,

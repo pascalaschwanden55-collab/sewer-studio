@@ -357,6 +357,27 @@ public sealed class DesignAuditThemeResourceTests
         Assert.DoesNotContain(" m/s) >= v_c", hydraulics);
     }
 
+    [Fact]
+    public void Shell_navigation_uses_unique_semantic_icons()
+    {
+        var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
+        var navStart = shell.IndexOf("NavItems = new List<NavItem>", StringComparison.Ordinal);
+        var navEnd = shell.IndexOf("RefreshNavigationAvailability();", navStart, StringComparison.Ordinal);
+        Assert.True(navStart >= 0 && navEnd > navStart, "Navigationsliste konnte nicht gelesen werden.");
+
+        var navBlock = shell[navStart..navEnd];
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            navBlock,
+            "new\\(\\\"(?<icon>\\\\u[0-9A-F]{4})\\\",\\s*\\\"(?<title>[^\\\"]+)\\\"");
+        var icons = matches.Select(match => match.Groups["icon"].Value).ToArray();
+
+        Assert.Equal(15, matches.Count);
+        Assert.Equal(icons.Length, icons.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("new(\"\\uE80A\", \"Schacht-Matrix\"", navBlock);
+        Assert.Contains("new(\"\\uE73E\", \"VSA\"", navBlock);
+        Assert.Contains("new(\"\\uE9D9\", \"Diagnose\"", navBlock);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
