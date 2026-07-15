@@ -10,6 +10,78 @@ public sealed class EnvironmentVarsCollection;
 public sealed class KnowledgeBasePathsTests
 {
     [Fact]
+    public void Instanzen_halten_Einstellungen_und_Cache_getrennt()
+    {
+        var baseRoot = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        var firstRoot = Path.Combine(baseRoot, "First");
+        var secondRoot = Path.Combine(baseRoot, "Second");
+        var first = CreateService(baseRoot, "first");
+        var second = CreateService(baseRoot, "second");
+        first.ConfigureSettingsRoot(firstRoot);
+        second.ConfigureSettingsRoot(secondRoot);
+
+        try
+        {
+            Assert.Equal(firstRoot, first.GetRoot());
+            Assert.Equal(secondRoot, second.GetRoot());
+
+            first.InvalidateCache();
+
+            Assert.Equal(secondRoot, second.GetResolution().Root);
+            Assert.Equal(
+                KnowledgeBasePaths.RootSource.PersistedSettings,
+                second.GetResolution().Source);
+        }
+        finally
+        {
+            if (Directory.Exists(baseRoot))
+                Directory.Delete(baseRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Standardpfad_kopiert_alte_Wissensdateien_ohne_Originale_zu_veraendern()
+    {
+        var baseRoot = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        var roaming = Path.Combine(baseRoot, "Roaming");
+        var appData = Path.Combine(baseRoot, "AppData");
+        var program = Path.Combine(baseRoot, "Program");
+        var legacyDb = Path.Combine(roaming, "AuswertungPro", "KiVideoanalyse", "KnowledgeBase.db");
+        var legacySamples = Path.Combine(roaming, "AuswertungPro", "training_center_samples.json");
+        var legacyFrame = Path.Combine(roaming, "AuswertungPro", "frames", "frame.png");
+        var legacyMeasures = Path.Combine(appData, "data", "measures_learning.json");
+        var legacyModel = Path.Combine(program, "Data", "measures-model.zip");
+        Write(legacyDb, "db");
+        Write(legacySamples, "samples");
+        Write(legacyFrame, "frame");
+        Write(legacyMeasures, "measures");
+        Write(legacyModel, "model");
+        var service = new KnowledgeBasePathService(
+            () => null,
+            () => roaming,
+            () => appData,
+            () => program);
+
+        try
+        {
+            var root = service.GetRoot();
+
+            Assert.Equal(Path.Combine(appData, "Knowledge"), root);
+            Assert.Equal("db", File.ReadAllText(Path.Combine(root, "KnowledgeBase.db")));
+            Assert.Equal("samples", File.ReadAllText(Path.Combine(root, "training_samples.json")));
+            Assert.Equal("frame", File.ReadAllText(Path.Combine(root, "frames", "frame.png")));
+            Assert.Equal("measures", File.ReadAllText(Path.Combine(root, "measures_learning.json")));
+            Assert.Equal("model", File.ReadAllText(Path.Combine(root, "measures-model.zip")));
+            Assert.Equal("db", File.ReadAllText(legacyDb));
+        }
+        finally
+        {
+            if (Directory.Exists(baseRoot))
+                Directory.Delete(baseRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void GetRoot_uses_persisted_settings_when_environment_override_is_missing()
     {
         var previousRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
@@ -213,4 +285,18 @@ public sealed class KnowledgeBasePathsTests
                 Directory.Delete(appDataRoot, recursive: true);
         }
     }
+
+    private static KnowledgeBasePathService CreateService(string baseRoot, string name) =>
+        new(
+            () => null,
+            () => Path.Combine(baseRoot, name, "Roaming"),
+            () => Path.Combine(baseRoot, name, "AppData"),
+            () => Path.Combine(baseRoot, name, "Program"));
+
+    private static void Write(string path, string content)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
 }

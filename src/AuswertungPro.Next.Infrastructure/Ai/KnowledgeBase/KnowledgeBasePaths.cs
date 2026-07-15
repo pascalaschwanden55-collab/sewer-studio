@@ -1,17 +1,11 @@
-using System;
-using System.IO;
-using AuswertungPro.Next.Application.Common;
-
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
+/// <summary>Kompatible statische API fuer die zentral aufgeloesten Wissenspfade.</summary>
 public static class KnowledgeBasePaths
 {
     public const string EnvironmentVariableName = "SEWERSTUDIO_KNOWLEDGE_ROOT";
 
-    private static readonly object Sync = new();
-    private static RootResolution? _cachedResolution;
-    private static string? _configuredSettingsRoot;
-    private static bool _migrationDone;
+    private static IKnowledgeBasePathService _current = new KnowledgeBasePathService();
 
     public enum RootSource
     {
@@ -29,224 +23,51 @@ public static class KnowledgeBasePaths
         public bool HasEnvironmentSettingsMismatch =>
             Source == RootSource.EnvironmentOverride
             && !string.IsNullOrWhiteSpace(PersistedSettingsRoot)
-            && !PathsEqual(Root, PersistedSettingsRoot);
+            && !KnowledgeBasePathService.PathsEqual(Root, PersistedSettingsRoot);
     }
 
-    public static string GetRoot(string? settingsOverride = null)
-    {
-        lock (Sync)
-        {
-            if (_cachedResolution is not null && settingsOverride is null)
-                return _cachedResolution.Root;
+    public static IKnowledgeBasePathService Current => Volatile.Read(ref _current);
 
-            var resolution = Resolve(settingsOverride);
-            Directory.CreateDirectory(resolution.Root);
+    public static void Use(IKnowledgeBasePathService paths) =>
+        Volatile.Write(ref _current, paths ?? throw new ArgumentNullException(nameof(paths)));
 
-            if (resolution.Source == RootSource.DefaultFallback && !_migrationDone)
-            {
-                _migrationDone = true;
-                TryMigrateFromAppData(resolution.Root);
-            }
+    public static string GetRoot(string? settingsOverride = null) =>
+        Current.GetRoot(settingsOverride);
 
-            if (settingsOverride is null)
-                _cachedResolution = resolution;
+    public static RootResolution GetResolution() => Current.GetResolution();
 
-            return resolution.Root;
-        }
-    }
+    public static string GetKnowledgeDbPath(string? settingsOverride = null) =>
+        Current.GetKnowledgeDbPath(settingsOverride);
 
-    /// <summary>
-    /// Liefert Pfad und Herkunft nach derselben Reihenfolge wie GetRoot:
-    /// Umgebungsvariable, gespeicherte Einstellung, bisheriger AppData-Fallback.
-    /// </summary>
-    public static RootResolution GetResolution()
-    {
-        lock (Sync)
-            return _cachedResolution ?? Resolve(settingsOverride: null);
-    }
+    public static string GetTrainingSamplesPath(string? settingsOverride = null) =>
+        Current.GetTrainingSamplesPath(settingsOverride);
 
-    public static string GetKnowledgeDbPath(string? settingsOverride = null)
-        => Path.Combine(GetRoot(settingsOverride), "KnowledgeBase.db");
+    public static string GetTrainingSettingsPath(string? settingsOverride = null) =>
+        Current.GetTrainingSettingsPath(settingsOverride);
 
-    public static string GetTrainingSamplesPath(string? settingsOverride = null)
-        => Path.Combine(GetRoot(settingsOverride), "training_samples.json");
+    public static string GetFramesDir(string? settingsOverride = null) =>
+        Current.GetFramesDir(settingsOverride);
 
-    public static string GetTrainingSettingsPath(string? settingsOverride = null)
-        => Path.Combine(GetRoot(settingsOverride), "training_settings.json");
+    public static string GetMeasuresLearningPath(string? settingsOverride = null) =>
+        Current.GetMeasuresLearningPath(settingsOverride);
 
-    public static string GetFramesDir(string? settingsOverride = null)
-    {
-        var dir = Path.Combine(GetRoot(settingsOverride), "frames");
-        Directory.CreateDirectory(dir);
-        return dir;
-    }
+    public static string GetMeasuresModelPath(string? settingsOverride = null) =>
+        Current.GetMeasuresModelPath(settingsOverride);
 
-    public static string GetMeasuresLearningPath(string? settingsOverride = null)
-        => Path.Combine(GetRoot(settingsOverride), "measures_learning.json");
+    public static void InvalidateCache() => Current.InvalidateCache();
 
-    public static string GetMeasuresModelPath(string? settingsOverride = null)
-        => Path.Combine(GetRoot(settingsOverride), "measures-model.zip");
+    public static void ConfigureSettingsRoot(string? settingsRoot) =>
+        Current.ConfigureSettingsRoot(settingsRoot);
 
-    public static void InvalidateCache()
-    {
-        lock (Sync)
-            _cachedResolution = null;
-    }
+    public static string LegacyKnowledgeDbPath => Current.LegacyKnowledgeDbPath;
 
-    /// <summary>
-    /// Setzt den dauerhaft gespeicherten KB-Pfad aus den App-Einstellungen.
-    /// Eine gesetzte SEWERSTUDIO_KNOWLEDGE_ROOT-Variable bleibt der hoechste Override.
-    /// </summary>
-    public static void ConfigureSettingsRoot(string? settingsRoot)
-    {
-        lock (Sync)
-        {
-            _configuredSettingsRoot = CleanAbsoluteRoot(
-                settingsRoot,
-                "Der gespeicherte Wissensdatenbank-Pfad");
-            _cachedResolution = null;
-        }
-    }
+    public static string LegacyTrainingSamplesPath => Current.LegacyTrainingSamplesPath;
 
-    public static string LegacyKnowledgeDbPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AuswertungPro", "KiVideoanalyse", "KnowledgeBase.db");
+    public static string LegacyTrainingSettingsPath => Current.LegacyTrainingSettingsPath;
 
-    public static string LegacyTrainingSamplesPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AuswertungPro", "training_center_samples.json");
+    public static string LegacyFramesDir => Current.LegacyFramesDir;
 
-    public static string LegacyTrainingSettingsPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AuswertungPro", "training_center_settings.json");
+    public static string LegacyMeasuresLearningPath => Current.LegacyMeasuresLearningPath;
 
-    public static string LegacyFramesDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AuswertungPro", "frames");
-
-    public static string LegacyMeasuresLearningPath => Path.Combine(
-        GetAppDataDir(), "data", "measures_learning.json");
-
-    public static string LegacyMeasuresModelPath => Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip");
-
-    private static RootResolution Resolve(string? settingsOverride)
-    {
-        var envRoot = CleanAbsoluteRoot(
-            Environment.GetEnvironmentVariable(EnvironmentVariableName),
-            $"Die Umgebungsvariable {EnvironmentVariableName}");
-        var configured = CleanAbsoluteRoot(
-            settingsOverride,
-            "Der angegebene Wissensdatenbank-Pfad") ?? _configuredSettingsRoot;
-
-        if (!string.IsNullOrWhiteSpace(envRoot))
-            return new RootResolution(envRoot, RootSource.EnvironmentOverride, envRoot, configured);
-
-        if (!string.IsNullOrWhiteSpace(configured))
-            return new RootResolution(configured, RootSource.PersistedSettings, null, configured);
-
-        return new RootResolution(
-            Path.Combine(GetAppDataDir(), "Knowledge"),
-            RootSource.DefaultFallback,
-            null,
-            null);
-    }
-
-    private static string? Clean(string? path)
-        => string.IsNullOrWhiteSpace(path) ? null : path.Trim();
-
-    private static string? CleanAbsoluteRoot(string? path, string sourceDescription)
-    {
-        var cleaned = Clean(path);
-        if (cleaned is null)
-            return null;
-
-        try
-        {
-            if (Path.IsPathFullyQualified(cleaned))
-                return Path.TrimEndingDirectorySeparator(Path.GetFullPath(cleaned));
-        }
-        catch (Exception ex) when (ex is ArgumentException
-                                   or NotSupportedException
-                                   or PathTooLongException)
-        {
-            // Die gemeinsame Warnung unten reicht aus und enthaelt absichtlich
-            // nicht den moeglicherweise manipulierten Rohwert.
-        }
-
-        BestEffort.ReportWarning(
-            $"[KnowledgeBase] {sourceDescription} wurde ignoriert, weil er kein gueltiger absoluter Pfad ist.");
-        return null;
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        try
-        {
-            return string.Equals(
-                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
-                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
-                StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    private static void TryMigrateFromAppData(string knowledgeRoot)
-    {
-        try
-        {
-            var newDbPath = Path.Combine(knowledgeRoot, "KnowledgeBase.db");
-            if (File.Exists(newDbPath))
-                return;
-
-            TryCopyFile(LegacyKnowledgeDbPath, newDbPath);
-            TryCopyFile(LegacyKnowledgeDbPath + "-wal", newDbPath + "-wal");
-            TryCopyFile(LegacyKnowledgeDbPath + "-shm", newDbPath + "-shm");
-            TryCopyFile(LegacyTrainingSamplesPath, Path.Combine(knowledgeRoot, "training_samples.json"));
-            TryCopyFile(LegacyTrainingSettingsPath, Path.Combine(knowledgeRoot, "training_settings.json"));
-            TryCopyFile(LegacyMeasuresLearningPath, Path.Combine(knowledgeRoot, "measures_learning.json"));
-            TryCopyFile(LegacyMeasuresModelPath, Path.Combine(knowledgeRoot, "measures-model.zip"));
-
-            if (Directory.Exists(LegacyFramesDir))
-            {
-                var newFramesDir = Path.Combine(knowledgeRoot, "frames");
-                Directory.CreateDirectory(newFramesDir);
-                foreach (var png in Directory.EnumerateFiles(LegacyFramesDir, "*.png"))
-                {
-                    var dest = Path.Combine(newFramesDir, Path.GetFileName(png));
-                    if (!File.Exists(dest))
-                        File.Copy(png, dest);
-                }
-            }
-        }
-        catch
-        {
-            // Migration darf den App-Start nicht blockieren.
-        }
-    }
-
-    private static void TryCopyFile(string source, string destination)
-    {
-        try
-        {
-            if (!File.Exists(source) || File.Exists(destination))
-                return;
-
-            var dir = Path.GetDirectoryName(destination);
-            if (dir is not null)
-                Directory.CreateDirectory(dir);
-
-            File.Copy(source, destination);
-        }
-        catch
-        {
-            // Best effort.
-        }
-    }
-
-    private static string GetAppDataDir()
-        => AppDataPathResolver.Resolve();
+    public static string LegacyMeasuresModelPath => Current.LegacyMeasuresModelPath;
 }

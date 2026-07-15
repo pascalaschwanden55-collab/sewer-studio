@@ -111,6 +111,7 @@ namespace AuswertungPro.Next.UI
         public string? KnowledgeRootStartupWarning { get; private set; }
         // Einmal beim Start aufgeloest. Alle vom ServiceProvider erzeugten KB-Dienste
         // erhalten genau diesen Ordner und koennen nicht versehentlich auseinanderlaufen.
+        public IKnowledgeBasePathService KnowledgePaths { get; }
         public string KnowledgeRoot { get; }
         public string KnowledgeDbPath { get; }
         // Zentrale Statusfarben (Ampel/Severity/Konfidenz) — eine Farbsprache fuer alle Fenster.
@@ -377,17 +378,19 @@ namespace AuswertungPro.Next.UI
                     settings.LastFullBackupPath,
                     settings.LastFullBackupSizeBytes));
 
+            KnowledgePaths = new KnowledgeBasePathService();
+            KnowledgeBasePaths.Use(KnowledgePaths);
             settings.MigrateLegacyKnowledgeRootPath();
 
             // Env-Var hat Vorrang. Fehlt sie, bleibt der zuletzt bestaetigte KB-Pfad
             // aus settings.json aktiv und die App startet nicht unbemerkt mit leerem Wissen.
-            KnowledgeBasePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
-            KnowledgeRoot = KnowledgeBasePaths.GetRoot();
+            KnowledgePaths.ConfigureSettingsRoot(settings.KnowledgeRootPath);
+            KnowledgeRoot = KnowledgePaths.GetRoot();
             VsaYoloClasses = new VsaYoloClassMapFileStore(
                 Path.Combine(KnowledgeRoot, "yolo_class_map.json"));
             VsaYoloClassMap.Use(VsaYoloClasses);
             TrainingSettings = new TrainingCenterSettingsFileStore(
-                KnowledgeBasePaths.GetTrainingSettingsPath());
+                KnowledgePaths.GetTrainingSettingsPath());
             TrainingCenterSettingsStore.Use(TrainingSettings);
             SelfTrainingHistory = new SelfTrainingHistoryFileStore(
                 Path.Combine(KnowledgeRoot, "selftraining_history.json"));
@@ -398,7 +401,7 @@ namespace AuswertungPro.Next.UI
                 Path.Combine(AppSettings.AppDataDir, "ai_sanierung_sessions.json"));
             AiOptimizationSessionStore.Use(AiOptimizationSessions);
             var trainingSamples = new TrainingSampleFileStore(
-                KnowledgeBasePaths.GetTrainingSamplesPath());
+                KnowledgePaths.GetTrainingSamplesPath());
             trainingSamples.ConfigureEvalProtection(settings.EvalSetRoot);
             TrainingSamples = trainingSamples;
             TrainingSamplesStore.Use(trainingSamples);
@@ -412,7 +415,7 @@ namespace AuswertungPro.Next.UI
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
-            var knowledgeResolution = KnowledgeBasePaths.GetResolution();
+            var knowledgeResolution = KnowledgePaths.GetResolution();
             KnowledgeDbPath = Path.Combine(KnowledgeRoot, "KnowledgeBase.db");
             if (knowledgeResolution.Source == KnowledgeBasePaths.RootSource.EnvironmentOverride)
             {
@@ -883,6 +886,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
             if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
             if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
+            if (serviceType == typeof(IKnowledgeBasePathService)) return KnowledgePaths;
             if (serviceType == typeof(IPdfFileSafetyChecker)) return PdfFileSafety;
             if (serviceType == typeof(IAtomicPdfFileReplacer)) return PdfFileReplacement;
             if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
