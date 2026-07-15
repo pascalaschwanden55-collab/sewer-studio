@@ -309,7 +309,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "PlayerWindow.Coding.OverlayInput.Schema.cs",
             "PlayerWindow.Coding.OverlayInput.Calibration.cs",
             "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
-            "PlayerWindow.Coding.Eingabemarker.cs",
+            "PlayerWindow.xaml.cs",
             "PlayerWindow.Keyboard.cs"
         };
 
@@ -407,7 +407,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
         var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerPreviewRenderer.cs");
@@ -415,23 +416,25 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.True(File.Exists(policyPath), "Eingabemarker-Rechteckgeometrie muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Canvas-Entscheidungen sollen die Geometrie-Policy ausserhalb von PlayerWindow verwenden.");
         Assert.True(File.Exists(rendererPath), "Eingabemarker-Preview-Rendering muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(interactionControllerPath), "Eingabemarker-Mausinteraktion soll in einem eigenen Controller liegen.");
 
-        var marker = File.ReadAllText(markerPath);
+        var interactionController = File.ReadAllText(interactionControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var policy = File.ReadAllText(policyPath);
         var canvasWorkflow = File.ReadAllText(canvasWorkflowPath);
         var renderer = File.ReadAllText(rendererPath);
 
         AssertNoForbiddenTokens(
-            marker,
+            interactionController,
             "CodingEingabemarkerGeometryPolicy.BuildPreviewRect",
             "CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection");
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", canvasWorkflow);
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", canvasWorkflow);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", marker);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", marker);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", marker);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", windowRoot);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", windowRoot);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", windowRoot);
         AssertNoForbiddenTokens(
-            marker,
+            interactionController,
             "Math.Min(_eingabemarkerDragStart.X",
             "Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)",
             "Math.Max(_eingabemarkerDragStart.X",
@@ -451,6 +454,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var focusControlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerFocusControls.cs");
@@ -462,8 +467,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.True(File.Exists(focusControlsPath), "Eingabemarker-Focus soll ueber die Player-Focus-Controls laufen.");
         Assert.True(File.Exists(inputWorkflowPath), "Eingabemarker-Key- und Auswahlentscheidungen sollen ausserhalb von PlayerWindow laufen.");
         Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Mausentscheidungen sollen ausserhalb von PlayerWindow laufen.");
+        Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht mehr in einem PlayerWindow-Partial liegen.");
+        Assert.True(File.Exists(interactionControllerPath), "Die Eingabemarker-Interaktion soll in einem eigenen Controller liegen.");
 
-        var marker = File.ReadAllText(markerPath);
+        var interactionController = File.ReadAllText(interactionControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var input = File.ReadAllText(inputPath);
         var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
         var focusControls = File.Exists(focusControlsPath) ? File.ReadAllText(focusControlsPath) : "";
@@ -471,26 +479,26 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var canvasWorkflow = File.Exists(canvasWorkflowPath) ? File.ReadAllText(canvasWorkflowPath) : "";
 
         AssertNoForbiddenTokens(
-            marker,
+            interactionController,
             "private void CmbEingabemarker_KeyDown",
             "private void CmbEingabemarker_SelectionChanged",
             "private static string? ResolveEingabemarkerCodeHint");
-        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseDown", marker);
-        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", marker);
-        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", marker);
-        AssertNoForbiddenTokens(marker, "if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)");
-        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", marker);
-        Assert.Contains("PlayerFocusControls.FocusElement", marker);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseDown", interactionController);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", interactionController);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", interactionController);
+        AssertNoForbiddenTokens(interactionController, "if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)");
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", windowRoot);
+        Assert.Contains("PlayerFocusControls.FocusElement", windowRoot);
         AssertNoForbiddenTokens(
-            marker,
+            interactionController + windowRoot,
             "Dispatcher.BeginInvoke",
             "new Action(() => TxtEingabemarker.Focus())",
             "TxtEingabemarker.Focus()",
             "System.Windows.Threading.DispatcherPriority.Input",
             "_eingabemarkerPreviewRect == null",
             "if (normalizedRect is null)");
-        Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
-        Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
+        Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", windowRoot);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", windowRoot);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
         Assert.Contains("CodingEingabemarkerPopupControls.ApplyQuickSelection", input);
         Assert.Contains("CodingEingabemarkerPopupControls.ResolveSelectedText", input);
@@ -504,7 +512,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "TxtEingabemarker.Text = text",
             "EingabemarkerPopup.Visibility != Visibility.Visible");
         AssertNoForbiddenTokens(
-            marker,
+            windowRoot,
             "EingabemarkerPopup.Visibility = Visibility.Visible",
             "EingabemarkerPopup.Visibility = Visibility.Collapsed",
             "TxtEingabemarker.Text = \"\"",
@@ -535,24 +543,26 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerToggleWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll ueber den OverlayInput-Control-Adapter laufen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Eingabemarker-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
-        var marker = File.ReadAllText(markerPath);
+        var interactionController = File.ReadAllText(interactionControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
-        Assert.Contains("CodingEingabemarkerToggleWorkflow.Execute", marker);
-        AssertNoForbiddenTokens(marker, "if (BtnEingabemarker.IsChecked == true)");
-        Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", marker);
-        Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", marker);
-        Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", marker);
+        Assert.Contains("CodingEingabemarkerToggleWorkflow.Execute", interactionController);
+        AssertNoForbiddenTokens(windowRoot, "if (BtnEingabemarker.IsChecked == true)");
+        Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", windowRoot);
+        Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", windowRoot);
+        Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", windowRoot);
         AssertNoForbiddenTokens(
-            marker,
+            interactionController + windowRoot,
             "CodingOverlayCanvas.IsHitTestVisible =",
             "CodingOverlayCanvas.Cursor =");
         Assert.Contains("request.IsChecked", toggleWorkflow);
@@ -592,6 +602,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
@@ -601,14 +612,15 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(submissionWorkflowPath), "Eingabemarker-Submission-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(directEventWorkflowPath), "Eingabemarker-Direkt-Event-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht mehr in einem PlayerWindow-Partial liegen.");
 
-        var marker = File.ReadAllText(markerPath);
+        var interactionController = File.ReadAllText(interactionControllerPath);
         var submission = File.ReadAllText(submissionPath);
         var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
         var directEventWorkflow = File.Exists(directEventWorkflowPath) ? File.ReadAllText(directEventWorkflowPath) : "";
 
         AssertNoForbiddenTokens(
-            marker,
+            interactionController,
             "private async Task SubmitEingabemarker",
             "CodingEingabemarkerDuplicatePolicy.FindDuplicate");
         Assert.Contains("private async Task SubmitEingabemarker", submission);

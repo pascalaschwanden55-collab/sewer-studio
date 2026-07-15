@@ -333,6 +333,41 @@ public partial class PlayerWindow : Window
                     CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
                     SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
                     DeactivateCodingOverlay: _markToolControls.DeactivateCodingOverlay)));
+        _codingEingabemarkerInteractionController = new CodingEingabemarkerInteractionController(
+            new CodingEingabemarkerInteractionControllerBindings(
+                PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(
+                    _playerPlaybackControlHost.SetPause),
+                EnsureMarkOverlayReady: _liveDetectionMarkToolController.EnsureOverlayReady,
+                OpenCodingOverlayPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
+                UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+                EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),
+                ShowDrawingStatus: () => _liveDetectionStatusController.SetCodingAiState(
+                    "Eingabemarker: Rechteck um die Beobachtung ziehen",
+                    PlayerStatusColors.Info,
+                    "Klicken + Ziehen = Bereich markieren"),
+                UncheckButton: () => PlayerToggleButtonControls.Uncheck(BtnEingabemarker),
+                HideInputPopup: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
+                ClearPreview: preview => CodingEingabemarkerPreviewRenderer.Clear(
+                    CodingOverlayCanvas,
+                    preview),
+                ResetCanvasCursor: () => CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas),
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
+                CreatePreview: point => CodingEingabemarkerPreviewRenderer.Create(CodingOverlayCanvas, point),
+                UpdatePreview: CodingEingabemarkerPreviewRenderer.Update,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
+                ResolveCanvasSize: () => CodingOverlayInputControls.GetCanvasActualSize(CodingOverlayCanvas),
+                DisableDrawingCanvas: () => CodingOverlayInputControls.DisableDrawingCanvas(CodingOverlayCanvas),
+                ShowInputPopup: () => CodingEingabemarkerPopupControls.ShowInput(
+                    EingabemarkerPopup,
+                    TxtEingabemarker,
+                    CmbEingabemarker),
+                FocusInput: () => PlayerDispatcherScheduler.ScheduleInput(
+                    Dispatcher,
+                    () => PlayerFocusControls.FocusElement(TxtEingabemarker)),
+                ShowInputStatus: () => _liveDetectionStatusController.SetCodingAiState(
+                    "Beschreibung eingeben oder Stichwort wÃ¤hlen, dann Enter",
+                    PlayerStatusColors.Info,
+                    "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));
         _liveDetectionMarkSegmentationController = new LiveDetectionMarkSegmentationController(
             new LiveDetectionMarkSegmentationControllerBindings(
                 HasBoxSegmentation: () => _codingAiRuntimeOwner.Controller.BoxSegmentation is not null,

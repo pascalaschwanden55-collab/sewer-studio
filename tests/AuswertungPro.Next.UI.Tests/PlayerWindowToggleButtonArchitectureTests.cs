@@ -18,7 +18,7 @@ public sealed class PlayerWindowToggleButtonArchitectureTests
         {
             "PlayerWindow.Coding.Ai.Live.cs",
             "PlayerWindow.xaml.cs",
-            "PlayerWindow.Coding.Eingabemarker.cs",
+            "PlayerWindow.Coding.cs",
             "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",
             "PlayerWindow.Keyboard.cs"

@@ -15,7 +15,7 @@ public partial class PlayerWindow
                 IsEscape: e.Key == Key.Escape,
                 IsEnter: e.Key == Key.Enter),
             new CodingEingabemarkerKeyInputWorkflowActions(
-                CancelMarker: CancelEingabemarker,
+                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel(),
                 ClearDetectionOverlays: ClearDetectionOverlays,
                 Submit: () => SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker")));
     }

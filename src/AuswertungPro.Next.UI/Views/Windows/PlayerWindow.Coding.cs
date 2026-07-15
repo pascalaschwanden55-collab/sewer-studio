@@ -21,6 +21,10 @@ public partial class PlayerWindow
     private void ConfirmReject_Click(object sender, RoutedEventArgs e)
         => _codingConfirmationController.Reject();
 
+    private void Eingabemarker_Click(object sender, RoutedEventArgs e)
+        => _codingEingabemarkerInteractionController.Toggle(
+            PlayerToggleButtonControls.IsChecked(BtnEingabemarker));
+
     /// <summary>
     /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.
     /// Wichtig fÃ¼r Popup-Overlay Ã¼ber VLC (HwndHost/Airspace).

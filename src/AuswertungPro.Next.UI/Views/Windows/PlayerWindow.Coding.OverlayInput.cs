@@ -15,13 +15,14 @@ public partial class PlayerWindow
 
         CodingOverlayInputMouseWorkflow.MouseDown(
             new CodingOverlayInputMouseDownRequest(
-                CurrentCodingOverlayInputEingabemarkerState(),
+                _codingEingabemarkerInteractionController.OverlayInputState,
                 _codingOverlayToolHost.HasOverlayService,
                 _codingSessionHost.HasViewModel,
                 _codingOverlayToolHost.ActiveTool == OverlayToolType.None,
                 _codingOverlayToolHost.IsMultiPointTool),
             new CodingOverlayInputMouseDownActions(
-                HandleEingabemarkerMouseDown: () => EingabemarkerCanvas_MouseDown(e.GetPosition(CodingOverlayCanvas)),
+                HandleEingabemarkerMouseDown: () =>
+                    _codingEingabemarkerInteractionController.MouseDown(e.GetPosition(CodingOverlayCanvas)),
                 MarkHandled: () => e.Handled = true,
                 TryStartCalibration: () => TryStartCodingCalibration(GetNorm()),
                 TryHandleSchemaMouseDown: () => TryHandleCodingSchemaMouseDown(GetNorm()),
@@ -36,12 +37,13 @@ public partial class PlayerWindow
 
         CodingOverlayInputMouseWorkflow.MouseMove(
             new CodingOverlayInputMouseMoveRequest(
-                IsEingabemarkerDrawingWithPreview: _eingabemarkerState.IsDrawing &&
-                    _eingabemarkerState.HasPreview,
+                IsEingabemarkerDrawingWithPreview:
+                    _codingEingabemarkerInteractionController.IsDrawingWithPreview,
                 HasOverlayService: _codingOverlayToolHost.HasOverlayService,
                 HasViewModel: _codingSessionHost.HasViewModel),
             new CodingOverlayInputMouseMoveActions(
-                HandleEingabemarkerMouseMove: () => EingabemarkerCanvas_MouseMove(e.GetPosition(CodingOverlayCanvas)),
+                HandleEingabemarkerMouseMove: () =>
+                    _codingEingabemarkerInteractionController.MouseMove(e.GetPosition(CodingOverlayCanvas)),
                 TryPreviewCalibration: () => TryPreviewCodingCalibration(GetNorm()),
                 TryHandleSchemaMouseMove: () => TryHandleCodingSchemaMouseMove(GetNorm()),
                 TryHandleMultiPointMouseMove: () => TryHandleCodingMultiPointMouseMove(GetNorm()),
@@ -55,17 +57,16 @@ public partial class PlayerWindow
 
         CodingOverlayInputMouseWorkflow.MouseUp(
             new CodingOverlayInputMouseUpRequest(
-                IsEingabemarkerDrawing: _eingabemarkerState.IsDrawing,
+                IsEingabemarkerDrawing: _codingEingabemarkerInteractionController.IsDrawing,
                 HasOverlayService: _codingOverlayToolHost.HasOverlayService,
                 HasViewModel: _codingSessionHost.HasViewModel),
             new CodingOverlayInputMouseUpActions(
-                HandleEingabemarkerMouseUp: () => EingabemarkerCanvas_MouseUp(e.GetPosition(CodingOverlayCanvas)),
+                HandleEingabemarkerMouseUp: () =>
+                    _codingEingabemarkerInteractionController.MouseUp(e.GetPosition(CodingOverlayCanvas)),
                 MarkHandled: () => e.Handled = true,
                 TryFinishCalibration: () => TryFinishCodingCalibration(GetNorm()),
                 TryHandleSchemaMouseUp: () => TryHandleCodingSchemaMouseUp(GetNorm()),
                 TryHandleStandardMouseUp: () => TryHandleCodingStandardMouseUp(GetNorm())));
     }
 
-    private CodingOverlayInputEingabemarkerState CurrentCodingOverlayInputEingabemarkerState()
-        => _eingabemarkerState.OverlayInputState;
 }

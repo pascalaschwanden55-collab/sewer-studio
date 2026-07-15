@@ -30,10 +30,9 @@ public partial class PlayerWindow
     private readonly CodingCalibrationPointerController _codingCalibrationPointerController;
     private readonly CodingEventsRefreshController _codingEventsRefreshController;
     private readonly ICodingProtocolMatchController _codingProtocolMatchController;
+    private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;
     private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
     private readonly CodingNavigationController _codingNavigationController;
-
-    private readonly CodingEingabemarkerStateController _eingabemarkerState = new();
 
     private CodingModeStateController _codingModeState => _codingRuntimeStates.ModeState;
 

@@ -18,7 +18,7 @@ public partial class PlayerWindow
                 _codingSessionRuntimeOwner.Service != null),
             new CodingEingabemarkerSubmissionWorkflowActions(
                 HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
-                SetAnalyzingPhase: _eingabemarkerState.SetAnalyzingPhase,
+                SetAnalyzingPhase: _codingEingabemarkerInteractionController.SetAnalyzingPhase,
                 ResolveCodeHint: ResolveEingabemarkerCodeHint,
                 FindDuplicate: codeHint =>
                 {
@@ -46,7 +46,7 @@ public partial class PlayerWindow
                     keywordHint: keyword,
                     codeHint: null),
                 ShowErrorStatus: message => _liveDetectionStatusController.SetCodingAiState($"Fehler: {message}", PlayerStatusColors.Error, ""),
-                CancelMarker: CancelEingabemarker));
+                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel()));
     }
 
     private void AddDirectEingabemarkerEvent(string codeHint, string keyword)
