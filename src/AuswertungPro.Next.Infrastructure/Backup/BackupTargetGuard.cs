@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using AuswertungPro.Next.Application.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Backup;
@@ -13,6 +12,15 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 /// </summary>
 public static class BackupTargetGuard
 {
+    private static IBackupTargetMarkerGuard _markerGuard = new BackupTargetMarkerGuardService();
+
+    public static IBackupTargetMarkerGuard MarkerGuard => Volatile.Read(ref _markerGuard);
+
+    public static void UseMarkerGuard(IBackupTargetMarkerGuard markerGuard)
+        => Volatile.Write(
+            ref _markerGuard,
+            markerGuard ?? throw new ArgumentNullException(nameof(markerGuard)));
+
     /// <summary>
     /// Prueft den Spiegel-Root und legt die Marker-Datei an.
     /// Erlaubt: Ordner existiert nicht / ist leer (Marker wird angelegt)
@@ -21,37 +29,7 @@ public static class BackupTargetGuard
     /// </summary>
     /// <returns>null = ok, sonst deutsche Fehlermeldung.</returns>
     public static string? ValidateAndCreateMarker(string backupRoot)
-    {
-        var root = Path.GetFullPath(backupRoot);
-        var markerPath = Path.Combine(root, BackupPlanBuilder.MarkerFileName);
-
-        if (Directory.Exists(root))
-        {
-            if (File.Exists(markerPath))
-                return null; // Folgelauf in bestehendem Spiegel
-
-            var hatInhalt = Directory.EnumerateFileSystemEntries(root).Any();
-            if (hatInhalt)
-            {
-                return $"Der Ordner \"{root}\" enthaelt bereits Daten, ist aber keine " +
-                       "SewerStudio-Datensicherung (Marker-Datei fehlt). " +
-                       "Bitte einen leeren Ordner oder eine bestehende Sicherung waehlen.";
-            }
-        }
-
-        try
-        {
-            Directory.CreateDirectory(root);
-            File.WriteAllText(markerPath,
-                "SewerStudio-Datensicherung. Diese Datei markiert den Spiegel-Ordner — nicht loeschen.");
-            File.SetAttributes(markerPath, FileAttributes.Hidden);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            return $"Zielordner \"{root}\" kann nicht beschrieben werden: {ex.Message}";
-        }
-    }
+        => MarkerGuard.ValidateAndCreateMarker(backupRoot);
 
     /// <summary>Defense-in-Depth: jeder Loeschpfad MUSS unterhalb des Spiegel-Roots liegen.</summary>
     public static bool IsInsideBackupRoot(string backupRoot, string path)

@@ -131,6 +131,7 @@ namespace AuswertungPro.Next.UI
         public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
         public IKnowledgeWalCheckpoint KnowledgeWalCheckpoint { get; }
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
+        public IBackupTargetMarkerGuard BackupTargetMarkers { get; }
         public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
@@ -480,13 +481,17 @@ namespace AuswertungPro.Next.UI
             KnowledgeBaseHealth = knowledgeBaseHealth ?? new KnowledgeBaseHealthInspectionService();
             KnowledgeBaseHealthChecker.Use(KnowledgeBaseHealth);
             GitCommit = new GitCommitFileResolver();
+            BackupTargetMarkers = new BackupTargetMarkerGuardService();
+            BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
             FullBackup = new FullBackupService(
                 () => FullBackupSourcesFactory.ErmittleAktuelleQuellen(
                     settings,
                     RepositoryRootLocator),
                 KnowledgeWalCheckpoint.TryCheckpoint,
                 ct => OllamaListAsync(ct),
-                gitCommitResolver: GitCommit);
+                availableBytes: null,
+                gitCommitResolver: GitCommit,
+                targetMarkerGuard: BackupTargetMarkers);
             KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
@@ -773,6 +778,7 @@ namespace AuswertungPro.Next.UI
         public object? GetService(Type serviceType)
         {
             if (serviceType == typeof(IFullBackupService)) return FullBackup;
+            if (serviceType == typeof(IBackupTargetMarkerGuard)) return BackupTargetMarkers;
             if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
             if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
             if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;

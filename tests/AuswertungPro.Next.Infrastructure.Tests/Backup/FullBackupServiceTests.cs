@@ -328,6 +328,20 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.Equal(0, result.FilesCopied);
     }
 
+    [Fact]
+    public async Task RunAsync_VerwendetDenInjiziertenZielmarkerSchutz()
+    {
+        var sources = CreateSourceTree();
+        var guard = new RecordingTargetMarkerGuard("Zielmarker abgelehnt.");
+        var service = new FullBackupService(() => sources, guard);
+
+        var result = await service.RunAsync(Path.Combine(_root, "target"));
+
+        Assert.False(result.Success);
+        Assert.Equal("Zielmarker abgelehnt.", result.Error);
+        Assert.EndsWith(BackupPlanBuilder.TargetFolderName, guard.LastBackupRoot);
+    }
+
     private FullBackupSources CreateSourceTree()
     {
         var repo = Path.Combine(_root, "repo");
@@ -380,5 +394,16 @@ public sealed class FullBackupServiceTests : IDisposable
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, content);
+    }
+
+    private sealed class RecordingTargetMarkerGuard(string? error) : IBackupTargetMarkerGuard
+    {
+        public string? LastBackupRoot { get; private set; }
+
+        public string? ValidateAndCreateMarker(string backupRoot)
+        {
+            LastBackupRoot = backupRoot;
+            return error;
+        }
     }
 }

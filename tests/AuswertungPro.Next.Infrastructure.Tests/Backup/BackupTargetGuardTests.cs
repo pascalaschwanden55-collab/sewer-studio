@@ -38,6 +38,17 @@ public sealed class BackupTargetGuardTests : IDisposable
     }
 
     [Fact]
+    public void Instanzdienst_LegtDenGleichenSchutzmarkerAn()
+    {
+        var backupRoot = Path.Combine(_root, "service");
+
+        var error = new BackupTargetMarkerGuardService().ValidateAndCreateMarker(backupRoot);
+
+        Assert.Null(error);
+        Assert.True(File.Exists(Path.Combine(backupRoot, BackupPlanBuilder.MarkerFileName)));
+    }
+
+    [Fact]
     public void ValidateAndCreateMarker_FremdinhaltOhneMarker_Blockiert()
     {
         var backupRoot = Path.Combine(_root, "foreign");

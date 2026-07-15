@@ -28,6 +28,7 @@ public sealed class FullBackupService : IFullBackupService
     private readonly Func<CancellationToken, Task<string?>>? _ollamaList;
     private readonly Func<string, long?> _availableBytes;
     private readonly IGitCommitResolver _gitCommitResolver;
+    private readonly IBackupTargetMarkerGuard _targetMarkerGuard;
 
     public FullBackupService(
         Func<FullBackupSources> quellenFactory,
@@ -35,12 +36,43 @@ public sealed class FullBackupService : IFullBackupService
         Func<CancellationToken, Task<string?>>? ollamaListe = null,
         Func<string, long?>? availableBytes = null,
         IGitCommitResolver? gitCommitResolver = null)
+        : this(
+            quellenFactory,
+            walCheckpoint,
+            ollamaListe,
+            availableBytes,
+            gitCommitResolver,
+            BackupTargetGuard.MarkerGuard)
+    {
+    }
+
+    public FullBackupService(
+        Func<FullBackupSources> quellenFactory,
+        IBackupTargetMarkerGuard targetMarkerGuard)
+        : this(
+            quellenFactory,
+            walCheckpoint: null,
+            ollamaListe: null,
+            availableBytes: null,
+            gitCommitResolver: null,
+            targetMarkerGuard: targetMarkerGuard)
+    {
+    }
+
+    public FullBackupService(
+        Func<FullBackupSources> quellenFactory,
+        Action? walCheckpoint,
+        Func<CancellationToken, Task<string?>>? ollamaListe,
+        Func<string, long?>? availableBytes,
+        IGitCommitResolver? gitCommitResolver,
+        IBackupTargetMarkerGuard targetMarkerGuard)
     {
         _sourcesFactory = quellenFactory ?? throw new ArgumentNullException(nameof(quellenFactory));
         _walCheckpoint = walCheckpoint;
         _ollamaList = ollamaListe;
         _availableBytes = availableBytes ?? BackupDiskSpaceGuard.GetAvailableBytes;
         _gitCommitResolver = gitCommitResolver ?? GitCommitResolver.DefaultResolver;
+        _targetMarkerGuard = targetMarkerGuard ?? throw new ArgumentNullException(nameof(targetMarkerGuard));
     }
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
@@ -65,7 +97,7 @@ public sealed class FullBackupService : IFullBackupService
             if (conflict is not null)
                 return Failure(conflict, backupRoot, started.Elapsed);
 
-            var markerError = BackupTargetGuard.ValidateAndCreateMarker(backupRoot);
+            var markerError = _targetMarkerGuard.ValidateAndCreateMarker(backupRoot);
             if (markerError is not null)
                 return Failure(markerError, backupRoot, started.Elapsed);
 
