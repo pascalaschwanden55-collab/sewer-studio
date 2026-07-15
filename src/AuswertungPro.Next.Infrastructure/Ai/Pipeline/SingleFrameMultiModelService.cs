@@ -24,17 +24,19 @@ public sealed class SingleFrameMultiModelService
         IVisionPipelineClient client,
         double? yoloConfidence = null,
         double? dinoBoxThreshold = null,
-        double? dinoTextThreshold = null)
+        double? dinoTextThreshold = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        var options = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         // Defaults respektieren dieselben Env-Vars wie der Batch-Pfad (AiSettingsFactory).
         // 0.25/0.20 seit A/B auf 57er-clean (2026-06-10) — gleiche Werte wie AiSettingsFactory.
         _yoloConfidence = yoloConfidence
-            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.YoloConfidenceEnvVar, 0.25);
+            ?? options.ResolveDoubleWithCompat(PipelineEnvironmentOptions.YoloConfidenceEnvVar, 0.25);
         _dinoBoxThreshold = dinoBoxThreshold
-            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoBoxThresholdEnvVar, 0.25);
+            ?? options.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoBoxThresholdEnvVar, 0.25);
         _dinoTextThreshold = dinoTextThreshold
-            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoTextThresholdEnvVar, 0.20);
+            ?? options.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoTextThresholdEnvVar, 0.20);
     }
 
     public SingleFrameMultiModelService(IVisionPipelineClient client, PipelineConfig config)

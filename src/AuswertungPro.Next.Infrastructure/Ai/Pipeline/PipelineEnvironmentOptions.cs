@@ -2,36 +2,61 @@ using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
-public static class PipelineEnvironmentOptions
+public interface IPipelineEnvironmentOptions
 {
-    public const string ClassifierDecisionEnvVar = "SEWERSTUDIO_CLASSIFIER_DECISION";
-    public const string ClassifierOnlyStructuralOffEnvVar = "SEWERSTUDIO_CLASSIFIER_ONLY_STRUCTURAL_OFF";
-    public const string ExpectedYoloModelEnvVar = "SEWERSTUDIO_EXPECTED_YOLO_MODEL";
-    public const string YoloConfidenceEnvVar = "SEWERSTUDIO_YOLO_CONFIDENCE";
-    public const string DinoBoxThresholdEnvVar = "SEWERSTUDIO_DINO_BOX_THRESHOLD";
-    public const string DinoTextThresholdEnvVar = "SEWERSTUDIO_DINO_TEXT_THRESHOLD";
-    public const string DefaultExpectedYoloModel = "yolo26m";
+    bool ClassifierDecisionEnabled();
 
-    public static bool ClassifierDecisionEnabled()
-        => AiSettingsFactory.ParseBool(Environment.GetEnvironmentVariable(ClassifierDecisionEnvVar));
+    bool ClassifierOnlyStructuralEnabled();
 
-    public static bool ClassifierOnlyStructuralEnabled()
-        => !AiSettingsFactory.ParseBool(Environment.GetEnvironmentVariable(ClassifierOnlyStructuralOffEnvVar));
+    string ExpectedYoloModel();
 
-    public static string ExpectedYoloModel()
-        => Environment.GetEnvironmentVariable(ExpectedYoloModelEnvVar)?.Trim() is { Length: > 0 } expected
-            ? expected
-            : DefaultExpectedYoloModel;
+    double? ReadDoubleWithCompat(string sewerStudioName);
 
-    public static double? ReadDoubleWithCompat(string sewerStudioName)
+    double ResolveDoubleWithCompat(string sewerStudioName, double defaultValue);
+}
+
+/// <summary>
+/// Liest die wenigen Umgebungsoptionen der Multi-Modell-Pipeline. Der Leser ist
+/// austauschbar, damit Tests und Fabriken nicht den globalen Prozesszustand aendern muessen.
+/// </summary>
+public sealed class PipelineEnvironmentOptionsService : IPipelineEnvironmentOptions
+{
+    private readonly Func<string, string?> _readEnvironmentVariable;
+
+    public PipelineEnvironmentOptionsService()
+        : this(Environment.GetEnvironmentVariable)
     {
-        var value = Environment.GetEnvironmentVariable(sewerStudioName)
-                    ?? Environment.GetEnvironmentVariable(CompatName(sewerStudioName));
+    }
+
+    public PipelineEnvironmentOptionsService(Func<string, string?> readEnvironmentVariable)
+    {
+        _readEnvironmentVariable = readEnvironmentVariable
+            ?? throw new ArgumentNullException(nameof(readEnvironmentVariable));
+    }
+
+    public bool ClassifierDecisionEnabled()
+        => AiSettingsFactory.ParseBool(
+            _readEnvironmentVariable(PipelineEnvironmentOptions.ClassifierDecisionEnvVar));
+
+    public bool ClassifierOnlyStructuralEnabled()
+        => !AiSettingsFactory.ParseBool(
+            _readEnvironmentVariable(PipelineEnvironmentOptions.ClassifierOnlyStructuralOffEnvVar));
+
+    public string ExpectedYoloModel()
+        => _readEnvironmentVariable(PipelineEnvironmentOptions.ExpectedYoloModelEnvVar)?.Trim()
+               is { Length: > 0 } expected
+            ? expected
+            : PipelineEnvironmentOptions.DefaultExpectedYoloModel;
+
+    public double? ReadDoubleWithCompat(string sewerStudioName)
+    {
+        var value = _readEnvironmentVariable(sewerStudioName)
+                    ?? _readEnvironmentVariable(CompatName(sewerStudioName));
 
         return AiSettingsFactory.ParseDouble(value);
     }
 
-    public static double ResolveDoubleWithCompat(string sewerStudioName, double defaultValue)
+    public double ResolveDoubleWithCompat(string sewerStudioName, double defaultValue)
         => ReadDoubleWithCompat(sewerStudioName) ?? defaultValue;
 
     private static string CompatName(string sewerStudioName)
@@ -41,4 +66,43 @@ public static class PipelineEnvironmentOptions
             ? "AUSWERTUNGPRO_" + sewerStudioName[prefix.Length..]
             : sewerStudioName;
     }
+}
+
+/// <summary>
+/// Kompatible statische Fassade. Das Lesen des Prozesszustands liegt im
+/// injizierbaren <see cref="IPipelineEnvironmentOptions"/>.
+/// </summary>
+public static class PipelineEnvironmentOptions
+{
+    private static IPipelineEnvironmentOptions _current = new PipelineEnvironmentOptionsService();
+
+    public const string ClassifierDecisionEnvVar = "SEWERSTUDIO_CLASSIFIER_DECISION";
+    public const string ClassifierOnlyStructuralOffEnvVar = "SEWERSTUDIO_CLASSIFIER_ONLY_STRUCTURAL_OFF";
+    public const string ExpectedYoloModelEnvVar = "SEWERSTUDIO_EXPECTED_YOLO_MODEL";
+    public const string YoloConfidenceEnvVar = "SEWERSTUDIO_YOLO_CONFIDENCE";
+    public const string DinoBoxThresholdEnvVar = "SEWERSTUDIO_DINO_BOX_THRESHOLD";
+    public const string DinoTextThresholdEnvVar = "SEWERSTUDIO_DINO_TEXT_THRESHOLD";
+    public const string DefaultExpectedYoloModel = "yolo26m";
+
+    public static IPipelineEnvironmentOptions Current => Volatile.Read(ref _current);
+
+    public static void Use(IPipelineEnvironmentOptions options) =>
+        Volatile.Write(
+            ref _current,
+            options ?? throw new ArgumentNullException(nameof(options)));
+
+    public static bool ClassifierDecisionEnabled()
+        => Current.ClassifierDecisionEnabled();
+
+    public static bool ClassifierOnlyStructuralEnabled()
+        => Current.ClassifierOnlyStructuralEnabled();
+
+    public static string ExpectedYoloModel()
+        => Current.ExpectedYoloModel();
+
+    public static double? ReadDoubleWithCompat(string sewerStudioName)
+        => Current.ReadDoubleWithCompat(sewerStudioName);
+
+    public static double ResolveDoubleWithCompat(string sewerStudioName, double defaultValue)
+        => Current.ResolveDoubleWithCompat(sewerStudioName, defaultValue);
 }

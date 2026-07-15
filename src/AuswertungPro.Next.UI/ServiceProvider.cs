@@ -233,6 +233,7 @@ namespace AuswertungPro.Next.UI
         public IProtocolAiService ProtocolAi { get; }
         public IGpuModelSelector GpuModels { get; }
         public IAiPlatformSettingsResolver AiSettings { get; }
+        public IPipelineEnvironmentOptions PipelineEnvironment { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
         public ITelemetryPathResolver TelemetryPaths { get; }
@@ -340,6 +341,8 @@ namespace AuswertungPro.Next.UI
             GpuModelSelector.Use(GpuModels);
             AiSettings = new AiPlatformSettingsResolver(GpuModels);
             AiSettingsFactory.Use(AiSettings);
+            PipelineEnvironment = new PipelineEnvironmentOptionsService();
+            PipelineEnvironmentOptions.Use(PipelineEnvironment);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
@@ -544,7 +547,8 @@ namespace AuswertungPro.Next.UI
                 PipelineTrace,
                 () => AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
                 CodeCatalog,
-                LoggerFactory);
+                LoggerFactory,
+                PipelineEnvironment);
             SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
@@ -879,6 +883,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ITelemetryPathResolver)) return TelemetryPaths;
             if (serviceType == typeof(IGpuModelSelector)) return GpuModels;
             if (serviceType == typeof(IAiPlatformSettingsResolver)) return AiSettings;
+            if (serviceType == typeof(IPipelineEnvironmentOptions)) return PipelineEnvironment;
             if (serviceType == typeof(IProtocolService)) return Protocols;
             if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
             if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;

@@ -69,6 +69,26 @@ public sealed class PipelineEnvironmentOptionsTests
             0.20));
     }
 
+    [Fact]
+    public void Service_reads_values_from_injected_source_without_global_environment()
+    {
+        var values = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            [PipelineEnvironmentOptions.ClassifierDecisionEnvVar] = "true",
+            [PipelineEnvironmentOptions.ClassifierOnlyStructuralOffEnvVar] = "1",
+            [PipelineEnvironmentOptions.ExpectedYoloModelEnvVar] = "  custom-model.pt  ",
+            ["AUSWERTUNGPRO_DINO_TEXT_THRESHOLD"] = "0.37",
+        };
+        var service = new PipelineEnvironmentOptionsService(
+            name => values.GetValueOrDefault(name));
+
+        Assert.True(service.ClassifierDecisionEnabled());
+        Assert.False(service.ClassifierOnlyStructuralEnabled());
+        Assert.Equal("custom-model.pt", service.ExpectedYoloModel());
+        Assert.Equal(0.37, service.ReadDoubleWithCompat(
+            PipelineEnvironmentOptions.DinoTextThresholdEnvVar));
+    }
+
     private sealed class PipelineEnvScope : IDisposable
     {
         private static readonly string[] ManagedNames =

@@ -34,6 +34,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly IPipelineTraceWriter _pipelineTraceWriter;
+    private readonly IPipelineEnvironmentOptions _pipelineEnvironmentOptions;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
@@ -41,7 +42,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient,
         ICodeCatalogProvider? codeCatalog = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
         : this(
             PipelineTraceWriter.Current,
             cfg,
@@ -49,7 +51,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             plausibility,
             httpClient,
             codeCatalog,
-            loggerFactory)
+            loggerFactory,
+            pipelineEnvironmentOptions)
     {
     }
 
@@ -60,9 +63,11 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient,
         ICodeCatalogProvider? codeCatalog = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
+        _pipelineEnvironmentOptions = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
@@ -126,7 +131,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 pipelineClient, pipelineCfg,
                 _cfg.FfmpegPath ?? "ffmpeg",
                 qwenVision: qwenVision,
-                logger: _loggerFactory.CreateLogger<MultiModelAnalysisService>());
+                logger: _loggerFactory.CreateLogger<MultiModelAnalysisService>(),
+                pipelineEnvironmentOptions: _pipelineEnvironmentOptions);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
 

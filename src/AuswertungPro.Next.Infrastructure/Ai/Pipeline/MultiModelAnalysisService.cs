@@ -51,16 +51,14 @@ public sealed class MultiModelAnalysisService
     /// und fuellt unsichere Faelle. Default AUS, bis der End-to-End-Eval gruen ist
     /// (Env: SEWERSTUDIO_CLASSIFIER_DECISION=1).
     /// </summary>
-    public bool ClassifierDecisionEnabled { get; set; } =
-        PipelineEnvironmentOptions.ClassifierDecisionEnabled();
+    public bool ClassifierDecisionEnabled { get; set; }
 
     /// <summary>
     /// Fix #1: Wenn DINO keine Box liefert, aber der Klassifikator einen Grundgeruest-Code
     /// (BCA/BCC/BCD/BCE) ueber das Voting bestaetigt, wird ein box-loser Befund erzeugt,
     /// statt den Frame still zu verwerfen. Default AN, reversibel ueber Env.
     /// </summary>
-    public bool ClassifierOnlyStructuralEnabled { get; set; } =
-        PipelineEnvironmentOptions.ClassifierOnlyStructuralEnabled();
+    public bool ClassifierOnlyStructuralEnabled { get; set; }
 
     /// <summary>Mindestkonfidenz fuer den box-losen Grundgeruest-Befund (Fix #1).</summary>
     public double ClassifierOnlyMinConfidence { get; set; } = 0.60;
@@ -70,7 +68,7 @@ public sealed class MultiModelAnalysisService
 
     // Erwartete Eigengewichte fuer die COCO-Fallback-Warnung. Liefert der Sidecar
     // einen anderen Modellnamen (z.B. yolo11m.pt), wird einmal pro Lauf gewarnt.
-    private static readonly string ExpectedYoloModel = PipelineEnvironmentOptions.ExpectedYoloModel();
+    private readonly string _expectedYoloModel;
 
     // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
     private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
@@ -90,7 +88,8 @@ public sealed class MultiModelAnalysisService
         EnhancedVisionAnalysisService? qwenVision = null,
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
-        Func<string, CancellationToken, Task<double>>? durationProbe = null)
+        Func<string, CancellationToken, Task<double>>? durationProbe = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
         : this(
             PipelineTraceWriter.Current,
             client,
@@ -99,7 +98,8 @@ public sealed class MultiModelAnalysisService
             qwenVision,
             logger,
             frameSource,
-            durationProbe)
+            durationProbe,
+            pipelineEnvironmentOptions)
     {
     }
 
@@ -111,9 +111,11 @@ public sealed class MultiModelAnalysisService
         EnhancedVisionAnalysisService? qwenVision = null,
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
-        Func<string, CancellationToken, Task<double>>? durationProbe = null)
+        Func<string, CancellationToken, Task<double>>? durationProbe = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
+        var options = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         _client = client;
         _config = config;
         _qwenVision = qwenVision;
@@ -127,6 +129,9 @@ public sealed class MultiModelAnalysisService
         _frameSource = frameSource;
         _durationProbe = durationProbe;
         _frameSourceOverridden = frameSource is not null;
+        ClassifierDecisionEnabled = options.ClassifierDecisionEnabled();
+        ClassifierOnlyStructuralEnabled = options.ClassifierOnlyStructuralEnabled();
+        _expectedYoloModel = options.ExpectedYoloModel();
     }
 
     public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
@@ -382,14 +387,14 @@ public sealed class MultiModelAnalysisService
                     // eigenen Gewichten (yolo26m), ist die Schadenserkennung faktisch
                     // blind — das darf nie wieder still passieren (realer Vorfall 2026-06-09).
                     if (!yoloFallbackWarned && yoloResult.ModelName is { Length: > 0 } yoloModelName
-                        && !yoloModelName.Contains(ExpectedYoloModel, StringComparison.OrdinalIgnoreCase))
+                        && !yoloModelName.Contains(_expectedYoloModel, StringComparison.OrdinalIgnoreCase))
                     {
                         yoloFallbackWarned = true;
                         _logger.LogWarning(
                             "YOLO laeuft mit '{Model}' statt der eigenen Gewichte ({Expected}) – COCO-Fallback, Schadenserkennung stark eingeschraenkt!",
-                            yoloModelName, ExpectedYoloModel);
+                            yoloModelName, _expectedYoloModel);
                         progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                            $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {ExpectedYoloModel}) – Schadenserkennung eingeschraenkt!"));
+                            $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {_expectedYoloModel}) – Schadenserkennung eingeschraenkt!"));
                     }
 
                     // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert

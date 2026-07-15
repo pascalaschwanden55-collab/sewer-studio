@@ -13,12 +13,19 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IPipelineTraceWriter _pipelineTraceWriter;
+    private readonly IPipelineEnvironmentOptions _pipelineEnvironmentOptions;
 
     public VideoAnalysisPipelineFactory(
         Func<PipelineConfig> getPipelineConfig,
         ICodeCatalogProvider? codeCatalog = null,
-        ILoggerFactory? loggerFactory = null)
-        : this(PipelineTraceWriter.Current, getPipelineConfig, codeCatalog, loggerFactory)
+        ILoggerFactory? loggerFactory = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
+        : this(
+            PipelineTraceWriter.Current,
+            getPipelineConfig,
+            codeCatalog,
+            loggerFactory,
+            pipelineEnvironmentOptions)
     {
     }
 
@@ -26,9 +33,11 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
         IPipelineTraceWriter pipelineTraceWriter,
         Func<PipelineConfig> getPipelineConfig,
         ICodeCatalogProvider? codeCatalog = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
+        _pipelineEnvironmentOptions = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         _getPipelineConfig = getPipelineConfig ?? throw new ArgumentNullException(nameof(getPipelineConfig));
         _codeCatalog = codeCatalog;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
@@ -50,6 +59,7 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
             plausibility,
             httpClient,
             _codeCatalog,
-            _loggerFactory);
+            _loggerFactory,
+            _pipelineEnvironmentOptions);
     }
 }
