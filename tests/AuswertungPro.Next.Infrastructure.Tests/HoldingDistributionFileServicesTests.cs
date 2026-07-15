@@ -35,6 +35,20 @@ public sealed class HoldingDistributionFileServicesTests : IDisposable
     }
 
     [Fact]
+    public void MoveOrCopy_MovesFile_AndRemovesSource()
+    {
+        Directory.CreateDirectory(_root);
+        var source = Path.Combine(_root, "verschieben.txt");
+        var destination = Path.Combine(_root, "verschoben.txt");
+        File.WriteAllText(source, "inhalt");
+
+        DistributionFileTransfer.MoveOrCopy(source, destination, move: true, overwrite: false);
+
+        Assert.False(File.Exists(source));
+        Assert.Equal("inhalt", File.ReadAllText(destination));
+    }
+
+    [Fact]
     public void BuildAmbiguousInfo_ListsEveryCandidate()
     {
         var result = VideoConflictArtifacts.BuildAmbiguousInfo(
@@ -70,6 +84,24 @@ public sealed class HoldingDistributionFileServicesTests : IDisposable
 
         Assert.Equal("a", File.ReadAllText(Path.Combine(unmatchedFolder, "20260712_100-200_CANDIDATE_01.mpg")));
         Assert.Equal("b", File.ReadAllText(Path.Combine(unmatchedFolder, "20260712_100-200_CANDIDATE_02.mp4")));
+    }
+
+    [Fact]
+    public void Instanzdienst_ermittelt_freien_Namen_und_kopiert_ohne_Quelle_zu_loeschen()
+    {
+        Directory.CreateDirectory(_root);
+        var source = Path.Combine(_root, "quelle.txt");
+        var occupied = Path.Combine(_root, "ziel.txt");
+        File.WriteAllText(source, "neu");
+        File.WriteAllText(occupied, "alt");
+        var service = new DistributionFileTransferService();
+
+        var destination = service.EnsureUniquePath(occupied, overwrite: false);
+        service.MoveOrCopy(source, destination, move: false, overwrite: false);
+
+        Assert.Equal(Path.Combine(_root, "ziel_01.txt"), destination);
+        Assert.True(File.Exists(source));
+        Assert.Equal("neu", File.ReadAllText(destination));
     }
 
     public void Dispose()
