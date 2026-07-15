@@ -78,31 +78,6 @@ public sealed class ArchitectureFitnessTests
     }
 
     [Fact]
-    public void Protocol_observations_window_uses_responsive_minimum_size_instead_of_fixed_size()
-    {
-        var protocolRoot = ReadXamlRootTag(
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "ProtocolObservationsWindow.xaml"));
-
-        var offenders = new[]
-            {
-                protocolRoot.Contains("Width=\"980\"", StringComparison.Ordinal)
-                    ? "ProtocolObservationsWindow.xaml: Width=\"980\""
-                    : null,
-                protocolRoot.Contains("Height=\"620\"", StringComparison.Ordinal)
-                    ? "ProtocolObservationsWindow.xaml: Height=\"620\""
-                    : null
-            }
-            .Where(item => item is not null)
-            .Cast<string>()
-            .ToArray();
-
-        Assert.True(
-            offenders.Length == 0,
-            "ProtocolObservationsWindow soll responsive ueber MinWidth/MinHeight statt fixe Width/Height arbeiten:\n"
-            + string.Join("\n", offenders));
-    }
-
-    [Fact]
     public void Sanierungs_matrix_detail_ui_does_not_reintroduce_removed_grouped_measure_layout()
     {
         var offenders = FindFileTokenOffenders(
@@ -134,14 +109,6 @@ public sealed class ArchitectureFitnessTests
             offenders.Count == 0,
             "DataPage-Sanierungseinstieg soll direkt in die Matrix navigieren und den alten Fensterpfad nicht reaktivieren:\n"
             + string.Join("\n", offenders));
-    }
-
-    private static string ReadXamlRootTag(string path)
-    {
-        var xaml = File.ReadAllText(path);
-        var end = xaml.IndexOf('>');
-        Assert.True(end > 0, $"XAML root tag wurde nicht gefunden: {Path.GetFileName(path)}");
-        return xaml[..end];
     }
 
     private static string ExtractBlockUntilReturn(string source, string marker)

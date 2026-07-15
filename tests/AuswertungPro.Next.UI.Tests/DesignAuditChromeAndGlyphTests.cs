@@ -19,6 +19,8 @@ public sealed class DesignAuditChromeAndGlyphTests
         Assert.Contains("WindowState=\"Maximized\"", protocolRoot);
         Assert.Contains("MinWidth=\"900\"", protocolRoot);
         Assert.Contains("MinHeight=\"600\"", protocolRoot);
+        Assert.DoesNotContain("Width=\"980\"", protocolRoot);
+        Assert.DoesNotContain("Height=\"620\"", protocolRoot);
 
         AssertWindowChrome(
             ReadUiFile(Path.Combine("Views", "Windows", "CorrectionDialog.xaml")),
