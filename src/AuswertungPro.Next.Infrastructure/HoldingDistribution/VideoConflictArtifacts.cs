@@ -1,27 +1,28 @@
-using System.Globalization;
 using System.Text;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
-internal static class VideoConflictArtifacts
+/// <summary>
+/// Reine Konflikthinweise und kompatible Fassade fuer die Kandidatenkopie.
+/// </summary>
+public static class VideoConflictArtifacts
 {
+    private static IVideoConflictCandidateCopier _current = new VideoConflictCandidateCopyService();
+
+    public static IVideoConflictCandidateCopier Current => Volatile.Read(ref _current);
+
+    public static void Use(IVideoConflictCandidateCopier copier)
+        => Volatile.Write(
+            ref _current,
+            copier ?? throw new ArgumentNullException(nameof(copier)));
+
     public static void CopyCandidates(
         string unmatchedFolder,
         string dateStamp,
         string holding,
         IReadOnlyList<string> candidates)
-    {
-        for (var i = 0; i < candidates.Count; i++)
-        {
-            var source = candidates[i];
-            var extension = Path.GetExtension(source);
-            var name = $"{dateStamp}_{holding}_CANDIDATE_{(i + 1).ToString("00", CultureInfo.InvariantCulture)}{extension}";
-            var destination = DistributionFileTransfer.EnsureUniquePath(
-                Path.Combine(unmatchedFolder, name),
-                overwrite: false);
-            File.Copy(source, destination, overwrite: false);
-        }
-    }
+        => Current.CopyCandidates(unmatchedFolder, dateStamp, holding, candidates);
 
     public static string BuildMissingInfo(string sourcePath, string videoName, DateTime date, string holding)
     {

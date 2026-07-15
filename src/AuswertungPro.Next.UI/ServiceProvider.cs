@@ -152,6 +152,7 @@ namespace AuswertungPro.Next.UI
         public IPdfOcrExtractor PdfOcrExtraction { get; }
         public IPdfImportService PdfImport { get; }
         public IDistributionFileTransfer DistributionFileTransfers { get; }
+        public IVideoConflictCandidateCopier VideoConflictCandidates { get; }
         public IShaftPdfSelectionExpander ShaftPdfSelectionExpansion { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
@@ -411,6 +412,8 @@ namespace AuswertungPro.Next.UI
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             DistributionFileTransfers = new DistributionFileTransferService();
             DistributionFileTransfer.Use(DistributionFileTransfers);
+            VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
+            VideoConflictArtifacts.Use(VideoConflictCandidates);
             ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
             ShaftPdfSelectionExpander.Use(ShaftPdfSelectionExpansion);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
@@ -798,6 +801,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;
+            if (serviceType == typeof(IVideoConflictCandidateCopier)) return VideoConflictCandidates;
             if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;
             if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
             if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;

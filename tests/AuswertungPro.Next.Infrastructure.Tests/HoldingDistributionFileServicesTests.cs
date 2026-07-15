@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -87,6 +88,52 @@ public sealed class HoldingDistributionFileServicesTests : IDisposable
     }
 
     [Fact]
+    public void CopyCandidates_KeepsExistingCandidate_AndUsesFreeName()
+    {
+        var sourceFolder = Path.Combine(_root, "source-collision");
+        var unmatchedFolder = Path.Combine(_root, "unmatched-collision");
+        Directory.CreateDirectory(sourceFolder);
+        Directory.CreateDirectory(unmatchedFolder);
+        var source = Path.Combine(sourceFolder, "neu.mpg");
+        var occupied = Path.Combine(unmatchedFolder, "20260712_100-200_CANDIDATE_01.mpg");
+        File.WriteAllText(source, "neu");
+        File.WriteAllText(occupied, "vorhanden");
+
+        VideoConflictArtifacts.CopyCandidates(
+            unmatchedFolder,
+            "20260712",
+            "100-200",
+            [source]);
+
+        Assert.Equal("vorhanden", File.ReadAllText(occupied));
+        Assert.Equal(
+            "neu",
+            File.ReadAllText(Path.Combine(unmatchedFolder, "20260712_100-200_CANDIDATE_01_01.mpg")));
+    }
+
+    [Fact]
+    public void Kandidatenkopie_verwendet_injizierte_Dateiuebertragung()
+    {
+        var transfer = new RecordingFileTransfer(Path.Combine("C:\\ziel", "frei.mpg"));
+        var service = new VideoConflictCandidateCopyService(transfer);
+
+        service.CopyCandidates(
+            "C:\\ziel",
+            "20260712",
+            "100-200",
+            ["C:\\quelle\\aufnahme.mpg"]);
+
+        Assert.Equal(
+            "C:\\ziel\\20260712_100-200_CANDIDATE_01.mpg",
+            transfer.RequestedPath);
+        Assert.False(transfer.RequestedOverwrite);
+        Assert.Equal("C:\\quelle\\aufnahme.mpg", transfer.Source);
+        Assert.Equal("C:\\ziel\\frei.mpg", transfer.Destination);
+        Assert.False(transfer.Move);
+        Assert.False(transfer.TransferOverwrite);
+    }
+
+    [Fact]
     public void Instanzdienst_ermittelt_freien_Namen_und_kopiert_ohne_Quelle_zu_loeschen()
     {
         Directory.CreateDirectory(_root);
@@ -108,5 +155,30 @@ public sealed class HoldingDistributionFileServicesTests : IDisposable
     {
         if (Directory.Exists(_root))
             Directory.Delete(_root, recursive: true);
+    }
+
+    private sealed class RecordingFileTransfer(string resolvedPath) : IDistributionFileTransfer
+    {
+        public string? RequestedPath { get; private set; }
+        public bool RequestedOverwrite { get; private set; }
+        public string? Source { get; private set; }
+        public string? Destination { get; private set; }
+        public bool Move { get; private set; }
+        public bool TransferOverwrite { get; private set; }
+
+        public string EnsureUniquePath(string path, bool overwrite)
+        {
+            RequestedPath = path;
+            RequestedOverwrite = overwrite;
+            return resolvedPath;
+        }
+
+        public void MoveOrCopy(string source, string destination, bool move, bool overwrite)
+        {
+            Source = source;
+            Destination = destination;
+            Move = move;
+            TransferOverwrite = overwrite;
+        }
     }
 }
