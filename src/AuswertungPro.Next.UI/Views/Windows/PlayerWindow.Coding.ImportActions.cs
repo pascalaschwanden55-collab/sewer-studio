@@ -45,7 +45,7 @@ public partial class PlayerWindow
                 ShowMissingCode: () => ShowOverlay(
                     "Kein VSA-Code — bitte zuerst 'Bearbeiten'.",
                     TimeSpan.FromSeconds(3)),
-                PersistTrainingSampleAsync: PersistSingleEventAsTrainingSample,
+                PersistTrainingSampleAsync: _codingTrainingPersistenceContext.PersistSingleEventAsync,
                 ShowSuccess: () => ShowOverlay(
                     "Ins KI-Brain uebernommen.",
                     TimeSpan.FromSeconds(2)),

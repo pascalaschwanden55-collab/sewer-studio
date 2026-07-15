@@ -13,7 +13,7 @@ public partial class PlayerWindow
     private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private readonly CodingPhotoCaptureServicesOwner _codingPhotoCaptureServicesOwner = new();
-    private readonly CodingTrainingSamplesOwner _codingTrainingSamplesOwner;
+    private readonly Ai.CodingTrainingPersistenceContext _codingTrainingPersistenceContext;
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
     private readonly CodingConfirmationDecisionController _codingConfirmationDecisionController;

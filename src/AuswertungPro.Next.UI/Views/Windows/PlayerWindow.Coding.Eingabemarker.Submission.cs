@@ -64,7 +64,7 @@ public partial class PlayerWindow
                 CapturePhoto: CodingCaptureSnapshot,
                 RefreshEvents: RefreshCodingEventsList,
                 UpdateToolBadge: UpdateToolBadge,
-                PersistTraining: ev => PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle"),
+                PersistTraining: ev => _codingTrainingPersistenceContext.PersistSingleEventAsync(ev).SafeFireAndForget("TrainingSaveSingle"),
                 ShowSuccessStatus: (code, label, meter) => SetCodingAiState(
                     $"{code} {label} bei {meter:F2}m eingetragen",
                     PlayerStatusColors.Success,

@@ -219,8 +219,10 @@ public sealed class PlayerWindowCoreArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var clockPath = Path.Combine(uiRoot, "Player", "PlayerClock.cs");
+        var trainingPersistencePath = Path.Combine(uiRoot, "Ai", "CodingTrainingPersistenceContext.cs");
 
         Assert.True(File.Exists(clockPath), "Zeit-Zugriffe aus PlayerWindow sollen in einer kleinen Clock-Hilfe liegen.");
+        Assert.True(File.Exists(trainingPersistencePath), "Trainingsspeicherung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
@@ -228,14 +230,15 @@ public sealed class PlayerWindowCoreArchitectureTests
                 .OrderBy(Path.GetFileName)
                 .Select(File.ReadAllText));
         var clock = File.ReadAllText(clockPath);
+        var trainingPersistence = File.ReadAllText(trainingPersistencePath);
 
         AssertNoForbiddenTokens(
-            playerWindowText,
+            playerWindowText + trainingPersistence,
             "DateTime.Now",
             "DateTime.UtcNow",
             "DateTimeOffset.Now");
         Assert.Contains("PlayerClock.Now", playerWindowText);
-        Assert.Contains("PlayerClock.UtcNow", playerWindowText);
+        Assert.Contains("PlayerClock.UtcNow", trainingPersistence);
         Assert.Contains("PlayerClock.NowOffset", playerWindowText);
         Assert.Contains("TimeProvider.System", clock);
     }

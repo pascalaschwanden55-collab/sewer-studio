@@ -268,7 +268,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     public void PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial()
     {
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTrainingPersistenceContext.cs");
         var lengthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
         var ensureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureService.cs");
         var ensureServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");

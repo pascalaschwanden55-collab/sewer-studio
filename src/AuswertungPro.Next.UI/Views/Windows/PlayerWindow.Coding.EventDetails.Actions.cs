@@ -15,7 +15,7 @@ public partial class PlayerWindow
                 AcceptDefect: () => CodingInlineDefectDecisionWorkflow.Accept(
                     () => _codingSessionHost.SelectedDefect,
                     () => { _codingSessionHost.ExecuteAcceptDefect(); },
-                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
+                    codingEvent => _codingTrainingPersistenceContext.PersistSingleEventAsync(codingEvent)
                         .SafeFireAndForget("TrainingSaveAcceptInline")),
                 UpdateInlineDefectDetail: UpdateInlineDefectDetail,
                 RefreshEvents: RefreshCodingEventsList,
@@ -53,7 +53,7 @@ public partial class PlayerWindow
             codingEvent,
             _codingSessionRuntimeOwner.Service,
             () => { _codingSessionHost.ExecuteEditDefect(); },
-            editedEvent => PersistSingleEventAsTrainingSample(editedEvent)
+            editedEvent => _codingTrainingPersistenceContext.PersistSingleEventAsync(editedEvent)
                 .SafeFireAndForget("TrainingSaveEditInline"));
     }
 

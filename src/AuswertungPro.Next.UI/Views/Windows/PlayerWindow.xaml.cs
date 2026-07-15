@@ -124,9 +124,14 @@ public partial class PlayerWindow : Window
             haltungRecord);
         var playerSettings = _protocolContext.Settings ?? AppSettings.Load();
         WireCodingPhotoHoverPreview();
-        _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
+        _codingTrainingPersistenceContext = CodingTrainingPersistenceContext.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
-            _protocolContext.Settings);
+            _protocolContext.Settings,
+            () => _codingSessionHost.HasViewModel,
+            () => _liveDetectionController.PendingConfirmationFrameBytes,
+            () => _codingSessionHost.HaltungName ?? "unknown",
+            () => _protocolContext.HaltungRecord?.GetFieldValue("Datum_Jahr"),
+            CaptureCurrentFrameAsync);
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
@@ -172,7 +177,7 @@ public partial class PlayerWindow : Window
                 ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
                 ResolveCodingEvents: () => _codingSessionHost.EventCollection,
                 PersistTrainingSample: (codingEvent, operation) =>
-                    PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget(operation),
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync(codingEvent).SafeFireAndForget(operation),
                 RefreshCodingEvents: RefreshCodingEventsList,
                 HideConfirmationPanel: _codingConfirmationPanelControls.Hide,
                 SelectEvent: _codingSidePanelControllers.EventsList.SelectEvent,

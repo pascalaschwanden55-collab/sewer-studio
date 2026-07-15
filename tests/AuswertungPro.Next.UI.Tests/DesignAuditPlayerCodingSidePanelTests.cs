@@ -193,7 +193,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var captureBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
-        var persistBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var persistBody = ReadUiFile("Ai", "CodingTrainingPersistenceContext.cs")
+                          + ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
         AssertNoForbiddenTokens(
             captureBody,

@@ -22,7 +22,7 @@ public partial class PlayerWindow
                 AssignProtocol: document => _protocolContext.HaltungRecord!.Protocol = document,
                 MarkProjectDirty: MarkProjectDirtyForCoding,
                 SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
-                PersistCodingEventsAsTrainingSamples: PersistCodingEventsAsTrainingSamples,
+                PersistCodingEventsAsTrainingSamples: _codingTrainingPersistenceContext.PersistEvents,
                 SetBaselineSignature: _codingBaselineSignatureState.Set,
                 SaveProjectAfterCoding: SaveProjectAfterCoding,
                 ShowOverlay: ShowOverlay));
