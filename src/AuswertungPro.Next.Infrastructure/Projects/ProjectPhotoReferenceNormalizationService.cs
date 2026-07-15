@@ -1,13 +1,14 @@
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Projects;
 
-internal static class ProjectPhotoReferenceNormalizer
+public sealed class ProjectPhotoReferenceNormalizationService : IProjectPhotoReferenceNormalizer
 {
-    public static int Normalize(Project? project, string? projectFilePath)
+    public int Normalize(Project? project, string? projectFilePath)
     {
         if (project is null || string.IsNullOrWhiteSpace(projectFilePath))
             return 0;

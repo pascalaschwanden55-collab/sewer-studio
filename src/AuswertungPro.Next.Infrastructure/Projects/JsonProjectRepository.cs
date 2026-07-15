@@ -15,6 +15,19 @@ public sealed class JsonProjectRepository : IProjectRepository
         PropertyNameCaseInsensitive = true
     };
 
+    private readonly IProjectPhotoReferenceNormalizer _photoReferenceNormalizer;
+
+    public JsonProjectRepository()
+        : this(new ProjectPhotoReferenceNormalizationService())
+    {
+    }
+
+    public JsonProjectRepository(IProjectPhotoReferenceNormalizer photoReferenceNormalizer)
+    {
+        _photoReferenceNormalizer = photoReferenceNormalizer
+            ?? throw new ArgumentNullException(nameof(photoReferenceNormalizer));
+    }
+
     // AP-50 Save-Schutz: serialisiert ALLE Speichervorgaenge prozessweit. Sobald Speichern
     // in den Hintergrund wandert, koennen manuelles Speichern, AutoSave und Restore-Point-Kopien
     // sonst gleichzeitig dieselbe projekt.json (und deren .bak) schreiben -> File.Replace-Kollision.
@@ -44,7 +57,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             }
 
             project.EnsureMetadataDefaults();
-            ProjectPhotoReferenceNormalizer.Normalize(project, path);
+            _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
             return Result<Project>.Success(project);
         }
@@ -80,7 +93,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         }
     }
 
-    private static Result SaveInternal(Project project, string path)
+    private Result SaveInternal(Project project, string path)
     {
         string? tempPath = null;
         try
@@ -88,7 +101,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             if (string.IsNullOrWhiteSpace(path))
                 return Result.Fail("APP-SAVE", "Speicherpfad ist leer.");
 
-            ProjectPhotoReferenceNormalizer.Normalize(project, path);
+            _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
             project.ModifiedAtUtc = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(project, Opt);

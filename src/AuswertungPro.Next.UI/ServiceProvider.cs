@@ -140,6 +140,7 @@ namespace AuswertungPro.Next.UI
         #region Persistenz
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
+        public IProjectPhotoReferenceNormalizer ProjectPhotoReferences { get; }
         public IProjectFileDiscovery ProjectFileDiscovery { get; }
         public IProjectDropPathResolver ProjectDropPaths { get; }
         #endregion
@@ -392,7 +393,8 @@ namespace AuswertungPro.Next.UI
             ProtocolTraining = new ProtocolTrainingFileStore();
             ProtocolTrainingStore.Use(ProtocolTraining);
 
-            Projects = new JsonProjectRepository();
+            ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
+            Projects = new JsonProjectRepository(ProjectPhotoReferences);
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
             ProjectDropPaths = new ProjectDropFilePathResolver();
             ViewModels.Pages.ProjectDropPathResolver.Use(ProjectDropPaths);
@@ -786,6 +788,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;
             if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
             if (serviceType == typeof(IProjectRepository)) return Projects;
+            if (serviceType == typeof(IProjectPhotoReferenceNormalizer)) return ProjectPhotoReferences;
             if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
             if (serviceType == typeof(IProjectDropPathResolver)) return ProjectDropPaths;
             if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;

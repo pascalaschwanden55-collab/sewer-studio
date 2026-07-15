@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Projects;
@@ -118,6 +119,65 @@ public sealed class JsonProjectRepositoryPhotoReferenceTests
             Assert.Single(loadedRecord.Protocol!.Original.Entries[0].FotoPaths));
     }
 
+    [Fact]
+    public void Save_GuessesNoRenamedPhoto_WhenSuffixIsAmbiguous()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+
+        var stale = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_22147-547.01_116.jpg");
+        var project = BuildProjectWithRenamedHoldingPhoto(stale);
+        var photoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "22147-22151");
+        Directory.CreateDirectory(photoDir);
+        File.WriteAllText(Path.Combine(photoDir, "Kandidat_A_116.jpg"), "a");
+        File.WriteAllText(Path.Combine(photoDir, "Kandidat_B_116.jpg"), "b");
+
+        var save = new JsonProjectRepository().Save(project, projectFile);
+
+        Assert.True(save.Ok, save.ErrorMessage);
+        Assert.Equal(stale, Assert.Single(project.Data).VsaFindings.Single().FotoPath);
+        Assert.Contains(stale, project.Data[0].Protocol!.Current.Entries[0].FotoPaths);
+    }
+
+    [Fact]
+    public void Instanzdienst_normalisiert_auf_vorhandenes_zentrales_Foto()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        var photoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "06-001");
+        Directory.CreateDirectory(photoDir);
+        File.WriteAllText(Path.Combine(photoDir, "H_06-001_002.jpg"), "bild");
+        var stale = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_06-001_002.jpg");
+        var project = BuildProjectWithStalePhoto(stale);
+        var service = new ProjectPhotoReferenceNormalizationService();
+
+        var changed = service.Normalize(project, projectFile);
+
+        Assert.True(changed > 0);
+        Assert.Equal(
+            "Fotos/Haltungen/06-001/H_06-001_002.jpg",
+            Assert.Single(project.Data).VsaFindings.Single().FotoPath);
+        Assert.Single(project.Data[0].Protocol!.Current.Entries[0].FotoPaths);
+    }
+
+    [Fact]
+    public void Projektablage_verwendet_injizierten_Foto_Normalisierer_beim_Speichern()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        var project = new Project();
+        var normalizer = new RecordingPhotoReferenceNormalizer();
+        var repository = new JsonProjectRepository(normalizer);
+
+        var result = repository.Save(project, projectFile);
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        Assert.Equal(1, normalizer.Calls);
+        Assert.Same(project, normalizer.Project);
+        Assert.Equal(projectFile, normalizer.ProjectFilePath);
+    }
+
     private static Project BuildProjectWithStalePhoto(string stalePath)
     {
         var project = new Project();
@@ -168,6 +228,21 @@ public sealed class JsonProjectRepositoryPhotoReferenceTests
             {
                 // best effort cleanup
             }
+        }
+    }
+
+    private sealed class RecordingPhotoReferenceNormalizer : IProjectPhotoReferenceNormalizer
+    {
+        public int Calls { get; private set; }
+        public Project? Project { get; private set; }
+        public string? ProjectFilePath { get; private set; }
+
+        public int Normalize(Project? project, string? projectFilePath)
+        {
+            Calls++;
+            Project = project;
+            ProjectFilePath = projectFilePath;
+            return 0;
         }
     }
 }
