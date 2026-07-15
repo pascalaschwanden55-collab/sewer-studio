@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
+using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Views.Windows;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -96,21 +100,20 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerManualMarkPlayback.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkToolController.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
         var catalogOpenWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
-        var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
-        var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+        var markCatalogPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Catalog.cs");
 
         Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(activationWorkflowPath), "Manuelle Markier-Pause soll im Aktivierungsworkflow orchestriert werden.");
         Assert.True(File.Exists(catalogOpenWorkflowPath), "Katalog-Oeffnen soll die manuelle Markier-Pause ausserhalb von PlayerWindow orchestrieren.");
 
         var helper = File.ReadAllText(helperPath);
+        var controller = File.ReadAllText(controllerPath);
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var catalogOpenWorkflow = File.Exists(catalogOpenWorkflowPath) ? File.ReadAllText(catalogOpenWorkflowPath) : "";
-        var markTools = File.ReadAllText(markToolsPath);
         var markCatalog = File.ReadAllText(markCatalogPath);
 
         Assert.Contains("public static class PlayerManualMarkPlayback", helper);
@@ -123,7 +126,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             "_player.SetPause(true)",
             "_player.SetPause(false)");
         AssertNoForbiddenTokens(
-            markTools,
+            controller,
             "PlayerManualMarkPlayback.PauseForManualMarking",
             "_player.SetPause(true)",
             "_player.SetPause(false)");
@@ -341,28 +344,41 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_mark_tool_wiring_lives_in_mark_tools_partial()
+    public void PlayerWindow_mark_tool_wiring_lives_in_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkToolController.cs");
         var liveDetectionControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
         var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkOverlayReadyWorkflow.cs");
+        var controllerField = typeof(PlayerWindow).GetField(
+            "_liveDetectionMarkToolController",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        var playerWindowMethodNames = typeof(PlayerWindow)
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+            .Select(method => method.Name)
+            .ToArray();
 
-        Assert.True(File.Exists(markToolsPath), "Markierwerkzeug-Wiring soll aus dem grossen Marking-Partial heraus.");
+        Assert.False(File.Exists(markToolsPath), "Markierwerkzeug-Wiring darf nicht als PlayerWindow-Partial zurueckkehren.");
+        Assert.True(File.Exists(controllerPath), "Markierwerkzeug-Wiring soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(controlsPath), "Markierwerkzeug-UI-Zustand soll in einem Player-Controller gekapselt sein.");
         Assert.True(File.Exists(activationWorkflowPath), "Markierwerkzeug-Aktivierungsentscheidung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(overlayReadyWorkflowPath), "Markier-Overlay-Bereitstellung soll ausserhalb von PlayerWindow entschieden werden.");
+        Assert.NotNull(controllerField);
+        Assert.Equal(typeof(ILiveDetectionMarkToolController), controllerField.FieldType);
 
+        var windowRoot = File.ReadAllText(windowRootPath);
         var marking = File.ReadAllText(markingPath);
-        var markTools = File.ReadAllText(markToolsPath);
         var state = File.ReadAllText(statePath);
         var controls = File.ReadAllText(controlsPath);
+        var controller = File.ReadAllText(controllerPath);
         var liveDetectionController = File.ReadAllText(liveDetectionControllerPath);
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var overlayReadyWorkflow = File.Exists(overlayReadyWorkflowPath) ? File.ReadAllText(overlayReadyWorkflowPath) : "";
@@ -373,7 +389,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             "private void EnsureMarkOverlayReady",
             "private void DeactivateMarkTool");
         AssertNoForbiddenTokens(
-            markTools,
+            controller,
             "private OverlayToolType _markToolType",
             "MarkToolPopup.IsOpen",
             "ToolsDropdownPopup.IsOpen",
@@ -389,26 +405,31 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             "new ViewModels.Windows.CodingSessionViewModel",
             "CodingFeedbackRecorder");
         Assert.Contains("_codingSessionHost", marking);
-        Assert.Contains("_codingSessionHost.ClearCurrentOverlay", markTools);
-        Assert.Contains("_codingSessionHost.HasViewModel", markTools);
-        Assert.Contains("private void ActivateMarkTool", markTools);
-        Assert.Contains("LiveDetectionManualMarkActivationWorkflow.Execute", markTools);
-        Assert.Contains("private void EnsureMarkOverlayReady", markTools);
-        Assert.Contains("LiveDetectionMarkOverlayReadyWorkflow.Execute", markTools);
-        Assert.Contains("private void DeactivateMarkTool", markTools);
+        Assert.Contains("_liveDetectionMarkToolController.Activate", marking);
+        Assert.Contains("_liveDetectionMarkToolController.Deactivate", marking);
+        Assert.Contains("public interface ILiveDetectionMarkToolController", controller);
+        Assert.Contains("LiveDetectionManualMarkActivationWorkflow.Execute", controller);
+        Assert.Contains("LiveDetectionMarkOverlayReadyWorkflow.Execute", controller);
+        Assert.Contains("LiveDetectionManualMarkDeactivationWorkflow.Execute", controller);
+        Assert.DoesNotContain("ActivateMarkTool", playerWindowMethodNames);
+        Assert.DoesNotContain("EnsureMarkOverlayReady", playerWindowMethodNames);
+        Assert.DoesNotContain("DeactivateMarkTool", playerWindowMethodNames);
         AssertNoForbiddenTokens(
             state,
             "private OverlayToolType _markToolType",
             "private bool _isManualMarkMode");
         Assert.Contains("OverlayToolType MarkToolType", liveDetectionController);
         Assert.Contains("bool IsManualMarkMode", liveDetectionController);
-        Assert.Contains("_markToolControls.BeginActivation", markTools);
-        Assert.Contains("_markToolControls.ActivatePointTool", markTools);
-        Assert.Contains("_markToolControls.OpenCodingOverlay", markTools);
-        Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
+        Assert.Contains("new LiveDetectionMarkToolController", windowRoot);
+        Assert.Contains("_markToolControls.BeginActivation", windowRoot);
+        Assert.Contains("_markToolControls.ActivatePointTool", windowRoot);
+        Assert.Contains("_markToolControls.OpenCodingOverlay", windowRoot);
+        Assert.Contains("_markToolControls.DeactivateDetectionSide", windowRoot);
         Assert.Contains("OverlayToolType.Point", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("CodingSessionStateFactory.Create", overlayReadyWorkflow);
+        Assert.Contains("new LiveDetectionMarkOverlayReadyStateRequest", windowRoot);
+        Assert.DoesNotContain("CodingSessionStateFactory.Create", windowRoot);
         Assert.Contains("if (request.HasOverlayService && request.HasViewModel)", overlayReadyWorkflow);
         Assert.Contains("actions.CreateState()", overlayReadyWorkflow);
         Assert.Contains("actions.SetSessionService(state.SessionService)", overlayReadyWorkflow);

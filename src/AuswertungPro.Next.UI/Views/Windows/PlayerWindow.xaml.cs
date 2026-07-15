@@ -282,6 +282,49 @@ public partial class PlayerWindow : Window
                 ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
                 TimerTick: DetectionTimer_Tick,
                 RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
+        _liveDetectionMarkToolController = new LiveDetectionMarkToolController(
+            new LiveDetectionMarkToolControllerBindings(
+                ToggleManualMarkPopup: _markToolControls.ToggleManualMarkPopup,
+                ToggleToolsDropdown: _markToolControls.ToggleToolsDropdown,
+                CreateActivationActions: ensureOverlayReady => new LiveDetectionManualMarkActivationWorkflowActions(
+                    BeginActivation: _markToolControls.BeginActivation,
+                    SetMarkToolType: _liveDetectionController.SetMarkToolType,
+                    SetPause: _playerPlaybackControlHost.SetPause,
+                    CancelSchema: _codingSchemaManager.Cancel,
+                    ClearSchemaType: _codingSchemaTypeState.Clear,
+                    SetManualMarkMode: _liveDetectionController.SetManualMarkMode,
+                    ActivatePointTool: _markToolControls.ActivatePointTool,
+                    EnsureOverlayReady: ensureOverlayReady,
+                    SetActiveTool: selectedTool => _codingOverlayToolHost.SetActiveTool(selectedTool),
+                    ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                    OpenCodingOverlay: _markToolControls.OpenCodingOverlay,
+                    UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+                    EnableCodingOverlayInput: _markToolControls.EnableCodingOverlayInput),
+                CreateOverlayReadyRequest: () => new LiveDetectionMarkOverlayReadyStateRequest(
+                    _codingOverlayRuntimeOwner.HasService,
+                    _codingSessionHost.HasViewModel,
+                    _playbackContext.VideoPath,
+                    _protocolContext.Settings,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingOverlayRuntimeOwner.Service),
+                OverlayReadyActions: new LiveDetectionMarkOverlayReadyApplyActions(
+                    SetSessionService: _codingSessionRuntimeOwner.Set,
+                    SetOverlayService: _codingOverlayRuntimeOwner.Set,
+                    SetViewModel: viewModel => _codingSessionViewModelOwner.Set(
+                        viewModel,
+                        observePropertyChanged: false)),
+                CreateDeactivationRequest: () => new LiveDetectionManualMarkDeactivationWorkflowRequest(
+                    _codingModeState.IsCodingMode,
+                    _liveDetectionController.IsDetecting),
+                DeactivationActions: new LiveDetectionManualMarkDeactivationWorkflowActions(
+                    SetMarkToolType: _liveDetectionController.SetMarkToolType,
+                    SetManualMarkMode: _liveDetectionController.SetManualMarkMode,
+                    ResetToolLabel: _markToolControls.ResetToolLabel,
+                    DeactivateDetectionSide: _markToolControls.DeactivateDetectionSide,
+                    CancelSchema: _codingSchemaManager.Cancel,
+                    CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
+                    SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
+                    DeactivateCodingOverlay: _markToolControls.DeactivateCodingOverlay)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(

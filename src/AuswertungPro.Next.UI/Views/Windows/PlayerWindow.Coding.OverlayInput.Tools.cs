@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void CodingToolRect_Click(object sender, RoutedEventArgs e)
-        => ActivateMarkTool(OverlayToolType.Rectangle, "Markieren");
+        => _liveDetectionMarkToolController.Activate(OverlayToolType.Rectangle, "Markieren");
 
     private void SetCodingTool(
         object activeBtn,

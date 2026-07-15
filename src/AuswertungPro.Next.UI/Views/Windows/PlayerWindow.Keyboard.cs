@@ -84,7 +84,7 @@ public partial class PlayerWindow
         PlayerMarkToolShortcutWorkflow.Execute(
             new PlayerMarkToolShortcutWorkflowRequest(_liveDetectionController.MarkToolType),
             new PlayerMarkToolShortcutWorkflowActions(
-                DeactivateMarkTool,
-                ToggleMarkToolPopup: () => _markToolControls.ToggleManualMarkPopup(isCodingMode: false)));
+                _liveDetectionMarkToolController.Deactivate,
+                ToggleMarkToolPopup: () => _liveDetectionMarkToolController.ToggleManualMarkPopup(isCodingMode: false)));
     }
 }

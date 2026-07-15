@@ -88,7 +88,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
             "PlayerWindow.Coding.OverlayInput.Visibility.cs",
             "PlayerWindow.LiveDetection.Marking.cs",
-            "PlayerWindow.LiveDetection.MarkTools.cs"
+            "PlayerWindow.xaml.cs"
         };
 
         foreach (var fileName in toolStateFiles)

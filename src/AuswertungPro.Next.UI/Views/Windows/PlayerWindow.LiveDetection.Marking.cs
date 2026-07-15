@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using System.Windows;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -8,6 +9,24 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private void ManualMark_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.ToggleManualMarkPopup(_codingModeState.IsCodingMode);
+
+    private void ToolsDropdown_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.ToggleToolsDropdown();
+
+    private void MarkTool_Punkt_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.Activate(OverlayToolType.Point, "Punkt");
+
+    private void MarkTool_Ellipse_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.Activate(OverlayToolType.Ellipse, "Ellipse");
+
+    private void MarkTool_Freihand_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.Activate(OverlayToolType.Freehand, "Freihand");
+
+    private void MarkTool_Rechteck_Click(object sender, RoutedEventArgs e)
+        => _liveDetectionMarkToolController.Activate(OverlayToolType.Rectangle, "Rechteck");
+
     /// <summary>
     /// Nach abgeschlossener Markierung: Code-Katalog oeffnen und Training speichern.
     /// </summary>
@@ -45,7 +64,7 @@ public partial class PlayerWindow
                 ClearBendMarker: () => CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas),
                 ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
                 RedrawCodingCanvasWithoutManualOverlay: () => RedrawCodingCanvas(includeManualOverlay: false),
-                DeactivateMarkTool: DeactivateMarkTool,
+                DeactivateMarkTool: _liveDetectionMarkToolController.Deactivate,
                 SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
                 ApplyCrossCursor: () => CodingOverlayInputControls.ApplyCanvasCursor(
                     CodingOverlayCanvas,

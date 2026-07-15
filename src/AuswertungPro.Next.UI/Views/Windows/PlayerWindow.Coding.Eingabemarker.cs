@@ -20,7 +20,7 @@ public partial class PlayerWindow
         => new(
             PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
             SetDrawingPhase: _eingabemarkerState.SetDrawingPhase,
-            EnsureMarkOverlayReady: EnsureMarkOverlayReady,
+            EnsureMarkOverlayReady: _liveDetectionMarkToolController.EnsureOverlayReady,
             OpenCodingOverlayPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
             UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
             EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),

@@ -27,7 +27,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "PlayerWindow.Coding.Lifecycle.Ui.cs",
             "PlayerWindow.LiveDetection.Confirmation.cs",
             "PlayerWindow.LiveDetection.Marking.Catalog.cs",
-            "PlayerWindow.LiveDetection.MarkTools.cs"
+            "PlayerWindow.xaml.cs"
         };
 
         Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen ueber einen Playback-Control-Host laufen.");
