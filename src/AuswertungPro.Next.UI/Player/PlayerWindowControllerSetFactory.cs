@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -19,6 +20,7 @@ public sealed record PlayerWindowControllerSet(
     PlayerWindowTimerController TimerController,
     PlayerMarkToolControls MarkToolControls,
     CodingOverlayRenderController CodingOverlayRenderController,
+    CodingImportReferenceDropController CodingImportReferenceDropController,
     LiveDetectionController LiveDetectionController);
 
 public sealed record PlayerWindowControllerSetControls(
@@ -163,6 +165,7 @@ public static class PlayerWindowControllerSetFactory
             new CodingOverlayRenderController(
                 new CanvasOverlaySurface(controls.CodingOverlayCanvas),
                 new DelegateOverlayCoordinateMapper(dependencies.MapCodingOverlayPoint)),
+            new CodingImportReferenceDropController(),
             new LiveDetectionController());
     }
 }

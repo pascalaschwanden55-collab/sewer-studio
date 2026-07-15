@@ -53,28 +53,19 @@ public partial class PlayerWindow
     /// </summary>
     private void HandleAbgleichDrop(CodingEvent ev, bool targetIsKi)
     {
-        var ki = _codingSessionHost.EventCollection;
+        var session = _codingSessionRuntimeOwner.Service;
         var import = _codingImportReferenceEvents.Events;
-        if (ki is null)
+        var result = _codingImportReferenceDropController.Execute(
+            new CodingImportReferenceDropRequest(
+                ev,
+                targetIsKi,
+                _codingSessionHost.EventCollection,
+                import),
+            new CodingImportReferenceDropActions(
+                session is null ? null : (entry, overlay) => session.AddEvent(entry, overlay),
+                session is null ? null : session.RemoveEvent));
+        if (!result.Applied)
             return;
-
-        if (targetIsKi)
-        {
-            // Rechts → Links (Import → KI): NUR kopieren. Import bleibt; KI bekommt einen unabhaengigen
-            // Klon mit neuen IDs als offenen Session-Befund. Ohne Session-Service passiert nichts.
-            var service = _codingSessionRuntimeOwner.Service;
-            if (service is null)
-                return;
-            var clone = CodingEventColumnTransfer.CloneWithNewIds(ev);
-            service.AddEvent(clone.Entry, clone.Overlay);
-        }
-        else
-        {
-            // Links → Rechts (KI → Import): verschieben und (nach Meter) eingliedern; zusaetzlich
-            // sauber aus der Session entfernen.
-            CodingEventColumnTransfer.Move(ev, ki, import);
-            _codingSessionRuntimeOwner.Service?.RemoveEvent(ev.EventId);
-        }
 
         RefreshCodingEventsList();
         CodingImportReferenceControls.SetCount(RunImportDefectCount, import.Count);

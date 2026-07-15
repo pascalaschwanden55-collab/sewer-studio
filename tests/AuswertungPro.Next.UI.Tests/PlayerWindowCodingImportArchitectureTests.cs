@@ -15,12 +15,14 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchStateResetter.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceInitializationWorkflow.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
+        var dropControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceDropController.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resetterPath), "Session-Event-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Import-Referenz-Initialisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlsPath), "Import-Referenz-Zaehler sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(dropControllerPath), "Import-/KI-Drop-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var import = File.ReadAllText(importPath);
         var coding = File.ReadAllText(codingPath);
@@ -29,6 +31,7 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var dropController = File.Exists(dropControllerPath) ? File.ReadAllText(dropControllerPath) : "";
 
         Assert.Contains("CodingImportReferenceInitializationWorkflow.Execute", coding);
         Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
@@ -37,6 +40,9 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         Assert.Contains("_codingSessionHost", coding);
         Assert.Contains("CodingImportReferenceControls.SetCount", import);
         Assert.Contains("CodingImportReferenceControls.SetCount", coding);
+        Assert.Contains("_codingImportReferenceDropController.Execute", coding);
+        Assert.DoesNotContain("CodingEventColumnTransfer.CloneWithNewIds", coding);
+        Assert.DoesNotContain("CodingEventColumnTransfer.Move(ev", coding);
         Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
         Assert.Contains("public static int ClearActiveSessionEvents", resetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
@@ -50,5 +56,6 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         Assert.Contains("actions.SetBaselineSignature(baselineSignature)", workflow);
         Assert.Contains("actions.ResetStretchTracker()", workflow);
         Assert.Contains("public static void SetCount", controls);
+        Assert.Contains("public sealed class CodingImportReferenceDropController", dropController);
     }
 }

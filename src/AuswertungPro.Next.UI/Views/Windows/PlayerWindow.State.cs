@@ -1,3 +1,4 @@
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -47,6 +48,8 @@ public partial class PlayerWindow
     private QuickScanController _quickScanController => _playerControllers.QuickScanController;
 
     private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController;
+
+    private CodingImportReferenceDropController _codingImportReferenceDropController => _playerControllers.CodingImportReferenceDropController;
 
     private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController;
 
