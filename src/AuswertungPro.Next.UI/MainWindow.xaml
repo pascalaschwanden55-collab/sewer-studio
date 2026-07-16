@@ -488,9 +488,17 @@
                                                 <ColumnDefinition Width="3"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
+                                            <!-- Der Balken waechst beim Auswaehlen ein, statt aufzublitzen.
+                                                 Eigener Transform je Eintrag (im Template erzeugt), damit
+                                                 nicht alle Eintraege denselben teilen. -->
                                             <Border x:Name="AccentStrip" Grid.Column="0"
                                                     Background="{DynamicResource AccentBarBrush}"
-                                                    CornerRadius="1.5" Margin="0,6" Opacity="0"/>
+                                                    CornerRadius="1.5" Margin="0,6" Opacity="0"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="AccentStripScale" ScaleY="0.4"/>
+                                                </Border.RenderTransform>
+                                            </Border>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
                                                     CornerRadius="6" Padding="2"
                                                     Margin="4,0,0,0">
@@ -502,6 +510,36 @@
                                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
                                                 <Setter TargetName="AccentStrip" Property="Opacity" Value="1"/>
                                                 <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="AccentStrip"
+                                                                             Storyboard.TargetProperty="Opacity"
+                                                                             From="0" To="1"
+                                                                             Duration="{StaticResource AnimDurationNormal}"
+                                                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                                                            <DoubleAnimation Storyboard.TargetName="AccentStripScale"
+                                                                             Storyboard.TargetProperty="ScaleY"
+                                                                             From="0.4" To="1"
+                                                                             Duration="{StaticResource AnimDurationNormal}"
+                                                                             EasingFunction="{StaticResource AnimEaseOut}"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="AccentStrip"
+                                                                             Storyboard.TargetProperty="Opacity"
+                                                                             To="0"
+                                                                             Duration="{StaticResource AnimDurationFast}"/>
+                                                            <DoubleAnimation Storyboard.TargetName="AccentStripScale"
+                                                                             Storyboard.TargetProperty="ScaleY"
+                                                                             To="0.4"
+                                                                             Duration="{StaticResource AnimDurationFast}"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBrush}"/>

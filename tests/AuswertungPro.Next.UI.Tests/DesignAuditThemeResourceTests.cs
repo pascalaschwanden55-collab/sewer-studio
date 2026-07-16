@@ -203,9 +203,12 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Color=\"{DynamicResource GlowAccentColor}\"", controls);
         Assert.Contains("Opacity=\"0\" BlurRadius=\"14\" ShadowDepth=\"0\"", controls);
 
-        Assert.Contains("x:Key=\"NeuralUnderlineBrush\"", controls);
         Assert.Contains("x:Key=\"AnimDurationXSlow\"", controls);
         Assert.Contains("x:Key=\"AnimEaseInOut\"", controls);
+
+        // Die Titel-Unterstreichung liegt je Theme, nicht hier — siehe
+        // Page_titles_carry_the_neural_underline_in_both_themes.
+        Assert.DoesNotContain("x:Key=\"NeuralUnderlineBrush\"", controls);
     }
 
     [Fact]
@@ -329,6 +332,48 @@ public sealed class DesignAuditThemeResourceTests
 
         // Video-Fenster bleiben ohne Backdrop (Renderlast).
         Assert.DoesNotContain("Fluent.Backdrop", ReadUiFile("Views", "Windows", "PlayerWindow.xaml"));
+    }
+
+    [Fact]
+    public void Page_titles_carry_the_neural_underline_in_both_themes()
+    {
+        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
+        var themeDark = ReadUiFile("Theme", "Theme.xaml");
+
+        foreach (var theme in new[] { themeLight, themeDark })
+        {
+            // Zentral im PageTitle-Style, damit jede Seite die Linie bekommt — auch kuenftige.
+            AssertStyleContains(theme, "PageTitle",
+                "Property=\"TextDecorations\"",
+                "<Pen Thickness=\"2\" Brush=\"{StaticResource NeuralUnderlineBrush}\"/>");
+            Assert.Contains("x:Key=\"NeuralUnderlineBrush\"", theme);
+        }
+
+        // Der Verlauf liegt je Theme, weil GradientStops keine DynamicResource aufnehmen und der
+        // Style ihn nur im eigenen Woerterbuch per StaticResource erreicht.
+        Assert.Contains("<GradientStop Color=\"#FF2563EB\" Offset=\"0\"/>", themeLight);
+        Assert.Contains("<GradientStop Color=\"#FF539BF5\" Offset=\"0\"/>", themeDark);
+    }
+
+    [Fact]
+    public void Navigation_selection_grows_in_instead_of_flashing()
+    {
+        var xaml = ReadUiFile("MainWindow.xaml");
+
+        Assert.Contains("<ScaleTransform x:Name=\"AccentStripScale\" ScaleY=\"0.4\"/>", xaml);
+        Assert.Contains("Storyboard.TargetName=\"AccentStripScale\"", xaml);
+        Assert.Contains("<Trigger.EnterActions>", xaml);
+        Assert.Contains("<Trigger.ExitActions>", xaml);
+    }
+
+    [Fact]
+    public void Card_stagger_stays_on_fixed_panels_not_on_data_bound_lists()
+    {
+        var overview = ReadUiFile("Views", "Pages", "OverviewPage.xaml");
+
+        Assert.Contains("<StackPanel ui:EntranceFx.Stagger=\"True\">", overview);
+        // Die Projektliste ist datengebunden und wird gescrollt — dort waere die Staffelung falsch.
+        Assert.DoesNotContain("<ListBox ui:EntranceFx.Stagger", overview);
     }
 
     [Fact]

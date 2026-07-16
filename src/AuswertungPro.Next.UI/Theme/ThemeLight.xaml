@@ -59,9 +59,6 @@
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf ── -->
     <Color x:Key="ColorSecondaryAccent">#FF0891B2</Color>
     <Color x:Key="ColorSecondaryAccentHover">#FF0E7490</Color>
-    <!-- Leuchtfarbe fuer AccentGlow (Theme/Controls.xaml). Volldeckend, weil DropShadowEffect
-         den Alpha-Anteil ignoriert und die Staerke ueber Opacity animiert wird. -->
-    <Color x:Key="GlowAccentColor">#FF2563EB</Color>
     <SolidColorBrush x:Key="SecondaryAccentBrush" Color="{StaticResource ColorSecondaryAccent}"/>
     <SolidColorBrush x:Key="SecondaryAccentHoverBrush" Color="{StaticResource ColorSecondaryAccentHover}"/>
     <SolidColorBrush x:Key="SecondaryAccentSubtleBrush" Color="#FFCFFAFE"/>
@@ -73,6 +70,14 @@
     <LinearGradientBrush x:Key="AccentBarBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="#FF2563EB" Offset="0"/>
         <GradientStop Color="#FF0891B2" Offset="1"/>
+    </LinearGradientBrush>
+    <!-- Titel-Unterstreichung: Blau nach Teal, laeuft nach rechts ins Transparente aus
+         (wie die Logo-Linie in der Sidebar). Je Theme eigene Stops, weil GradientStops
+         keine DynamicResource aufnehmen koennen. -->
+    <LinearGradientBrush x:Key="NeuralUnderlineBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF2563EB" Offset="0"/>
+        <GradientStop Color="#FF0891B2" Offset="0.45"/>
+        <GradientStop Color="#000891B2" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- ── STATUSFARBEN-TOKENS (eine Farbsprache; C#-Quelle: StatusColorService) ── -->
@@ -95,7 +100,9 @@
     <SolidColorBrush x:Key="CodeGroupBestandSubtleBrush" Color="#FFD6E4F7"/>
     <SolidColorBrush x:Key="CodeGroupSonstigBrush" Color="#FF64748B"/>
     <SolidColorBrush x:Key="CodeGroupSonstigSubtleBrush" Color="#FFE9EDF3"/>
-    <!-- Glow-Farbe fuer Premium-Akzente (DropShadow-Glows, Puls-Ringe). -->
+    <!-- Glow-Farbe fuer Premium-Akzente (DropShadow-Glows, Puls-Ringe); Quelle fuer AccentGlow
+         in Theme/Controls.xaml. Volldeckend halten: DropShadowEffect ignoriert den Alpha-Anteil
+         von Color und regelt die Staerke ausschliesslich ueber Opacity. -->
     <Color x:Key="GlowAccentColor">#FF2563EB</Color>
 
     <!-- ── GRADIENT BRUSHES ── -->
@@ -139,6 +146,20 @@
         <Setter Property="FontSize" Value="20"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <!-- Akzentlinie unter dem Titel: als TextDecoration, damit jede Seite sie automatisch
+             bekommt — auch kuenftige. PenOffset haelt Abstand zur Grundlinie, sonst wirkt es
+             wie ein Link statt wie eine Linie. -->
+        <Setter Property="TextDecorations">
+            <Setter.Value>
+                <TextDecorationCollection>
+                    <TextDecoration Location="Underline" PenOffset="7" PenThicknessUnit="Pixel">
+                        <TextDecoration.Pen>
+                            <Pen Thickness="2" Brush="{StaticResource NeuralUnderlineBrush}"/>
+                        </TextDecoration.Pen>
+                    </TextDecoration>
+                </TextDecorationCollection>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="SectionTitle" TargetType="TextBlock">

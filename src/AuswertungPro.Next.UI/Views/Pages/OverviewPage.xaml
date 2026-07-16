@@ -274,7 +274,9 @@
             </Border>
 
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+                <!-- Die Cockpit-Karten kommen nacheinander an. Feste Karten mit Sichtbarkeits-
+                     Bindung — kein virtualisiertes Listenpanel, darum hier unbedenklich. -->
+                <StackPanel ui:EntranceFx.Stagger="True">
                     <Border Style="{StaticResource Card}"
                             Visibility="{Binding ShowProjectChoice, Converter={StaticResource BoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" TextBlock.TextAlignment="Center">

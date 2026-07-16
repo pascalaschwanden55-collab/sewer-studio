@@ -39,14 +39,9 @@
     <DropShadowEffect x:Key="AccentGlow" x:Shared="False" Color="{DynamicResource GlowAccentColor}"
                       Opacity="0" BlurRadius="14" ShadowDepth="0"/>
 
-    <!-- Titel-Unterstreichung: Blau nach Teal, laeuft nach rechts ins Transparente aus (wie die
-         Logo-Linie in der Sidebar). GradientStops koennen keine DynamicResource aufnehmen —
-         die Stops sind darum bewusst fest und auf hell wie dunkel lesbar. -->
-    <LinearGradientBrush x:Key="NeuralUnderlineBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#FF2563EB" Offset="0"/>
-        <GradientStop Color="#FF0891B2" Offset="0.45"/>
-        <GradientStop Color="#000891B2" Offset="1"/>
-    </LinearGradientBrush>
+    <!-- Die Titel-Unterstreichung NeuralUnderlineBrush liegt je Theme in ThemeLight.xaml und
+         Theme.xaml: GradientStops koennen keine DynamicResource aufnehmen, also braucht jedes
+         Theme eigene Stops — und der PageTitle-Style dort erreicht sie nur im eigenen Woerterbuch. -->
 
     <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>

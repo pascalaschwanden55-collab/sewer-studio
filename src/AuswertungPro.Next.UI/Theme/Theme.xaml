@@ -59,9 +59,6 @@
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
     <Color x:Key="ColorSecondaryAccentHover">#FF67E8F9</Color>
-    <!-- Leuchtfarbe fuer AccentGlow (Theme/Controls.xaml). Heller als im Hellthema, damit der
-         Schein auf dunklen Flaechen ueberhaupt sichtbar ist. Alpha ignoriert der Effekt — Staerke via Opacity. -->
-    <Color x:Key="GlowAccentColor">#FF539BF5</Color>
     <SolidColorBrush x:Key="SecondaryAccentBrush" Color="{StaticResource ColorSecondaryAccent}"/>
     <SolidColorBrush x:Key="SecondaryAccentHoverBrush" Color="{StaticResource ColorSecondaryAccentHover}"/>
     <SolidColorBrush x:Key="SecondaryAccentSubtleBrush" Color="#FF164E5C"/>
@@ -73,6 +70,13 @@
     <LinearGradientBrush x:Key="AccentBarBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="#FF539BF5" Offset="0"/>
         <GradientStop Color="#FF22D3EE" Offset="1"/>
+    </LinearGradientBrush>
+    <!-- Titel-Unterstreichung: wie im Hellthema, aber in den helleren Toenen des Dunkelthemas —
+         das kraeftige Blau des Hellthemas verschwindet auf dunklem Grund. -->
+    <LinearGradientBrush x:Key="NeuralUnderlineBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF539BF5" Offset="0"/>
+        <GradientStop Color="#FF22D3EE" Offset="0.45"/>
+        <GradientStop Color="#0022D3EE" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- ── STATUSFARBEN-TOKENS (eine Farbsprache; C#-Quelle: StatusColorService) ── -->
@@ -95,7 +99,10 @@
     <SolidColorBrush x:Key="CodeGroupBestandSubtleBrush" Color="#FF1C3050"/>
     <SolidColorBrush x:Key="CodeGroupSonstigBrush" Color="#FF8891A0"/>
     <SolidColorBrush x:Key="CodeGroupSonstigSubtleBrush" Color="#FF32383F"/>
-    <!-- Glow-Farbe fuer Premium-Akzente (DropShadow-Glows, Puls-Ringe). -->
+    <!-- Glow-Farbe fuer Premium-Akzente (DropShadow-Glows, Puls-Ringe); Quelle fuer AccentGlow
+         in Theme/Controls.xaml. Heller als im Hellthema, sonst bliebe der Schein auf dunklen
+         Flaechen unsichtbar. Volldeckend halten: DropShadowEffect ignoriert den Alpha-Anteil
+         von Color und regelt die Staerke ausschliesslich ueber Opacity. -->
     <Color x:Key="GlowAccentColor">#FF539BF5</Color>
 
     <!-- ── GRADIENT BRUSHES ── -->
@@ -139,6 +146,20 @@
         <Setter Property="FontSize" Value="20"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <!-- Akzentlinie unter dem Titel: als TextDecoration, damit jede Seite sie automatisch
+             bekommt — auch kuenftige. PenOffset haelt Abstand zur Grundlinie, sonst wirkt es
+             wie ein Link statt wie eine Linie. -->
+        <Setter Property="TextDecorations">
+            <Setter.Value>
+                <TextDecorationCollection>
+                    <TextDecoration Location="Underline" PenOffset="7" PenThicknessUnit="Pixel">
+                        <TextDecoration.Pen>
+                            <Pen Thickness="2" Brush="{StaticResource NeuralUnderlineBrush}"/>
+                        </TextDecoration.Pen>
+                    </TextDecoration>
+                </TextDecorationCollection>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="SectionTitle" TargetType="TextBlock">
