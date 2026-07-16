@@ -20,7 +20,8 @@ public sealed record TrainingKnowledgeBaseQualityRefreshDefaultRequestFactoryReq
 public static class TrainingKnowledgeBaseQualityRefreshRequestFactory
 {
     public static TrainingKnowledgeBaseQualityRefreshWorkflowRequest CreateWithDefaults(
-        TrainingKnowledgeBaseQualityRefreshDefaultRequestFactoryRequest request)
+        TrainingKnowledgeBaseQualityRefreshDefaultRequestFactoryRequest request,
+        ISelfTrainingHistoryStore? historyStore = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.ReadQualityAsync);
@@ -30,7 +31,7 @@ public static class TrainingKnowledgeBaseQualityRefreshRequestFactory
 
         return Create(new TrainingKnowledgeBaseQualityRefreshRequestFactoryRequest(
             request.ReadQualityAsync,
-            SelfTrainingHistoryStore.LoadAsync,
+            (historyStore ?? SelfTrainingHistoryStore.Current).LoadAsync,
             request.ApplyPresentation,
             request.Log,
             request.OnUi));

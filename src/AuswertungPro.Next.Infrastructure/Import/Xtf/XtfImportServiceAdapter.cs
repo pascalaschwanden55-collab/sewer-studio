@@ -20,6 +20,17 @@ public sealed class XtfImportServiceAdapter : IXtfImportService
     {
     }
 
+    public XtfImportServiceAdapter(
+        IVsaMediaPathResolver mediaPaths,
+        IM150SourceFileReader m150SourceFiles,
+        IM150MdbRowReader m150MdbRows)
+        : this(LegacyXtfImportService.CreateForApplication(
+            mediaPaths ?? throw new ArgumentNullException(nameof(mediaPaths)),
+            m150SourceFiles ?? throw new ArgumentNullException(nameof(m150SourceFiles)),
+            m150MdbRows ?? throw new ArgumentNullException(nameof(m150MdbRows))))
+    {
+    }
+
     internal XtfImportServiceAdapter(LegacyXtfImportService service)
     {
         _svc = service ?? throw new ArgumentNullException(nameof(service));

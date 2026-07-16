@@ -228,7 +228,7 @@ public partial class ProtocolObservationsWindow : Window
             // Eintrag zurueckspiegeln.
             var vm = new AuswertungPro.Next.UI.ViewModels.Windows.VsaCodeExplorerViewModel(
                 entry, entry.MeterStart, entry.Zeit, _sp.CodeSelectionCatalog);
-            var dlg = new AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow(vm, _videoPath, entry.Zeit)
+            var dlg = new AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow(vm, _videoPath, entry.Zeit, _sp.CodeUsage)
             {
                 Owner = this,
                 // Feste Groesse hat hier Vorrang: der Konstruktor ruft WindowStateManager.Track,

@@ -8,15 +8,17 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 public static class TrainingCenterSettingsStore
 {
-    private static ITrainingCenterSettingsStore _current = new TrainingCenterSettingsFileStore();
+    private static readonly ITrainingCenterSettingsStore Default = new TrainingCenterSettingsFileStore();
 
     public static string DefaultPath => Current.StoragePath;
 
-    public static ITrainingCenterSettingsStore Current => Volatile.Read(ref _current);
+    public static ITrainingCenterSettingsStore Current => Default;
 
-    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITrainingCenterSettingsStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Der globale Speicher fuer Trainings-Einstellungen kann nicht mehr ausgetauscht werden. " +
+            "ITrainingCenterSettingsStore bitte per Konstruktor uebergeben.");
 
     public static Task<TrainingCenterSettings> LoadAsync() =>
         Current.LoadAsync();

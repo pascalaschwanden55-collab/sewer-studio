@@ -1,4 +1,3 @@
-using System;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -11,14 +10,9 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public static class DataPageDichtheitPdfResolver
 {
-    private static IDichtheitProtocolFileLocator _current = new DichtheitProtocolFileLocator();
+    private static readonly IDichtheitProtocolFileLocator Default = new DichtheitProtocolFileLocator();
 
-    internal static IDichtheitProtocolFileLocator CompatibilityService => Volatile.Read(ref _current);
-
-    internal static void Use(IDichtheitProtocolFileLocator locator)
-        => Volatile.Write(
-            ref _current,
-            locator ?? throw new ArgumentNullException(nameof(locator)));
+    internal static IDichtheitProtocolFileLocator CompatibilityService => Default;
 
     public static IReadOnlyList<string> Resolve(HaltungRecord? record, string? projectFolder)
         => Resolve(record, projectFolder, configuredRoot: null);

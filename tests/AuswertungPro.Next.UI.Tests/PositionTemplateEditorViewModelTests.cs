@@ -26,9 +26,9 @@ public sealed class PositionTemplateEditorViewModelTests
             var viewModel = new PositionTemplateEditorViewModel(
                 null,
                 window,
-                dialogs,
                 positionStore,
-                costStore);
+                costStore,
+                dialogs);
             viewModel.SelectedGroup = viewModel.Groups.Single(group => group.Name == "Testgruppe");
             var second = viewModel.SelectedGroup.Positions[1];
             viewModel.SelectedPosition = second;
@@ -81,9 +81,9 @@ public sealed class PositionTemplateEditorViewModelTests
             var viewModel = new PositionTemplateEditorViewModel(
                 null,
                 window,
-                dialogs,
                 new PositionTemplateStore(positionPath),
-                new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")));
+                new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")),
+                dialogs);
             var remainedOpen = false;
             window.Loaded += (_, _) =>
             {

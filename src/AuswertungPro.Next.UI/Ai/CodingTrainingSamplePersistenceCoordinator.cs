@@ -54,10 +54,11 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
 
     public static CodingTrainingSamplePersistenceCoordinator CreateDefault(
         Func<ICodingSessionService?> sessionProvider,
-        AppSettings? settings)
+        AppSettings? settings,
+        ITrainingSampleStore? trainingSamples = null)
         => new(
             new CodingTrainingFrameStore(),
-            new CodingTrainingSamplePersister(sessionProvider),
+            new CodingTrainingSamplePersister(sessionProvider, trainingSamples),
             new CodingTrainingSampleEvalProtector(settings),
             message => BestEffort.ReportWarning(message));
 

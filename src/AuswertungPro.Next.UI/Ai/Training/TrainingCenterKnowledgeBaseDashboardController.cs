@@ -1,4 +1,6 @@
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -30,13 +32,23 @@ internal sealed record TrainingCenterKnowledgeBaseDashboardUi(
 internal sealed class TrainingCenterKnowledgeBaseDashboardController
 {
     private readonly IKnowledgeBaseDiagnosticsRunner _diagnostics;
+    private readonly ISelfTrainingHistoryStore _history;
     private readonly TrainingCenterKnowledgeBaseDashboardUi _ui;
 
     internal TrainingCenterKnowledgeBaseDashboardController(
         IKnowledgeBaseDiagnosticsRunner diagnostics,
         TrainingCenterKnowledgeBaseDashboardUi ui)
+        : this(diagnostics, SelfTrainingHistoryStore.Current, ui)
+    {
+    }
+
+    internal TrainingCenterKnowledgeBaseDashboardController(
+        IKnowledgeBaseDiagnosticsRunner diagnostics,
+        ISelfTrainingHistoryStore history,
+        TrainingCenterKnowledgeBaseDashboardUi ui)
     {
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        _history = history ?? throw new ArgumentNullException(nameof(history));
         _ui = ui ?? throw new ArgumentNullException(nameof(ui));
     }
 
@@ -59,7 +71,8 @@ internal sealed class TrainingCenterKnowledgeBaseDashboardController
                     () => _diagnostics.ReadQualityAsync(),
                     ApplyQuality,
                     _ui.Log,
-                    _ui.OnUi)));
+                    _ui.OnUi),
+                _history));
     }
 
     internal void ApplyStatus(TrainingKnowledgeBaseStatusPresentation presentation)

@@ -187,7 +187,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains("_codingSessionHost", training);
         Assert.Contains("CodingProtocolTrainingSnapshotStore", workflow);
         Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", workflowFactory);
-        Assert.Contains("TeacherAnnotationStore.AppendAsync", workflowFactory);
+        Assert.Contains("annotationStore.AppendAsync", workflowFactory);
     }
 
     [Fact]

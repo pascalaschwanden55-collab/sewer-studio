@@ -9,6 +9,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
@@ -23,9 +24,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCalculatorViewModel : ObservableObject
 {
-    private readonly CostCatalogStore _catalogStore = new();
-    private readonly MeasureTemplateStore _templateStore = new();
-    private readonly ProjectCostStoreRepository _costRepo = new();
+    private readonly ICostCatalogStore _catalogStore;
+    private readonly IMeasureTemplateStore _templateStore;
+    private readonly IProjectCostStoreRepository _costRepo;
     private readonly Action<HoldingCost>? _applyTotal;
     private readonly IDialogService _dialogs;
     private readonly string? _projectPath;
@@ -81,6 +82,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     public event Action? Saved;
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public CostCalculatorViewModel(
         string holding,
         DateTime? date,
@@ -90,10 +92,40 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         HaltungRecord? haltungRecord = null,
         IReadOnlyList<HaltungRecord>? projectRecords = null,
         IDialogService? dialogs = null)
+        : this(
+            holding,
+            date,
+            recommendedTokens,
+            projectPath,
+            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
+            CostStoreCompatibility.Factory.CreateProjectCostStore(),
+            applyTotal,
+            haltungRecord,
+            projectRecords,
+            dialogs)
+    {
+    }
+
+    public CostCalculatorViewModel(
+        string holding,
+        DateTime? date,
+        IReadOnlyList<string> recommendedTokens,
+        string? projectPath,
+        ICostCatalogStore catalogStore,
+        IMeasureTemplateStore templateStore,
+        IProjectCostStoreRepository costRepo,
+        Action<HoldingCost>? applyTotal = null,
+        HaltungRecord? haltungRecord = null,
+        IReadOnlyList<HaltungRecord>? projectRecords = null,
+        IDialogService? dialogs = null)
     {
         Holding = holding;
         Date = date;
         _projectPath = projectPath;
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
+        _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
+        _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
         _applyTotal = applyTotal;
         _dialogs = dialogs ?? new DialogService();
 
@@ -509,7 +541,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void EditPositionTemplates()
     {
-        var dialog = new CostCatalogEditorDialog(_projectPath);
+        var dialog = new CostCatalogEditorDialog(_projectPath, _catalogStore);
         dialog.ShowDialog();
         // Always reload â€“ user may have saved changes
         ReloadCatalog();

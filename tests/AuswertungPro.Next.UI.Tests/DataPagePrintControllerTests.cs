@@ -1,3 +1,5 @@
+using System.IO;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
@@ -333,6 +335,30 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_laesst_Projektkosten_ueber_den_injizierten_Vertrag_laden()
+    {
+        var dialogs = new CapturingDialogService();
+        var costs = new RecordingProjectCostStoreRepository();
+        costs.Store.ByHolding["12/34"] = HoldingCostWithMeasure("12/34");
+        DataPageDossierPrintAvailability? captured = null;
+        var controller = CreateController(
+            dialogs,
+            getLastProjectPath: () => "C:\\projekt\\Projektdateien\\projekt.json",
+            projectCosts: costs,
+            selectDossierPrintOptions: availability =>
+            {
+                captured = availability;
+                return null;
+            });
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal("C:\\projekt\\Projektdateien\\projekt.json", costs.LoadedProjectPath);
+        Assert.NotNull(captured);
+        Assert.True(captured!.KostenAvailable);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_warnt_bei_dirty_project_und_bricht_bei_nein_ab()
     {
         var dialogs = new CapturingDialogService { ConfirmWarnResult = false };
@@ -559,6 +585,7 @@ public sealed class DataPagePrintControllerTests
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<HydraulikPrintOptions?>? selectHydraulikPrintOptions = null,
         Func<HaltungRecord, HydraulikCalcResult, HydraulikPrintOptions, Task<byte[]>>? buildHydraulikPdfAsync = null,
+        Func<string?>? getLastProjectPath = null,
         Func<string, (string? VonNr, string? BisNr)>? splitHoldingNodes = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
         Func<HaltungRecord, DataPageHydraulikAvailability>? readDossierHydraulikAvailability = null,
@@ -572,12 +599,14 @@ public sealed class DataPagePrintControllerTests
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         Func<string, bool>? openPdf = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProjectCostStoreRepository? projectCosts = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
             buildAwuPdf: buildAwuPdf ?? ((_, _, _, _, _) => Array.Empty<byte>()),
             baseDirectory,
+            projectCosts: projectCosts ?? new RecordingProjectCostStoreRepository(),
             fileExists: fileExists ?? (_ => false),
             writeAllBytes: writeAllBytes ?? ((_, _) => { }),
             writeAllBytesAsync: writeAllBytesAsync ?? ((_, _) => Task.CompletedTask),
@@ -585,6 +614,7 @@ public sealed class DataPagePrintControllerTests
             buildHydraulikCalculation: buildHydraulikCalculation,
             selectHydraulikPrintOptions: selectHydraulikPrintOptions,
             buildHydraulikPdfAsync: buildHydraulikPdfAsync,
+            getLastProjectPath: getLastProjectPath,
             splitHoldingNodes: splitHoldingNodes,
             findSchachtByNummer: findSchachtByNummer,
             readDossierHydraulikAvailability: readDossierHydraulikAvailability,
@@ -695,6 +725,33 @@ public sealed class DataPagePrintControllerTests
             List<string> paths)
         {
         }
+    }
+
+    private sealed class RecordingProjectCostStoreRepository : IProjectCostStoreRepository
+    {
+        public ProjectCostStore Store { get; } = new();
+        public string? LoadedProjectPath { get; private set; }
+
+        public ProjectCostStore Load(string? projectPath)
+        {
+            LoadedProjectPath = projectPath;
+            return Store;
+        }
+
+        public ProjectCostStore Load(string? projectPath, out string? loadError)
+        {
+            loadError = null;
+            return Load(projectPath);
+        }
+
+        public bool Save(string? projectPath, ProjectCostStore store, out string? error)
+        {
+            error = null;
+            return true;
+        }
+
+        public string GetStorePath(string projectDirectory)
+            => Path.Combine(projectDirectory, "costs.json");
     }
 
     private sealed class CapturingDialogService : IDialogService

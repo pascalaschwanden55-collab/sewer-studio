@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
@@ -17,11 +18,10 @@ namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 /// </summary>
 internal sealed class SchachtMassnahmenDialogController
 {
-    private const string StoreFileName = "schacht_empfehlungen.json";
-
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
     private readonly ISchachtMassnahmenKatalogStore _katalog;
+    private readonly IProjectCostStoreRepository _repository;
     private readonly FrameworkElement _ownerElement;
     private readonly Action _markProjectDirty;
     private readonly Action _refreshPage;
@@ -30,6 +30,7 @@ internal sealed class SchachtMassnahmenDialogController
         AppSettings settings,
         IDialogService dialogs,
         ISchachtMassnahmenKatalogStore katalog,
+        IProjectCostStoreRepository repository,
         FrameworkElement ownerElement,
         Action markProjectDirty,
         Action refreshPage)
@@ -37,6 +38,7 @@ internal sealed class SchachtMassnahmenDialogController
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _katalog = katalog ?? throw new ArgumentNullException(nameof(katalog));
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _ownerElement = ownerElement ?? throw new ArgumentNullException(nameof(ownerElement));
         _markProjectDirty = markProjectDirty ?? throw new ArgumentNullException(nameof(markProjectDirty));
         _refreshPage = refreshPage ?? throw new ArgumentNullException(nameof(refreshPage));
@@ -48,8 +50,7 @@ internal sealed class SchachtMassnahmenDialogController
 
         var schachtNummer = SchaechteColumnPolicy.GetSchachtNumber(record);
         var projectPath = _settings.LastProjectPath;
-        var repository = new ProjectCostStoreRepository(StoreFileName);
-        var store = repository.Load(projectPath, out var loadError);
+        var store = _repository.Load(projectPath, out var loadError);
 
         if (loadError is not null)
         {
@@ -66,7 +67,7 @@ internal sealed class SchachtMassnahmenDialogController
             record,
             _katalog.Load(),
             bestehend,
-            onUebernehmen: cost => Persist(repository, store, schachtNummer, cost, projectPath),
+            onUebernehmen: cost => Persist(_repository, store, schachtNummer, cost, projectPath),
             onListeBearbeiten: EditKatalog);
 
         var window = new SchachtMassnahmenWindow(viewModel)
@@ -77,7 +78,7 @@ internal sealed class SchachtMassnahmenDialogController
     }
 
     private void Persist(
-        ProjectCostStoreRepository repository,
+        IProjectCostStoreRepository repository,
         ProjectCostStore store,
         string schachtNummer,
         HoldingCost cost,

@@ -49,7 +49,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         : this(
             channelsTablePath,
             manholesTablePath,
-            VsaShadowTelemetryWriter.Current,
+            new VsaShadowTelemetryFileWriter(),
             shadowModeEnabled,
             shadowLogPath,
             useV2Engine,

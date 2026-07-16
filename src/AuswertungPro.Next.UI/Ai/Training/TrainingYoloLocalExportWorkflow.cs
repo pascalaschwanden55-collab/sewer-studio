@@ -39,23 +39,29 @@ public static class TrainingYoloLocalExportRequestFactory
         Action<int> setProgressMax,
         Action<int> setProgressValue,
         Action<string> setStatusText,
-        CancellationToken cancellationToken)
-        => new(
+        CancellationToken cancellationToken,
+        ITeacherAnnotationStore? teacherAnnotations = null,
+        IVsaYoloClassMapStore? yoloClasses = null)
+    {
+        var classMap = yoloClasses ?? VsaYoloClassMap.Current;
+        return new(
             ApprovedSamples: approvedSamples,
             OutputDir: outputDir,
             EvalImageHashes: evalImageHashes,
             EvalHaltungKeys: evalHaltungKeys,
-            LoadAnnotationsAsync: async () => await TeacherAnnotationStore.LoadAsync().ConfigureAwait(false),
+            LoadAnnotationsAsync: async () => await (teacherAnnotations ?? TeacherAnnotationStore.Current)
+                .LoadAsync().ConfigureAwait(false),
             PersistSamplesAsync: persistSamplesAsync,
             Log: log,
             SetProgressMax: setProgressMax,
             SetProgressValue: setProgressValue,
             SetStatusText: setStatusText,
-            GetClassId: VsaYoloClassMap.GetClassId,
-            GetFullClassMap: VsaYoloClassMap.GetFullMap,
-            ExportClassesTxtAsync: VsaYoloClassMap.ExportClassesTxtAsync,
+            GetClassId: classMap.GetClassId,
+            GetFullClassMap: classMap.GetFullMap,
+            ExportClassesTxtAsync: classMap.ExportClassesTxtAsync,
             UtcNow: () => DateTime.UtcNow,
             CancellationToken: cancellationToken);
+    }
 }
 
 public static class TrainingYoloLocalExportWorkflow

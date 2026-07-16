@@ -1,7 +1,9 @@
 using System.Windows;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Player;
@@ -23,7 +25,10 @@ public sealed record LiveDetectionTrainingControllerSetDependencies(
     Func<Task<byte[]?>> CaptureCurrentFrameAsync,
     Action RefreshCodingEvents,
     Action<string, bool> ShowOsdMeterStatus,
-    Action ResumeDetection);
+    Action ResumeDetection,
+    ITeacherAnnotationStore? TeacherAnnotations = null,
+    ICodeUsageTracker? CodeUsage = null,
+    IVsaYoloClassMapStore? VsaYoloClasses = null);
 
 public static class LiveDetectionTrainingControllerSetFactory
 {
@@ -32,7 +37,9 @@ public static class LiveDetectionTrainingControllerSetFactory
         ILiveDetectionTrainingAnnotationWriter? annotationWriter = null)
     {
         Validate(dependencies);
-        annotationWriter ??= LiveDetectionTrainingAnnotationWriter.CreateDefault();
+        annotationWriter ??= LiveDetectionTrainingAnnotationWriter.CreateDefault(
+            dependencies.TeacherAnnotations,
+            dependencies.VsaYoloClasses);
 
         var confirmation = new LiveDetectionConfirmationTrainingController(
             dependencies.DetectionController,
@@ -46,7 +53,8 @@ public static class LiveDetectionTrainingControllerSetFactory
                             meter,
                             timestampSeconds,
                             dependencies.VideoPath,
-                            dependencies.Owner),
+                            dependencies.Owner,
+                            dependencies.CodeUsage),
                         new LiveDetectionCorrectionCodeSelectionActions(
                             dependencies.CreateCorrectionViewModel)),
                 CaptureCurrentFrameAsync: dependencies.CaptureCurrentFrameAsync,

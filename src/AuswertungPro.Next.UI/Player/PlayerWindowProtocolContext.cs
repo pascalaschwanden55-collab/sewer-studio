@@ -1,8 +1,11 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Player;
@@ -45,6 +48,20 @@ public sealed class PlayerWindowProtocolContext
     public IProtocolPdfExporter? ProtocolPdfExports => _dependencies.ProtocolPdfExports;
 
     public ICodingFramePhotoStore CodingFramePhotos => _dependencies.CodingFramePhotos;
+
+    public ICodingDefectPreviewRenderer CodingDefectPreviews => _dependencies.CodingDefectPreviews;
+
+    public ITeacherAnnotationStore TeacherAnnotations => _dependencies.TeacherAnnotations;
+
+    public IVsaYoloClassMapStore VsaYoloClasses => _dependencies.VsaYoloClasses;
+
+    public ITrainingSampleStore TrainingSamples => _dependencies.TrainingSamples;
+
+    public IDialogService Dialogs => _dependencies.Dialogs;
+
+    public ICodeUsageTracker CodeUsage => _dependencies.CodeUsage;
+
+    public ISidecarTelemetryWriter SidecarTelemetry => _dependencies.SidecarTelemetry;
 
     public ILoggerFactory? LoggerFactory => _dependencies.LoggerFactory;
 

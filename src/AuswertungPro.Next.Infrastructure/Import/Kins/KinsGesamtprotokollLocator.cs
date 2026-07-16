@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Kins;
@@ -8,14 +7,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Kins;
 /// </summary>
 public static class KinsGesamtprotokollLocator
 {
-    private static IKinsGesamtprotokollLocator _current = new KinsGesamtprotokollFileLocator();
+    private static readonly IKinsGesamtprotokollLocator Default =
+        new KinsGesamtprotokollFileLocator();
 
-    public static IKinsGesamtprotokollLocator Current => Volatile.Read(ref _current);
+    public static IKinsGesamtprotokollLocator Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IKinsGesamtprotokollLocator locator)
-        => Volatile.Write(
-            ref _current,
-            locator ?? throw new ArgumentNullException(nameof(locator)));
+        => throw new NotSupportedException(
+            "Die globale KINS-Gesamtprotokollsuche kann nicht mehr ausgetauscht werden. " +
+            "IKinsGesamtprotokollLocator bitte per Konstruktor uebergeben.");
 
     public static string? Finde(string sourceFolder)
         => Current.Finde(sourceFolder);

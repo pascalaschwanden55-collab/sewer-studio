@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
@@ -43,9 +44,9 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     private readonly Func<string?> _getProjectPath;
     private readonly IDialogService _dialogs;
     private readonly DashboardRefreshNotifier _dashboardRefresh;
-    private readonly CostCatalogStore _catalogStore = new();
-    private readonly MeasureTemplateStore _templateStore = new();
-    private readonly ProjectCostStoreRepository _costRepo = new("schacht_costs.json");
+    private readonly ICostCatalogStore _catalogStore;
+    private readonly IMeasureTemplateStore _templateStore;
+    private readonly IProjectCostStoreRepository _costRepo;
 
     private Dictionary<string, MeasureTemplate> _templates = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, CostCatalogItem> _catalog = new(StringComparer.OrdinalIgnoreCase);
@@ -73,7 +74,27 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             getProject: () => shell.Project,
             getProjectPath: () => services.Settings.LastProjectPath,
             dialogs: services.Dialogs,
-            dashboardRefresh: services.DashboardRefresh)
+            dashboardRefresh: services.DashboardRefresh,
+            catalogStore: services.CostStores.CreateCostCatalogStore(),
+            templateStore: services.CostStores.CreateMeasureTemplateStore(),
+            costRepo: services.CostStores.CreateProjectCostStore("schacht_costs.json"))
+    {
+    }
+
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
+    public SchachtSanierungsMatrixPageViewModel(
+        Func<Project> getProject,
+        Func<string?> getProjectPath,
+        IDialogService dialogs,
+        DashboardRefreshNotifier dashboardRefresh)
+        : this(
+            getProject,
+            getProjectPath,
+            dialogs,
+            dashboardRefresh,
+            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
+            CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_costs.json"))
     {
     }
 
@@ -81,12 +102,18 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         Func<Project> getProject,
         Func<string?> getProjectPath,
         IDialogService dialogs,
-        DashboardRefreshNotifier dashboardRefresh)
+        DashboardRefreshNotifier dashboardRefresh,
+        ICostCatalogStore catalogStore,
+        IMeasureTemplateStore templateStore,
+        IProjectCostStoreRepository costRepo)
     {
         _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
         _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
+        _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
+        _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
         Reload();
     }
 

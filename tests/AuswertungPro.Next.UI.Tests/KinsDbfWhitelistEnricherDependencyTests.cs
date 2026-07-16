@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class KinsDbfWhitelistEnricherDependencyTests
 {
     [Fact]
-    public void ServiceProvider_Fassade_und_EinKnopfImport_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_verdrahtet_KINS_DBF_Anreicherung_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -29,9 +29,16 @@ public sealed class KinsDbfWhitelistEnricherDependencyTests
             enricherField!.GetValue(orchestrator));
         Assert.Same(
             services.KinsDbfWhitelistEnrichment,
-            KinsDbfWhitelistEnricher.Current);
-        Assert.Same(
-            services.KinsDbfWhitelistEnrichment,
             services.GetService(typeof(IKinsDbfWhitelistEnricher)));
+
+        var before = KinsDbfWhitelistEnricher.Current;
+        var use = typeof(KinsDbfWhitelistEnricher).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.KinsDbfWhitelistEnrichment]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, KinsDbfWhitelistEnricher.Current);
     }
 }

@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -19,7 +20,10 @@ public sealed class SanierungsmassnahmenViewModelTests
             holding: "H-200",
             date: null,
             recommendedTokens: [],
-            projectPath: null);
+            projectPath: null,
+            catalogStore: new CostCatalogStore(),
+            templateStore: new MeasureTemplateStore(),
+            costRepo: new ProjectCostStoreRepository());
         var viewModel = new SanierungsmassnahmenViewModel(
             calculator,
             optimizationVm: null,
@@ -51,7 +55,10 @@ public sealed class SanierungsmassnahmenViewModelTests
             holding: "H-201",
             date: null,
             recommendedTokens: [],
-            projectPath: null);
+            projectPath: null,
+            catalogStore: new CostCatalogStore(),
+            templateStore: new MeasureTemplateStore(),
+            costRepo: new ProjectCostStoreRepository());
         var expected = calculator.Measures.First(measure => !measure.Disabled);
         var optimization = new SanierungOptimizationViewModel(
             record,

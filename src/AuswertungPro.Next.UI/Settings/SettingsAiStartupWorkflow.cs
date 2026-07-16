@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.UI.Services;
@@ -33,6 +34,32 @@ public static class SettingsAiStartupWorkflow
                 dialogs,
                 ui,
                 StartWithDefaultsAsync,
+                saveSettingsImmediate),
+            ct);
+
+    public static Task RunAsync(
+        AppSettings settings,
+        IDialogService dialogs,
+        SettingsAiStartupWorkflowUi ui,
+        Action saveSettingsImmediate,
+        IAiStartedProcessLifetime startedProcesses,
+        IAiPlatformSettingsResolver aiSettings,
+        ISidecarScriptLocator sidecarScripts,
+        ISidecarTokenResolver sidecarTokens,
+        CancellationToken ct = default)
+        => RunAsync(
+            new SettingsAiStartupWorkflowRequest(
+                settings,
+                dialogs,
+                ui,
+                (currentSettings, progress, token) => AiStartupService.StartAsync(
+                    currentSettings,
+                    startedProcesses,
+                    aiSettings,
+                    sidecarScripts,
+                    sidecarTokens,
+                    progress,
+                    token),
                 saveSettingsImmediate),
             ct);
 

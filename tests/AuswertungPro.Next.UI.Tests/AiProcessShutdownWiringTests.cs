@@ -27,11 +27,21 @@ public sealed class AiProcessShutdownWiringTests
 
         Assert.NotNull(lifetimeField);
         Assert.Same(services.AiStartedProcesses, lifetimeField!.GetValue(launcher));
-        Assert.Same(services.AiStartedProcesses, AiStartedProcessLifetime.Current);
         Assert.Same(
             services.AiStartedProcesses,
             services.GetService(typeof(IAiStartedProcessLifetime)));
         Assert.Contains("_services?.AiStartedProcesses.StopAllStartedProcesses()", appSource, StringComparison.Ordinal);
+        Assert.Contains("services.AiStartedProcesses,", appSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AiStartedProcessLifetime.StopAllStartedProcesses()", appSource, StringComparison.Ordinal);
+
+        var before = AiStartedProcessLifetime.Current;
+        var use = typeof(AiStartedProcessLifetime).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.AiStartedProcesses]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, AiStartedProcessLifetime.Current);
     }
 }

@@ -9,5 +9,13 @@ namespace AuswertungPro.Next.UI.Theme;
 /// </summary>
 public static class StatusColors
 {
-    public static IStatusColorService Current { get; set; } = new StatusColorService();
+    private static readonly IStatusColorService Default = new StatusColorService();
+
+    public static IStatusColorService Current
+    {
+        get => Default;
+        [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IStatusColorService direkt uebergeben.")]
+        set => throw new NotSupportedException(
+            "StatusColors.Current ist unveraenderlich. IStatusColorService direkt uebergeben.");
+    }
 }

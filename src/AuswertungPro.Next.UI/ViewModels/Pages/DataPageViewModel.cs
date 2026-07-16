@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
@@ -20,10 +21,10 @@ using System.Windows;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
-using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Player;
@@ -69,6 +70,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageSanierungWindowController _sanierungWindowController;
     private readonly DataPageProjectBindingController _projectBindingController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
+    private readonly ICostStoreFactory _costStores;
+    private readonly IProjectCostStoreRepository _projectCosts;
+    private readonly IMeasureTemplateStore _measureTemplates;
+    private readonly ITrainingCaseIdSource _trainingCases;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
     private readonly DataPageProtocolDocumentController _protocolDocumentController = new();
@@ -186,6 +191,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _videoStartErrorLogs = services.VideoStartErrorLogs;
         _explorerReveal = services.ExplorerReveal;
         _inspectionProtocolFiles = services.InspectionProtocolFiles;
+        _costStores = services.CostStores;
+        _projectCosts = _costStores.CreateProjectCostStore();
+        _measureTemplates = _costStores.CreateMeasureTemplateStore();
+        _trainingCases = services.TrainingCases;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _timers = new DataPageTimerController(
@@ -197,6 +206,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _protocolPdfExporter,
             () => _shell.GetProjectFolder(),
             services.PdfMerge,
+            _projectCosts,
             buildHydraulikCalculation: record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
@@ -256,8 +266,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _dialogs,
             () => Selected,
             () => _settings.LastProjectPath,
-            projectPath => new ProjectCostStoreRepository().Load(projectPath),
-            ProjectCostStoreRepository.GetStorePath,
+            _projectCosts.Load,
+            _projectCosts.GetStorePath,
             (record, cost) => ApplyCostsToRecord(record, cost, learn: false),
             _shell.SetStatus);
         _videoRelinkController = new DataPageVideoRelinkController(
@@ -706,6 +716,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             null,
             request.RecommendedTemplates,
             _settings.LastProjectPath,
+            _costStores.CreateCostCatalogStore(),
+            _costStores.CreateMeasureTemplateStore(),
+            _costStores.CreateProjectCostStore(),
             request.ApplyCosts,
             haltungRecord: request.Record,
             projectRecords: Records);
@@ -718,7 +731,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             var syncProjectPath = _settings.LastProjectPath;
             if (string.IsNullOrWhiteSpace(syncProjectPath))
                 return;
-            var syncStore = new ProjectCostStoreRepository().Load(syncProjectPath, out var syncLoadError);
+            var syncStore = _projectCosts.Load(syncProjectPath, out var syncLoadError);
             if (syncLoadError is null)
             {
                 _costFieldSynchronizer.Sync(_shell.Project, syncStore);
@@ -909,9 +922,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var store = new TrainingCenterStore();
-            var state = await store.LoadAsync();
-            _trainingCaseIndex.ReplaceCaseIds(state.Cases.Select(tc => tc.CaseId));
+            var caseIds = await _trainingCases.LoadCaseIdsAsync();
+            _trainingCaseIndex.ReplaceCaseIds(caseIds);
         }
         catch
         {

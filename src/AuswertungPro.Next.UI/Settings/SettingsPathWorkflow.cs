@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Common;
 
@@ -16,16 +15,11 @@ public sealed record SettingsOpenFolderRequest(
 
 public static class SettingsPathWorkflow
 {
-    private static IFolderOpenService _folderOpen = new FolderOpenService(new SafeShellOpenService());
+    private static readonly IFolderOpenService DefaultFolderOpen =
+        new FolderOpenService(new SafeShellOpenService());
 
     internal static IFolderOpenService CompatibilityService
-        => Volatile.Read(ref _folderOpen);
-
-    internal static void Use(IFolderOpenService folderOpen)
-    {
-        ArgumentNullException.ThrowIfNull(folderOpen);
-        Volatile.Write(ref _folderOpen, folderOpen);
-    }
+        => DefaultFolderOpen;
 
     public static string? SelectPdfToText(IDialogService dialogs)
         => dialogs.OpenFile(

@@ -118,41 +118,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         NavItems = new List<NavItem>
         {
-            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(
-                this,
-                settings: _sp.Settings,
-                dashboardRefresh: _sp.DashboardRefresh,
-                dialogs: _sp.Dialogs,
-                projects: _sp.Projects,
-                projectFileDiscovery: _sp.ProjectFileDiscovery,
-                projectDropPaths: _sp.ProjectDropPaths), canOpenWithoutProject: true),
-            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, dropdownOptions: _sp.DropdownOptions), canOpenWithoutProject: true),
+            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
-            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(
-                this,
-                settings: _sp.Settings,
-                dialogs: _sp.Dialogs,
-                schachtProtocolImport: _sp.SchachtProtocolImport,
-                schachtStammdatenErgaenzung: _sp.SchachtStammdatenErgaenzung,
-                schachtMassnahmenKatalog: _sp.SchachtMassnahmenKatalog,
-                dropdownOptions: _sp.DropdownOptions,
-                shaftRename: _sp.ShaftRename,
-                explorerReveal: _sp.ExplorerReveal,
-                templateColumnReader: _sp.SchaechteTemplateColumns,
-                schachtFileTargets: _sp.SchachtFileTargets)),
+            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
-            new("\uE898", "Export", () => new Pages.ExportPageViewModel(
-                this,
-                settings: _sp.Settings,
-                dialogs: _sp.Dialogs,
-                excelExport: _sp.ExcelExport,
-                toasts: _sp.Toasts,
-                costFieldSync: _sp.CostFieldSync,
-                patternResolver: _sp.DistributionPatterns,
-                directoryTreeResolver: _sp.DistributionDirectoryTree,
-                katasterXtfPaths: _sp.KatasterXtfPaths,
-                haltungCadastreIndexes: _sp.HaltungCadastreIndexes), canOpenWithoutProject: true),
+            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
             {
                 DataContext = new Pages.KarteViewModel(
@@ -179,27 +151,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 service: _sp.MediaConflictCenter,
                 setStatus: SetStatus,
                 playVideo: MediaConflictVideoLauncher.Create(_sp))),
-            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(
-                this,
-                settings: _sp.Settings,
-                dialogs: _sp.Dialogs,
-                protocolPdfExporter: _sp.ProtocolPdfExporter,
-                costFieldSync: _sp.CostFieldSync,
-                dossierPhotoAvailability: _sp.DossierPhotoAvailability,
-                inspectionProtocolFiles: _sp.InspectionProtocolFiles)),
-            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(
-                this,
-                settings: _sp.Settings,
-                dialogs: _sp.Dialogs,
-                costFieldSync: _sp.CostFieldSync,
-                dashboardRefresh: _sp.DashboardRefresh,
-                holding: null,
-                singleHoldingMode: false)),
-            new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(
-                getProject: () => Project,
-                getProjectPath: () => _sp.Settings.LastProjectPath,
-                dialogs: _sp.Dialogs,
-                dashboardRefresh: _sp.DashboardRefresh)),
+            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
+            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
+            new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
             new("\uE8AA", "Schattenauswertung", () => new Pages.SchattenauswertungPageViewModel(
                 getProject: () => Project,
@@ -234,7 +188,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 codexArtifactCleanup: _sp.CodexArtifactCleanup,
                 knowledgeBackup: _sp.KnowledgeBackup,
                 katasterXtfPaths: _sp.KatasterXtfPaths,
-                folderOpen: _sp.FolderOpen), canOpenWithoutProject: true)
+                folderOpen: _sp.FolderOpen,
+                programRootLocator: _sp.ProgramRootLocator), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 
@@ -443,10 +398,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             _navItemBeforeChange = null;
             SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(
                 this,
-                settings: _sp.Settings,
-                dialogs: _sp.Dialogs,
-                costFieldSync: _sp.CostFieldSync,
-                dashboardRefresh: _sp.DashboardRefresh,
+                _sp,
                 holding: holding,
                 singleHoldingMode: true,
                 targetRecord: targetRecord));
@@ -468,14 +420,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _navItemBeforeChange = null;
         CurrentMode = ShellMode.Launcher;
         ResetProjectReady();
-        SetCurrentPage(new Pages.OverviewPageViewModel(
-            this,
-            settings: _sp.Settings,
-            dashboardRefresh: _sp.DashboardRefresh,
-            dialogs: _sp.Dialogs,
-            projects: _sp.Projects,
-            projectFileDiscovery: _sp.ProjectFileDiscovery,
-            projectDropPaths: _sp.ProjectDropPaths));
+        SetCurrentPage(new Pages.OverviewPageViewModel(this, _sp));
     }
 
     /// <summary>„Neues Projekt": leeres Projekt + Infoblatt im Draft-Modus.</summary>
@@ -491,7 +436,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SelectedNavItem = null;
         _suppressLeaveGuard = false;
         CurrentMode = ShellMode.Draft;
-        SetCurrentPage(new Pages.ProjectPageViewModel(this, dropdownOptions: _sp.DropdownOptions));
+        SetCurrentPage(new Pages.ProjectPageViewModel(this, _sp));
     }
 
     /// <summary>Wechselt in den Arbeitsbereich und navigiert auf die Landeseite.</summary>
@@ -891,13 +836,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         // EIN Preis-Katalog: derselbe, den Kostenrechner und Sanierungs-Matrix nutzen
         // (cost_catalog.json über CostCatalogStore). Der alte PriceCatalogEditor wird
         // bewusst nicht mehr geöffnet, damit es nur einen anwendbaren Katalog gibt.
-        var dialog = new Dialogs.CostCatalogEditorDialog(_sp.Settings.LastProjectPath);
+        var dialog = new Dialogs.CostCatalogEditorDialog(
+            _sp.Settings.LastProjectPath,
+            _sp.CostStores.CreateCostCatalogStore());
         dialog.ShowDialog();
     }
 
     private void OpenTemplateEditor()
     {
-        var vm = new Windows.MeasureTemplateEditorViewModel(_sp.Settings.LastProjectPath, _sp.Dialogs);
+        var vm = new Windows.MeasureTemplateEditorViewModel(
+            _sp.Settings.LastProjectPath,
+            _sp.CostStores.CreateMeasureTemplateStore(),
+            _sp.CostStores.CreateCostCatalogStore(),
+            _sp.Dialogs);
         var window = new Views.Windows.MeasureTemplateEditorWindow
         {
             DataContext = vm

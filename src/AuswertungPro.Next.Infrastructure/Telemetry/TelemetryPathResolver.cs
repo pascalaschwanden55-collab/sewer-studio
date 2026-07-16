@@ -43,14 +43,15 @@ public static class TelemetryPathResolver
 {
     public const string TelemetryDirEnvVar = "SEWERSTUDIO_TELEMETRY_DIR";
 
-    private static ITelemetryPathResolver _current = new TelemetryFilePathResolver();
+    private static readonly ITelemetryPathResolver Default = new TelemetryFilePathResolver();
 
-    public static ITelemetryPathResolver Current => Volatile.Read(ref _current);
+    public static ITelemetryPathResolver Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITelemetryPathResolver resolver) =>
-        Volatile.Write(
-            ref _current,
-            resolver ?? throw new ArgumentNullException(nameof(resolver)));
+        throw new NotSupportedException(
+            "Die globale Telemetrie-Pfadsuche kann nicht mehr ausgetauscht werden. " +
+            "ITelemetryPathResolver bitte per Konstruktor uebergeben.");
 
     public static string? ResolveFile(string fileName) => Current.ResolveFile(fileName);
 }

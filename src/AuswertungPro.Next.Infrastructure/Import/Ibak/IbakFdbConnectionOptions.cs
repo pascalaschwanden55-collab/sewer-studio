@@ -86,14 +86,16 @@ public static class IbakFdbConnectionOptions
     public const string DefaultUser = "SYSDBA";
     public const string DefaultPassword = "masterkey";
 
-    private static IIbakFdbConnectionOptions _current = new IbakFdbConnectionOptionsService();
+    private static readonly IIbakFdbConnectionOptions Default =
+        new IbakFdbConnectionOptionsService();
 
-    public static IIbakFdbConnectionOptions Current => Volatile.Read(ref _current);
+    public static IIbakFdbConnectionOptions Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IIbakFdbConnectionOptions options) =>
-        Volatile.Write(
-            ref _current,
-            options ?? throw new ArgumentNullException(nameof(options)));
+        throw new NotSupportedException(
+            "Die globalen IBAK-Verbindungsoptionen koennen nicht mehr ausgetauscht werden. " +
+            "IIbakFdbConnectionOptions bitte per Konstruktor uebergeben.");
 
     public static FbConnectionStringBuilder CreateEmbedded(
         string databasePath,

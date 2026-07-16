@@ -29,9 +29,22 @@ public sealed class PdfFileSafetyDependencyTests
         Assert.NotNull(ocrSafety);
         Assert.Same(services.PdfFileSafety, textSafety!.GetValue(services.PdfTextExtraction));
         Assert.Same(services.PdfFileSafety, ocrSafety!.GetValue(services.PdfOcrExtraction));
-        Assert.Same(services.PdfFileSafety, PdfImportSafetyPolicy.Current);
         Assert.Same(
             services.PdfFileSafety,
             services.GetService(typeof(IPdfFileSafetyChecker)));
+    }
+
+    [Fact]
+    public void KompatibilitaetsFassade_kann_die_PdfPruefung_nicht_mehr_global_austauschen()
+    {
+        var before = PdfImportSafetyPolicy.Current;
+        var use = typeof(PdfImportSafetyPolicy).GetMethod(nameof(PdfImportSafetyPolicy.Use));
+
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(
+            () => use.Invoke(null, [new PdfFileSafetyService()]));
+
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, PdfImportSafetyPolicy.Current);
     }
 }

@@ -1,6 +1,7 @@
 using System.Net.Http;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -50,6 +51,14 @@ public static class SelfTrainingSessionController
             ? OllamaConfig.DefaultVisionModel
             : configuredModel;
 
+    internal static string ResolveFfmpegPath(
+        string? configuredPath,
+        ITrainingFfmpegPathResolver resolver)
+    {
+        ArgumentNullException.ThrowIfNull(resolver);
+        return resolver.Resolve(configuredPath);
+    }
+
     public static SelfTrainingSession Create(
         AiRuntimeSettings runtimeSettings,
         OllamaConfig retrievalConfig,
@@ -57,11 +66,38 @@ public static class SelfTrainingSessionController
         TrainingCenterSettings trainingSettings,
         AppSettings? appSettings,
         ICodeCatalogProvider? codeCatalog)
+        => Create(
+            runtimeSettings,
+            retrievalConfig,
+            kbHttpClient,
+            trainingSettings,
+            appSettings,
+            codeCatalog,
+            TrainingFfmpegPathResolver.CompatibilityService,
+            FrameStore.Current,
+            ProcessOutputReader.Current,
+            TrainingSamplesStore.Current);
+
+    internal static SelfTrainingSession Create(
+        AiRuntimeSettings runtimeSettings,
+        OllamaConfig retrievalConfig,
+        HttpClient kbHttpClient,
+        TrainingCenterSettings trainingSettings,
+        AppSettings? appSettings,
+        ICodeCatalogProvider? codeCatalog,
+        ITrainingFfmpegPathResolver ffmpegPathResolver,
+        ITrainingFrameStore frameStore,
+        IProcessOutputReader processOutputs,
+        ITrainingSampleStore trainingSamples)
     {
         ArgumentNullException.ThrowIfNull(runtimeSettings);
         ArgumentNullException.ThrowIfNull(retrievalConfig);
         ArgumentNullException.ThrowIfNull(kbHttpClient);
         ArgumentNullException.ThrowIfNull(trainingSettings);
+        ArgumentNullException.ThrowIfNull(ffmpegPathResolver);
+        ArgumentNullException.ThrowIfNull(frameStore);
+        ArgumentNullException.ThrowIfNull(processOutputs);
+        ArgumentNullException.ThrowIfNull(trainingSamples);
 
         var visionModel = ResolveVisionModel(runtimeSettings.VisionModel);
         var ollamaClient = new OllamaClient(
@@ -84,9 +120,12 @@ public static class SelfTrainingSessionController
             technique,
             pdfExtractor,
             trainingSettings,
-            TrainingFfmpegPathResolver.Resolve(runtimeSettings.FfmpegPath),
+            ResolveFfmpegPath(runtimeSettings.FfmpegPath, ffmpegPathResolver),
             retrieval,
-            evalHaltungen);
+            evalHaltungen,
+            frameStore,
+            processOutputs: processOutputs,
+            trainingSamples: trainingSamples);
 
         return new SelfTrainingSession(
             visionModel,

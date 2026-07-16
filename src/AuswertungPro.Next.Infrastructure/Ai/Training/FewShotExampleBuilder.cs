@@ -52,6 +52,7 @@ public sealed class FewShotExampleBuilder
 {
     private readonly FewShotExampleStore _store;
     private readonly PdfProtocolExtractor _pdfExtractor;
+    private readonly ITeacherAnnotationStore _teacherAnnotations;
 
     // Codes die KEINE Schadensbeispiele sind (Rohrstart/-ende, Beginn TV etc.)
     private static readonly HashSet<string> SkipCodes = new(StringComparer.OrdinalIgnoreCase)
@@ -77,10 +78,13 @@ public sealed class FewShotExampleBuilder
         @"Profil\s+(.+?)(?:\r|\n|$)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public FewShotExampleBuilder(FewShotExampleStore store)
+    public FewShotExampleBuilder(
+        FewShotExampleStore store,
+        ITeacherAnnotationStore? teacherAnnotations = null)
     {
         _store = store;
         _pdfExtractor = new PdfProtocolExtractor();
+        _teacherAnnotations = teacherAnnotations ?? TeacherAnnotationStore.Current;
     }
 
     /// <summary>
@@ -261,7 +265,7 @@ public sealed class FewShotExampleBuilder
         List<TeacherAnnotation> annotations;
         try
         {
-            annotations = await TeacherAnnotationStore.LoadAsync();
+            annotations = await _teacherAnnotations.LoadAsync();
         }
         catch
         {

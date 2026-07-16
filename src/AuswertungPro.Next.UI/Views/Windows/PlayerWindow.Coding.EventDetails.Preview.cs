@@ -9,7 +9,7 @@ public partial class PlayerWindow
     private void UpdateInlineEvidencePreview(CodingEvent ev)
     {
         CodingInlineEvidencePreviewWorkflow.Execute(
-            new CodingInlineEvidencePreviewWorkflowRequest(ev),
+            new CodingInlineEvidencePreviewWorkflowRequest(ev, _protocolContext.CodingDefectPreviews),
             new CodingInlineEvidencePreviewWorkflowActions(
                 ApplyPreview: ApplyInlineEvidencePreviewState,
                 TraceError: message => PlayerTrace.WriteLine(message)));

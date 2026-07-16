@@ -7,9 +7,11 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 using LegacyMeasureTemplate = AuswertungPro.Next.Domain.Models.Costs.MeasureTemplate;
 using LegacyMeasureTemplates = AuswertungPro.Next.Domain.Models.Costs.MeasureTemplates;
 using LegacyPriceItem = AuswertungPro.Next.Domain.Models.Costs.PriceItem;
@@ -25,8 +27,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         AllowTrailingCommas = true
     };
 
-    private readonly MeasureTemplateStore _templateStore;
-    private readonly CostCatalogStore _catalogStore;
+    private readonly IMeasureTemplateStore _templateStore;
+    private readonly ICostCatalogStore _catalogStore;
     private readonly IDialogService _dialogs;
     private readonly string? _projectPath;
     private readonly string _legacyTemplatePath;
@@ -51,6 +53,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     public IRelayCommand RemoveCatalogItemCommand { get; }
     public IRelayCommand SaveCatalogCommand { get; }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Vorlagen-Speicher injizieren.")]
     public MeasureTemplateEditorViewModel(
         string? projectPath = null,
         IDialogService? dialogs = null,
@@ -58,11 +61,28 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         CostCatalogStore? catalogStore = null,
         string? legacyTemplatePath = null,
         string? activeUserTemplatePath = null)
+        : this(
+            projectPath,
+            templateStore ?? CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
+            catalogStore ?? CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            dialogs,
+            legacyTemplatePath,
+            activeUserTemplatePath)
+    {
+    }
+
+    public MeasureTemplateEditorViewModel(
+        string? projectPath,
+        IMeasureTemplateStore templateStore,
+        ICostCatalogStore catalogStore,
+        IDialogService? dialogs = null,
+        string? legacyTemplatePath = null,
+        string? activeUserTemplatePath = null)
     {
         _projectPath = projectPath;
         _dialogs = dialogs ?? new DialogService();
-        _templateStore = templateStore ?? new MeasureTemplateStore();
-        _catalogStore = catalogStore ?? new CostCatalogStore();
+        _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
         _legacyTemplatePath = legacyTemplatePath ?? ResolveLegacyTemplatePath();
         _activeUserTemplatePath = activeUserTemplatePath ?? ResolveActiveUserTemplatePath();
 
@@ -90,9 +110,15 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         };
     }
 
-    [Obsolete("Nur fuer alten Test-/Aufrufer-Code. Der Editor nutzt intern MeasureTemplateStore/CostCatalogStore.")]
-    public MeasureTemplateEditorViewModel(Infrastructure.Costs.CostCalculationService _, IDialogService? dialogs = null)
-        : this(projectPath: null, dialogs: dialogs)
+    [Obsolete("Nur fuer alten Test-/Aufrufer-Code. Der Editor nutzt intern Application-Vertraege.")]
+    public MeasureTemplateEditorViewModel(
+        Infrastructure.Costs.CostCalculationService _,
+        IDialogService? dialogs = null)
+        : this(
+            projectPath: null,
+            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
+            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            dialogs)
     {
     }
 

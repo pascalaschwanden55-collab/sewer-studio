@@ -130,6 +130,7 @@ public partial class SchaechtePage : UserControl
             _vm.Settings,
             _vm.Dialogs,
             _vm.SchachtMassnahmenKatalog,
+            _vm.SchachtRecommendationCosts,
             this,
             MarkProjectDirty,
             ApplySearchFilter);

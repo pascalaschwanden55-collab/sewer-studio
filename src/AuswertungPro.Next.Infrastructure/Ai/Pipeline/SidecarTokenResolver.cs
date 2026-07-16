@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -10,14 +9,15 @@ public static class SidecarTokenResolver
 {
     public const string HeaderName = "X-Sidecar-Token";
 
-    private static ISidecarTokenResolver _current = new SidecarTokenFileResolver();
+    private static readonly ISidecarTokenResolver Default = new SidecarTokenFileResolver();
 
-    public static ISidecarTokenResolver Current => Volatile.Read(ref _current);
+    public static ISidecarTokenResolver Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ISidecarTokenResolver resolver)
-        => Volatile.Write(
-            ref _current,
-            resolver ?? throw new ArgumentNullException(nameof(resolver)));
+        => throw new NotSupportedException(
+            "Die globale Sidecar-Token-Aufloesung kann nicht mehr ausgetauscht werden. " +
+            "ISidecarTokenResolver bitte per Konstruktor uebergeben.");
 
     public static string? Resolve(string? configuredToken = null)
         => Current.Resolve(configuredToken);

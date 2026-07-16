@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
@@ -31,8 +32,14 @@ public static class TrainingApprovedProtocolExportRequestFactory
 {
     public static TrainingApprovedProtocolExportWorkflowRequest CreateWithDefaults(
         TrainingApprovedProtocolExportDefaultRequestFactoryRequest request)
+        => CreateWithDefaults(request, ProtocolTrainingStore.Current);
+
+    internal static TrainingApprovedProtocolExportWorkflowRequest CreateWithDefaults(
+        TrainingApprovedProtocolExportDefaultRequestFactoryRequest request,
+        IProtocolTrainingStore protocolTraining)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(protocolTraining);
 
         return CreateWithDefaults(new TrainingApprovedProtocolExportRequestFactoryRequest(
             request.GetIsBusy,
@@ -42,16 +49,26 @@ public static class TrainingApprovedProtocolExportRequestFactory
             request.PersistSamplesAsync,
             UtcNow: () => DateTime.UtcNow,
             request.Log,
-            request.SetStatusText));
+            request.SetStatusText),
+            protocolTraining);
     }
 
     public static TrainingApprovedProtocolExportWorkflowRequest CreateWithDefaults(
         TrainingApprovedProtocolExportRequestFactoryRequest request)
-        => Create(
+        => CreateWithDefaults(request, ProtocolTrainingStore.Current);
+
+    internal static TrainingApprovedProtocolExportWorkflowRequest CreateWithDefaults(
+        TrainingApprovedProtocolExportRequestFactoryRequest request,
+        IProtocolTrainingStore protocolTraining)
+    {
+        ArgumentNullException.ThrowIfNull(protocolTraining);
+
+        return Create(
             request,
             new TrainingApprovedProtocolExportRequestFactoryDefaults(
-                ProtocolTrainingStore.AddSample,
-                ProtocolTrainingStore.DefaultPath));
+                protocolTraining.AddSample,
+                protocolTraining.StoragePath));
+    }
 
     public static TrainingApprovedProtocolExportWorkflowRequest Create(
         TrainingApprovedProtocolExportRequestFactoryRequest request,

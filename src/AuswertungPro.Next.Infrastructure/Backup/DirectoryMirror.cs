@@ -38,12 +38,12 @@ public sealed class DirectoryMirror
         : this(
             versionsStandName,
             afterTemporaryFileWritten: null,
-            sqliteSnapshots: SqliteSnapshotCopier.Current)
+            sqliteSnapshots: new SqliteSnapshotCopyService())
     {
     }
 
     internal DirectoryMirror(string? versionsStandName, Action<string>? afterTemporaryFileWritten)
-        : this(versionsStandName, afterTemporaryFileWritten, SqliteSnapshotCopier.Current)
+        : this(versionsStandName, afterTemporaryFileWritten, new SqliteSnapshotCopyService())
     {
     }
 

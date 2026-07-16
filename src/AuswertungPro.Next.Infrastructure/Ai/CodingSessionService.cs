@@ -24,18 +24,21 @@ public sealed class CodingSessionService : ICodingSessionService
     private readonly Func<OllamaConfig?> _ollamaConfigProvider;
     private readonly Func<IReadOnlySet<string>> _evalHashesProvider;
     private readonly Func<IReadOnlySet<string>> _evalHaltungKeysProvider;
+    private readonly ITrainingSampleStore _trainingSamples;
     private CodingSession? _session;
 
     public CodingSessionService(
         Func<OllamaConfig?>? ollamaConfigProvider = null,
         Func<IReadOnlySet<string>>? evalHashesProvider = null,
-        Func<IReadOnlySet<string>>? evalHaltungKeysProvider = null)
+        Func<IReadOnlySet<string>>? evalHaltungKeysProvider = null,
+        ITrainingSampleStore? trainingSamples = null)
     {
         _ollamaConfigProvider = ollamaConfigProvider ?? (() => null);
         _evalHashesProvider = evalHashesProvider
             ?? (() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         _evalHaltungKeysProvider = evalHaltungKeysProvider
             ?? (() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        _trainingSamples = trainingSamples ?? TrainingSamplesStore.Current;
     }
 
     // --- Session-Lifecycle ---
@@ -276,7 +279,7 @@ public sealed class CodingSessionService : ICodingSessionService
             if (samples.Count > 0)
             {
                 ct.ThrowIfCancellationRequested();
-                await TrainingSamplesStore.MergeAndSaveAsync(samples).ConfigureAwait(false);
+                await _trainingSamples.MergeAndSaveAsync(samples).ConfigureAwait(false);
 
                 // KB-Indexierung weiterhin fire-and-forget (optional, nicht kritisch)
                 _ = IndexApprovedSamplesToKbAsync(samples);
@@ -373,7 +376,7 @@ public sealed class CodingSessionService : ICodingSessionService
             // Status zurueck in die JSON (Merge, kein Voll-Save -> kein Ueberschreiben paralleler Writes).
             if (touched.Count > 0)
             {
-                try { await TrainingSamplesStore.MergeOrUpdateAsync(touched); }
+                try { await _trainingSamples.MergeOrUpdateAsync(touched); }
                 catch (Exception ex)
                 {
                     BestEffort.ReportWarning(

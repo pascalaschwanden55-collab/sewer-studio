@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
 
-public sealed class ProjectCostStoreRepository
+public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -96,6 +97,9 @@ public sealed class ProjectCostStoreRepository
     /// <summary>Pfad des Standard-Haltungs-Stores (costs.json). Rueckwaertskompatibel.</summary>
     public static string GetStorePath(string projectDir)
         => Path.Combine(projectDir, "costs", "costs.json");
+
+    string IProjectCostStoreRepository.GetStorePath(string projectDirectory)
+        => ResolveStorePath(projectDirectory);
 
     // Pfad dieser Repo-Instanz (Haltungen: costs.json, Schaechte: schacht_costs.json).
     private string ResolveStorePath(string projectDir)

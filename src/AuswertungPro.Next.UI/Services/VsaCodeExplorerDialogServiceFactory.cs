@@ -4,13 +4,14 @@ namespace AuswertungPro.Next.UI.Services;
 
 public static class VsaCodeExplorerDialogServiceFactory
 {
-    public static VsaCodeExplorerDialogService Create()
+    public static VsaCodeExplorerDialogService Create(ICodeUsageTracker? codeUsage = null)
         => new(request =>
         {
             var dialog = new VsaCodeExplorerWindow(
                 request.ViewModel,
                 request.VideoPath,
-                request.CurrentVideoTime)
+                request.CurrentVideoTime,
+                codeUsage)
             {
                 Owner = request.Owner,
                 LiveSnapshotProvider = request.LiveSnapshotProvider

@@ -75,10 +75,15 @@ public sealed class DistributionPdfPageReadingService : IDistributionPdfPageRead
 /// <summary>Kompatible Fassade fuer bestehende statische Verteiler-Aufrufe.</summary>
 public static class DistributionPdfPageReader
 {
-    private static IDistributionPdfPageReader _current = new DistributionPdfPageReadingService();
+    private static readonly IDistributionPdfPageReader Default = new DistributionPdfPageReadingService();
 
-    public static IDistributionPdfPageReader Current => Volatile.Read(ref _current);
+    public static IDistributionPdfPageReader Current => Default;
 
-    public static void Use(IDistributionPdfPageReader reader) =>
-        Volatile.Write(ref _current, reader ?? throw new ArgumentNullException(nameof(reader)));
+    [Obsolete("Die Verteil-PDF-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(IDistributionPdfPageReader reader)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        throw new NotSupportedException(
+            "Die Verteil-PDF-Fassade kann nicht mehr global ersetzt werden.");
+    }
 }

@@ -7,14 +7,17 @@ namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 /// </summary>
 public static class ShaftPdfSelectionExpander
 {
-    private static IShaftPdfSelectionExpander _current = new ShaftPdfSelectionExpansionService();
+    private static readonly IShaftPdfSelectionExpander Default = new ShaftPdfSelectionExpansionService();
 
-    public static IShaftPdfSelectionExpander Current => Volatile.Read(ref _current);
+    public static IShaftPdfSelectionExpander Current => Default;
 
+    [Obsolete("Die Schacht-PDF-Auswahl-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IShaftPdfSelectionExpander expander)
-        => Volatile.Write(
-            ref _current,
-            expander ?? throw new ArgumentNullException(nameof(expander)));
+    {
+        ArgumentNullException.ThrowIfNull(expander);
+        throw new NotSupportedException(
+            "Die Schacht-PDF-Auswahl-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static List<string> Expand(IReadOnlyList<string> selectedPdfFiles)
         => Current.Expand(selectedPdfFiles).ToList();

@@ -7,14 +7,17 @@ namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 /// </summary>
 public static class DistributionFileTransfer
 {
-    private static IDistributionFileTransfer _current = new DistributionFileTransferService();
+    private static readonly IDistributionFileTransfer Default = new DistributionFileTransferService();
 
-    public static IDistributionFileTransfer Current => Volatile.Read(ref _current);
+    public static IDistributionFileTransfer Current => Default;
 
+    [Obsolete("Die Dateiuebertragungs-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IDistributionFileTransfer transfer)
-        => Volatile.Write(
-            ref _current,
-            transfer ?? throw new ArgumentNullException(nameof(transfer)));
+    {
+        ArgumentNullException.ThrowIfNull(transfer);
+        throw new NotSupportedException(
+            "Die Dateiuebertragungs-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static string EnsureUniquePath(string path, bool overwrite)
         => Current.EnsureUniquePath(path, overwrite);

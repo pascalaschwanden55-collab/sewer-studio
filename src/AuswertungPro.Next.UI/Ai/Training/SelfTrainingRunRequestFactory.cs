@@ -1,6 +1,8 @@
 using System.Net.Http;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -40,15 +42,52 @@ public sealed record SelfTrainingRunRequestFactoryDefaults(
 public static class SelfTrainingRunRequestFactory
 {
     public static SelfTrainingRunWorkflowRequest CreateWithDefaults(SelfTrainingRunRequestFactoryRequest request)
-        => Create(
+        => CreateWithDefaults(
+            request,
+            TrainingFfmpegPathResolver.CompatibilityService,
+            TrainingCenterSettingsStore.Current,
+            SelfTrainingHistoryStore.Current,
+            FrameStore.Current,
+            ProcessOutputReader.Current,
+            TrainingSamplesStore.Current);
+
+    internal static SelfTrainingRunWorkflowRequest CreateWithDefaults(
+        SelfTrainingRunRequestFactoryRequest request,
+        ITrainingFfmpegPathResolver trainingFfmpegPaths,
+        ITrainingCenterSettingsStore trainingSettings,
+        ISelfTrainingHistoryStore selfTrainingHistory,
+        ITrainingFrameStore trainingFrames,
+        IProcessOutputReader processOutputs,
+        ITrainingSampleStore trainingSamples)
+    {
+        ArgumentNullException.ThrowIfNull(trainingFfmpegPaths);
+        ArgumentNullException.ThrowIfNull(trainingSettings);
+        ArgumentNullException.ThrowIfNull(selfTrainingHistory);
+        ArgumentNullException.ThrowIfNull(trainingFrames);
+        ArgumentNullException.ThrowIfNull(processOutputs);
+        ArgumentNullException.ThrowIfNull(trainingSamples);
+
+        return Create(
             request,
             new SelfTrainingRunRequestFactoryDefaults(
                 BeginActivity: () => AiActivityTracker.Begin("Selbsttraining"),
-                PrepareRuntimeAsync: SelfTrainingRuntimeSetupController.PrepareWithDefaultsAsync,
-                AppendHistoryAsync: SelfTrainingHistoryStore.AppendRunAsync,
-                LoadSamplesAsync: TrainingSamplesStore.LoadAsync,
-                MergeOrUpdateSamplesAsync: TrainingSamplesStore.MergeOrUpdateAsync,
+                PrepareRuntimeAsync: (getHttp, setHttp, appSettings, codeCatalog, log) =>
+                    SelfTrainingRuntimeSetupController.PrepareWithDefaultsAsync(
+                        getHttp,
+                        setHttp,
+                        appSettings,
+                        codeCatalog,
+                        log,
+                        trainingFfmpegPaths,
+                        trainingSettings,
+                        trainingFrames,
+                        processOutputs,
+                        trainingSamples),
+                AppendHistoryAsync: selfTrainingHistory.AppendRunAsync,
+                LoadSamplesAsync: trainingSamples.LoadAsync,
+                MergeOrUpdateSamplesAsync: trainingSamples.MergeOrUpdateAsync,
                 UtcNow: () => DateTime.UtcNow));
+    }
 
     public static SelfTrainingRunWorkflowRequest Create(
         SelfTrainingRunRequestFactoryRequest request,

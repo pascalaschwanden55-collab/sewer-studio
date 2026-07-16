@@ -4,6 +4,8 @@ using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.QgisBridge;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +14,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class KatasterXtfPathResolverDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Kataster_Pfadsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -21,14 +23,16 @@ public sealed class KatasterXtfPathResolverDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.KatasterXtfPaths, KatasterXtfPathResolver.CompatibilityService);
         Assert.Same(
             services.KatasterXtfPaths,
             services.GetService(typeof(IKatasterXtfPathResolver)));
+        Assert.Null(typeof(KatasterXtfPathResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Fact]
-    public void Kataster_Index_und_Exportseite_verwenden_den_zentralen_Dienst()
+    public void Kataster_Dienste_sind_direkt_verdrahtet_und_Fassaden_bleiben_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -36,9 +40,11 @@ public sealed class KatasterXtfPathResolverDependencyTests
             new DiagnosticsOptions(),
             loggerFactory.CreateLogger("test"),
             loggerFactory);
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var exportPage = new ExportPageViewModel(shell, services);
 
-        Assert.Same(services.HaltungCadastreIndexes, HaltungCadastreIndex.CurrentProvider);
-        Assert.Same(services.HaltungCadastreTables, HaltungCadastreExtractor.Current);
         Assert.Same(
             services.HaltungCadastreTables,
             services.GetService(typeof(IHaltungCadastreTableStore)));
@@ -51,6 +57,27 @@ public sealed class KatasterXtfPathResolverDependencyTests
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(field);
         Assert.Equal(typeof(IHaltungCadastreIndexProvider), field!.FieldType);
+        Assert.Same(services.HaltungCadastreIndexes, field.GetValue(exportPage));
+
+        var tableBefore = HaltungCadastreExtractor.Current;
+        var tableUse = typeof(HaltungCadastreExtractor).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(tableUse);
+        var tableError = Assert.Throws<TargetInvocationException>(() =>
+            tableUse!.Invoke(null, [services.HaltungCadastreTables]));
+        Assert.IsType<NotSupportedException>(tableError.InnerException);
+        Assert.Same(tableBefore, HaltungCadastreExtractor.Current);
+
+        var indexBefore = HaltungCadastreIndex.CurrentProvider;
+        var indexUse = typeof(HaltungCadastreIndex).GetMethod(
+            "UseProvider",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(indexUse);
+        var indexError = Assert.Throws<TargetInvocationException>(() =>
+            indexUse!.Invoke(null, [services.HaltungCadastreIndexes]));
+        Assert.IsType<NotSupportedException>(indexError.InnerException);
+        Assert.Same(indexBefore, HaltungCadastreIndex.CurrentProvider);
     }
 
     [Theory]

@@ -1,3 +1,4 @@
+using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI.Ai.Training;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class TrainingPreviewFrameExtractorDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_VorschauFassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Trainingsvorschau_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -20,6 +21,8 @@ public sealed class TrainingPreviewFrameExtractorDependencyTests
         Assert.Same(
             services.TrainingPreviewFrames,
             services.GetService(typeof(ITrainingPreviewFrameExtractor)));
-        Assert.Same(services.TrainingPreviewFrames, TrainingPreviewFrameExtractor.Current);
+        Assert.Null(typeof(TrainingPreviewFrameExtractor).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public));
     }
 }

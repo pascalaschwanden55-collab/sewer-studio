@@ -28,9 +28,21 @@ public sealed class PdfTextExtractorDependencyTests
 
         Assert.NotNull(extractorField);
         Assert.Same(services.PdfTextExtraction, extractorField!.GetValue(importService));
-        Assert.Same(services.PdfTextExtraction, PdfTextExtractor.Current);
         Assert.Same(
             services.PdfTextExtraction,
             services.GetService(typeof(IPdfTextExtractor)));
+    }
+
+    [Fact]
+    public void Statische_PdfTextFassade_ist_unveraenderbar()
+    {
+        var before = PdfTextExtractor.Current;
+        var use = typeof(PdfTextExtractor).GetMethod(nameof(PdfTextExtractor.Use));
+
+        var error = Assert.Throws<TargetInvocationException>(
+            () => use!.Invoke(null, [new PdfTextExtractionService()]));
+
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, PdfTextExtractor.Current);
     }
 }

@@ -60,6 +60,8 @@ public sealed class PlayerWindowProtocolContextTests
         Assert.Null(context.CodeSelectionCatalog);
         Assert.Null(context.PipelineConfig);
         Assert.Null(context.ProtocolPdfExporter);
+        Assert.NotNull(context.CodingDefectPreviews);
+        Assert.NotNull(context.Dialogs);
         Assert.Null(context.LoggerFactory);
         Assert.Null(context.LastProjectPath);
         Assert.Null(context.LegacyServiceProvider);

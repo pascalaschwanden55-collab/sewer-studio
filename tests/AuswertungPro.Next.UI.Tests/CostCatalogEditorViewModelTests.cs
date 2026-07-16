@@ -18,7 +18,7 @@ public sealed class CostCatalogEditorViewModelTests
             var store = new CostCatalogStore(overridePath);
             var dialogs = new DialogFake();
             var window = CreateTestWindow();
-            var viewModel = new CostCatalogEditorViewModel(null, window, dialogs, store);
+            var viewModel = new CostCatalogEditorViewModel(null, window, store, dialogs);
             viewModel.AddCommand.Execute(null);
             var expectedKey = viewModel.SelectedItem!.Key;
             viewModel.SelectedItem.Name = "Gepruefte Testposition";
@@ -48,7 +48,7 @@ public sealed class CostCatalogEditorViewModelTests
             var store = new CostCatalogStore(overridePath);
             var dialogs = new DialogFake();
             var window = CreateTestWindow();
-            var viewModel = new CostCatalogEditorViewModel(null, window, dialogs, store);
+            var viewModel = new CostCatalogEditorViewModel(null, window, store, dialogs);
             var remainedOpen = false;
             window.Loaded += (_, _) =>
             {

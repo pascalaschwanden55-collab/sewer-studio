@@ -35,21 +35,35 @@ public interface ILiveDetectionTrainingAnnotationWriter
 public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTrainingAnnotationWriter
 {
     private readonly LiveDetectionTrainingFrameExporter _frameExporter;
+    private readonly LiveDetectionTrainingExportPlanner _exportPlanner;
     private readonly Func<string> _annotationIdFactory;
     private readonly Func<TeacherAnnotation, Task> _appendAsync;
 
     public LiveDetectionTrainingAnnotationWriter(
         LiveDetectionTrainingFrameExporter frameExporter,
         Func<string>? annotationIdFactory = null,
-        Func<TeacherAnnotation, Task>? appendAsync = null)
+        Func<TeacherAnnotation, Task>? appendAsync = null,
+        LiveDetectionTrainingExportPlanner? exportPlanner = null)
     {
-        _frameExporter = frameExporter;
+        _frameExporter = frameExporter ?? throw new ArgumentNullException(nameof(frameExporter));
+        _exportPlanner = exportPlanner
+            ?? new LiveDetectionTrainingExportPlanner(InfraTeacher.VsaYoloClassMap.Current);
         _annotationIdFactory = annotationIdFactory ?? LiveDetectionTrainingExportPlanner.CreateAnnotationId;
         _appendAsync = appendAsync ?? (annotation => InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation));
     }
 
-    public static LiveDetectionTrainingAnnotationWriter CreateDefault()
-        => new(new LiveDetectionTrainingFrameExporter(TrainingAnnotationExportServiceFactory.Create()));
+    public static LiveDetectionTrainingAnnotationWriter CreateDefault(
+        ITeacherAnnotationStore? annotationStore = null,
+        IVsaYoloClassMapStore? yoloClasses = null)
+    {
+        var annotations = annotationStore ?? InfraTeacher.TeacherAnnotationStore.Current;
+        var classMap = yoloClasses ?? InfraTeacher.VsaYoloClassMap.Current;
+        return new LiveDetectionTrainingAnnotationWriter(
+            new LiveDetectionTrainingFrameExporter(
+                TrainingAnnotationExportServiceFactory.Create(annotations)),
+            appendAsync: annotation => annotations.AppendAsync(annotation),
+            exportPlanner: new LiveDetectionTrainingExportPlanner(classMap));
+    }
 
     public async Task<TeacherAnnotation> SaveAcceptedAsync(
         byte[] frameBytes,
@@ -58,7 +72,7 @@ public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTraini
         CancellationToken ct = default)
     {
         var annotationId = _annotationIdFactory();
-        var exportPlan = LiveDetectionTrainingExportPlanner.BuildAccepted(finding, annotationId);
+        var exportPlan = _exportPlanner.PlanAccepted(finding, annotationId);
         var exportResult = await _frameExporter.ExportAsync(
             frameBytes,
             exportPlan.BoundingBox,
@@ -87,7 +101,7 @@ public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTraini
         CancellationToken ct = default)
     {
         var annotationId = _annotationIdFactory();
-        var exportPlan = LiveDetectionTrainingExportPlanner.BuildCorrected(sourceFinding, selectedEntry.Code, annotationId);
+        var exportPlan = _exportPlanner.PlanCorrected(sourceFinding, selectedEntry.Code, annotationId);
         var exportResult = await _frameExporter.ExportAsync(
             frameBytes,
             exportPlan.BoundingBox,
@@ -126,7 +140,7 @@ public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTraini
             frameBytes,
             boundingBox,
             selectedEntry.Code,
-            InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code),
+            _exportPlanner.GetClassId(selectedEntry.Code),
             $"mark_{annotationId}",
             annotationId,
             ct);

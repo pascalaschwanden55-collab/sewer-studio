@@ -7,12 +7,17 @@ public sealed record PdfTextExtraction(IReadOnlyList<string> Pages, string FullT
 /// <summary>Kompatible statische API; die Datei- und Prozessarbeit liegt im Instanzdienst.</summary>
 public static class PdfTextExtractor
 {
-    private static IPdfTextExtractor _current = new PdfTextExtractionService();
+    private static readonly IPdfTextExtractor Default = new PdfTextExtractionService();
 
-    public static IPdfTextExtractor Current => Volatile.Read(ref _current);
+    public static IPdfTextExtractor Current => Default;
 
+    [Obsolete("Die PDF-Text-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IPdfTextExtractor extractor)
-        => Volatile.Write(ref _current, extractor ?? throw new ArgumentNullException(nameof(extractor)));
+    {
+        ArgumentNullException.ThrowIfNull(extractor);
+        throw new NotSupportedException(
+            "Die PDF-Text-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static string FindPdfToTextPath(string? explicitPath = null)
         => Current.FindPdfToTextPath(explicitPath);

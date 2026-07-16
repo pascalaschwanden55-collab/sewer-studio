@@ -126,7 +126,7 @@ namespace AuswertungPro.Next.UI
                     ExplicitPdfToTextPath = settings.PdfToTextPath
                 };
 
-                _services = new ServiceProvider(
+                var services = _services = new ServiceProvider(
                     settings,
                     diagnostics,
                     logger,
@@ -134,7 +134,6 @@ namespace AuswertungPro.Next.UI
                     settingsQuarantine,
                     settingsMigration,
                     katasterXtfPaths);
-                DialogHost.Configure(_services.Dialogs);
                 var splashReadyTask = splash.SignalReadyAsync();
 
                 // Global exception handling (after services initialized, but before first window).
@@ -187,7 +186,7 @@ namespace AuswertungPro.Next.UI
                         loggerFactory.CreateLogger<QgisBridgeServer>());
                 }
                 if (settings.AiStartOnProgramStart)
-                    _ = StartAiOnStartupAsync(settings, logger, mainWindow);
+                    _ = StartAiOnStartupAsync(services, logger, mainWindow);
 
                 // Splash erst ausblenden, wenn der Fortschrittsbalken durchgelaufen ist –
                 // sonst wird die Startanimation bei schnellem Start abgeschnitten.
@@ -289,15 +288,23 @@ namespace AuswertungPro.Next.UI
             return tcs.Task;
         }
 
-        private static async Task StartAiOnStartupAsync(AppSettings settings, ILogger logger, Window mainWindow)
+        private static async Task StartAiOnStartupAsync(
+            ServiceProvider services,
+            ILogger logger,
+            Window mainWindow)
         {
             if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shell)
                 shell.SetStatus("Starte KI...");
 
             try
             {
-                var result = await AiStartupService.StartAsync(settings);
-                settings.SaveImmediate();
+                var result = await AiStartupService.StartAsync(
+                    services.Settings,
+                    services.AiStartedProcesses,
+                    services.AiSettings,
+                    services.SidecarScripts,
+                    services.SidecarTokens);
+                services.Settings.SaveImmediate();
                 logger.LogInformation("KI-Autostart abgeschlossen: {Summary}", result.Summary);
 
                 if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shellAfter)

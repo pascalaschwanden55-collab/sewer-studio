@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
@@ -20,11 +21,15 @@ public sealed class CodingTrainingSamplesOwner
 
     public static CodingTrainingSamplesOwner CreateDefault(
         Func<ICodingSessionService?> sessionProvider,
-        AppSettings? settings)
+        AppSettings? settings,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(sessionProvider);
 
         return new CodingTrainingSamplesOwner(
-            () => CodingTrainingSamplePersistenceCoordinator.CreateDefault(sessionProvider, settings));
+            () => CodingTrainingSamplePersistenceCoordinator.CreateDefault(
+                sessionProvider,
+                settings,
+                trainingSamples));
     }
 }

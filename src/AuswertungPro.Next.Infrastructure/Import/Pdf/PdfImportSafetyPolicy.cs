@@ -7,7 +7,7 @@ public sealed record PdfSafetyCheck(bool Allowed, string? Message);
 
 public static class PdfImportSafetyPolicy
 {
-    private static IPdfFileSafetyChecker _current = new PdfFileSafetyService();
+    private static readonly IPdfFileSafetyChecker Default = new PdfFileSafetyService();
 
     // Workstation-tauglicher Default (2 GB): grosse GEP-/SchachtPro-Gesamtauszuege mit
     // Vollbild-Fotos (~1 GB) muessen in voller Qualitaet importierbar sein. Bleibt eine
@@ -29,10 +29,12 @@ public static class PdfImportSafetyPolicy
     /// </summary>
     public const string MaxPagesEnvVar = "SEWERSTUDIO_MAX_PDF_PAGES";
 
-    public static IPdfFileSafetyChecker Current => Volatile.Read(ref _current);
+    public static IPdfFileSafetyChecker Current => Default;
 
+    [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IPdfFileSafetyChecker direkt uebergeben.")]
     public static void Use(IPdfFileSafetyChecker checker)
-        => Volatile.Write(ref _current, checker ?? throw new ArgumentNullException(nameof(checker)));
+        => throw new NotSupportedException(
+            "PdfImportSafetyPolicy ist unveraenderlich. IPdfFileSafetyChecker direkt uebergeben.");
 
     /// <summary>
     /// Aufgeloestes Byte-Budget: Override aus <see cref="MaxBytesEnvVar"/> (in MB), sonst Default.

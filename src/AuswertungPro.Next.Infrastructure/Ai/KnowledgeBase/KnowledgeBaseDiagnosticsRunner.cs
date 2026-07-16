@@ -11,7 +11,9 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-public sealed class KnowledgeBaseDiagnosticsRunner(string? dbPath = null) : IKnowledgeBaseDiagnosticsRunner
+public sealed class KnowledgeBaseDiagnosticsRunner(
+    string? dbPath = null,
+    ITrainingSampleStore? trainingSamples = null) : IKnowledgeBaseDiagnosticsRunner
 {
     public async Task<KnowledgeBaseStatusReport> ReadStatusAsync(int topCodes = 20, CancellationToken ct = default)
     {
@@ -29,7 +31,8 @@ public sealed class KnowledgeBaseDiagnosticsRunner(string? dbPath = null) : IKno
         var newCount = 0;
         try
         {
-            var samples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+            var samples = await (trainingSamples ?? TrainingSamplesStore.Current)
+                .LoadAsync().ConfigureAwait(false);
             foreach (var sample in samples)
             {
                 if (sample.KbIndexState == KbIndexState.Error)

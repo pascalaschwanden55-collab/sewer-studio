@@ -28,9 +28,22 @@ public sealed class PdfOcrExtractorDependencyTests
 
         Assert.NotNull(extractorField);
         Assert.Same(services.PdfOcrExtraction, extractorField!.GetValue(importService));
-        Assert.Same(services.PdfOcrExtraction, PdfOcrExtractor.Current);
         Assert.Same(
             services.PdfOcrExtraction,
             services.GetService(typeof(IPdfOcrExtractor)));
+    }
+
+    [Fact]
+    public void Statische_PdfOcrFassade_ist_unveraenderbar()
+    {
+        var before = PdfOcrExtractor.Current;
+        var use = typeof(PdfOcrExtractor).GetMethod(nameof(PdfOcrExtractor.Use));
+        var replacement = new PdfOcrExtractionService(new PdfTextExtractionService());
+
+        var error = Assert.Throws<TargetInvocationException>(
+            () => use!.Invoke(null, [replacement]));
+
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, PdfOcrExtractor.Current);
     }
 }

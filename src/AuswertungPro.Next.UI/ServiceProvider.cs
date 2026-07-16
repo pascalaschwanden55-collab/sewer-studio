@@ -73,7 +73,7 @@ namespace AuswertungPro.Next.UI
     /// <summary>
     /// Minimaler DI-Container (damit kein extra Hosting-Paket nötig ist).
     /// </summary>
-    public sealed class ServiceProvider : IServiceProvider
+    public sealed partial class ServiceProvider : IServiceProvider
     {
         // Ein langlebiger Client fuer den optionalen Import-Schiedsrichter. HttpClient ist
         // thread-sicher und soll nicht bei jedem Import neu erzeugt werden.
@@ -124,6 +124,7 @@ namespace AuswertungPro.Next.UI
         public AuswertungPro.Next.Application.Common.IEtaCalculator CreateEtaCalculator() => new AuswertungPro.Next.Application.Common.EtaCalculator();
         public DashboardRefreshNotifier DashboardRefresh { get; } = new();
         public IDropdownOptionsStore DropdownOptions { get; }
+        public ICostStoreFactory CostStores { get; }
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
         public IHaltungCadastreTableStore HaltungCadastreTables { get; }
         public IHaltungCadastreIndexProvider HaltungCadastreIndexes { get; }
@@ -277,11 +278,12 @@ namespace AuswertungPro.Next.UI
         public IAiSanierungOptimizationFactory SanierungOptimizations { get; }
         internal DataPage.IDataPageWindowLauncher DataPageWindows { get; }
         public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
+        public ITrainingCaseIdSource TrainingCases { get; }
         public TrainingCenterImportService TrainingCenterImport { get; } = new();
         public ReviewQueueService TrainingReviewQueue => _trainingReviewQueue.Value;
 
         public TrainingReviewSamSegmentationService CreateTrainingReviewSam()
-            => new(new VisionPipelineTrainingReviewSamClient(PipelineCfg));
+            => new(new VisionPipelineTrainingReviewSamClient(PipelineCfg, SidecarTelemetry));
 
         public FewShotExampleStore CreateFewShotStore()
             => new(message => Logger.LogWarning("{Message}", message));
@@ -319,58 +321,35 @@ namespace AuswertungPro.Next.UI
             SettingsMigration = settingsMigration
                 ?? throw new ArgumentNullException(nameof(settingsMigration));
             KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
-            Mapping.KatasterXtfPathResolver.Use(KatasterXtfPaths);
             HaltungCadastreTables = new HaltungCadastreTableFileStore();
-            HaltungCadastreExtractor.Use(HaltungCadastreTables);
             HaltungCadastreIndexes = new HaltungCadastreIndexProvider(HaltungCadastreTables);
-            HaltungCadastreIndex.UseProvider(HaltungCadastreIndexes);
             OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
-            Mapping.OfflineBasemapBaseResolver.Use(OfflineBasemapPaths);
             BasemapLayers = new Mapping.KarteBasemapLayerService();
-            Mapping.KarteBasemapLayerFactory.Use(BasemapLayers);
             VsaCatalogPaths = new VsaCatalogFilePathResolver();
-            Services.VsaCatalogPathResolver.Use(VsaCatalogPaths);
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
             ShellOpen = new SafeShellOpenService();
-            Services.SafeShellOpen.Use(ShellOpen);
             FolderOpen = new FolderOpenService(ShellOpen);
-            AuswertungPro.Next.UI.Settings.SettingsPathWorkflow.Use(FolderOpen);
             ProgramRootLocator = new ProgramRootFileLocator();
-            SettingsProgramCleanupRequestFactory.Use(ProgramRootLocator);
             RepositoryRootLocator = new RepositoryRootFileLocator();
-            RepoRootLocator.Use(RepositoryRootLocator);
             FfmpegExecutables = new FfmpegFileLocator();
-            FfmpegLocator.Use(FfmpegExecutables);
             ProcessOutputs = new ProcessOutputReaderService();
-            ProcessOutputReader.Use(ProcessOutputs);
             VideoFrameExtraction = new VideoFrameExtractionService(ProcessOutputs);
-            VideoFrameExtractor.Use(VideoFrameExtraction);
             TrainingFfmpegPaths = new TrainingFfmpegFilePathResolver();
-            AuswertungPro.Next.UI.Ai.Training.TrainingFfmpegPathResolver.Use(TrainingFfmpegPaths);
             SidecarScripts = new SidecarScriptFileLocator();
-            SidecarScriptLocator.Use(SidecarScripts);
             SidecarTokens = new SidecarTokenFileResolver();
-            SidecarTokenResolver.Use(SidecarTokens);
             AiStartedProcesses = new AiStartedProcessLifetimeService();
-            AiStartedProcessLifetime.Use(AiStartedProcesses);
             GpuModels = new GpuModelSelectionService();
-            GpuModelSelector.Use(GpuModels);
             AiSettings = new AiPlatformSettingsResolver(GpuModels);
-            AiSettingsFactory.Use(AiSettings);
             PipelineEnvironment = new PipelineEnvironmentOptionsService();
-            PipelineEnvironmentOptions.Use(PipelineEnvironment);
             settings.UseSettingsFileStore(SettingsFiles);
             Diagnostics = diagnostics;
             Logger = logger;
             LoggerFactory = loggerFactory;
             TelemetryPaths = new TelemetryFilePathResolver();
-            TelemetryPathResolver.Use(TelemetryPaths);
             SidecarTelemetry = new SidecarTelemetryFileWriter(TelemetryPaths);
-            SidecarTelemetryWriter.Use(SidecarTelemetry);
             PipelineTrace = new PipelineTraceFileWriter(TelemetryPaths);
-            PipelineTraceWriter.Use(PipelineTrace);
             VideoStartErrorLogs = new VideoStartErrorLogFileWriter();
             var logDirectory = Path.Combine(AppSettings.AppDataDir, "logs");
             LogTailReader = new DailyLogTailReader(logDirectory);
@@ -381,8 +360,7 @@ namespace AuswertungPro.Next.UI
                     settings.LastFullBackupPath,
                     settings.LastFullBackupSizeBytes));
 
-            KnowledgePaths = new KnowledgeBasePathService();
-            KnowledgeBasePaths.Use(KnowledgePaths);
+            KnowledgePaths = KnowledgeBasePaths.Current;
             settings.MigrateLegacyKnowledgeRootPath();
 
             // Env-Var hat Vorrang. Fehlt sie, bleibt der zuletzt bestaetigte KB-Pfad
@@ -391,30 +369,25 @@ namespace AuswertungPro.Next.UI
             KnowledgeRoot = KnowledgePaths.GetRoot();
             VsaYoloClasses = new VsaYoloClassMapFileStore(
                 Path.Combine(KnowledgeRoot, "yolo_class_map.json"));
-            VsaYoloClassMap.Use(VsaYoloClasses);
             TrainingSettings = new TrainingCenterSettingsFileStore(
                 KnowledgePaths.GetTrainingSettingsPath());
-            TrainingCenterSettingsStore.Use(TrainingSettings);
             SelfTrainingHistory = new SelfTrainingHistoryFileStore(
                 Path.Combine(KnowledgeRoot, "selftraining_history.json"));
-            SelfTrainingHistoryStore.Use(SelfTrainingHistory);
             TeacherAnnotations = new TeacherAnnotationFileStore(KnowledgeRoot);
-            TeacherAnnotationStore.Use(TeacherAnnotations);
             AiOptimizationSessions = new AiOptimizationSessionFileStore(
                 Path.Combine(AppSettings.AppDataDir, "ai_sanierung_sessions.json"));
-            AiOptimizationSessionStore.Use(AiOptimizationSessions);
             var trainingSamples = new TrainingSampleFileStore(
                 KnowledgePaths.GetTrainingSamplesPath());
             trainingSamples.ConfigureEvalProtection(settings.EvalSetRoot);
+            // Auch die unveraenderbare Kompatibilitaets-Fassade auf denselben Eval-Schutz-Root
+            // setzen, damit Fallback-Pfade ueber TrainingSamplesStore.Current nicht gegen einen
+            // abweichend konfigurierten Eval-Root filtern (Schutz vor Eval-Kontamination).
+            TrainingSamplesStore.ConfigureEvalProtection(settings.EvalSetRoot);
             TrainingSamples = trainingSamples;
-            TrainingSamplesStore.Use(trainingSamples);
             TrainingFrames = new TrainingFrameFileStore();
-            FrameStore.Use(TrainingFrames);
             TrainingPreviewFrames = new TrainingPreviewFrameExtractionService(TrainingFrames);
-            TrainingPreviewFrameExtractor.Use(TrainingPreviewFrames);
             CodingFramePhotos = new CodingFramePhotoFileStore();
             CodingDefectPreviews = new CodingDefectPreviewRenderer();
-            CodingDefectPreviewService.Use(CodingDefectPreviews);
             _trainingReviewQueue = new Lazy<ReviewQueueService>(
                 ReviewQueueService.CreatePersistent,
                 System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
@@ -436,71 +409,55 @@ namespace AuswertungPro.Next.UI
                 : null;
 
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
-            Theme.StatusColors.Current = StatusColors;
-            CodeUsageTrackers.Current = CodeUsage;
 
             DropdownOptions = new FileDropdownOptionsStore();
+            CostStores = new CostStoreFactory();
+            TrainingCases = new TrainingCaseIdSource(TrainingCenterStore);
             ProtocolTraining = new ProtocolTrainingFileStore();
-            ProtocolTrainingStore.Use(ProtocolTraining);
 
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
             ProjectDropPaths = new ProjectDropFilePathResolver();
-            ViewModels.Pages.ProjectDropPathResolver.Use(ProjectDropPaths);
             ProjectStructure = new ProjectStructureInitializer();
             KiasExportPatterns = new KiasExportPatternDetectionService();
-            KiasExportPattern.Use(KiasExportPatterns);
             KanalExportDetection = new KanalExportDetectionService(KiasExportPatterns);
             SchaechteTemplateColumns = new SchaechteTemplateColumnFileReader();
             PdfFileSafety = new PdfFileSafetyService();
-            PdfImportSafetyPolicy.Use(PdfFileSafety);
             PdfFileReplacement = new AtomicPdfFileReplacementService(PdfFileSafety);
-            AtomicPdfFileReplacer.Use(PdfFileReplacement);
             PdfTextExtraction = new PdfTextExtractionService(PdfFileSafety);
-            PdfTextExtractor.Use(PdfTextExtraction);
             PdfOcrExtraction = new PdfOcrExtractionService(PdfTextExtraction, PdfFileSafety);
-            PdfOcrExtractor.Use(PdfOcrExtraction);
             SchachtProtocolOcr = new SchachtProtocolOcrReaderService(PdfFileSafety, PdfOcrExtraction);
             PdfFormFields = new PdfFormFieldReaderService();
-            PdfFormFieldExtractor.Use(PdfFormFields);
             PdfTextPrefixes = new PdfTextPrefixReaderService();
             PdfDokumentTypErkennung.UseTextPrefixReader(PdfTextPrefixes);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
             PdfTextLayerRewrite = new PdfTextLayerRewriteService();
-            PdfTextLayerRewriter.Use(PdfTextLayerRewrite);
             DistributionPdfPages = new DistributionPdfPageReadingService(PdfTextExtraction, PdfFileSafety);
-            DistributionPdfPageReader.Use(DistributionPdfPages);
             DistributionFileTransfers = new DistributionFileTransferService();
-            DistributionFileTransfer.Use(DistributionFileTransfers);
             VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
-            VideoConflictArtifacts.Use(VideoConflictCandidates);
             ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
-            ShaftPdfSelectionExpander.Use(ShaftPdfSelectionExpansion);
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfHoldingFiles = new XtfHoldingFileReader();
             XtfHelper.UseHoldingReader(XtfHoldingFiles);
             M150SourceFiles = new M150XmlTextFileReader();
-            M150SourceFileReader.Use(M150SourceFiles);
             M150MdbRows = new PowerShellM150MdbRowReader();
-            M150MdbRowReader.Use(M150MdbRows);
-            XtfImport = new XtfImportServiceAdapter(VsaMediaPaths);
-            WinCanImport = new WinCanDbImportService();
+            XtfImport = new XtfImportServiceAdapter(
+                VsaMediaPaths,
+                M150SourceFiles,
+                M150MdbRows);
+            WinCanImport = new WinCanDbImportService(M150MdbRows, XtfImport);
             XtfStammdatenSources = new XtfStammdatenSourceReader();
             XtfStammdatenExtractor.UseSourceReader(XtfStammdatenSources);
             IbakPdfStammdatenSources = new IbakPdfStammdatenSourceReader(PdfTextExtraction);
             IbakPdfStammdatenExtractor.UseSourceReader(IbakPdfStammdatenSources);
             IbakConnections = new IbakFdbConnectionOptionsService();
-            IbakFdbConnectionOptions.Use(IbakConnections);
             IbakImport = new IbakExportImportService(IbakConnections);
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             KinsDvdTextEnrichment = new KinsDvdTextEnrichmentService();
-            KinsDvdTextEnricher.Use(KinsDvdTextEnrichment);
             KinsDbfWhitelistEnrichment = new KinsDbfWhitelistEnrichmentService();
-            KinsDbfWhitelistEnricher.Use(KinsDbfWhitelistEnrichment);
             KinsGesamtprotokolle = new KinsGesamtprotokollFileLocator();
-            KinsGesamtprotokollLocator.Use(KinsGesamtprotokolle);
             ProjectPortability = new ProjectPortabilityService();
             ProjectPhotoAssignment = new ProjectPhotoAssignmentService();
             HoldingRename = new HoldingRenameFileService();
@@ -508,14 +465,10 @@ namespace AuswertungPro.Next.UI
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             PdfMerge = new PdfMergeService();
-            PdfMergeHelper.Use(PdfMerge);
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator();
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
-            DataPage.DataPageProtocolPathResolver.Use(InspectionProtocolFiles);
-            DataPage.DataPageDichtheitPdfResolver.Use(DichtheitProtocolFiles);
-            DataPage.SchachtFileTargetResolver.Use(SchachtFileTargets);
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
@@ -532,7 +485,6 @@ namespace AuswertungPro.Next.UI
             DistributionDirectoryTree = new DistributionDirectoryTreeResolver(DistributionPatterns);
             ExcelExport = new ExcelTemplateExportService();
             NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService();
-            NpkLeistungsverzeichnisExcelExporter.Use(NpkExcelExport);
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
             // Register protocol/photo/pdf services
@@ -547,15 +499,12 @@ namespace AuswertungPro.Next.UI
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
             KnowledgeBaseHealth = knowledgeBaseHealth ?? new KnowledgeBaseHealthInspectionService();
-            KnowledgeBaseHealthChecker.Use(KnowledgeBaseHealth);
             GitCommit = new GitCommitFileResolver();
             BackupTargetMarkers = new BackupTargetMarkerGuardService();
             BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
             SqliteSnapshots = new SqliteSnapshotCopyService();
             BackupManifestIntegrity = new BackupManifestIntegrityService();
-            Infrastructure.Backup.BackupManifestIntegrity.Use(BackupManifestIntegrity);
             BackupSources = new FullBackupSourcesProvider(RepositoryRootLocator);
-            FullBackupSourcesFactory.Use(BackupSources);
             FullBackup = new FullBackupService(
                 () => BackupSources.Resolve(settings),
                 KnowledgeWalCheckpoint.TryCheckpoint,
@@ -584,10 +533,12 @@ namespace AuswertungPro.Next.UI
                 catalogPaths.XmlCatalogPaths);
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
                 PipelineTrace,
+                ProcessOutputs,
                 () => AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings)).ToPipelineConfig(),
                 CodeCatalog,
                 LoggerFactory,
-                PipelineEnvironment);
+                PipelineEnvironment,
+                SidecarTelemetry);
             SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
@@ -671,7 +622,9 @@ namespace AuswertungPro.Next.UI
             settings.SaveImmediate();
 
             Retrieval = retrieval;
-            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner(KnowledgeDbPath);
+            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner(
+                KnowledgeDbPath,
+                TrainingSamples);
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
@@ -694,7 +647,6 @@ namespace AuswertungPro.Next.UI
             var v2ChannelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_channels.json");
             var v2ManholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
             VsaShadowTelemetry = new VsaShadowTelemetryFileWriter(TelemetryPaths);
-            VsaShadowTelemetryWriter.Use(VsaShadowTelemetry);
             Vsa = new VsaEvaluationService(
                 channelsTable,
                 manholesTable,
@@ -708,6 +660,7 @@ namespace AuswertungPro.Next.UI
                 Path.Combine(KnowledgeRoot, "measures_learning.json"),
                 Path.Combine(KnowledgeRoot, "measures-model.zip"));
             DataPageWindows = new DataPage.DataPageWindowLauncher(this);
+            _services = CreateServiceMap();
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
@@ -849,118 +802,120 @@ namespace AuswertungPro.Next.UI
             return new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers);
         }
 
-        public object? GetService(Type serviceType)
-        {
-            if (serviceType == typeof(IFullBackupService)) return FullBackup;
-            if (serviceType == typeof(IFullBackupSourcesProvider)) return BackupSources;
-            if (serviceType == typeof(IBackupTargetMarkerGuard)) return BackupTargetMarkers;
-            if (serviceType == typeof(ISqliteSnapshotCopier)) return SqliteSnapshots;
-            if (serviceType == typeof(IBackupManifestIntegrityService)) return BackupManifestIntegrity;
-            if (serviceType == typeof(ISettingsRestorePointStore)) return SettingsRestorePoints;
-            if (serviceType == typeof(ISettingsFileStore)) return SettingsFiles;
-            if (serviceType == typeof(ISettingsQuarantineStore)) return SettingsQuarantine;
-            if (serviceType == typeof(ISettingsMigrationService)) return SettingsMigration;
-            if (serviceType == typeof(IExplorerRevealService)) return ExplorerReveal;
-            if (serviceType == typeof(ISafeShellOpenService)) return ShellOpen;
-            if (serviceType == typeof(IFolderOpenService)) return FolderOpen;
-            if (serviceType == typeof(IProgramRootLocator)) return ProgramRootLocator;
-            if (serviceType == typeof(IRepositoryRootLocator)) return RepositoryRootLocator;
-            if (serviceType == typeof(IFfmpegExecutableLocator)) return FfmpegExecutables;
-            if (serviceType == typeof(IProcessOutputReader)) return ProcessOutputs;
-            if (serviceType == typeof(IVideoFrameExtractor)) return VideoFrameExtraction;
-            if (serviceType == typeof(ITrainingFfmpegPathResolver)) return TrainingFfmpegPaths;
-            if (serviceType == typeof(ISidecarScriptLocator)) return SidecarScripts;
-            if (serviceType == typeof(ISidecarTokenResolver)) return SidecarTokens;
-            if (serviceType == typeof(IAiStartedProcessLifetime)) return AiStartedProcesses;
-            if (serviceType == typeof(IVsaYoloClassMapStore)) return VsaYoloClasses;
-            if (serviceType == typeof(IKatasterXtfPathResolver)) return KatasterXtfPaths;
-            if (serviceType == typeof(IHaltungCadastreTableStore)) return HaltungCadastreTables;
-            if (serviceType == typeof(IHaltungCadastreIndexProvider)) return HaltungCadastreIndexes;
-            if (serviceType == typeof(IOfflineBasemapPathResolver)) return OfflineBasemapPaths;
-            if (serviceType == typeof(Mapping.IKarteBasemapLayerFactory)) return BasemapLayers;
-            if (serviceType == typeof(IVsaCatalogPathResolver)) return VsaCatalogPaths;
-            if (serviceType == typeof(IGitCommitResolver)) return GitCommit;
-            if (serviceType == typeof(IProjectRepository)) return Projects;
-            if (serviceType == typeof(IProjectPhotoReferenceNormalizer)) return ProjectPhotoReferences;
-            if (serviceType == typeof(IProjectFileDiscovery)) return ProjectFileDiscovery;
-            if (serviceType == typeof(IProjectDropPathResolver)) return ProjectDropPaths;
-            if (serviceType == typeof(IProjectStructureInitializer)) return ProjectStructure;
-            if (serviceType == typeof(IKiasExportPatternDetector)) return KiasExportPatterns;
-            if (serviceType == typeof(IKanalExportDetectionService)) return KanalExportDetection;
-            if (serviceType == typeof(ISchaechteTemplateColumnReader)) return SchaechteTemplateColumns;
-            if (serviceType == typeof(IVideoStartErrorLogWriter)) return VideoStartErrorLogs;
-            if (serviceType == typeof(IKnowledgeWalCheckpoint)) return KnowledgeWalCheckpoint;
-            if (serviceType == typeof(IKnowledgeBaseHealthInspector)) return KnowledgeBaseHealth;
-            if (serviceType == typeof(IKnowledgeBasePathService)) return KnowledgePaths;
-            if (serviceType == typeof(IPdfFileSafetyChecker)) return PdfFileSafety;
-            if (serviceType == typeof(IAtomicPdfFileReplacer)) return PdfFileReplacement;
-            if (serviceType == typeof(IPdfTextExtractor)) return PdfTextExtraction;
-            if (serviceType == typeof(IPdfOcrExtractor)) return PdfOcrExtraction;
-            if (serviceType == typeof(ISchachtProtocolOcrReader)) return SchachtProtocolOcr;
-            if (serviceType == typeof(IPdfFormFieldReader)) return PdfFormFields;
-            if (serviceType == typeof(IPdfTextPrefixReader)) return PdfTextPrefixes;
-            if (serviceType == typeof(IPdfImportService)) return PdfImport;
-            if (serviceType == typeof(IPdfTextLayerRewriter)) return PdfTextLayerRewrite;
-            if (serviceType == typeof(IDistributionPdfPageReader)) return DistributionPdfPages;
-            if (serviceType == typeof(IDistributionFileTransfer)) return DistributionFileTransfers;
-            if (serviceType == typeof(IVideoConflictCandidateCopier)) return VideoConflictCandidates;
-            if (serviceType == typeof(IShaftPdfSelectionExpander)) return ShaftPdfSelectionExpansion;
-            if (serviceType == typeof(INameBasedProtocolDistributor)) return NameBasedProtocolDistributor;
-            if (serviceType == typeof(IVsaMediaPathResolver)) return VsaMediaPaths;
-            if (serviceType == typeof(IXtfHoldingFileReader)) return XtfHoldingFiles;
-            if (serviceType == typeof(IM150SourceFileReader)) return M150SourceFiles;
-            if (serviceType == typeof(IM150MdbRowReader)) return M150MdbRows;
-            if (serviceType == typeof(IXtfImportService)) return XtfImport;
-            if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
-            if (serviceType == typeof(IXtfStammdatenSourceReader)) return XtfStammdatenSources;
-            if (serviceType == typeof(IIbakPdfStammdatenSourceReader)) return IbakPdfStammdatenSources;
-            if (serviceType == typeof(IIbakFdbConnectionOptions)) return IbakConnections;
-            if (serviceType == typeof(IIbakImportService)) return IbakImport;
-            if (serviceType == typeof(IKinsImportService)) return KinsImport;
-            if (serviceType == typeof(IKinsDvdTextEnricher)) return KinsDvdTextEnrichment;
-            if (serviceType == typeof(IKinsDbfWhitelistEnricher)) return KinsDbfWhitelistEnrichment;
-            if (serviceType == typeof(IKinsGesamtprotokollLocator)) return KinsGesamtprotokolle;
-            if (serviceType == typeof(IImportRunReportExporter)) return ImportRunReports;
-            if (serviceType == typeof(ISchachtProtocolImportService)) return SchachtProtocolImport;
-            if (serviceType == typeof(ISchachtStammdatenErgaenzungsService)) return SchachtStammdatenErgaenzung;
-            if (serviceType == typeof(IExcelExportService)) return ExcelExport;
-            if (serviceType == typeof(INpkLeistungsverzeichnisExcelExporter)) return NpkExcelExport;
-            if (serviceType == typeof(IDistributionPatternResolver)) return DistributionPatterns;
-            if (serviceType == typeof(IDistributionDirectoryTreeResolver)) return DistributionDirectoryTree;
-            if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
-            if (serviceType == typeof(IVsaShadowTelemetryWriter)) return VsaShadowTelemetry;
-            if (serviceType == typeof(ISidecarTelemetryWriter)) return SidecarTelemetry;
-            if (serviceType == typeof(IPipelineTraceWriter)) return PipelineTrace;
-            if (serviceType == typeof(ITelemetryPathResolver)) return TelemetryPaths;
-            if (serviceType == typeof(IGpuModelSelector)) return GpuModels;
-            if (serviceType == typeof(IAiPlatformSettingsResolver)) return AiSettings;
-            if (serviceType == typeof(IPipelineEnvironmentOptions)) return PipelineEnvironment;
-            if (serviceType == typeof(IProtocolService)) return Protocols;
-            if (serviceType == typeof(IPdfMergeService)) return PdfMerge;
-            if (serviceType == typeof(IDossierPhotoAvailabilityService)) return DossierPhotoAvailability;
-            if (serviceType == typeof(IInspectionProtocolFileLocator)) return InspectionProtocolFiles;
-            if (serviceType == typeof(IDichtheitProtocolFileLocator)) return DichtheitProtocolFiles;
-            if (serviceType == typeof(ISchachtFileTargetResolver)) return SchachtFileTargets;
-            if (serviceType == typeof(IProtocolTrainingStore)) return ProtocolTraining;
-            if (serviceType == typeof(ITrainingCenterSettingsStore)) return TrainingSettings;
-            if (serviceType == typeof(ISelfTrainingHistoryStore)) return SelfTrainingHistory;
-            if (serviceType == typeof(ITeacherAnnotationStore)) return TeacherAnnotations;
-            if (serviceType == typeof(IAiOptimizationSessionStore)) return AiOptimizationSessions;
-            if (serviceType == typeof(ITrainingSampleStore)) return TrainingSamples;
-            if (serviceType == typeof(ITrainingFrameStore)) return TrainingFrames;
-            if (serviceType == typeof(ITrainingPreviewFrameExtractor)) return TrainingPreviewFrames;
-            if (serviceType == typeof(ICodingFramePhotoStore)) return CodingFramePhotos;
-            if (serviceType == typeof(ICodingDefectPreviewRenderer)) return CodingDefectPreviews;
-            if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
-            if (serviceType == typeof(IDiagnosticsPackageService)) return DiagnosticsPackages;
-            if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;
-            if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)) return CodeSelectionCatalog;
-            if (serviceType == typeof(ILogger)) return Logger;
-            if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
-            if (serviceType == typeof(IStatusColorService)) return StatusColors;
-            if (serviceType == typeof(ICodeUsageTracker)) return CodeUsage;
-            return null;
-        }
+        private IReadOnlyDictionary<Type, object> CreateServiceMap()
+            => new Dictionary<Type, object>
+            {
+                [typeof(IFullBackupService)] = FullBackup,
+                [typeof(IFullBackupSourcesProvider)] = BackupSources,
+                [typeof(IBackupTargetMarkerGuard)] = BackupTargetMarkers,
+                [typeof(ISqliteSnapshotCopier)] = SqliteSnapshots,
+                [typeof(IBackupManifestIntegrityService)] = BackupManifestIntegrity,
+                [typeof(ISettingsRestorePointStore)] = SettingsRestorePoints,
+                [typeof(ISettingsFileStore)] = SettingsFiles,
+                [typeof(ISettingsQuarantineStore)] = SettingsQuarantine,
+                [typeof(ISettingsMigrationService)] = SettingsMigration,
+                [typeof(IExplorerRevealService)] = ExplorerReveal,
+                [typeof(ISafeShellOpenService)] = ShellOpen,
+                [typeof(IFolderOpenService)] = FolderOpen,
+                [typeof(IProgramRootLocator)] = ProgramRootLocator,
+                [typeof(IRepositoryRootLocator)] = RepositoryRootLocator,
+                [typeof(IFfmpegExecutableLocator)] = FfmpegExecutables,
+                [typeof(IProcessOutputReader)] = ProcessOutputs,
+                [typeof(IVideoFrameExtractor)] = VideoFrameExtraction,
+                [typeof(ITrainingFfmpegPathResolver)] = TrainingFfmpegPaths,
+                [typeof(ISidecarScriptLocator)] = SidecarScripts,
+                [typeof(ISidecarTokenResolver)] = SidecarTokens,
+                [typeof(IAiStartedProcessLifetime)] = AiStartedProcesses,
+                [typeof(IVsaYoloClassMapStore)] = VsaYoloClasses,
+                [typeof(IKatasterXtfPathResolver)] = KatasterXtfPaths,
+                [typeof(IHaltungCadastreTableStore)] = HaltungCadastreTables,
+                [typeof(IHaltungCadastreIndexProvider)] = HaltungCadastreIndexes,
+                [typeof(IOfflineBasemapPathResolver)] = OfflineBasemapPaths,
+                [typeof(Mapping.IKarteBasemapLayerFactory)] = BasemapLayers,
+                [typeof(IVsaCatalogPathResolver)] = VsaCatalogPaths,
+                [typeof(IGitCommitResolver)] = GitCommit,
+                [typeof(IProjectRepository)] = Projects,
+                [typeof(ICostStoreFactory)] = CostStores,
+                [typeof(IProjectPhotoReferenceNormalizer)] = ProjectPhotoReferences,
+                [typeof(IProjectFileDiscovery)] = ProjectFileDiscovery,
+                [typeof(IProjectDropPathResolver)] = ProjectDropPaths,
+                [typeof(IProjectStructureInitializer)] = ProjectStructure,
+                [typeof(IKiasExportPatternDetector)] = KiasExportPatterns,
+                [typeof(IKanalExportDetectionService)] = KanalExportDetection,
+                [typeof(ISchaechteTemplateColumnReader)] = SchaechteTemplateColumns,
+                [typeof(IVideoStartErrorLogWriter)] = VideoStartErrorLogs,
+                [typeof(IKnowledgeWalCheckpoint)] = KnowledgeWalCheckpoint,
+                [typeof(IKnowledgeBaseHealthInspector)] = KnowledgeBaseHealth,
+                [typeof(IKnowledgeBasePathService)] = KnowledgePaths,
+                [typeof(IPdfFileSafetyChecker)] = PdfFileSafety,
+                [typeof(IAtomicPdfFileReplacer)] = PdfFileReplacement,
+                [typeof(IPdfTextExtractor)] = PdfTextExtraction,
+                [typeof(IPdfOcrExtractor)] = PdfOcrExtraction,
+                [typeof(ISchachtProtocolOcrReader)] = SchachtProtocolOcr,
+                [typeof(IPdfFormFieldReader)] = PdfFormFields,
+                [typeof(IPdfTextPrefixReader)] = PdfTextPrefixes,
+                [typeof(IPdfImportService)] = PdfImport,
+                [typeof(IPdfTextLayerRewriter)] = PdfTextLayerRewrite,
+                [typeof(IDistributionPdfPageReader)] = DistributionPdfPages,
+                [typeof(IDistributionFileTransfer)] = DistributionFileTransfers,
+                [typeof(IVideoConflictCandidateCopier)] = VideoConflictCandidates,
+                [typeof(IShaftPdfSelectionExpander)] = ShaftPdfSelectionExpansion,
+                [typeof(INameBasedProtocolDistributor)] = NameBasedProtocolDistributor,
+                [typeof(IVsaMediaPathResolver)] = VsaMediaPaths,
+                [typeof(IXtfHoldingFileReader)] = XtfHoldingFiles,
+                [typeof(IM150SourceFileReader)] = M150SourceFiles,
+                [typeof(IM150MdbRowReader)] = M150MdbRows,
+                [typeof(IXtfImportService)] = XtfImport,
+                [typeof(IWinCanDbImportService)] = WinCanImport,
+                [typeof(IXtfStammdatenSourceReader)] = XtfStammdatenSources,
+                [typeof(IIbakPdfStammdatenSourceReader)] = IbakPdfStammdatenSources,
+                [typeof(IIbakFdbConnectionOptions)] = IbakConnections,
+                [typeof(IIbakImportService)] = IbakImport,
+                [typeof(IKinsImportService)] = KinsImport,
+                [typeof(IKinsDvdTextEnricher)] = KinsDvdTextEnrichment,
+                [typeof(IKinsDbfWhitelistEnricher)] = KinsDbfWhitelistEnrichment,
+                [typeof(IKinsGesamtprotokollLocator)] = KinsGesamtprotokolle,
+                [typeof(IImportRunReportExporter)] = ImportRunReports,
+                [typeof(ISchachtProtocolImportService)] = SchachtProtocolImport,
+                [typeof(ISchachtStammdatenErgaenzungsService)] = SchachtStammdatenErgaenzung,
+                [typeof(IExcelExportService)] = ExcelExport,
+                [typeof(INpkLeistungsverzeichnisExcelExporter)] = NpkExcelExport,
+                [typeof(IDistributionPatternResolver)] = DistributionPatterns,
+                [typeof(IDistributionDirectoryTreeResolver)] = DistributionDirectoryTree,
+                [typeof(IVsaEvaluationService)] = Vsa,
+                [typeof(IVsaShadowTelemetryWriter)] = VsaShadowTelemetry,
+                [typeof(ISidecarTelemetryWriter)] = SidecarTelemetry,
+                [typeof(IPipelineTraceWriter)] = PipelineTrace,
+                [typeof(ITelemetryPathResolver)] = TelemetryPaths,
+                [typeof(IGpuModelSelector)] = GpuModels,
+                [typeof(IAiPlatformSettingsResolver)] = AiSettings,
+                [typeof(IPipelineEnvironmentOptions)] = PipelineEnvironment,
+                [typeof(IProtocolService)] = Protocols,
+                [typeof(IPdfMergeService)] = PdfMerge,
+                [typeof(IDossierPhotoAvailabilityService)] = DossierPhotoAvailability,
+                [typeof(IInspectionProtocolFileLocator)] = InspectionProtocolFiles,
+                [typeof(IDichtheitProtocolFileLocator)] = DichtheitProtocolFiles,
+                [typeof(ISchachtFileTargetResolver)] = SchachtFileTargets,
+                [typeof(IProtocolTrainingStore)] = ProtocolTraining,
+                [typeof(ITrainingCenterSettingsStore)] = TrainingSettings,
+                [typeof(ITrainingCaseIdSource)] = TrainingCases,
+                [typeof(ISelfTrainingHistoryStore)] = SelfTrainingHistory,
+                [typeof(ITeacherAnnotationStore)] = TeacherAnnotations,
+                [typeof(IAiOptimizationSessionStore)] = AiOptimizationSessions,
+                [typeof(ITrainingSampleStore)] = TrainingSamples,
+                [typeof(ITrainingFrameStore)] = TrainingFrames,
+                [typeof(ITrainingPreviewFrameExtractor)] = TrainingPreviewFrames,
+                [typeof(ICodingFramePhotoStore)] = CodingFramePhotos,
+                [typeof(ICodingDefectPreviewRenderer)] = CodingDefectPreviews,
+                [typeof(IKnowledgeBaseDiagnosticsRunner)] = KnowledgeBaseDiagnostics,
+                [typeof(IDiagnosticsPackageService)] = DiagnosticsPackages,
+                [typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)] = CodeCatalog,
+                [typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)] = CodeSelectionCatalog,
+                [typeof(ILogger)] = Logger,
+                [typeof(ILoggerFactory)] = LoggerFactory,
+                [typeof(IStatusColorService)] = StatusColors,
+                [typeof(ICodeUsageTracker)] = CodeUsage,
+            };
 
         private static async Task<string?> OllamaListAsync(CancellationToken ct)
         {

@@ -11,7 +11,7 @@ public partial class PlayerWindow
         CodingSessionStateCreationWorkflow.Execute(
             new CodingSessionStateCreationRequest(
                 _playbackContext.VideoPath,
-                _protocolContext.Settings),
+                _protocolContext.Settings, _protocolContext.TrainingSamples),
             new CodingSessionStateCreationApplyActions(
                 SetSessionService: _codingSessionRuntimeOwner.Set,
                 SetOverlayService: _codingOverlayRuntimeOwner.Set,

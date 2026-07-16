@@ -8,12 +8,14 @@ public static class AtomicPdfFileReplacer
     internal delegate void ReplaceFile(string sourcePath, string targetPath, string backupPath);
     internal delegate void MoveFile(string sourcePath, string targetPath, bool overwrite);
 
-    private static IAtomicPdfFileReplacer _current = new AtomicPdfFileReplacementService();
+    private static readonly IAtomicPdfFileReplacer Default = new AtomicPdfFileReplacementService();
 
-    public static IAtomicPdfFileReplacer Current => Volatile.Read(ref _current);
+    public static IAtomicPdfFileReplacer Current => Default;
 
+    [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IAtomicPdfFileReplacer direkt uebergeben.")]
     public static void Use(IAtomicPdfFileReplacer replacer)
-        => Volatile.Write(ref _current, replacer ?? throw new ArgumentNullException(nameof(replacer)));
+        => throw new NotSupportedException(
+            "AtomicPdfFileReplacer ist unveraenderlich. IAtomicPdfFileReplacer direkt uebergeben.");
 
     internal static void ReplaceValidated(string generatedPdfPath, string targetPdfPath)
         => Current.ReplaceValidated(generatedPdfPath, targetPdfPath);

@@ -32,7 +32,8 @@ public static class CodingAiRuntimeFactory
     public static CodingAiRuntime Create(
         AiPlatformSettings platformSettings,
         ICodeCatalogProvider? codeCatalog,
-        PipelineConfig? overridePipelineConfig = null)
+        PipelineConfig? overridePipelineConfig = null,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
     {
         ArgumentNullException.ThrowIfNull(platformSettings);
 
@@ -58,7 +59,9 @@ public static class CodingAiRuntimeFactory
         {
             var visionClient = new VisionPipelineClient(
                 pipelineConfig.SidecarUrl,
-                sidecarToken: pipelineConfig.SidecarToken);
+                null,
+                pipelineConfig.SidecarToken,
+                sidecarTelemetry ?? SidecarTelemetryWriter.Current);
             var multiModel = new SingleFrameMultiModelService(visionClient, pipelineConfig);
             var boxSegmentation = new MarkBoxSegmentationService(visionClient.SegmentSamAsync);
 

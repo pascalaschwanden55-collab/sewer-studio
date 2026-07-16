@@ -12,50 +12,8 @@ using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
-public sealed class LegacyXtfImportService
+public sealed partial class LegacyXtfImportService
 {
-    private readonly string? _archiveRoot;
-    private readonly string? _legacyArchiveRoot;
-    private readonly IVsaMediaPathResolver _mediaPaths;
-    private readonly LegacyXtfSourceReader _sourceReader = new(new SafeXmlDocumentLoader());
-
-    public LegacyXtfImportService()
-    {
-        // Direkte Parser-Nutzung (vor allem Tests) schreibt keine Dateien neben das Programm.
-        // Die App verwendet CreateForApplication() und bekommt den sicheren LocalAppData-Pfad.
-        _mediaPaths = VsaMediaPathResolver.Current;
-    }
-
-    public LegacyXtfImportService(string archiveRoot, string? legacyArchiveRoot = null)
-        : this(archiveRoot, legacyArchiveRoot, VsaMediaPathResolver.Current)
-    {
-    }
-
-    internal LegacyXtfImportService(
-        string archiveRoot,
-        string? legacyArchiveRoot,
-        IVsaMediaPathResolver mediaPaths,
-        ISafeXmlDocumentLoader? xmlLoader = null)
-    {
-        _archiveRoot = string.IsNullOrWhiteSpace(archiveRoot)
-            ? throw new ArgumentException("Der XTF-Archivordner fehlt.", nameof(archiveRoot))
-            : Path.GetFullPath(archiveRoot);
-        _legacyArchiveRoot = string.IsNullOrWhiteSpace(legacyArchiveRoot)
-            ? null
-            : Path.GetFullPath(legacyArchiveRoot);
-        _mediaPaths = mediaPaths ?? throw new ArgumentNullException(nameof(mediaPaths));
-        _sourceReader = new LegacyXtfSourceReader(xmlLoader ?? new SafeXmlDocumentLoader());
-    }
-
-    public static LegacyXtfImportService CreateForApplication()
-        => CreateForApplication(VsaMediaPathResolver.Current);
-
-    internal static LegacyXtfImportService CreateForApplication(IVsaMediaPathResolver mediaPaths) => new(
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SewerStudio", "Rohdaten", "xtf_imports"),
-            Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports"),
-            mediaPaths);
-
     public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
     {
         var stats = new ImportStats();
@@ -253,13 +211,13 @@ public sealed class LegacyXtfImportService
         }
     }
 
-    private static void ImportM150(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
+    private void ImportM150(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
-        var (hgCount, hiCount) = M150MdbImportHelper.GetM150XmlNodeCounts(path);
+        var (hgCount, hiCount) = M150MdbImportHelper.GetM150XmlNodeCounts(path, _m150SourceFiles);
         var createdBefore = stats.CreatedRecords;
         var updatedBefore = stats.UpdatedRecords;
 
-        var records = M150MdbImportHelper.ParseM150File(path, out var warnings);
+        var records = M150MdbImportHelper.ParseM150File(path, _m150SourceFiles, out var warnings);
         stats.Found += records.Count;
 
         foreach (var rec in records)
@@ -301,9 +259,14 @@ public sealed class LegacyXtfImportService
         });
     }
 
-    private static void ImportMdb(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
+    private void ImportMdb(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
-        if (!M150MdbImportHelper.TryParseMdbFile(path, out var records, out var error, out var warnings))
+        if (!M150MdbImportHelper.TryParseMdbFile(
+                path,
+                _m150MdbRows,
+                out var records,
+                out var error,
+                out var warnings))
             throw new InvalidOperationException(error ?? $"MDB Import fehlgeschlagen: {Path.GetFileName(path)}");
 
         stats.Found += records.Count;

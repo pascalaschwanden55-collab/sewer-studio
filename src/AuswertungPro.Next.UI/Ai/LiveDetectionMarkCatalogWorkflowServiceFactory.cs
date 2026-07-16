@@ -11,13 +11,14 @@ public static class LiveDetectionMarkCatalogWorkflowServiceFactory
         Func<bool> hasCodeCatalog,
         Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
         Action<ProtocolEntry> onEntryCreated,
-        Action<string> showOverlay)
+        Action<string> showOverlay,
+        ICodeUsageTracker? codeUsage = null)
         => new(
             hasCodeCatalog,
             () => LiveDetectionDialogServiceFactory.Create().ShowCodeCatalogUnavailable(),
             createViewModel,
             (viewModel, videoPath, videoTime, owner) =>
-                VsaCodeExplorerDialogServiceFactory.Create().Show(viewModel, videoPath, videoTime, owner),
+                VsaCodeExplorerDialogServiceFactory.Create(codeUsage).Show(viewModel, videoPath, videoTime, owner),
             onEntryCreated,
             showOverlay);
 }

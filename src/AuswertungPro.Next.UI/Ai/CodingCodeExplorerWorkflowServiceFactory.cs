@@ -8,11 +8,12 @@ namespace AuswertungPro.Next.UI.Ai;
 public static class CodingCodeExplorerWorkflowServiceFactory
 {
     public static CodingCodeExplorerWorkflowService Create(
-        Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel)
+        Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
+        ICodeUsageTracker? codeUsage = null)
         => new(
             createViewModel,
             (viewModel, videoPath, currentVideoTime, owner, liveSnapshotProvider) =>
-                VsaCodeExplorerDialogServiceFactory.Create().Show(
+                VsaCodeExplorerDialogServiceFactory.Create(codeUsage).Show(
                     viewModel,
                     videoPath,
                     currentVideoTime,

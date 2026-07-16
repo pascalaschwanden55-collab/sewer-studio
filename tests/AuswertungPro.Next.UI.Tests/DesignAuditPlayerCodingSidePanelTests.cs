@@ -568,7 +568,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("actions.ScheduleHideBadge(badge.AutoHideDelay)", importTrainingResultWorkflow);
         Assert.Contains("await _seekAndWait(importEvent)", workflow);
         Assert.Contains("await _appendAnnotation(annotation)", workflow);
-        Assert.Contains("TeacherAnnotationStore.AppendAsync", workflowFactory);
+        Assert.Contains("annotationStore.AppendAsync", workflowFactory);
     }
 
     [Fact]

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Protocol;
 
@@ -32,16 +31,10 @@ public static class VsaCatalogPathResolver
         VsaCatalogPathNames.KekManifestPathEnvironmentVariable;
     public const string KekManifestFileName = VsaCatalogPathNames.KekManifestFileName;
 
-    private static IVsaCatalogPathResolver _current = new VsaCatalogFilePathResolver();
+    private static readonly IVsaCatalogPathResolver Default = new VsaCatalogFilePathResolver();
 
     internal static IVsaCatalogPathResolver CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(IVsaCatalogPathResolver resolver)
-    {
-        ArgumentNullException.ThrowIfNull(resolver);
-        Volatile.Write(ref _current, resolver);
-    }
+        => Default;
 
     public static VsaCatalogPathResolution Resolve(
         AppSettings settings,

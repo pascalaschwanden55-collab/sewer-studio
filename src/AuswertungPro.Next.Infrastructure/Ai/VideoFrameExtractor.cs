@@ -5,15 +5,16 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 /// <summary>Kompatible Fassade; Prozess- und Dateiarbeit liegt im Instanzdienst.</summary>
 public static class VideoFrameExtractor
 {
-    private static IVideoFrameExtractor _current =
+    private static readonly IVideoFrameExtractor Default =
         new VideoFrameExtractionService(ProcessOutputReader.Current);
 
-    public static IVideoFrameExtractor Current => Volatile.Read(ref _current);
+    public static IVideoFrameExtractor Current => Default;
 
-    public static void Use(IVideoFrameExtractor extractor)
-        => Volatile.Write(
-            ref _current,
-            extractor ?? throw new ArgumentNullException(nameof(extractor)));
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
+    public static void Use(IVideoFrameExtractor extractor) =>
+        throw new NotSupportedException(
+            "Der globale Video-Frame-Extraktor kann nicht mehr ausgetauscht werden. " +
+            "IVideoFrameExtractor bitte per Konstruktor uebergeben.");
 
     /// <summary>
     /// Extrahiert ein einzelnes PNG-Frame aus einem Video bei einer Zeitposition.

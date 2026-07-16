@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SchachtFileTargetResolverDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Schacht_Dateiziele_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -21,10 +21,12 @@ public sealed class SchachtFileTargetResolverDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.SchachtFileTargets, SchachtFileTargetResolver.CompatibilityService);
         Assert.Same(
             services.SchachtFileTargets,
             services.GetService(typeof(ISchachtFileTargetResolver)));
+        Assert.Null(typeof(SchachtFileTargetResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Fact]
@@ -58,6 +60,7 @@ public sealed class SchachtFileTargetResolverDependencyTests
             services.SchachtProtocolImport,
             services.SchachtStammdatenErgaenzung,
             services.SchachtMassnahmenKatalog,
+            services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
             services.DropdownOptions,
             services.ShaftRename,
             services.ExplorerReveal,

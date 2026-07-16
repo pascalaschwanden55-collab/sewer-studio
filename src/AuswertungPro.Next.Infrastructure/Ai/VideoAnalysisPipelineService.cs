@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -34,7 +35,9 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly IPipelineTraceWriter _pipelineTraceWriter;
+    private readonly IProcessOutputReader _processOutputs;
     private readonly IPipelineEnvironmentOptions _pipelineEnvironmentOptions;
+    private readonly ISidecarTelemetryWriter _sidecarTelemetry;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
@@ -43,16 +46,19 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         HttpClient httpClient,
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
         : this(
             PipelineTraceWriter.Current,
+            ProcessOutputReader.Current,
             cfg,
             pipelineCfg,
             plausibility,
             httpClient,
             codeCatalog,
             loggerFactory,
-            pipelineEnvironmentOptions)
+            pipelineEnvironmentOptions,
+            sidecarTelemetry)
     {
     }
 
@@ -64,10 +70,38 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         HttpClient httpClient,
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        : this(
+            pipelineTraceWriter,
+            ProcessOutputReader.Current,
+            cfg,
+            pipelineCfg,
+            plausibility,
+            httpClient,
+            codeCatalog,
+            loggerFactory,
+            pipelineEnvironmentOptions,
+            sidecarTelemetry)
+    {
+    }
+
+    public VideoAnalysisPipelineService(
+        IPipelineTraceWriter pipelineTraceWriter,
+        IProcessOutputReader processOutputs,
+        AiRuntimeSettings cfg,
+        PipelineConfig pipelineCfg,
+        IAiSuggestionPlausibilityService plausibility,
+        HttpClient httpClient,
+        ICodeCatalogProvider? codeCatalog = null,
+        ILoggerFactory? loggerFactory = null,
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
+        _processOutputs = processOutputs ?? throw new ArgumentNullException(nameof(processOutputs));
         _pipelineEnvironmentOptions = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
+        _sidecarTelemetry = sidecarTelemetry ?? SidecarTelemetryWriter.Current;
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
@@ -120,7 +154,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (useMultiModel)
         {
             // â”€â”€ Multi-Model Path: YOLO -> DINO -> SAM -> Qwen â”€â”€
-            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
+            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken, _sidecarTelemetry);
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = CreateOllamaClient();
@@ -132,7 +166,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 _cfg.FfmpegPath ?? "ffmpeg",
                 qwenVision: qwenVision,
                 logger: _loggerFactory.CreateLogger<MultiModelAnalysisService>(),
-                pipelineEnvironmentOptions: _pipelineEnvironmentOptions);
+                pipelineEnvironmentOptions: _pipelineEnvironmentOptions,
+                processOutputs: _processOutputs);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
 
@@ -156,7 +191,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 visionModel: _cfg.VisionModel,
                 ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg",
                 codeCatalog: _codeCatalog,
-                logger: _loggerFactory.CreateLogger<VideoFullAnalysisService>());
+                logger: _loggerFactory.CreateLogger<VideoFullAnalysisService>(),
+                processOutputs: _processOutputs);
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;
@@ -247,7 +283,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         // den Multi-Model-Hauptpfad nicht freigeben.
         try
         {
-            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
+            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken, _sidecarTelemetry);
             var healthCheck = await client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
             var notReadyReason = DescribeSidecarNotReady(healthCheck, pipelineCfg.SidecarUrl);
             if (notReadyReason is not null)

@@ -120,6 +120,7 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
 
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", photos);
         Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", photos);
+        Assert.Contains("_protocolContext.CodingDefectPreviews", photos);
         Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", loader);
         Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", loader);
         Assert.Contains("File.Exists", loader);

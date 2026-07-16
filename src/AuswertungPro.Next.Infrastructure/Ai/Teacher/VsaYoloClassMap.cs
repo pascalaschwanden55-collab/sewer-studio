@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -12,14 +11,17 @@ public static class VsaYoloClassMap
     private static readonly IReadOnlyDictionary<string, int> _defaults =
         VsaYoloClassMapFileStore.Defaults;
 
-    private static IVsaYoloClassMapStore _current = new VsaYoloClassMapFileStore();
+    private static readonly IVsaYoloClassMapStore Default = new VsaYoloClassMapFileStore();
 
-    public static IVsaYoloClassMapStore Current => Volatile.Read(ref _current);
+    public static IVsaYoloClassMapStore Current => Default;
 
+    [Obsolete("Die VSA-YOLO-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IVsaYoloClassMapStore store)
-        => Volatile.Write(
-            ref _current,
-            store ?? throw new ArgumentNullException(nameof(store)));
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        throw new NotSupportedException(
+            "Die VSA-YOLO-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static int GetClassId(string vsaCode)
         => Current.GetClassId(vsaCode);

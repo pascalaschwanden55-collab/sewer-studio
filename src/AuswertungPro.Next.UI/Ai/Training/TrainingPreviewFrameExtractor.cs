@@ -62,15 +62,10 @@ public sealed class TrainingPreviewFrameExtractionService : ITrainingPreviewFram
 /// <summary>Kompatibilitaetsfassade fuer bestehende Aufrufer.</summary>
 public static class TrainingPreviewFrameExtractor
 {
-    private static ITrainingPreviewFrameExtractor _current =
-        new TrainingPreviewFrameExtractionService(FrameStore.Current);
+    private static readonly ITrainingPreviewFrameExtractor Default =
+        new TrainingPreviewFrameExtractionService(new TrainingFrameFileStore());
 
-    public static ITrainingPreviewFrameExtractor Current => Volatile.Read(ref _current);
-
-    public static void Use(ITrainingPreviewFrameExtractor extractor) =>
-        Volatile.Write(
-            ref _current,
-            extractor ?? throw new ArgumentNullException(nameof(extractor)));
+    public static ITrainingPreviewFrameExtractor Current => Default;
 
     public static Task<string?> ExtractPreviewFrameAsync(
         TrainingCase trainingCase,

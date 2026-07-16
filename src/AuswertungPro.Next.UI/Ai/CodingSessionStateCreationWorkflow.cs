@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
@@ -21,7 +22,8 @@ public sealed record CodingSessionStateCreationWorkflowActions(
 
 public sealed record CodingSessionStateCreationRequest(
     string VideoPath,
-    AppSettings? Settings);
+    AppSettings? Settings,
+    ITrainingSampleStore? TrainingSamples = null);
 
 public sealed record CodingSessionStateCreationApplyActions(
     Action<ICodingSessionService> SetSessionService,
@@ -47,7 +49,10 @@ public static class CodingSessionStateCreationWorkflow
 
         return Execute(
             new CodingSessionStateCreationWorkflowActions(
-                CreateState: () => CodingSessionStateFactory.Create(request.VideoPath, request.Settings),
+                CreateState: () => CodingSessionStateFactory.Create(
+                    request.VideoPath,
+                    request.Settings,
+                    request.TrainingSamples),
                 SetSessionService: actions.SetSessionService,
                 SetOverlayService: actions.SetOverlayService,
                 CancelSchema: actions.CancelSchema,

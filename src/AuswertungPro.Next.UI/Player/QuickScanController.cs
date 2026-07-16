@@ -30,6 +30,8 @@ public sealed class QuickScanController
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
     private readonly Func<(double offsetX, double trackWidth)> _getSliderTrackBounds;
+    private readonly IProcessOutputReader _processOutputs;
+    private readonly IDialogService _dialogs;
 
     private CancellationTokenSource? _quickScanCts;
     private bool _isQuickScanning;
@@ -44,7 +46,9 @@ public sealed class QuickScanController
         string videoPath,
         Action ensurePlaying,
         Action updateUi,
-        Func<(double offsetX, double trackWidth)> getSliderTrackBounds)
+        Func<(double offsetX, double trackWidth)> getSliderTrackBounds,
+        IProcessOutputReader processOutputs,
+        IDialogService dialogs)
     {
         _heatmapCanvas = heatmapCanvas ?? throw new ArgumentNullException(nameof(heatmapCanvas));
         _quickScanButton = quickScanButton ?? throw new ArgumentNullException(nameof(quickScanButton));
@@ -55,6 +59,8 @@ public sealed class QuickScanController
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
         _updateUi = updateUi ?? throw new ArgumentNullException(nameof(updateUi));
         _getSliderTrackBounds = getSliderTrackBounds ?? throw new ArgumentNullException(nameof(getSliderTrackBounds));
+        _processOutputs = processOutputs ?? throw new ArgumentNullException(nameof(processOutputs));
+        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
     }
 
     /// <summary>Bricht einen laufenden Scan ab (null-safe). Vom Window-Teardown aufgerufen.</summary>
@@ -78,14 +84,14 @@ public sealed class QuickScanController
         }
         catch
         {
-            DialogHost.Current.Warn("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan");
+            _dialogs.Warn("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan");
             _quickScanButton.IsChecked = false;
             return;
         }
 
         if (!cfg.Enabled)
         {
-            DialogHost.Current.Info("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan");
+            _dialogs.Info("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan");
             _quickScanButton.IsChecked = false;
             return;
         }
@@ -94,7 +100,11 @@ public sealed class QuickScanController
         using var client = new OllamaClient(cfg.OllamaBaseUri,
             ownedTimeout: cfg.OllamaRequestTimeout > TimeSpan.Zero ? cfg.OllamaRequestTimeout : TimeSpan.FromMinutes(10),
             keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx);
-        var service = new QuickScanService(client, cfg.VisionModel, ffmpegPath);
+        var service = new QuickScanService(
+            client,
+            cfg.VisionModel,
+            ffmpegPath,
+            _processOutputs);
 
         _quickScanCts = new CancellationTokenSource();
         _isQuickScanning = true;

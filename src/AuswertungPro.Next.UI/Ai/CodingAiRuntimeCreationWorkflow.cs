@@ -16,13 +16,18 @@ public static class CodingAiRuntimeCreationWorkflow
 {
     public static CodingAiRuntime Create(
         ICodeCatalogProvider? codeCatalog,
-        PipelineConfig? pipelineConfig)
+        PipelineConfig? pipelineConfig,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
         => Create(
             new CodingAiRuntimeCreationRequest(codeCatalog, pipelineConfig),
             new CodingAiRuntimeCreationActions(
                 () => PlayerAiSettingsLoader.LoadPlatformSettings(),
                 (platformSettings, codeCatalog, loadedPipelineConfig) =>
-                    CodingAiRuntimeFactory.Create(platformSettings, codeCatalog, loadedPipelineConfig)));
+                    CodingAiRuntimeFactory.Create(
+                        platformSettings,
+                        codeCatalog,
+                        loadedPipelineConfig,
+                        sidecarTelemetry)));
 
     public static CodingAiRuntime Create(
         CodingAiRuntimeCreationRequest request,

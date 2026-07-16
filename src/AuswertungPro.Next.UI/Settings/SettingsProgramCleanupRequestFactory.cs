@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Infrastructure.Maintenance;
@@ -11,16 +10,11 @@ namespace AuswertungPro.Next.UI.Settings;
 
 public static class SettingsProgramCleanupRequestFactory
 {
-    private static IProgramRootLocator _current = new ProgramRootFileLocator();
+    private static readonly IProgramRootLocator DefaultProgramRootLocator =
+        new ProgramRootFileLocator();
 
     internal static IProgramRootLocator CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(IProgramRootLocator locator)
-    {
-        ArgumentNullException.ThrowIfNull(locator);
-        Volatile.Write(ref _current, locator);
-    }
+        => DefaultProgramRootLocator;
 
     public static ProgramCleanupRequest Create(AppSettings settings, DateTime utcNow)
         => Create(

@@ -5,7 +5,7 @@ public static class KnowledgeBasePaths
 {
     public const string EnvironmentVariableName = "SEWERSTUDIO_KNOWLEDGE_ROOT";
 
-    private static IKnowledgeBasePathService _current = new KnowledgeBasePathService();
+    private static readonly IKnowledgeBasePathService Default = new KnowledgeBasePathService();
 
     public enum RootSource
     {
@@ -26,10 +26,15 @@ public static class KnowledgeBasePaths
             && !KnowledgeBasePathService.PathsEqual(Root, PersistedSettingsRoot);
     }
 
-    public static IKnowledgeBasePathService Current => Volatile.Read(ref _current);
+    public static IKnowledgeBasePathService Current => Default;
 
-    public static void Use(IKnowledgeBasePathService paths) =>
-        Volatile.Write(ref _current, paths ?? throw new ArgumentNullException(nameof(paths)));
+    [Obsolete("Die Wissenspfad-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(IKnowledgeBasePathService paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        throw new NotSupportedException(
+            "Die Wissenspfad-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static string GetRoot(string? settingsOverride = null) =>
         Current.GetRoot(settingsOverride);

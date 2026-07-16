@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -26,6 +27,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly IRetrievalService? _retrieval;
     private readonly IReadOnlySet<string>? _evalHaltungKeys;
     private readonly ITrainingFrameStore _frameStore;
+    private readonly IProcessOutputReader _processOutputs;
+    private readonly ITrainingSampleStore _trainingSamples;
 
     private readonly AsyncPauseGate _pauseGate = new();
 
@@ -40,7 +43,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         string? ffmpegPath = null,
         IRetrievalService? retrieval = null,
         IReadOnlySet<string>? evalHaltungKeys = null,
-        ITrainingFrameStore? frameStore = null)
+        ITrainingFrameStore? frameStore = null,
+        IProcessOutputReader? processOutputs = null,
+        ITrainingSampleStore? trainingSamples = null)
     {
         _vision = vision;
         _comparison = comparison;
@@ -51,6 +56,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _retrieval = retrieval;
         _evalHaltungKeys = evalHaltungKeys;
         _frameStore = frameStore ?? FrameStore.Current;
+        _processOutputs = processOutputs ?? ProcessOutputReader.Current;
+        _trainingSamples = trainingSamples ?? TrainingSamplesStore.Current;
     }
 
     public void Pause() => _pauseGate.Pause();
@@ -168,7 +175,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             var ffmpeg = _ffmpegPath;
 
             // Videodauer ermitteln fuer Meter→Zeit-Mapping
-            var probe = new VideoProbeService(ffmpegPath: ffmpeg);
+            var probe = new VideoProbeService(
+                ffmpegPath: ffmpeg,
+                processOutputs: _processOutputs);
             var probeResult = await probe.ProbeAsync(tc.VideoPath, ct);
             double videoDuration = probeResult.Success ? probeResult.DurationSeconds : 300.0;
 
@@ -402,7 +411,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         // Samples mergen (bestehende laden + neue hinzufuegen + Dedup via Signature)
         if (generatedSamples.Count > 0)
         {
-            await TrainingSamplesStore.MergeAndSaveAsync(generatedSamples);
+            await _trainingSamples.MergeAndSaveAsync(generatedSamples);
         }
 
         sw.Stop();

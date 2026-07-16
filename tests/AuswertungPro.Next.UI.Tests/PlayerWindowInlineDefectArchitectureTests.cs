@@ -76,6 +76,7 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
             "BitmapImage");
         Assert.Contains("private void UpdateInlineEvidencePreview", preview);
         Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", preview);
+        Assert.Contains("_protocolContext.CodingDefectPreviews", preview);
         AssertNoForbiddenTokens(
             preview,
             "CodingInlineEvidencePreviewService.Build",

@@ -29,7 +29,8 @@ public sealed record SelfTrainingRunPreparationDefaultRequestFactoryRequest(
 public static class SelfTrainingRunPreparationRequestFactory
 {
     public static SelfTrainingRunPreparationWorkflowRequest CreateWithDefaults(
-        SelfTrainingRunPreparationDefaultRequestFactoryRequest request)
+        SelfTrainingRunPreparationDefaultRequestFactoryRequest request,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -49,12 +50,13 @@ public static class SelfTrainingRunPreparationRequestFactory
                 request.SetSelectedCase,
                 request.ResetCancellation,
                 request.SetStatusText),
-            TrainingSamplesStore.LoadAsync);
+            (trainingSamples ?? TrainingSamplesStore.Current).LoadAsync);
     }
 
     public static SelfTrainingRunPreparationWorkflowRequest CreateWithDefaults(
-        SelfTrainingRunPreparationRequestFactoryRequest request)
-        => Create(request, TrainingSamplesStore.LoadAsync);
+        SelfTrainingRunPreparationRequestFactoryRequest request,
+        ITrainingSampleStore? trainingSamples = null)
+        => Create(request, (trainingSamples ?? TrainingSamplesStore.Current).LoadAsync);
 
     public static SelfTrainingRunPreparationWorkflowRequest Create(
         SelfTrainingRunPreparationRequestFactoryRequest request,

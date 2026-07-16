@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -26,6 +27,30 @@ public sealed class TrainingApprovedProtocolExportRequestFactoryTests
         var after = DateTime.UtcNow;
 
         Assert.InRange(now, before, after);
+    }
+
+    [Fact]
+    public void CreateWithDefaults_verwendet_den_uebergebenen_Protokollspeicher()
+    {
+        var store = new ProtocolTrainingStoreFake("direkt.json");
+
+        var request = TrainingApprovedProtocolExportRequestFactory.CreateWithDefaults(
+            new TrainingApprovedProtocolExportDefaultRequestFactoryRequest(
+                GetIsBusy: () => false,
+                SetIsBusy: _ => { },
+                Samples: [Sample("sample-store")],
+                IsExportEligible: _ => true,
+                PersistSamplesAsync: () => Task.CompletedTask,
+                Log: _ => { },
+                SetStatusText: _ => { }),
+            store);
+        var entry = new ProtocolEntry { Code = "BAA" };
+
+        request.AddProtocolTrainingSample(entry, "haltung-1");
+
+        Assert.Same(entry, store.LastEntry);
+        Assert.Equal("haltung-1", store.LastHaltungId);
+        Assert.Equal("direkt.json", request.TargetPath);
     }
 
     [Fact]
@@ -82,4 +107,19 @@ public sealed class TrainingApprovedProtocolExportRequestFactoryTests
             Code = "BAB",
             Status = TrainingSampleStatus.Approved
         };
+
+    private sealed class ProtocolTrainingStoreFake(string storagePath) : IProtocolTrainingStore
+    {
+        public string StoragePath { get; } = storagePath;
+        public ProtocolEntry? LastEntry { get; private set; }
+        public string? LastHaltungId { get; private set; }
+
+        public void AddSample(ProtocolEntry entry, string? haltungId)
+        {
+            LastEntry = entry;
+            LastHaltungId = haltungId;
+        }
+
+        public IReadOnlyList<ProtocolAiTrainingSample> LoadRecent(int maxCount) => [];
+    }
 }

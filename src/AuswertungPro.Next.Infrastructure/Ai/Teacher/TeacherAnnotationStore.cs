@@ -8,15 +8,17 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
 /// </summary>
 public static class TeacherAnnotationStore
 {
-    private static ITeacherAnnotationStore _current = new TeacherAnnotationFileStore();
+    private static readonly ITeacherAnnotationStore Default = new TeacherAnnotationFileStore();
 
     public static string DefaultPath => Current.StoragePath;
 
-    public static ITeacherAnnotationStore Current => Volatile.Read(ref _current);
+    public static ITeacherAnnotationStore Current => Default;
 
-    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITeacherAnnotationStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Die globale Ablage fuer Lehrer-Annotationen kann nicht mehr ausgetauscht werden. " +
+            "ITeacherAnnotationStore bitte per Konstruktor uebergeben.");
 
     public static string GetImagesDir() => Current.GetImagesDir();
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -43,13 +44,50 @@ public static class AiStartupService
     public static Task<AiStartupResult> StartAsync(
         AppSettings settings,
         CancellationToken ct = default)
-        => StartAsync(settings, new DefaultAiStartupLauncher(), sidecarScriptPath: null, progress: null, ct);
+        => StartCoreAsync(
+            settings,
+            new DefaultAiStartupLauncher(),
+            AiSettingsFactory.Current,
+            SidecarScriptLocator.Current,
+            SidecarTokenResolver.Current,
+            sidecarScriptPath: null,
+            progress: null,
+            ct);
 
     public static Task<AiStartupResult> StartAsync(
         AppSettings settings,
         IProgress<string> progress,
         CancellationToken ct = default)
-        => StartAsync(settings, new DefaultAiStartupLauncher(), sidecarScriptPath: null, progress, ct);
+        => StartCoreAsync(
+            settings,
+            new DefaultAiStartupLauncher(),
+            AiSettingsFactory.Current,
+            SidecarScriptLocator.Current,
+            SidecarTokenResolver.Current,
+            sidecarScriptPath: null,
+            progress,
+            ct);
+
+    public static Task<AiStartupResult> StartAsync(
+        AppSettings settings,
+        IAiStartedProcessLifetime startedProcesses,
+        IAiPlatformSettingsResolver aiSettings,
+        ISidecarScriptLocator sidecarScripts,
+        ISidecarTokenResolver sidecarTokens,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(startedProcesses);
+        return StartCoreAsync(
+            settings,
+            new DefaultAiStartupLauncher(startedProcesses),
+            aiSettings,
+            sidecarScripts,
+            sidecarTokens,
+            sidecarScriptPath: null,
+            progress,
+            ct);
+    }
 
     public static Task<AiStartupResult> StartAsync(
         AppSettings settings,
@@ -64,12 +102,34 @@ public static class AiStartupService
         string? sidecarScriptPath,
         IProgress<string>? progress,
         CancellationToken ct = default)
+        => await StartCoreAsync(
+            settings,
+            launcher,
+            AiSettingsFactory.Current,
+            SidecarScriptLocator.Current,
+            SidecarTokenResolver.Current,
+            sidecarScriptPath,
+            progress,
+            ct).ConfigureAwait(false);
+
+    private static async Task<AiStartupResult> StartCoreAsync(
+        AppSettings settings,
+        IAiStartupLauncher launcher,
+        IAiPlatformSettingsResolver aiSettings,
+        ISidecarScriptLocator sidecarScripts,
+        ISidecarTokenResolver sidecarTokens,
+        string? sidecarScriptPath,
+        IProgress<string>? progress,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(launcher);
+        ArgumentNullException.ThrowIfNull(aiSettings);
+        ArgumentNullException.ThrowIfNull(sidecarScripts);
+        ArgumentNullException.ThrowIfNull(sidecarTokens);
 
         var settingsChanged = ApplyRuntimeDefaults(settings);
-        var platform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
+        var platform = aiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings));
         var preloadRequests = AiStartupPlanBuilder.BuildOllamaPreloadRequests(
             platform.VisionModel, platform.TextModel, platform.EmbedModel, platform.OllamaKeepAlive);
         var modelLabel = AiStartupPlanBuilder.BuildModelLabel(
@@ -77,9 +137,9 @@ public static class AiStartupService
 
         AiRuntimeStatusTracker.MarkStarting(modelLabel);
 
-        var sidecarHeaders = BuildSidecarHeaders(platform.SidecarToken);
-        var script = sidecarScriptPath ?? SidecarScriptLocator.FindDefaultSidecarScript();
-        var psExe = SidecarScriptLocator.ResolvePowerShellExe();
+        var sidecarHeaders = BuildSidecarHeaders(platform.SidecarToken, sidecarTokens);
+        var script = sidecarScriptPath ?? sidecarScripts.FindDefaultSidecarScript();
+        var psExe = sidecarScripts.ResolvePowerShellExe();
 
         var input = new AiStartupOrchestratorInput(
             OllamaBaseUri: platform.OllamaBaseUri,
@@ -111,9 +171,11 @@ public static class AiStartupService
 
     // ------------------------------------------------------------------ Hilfsmethoden
 
-    private static IReadOnlyDictionary<string, string>? BuildSidecarHeaders(string? configuredToken)
+    private static IReadOnlyDictionary<string, string>? BuildSidecarHeaders(
+        string? configuredToken,
+        ISidecarTokenResolver sidecarTokens)
     {
-        var token = SidecarTokenResolver.Resolve(configuredToken);
+        var token = sidecarTokens.Resolve(configuredToken);
         return token is null
             ? null
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

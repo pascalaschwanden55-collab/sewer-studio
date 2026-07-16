@@ -25,7 +25,8 @@ public sealed record TrainingBatchImportWorkflowRequest(
     Action ClearLivePreview,
     Action ResetSelfTrainingVisuals,
     Func<IDisposable> BeginActivity,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    ITrainingFrameStore? FrameStore = null);
 
 public static class TrainingBatchImportWorkflow
 {
@@ -63,7 +64,12 @@ public static class TrainingBatchImportWorkflow
                 (cfg, settings) =>
                 {
                     var meterSvc = TrainingMeterTimelineServiceFactory.Create(cfg, settings.GpuConcurrency);
-                    return new TrainingSampleGenerator(cfg, meterSvc, settings, request.CodeCatalog);
+                    return new TrainingSampleGenerator(
+                        cfg,
+                        meterSvc,
+                        settings,
+                        request.CodeCatalog,
+                        request.FrameStore ?? FrameStore.Current);
                 },
                 async () => await request.LoadSamplesAsync().ConfigureAwait(false),
                 request.BatchUi.SetProgressMax,

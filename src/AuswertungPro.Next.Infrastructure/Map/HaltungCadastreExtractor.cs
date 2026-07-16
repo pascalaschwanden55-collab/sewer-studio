@@ -17,16 +17,18 @@ public sealed record CadastreHaltung(
 /// </summary>
 public static class HaltungCadastreExtractor
 {
-    private static IHaltungCadastreTableStore _current = new HaltungCadastreTableFileStore();
+    private static readonly IHaltungCadastreTableStore Default =
+        new HaltungCadastreTableFileStore();
 
     public const string TableHeader = "Bezeichnung\tShaftA\tShaftB\tLaenge\tLichteHoehe\tMaterial";
 
-    public static IHaltungCadastreTableStore Current => Volatile.Read(ref _current);
+    public static IHaltungCadastreTableStore Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IHaltungCadastreTableStore store) =>
-        Volatile.Write(
-            ref _current,
-            store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Die globale Kataster-Tabellenablage kann nicht mehr ausgetauscht werden. " +
+            "IHaltungCadastreTableStore bitte per Konstruktor uebergeben.");
 
     public static IEnumerable<CadastreHaltung> Extract(string xtfPath)
         => Current.Extract(xtfPath);

@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 
@@ -9,14 +8,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Kins;
 /// </summary>
 public static class KinsDbfWhitelistEnricher
 {
-    private static IKinsDbfWhitelistEnricher _current = new KinsDbfWhitelistEnrichmentService();
+    private static readonly IKinsDbfWhitelistEnricher Default =
+        new KinsDbfWhitelistEnrichmentService();
 
-    public static IKinsDbfWhitelistEnricher Current => Volatile.Read(ref _current);
+    public static IKinsDbfWhitelistEnricher Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IKinsDbfWhitelistEnricher enricher)
-        => Volatile.Write(
-            ref _current,
-            enricher ?? throw new ArgumentNullException(nameof(enricher)));
+        => throw new NotSupportedException(
+            "Die globale KINS-DBF-Anreicherung kann nicht mehr ausgetauscht werden. " +
+            "IKinsDbfWhitelistEnricher bitte per Konstruktor uebergeben.");
 
     public static KinsDbfEnrichResult Apply(
         Project project,

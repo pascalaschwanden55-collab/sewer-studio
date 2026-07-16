@@ -43,7 +43,7 @@ public partial class PlayerWindow
             importEvent,
             importEventToSeek => _codingProtocolMatchController.SeekImportEvent(importEventToSeek),
             () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null,
-            CodingProtocolGuidedVerificationAdapter.Create(_codingAiRuntimeOwner.Controller.ProtocolVerifier));
+            CodingProtocolGuidedVerificationAdapter.Create(_codingAiRuntimeOwner.Controller.ProtocolVerifier), _protocolContext.TeacherAnnotations);
         return CodingImportTrainingResultWorkflow.Execute(
             result,
             new CodingImportTrainingResultDisplayActions(

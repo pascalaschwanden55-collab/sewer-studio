@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using AuswertungPro.Next.Application.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Backup;
@@ -7,14 +6,15 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 /// <summary>Findet die Repo-Wurzel anhand der AuswertungPro.sln.</summary>
 public static class RepoRootLocator
 {
-    private static IRepositoryRootLocator _current = new RepositoryRootFileLocator();
+    private static readonly IRepositoryRootLocator Default = new RepositoryRootFileLocator();
 
-    public static IRepositoryRootLocator Current => Volatile.Read(ref _current);
+    public static IRepositoryRootLocator Current => Default;
 
-    public static void Use(IRepositoryRootLocator locator)
-        => Volatile.Write(
-            ref _current,
-            locator ?? throw new ArgumentNullException(nameof(locator)));
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
+    public static void Use(IRepositoryRootLocator locator) =>
+        throw new NotSupportedException(
+            "Die globale Projektordnersuche kann nicht mehr ausgetauscht werden. " +
+            "IRepositoryRootLocator bitte per Konstruktor uebergeben.");
 
     public static string? Locate()
         => Current.Locate(AppContext.BaseDirectory);

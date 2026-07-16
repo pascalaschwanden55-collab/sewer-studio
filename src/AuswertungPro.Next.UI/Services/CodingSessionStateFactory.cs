@@ -1,5 +1,6 @@
 using System;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.UI;
@@ -14,9 +15,12 @@ public sealed record CodingSessionStateComponents(
 
 public static class CodingSessionStateFactory
 {
-    public static CodingSessionStateComponents Create(string videoPath, AppSettings? settings = null)
+    public static CodingSessionStateComponents Create(
+        string videoPath,
+        AppSettings? settings = null,
+        ITrainingSampleStore? trainingSamples = null)
         => Create(
-            CodingSessionServiceFactory.Create(settings),
+            CodingSessionServiceFactory.Create(settings, trainingSamples),
             new OverlayToolService(),
             new CodingFeedbackRecorder(),
             videoPath);
@@ -25,9 +29,10 @@ public static class CodingSessionStateFactory
         string videoPath,
         AppSettings? settings,
         ICodingSessionService? existingSessionService,
-        IOverlayToolService? existingOverlayService)
+        IOverlayToolService? existingOverlayService,
+        ITrainingSampleStore? trainingSamples = null)
         => Create(
-            existingSessionService ?? CodingSessionServiceFactory.Create(settings),
+            existingSessionService ?? CodingSessionServiceFactory.Create(settings, trainingSamples),
             existingOverlayService ?? new OverlayToolService(),
             new CodingFeedbackRecorder(),
             videoPath);

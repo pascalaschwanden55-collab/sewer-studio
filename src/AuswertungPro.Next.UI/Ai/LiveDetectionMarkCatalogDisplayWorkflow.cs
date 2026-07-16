@@ -1,5 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -10,7 +11,8 @@ public sealed record LiveDetectionMarkCatalogDisplayRequest(
     string? SuggestedCode,
     double? Meter,
     string? VideoPath,
-    Window Owner);
+    Window Owner,
+    ICodeUsageTracker? CodeUsage = null);
 
 public sealed record LiveDetectionMarkCatalogDisplayActions(
     Func<bool> HasCodeCatalog,
@@ -26,7 +28,13 @@ public static class LiveDetectionMarkCatalogDisplayWorkflow
         => TryOpen(
             request,
             actions,
-            LiveDetectionMarkCatalogWorkflowServiceFactory.Create);
+            (hasCodeCatalog, createViewModel, onEntryCreated, showOverlay) =>
+                LiveDetectionMarkCatalogWorkflowServiceFactory.Create(
+                    hasCodeCatalog,
+                    createViewModel,
+                    onEntryCreated,
+                    showOverlay,
+                    request.CodeUsage));
 
     public static bool TryOpen(
         LiveDetectionMarkCatalogDisplayRequest request,

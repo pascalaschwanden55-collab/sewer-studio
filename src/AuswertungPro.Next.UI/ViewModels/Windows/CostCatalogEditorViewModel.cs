@@ -5,15 +5,17 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Cost;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCatalogEditorViewModel : ObservableObject
 {
-    private readonly CostCatalogStore _store;
+    private readonly ICostCatalogStore _store;
     private readonly CostCatalog _catalog;
     private readonly string? _projectPath;
     private readonly Window _window;
@@ -43,16 +45,30 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CloseCommand { get; }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]
     public CostCatalogEditorViewModel(
         string? projectPath,
         Window window,
         IDialogService? dialogs = null,
         CostCatalogStore? store = null)
+        : this(
+            projectPath,
+            window,
+            store ?? CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            dialogs)
+    {
+    }
+
+    public CostCatalogEditorViewModel(
+        string? projectPath,
+        Window window,
+        ICostCatalogStore store,
+        IDialogService? dialogs = null)
     {
         _projectPath = projectPath;
         _window = window;
         _dialogs = dialogs ?? new DialogService();
-        _store = store ?? new CostCatalogStore();
+        _store = store ?? throw new ArgumentNullException(nameof(store));
 
         _catalog = _store.LoadMerged(projectPath);
         Items = new ObservableCollection<CostCatalogItem>(_catalog.Items);

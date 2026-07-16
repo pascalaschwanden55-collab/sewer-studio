@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Map;
@@ -28,6 +29,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
+    private readonly IProjectCostStoreRepository _projectCosts;
     private readonly IDistributionPatternResolver _patternResolver;
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
@@ -64,6 +66,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             excelExport: sp.ExcelExport,
             toasts: sp.Toasts,
             costFieldSync: sp.CostFieldSync,
+            projectCosts: sp.CostStores.CreateProjectCostStore(),
             patternResolver: sp.DistributionPatterns,
             directoryTreeResolver: sp.DistributionDirectoryTree,
             katasterXtfPaths: sp.KatasterXtfPaths,
@@ -71,6 +74,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
     }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]
     public ExportPageViewModel(
         ShellViewModel shell,
         AppSettings settings,
@@ -82,6 +86,33 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
         IKatasterXtfPathResolver? katasterXtfPaths = null,
         IHaltungCadastreIndexProvider? haltungCadastreIndexes = null)
+        : this(
+            shell,
+            settings,
+            dialogs,
+            excelExport,
+            toasts,
+            costFieldSync,
+            CostStoreCompatibility.Factory.CreateProjectCostStore(),
+            patternResolver,
+            directoryTreeResolver,
+            katasterXtfPaths,
+            haltungCadastreIndexes)
+    {
+    }
+
+    public ExportPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        IExcelExportService excelExport,
+        IToastService toasts,
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IProjectCostStoreRepository projectCosts,
+        IDistributionPatternResolver? patternResolver = null,
+        IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
+        IKatasterXtfPathResolver? katasterXtfPaths = null,
+        IHaltungCadastreIndexProvider? haltungCadastreIndexes = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -89,6 +120,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _excelExport = excelExport ?? throw new ArgumentNullException(nameof(excelExport));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
+        _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
         DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
@@ -314,8 +346,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             var projectPath = _settings.LastProjectPath ?? "";
             if (!string.IsNullOrWhiteSpace(projectPath))
             {
-                var store = new AuswertungPro.Next.Infrastructure.Costs.ProjectCostStoreRepository()
-                    .Load(projectPath, out var syncLoadError);
+                var store = _projectCosts.Load(projectPath, out var syncLoadError);
                 if (syncLoadError is null)
                     _costFieldSync.Sync(_shell.Project, store);
             }

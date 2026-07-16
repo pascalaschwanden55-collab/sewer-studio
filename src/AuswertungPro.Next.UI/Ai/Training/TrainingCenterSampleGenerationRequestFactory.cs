@@ -27,7 +27,10 @@ public sealed record TrainingCenterSampleGenerationDefaultRequestFactoryRequest(
 public static class TrainingCenterSampleGenerationRequestFactory
 {
     public static TrainingCenterSampleGenerationWorkflowRequest CreateWithDefaults(
-        TrainingCenterSampleGenerationDefaultRequestFactoryRequest request)
+        TrainingCenterSampleGenerationDefaultRequestFactoryRequest request,
+        ITrainingCenterSettingsStore? settingsStore = null,
+        ITrainingFrameStore? frameStore = null,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -39,23 +42,32 @@ public static class TrainingCenterSampleGenerationRequestFactory
             BeginActivity: () => AiTrack.Begin("Training Center"),
             request.CodeCatalog,
             request.AppendSamples,
-            request.SetStatusText));
+            request.SetStatusText),
+            settingsStore,
+            frameStore,
+            trainingSamples);
     }
 
     public static TrainingCenterSampleGenerationWorkflowRequest CreateWithDefaults(
-        TrainingCenterSampleGenerationRequestFactoryRequest request)
+        TrainingCenterSampleGenerationRequestFactoryRequest request,
+        ITrainingCenterSettingsStore? settingsStore = null,
+        ITrainingFrameStore? frameStore = null,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var samples = trainingSamples ?? TrainingSamplesStore.Current;
         return Create(
             request,
-            TrainingSamplesStore.LoadAsync,
+            samples.LoadAsync,
             (input, signatures, token) => TrainingCenterSampleGenerationRuntime.GenerateWithDiagnosticsAsync(
                 request.CodeCatalog,
                 input,
                 signatures,
+                settingsStore ?? TrainingCenterSettingsStore.Current,
+                frameStore ?? FrameStore.Current,
                 token),
-            TrainingSamplesStore.MergeAndSaveAsync);
+            samples.MergeAndSaveAsync);
     }
 
     public static TrainingCenterSampleGenerationWorkflowRequest Create(

@@ -5,12 +5,15 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// <summary>Kompatibilitaetsfassade; die Dateiarbeit liegt im Instanzdienst.</summary>
 public static class FrameStore
 {
-    private static ITrainingFrameStore _current = new TrainingFrameFileStore();
+    private static readonly ITrainingFrameStore Default = new TrainingFrameFileStore();
 
-    public static ITrainingFrameStore Current => Volatile.Read(ref _current);
+    public static ITrainingFrameStore Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITrainingFrameStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Der globale Trainings-Frame-Speicher kann nicht mehr ausgetauscht werden. " +
+            "ITrainingFrameStore bitte per Konstruktor uebergeben.");
 
     public static string GetFramesDir(string? customDir = null) =>
         Current.GetFramesDir(customDir);

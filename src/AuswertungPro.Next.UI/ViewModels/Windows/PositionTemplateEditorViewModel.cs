@@ -9,13 +9,14 @@ using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 {
-    private readonly PositionTemplateStore _store;
-    private readonly CostCatalogStore _catalogStore;
+    private readonly IPositionTemplateStore _store;
+    private readonly ICostCatalogStore _catalogStore;
     private readonly string? _projectPath;
     private readonly Window _window;
     private readonly IDialogService _dialogs;
@@ -41,18 +42,34 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     public IRelayCommand MoveToStorageCommand { get; }
     public IRelayCommand RestoreFromStorageCommand { get; }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Vorlagen-Speicher injizieren.")]
     public PositionTemplateEditorViewModel(
         string? projectPath,
         Window window,
         IDialogService? dialogs = null,
         PositionTemplateStore? store = null,
         CostCatalogStore? catalogStore = null)
+        : this(
+            projectPath,
+            window,
+            store ?? CostStoreCompatibility.Factory.CreatePositionTemplateStore(),
+            catalogStore ?? CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            dialogs)
+    {
+    }
+
+    public PositionTemplateEditorViewModel(
+        string? projectPath,
+        Window window,
+        IPositionTemplateStore store,
+        ICostCatalogStore catalogStore,
+        IDialogService? dialogs = null)
     {
         _projectPath = projectPath;
         _window = window;
         _dialogs = dialogs ?? new DialogService();
-        _store = store ?? new PositionTemplateStore();
-        _catalogStore = catalogStore ?? new CostCatalogStore();
+        _store = store ?? throw new ArgumentNullException(nameof(store));
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
 
         // Load data
         _originalCatalog = _store.LoadMerged(projectPath);

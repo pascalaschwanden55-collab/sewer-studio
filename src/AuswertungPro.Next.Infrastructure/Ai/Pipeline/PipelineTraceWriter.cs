@@ -8,12 +8,15 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public static class PipelineTraceWriter
 {
-    private static IPipelineTraceWriter _current = new PipelineTraceFileWriter();
+    private static readonly IPipelineTraceWriter Default = new PipelineTraceFileWriter();
 
-    public static IPipelineTraceWriter Current => Volatile.Read(ref _current);
+    public static IPipelineTraceWriter Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IPipelineTraceWriter writer) =>
-        Volatile.Write(ref _current, writer ?? throw new ArgumentNullException(nameof(writer)));
+        throw new NotSupportedException(
+            "Der globale Pipeline-Trace-Schreiber kann nicht mehr ausgetauscht werden. " +
+            "IPipelineTraceWriter bitte per Konstruktor uebergeben.");
 
     public static async Task WriteAsync(PipelineFrameTrace entry)
     {

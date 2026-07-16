@@ -192,7 +192,7 @@ public partial class PlayerWindow : Window
             new CodingPipelineHealthControllerActions(
                 CreateRuntime: () => CodingAiRuntimeCreationWorkflow.Create(
                     CodeCatalog,
-                    _protocolContext.PipelineConfig),
+                    _protocolContext.PipelineConfig, _protocolContext.SidecarTelemetry),
                 CreateHealthMonitor: runtime => CodingAiHealthMonitorCreationWorkflow.Create(
                     runtime,
                     aiEnabled: () => _codingAiRuntimeOwner.Controller.AiEnabled,
@@ -222,7 +222,7 @@ public partial class PlayerWindow : Window
             () => _liveDetectionController.PendingConfirmationFrameBytes,
             () => _codingSessionHost.HaltungName ?? "unknown",
             () => _protocolContext.HaltungRecord?.GetFieldValue("Datum_Jahr"),
-            CaptureCurrentFrameAsync);
+            CaptureCurrentFrameAsync, _protocolContext.TrainingSamples);
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
@@ -241,7 +241,7 @@ public partial class PlayerWindow : Window
                 UpdateUi: UpdateUi,
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
-                MapCodingOverlayPoint: CodingNormToPixel));
+                MapCodingOverlayPoint: CodingNormToPixel, ProcessOutputs: serviceProvider?.ProcessOutputs, Dialogs: _protocolContext.Dialogs));
         _liveDetectionStopController = new LiveDetectionStopController(
             new LiveDetectionStopControllerSources(
                 StopRuntime: _liveDetectionController.Stop,
@@ -314,7 +314,7 @@ public partial class PlayerWindow : Window
                     _playbackContext.VideoPath,
                     _protocolContext.Settings,
                     _codingSessionRuntimeOwner.Service,
-                    _codingOverlayRuntimeOwner.Service),
+                    _codingOverlayRuntimeOwner.Service, _protocolContext.TrainingSamples),
                 OverlayReadyActions: new LiveDetectionMarkOverlayReadyApplyActions(
                     SetSessionService: _codingSessionRuntimeOwner.Set,
                     SetOverlayService: _codingOverlayRuntimeOwner.Set,
@@ -602,7 +602,7 @@ public partial class PlayerWindow : Window
                 CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
                 RefreshCodingEvents: RefreshCodingEventsList,
                 ShowOsdMeterStatus: ShowOsdMeterStatus,
-                ResumeDetection: ResumeDetection));
+                ResumeDetection: ResumeDetection, TeacherAnnotations: _protocolContext.TeacherAnnotations, CodeUsage: _protocolContext.CodeUsage, VsaYoloClasses: _protocolContext.VsaYoloClasses));
         _liveDetectionConfirmationTrainingController = liveDetectionTrainingControllers.Confirmation;
         _liveDetectionManualMarkTrainingController = liveDetectionTrainingControllers.ManualMark;
         var codingConfirmationDecisionController = new CodingConfirmationDecisionController(

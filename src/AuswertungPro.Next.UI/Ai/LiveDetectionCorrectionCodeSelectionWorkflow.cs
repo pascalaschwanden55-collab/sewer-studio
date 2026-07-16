@@ -1,5 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -8,7 +9,8 @@ public sealed record LiveDetectionCorrectionCodeSelectionRequest(
     double? Meter,
     double TimestampSec,
     string? VideoPath,
-    Window Owner);
+    Window Owner,
+    ICodeUsageTracker? CodeUsage = null);
 
 public sealed record LiveDetectionCorrectionCodeSelectionActions(
     Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> CreateViewModel);
@@ -21,7 +23,9 @@ public static class LiveDetectionCorrectionCodeSelectionWorkflow
         => Select(
             request,
             actions,
-            LiveDetectionCorrectionCodeSelectionServiceFactory.Create);
+            createViewModel => LiveDetectionCorrectionCodeSelectionServiceFactory.Create(
+                createViewModel,
+                request.CodeUsage));
 
     public static ProtocolEntry? Select(
         LiveDetectionCorrectionCodeSelectionRequest request,

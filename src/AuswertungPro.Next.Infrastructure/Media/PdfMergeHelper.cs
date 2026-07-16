@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.Infrastructure.Media;
@@ -8,14 +7,15 @@ namespace AuswertungPro.Next.Infrastructure.Media;
 /// </summary>
 public static class PdfMergeHelper
 {
-    private static IPdfMergeService _current = new PdfMergeService();
+    private static readonly IPdfMergeService Default = new PdfMergeService();
 
-    public static IPdfMergeService Current => Volatile.Read(ref _current);
+    public static IPdfMergeService Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IPdfMergeService service)
-        => Volatile.Write(
-            ref _current,
-            service ?? throw new ArgumentNullException(nameof(service)));
+        => throw new NotSupportedException(
+            "Der globale PDF-Zusammenfuegedienst kann nicht mehr ausgetauscht werden. " +
+            "IPdfMergeService bitte per Konstruktor uebergeben.");
 
     /// <summary>
     /// Haengt die Seiten der Original-PDFs an das generierte PDF an.

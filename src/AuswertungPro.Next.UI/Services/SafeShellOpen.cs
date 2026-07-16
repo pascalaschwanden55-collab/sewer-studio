@@ -7,16 +7,15 @@ namespace AuswertungPro.Next.UI.Services;
 
 public static class SafeShellOpen
 {
-    private static ISafeShellOpenService _current = new SafeShellOpenService();
+    private static readonly ISafeShellOpenService Default = new SafeShellOpenService();
 
     internal static ISafeShellOpenService CompatibilityService
-        => Volatile.Read(ref _current);
+        => Default;
 
+    [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ISafeShellOpenService direkt uebergeben.")]
     internal static void Use(ISafeShellOpenService service)
-    {
-        ArgumentNullException.ThrowIfNull(service);
-        Volatile.Write(ref _current, service);
-    }
+        => throw new NotSupportedException(
+            "SafeShellOpen ist unveraenderlich. ISafeShellOpenService direkt uebergeben.");
 
     public static bool TryOpen(string? path, out string? error)
     {

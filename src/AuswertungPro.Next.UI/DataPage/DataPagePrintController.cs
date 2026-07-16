@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -51,6 +52,7 @@ public sealed class DataPagePrintController
     private readonly Func<string, bool> _openPdf;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
+    private readonly IProjectCostStoreRepository _projectCosts;
 
     public DataPagePrintController(
         IDialogService dialogs,
@@ -67,6 +69,7 @@ public sealed class DataPagePrintController
             dialogs,
             (IProtocolPdfExporter)protocolPdfExporter,
             getProjectFolder,
+            CreateCompatibilityProjectCosts(),
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -91,8 +94,10 @@ public sealed class DataPagePrintController
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
         : this(
             dialogs,
-            protocolPdfExporter,
+            (IProtocolPdfExporter)protocolPdfExporter,
             getProjectFolder,
+            pdfMerge,
+            CreateCompatibilityProjectCosts(),
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -101,13 +106,13 @@ public sealed class DataPagePrintController
             dossierPhotoAvailability,
             inspectionProtocolFiles)
     {
-        _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
 
     internal DataPagePrintController(
         IDialogService dialogs,
         IProtocolPdfExporter protocolPdfExporter,
         Func<string?> getProjectFolder,
+        IProjectCostStoreRepository projectCosts,
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
@@ -120,6 +125,7 @@ public sealed class DataPagePrintController
             getProjectFolder,
             CreateBuildAwuPdf(protocolPdfExporter),
             AppContext.BaseDirectory,
+            projectCosts,
             buildHydraulikCalculation: buildHydraulikCalculation,
             getLastProjectPath: getLastProjectPath,
             findSchachtByNummer: findSchachtByNummer,
@@ -138,6 +144,7 @@ public sealed class DataPagePrintController
         IProtocolPdfExporter protocolPdfExporter,
         Func<string?> getProjectFolder,
         IPdfMergeService pdfMerge,
+        IProjectCostStoreRepository projectCosts,
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
@@ -149,6 +156,7 @@ public sealed class DataPagePrintController
             dialogs,
             protocolPdfExporter,
             getProjectFolder,
+            projectCosts,
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -165,6 +173,65 @@ public sealed class DataPagePrintController
         Func<string?> getProjectFolder,
         Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> buildAwuPdf,
         string baseDirectory,
+        Func<string, bool>? fileExists = null,
+        Action<string, byte[]>? writeAllBytes = null,
+        Func<string, byte[], Task>? writeAllBytesAsync = null,
+        Func<DateTime>? now = null,
+        Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
+        Func<HydraulikPrintOptions?>? selectHydraulikPrintOptions = null,
+        Func<HaltungRecord, HydraulikCalcResult, HydraulikPrintOptions, Task<byte[]>>? buildHydraulikPdfAsync = null,
+        Func<string?>? getLastProjectPath = null,
+        Func<string, (string? VonNr, string? BisNr)>? splitHoldingNodes = null,
+        Func<string?, SchachtRecord?>? findSchachtByNummer = null,
+        Func<HaltungRecord, DataPageHydraulikAvailability>? readDossierHydraulikAvailability = null,
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        Func<string, HoldingCost?>? findHoldingCost = null,
+        Func<HaltungRecord, string, SchachtRecord?, SchachtRecord?, List<string>>? resolveDossierOriginalPdfPaths = null,
+        Func<DataPageDossierPrintAvailability, DossierPrintOptions?>? selectDossierPrintOptions = null,
+        Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>>? buildDossierPdfAsync = null,
+        Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
+        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
+        Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
+        Func<string, bool>? openPdf = null,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        : this(
+            dialogs,
+            getProjectFolder,
+            buildAwuPdf,
+            baseDirectory,
+            CreateCompatibilityProjectCosts(),
+            fileExists,
+            writeAllBytes,
+            writeAllBytesAsync,
+            now,
+            buildHydraulikCalculation,
+            selectHydraulikPrintOptions,
+            buildHydraulikPdfAsync,
+            getLastProjectPath,
+            splitHoldingNodes,
+            findSchachtByNummer,
+            readDossierHydraulikAvailability,
+            buildDossierHydraulikCalculation,
+            findHoldingCost,
+            resolveDossierOriginalPdfPaths,
+            selectDossierPrintOptions,
+            buildDossierPdfAsync,
+            mergeOriginals,
+            mergeWithOriginals,
+            regenerateOne,
+            openPdf,
+            dossierPhotoAvailability,
+            inspectionProtocolFiles)
+    {
+    }
+
+    internal DataPagePrintController(
+        IDialogService dialogs,
+        Func<string?> getProjectFolder,
+        Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> buildAwuPdf,
+        string baseDirectory,
+        IProjectCostStoreRepository projectCosts,
         Func<string, bool>? fileExists = null,
         Action<string, byte[]>? writeAllBytes = null,
         Func<string, byte[], Task>? writeAllBytesAsync = null,
@@ -225,6 +292,7 @@ public sealed class DataPagePrintController
             ?? DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPageProtocolPathResolver.CompatibilityService;
+        _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -476,9 +544,12 @@ public sealed class DataPagePrintController
         if (string.IsNullOrWhiteSpace(projectPath))
             return null;
 
-        var store = new ProjectCostStoreRepository().Load(projectPath);
+        var store = _projectCosts.Load(projectPath);
         return store.ByHolding.TryGetValue(holdingLabel.Trim(), out var cost) ? cost : null;
     }
+
+    private static IProjectCostStoreRepository CreateCompatibilityProjectCosts()
+        => CostStoreCompatibility.Factory.CreateProjectCostStore();
 
     private List<string> ResolveDossierOriginalPdfPaths(
         HaltungRecord record,

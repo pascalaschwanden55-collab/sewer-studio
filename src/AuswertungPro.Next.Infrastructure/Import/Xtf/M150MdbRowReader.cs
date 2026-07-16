@@ -216,12 +216,15 @@ finally {
 /// <summary>Kompatible Fassade für bestehende statische Importwege.</summary>
 public static class M150MdbRowReader
 {
-    private static IM150MdbRowReader _current = new PowerShellM150MdbRowReader();
+    private static readonly IM150MdbRowReader Default = new PowerShellM150MdbRowReader();
 
-    public static IM150MdbRowReader Current => Volatile.Read(ref _current);
+    public static IM150MdbRowReader Current => Default;
 
-    public static void Use(IM150MdbRowReader reader) =>
-        Volatile.Write(
-            ref _current,
-            reader ?? throw new ArgumentNullException(nameof(reader)));
+    [Obsolete("Die M150-MDB-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(IM150MdbRowReader reader)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        throw new NotSupportedException(
+            "Die M150-MDB-Fassade kann nicht mehr global ersetzt werden.");
+    }
 }

@@ -7,6 +7,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Maintenance;
@@ -36,6 +38,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IFolderOpenService _folderOpen;
     private readonly IProgramRootLocator _programRootLocator;
+    private readonly IAiStartedProcessLifetime _aiStartedProcesses;
+    private readonly IAiPlatformSettingsResolver _aiSettings;
+    private readonly ISidecarScriptLocator _sidecarScripts;
+    private readonly ISidecarTokenResolver _sidecarTokens;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -142,7 +148,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             knowledgeBackup: sp.KnowledgeBackup,
             katasterXtfPaths: sp.KatasterXtfPaths,
             folderOpen: sp.FolderOpen,
-            programRootLocator: sp.ProgramRootLocator)
+            programRootLocator: sp.ProgramRootLocator,
+            aiStartedProcesses: sp.AiStartedProcesses,
+            aiSettings: sp.AiSettings,
+            sidecarScripts: sp.SidecarScripts,
+            sidecarTokens: sp.SidecarTokens)
     {
     }
 
@@ -228,7 +238,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IKnowledgeBackupService knowledgeBackup,
         IKatasterXtfPathResolver? katasterXtfPaths,
         IFolderOpenService? folderOpen,
-        IProgramRootLocator? programRootLocator)
+        IProgramRootLocator? programRootLocator,
+        IAiStartedProcessLifetime? aiStartedProcesses = null,
+        IAiPlatformSettingsResolver? aiSettings = null,
+        ISidecarScriptLocator? sidecarScripts = null,
+        ISidecarTokenResolver? sidecarTokens = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -243,6 +257,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
         _programRootLocator = programRootLocator
             ?? SettingsProgramCleanupRequestFactory.CompatibilityService;
+        _aiStartedProcesses = aiStartedProcesses
+            ?? Infrastructure.Ai.Startup.AiStartedProcessLifetime.Current;
+        _aiSettings = aiSettings
+            ?? Infrastructure.Ai.Configuration.AiSettingsFactory.Current;
+        _sidecarScripts = sidecarScripts
+            ?? Infrastructure.Ai.Startup.SidecarScriptLocator.Current;
+        _sidecarTokens = sidecarTokens
+            ?? Infrastructure.Ai.Pipeline.SidecarTokenResolver.Current;
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -433,7 +455,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 () => IsAiStarting,
                 value => IsAiStarting = value,
                 value => AiStartupStatusText = value),
-            _settings.SaveImmediate).ConfigureAwait(true);
+            _settings.SaveImmediate,
+            _aiStartedProcesses,
+            _aiSettings,
+            _sidecarScripts,
+            _sidecarTokens).ConfigureAwait(true);
     }
 
     private void ApplyTheme()

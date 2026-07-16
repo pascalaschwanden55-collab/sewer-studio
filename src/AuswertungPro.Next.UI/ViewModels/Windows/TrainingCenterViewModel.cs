@@ -292,7 +292,8 @@ public partial class TrainingCenterViewModel : ObservableObject
         await SelfTrainingLastMatchRateRefreshWorkflow.RunAsync(
             SelfTrainingLastMatchRateRefreshRequestFactory.CreateWithDefaults(
                 new SelfTrainingLastMatchRateRefreshDefaultRequestFactoryRequest(
-                    CreateMatchRatePresentationUi()))).ConfigureAwait(false);
+                    CreateMatchRatePresentationUi()),
+                _selfTrainingHistory)).ConfigureAwait(false);
     }
 
     private SelfTrainingMatchRatePresentationUi CreateMatchRatePresentationUi()
@@ -460,7 +461,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                     ResetCancellation: ResetGenerationCancellation,
                     CodeCatalog: _codeCatalog,
                     AppendSamples: samples => TrainingSampleCollectionController.Append(Samples, samples),
-                    SetStatusText: value => StatusText = value)));
+                    SetStatusText: value => StatusText = value),
+                _trainingSettings,
+                _trainingFrames,
+                _trainingSamples));
     }
 
     private CancellationTokenSource ResetGenerationCancellationSource()
@@ -538,7 +542,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                     IsExportEligible: sample => TrainingSampleExportEligibility.EvaluateAndUpdate(sample, _codeCatalog),
                     PersistSamplesAsync: () => PersistSamplesAsync(),
                     Log: Log,
-                    SetStatusText: SetApprovedProtocolExportStatusText)));
+                    SetStatusText: SetApprovedProtocolExportStatusText),
+                _protocolTraining));
     }
 
     private void SetApprovedProtocolExportStatusText(string value) => StatusText = value;
@@ -581,7 +586,11 @@ public partial class TrainingCenterViewModel : ObservableObject
                 RefreshKbStatusAsync: RefreshKbStatusAsync,
                 ClearLivePreview: ClearLivePreview,
                 ResetSelfTrainingVisuals: () => ResetSelfTrainingVisuals()),
-            previewFrameExtractor: _trainingPreviewFrames)).ConfigureAwait(false);
+            previewFrameExtractor: _trainingPreviewFrames,
+            settingsStore: _trainingSettings,
+            frameStore: _trainingFrames,
+            trainingSamples: _trainingSamples,
+            dialogs: _dialogs)).ConfigureAwait(false);
     }
 
     [RelayCommand]
@@ -668,7 +677,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Log: Log,
                 SetStatus: SetStatus,
                 OnUi: OnUi,
-                ExportBackupAsync: _knowledgeBackup.ExportAsync))).ConfigureAwait(false);
+                ExportBackupAsync: _knowledgeBackup.ExportAsync)),
+            _trainingSamples).ConfigureAwait(false);
     }
 
 
@@ -704,7 +714,9 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)
     {
-        return await TrainingReviewSampleIdResolutionWorkflow.ResolveWithDefaultsAsync(item).ConfigureAwait(false);
+        return await TrainingReviewSampleIdResolutionWorkflow.ResolveWithDefaultsAsync(
+            item,
+            _trainingSamples).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -781,7 +793,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 OnUi: OnUi,
                 SetReviewQueueCount: value => ReviewQueueCount = value,
                 SetReviewStatusText: value => ReviewStatusText = value,
-                Log: Log)));
+                Log: Log)),
+            _trainingSamples);
 
     // ── Review Queue Commands ────────────────────────────────────────────
 
@@ -888,7 +901,13 @@ public partial class TrainingCenterViewModel : ObservableObject
                     ReloadReviewQueue: LoadReviewQueue,
                     LoadSamplesInternalAsync: LoadSamplesInternalAsync,
                     RefreshKbStatusAsync: RefreshKbStatusAsync,
-                    ResetVisuals: () => ResetSelfTrainingVisuals(resetMatchRate: true)))).ConfigureAwait(false);
+                    ResetVisuals: () => ResetSelfTrainingVisuals(resetMatchRate: true)),
+                _trainingFfmpegPaths,
+                _trainingSettings,
+                _selfTrainingHistory,
+                _trainingFrames,
+                _processOutputs,
+                _trainingSamples)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -944,7 +963,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                     ReloadCurrentReviewQueue,
                     OnUi,
                     value => ReviewStatusText = value,
-                    Log))).ConfigureAwait(false);
+                    Log),
+                _trainingSamples)).ConfigureAwait(false);
     }
 
     private void ReloadCurrentReviewQueue()

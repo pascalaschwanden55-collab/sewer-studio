@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Shared;
@@ -9,14 +8,17 @@ public static class FfmpegLocator
     /// <summary>Name der Umgebungsvariable für den FFmpeg-Pfad.</summary>
     public const string EnvKey = FfmpegFileLocator.EnvironmentVariableName;
 
-    private static IFfmpegExecutableLocator _current = new FfmpegFileLocator();
+    private static readonly IFfmpegExecutableLocator Default = new FfmpegFileLocator();
 
-    public static IFfmpegExecutableLocator Current => Volatile.Read(ref _current);
+    public static IFfmpegExecutableLocator Current => Default;
 
+    [Obsolete("Die FFmpeg-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IFfmpegExecutableLocator locator)
-        => Volatile.Write(
-            ref _current,
-            locator ?? throw new ArgumentNullException(nameof(locator)));
+    {
+        ArgumentNullException.ThrowIfNull(locator);
+        throw new NotSupportedException(
+            "Die FFmpeg-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static string ResolveFfmpeg()
         => Current.ResolveFfmpeg();

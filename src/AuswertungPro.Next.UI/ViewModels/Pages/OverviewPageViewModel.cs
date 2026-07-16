@@ -11,6 +11,7 @@ using System.Linq;
 using System;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
@@ -41,8 +42,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly IProjectDropPathResolver _projectDropPaths;
         private readonly DispatcherTimer _dashboardRefreshTimer;
         private readonly DispatcherTimer _previewRefreshTimer;
-        private readonly ProjectCostStoreRepository _haltungCostRepo = new();
-        private readonly ProjectCostStoreRepository _schachtCostRepo = new("schacht_costs.json");
+        private readonly IProjectCostStoreRepository _haltungCostRepo;
+        private readonly IProjectCostStoreRepository _schachtCostRepo;
         private Project? _subscribedProject;
         private CancellationTokenSource? _previewCts;
         private ProjectOverviewEntry? _pendingPreviewEntry;
@@ -96,11 +97,14 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.DashboardRefresh,
                 sp.Dialogs,
                 sp.Projects,
+                sp.CostStores.CreateProjectCostStore(),
+                sp.CostStores.CreateProjectCostStore("schacht_costs.json"),
                 sp.ProjectFileDiscovery,
                 sp.ProjectDropPaths)
         {
         }
 
+        [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
         public OverviewPageViewModel(
             ShellViewModel shell,
             AppSettings settings,
@@ -113,8 +117,32 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 dashboardRefresh,
                 dialogs,
                 projects,
+                CostStoreCompatibility.Factory.CreateProjectCostStore(),
+                CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_costs.json"),
                 ProjectFileDiscovery.CompatibilityService,
                 ProjectDropPathResolver.CompatibilityService)
+        {
+        }
+
+        [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
+        public OverviewPageViewModel(
+            ShellViewModel shell,
+            AppSettings settings,
+            DashboardRefreshNotifier dashboardRefresh,
+            IDialogService dialogs,
+            IProjectRepository projects,
+            IProjectFileDiscovery projectFileDiscovery,
+            IProjectDropPathResolver? projectDropPaths = null)
+            : this(
+                shell,
+                settings,
+                dashboardRefresh,
+                dialogs,
+                projects,
+                CostStoreCompatibility.Factory.CreateProjectCostStore(),
+                CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_costs.json"),
+                projectFileDiscovery,
+                projectDropPaths)
         {
         }
 
@@ -124,6 +152,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             DashboardRefreshNotifier dashboardRefresh,
             IDialogService dialogs,
             IProjectRepository projects,
+            IProjectCostStoreRepository haltungCostRepo,
+            IProjectCostStoreRepository schachtCostRepo,
             IProjectFileDiscovery projectFileDiscovery,
             IProjectDropPathResolver? projectDropPaths = null)
         {
@@ -132,6 +162,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
             _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
+            _haltungCostRepo = haltungCostRepo ?? throw new ArgumentNullException(nameof(haltungCostRepo));
+            _schachtCostRepo = schachtCostRepo ?? throw new ArgumentNullException(nameof(schachtCostRepo));
             _projectFileDiscovery = projectFileDiscovery
                 ?? throw new ArgumentNullException(nameof(projectFileDiscovery));
             _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
@@ -294,7 +326,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return DashboardStatisticsBuilder.Build(project, hCosts, sCosts);
         }
 
-        private static ProjectCostStore LoadCostStore(ProjectCostStoreRepository repo, string? projectPath, out bool ok)
+        private static ProjectCostStore LoadCostStore(IProjectCostStoreRepository repo, string? projectPath, out bool ok)
         {
             ok = false;
             if (string.IsNullOrWhiteSpace(projectPath))

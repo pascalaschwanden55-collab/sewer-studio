@@ -9,6 +9,7 @@ public partial class TrainingCenterViewModel
         IKnowledgeBaseDiagnosticsRunner diagnostics)
         => new(
             diagnostics,
+            _selfTrainingHistory,
             new TrainingCenterKnowledgeBaseDashboardUi(
                 value => KbSampleCount = value,
                 value => KbErrorCount = value,

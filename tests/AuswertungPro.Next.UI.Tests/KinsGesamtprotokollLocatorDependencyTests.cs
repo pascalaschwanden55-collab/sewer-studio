@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class KinsGesamtprotokollLocatorDependencyTests
 {
     [Fact]
-    public void ServiceProvider_Fassade_und_EinKnopfImport_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_verdrahtet_KINS_Gesamtprotokollsuche_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -29,9 +29,16 @@ public sealed class KinsGesamtprotokollLocatorDependencyTests
             locatorField!.GetValue(orchestrator));
         Assert.Same(
             services.KinsGesamtprotokolle,
-            KinsGesamtprotokollLocator.Current);
-        Assert.Same(
-            services.KinsGesamtprotokolle,
             services.GetService(typeof(IKinsGesamtprotokollLocator)));
+
+        var before = KinsGesamtprotokollLocator.Current;
+        var use = typeof(KinsGesamtprotokollLocator).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.KinsGesamtprotokolle]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, KinsGesamtprotokollLocator.Current);
     }
 }

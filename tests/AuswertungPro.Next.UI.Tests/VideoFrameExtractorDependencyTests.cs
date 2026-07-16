@@ -1,3 +1,4 @@
+using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -8,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class VideoFrameExtractorDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_FrameFassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_FrameExtraktor_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -21,6 +22,15 @@ public sealed class VideoFrameExtractorDependencyTests
         Assert.Same(
             services.VideoFrameExtraction,
             services.GetService(typeof(IVideoFrameExtractor)));
-        Assert.Same(services.VideoFrameExtraction, VideoFrameExtractor.Current);
+
+        var before = VideoFrameExtractor.Current;
+        var use = typeof(VideoFrameExtractor).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.VideoFrameExtraction]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, VideoFrameExtractor.Current);
     }
 }

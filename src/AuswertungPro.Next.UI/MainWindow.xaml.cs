@@ -16,6 +16,7 @@ namespace AuswertungPro.Next.UI;
 
 public partial class MainWindow : Window
 {
+    private readonly IDialogService _dialogs;
     private bool _isDataContextDisposed;
     private bool _startupEntrancePlayed;
     private KarteWindow? _detachedKarteWindow;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
         var services = GetServiceProvider();
+        _dialogs = services.Dialogs;
         // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
         services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
         // AP-06: Startwarnung zur Wissensdatenbank anzeigen, sobald der Host bereit ist
@@ -98,7 +100,7 @@ public partial class MainWindow : Window
 
         if (DataContext is ShellViewModel vm && vm.Project.Dirty)
         {
-            var result = DialogHost.Current.ConfirmCancel(
+            var result = _dialogs.ConfirmCancel(
                 "Es gibt ungespeicherte Änderungen. Jetzt speichern?",
                 "Projekt speichern");
 
@@ -167,7 +169,12 @@ public partial class MainWindow : Window
 
         try
         {
-            var result = await AiStartupService.StartAsync(sp.Settings);
+            var result = await AiStartupService.StartAsync(
+                sp.Settings,
+                sp.AiStartedProcesses,
+                sp.AiSettings,
+                sp.SidecarScripts,
+                sp.SidecarTokens);
             sp.Settings.SaveImmediate();
 
             shell?.SetStatus(result.HasWarnings ? "KI-Start mit Warnung" : "KI gestartet");

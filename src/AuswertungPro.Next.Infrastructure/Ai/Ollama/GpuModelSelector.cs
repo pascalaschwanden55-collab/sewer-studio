@@ -144,7 +144,7 @@ public sealed class GpuModelSelectionService : IGpuModelSelector
 /// </summary>
 public static class GpuModelSelector
 {
-    private static IGpuModelSelector _current = new GpuModelSelectionService();
+    private static readonly IGpuModelSelector Default = new GpuModelSelectionService();
 
     /// <summary>Modell fuer grosse GPUs mit Platz fuer den Sidecar-Stack.</summary>
     public const string LargeModel = "qwen3-vl:8b-q8";
@@ -172,12 +172,13 @@ public static class GpuModelSelector
         string GpuName,
         string Reason);
 
-    public static IGpuModelSelector Current => Volatile.Read(ref _current);
+    public static IGpuModelSelector Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IGpuModelSelector selector) =>
-        Volatile.Write(
-            ref _current,
-            selector ?? throw new ArgumentNullException(nameof(selector)));
+        throw new NotSupportedException(
+            "Die globale GPU-Modellwahl kann nicht mehr ausgetauscht werden. " +
+            "IGpuModelSelector bitte per Konstruktor uebergeben.");
 
     /// <summary>Prueft, ob der Modellname automatisch aufgeloest werden soll.</summary>
     public static bool IsAutoMode(string? modelName)

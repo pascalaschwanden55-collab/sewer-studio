@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -36,7 +37,8 @@ public sealed class CodingTrainingPersistenceContext
         Func<byte[]?> preferredFrameBytes,
         Func<string> caseId,
         Func<string?> inspectionDateText,
-        Func<Task<byte[]?>> captureFrameAsync)
+        Func<Task<byte[]?>> captureFrameAsync,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(sessionProvider);
         ArgumentNullException.ThrowIfNull(hasCodingContext);
@@ -45,7 +47,10 @@ public sealed class CodingTrainingPersistenceContext
         ArgumentNullException.ThrowIfNull(inspectionDateText);
         ArgumentNullException.ThrowIfNull(captureFrameAsync);
 
-        var owner = CodingTrainingSamplesOwner.CreateDefault(sessionProvider, settings);
+        var owner = CodingTrainingSamplesOwner.CreateDefault(
+            sessionProvider,
+            settings,
+            trainingSamples);
         return new CodingTrainingPersistenceContext(
             (codingEvent, request) => owner.Coordinator.PersistSingleEventAsync(codingEvent, request),
             (events, request) => owner.Coordinator.PersistEventsAsync(events, request),

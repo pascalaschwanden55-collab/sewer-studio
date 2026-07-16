@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -89,7 +90,7 @@ public sealed class MultiModelAnalysisService
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
         Func<string, CancellationToken, Task<double>>? durationProbe = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null)
         : this(
             PipelineTraceWriter.Current,
             client,
@@ -99,7 +100,7 @@ public sealed class MultiModelAnalysisService
             logger,
             frameSource,
             durationProbe,
-            pipelineEnvironmentOptions)
+            pipelineEnvironmentOptions, processOutputs)
     {
     }
 
@@ -112,7 +113,7 @@ public sealed class MultiModelAnalysisService
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
         Func<string, CancellationToken, Task<double>>? durationProbe = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         var options = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
@@ -122,7 +123,7 @@ public sealed class MultiModelAnalysisService
         _logger = logger ?? NullLogger.Instance;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = DeriveFfprobePath(ffmpegPath);
-        _videoProbe = new VideoProbeService(ffprobePath: _ffprobePath, ffmpegPath: _ffmpegPath);
+        _videoProbe = new VideoProbeService(ffprobePath: _ffprobePath, ffmpegPath: _ffmpegPath, processOutputs: processOutputs);
         _minClassConfidence = config.YoloClassConfidence.Count > 0
             ? config.YoloClassConfidence.Values.Min()
             : config.YoloConfidence;
@@ -133,7 +134,6 @@ public sealed class MultiModelAnalysisService
         ClassifierOnlyStructuralEnabled = options.ClassifierOnlyStructuralEnabled();
         _expectedYoloModel = options.ExpectedYoloModel();
     }
-
     public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
         => qwenMeterAccepted ? ("QwenOsd", false) : ("LinearEstimate", true);
 

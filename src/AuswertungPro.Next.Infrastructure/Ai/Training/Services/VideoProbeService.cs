@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
@@ -18,11 +19,16 @@ public sealed class VideoProbeService
 {
     private readonly string _ffprobe;
     private readonly string _ffmpeg;
+    private readonly IProcessOutputReader _processOutputs;
 
-    public VideoProbeService(string? ffprobePath = null, string? ffmpegPath = null)
+    public VideoProbeService(
+        string? ffprobePath = null,
+        string? ffmpegPath = null,
+        IProcessOutputReader? processOutputs = null)
     {
         _ffprobe = ffprobePath ?? FfmpegLocator.ResolveFfprobe();
         _ffmpeg  = ffmpegPath  ?? FfmpegLocator.ResolveFfmpeg();
+        _processOutputs = processOutputs ?? ProcessOutputReader.Current;
     }
 
     /// <summary>
@@ -66,7 +72,7 @@ public sealed class VideoProbeService
 
         try
         {
-            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            var output = await _processOutputs.ReadToExitAsync(psi, ct).ConfigureAwait(false);
             if (output is null) return VideoProbeResult.Fail("ffprobe: Process.Start returned null");
 
             var stdout = output.StandardOutput;
@@ -100,7 +106,7 @@ public sealed class VideoProbeService
 
         try
         {
-            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            var output = await _processOutputs.ReadToExitAsync(psi, ct).ConfigureAwait(false);
             if (output is null) return VideoProbeResult.Fail("ffmpeg: Process.Start returned null");
 
             var stderr = output.StandardError;

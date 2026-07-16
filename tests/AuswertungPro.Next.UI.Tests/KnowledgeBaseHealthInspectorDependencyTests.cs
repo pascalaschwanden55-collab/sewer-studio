@@ -1,3 +1,4 @@
+using System.Reflection;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -25,7 +26,6 @@ public sealed class KnowledgeBaseHealthInspectorDependencyTests
         Assert.Equal(1, inspector.Calls);
         Assert.Equal(services.KnowledgeDbPath, inspector.LastPath);
         Assert.Same(inspector, services.KnowledgeBaseHealth);
-        Assert.Same(inspector, KnowledgeBaseHealthChecker.Current);
         Assert.Same(
             inspector,
             services.GetService(typeof(IKnowledgeBaseHealthInspector)));
@@ -33,6 +33,16 @@ public sealed class KnowledgeBaseHealthInspectorDependencyTests
             "Test-Korruption",
             services.KnowledgeRootStartupWarning,
             StringComparison.Ordinal);
+
+        var before = KnowledgeBaseHealthChecker.Current;
+        var use = typeof(KnowledgeBaseHealthChecker).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [inspector]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, KnowledgeBaseHealthChecker.Current);
     }
 
     private sealed class RecordingHealthInspector : IKnowledgeBaseHealthInspector

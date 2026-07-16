@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DichtheitProtocolFileLocatorDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_DP_Pfadsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -19,10 +19,12 @@ public sealed class DichtheitProtocolFileLocatorDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.DichtheitProtocolFiles, DataPageDichtheitPdfResolver.CompatibilityService);
         Assert.Same(
             services.DichtheitProtocolFiles,
             services.GetService(typeof(IDichtheitProtocolFileLocator)));
+        Assert.Null(typeof(DataPageDichtheitPdfResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Fact]

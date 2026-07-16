@@ -14,7 +14,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ProjectDropPathResolverDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Drop_Pfadsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -23,10 +23,12 @@ public sealed class ProjectDropPathResolverDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.ProjectDropPaths, ProjectDropPathResolver.CompatibilityService);
         Assert.Same(
             services.ProjectDropPaths,
             services.GetService(typeof(IProjectDropPathResolver)));
+        Assert.Null(typeof(ProjectDropPathResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Fact]
@@ -67,6 +69,8 @@ public sealed class ProjectDropPathResolverDependencyTests
             services.DashboardRefresh,
             services.Dialogs,
             services.Projects,
+            services.CostStores.CreateProjectCostStore(),
+            services.CostStores.CreateProjectCostStore("schacht_costs.json"),
             services.ProjectFileDiscovery,
             resolver);
 

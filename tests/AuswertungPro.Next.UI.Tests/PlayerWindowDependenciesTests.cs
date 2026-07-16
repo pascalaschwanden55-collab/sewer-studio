@@ -14,6 +14,8 @@ public sealed class PlayerWindowDependenciesTests
         Assert.Null(dependencies.CodeSelectionCatalog);
         Assert.Null(dependencies.PipelineConfig);
         Assert.Null(dependencies.ProtocolPdfExporter);
+        Assert.NotNull(dependencies.CodingDefectPreviews);
+        Assert.NotNull(dependencies.Dialogs);
         Assert.Null(dependencies.LoggerFactory);
         Assert.Null(dependencies.LastProjectPath);
         Assert.False(dependencies.HasCodeCatalog);

@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class BackupManifestIntegrityDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_Vollsicherung_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_verdrahtet_Sicherungspruefung_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -24,10 +24,17 @@ public sealed class BackupManifestIntegrityDependencyTests
         Assert.Same(
             services.BackupManifestIntegrity,
             services.GetService(typeof(IBackupManifestIntegrityService)));
-        Assert.Same(
-            services.BackupManifestIntegrity,
-            Infrastructure.Backup.BackupManifestIntegrity.Current);
         Assert.NotNull(field);
         Assert.Same(services.BackupManifestIntegrity, field.GetValue(services.FullBackup));
+
+        var before = Infrastructure.Backup.BackupManifestIntegrity.Current;
+        var use = typeof(Infrastructure.Backup.BackupManifestIntegrity).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.BackupManifestIntegrity]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, Infrastructure.Backup.BackupManifestIntegrity.Current);
     }
 }

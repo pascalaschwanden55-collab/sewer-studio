@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Map;
 
@@ -7,16 +6,10 @@ namespace AuswertungPro.Next.UI.Mapping;
 
 public static class KatasterXtfPathResolver
 {
-    private static IKatasterXtfPathResolver _current = new KatasterXtfFilePathResolver();
+    private static readonly IKatasterXtfPathResolver Default = new KatasterXtfFilePathResolver();
 
     internal static IKatasterXtfPathResolver CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(IKatasterXtfPathResolver resolver)
-    {
-        ArgumentNullException.ThrowIfNull(resolver);
-        Volatile.Write(ref _current, resolver);
-    }
+        => Default;
 
     public static string Resolve(AppSettings settings)
     {

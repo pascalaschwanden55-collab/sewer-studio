@@ -1,3 +1,4 @@
+using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -8,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PdfFormFieldReaderDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_FormularFassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_den_PdfFormularfeldLeser()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -19,6 +20,18 @@ public sealed class PdfFormFieldReaderDependencyTests
 
         Assert.IsType<PdfFormFieldReaderService>(services.PdfFormFields);
         Assert.Same(services.PdfFormFields, services.GetService(typeof(IPdfFormFieldReader)));
-        Assert.Same(services.PdfFormFields, PdfFormFieldExtractor.Current);
+    }
+
+    [Fact]
+    public void Statische_PdfFormularfeldFassade_ist_unveraenderbar()
+    {
+        var before = PdfFormFieldExtractor.Current;
+        var use = typeof(PdfFormFieldExtractor).GetMethod(nameof(PdfFormFieldExtractor.Use));
+
+        var error = Assert.Throws<TargetInvocationException>(
+            () => use!.Invoke(null, [new PdfFormFieldReaderService()]));
+
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, PdfFormFieldExtractor.Current);
     }
 }

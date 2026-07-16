@@ -1,5 +1,3 @@
-using System;
-using System.Threading;
 using Mapsui.Layers;
 
 namespace AuswertungPro.Next.UI.Mapping;
@@ -17,16 +15,10 @@ public static class KarteBasemapLayerFactory
     public const string SatellitSubfolder = "satellit";
     public const string AvSubfolder = "av";
 
-    private static IKarteBasemapLayerFactory _current = new KarteBasemapLayerService();
+    private static readonly IKarteBasemapLayerFactory Default = new KarteBasemapLayerService();
 
     internal static IKarteBasemapLayerFactory CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(IKarteBasemapLayerFactory factory)
-    {
-        ArgumentNullException.ThrowIfNull(factory);
-        Volatile.Write(ref _current, factory);
-    }
+        => Default;
 
     public static ILayer? CreateOfflineSatellit(string? basePath)
         => CompatibilityService.CreateOfflineSatellit(basePath);

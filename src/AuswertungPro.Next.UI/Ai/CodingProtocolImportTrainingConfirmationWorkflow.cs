@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -29,6 +30,25 @@ public static class CodingProtocolImportTrainingConfirmationWorkflow
             verifyProtocolAsync,
             new CodingProtocolImportTrainingConfirmationWorkflowActions(
                 CreateService: CodingProtocolImportTrainingWorkflowServiceFactory.Create));
+
+    public static Task<CodingProtocolImportTrainingResult> ConfirmAsync(
+        CodingEvent importEvent,
+        Action<CodingEvent> seekToImportEvent,
+        Func<string?> captureSnapshot,
+        Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? verifyProtocolAsync,
+        ITeacherAnnotationStore annotationStore)
+        => ConfirmAsync(
+            importEvent,
+            seekToImportEvent,
+            captureSnapshot,
+            verifyProtocolAsync,
+            new CodingProtocolImportTrainingConfirmationWorkflowActions(
+                CreateService: (seek, capture, verify) =>
+                    CodingProtocolImportTrainingWorkflowServiceFactory.Create(
+                        seek,
+                        capture,
+                        verify,
+                        annotationStore)));
 
     public static async Task<CodingProtocolImportTrainingResult> ConfirmAsync(
         CodingEvent importEvent,

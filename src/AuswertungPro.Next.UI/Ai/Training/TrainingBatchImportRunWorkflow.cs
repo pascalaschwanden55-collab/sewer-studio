@@ -35,7 +35,8 @@ public sealed record TrainingBatchImportRunWorkflowRequest(
     Action ClearLivePreview,
     Action ResetSelfTrainingVisuals,
     Func<IDisposable> BeginActivity,
-    Func<TrainingBatchImportWorkflowRequest, Task> RunWorkflowAsync);
+    Func<TrainingBatchImportWorkflowRequest, Task> RunWorkflowAsync,
+    ITrainingFrameStore? FrameStore = null);
 
 public static class TrainingBatchImportRunWorkflow
 {
@@ -82,6 +83,7 @@ public static class TrainingBatchImportRunWorkflow
                 ClearLivePreview: request.ClearLivePreview,
                 ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals,
                 BeginActivity: request.BeginActivity,
-                CancellationToken: cancellationToken)).ConfigureAwait(false);
+                CancellationToken: cancellationToken,
+                FrameStore: request.FrameStore)).ConfigureAwait(false);
     }
 }

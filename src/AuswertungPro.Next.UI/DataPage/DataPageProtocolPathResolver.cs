@@ -10,14 +10,9 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public static class DataPageProtocolPathResolver
 {
-    private static IInspectionProtocolFileLocator _current = new InspectionProtocolFileLocator();
+    private static readonly IInspectionProtocolFileLocator Default = new InspectionProtocolFileLocator();
 
-    internal static IInspectionProtocolFileLocator CompatibilityService => Volatile.Read(ref _current);
-
-    internal static void Use(IInspectionProtocolFileLocator locator)
-        => Volatile.Write(
-            ref _current,
-            locator ?? throw new ArgumentNullException(nameof(locator)));
+    internal static IInspectionProtocolFileLocator CompatibilityService => Default;
 
     public static string? ResolveExistingPath(string? raw, string? projectPath)
         => CompatibilityService.ResolveExistingPath(raw, projectPath);

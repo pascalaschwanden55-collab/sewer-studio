@@ -38,6 +38,8 @@ public sealed class OverviewProjectFileDiscoveryDependencyTests
             services.DashboardRefresh,
             services.Dialogs,
             services.Projects,
+            services.CostStores.CreateProjectCostStore(),
+            services.CostStores.CreateProjectCostStore("schacht_costs.json"),
             discovery);
 
         Assert.Equal(1, discovery.Calls);

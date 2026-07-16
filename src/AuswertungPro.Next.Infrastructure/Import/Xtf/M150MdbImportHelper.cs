@@ -134,12 +134,26 @@ internal static class M150MdbImportHelper
     }
 
     public static bool TryParseMdbFile(string path, out List<HaltungRecord> records, out string? error, out List<string> warnings)
+        => TryParseMdbFile(
+            path,
+            M150MdbRowReader.Current,
+            out records,
+            out error,
+            out warnings);
+
+    internal static bool TryParseMdbFile(
+        string path,
+        IM150MdbRowReader rowReader,
+        out List<HaltungRecord> records,
+        out string? error,
+        out List<string> warnings)
     {
+        ArgumentNullException.ThrowIfNull(rowReader);
         records = new List<HaltungRecord>();
         warnings = new List<string>();
         error = null;
 
-        if (!M150MdbRowReader.Current.TryReadRows(path, out var rows, out error))
+        if (!rowReader.TryReadRows(path, out var rows, out error))
             return false;
 
         var entries = new List<ImportEntry>();

@@ -69,10 +69,10 @@ public sealed class MeasureTemplateEditorViewModelTests
         var legacyPath = Path.Combine(root, "legacy", "measure_templates.json");
         var activePath = Path.Combine(root, "measure_templates.user.json");
         return new MeasureTemplateEditorViewModel(
-            projectPath: null,
-            dialogs,
+            null,
             templateStore,
             new CostCatalogStore(Path.Combine(root, "cost_catalog.user.json")),
+            dialogs,
             legacyPath,
             activePath);
     }

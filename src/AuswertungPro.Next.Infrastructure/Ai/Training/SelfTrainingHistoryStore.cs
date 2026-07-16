@@ -8,15 +8,17 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 public static class SelfTrainingHistoryStore
 {
-    private static ISelfTrainingHistoryStore _current = new SelfTrainingHistoryFileStore();
+    private static readonly ISelfTrainingHistoryStore Default = new SelfTrainingHistoryFileStore();
 
     public static string DefaultPath => Current.StoragePath;
 
-    public static ISelfTrainingHistoryStore Current => Volatile.Read(ref _current);
+    public static ISelfTrainingHistoryStore Current => Default;
 
-    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ISelfTrainingHistoryStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Der globale Speicher fuer den Selbsttraining-Verlauf kann nicht mehr ausgetauscht werden. " +
+            "ISelfTrainingHistoryStore bitte per Konstruktor uebergeben.");
 
     public static Task<List<SelfTrainingRunSnapshot>> LoadAsync() =>
         Current.LoadAsync();

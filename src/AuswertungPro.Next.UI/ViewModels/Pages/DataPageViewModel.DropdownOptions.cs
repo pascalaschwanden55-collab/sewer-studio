@@ -1,4 +1,3 @@
-using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
@@ -46,8 +45,7 @@ public sealed partial class DataPageViewModel
     {
         try
         {
-            var store = new MeasureTemplateStore();
-            var catalog = store.LoadMerged(_settings.LastProjectPath);
+            var catalog = _measureTemplates.LoadMerged(_settings.LastProjectPath);
             foreach (var measure in catalog.Measures)
             {
                 if (measure.Disabled)

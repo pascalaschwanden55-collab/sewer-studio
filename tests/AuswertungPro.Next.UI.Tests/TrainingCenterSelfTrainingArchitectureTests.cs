@@ -63,7 +63,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("request.CreateRunRequest(", commandWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("Directory.Exists", factorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingCaseInputMapper.ToTrainingCase", factorySource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ITrainingSampleStore? trainingSamples", factorySource, StringComparison.Ordinal);
+        Assert.Contains("trainingSamples ?? TrainingSamplesStore.Current", factorySource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingAutoScanController.RunAsync(", workflowSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingCaseSelectionController.Select(", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.ResetCancellation()", workflowSource, StringComparison.Ordinal);
@@ -526,7 +527,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
 
         Assert.Contains("SelfTrainingLastMatchRateRefreshWorkflow.RunAsync(", loadSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingLastMatchRateRefreshRequestFactory.CreateWithDefaults(", loadSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingHistoryStore.LoadAsync", factorySource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingHistory", loadSource, StringComparison.Ordinal);
+        Assert.Contains("(historyStore ?? SelfTrainingHistoryStore.Current).LoadAsync", factorySource, StringComparison.Ordinal);
         Assert.Contains("new SelfTrainingLastMatchRateRefreshWorkflowRequest(", factorySource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingLastMatchRatePresentationBuilder.Build(runs)", workflowSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingMatchRatePresentationController.Apply(", workflowSource, StringComparison.Ordinal);
@@ -734,7 +736,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
 
         Assert.Contains("TrainingReviewSampleIdResolutionWorkflow.ResolveWithDefaultsAsync(", methodSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingReviewSampleIdResolver.ResolveAsync(", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("ITrainingSampleStore? trainingSamples", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("trainingSamples ?? TrainingSamplesStore.Current", workflowSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             methodSource,
             "SelfTrainingReviewSampleIdResolver.ResolveAsync(",
@@ -783,8 +786,9 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("TrainingGoldKbReconcileRequestFactory.CreateWithDefaults(", commandWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingGoldKbReconcileRunWorkflow.RunAsync", commandFactorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingGoldKbReconcileWorkflowController.RunAsync(", runWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", commandWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.MergeOrUpdateAsync", commandWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("ITrainingSampleStore? trainingSamples", commandWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("samples.LoadAsync", commandWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("samples.MergeOrUpdateAsync", commandWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("IncrementalKbUpdateWithReasonAsync", viewModelSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             methodSource,
@@ -917,7 +921,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("TrainingReviewApprovalServiceFactory.Create(", commandWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingReviewApprovalServiceFactory.Create(", commandMethod, StringComparison.Ordinal);
         Assert.Contains("new DelegatingKnowledgeBaseIndexer(", factorySource, StringComparison.Ordinal);
-        Assert.Contains("new TrainingSamplesStoreAdapter()", factorySource, StringComparison.Ordinal);
+        Assert.Contains("new TrainingSamplesStoreAdapter(trainingSamples ?? TrainingSamplesStore.Current)", factorySource, StringComparison.Ordinal);
         Assert.Contains("new ReviewApprovalService(", factorySource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             source,
@@ -1218,7 +1222,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("new TrainingKnowledgeBaseStatusRefreshWorkflowRequest(", statusFactorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseQualityRefreshWorkflow.RunAsync(", refreshQualitySource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseQualityRefreshRequestFactory.CreateWithDefaults(", refreshQualitySource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingHistoryStore.LoadAsync", qualityFactorySource, StringComparison.Ordinal);
+        Assert.Contains("_history", refreshQualitySource, StringComparison.Ordinal);
+        Assert.Contains("(historyStore ?? SelfTrainingHistoryStore.Current).LoadAsync", qualityFactorySource, StringComparison.Ordinal);
         Assert.Contains("new TrainingKnowledgeBaseQualityRefreshWorkflowRequest(", qualityFactorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseStatusPresentationBuilder.Build(status)", statusWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs)", qualityWorkflowSource, StringComparison.Ordinal);
@@ -1333,8 +1338,10 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("TrainingApprovedProtocolExportRequestFactory.CreateWithDefaults(", methodSource, StringComparison.Ordinal);
         Assert.Contains("new TrainingApprovedProtocolExportDefaultRequestFactoryRequest(", methodSource, StringComparison.Ordinal);
         Assert.Contains("TrainingApprovedProtocolExportController.RunAsync(", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("ProtocolTrainingStore.AddSample", factorySource, StringComparison.Ordinal);
-        Assert.Contains("ProtocolTrainingStore.DefaultPath", factorySource, StringComparison.Ordinal);
+        Assert.Contains("IProtocolTrainingStore protocolTraining", factorySource, StringComparison.Ordinal);
+        Assert.Contains("protocolTraining.AddSample", factorySource, StringComparison.Ordinal);
+        Assert.Contains("protocolTraining.StoragePath", factorySource, StringComparison.Ordinal);
+        Assert.Contains("_protocolTraining", methodSource, StringComparison.Ordinal);
         Assert.Contains("UtcNow: () => DateTime.UtcNow", factorySource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             methodSource,
@@ -1470,9 +1477,10 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("TrainingCenterSampleGenerationWorkflow.RunAsync(", generateMethod, StringComparison.Ordinal);
         Assert.Contains("TrainingCenterSampleGenerationRequestFactory.CreateWithDefaults(", generateMethod, StringComparison.Ordinal);
         Assert.Contains("new TrainingCenterSampleGenerationDefaultRequestFactoryRequest(", generateMethod, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", factorySource, StringComparison.Ordinal);
+        Assert.Contains("var samples = trainingSamples ?? TrainingSamplesStore.Current", factorySource, StringComparison.Ordinal);
+        Assert.Contains("samples.LoadAsync", factorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingCenterSampleGenerationRuntime.GenerateWithDiagnosticsAsync(", factorySource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.MergeAndSaveAsync", factorySource, StringComparison.Ordinal);
+        Assert.Contains("samples.MergeAndSaveAsync", factorySource, StringComparison.Ordinal);
         Assert.Contains("AiTrack.Begin(\"Training Center\")", factorySource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             generateMethod,
@@ -2607,7 +2615,8 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("TrainingProtocolStartdataSuggestionWorkflow.RunAsync(", suggestMethod, StringComparison.Ordinal);
         Assert.Contains("TrainingProtocolStartdataSuggestionRequestFactory.CreateWithDefaults(", suggestMethod, StringComparison.Ordinal);
         Assert.Contains("new TrainingProtocolStartdataSuggestionRequestFactoryRequest(", suggestMethod, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ITrainingSampleStore? trainingSamples", factorySource, StringComparison.Ordinal);
+        Assert.Contains("trainingSamples ?? TrainingSamplesStore.Current", factorySource, StringComparison.Ordinal);
         Assert.Contains("VsaCodeResolver.CurrentCatalog", factorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingProtocolStartdataQueueController.Run(", workflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingProtocolStartdataCatalogController.Resolve(", workflowSource, StringComparison.Ordinal);
@@ -2812,7 +2821,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.False(File.Exists(oldResolverPath), oldResolverPath);
         var resolverSource = File.ReadAllText(newResolverPath);
         Assert.Contains("namespace AuswertungPro.Next.UI.Ai.Training", resolverSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingFfmpegPathResolver.Resolve", sessionControllerSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveFfmpegPath(runtimeSettings.FfmpegPath, ffmpegPathResolver)", sessionControllerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AuswertungPro.Next.UI.ViewModels.Windows", sessionControllerSource, StringComparison.Ordinal);
     }
 

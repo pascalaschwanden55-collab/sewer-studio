@@ -5,17 +5,22 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// <summary>Kompatibilitaetsfassade; die Dateiarbeit liegt im Instanzdienst.</summary>
 public static class TrainingSamplesStore
 {
-    private static TrainingSampleFileStore _current = new();
+    private static readonly TrainingSampleFileStore Default = new();
 
-    public static ITrainingSampleStore Current => Volatile.Read(ref _current);
-    public static string DefaultPath => Volatile.Read(ref _current).StoragePath;
-    public static string EffectiveEvalSetRoot => Volatile.Read(ref _current).EffectiveEvalSetRoot;
+    public static ITrainingSampleStore Current => Default;
+    public static string DefaultPath => Default.StoragePath;
+    public static string EffectiveEvalSetRoot => Default.EffectiveEvalSetRoot;
 
-    public static void Use(TrainingSampleFileStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+    [Obsolete("Die Trainingssample-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(TrainingSampleFileStore store)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        throw new NotSupportedException(
+            "Die Trainingssample-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static void ConfigureEvalProtection(string? evalSetRoot) =>
-        Volatile.Read(ref _current).ConfigureEvalProtection(evalSetRoot);
+        Default.ConfigureEvalProtection(evalSetRoot);
 
     public static Task<List<TrainingSample>> LoadAsync() => Current.LoadAsync();
     public static Task SaveAsync(List<TrainingSample> samples) => Current.SaveAsync(samples);

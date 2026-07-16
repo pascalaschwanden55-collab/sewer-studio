@@ -1,4 +1,5 @@
 using System.Windows;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -18,6 +19,23 @@ public static class CodingPhotoViewerDisplayWorkflow
             lastProjectPath,
             new CodingPhotoViewerDisplayWorkflowActions(
                 CreateService: CodingPhotoViewerWorkflowServiceFactory.Create));
+
+    public static void Show(
+        Window owner,
+        CodingEvent codingEvent,
+        string? lastProjectPath,
+        ICodingDefectPreviewRenderer previewRenderer)
+    {
+        ArgumentNullException.ThrowIfNull(previewRenderer);
+
+        Show(
+            owner,
+            codingEvent,
+            lastProjectPath,
+            new CodingPhotoViewerDisplayWorkflowActions(
+                CreateService: () =>
+                    CodingPhotoViewerWorkflowServiceFactory.Create(previewRenderer)));
+    }
 
     public static void Show(
         Window owner,

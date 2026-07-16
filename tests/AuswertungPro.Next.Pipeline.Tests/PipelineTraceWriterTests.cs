@@ -82,26 +82,17 @@ public sealed class PipelineTraceWriterTests : IDisposable
     [Fact]
     public async Task WriteAsync_laesst_Telemetriefehler_nicht_in_den_Hauptablauf_durch()
     {
-        var previous = PipelineTraceWriter.Current;
-        try
-        {
-            PipelineTraceWriter.Use(new ThrowingPipelineTraceWriter());
+        var exception = await Record.ExceptionAsync(() =>
+            PipelineTraceWriteGuard.WriteAsync(
+                new ThrowingPipelineTraceWriter(),
+                new PipelineTraceEntry { RunId = "throwing-run" }));
 
-            var exception = await Record.ExceptionAsync(() =>
-                PipelineTraceWriter.WriteAsync(new PipelineFrameTrace { RunId = "throwing-run" }));
-
-            Assert.Null(exception);
-        }
-        finally
-        {
-            PipelineTraceWriter.Use(previous);
-        }
+        Assert.Null(exception);
     }
 
     [Fact]
     public async Task WriteAsync_leitet_alle_Felder_an_den_injizierten_Dienst_weiter()
     {
-        var previous = PipelineTraceWriter.Current;
         var writer = new RecordingPipelineTraceWriter();
         var source = new PipelineFrameTrace
         {
@@ -135,23 +126,16 @@ public sealed class PipelineTraceWriterTests : IDisposable
             DegradedReason = "test_degraded"
         };
 
-        try
-        {
-            PipelineTraceWriter.Use(writer);
+        await PipelineTraceWriteGuard.WriteAsync(
+            writer,
+            PipelineTraceEntryMapper.Map(source));
 
-            await PipelineTraceWriter.WriteAsync(source);
-
-            var mapped = Assert.Single(writer.Entries);
-            foreach (var sourceProperty in typeof(PipelineFrameTrace).GetProperties())
-            {
-                var targetProperty = typeof(PipelineTraceEntry).GetProperty(sourceProperty.Name);
-                Assert.NotNull(targetProperty);
-                Assert.Equal(sourceProperty.GetValue(source), targetProperty.GetValue(mapped));
-            }
-        }
-        finally
+        var mapped = Assert.Single(writer.Entries);
+        foreach (var sourceProperty in typeof(PipelineFrameTrace).GetProperties())
         {
-            PipelineTraceWriter.Use(previous);
+            var targetProperty = typeof(PipelineTraceEntry).GetProperty(sourceProperty.Name);
+            Assert.NotNull(targetProperty);
+            Assert.Equal(sourceProperty.GetValue(source), targetProperty.GetValue(mapped));
         }
     }
 

@@ -1,9 +1,11 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
 
 public sealed record CodingInlineEvidencePreviewWorkflowRequest(
     CodingEvent CodingEvent,
+    ICodingDefectPreviewRenderer? PreviewRenderer = null,
     Func<CodingEvent, CodingInlineEvidencePreviewState>? BuildPreview = null);
 
 public sealed record CodingInlineEvidencePreviewWorkflowActions(
@@ -21,7 +23,12 @@ public static class CodingInlineEvidencePreviewWorkflow
 
         try
         {
-            var buildPreview = request.BuildPreview ?? (codingEvent => CodingInlineEvidencePreviewService.Build(codingEvent));
+            var buildPreview = request.BuildPreview ?? (codingEvent =>
+                CodingInlineEvidencePreviewService.Build(
+                    codingEvent,
+                    request.PreviewRenderer is null
+                        ? null
+                        : item => request.PreviewRenderer.BuildPreviewImagePath(item)));
             actions.ApplyPreview(buildPreview(request.CodingEvent));
         }
         catch (Exception ex)

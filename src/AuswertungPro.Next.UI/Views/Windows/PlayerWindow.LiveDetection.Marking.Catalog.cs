@@ -44,7 +44,7 @@ public partial class PlayerWindow
                 suggestedCode,
                 _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
                 _playbackContext.VideoPath,
-                this),
+                this, _protocolContext.CodeUsage),
             new LiveDetectionMarkCatalogDisplayActions(
                 HasCodeCatalog: () => _protocolContext.HasCodeCatalog,
                 CreateViewModel: CreateVsaCodeExplorerViewModel,

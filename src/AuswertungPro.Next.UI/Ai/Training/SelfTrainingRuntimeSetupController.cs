@@ -1,7 +1,9 @@
 using System.Net.Http;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Services;
@@ -55,10 +57,40 @@ public static class SelfTrainingRuntimeSetupController
         AppSettings? appSettings,
         ICodeCatalogProvider? codeCatalog,
         Action<string> log)
-        => PrepareAsync(
+        => PrepareWithDefaultsAsync(
+            getCachedKbHttpClient,
+            setCachedKbHttpClient,
+            appSettings,
+            codeCatalog,
+            log,
+            TrainingFfmpegPathResolver.CompatibilityService,
+            TrainingCenterSettingsStore.Current,
+            FrameStore.Current,
+            ProcessOutputReader.Current,
+            TrainingSamplesStore.Current);
+
+    internal static Task<SelfTrainingRuntimeSetup> PrepareWithDefaultsAsync(
+        Func<HttpClient?> getCachedKbHttpClient,
+        Action<HttpClient> setCachedKbHttpClient,
+        AppSettings? appSettings,
+        ICodeCatalogProvider? codeCatalog,
+        Action<string> log,
+        ITrainingFfmpegPathResolver trainingFfmpegPaths,
+        ITrainingCenterSettingsStore trainingSettings,
+        ITrainingFrameStore trainingFrames,
+        IProcessOutputReader processOutputs,
+        ITrainingSampleStore trainingSamples)
+    {
+        ArgumentNullException.ThrowIfNull(trainingFfmpegPaths);
+        ArgumentNullException.ThrowIfNull(trainingSettings);
+        ArgumentNullException.ThrowIfNull(trainingFrames);
+        ArgumentNullException.ThrowIfNull(processOutputs);
+        ArgumentNullException.ThrowIfNull(trainingSamples);
+
+        return PrepareAsync(
             new SelfTrainingRuntimeSetupRequest(
                 () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
-                TrainingCenterSettingsStore.LoadAsync,
+                trainingSettings.LoadAsync,
                 () => PlayerAiSettingsLoader.LoadPlatformSettings().ToOllamaConfig(),
                 getCachedKbHttpClient,
                 setCachedKbHttpClient,
@@ -69,8 +101,13 @@ public static class SelfTrainingRuntimeSetupController
                         kbHttpClient,
                         trainingSettings,
                         appSettings,
-                        codeCatalog),
+                        codeCatalog,
+                        trainingFfmpegPaths,
+                        trainingFrames,
+                        processOutputs,
+                        trainingSamples),
                 log));
+    }
 
     public static Task<SelfTrainingRuntimeSetup> PrepareAsync(
         Func<AiRuntimeSettings> loadRuntimeSettings,

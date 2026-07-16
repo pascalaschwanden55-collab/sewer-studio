@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading;
 using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
@@ -32,14 +31,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 /// </summary>
 public static class KiasExportPattern
 {
-    private static IKiasExportPatternDetector _current = new KiasExportPatternDetectionService();
+    private static readonly IKiasExportPatternDetector Default =
+        new KiasExportPatternDetectionService();
 
-    public static IKiasExportPatternDetector Current => Volatile.Read(ref _current);
+    public static IKiasExportPatternDetector Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IKiasExportPatternDetector detector)
-        => Volatile.Write(
-            ref _current,
-            detector ?? throw new ArgumentNullException(nameof(detector)));
+        => throw new NotSupportedException(
+            "Die globale KIAS-Erkennung kann nicht mehr ausgetauscht werden. " +
+            "IKiasExportPatternDetector bitte per Konstruktor uebergeben.");
 
     public sealed record DetectionResult(
         bool IsKias,

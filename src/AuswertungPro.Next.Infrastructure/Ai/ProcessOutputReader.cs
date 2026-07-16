@@ -8,14 +8,15 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 /// </summary>
 public static class ProcessOutputReader
 {
-    private static IProcessOutputReader _current = new ProcessOutputReaderService();
+    private static readonly IProcessOutputReader Default = new ProcessOutputReaderService();
 
-    public static IProcessOutputReader Current => Volatile.Read(ref _current);
+    public static IProcessOutputReader Current => Default;
 
-    public static void Use(IProcessOutputReader reader)
-        => Volatile.Write(
-            ref _current,
-            reader ?? throw new ArgumentNullException(nameof(reader)));
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
+    public static void Use(IProcessOutputReader reader) =>
+        throw new NotSupportedException(
+            "Der globale Prozessausgabe-Leser kann nicht mehr ausgetauscht werden. " +
+            "IProcessOutputReader bitte per Konstruktor uebergeben.");
 
     public static Task<ProcessOutputResult?> ReadToExitAsync(
         ProcessStartInfo startInfo,

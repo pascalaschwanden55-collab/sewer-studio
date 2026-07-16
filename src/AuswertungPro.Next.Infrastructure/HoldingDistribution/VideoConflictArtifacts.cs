@@ -8,14 +8,17 @@ namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 /// </summary>
 public static class VideoConflictArtifacts
 {
-    private static IVideoConflictCandidateCopier _current = new VideoConflictCandidateCopyService();
+    private static readonly IVideoConflictCandidateCopier Default = new VideoConflictCandidateCopyService();
 
-    public static IVideoConflictCandidateCopier Current => Volatile.Read(ref _current);
+    public static IVideoConflictCandidateCopier Current => Default;
 
+    [Obsolete("Die Videokonflikt-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IVideoConflictCandidateCopier copier)
-        => Volatile.Write(
-            ref _current,
-            copier ?? throw new ArgumentNullException(nameof(copier)));
+    {
+        ArgumentNullException.ThrowIfNull(copier);
+        throw new NotSupportedException(
+            "Die Videokonflikt-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     public static void CopyCandidates(
         string unmatchedFolder,

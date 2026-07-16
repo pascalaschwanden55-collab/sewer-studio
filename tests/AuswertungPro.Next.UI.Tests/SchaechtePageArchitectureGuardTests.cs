@@ -295,7 +295,8 @@ public sealed class SchaechtePageArchitectureGuardTests
             "new SchachtMassnahmenWindow",
             "new SchachtMassnahmenKatalogEditorWindow");
 
-        Assert.Contains("new ProjectCostStoreRepository", controller);
+        Assert.Contains("IProjectCostStoreRepository repository", controller);
+        Assert.DoesNotContain("new ProjectCostStoreRepository", controller);
         Assert.Contains("store.ByHolding[schachtNummer] = cost", controller);
         Assert.Contains("new SchachtMassnahmenWindow", controller);
         Assert.Contains("new SchachtMassnahmenKatalogEditorWindow", controller);

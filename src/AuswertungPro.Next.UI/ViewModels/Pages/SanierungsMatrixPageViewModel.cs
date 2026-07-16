@@ -183,9 +183,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private readonly IDialogService _dialogs;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly DashboardRefreshNotifier _dashboardRefresh;
-    private readonly CostCatalogStore _catalogStore = new();
-    private readonly MeasureTemplateStore _templateStore = new();
-    private readonly ProjectCostStoreRepository _costRepo = new();
+    private readonly ICostCatalogStore _catalogStore;
+    private readonly IMeasureTemplateStore _templateStore;
+    private readonly IProjectCostStoreRepository _costRepo;
 
     private Dictionary<string, MeasureTemplate> _templates = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, CostCatalogItem> _catalog = new(StringComparer.OrdinalIgnoreCase);
@@ -257,6 +257,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             dialogs: services.Dialogs,
             costFieldSync: services.CostFieldSync,
             dashboardRefresh: services.DashboardRefresh,
+            catalogStore: services.CostStores.CreateCostCatalogStore(),
+            templateStore: services.CostStores.CreateMeasureTemplateStore(),
+            costRepo: services.CostStores.CreateProjectCostStore(),
             holding: holding,
             singleHoldingMode: singleHoldingMode,
             targetRecord: targetRecord)
@@ -269,6 +272,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         IDialogService dialogs,
         IDerivedCostFieldSynchronizer costFieldSync,
         DashboardRefreshNotifier dashboardRefresh,
+        ICostCatalogStore catalogStore,
+        IMeasureTemplateStore templateStore,
+        IProjectCostStoreRepository costRepo,
         string? holding,
         bool singleHoldingMode,
         HaltungRecord? targetRecord = null)
@@ -278,6 +284,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
+        _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
+        _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
         _singleHoldingTarget = string.IsNullOrWhiteSpace(holding) ? null : holding.Trim();
         _singleHoldingTargetRecord = targetRecord;
         IsSingleHoldingMode = singleHoldingMode;
@@ -846,7 +855,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (!ResolveDirtyDetail())
             return;
 
-        var dialog = new CostCatalogEditorDialog(string.IsNullOrWhiteSpace(_projectPath) ? null : _projectPath);
+        var dialog = new CostCatalogEditorDialog(
+            string.IsNullOrWhiteSpace(_projectPath) ? null : _projectPath,
+            _catalogStore);
         dialog.ShowDialog();
         ReloadCatalogAndApplyPrices();
     }

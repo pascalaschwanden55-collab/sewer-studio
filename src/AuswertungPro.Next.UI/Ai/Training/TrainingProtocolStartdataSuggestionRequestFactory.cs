@@ -17,11 +17,12 @@ public sealed record TrainingProtocolStartdataSuggestionRequestFactoryRequest(
 public static class TrainingProtocolStartdataSuggestionRequestFactory
 {
     public static TrainingProtocolStartdataSuggestionWorkflowRequest CreateWithDefaults(
-        TrainingProtocolStartdataSuggestionRequestFactoryRequest request)
+        TrainingProtocolStartdataSuggestionRequestFactoryRequest request,
+        ITrainingSampleStore? trainingSamples = null)
         => Create(
             request,
             () => VsaCodeResolver.CurrentCatalog,
-            TrainingSamplesStore.LoadAsync);
+            (trainingSamples ?? TrainingSamplesStore.Current).LoadAsync);
 
     public static TrainingProtocolStartdataSuggestionWorkflowRequest Create(
         TrainingProtocolStartdataSuggestionRequestFactoryRequest request,

@@ -1,5 +1,4 @@
 using System.IO;
-using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
@@ -7,16 +6,10 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public static class CodingDefectPreviewService
 {
-    private static ICodingDefectPreviewRenderer _current = new CodingDefectPreviewRenderer();
+    private static readonly ICodingDefectPreviewRenderer Default = new CodingDefectPreviewRenderer();
 
     internal static ICodingDefectPreviewRenderer CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(ICodingDefectPreviewRenderer renderer)
-    {
-        ArgumentNullException.ThrowIfNull(renderer);
-        Volatile.Write(ref _current, renderer);
-    }
+        => Default;
 
     public static string? BuildPreviewImagePath(CodingEvent ev, string? previewRoot = null)
         => CompatibilityService.BuildPreviewImagePath(ev, previewRoot);

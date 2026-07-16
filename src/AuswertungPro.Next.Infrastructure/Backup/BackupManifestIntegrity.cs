@@ -289,14 +289,16 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
 /// </summary>
 public static class BackupManifestIntegrity
 {
-    private static IBackupManifestIntegrityService _current = new BackupManifestIntegrityService();
+    private static readonly IBackupManifestIntegrityService Default =
+        new BackupManifestIntegrityService();
 
-    public static IBackupManifestIntegrityService Current => Volatile.Read(ref _current);
+    public static IBackupManifestIntegrityService Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IBackupManifestIntegrityService service) =>
-        Volatile.Write(
-            ref _current,
-            service ?? throw new ArgumentNullException(nameof(service)));
+        throw new NotSupportedException(
+            "Die globale Sicherungspruefung kann nicht mehr ausgetauscht werden. " +
+            "IBackupManifestIntegrityService bitte per Konstruktor uebergeben.");
 
     public static Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
         string backupRoot,

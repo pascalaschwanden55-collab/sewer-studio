@@ -7,13 +7,18 @@ internal sealed record OcrPageExtractionResult(bool Success, string? Text, strin
 /// <summary>Kompatible interne API; Datei- und Prozessarbeit liegt im Instanzdienst.</summary>
 public static class PdfOcrExtractor
 {
-    private static IPdfOcrExtractor _current =
+    private static readonly IPdfOcrExtractor Default =
         new PdfOcrExtractionService(PdfTextExtractor.Current);
 
-    public static IPdfOcrExtractor Current => Volatile.Read(ref _current);
+    public static IPdfOcrExtractor Current => Default;
 
+    [Obsolete("Die PDF-OCR-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
     public static void Use(IPdfOcrExtractor extractor)
-        => Volatile.Write(ref _current, extractor ?? throw new ArgumentNullException(nameof(extractor)));
+    {
+        ArgumentNullException.ThrowIfNull(extractor);
+        throw new NotSupportedException(
+            "Die PDF-OCR-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     internal static OcrPageExtractionResult TryExtractPageText(string pdfPath, int pageNumber)
     {

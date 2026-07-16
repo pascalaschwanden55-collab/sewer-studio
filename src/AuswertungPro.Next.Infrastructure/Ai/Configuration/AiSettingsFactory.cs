@@ -132,15 +132,16 @@ public sealed class AiPlatformSettingsResolver : IAiPlatformSettingsResolver
 /// <summary>Kompatibilitaetsfassade; reine Parser bleiben statisch.</summary>
 public static class AiSettingsFactory
 {
-    private static IAiPlatformSettingsResolver _current =
+    private static readonly IAiPlatformSettingsResolver Default =
         new AiPlatformSettingsResolver(GpuModelSelector.Current);
 
-    public static IAiPlatformSettingsResolver Current => Volatile.Read(ref _current);
+    public static IAiPlatformSettingsResolver Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IAiPlatformSettingsResolver resolver) =>
-        Volatile.Write(
-            ref _current,
-            resolver ?? throw new ArgumentNullException(nameof(resolver)));
+        throw new NotSupportedException(
+            "Der globale KI-Einstellungsdienst kann nicht mehr ausgetauscht werden. " +
+            "IAiPlatformSettingsResolver bitte per Konstruktor uebergeben.");
 
     public static AiPlatformSettings Load(AiSettingsSource? source = null) =>
         Current.Load(source);

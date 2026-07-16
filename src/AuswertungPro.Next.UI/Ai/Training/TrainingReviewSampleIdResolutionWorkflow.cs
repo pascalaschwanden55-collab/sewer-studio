@@ -21,8 +21,10 @@ public static class TrainingReviewSampleIdResolutionWorkflow
             request.LoadSamplesAsync);
     }
 
-    public static Task<string?> ResolveWithDefaultsAsync(InfraSelfImproving.ReviewQueueItem item)
+    public static Task<string?> ResolveWithDefaultsAsync(
+        InfraSelfImproving.ReviewQueueItem item,
+        ITrainingSampleStore? trainingSamples = null)
         => ResolveAsync(new TrainingReviewSampleIdResolutionWorkflowRequest(
             item,
-            TrainingSamplesStore.LoadAsync));
+            (trainingSamples ?? TrainingSamplesStore.Current).LoadAsync));
 }

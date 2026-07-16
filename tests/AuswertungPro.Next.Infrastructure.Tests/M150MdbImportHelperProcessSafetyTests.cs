@@ -90,6 +90,41 @@ public sealed class M150MdbImportHelperProcessSafetyTests
         Assert.Equal("Access-Treiber fehlt", error);
     }
 
+    [Fact]
+    public void TryParseMdbFile_verwendet_den_direkt_uebergebenen_Leser()
+    {
+        var reader = new RecordingMdbRowReader(
+        [
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["__table"] = "S_T",
+                ["S_ID"] = "42",
+                ["S_StartNode"] = "80638",
+                ["S_EndNode"] = "80631",
+                ["S_Sectionlength"] = "12.5"
+            },
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["__table"] = "SI_T",
+                ["SI_Section_ID"] = "42",
+                ["SI_InspDate"] = "15.07.2026"
+            }
+        ]);
+
+        var success = M150MdbImportHelper.TryParseMdbFile(
+            "wird-nicht-geoeffnet.mdb",
+            reader,
+            out var records,
+            out var error,
+            out _);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.Equal(1, reader.ReadCount);
+        var record = Assert.Single(records);
+        Assert.Equal("80638-80631", record.GetFieldValue("Haltungsname"));
+    }
+
     private static string ValueAfter(IReadOnlyList<string> arguments, string name)
     {
         var index = arguments.ToList().IndexOf(name);
@@ -105,5 +140,22 @@ public sealed class M150MdbImportHelperProcessSafetyTests
             .ToArray();
 
         Assert.True(hits.Length == 0, "Verbotene blockierende Prozess-APIs gefunden: " + string.Join(", ", hits));
+    }
+
+    private sealed class RecordingMdbRowReader(
+        IReadOnlyList<Dictionary<string, string>> sourceRows) : IM150MdbRowReader
+    {
+        public int ReadCount { get; private set; }
+
+        public bool TryReadRows(
+            string mdbPath,
+            out List<Dictionary<string, string>> rows,
+            out string? error)
+        {
+            ReadCount++;
+            rows = sourceRows.Select(row => new Dictionary<string, string>(row)).ToList();
+            error = null;
+            return true;
+        }
     }
 }

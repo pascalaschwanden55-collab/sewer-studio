@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -9,6 +10,17 @@ public static class CodingProtocolImportTrainingWorkflowServiceFactory
         Action<CodingEvent> seekToImportEvent,
         Func<string?> captureSnapshot,
         Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? verifyProtocolAsync = null)
+        => Create(
+            seekToImportEvent,
+            captureSnapshot,
+            verifyProtocolAsync,
+            InfraTeacher.TeacherAnnotationStore.Current);
+
+    public static CodingProtocolImportTrainingWorkflowService Create(
+        Action<CodingEvent> seekToImportEvent,
+        Func<string?> captureSnapshot,
+        Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? verifyProtocolAsync,
+        ITeacherAnnotationStore annotationStore)
         => new(
             async importEvent =>
             {
@@ -20,6 +32,6 @@ public static class CodingProtocolImportTrainingWorkflowServiceFactory
             () => Guid.NewGuid().ToString("N")[..12],
             CodingProtocolTrainingSnapshotStoreFactory.Create(),
             LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation,
-            annotation => InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation),
+            annotation => annotationStore.AppendAsync(annotation),
             verifyProtocolAsync);
 }

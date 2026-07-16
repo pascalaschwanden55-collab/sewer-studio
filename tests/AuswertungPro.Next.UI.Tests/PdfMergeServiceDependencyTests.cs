@@ -13,7 +13,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PdfMergeServiceDependencyTests
 {
     [Fact]
-    public void ServiceProvider_Datenseite_und_Druckcenter_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_verdrahtet_PDF_Merge_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -43,9 +43,18 @@ public sealed class PdfMergeServiceDependencyTests
         Assert.NotNull(builderMergeField);
         Assert.Same(services.PdfMerge, pdfMergeField!.GetValue(printController));
         Assert.Same(services.PdfMerge, builderMergeField!.GetValue(builderPage));
-        Assert.Same(services.PdfMerge, PdfMergeHelper.Current);
         Assert.Same(
             services.PdfMerge,
             services.GetService(typeof(IPdfMergeService)));
+
+        var before = PdfMergeHelper.Current;
+        var use = typeof(PdfMergeHelper).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.PdfMerge]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, PdfMergeHelper.Current);
     }
 }

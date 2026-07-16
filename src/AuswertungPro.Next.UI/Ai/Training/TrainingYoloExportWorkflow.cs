@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -28,7 +29,9 @@ public sealed record TrainingYoloExportWorkflowRequest(
     Action<string> Log,
     Action<int> SetProgressMax,
     Action<int> SetProgressValue,
-    Action<string> SetStatusText);
+    Action<string> SetStatusText,
+    ITeacherAnnotationStore? TeacherAnnotations = null,
+    IVsaYoloClassMapStore? VsaYoloClasses = null);
 
 public static class TrainingYoloExportRequestFactory
 {
@@ -43,7 +46,10 @@ public static class TrainingYoloExportRequestFactory
         Action<string> log,
         Action<int> setProgressMax,
         Action<int> setProgressValue,
-        Action<string> setStatusText)
+        Action<string> setStatusText,
+        ITeacherAnnotationStore? teacherAnnotations = null,
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        IVsaYoloClassMapStore? vsaYoloClasses = null)
     {
         ArgumentNullException.ThrowIfNull(samples);
         ArgumentNullException.ThrowIfNull(isBusy);
@@ -62,7 +68,7 @@ public static class TrainingYoloExportRequestFactory
             PersistSamplesAsync: persistSamplesAsync,
             SelectOutputDirectory: TrainingYoloExportTargetFolderSelector.SelectFolder,
             ResetCancellation: resetCancellation,
-            CreateSidecarRuntime: TrainingYoloSidecarRuntimeFactory.CreateWithDefaults,
+            CreateSidecarRuntime: () => TrainingYoloSidecarRuntimeFactory.CreateWithDefaults(sidecarTelemetry),
             LoadEvalSets: () => EvalContaminationSetProvider.Load(settings),
             BuildSidecarPayloadAsync: TrainingYoloSidecarExportPayloadWorkflow.BuildAsync,
             RunSidecarCompletionAsync: TrainingYoloSidecarExportCompletionWorkflow.RunAsync,
@@ -71,7 +77,9 @@ public static class TrainingYoloExportRequestFactory
             Log: log,
             SetProgressMax: setProgressMax,
             SetProgressValue: setProgressValue,
-            SetStatusText: setStatusText);
+            SetStatusText: setStatusText,
+            TeacherAnnotations: teacherAnnotations,
+            VsaYoloClasses: vsaYoloClasses);
     }
 
 }
@@ -235,6 +243,8 @@ public static class TrainingYoloExportWorkflow
                 request.SetProgressMax,
                 request.SetProgressValue,
                 request.SetStatusText,
-                ct));
+                ct,
+                request.TeacherAnnotations,
+                request.VsaYoloClasses));
     }
 }

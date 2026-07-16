@@ -32,7 +32,8 @@ public sealed record TrainingBatchImportRunRequestFactoryRequest(
     ObservableCollection<TrainingSample> Samples,
     Func<Task> RefreshKbStatusAsync,
     Action ClearLivePreview,
-    Action ResetSelfTrainingVisuals);
+    Action ResetSelfTrainingVisuals,
+    ITrainingFrameStore? FrameStore = null);
 
 public sealed record TrainingBatchImportRunDefaultRequestFactoryRequest(
     IReadOnlyCollection<string> RootFolders,
@@ -71,7 +72,10 @@ public static class TrainingBatchImportRunRequestFactory
 {
     public static TrainingBatchImportRunWorkflowRequest CreateWithDefaults(
         TrainingBatchImportRunDefaultRequestFactoryRequest request,
-        ITrainingPreviewFrameExtractor? previewFrameExtractor = null)
+        ITrainingPreviewFrameExtractor? previewFrameExtractor = null,
+        ITrainingCenterSettingsStore? settingsStore = null,
+        ITrainingFrameStore? frameStore = null,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.ScanInputsAsync);
@@ -104,21 +108,29 @@ public static class TrainingBatchImportRunRequestFactory
             Samples: request.Samples,
             RefreshKbStatusAsync: request.RefreshKbStatusAsync,
             ClearLivePreview: request.ClearLivePreview,
-            ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals));
+            ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals,
+            FrameStore: frameStore),
+            settingsStore,
+            trainingSamples);
     }
 
     public static TrainingBatchImportRunWorkflowRequest CreateWithDefaults(
-        TrainingBatchImportRunRequestFactoryRequest request)
-        => Create(
+        TrainingBatchImportRunRequestFactoryRequest request,
+        ITrainingCenterSettingsStore? settingsStore = null,
+        ITrainingSampleStore? trainingSamples = null)
+    {
+        var samples = trainingSamples ?? TrainingSamplesStore.Current;
+        return Create(
             request,
             new TrainingBatchImportRunRequestFactoryDefaults(
                 DirectoryExists: Directory.Exists,
                 LoadRuntimeSettings: () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
-                LoadSettingsAsync: TrainingCenterSettingsStore.LoadAsync,
-                LoadSamplesAsync: TrainingSamplesStore.LoadAsync,
-                MergeAndSaveSamplesAsync: TrainingSamplesStore.MergeAndSaveAsync,
+                LoadSettingsAsync: (settingsStore ?? TrainingCenterSettingsStore.Current).LoadAsync,
+                LoadSamplesAsync: samples.LoadAsync,
+                MergeAndSaveSamplesAsync: samples.MergeAndSaveAsync,
                 RunWorkflowAsync: TrainingBatchImportWorkflow.RunAsync,
                 BeginActivity: () => AiTrack.Begin("Training Center")));
+    }
 
     public static TrainingBatchImportRunWorkflowRequest Create(
         TrainingBatchImportRunRequestFactoryRequest request,
@@ -157,6 +169,7 @@ public static class TrainingBatchImportRunRequestFactory
             ClearLivePreview: request.ClearLivePreview,
             ResetSelfTrainingVisuals: request.ResetSelfTrainingVisuals,
             BeginActivity: defaults.BeginActivity,
-            RunWorkflowAsync: defaults.RunWorkflowAsync);
+            RunWorkflowAsync: defaults.RunWorkflowAsync,
+            FrameStore: request.FrameStore);
     }
 }

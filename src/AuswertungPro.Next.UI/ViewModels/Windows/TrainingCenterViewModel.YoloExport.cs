@@ -27,6 +27,9 @@ public partial class TrainingCenterViewModel
                 Log,
                 value => ProgressMax = value,
                 value => ProgressValue = value,
-                value => StatusText = value)).ConfigureAwait(true);
+                value => StatusText = value,
+                _teacherAnnotations,
+                _sidecarTelemetry,
+                _vsaYoloClasses)).ConfigureAwait(true);
     }
 }

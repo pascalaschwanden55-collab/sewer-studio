@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
@@ -10,9 +11,16 @@ public sealed record LiveDetectionTrainingExportPlan(
     string BaseName,
     NormalizedBoundingBox BoundingBox);
 
-public static class LiveDetectionTrainingExportPlanner
+public sealed class LiveDetectionTrainingExportPlanner
 {
-    public static LiveDetectionTrainingExportPlan BuildAccepted(
+    private readonly IVsaYoloClassMapStore _classMap;
+
+    public LiveDetectionTrainingExportPlanner(IVsaYoloClassMapStore classMap)
+    {
+        _classMap = classMap ?? throw new ArgumentNullException(nameof(classMap));
+    }
+
+    public LiveDetectionTrainingExportPlan PlanAccepted(
         LiveFrameFinding finding,
         string annotationId)
     {
@@ -20,22 +28,40 @@ public static class LiveDetectionTrainingExportPlanner
         return Build(finding, code, $"det_{annotationId}");
     }
 
-    public static LiveDetectionTrainingExportPlan BuildCorrected(
+    public LiveDetectionTrainingExportPlan PlanCorrected(
         LiveFrameFinding sourceFinding,
         string selectedCode,
         string annotationId)
         => Build(sourceFinding, selectedCode, $"det_corr_{annotationId}");
 
+    public int GetClassId(string code)
+        => _classMap.GetClassId(code);
+
+    [Obsolete("Klassenkarte direkt ueber den Konstruktor uebergeben.")]
+    public static LiveDetectionTrainingExportPlan BuildAccepted(
+        LiveFrameFinding finding,
+        string annotationId)
+        => new LiveDetectionTrainingExportPlanner(InfraTeacher.VsaYoloClassMap.Current)
+            .PlanAccepted(finding, annotationId);
+
+    [Obsolete("Klassenkarte direkt ueber den Konstruktor uebergeben.")]
+    public static LiveDetectionTrainingExportPlan BuildCorrected(
+        LiveFrameFinding sourceFinding,
+        string selectedCode,
+        string annotationId)
+        => new LiveDetectionTrainingExportPlanner(InfraTeacher.VsaYoloClassMap.Current)
+            .PlanCorrected(sourceFinding, selectedCode, annotationId);
+
     public static string CreateAnnotationId()
         => Guid.NewGuid().ToString("N")[..12];
 
-    private static LiveDetectionTrainingExportPlan Build(
+    private LiveDetectionTrainingExportPlan Build(
         LiveFrameFinding finding,
         string code,
         string baseName)
         => new(
             code,
-            InfraTeacher.VsaYoloClassMap.GetClassId(code),
+            _classMap.GetClassId(code),
             baseName,
             LiveDetectionGeometryMapper.BBoxFromClockPosition(finding));
 }

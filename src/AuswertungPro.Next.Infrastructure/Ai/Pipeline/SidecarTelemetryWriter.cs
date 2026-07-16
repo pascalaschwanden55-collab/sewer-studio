@@ -5,12 +5,14 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// <summary>Kompatibilitaetsfassade; die Dateiarbeit liegt im Instanzdienst.</summary>
 public static class SidecarTelemetryWriter
 {
-    private static ISidecarTelemetryWriter _current = new SidecarTelemetryFileWriter();
+    private static readonly ISidecarTelemetryWriter Default = new SidecarTelemetryFileWriter();
 
-    public static ISidecarTelemetryWriter Current => Volatile.Read(ref _current);
+    public static ISidecarTelemetryWriter Current => Default;
 
+    [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ISidecarTelemetryWriter direkt uebergeben.")]
     public static void Use(ISidecarTelemetryWriter writer) =>
-        Volatile.Write(ref _current, writer ?? throw new ArgumentNullException(nameof(writer)));
+        throw new NotSupportedException(
+            "SidecarTelemetryWriter ist unveraenderlich. ISidecarTelemetryWriter direkt uebergeben.");
 
     public static Task WriteAsync(SidecarTelemetryEvent entry) => Current.WriteAsync(entry);
 

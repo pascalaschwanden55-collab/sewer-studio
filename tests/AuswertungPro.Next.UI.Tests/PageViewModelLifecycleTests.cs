@@ -71,7 +71,7 @@ public sealed class PageViewModelLifecycleTests
         {
             "DataPage" => new DataPageViewModel(shell, services),
             "OverviewPage" => new OverviewPageViewModel(shell, services),
-            "ProjectPage" => new ProjectPageViewModel(shell),
+            "ProjectPage" => new ProjectPageViewModel(shell, services),
             _ => throw new ArgumentOutOfRangeException(nameof(page), page, null)
         };
 }

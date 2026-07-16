@@ -52,7 +52,7 @@ public sealed class FullBackupServiceTests : IDisposable
             availableBytes: null,
             gitCommitResolver: null,
             targetMarkerGuard: BackupTargetGuard.MarkerGuard,
-            sqliteSnapshots: SqliteSnapshotCopier.Current,
+            sqliteSnapshots: new SqliteSnapshotCopyService(),
             manifestIntegrity: manifestIntegrity);
 
         var result = await service.RunAsync(targetParent);

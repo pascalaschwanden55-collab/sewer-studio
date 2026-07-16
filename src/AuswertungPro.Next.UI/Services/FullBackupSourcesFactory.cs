@@ -103,15 +103,16 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
 /// <summary>Kompatibilitaetsfassade fuer bestehende Aufrufer.</summary>
 public static class FullBackupSourcesFactory
 {
-    private static IFullBackupSourcesProvider _current =
-        new FullBackupSourcesProvider(RepoRootLocator.Current);
+    private static readonly IFullBackupSourcesProvider Default =
+        new FullBackupSourcesProvider(new RepositoryRootFileLocator());
 
-    public static IFullBackupSourcesProvider Current => Volatile.Read(ref _current);
+    public static IFullBackupSourcesProvider Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IFullBackupSourcesProvider provider) =>
-        Volatile.Write(
-            ref _current,
-            provider ?? throw new ArgumentNullException(nameof(provider)));
+        throw new NotSupportedException(
+            "Die globale Sicherungsquellen-Suche kann nicht mehr ausgetauscht werden. " +
+            "IFullBackupSourcesProvider bitte per Konstruktor uebergeben.");
 
     public static FullBackupSources ErmittleAktuelleQuellen(AppSettings? settings = null) =>
         Current.Resolve(settings);

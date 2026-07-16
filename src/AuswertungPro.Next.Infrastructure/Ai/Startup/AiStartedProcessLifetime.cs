@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Threading;
 using AuswertungPro.Next.Application.Ai.Startup;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Startup;
@@ -9,14 +8,16 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Startup;
 /// </summary>
 public static class AiStartedProcessLifetime
 {
-    private static IAiStartedProcessLifetime _current = new AiStartedProcessLifetimeService();
+    private static readonly IAiStartedProcessLifetime Default =
+        new AiStartedProcessLifetimeService();
 
-    public static IAiStartedProcessLifetime Current => Volatile.Read(ref _current);
+    public static IAiStartedProcessLifetime Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IAiStartedProcessLifetime lifetime)
-        => Volatile.Write(
-            ref _current,
-            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
+        => throw new NotSupportedException(
+            "Die globale KI-Prozessverwaltung kann nicht mehr ausgetauscht werden. " +
+            "IAiStartedProcessLifetime bitte per Konstruktor uebergeben.");
 
     internal static bool TryTrack(Process process, out string? error)
         => Current.TryTrack(process, out error);

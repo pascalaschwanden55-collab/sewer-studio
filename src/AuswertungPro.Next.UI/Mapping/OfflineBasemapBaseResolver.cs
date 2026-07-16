@@ -1,5 +1,3 @@
-using System;
-using System.Threading;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Map;
 
@@ -15,16 +13,10 @@ namespace AuswertungPro.Next.UI.Mapping;
 /// </summary>
 public static class OfflineBasemapBaseResolver
 {
-    private static IOfflineBasemapPathResolver _current = new OfflineBasemapDirectoryResolver();
+    private static readonly IOfflineBasemapPathResolver Default = new OfflineBasemapDirectoryResolver();
 
     internal static IOfflineBasemapPathResolver CompatibilityService
-        => Volatile.Read(ref _current);
-
-    internal static void Use(IOfflineBasemapPathResolver resolver)
-    {
-        ArgumentNullException.ThrowIfNull(resolver);
-        Volatile.Write(ref _current, resolver);
-    }
+        => Default;
 
     public static string? Resolve(string? configuredPath)
     {

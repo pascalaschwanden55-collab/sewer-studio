@@ -15,8 +15,7 @@ public partial class PlayerWindow
                     "Keine Fotos vorhanden. Doppelklick zum Bearbeiten.",
                     TimeSpan.FromSeconds(3)),
                 ShowViewer: codingEvent => CodingPhotoViewerDisplayWorkflow.Show(
-                    this,
-                    codingEvent,
-                    _protocolContext.LastProjectPath)));
+                    this, codingEvent, _protocolContext.LastProjectPath,
+                    _protocolContext.CodingDefectPreviews)));
     }
 }

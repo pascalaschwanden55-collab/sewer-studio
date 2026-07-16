@@ -26,7 +26,9 @@ public sealed record TrainingReviewItemDecisionCommandWorkflowRequest(
 
 public static class TrainingReviewItemDecisionCommandWorkflow
 {
-    public static Task RunAsync(TrainingReviewItemDecisionCommandWorkflowRequest request)
+    public static Task RunAsync(
+        TrainingReviewItemDecisionCommandWorkflowRequest request,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -45,7 +47,8 @@ public static class TrainingReviewItemDecisionCommandWorkflow
                 request.ResolveSampleIdAsync,
                 () => TrainingReviewApprovalServiceFactory.Create(
                     request.IndexSamplesAsync,
-                    request.DeindexSample),
+                    request.DeindexSample,
+                    trainingSamples),
                 request.ReloadSamplesAsync,
                 request.OnUi,
                 request.SetReviewQueueCount,

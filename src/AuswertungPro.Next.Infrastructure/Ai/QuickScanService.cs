@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -49,12 +50,18 @@ public sealed class QuickScanService
     private readonly OllamaClient _client;
     private readonly string _visionModel;
     private readonly string _ffmpegPath;
+    private readonly IProcessOutputReader _processOutputs;
 
-    public QuickScanService(OllamaClient client, string visionModel, string ffmpegPath)
+    public QuickScanService(
+        OllamaClient client,
+        string visionModel,
+        string ffmpegPath,
+        IProcessOutputReader? processOutputs = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _visionModel = visionModel;
         _ffmpegPath = ffmpegPath;
+        _processOutputs = processOutputs ?? ProcessOutputReader.Current;
     }
 
     public async Task<QuickScanResult> ScanAsync(
@@ -146,7 +153,7 @@ public sealed class QuickScanService
         return fallback ?? 0;
     }
 
-    private static async Task<double?> TryFfprobeAsync(string ffprobeExe, string videoPath, CancellationToken ct)
+    private async Task<double?> TryFfprobeAsync(string ffprobeExe, string videoPath, CancellationToken ct)
     {
         try
         {
@@ -166,7 +173,7 @@ public sealed class QuickScanService
             psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
             psi.ArgumentList.Add(videoPath);
 
-            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            var output = await _processOutputs.ReadToExitAsync(psi, ct).ConfigureAwait(false);
             if (output is null) return null;
 
             var stdout = output.StandardOutput;

@@ -2,11 +2,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
 
-public sealed class MeasureTemplateStore
+public sealed class MeasureTemplateStore : IMeasureTemplateStore
 {
     private readonly string? _userOverridePath;
 

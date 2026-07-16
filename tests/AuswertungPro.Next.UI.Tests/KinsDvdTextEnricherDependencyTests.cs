@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class KinsDvdTextEnricherDependencyTests
 {
     [Fact]
-    public void ServiceProvider_Fassade_und_EinKnopfImport_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_verdrahtet_KINS_Textanreicherung_direkt_und_Fassade_bleibt_unveraenderlich()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -29,9 +29,16 @@ public sealed class KinsDvdTextEnricherDependencyTests
             enricherField!.GetValue(orchestrator));
         Assert.Same(
             services.KinsDvdTextEnrichment,
-            KinsDvdTextEnricher.Current);
-        Assert.Same(
-            services.KinsDvdTextEnrichment,
             services.GetService(typeof(IKinsDvdTextEnricher)));
+
+        var before = KinsDvdTextEnricher.Current;
+        var use = typeof(KinsDvdTextEnricher).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.Public);
+        Assert.NotNull(use);
+        var error = Assert.Throws<TargetInvocationException>(() =>
+            use!.Invoke(null, [services.KinsDvdTextEnrichment]));
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, KinsDvdTextEnricher.Current);
     }
 }

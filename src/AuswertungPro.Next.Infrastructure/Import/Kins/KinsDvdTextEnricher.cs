@@ -1,4 +1,3 @@
-using System.Threading;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 
@@ -9,14 +8,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Kins;
 /// </summary>
 public static class KinsDvdTextEnricher
 {
-    private static IKinsDvdTextEnricher _current = new KinsDvdTextEnrichmentService();
+    private static readonly IKinsDvdTextEnricher Default =
+        new KinsDvdTextEnrichmentService();
 
-    public static IKinsDvdTextEnricher Current => Volatile.Read(ref _current);
+    public static IKinsDvdTextEnricher Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IKinsDvdTextEnricher enricher)
-        => Volatile.Write(
-            ref _current,
-            enricher ?? throw new ArgumentNullException(nameof(enricher)));
+        => throw new NotSupportedException(
+            "Die globale KINS-Textanreicherung kann nicht mehr ausgetauscht werden. " +
+            "IKinsDvdTextEnricher bitte per Konstruktor uebergeben.");
 
     public static KinsDvdTextEnrichResult Apply(Project project, string kiDvDatenPath)
     {

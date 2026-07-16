@@ -1,15 +1,23 @@
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Dialogs;
 
 public partial class CostCatalogEditorDialog : Window
 {
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]
     public CostCatalogEditorDialog(string? projectPath)
+        : this(projectPath, CostStoreCompatibility.Factory.CreateCostCatalogStore())
+    {
+    }
+
+    public CostCatalogEditorDialog(string? projectPath, ICostCatalogStore store)
     {
         InitializeComponent();
-        DataContext = new CostCatalogEditorViewModel(projectPath, this);
+        DataContext = new CostCatalogEditorViewModel(projectPath, this, store);
     }
 
     // Nach Bearbeiten der Typ-Spalte (Fixed <-> ByDN) das DN-Panel sofort ein-/ausblenden.

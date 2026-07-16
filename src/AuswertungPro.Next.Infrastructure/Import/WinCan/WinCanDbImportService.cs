@@ -14,7 +14,7 @@ using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
 
-public sealed class WinCanDbImportService : IWinCanDbImportService
+public sealed partial class WinCanDbImportService : IWinCanDbImportService
 {
     private static readonly HashSet<string> MediaExtensions = new(
         MediaFileTypes.VideoExtensions
@@ -333,7 +333,12 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         foreach (var mdbPath in mdbPaths)
         {
             ctx?.CancellationToken.ThrowIfCancellationRequested();
-            if (!M150MdbImportHelper.TryParseMdbFile(mdbPath, out var records, out var parseError, out var warnings))
+            if (!M150MdbImportHelper.TryParseMdbFile(
+                    mdbPath,
+                    _m150MdbRows,
+                    out var records,
+                    out var parseError,
+                    out var warnings))
             {
                 errors++;
                 messages.Add($"MDB konnte nicht gelesen werden: {Path.GetFileName(mdbPath)} ({parseError ?? "unbekannter Fehler"})");
@@ -752,9 +757,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         ctx?.Log.AddEntry("WinCan", "XTF_Fallback", ImportLogStatus.Info,
             detail: $"SDF nicht lesbar, verwende {xtfFiles.Count} XTF-Datei(en) als Fallback: {string.Join(", ", xtfFiles.Select(Path.GetFileName))}");
 
-        // XTF-Import via LegacyXtfImportService
-        var xtfService = new XtfImportServiceAdapter();
-        var xtfResult = xtfService.ImportXtfFiles(xtfFiles, project, ctx);
+        var xtfResult = _xtfImport.ImportXtfFiles(xtfFiles, project, ctx);
 
         if (!xtfResult.Ok || xtfResult.Value is null)
         {

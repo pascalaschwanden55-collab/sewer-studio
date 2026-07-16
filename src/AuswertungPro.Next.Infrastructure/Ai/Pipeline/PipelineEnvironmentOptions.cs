@@ -74,7 +74,8 @@ public sealed class PipelineEnvironmentOptionsService : IPipelineEnvironmentOpti
 /// </summary>
 public static class PipelineEnvironmentOptions
 {
-    private static IPipelineEnvironmentOptions _current = new PipelineEnvironmentOptionsService();
+    private static readonly IPipelineEnvironmentOptions Default =
+        new PipelineEnvironmentOptionsService();
 
     public const string ClassifierDecisionEnvVar = "SEWERSTUDIO_CLASSIFIER_DECISION";
     public const string ClassifierOnlyStructuralOffEnvVar = "SEWERSTUDIO_CLASSIFIER_ONLY_STRUCTURAL_OFF";
@@ -84,12 +85,13 @@ public static class PipelineEnvironmentOptions
     public const string DinoTextThresholdEnvVar = "SEWERSTUDIO_DINO_TEXT_THRESHOLD";
     public const string DefaultExpectedYoloModel = "yolo26m";
 
-    public static IPipelineEnvironmentOptions Current => Volatile.Read(ref _current);
+    public static IPipelineEnvironmentOptions Current => Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IPipelineEnvironmentOptions options) =>
-        Volatile.Write(
-            ref _current,
-            options ?? throw new ArgumentNullException(nameof(options)));
+        throw new NotSupportedException(
+            "Die globalen Pipeline-Umgebungswerte koennen nicht mehr ausgetauscht werden. " +
+            "IPipelineEnvironmentOptions bitte per Konstruktor uebergeben.");
 
     public static bool ClassifierDecisionEnabled()
         => Current.ClassifierDecisionEnabled();

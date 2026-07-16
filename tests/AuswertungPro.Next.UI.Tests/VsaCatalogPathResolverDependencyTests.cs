@@ -1,3 +1,4 @@
+using System.Reflection;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class VsaCatalogPathResolverDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_VSA_Katalogsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -16,9 +17,11 @@ public sealed class VsaCatalogPathResolverDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.VsaCatalogPaths, VsaCatalogPathResolver.CompatibilityService);
         Assert.Same(
             services.VsaCatalogPaths,
             services.GetService(typeof(IVsaCatalogPathResolver)));
+        Assert.Null(typeof(VsaCatalogPathResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 }

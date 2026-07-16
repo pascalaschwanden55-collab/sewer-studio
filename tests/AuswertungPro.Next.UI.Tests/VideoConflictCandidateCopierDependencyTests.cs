@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class VideoConflictCandidateCopierDependencyTests
 {
     [Fact]
-    public void Kandidatenkopie_und_Fassade_verwenden_die_zentrale_Dateiuebertragung()
+    public void Kandidatenkopie_verwendet_die_zentrale_Dateiuebertragung()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -24,9 +24,23 @@ public sealed class VideoConflictCandidateCopierDependencyTests
 
         Assert.NotNull(transferField);
         Assert.Same(services.DistributionFileTransfers, transferField!.GetValue(copier));
-        Assert.Same(services.VideoConflictCandidates, VideoConflictArtifacts.Current);
         Assert.Same(
             services.VideoConflictCandidates,
             services.GetService(typeof(IVideoConflictCandidateCopier)));
+    }
+
+    [Fact]
+    public void Statische_VideokonfliktFassade_ist_unveraenderbar()
+    {
+        var before = VideoConflictArtifacts.Current;
+        var use = typeof(VideoConflictArtifacts).GetMethod(nameof(VideoConflictArtifacts.Use));
+        var replacement = new VideoConflictCandidateCopyService(
+            new DistributionFileTransferService());
+
+        var error = Assert.Throws<TargetInvocationException>(
+            () => use!.Invoke(null, [replacement]));
+
+        Assert.IsType<NotSupportedException>(error.InnerException);
+        Assert.Same(before, VideoConflictArtifacts.Current);
     }
 }

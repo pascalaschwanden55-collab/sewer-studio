@@ -336,7 +336,9 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("LiveDetectionTrainingControllerSetFactory.Create", playerWindow);
         Assert.DoesNotContain("LiveDetectionTrainingAnnotationWriter.CreateDefault", playerWindow);
         Assert.DoesNotContain("new LiveDetectionManualMarkTrainingController", playerWindow);
-        Assert.Equal(1, CountOccurrences(controllerSetFactory, "LiveDetectionTrainingAnnotationWriter.CreateDefault()"));
+        Assert.Equal(1, CountOccurrences(controllerSetFactory, "LiveDetectionTrainingAnnotationWriter.CreateDefault("));
+        Assert.Contains("dependencies.TeacherAnnotations", controllerSetFactory);
+        Assert.Contains("dependencies.VsaYoloClasses", controllerSetFactory);
         Assert.Contains("new LiveDetectionConfirmationTrainingController", controllerSetFactory);
         Assert.Contains("new LiveDetectionManualMarkTrainingController", controllerSetFactory);
         Assert.True(

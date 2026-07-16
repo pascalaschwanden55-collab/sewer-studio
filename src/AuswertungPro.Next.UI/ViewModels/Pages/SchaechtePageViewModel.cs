@@ -4,6 +4,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Schacht;
@@ -22,6 +23,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
+    private readonly IProjectCostStoreRepository _schachtRecommendationCosts;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IShaftRenameService _shaftRename;
     private readonly IExplorerRevealService _explorerReveal;
@@ -41,6 +43,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
+    internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
     internal IShaftRenameService ShaftRename => _shaftRename;
     internal IExplorerRevealService ExplorerReveal => _explorerReveal;
     internal ISchachtFileTargetResolver SchachtFileTargets => _schachtFileTargets;
@@ -104,6 +107,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtProtocolImport: services.SchachtProtocolImport,
             schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
             schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
+            schachtRecommendationCosts: services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
             dropdownOptions: services.DropdownOptions,
             shaftRename: services.ShaftRename,
             explorerReveal: services.ExplorerReveal,
@@ -112,6 +116,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
     }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public SchaechtePageViewModel(
         ShellViewModel shell,
         AppSettings settings,
@@ -124,6 +129,35 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         IExplorerRevealService? explorerReveal = null,
         ISchaechteTemplateColumnReader? templateColumnReader = null,
         ISchachtFileTargetResolver? schachtFileTargets = null)
+        : this(
+            shell,
+            settings,
+            dialogs,
+            schachtProtocolImport,
+            schachtStammdatenErgaenzung,
+            schachtMassnahmenKatalog,
+            CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_empfehlungen.json"),
+            dropdownOptions ?? DropdownOptionsCompatibility.Default,
+            shaftRename,
+            explorerReveal,
+            templateColumnReader,
+            schachtFileTargets)
+    {
+    }
+
+    public SchaechtePageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        ISchachtProtocolImportService schachtProtocolImport,
+        ISchachtStammdatenErgaenzungsService schachtStammdatenErgaenzung,
+        ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog,
+        IProjectCostStoreRepository schachtRecommendationCosts,
+        IDropdownOptionsStore dropdownOptions,
+        IShaftRenameService? shaftRename = null,
+        IExplorerRevealService? explorerReveal = null,
+        ISchaechteTemplateColumnReader? templateColumnReader = null,
+        ISchachtFileTargetResolver? schachtFileTargets = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -131,7 +165,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
-        _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
+        _schachtRecommendationCosts = schachtRecommendationCosts ?? throw new ArgumentNullException(nameof(schachtRecommendationCosts));
+        _dropdownOptions = dropdownOptions ?? throw new ArgumentNullException(nameof(dropdownOptions));
         _shaftRename = shaftRename ?? new ShaftRenameFileService();
         _explorerReveal = explorerReveal ?? ExplorerRevealService.DefaultService;
         _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;

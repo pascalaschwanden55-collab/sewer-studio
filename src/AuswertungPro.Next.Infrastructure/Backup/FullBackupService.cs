@@ -45,7 +45,7 @@ public sealed class FullBackupService : IFullBackupService
             availableBytes,
             gitCommitResolver,
             BackupTargetGuard.MarkerGuard,
-            SqliteSnapshotCopier.Current)
+            new SqliteSnapshotCopyService())
     {
     }
 
@@ -59,7 +59,7 @@ public sealed class FullBackupService : IFullBackupService
             availableBytes: null,
             gitCommitResolver: null,
             targetMarkerGuard: targetMarkerGuard,
-            sqliteSnapshots: SqliteSnapshotCopier.Current)
+            sqliteSnapshots: new SqliteSnapshotCopyService())
     {
     }
 
@@ -77,7 +77,7 @@ public sealed class FullBackupService : IFullBackupService
             availableBytes,
             gitCommitResolver,
             targetMarkerGuard,
-            SqliteSnapshotCopier.Current)
+            new SqliteSnapshotCopyService())
     {
     }
 

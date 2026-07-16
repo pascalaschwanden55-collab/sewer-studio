@@ -23,7 +23,8 @@ public partial class PlayerWindow
                     "Keine Fotos vorhanden. 'Bearbeiten' zum Erfassen.",
                     TimeSpan.FromSeconds(3)),
                 ShowViewer: codingEvent => CodingPhotoViewerDisplayWorkflow.Show(
-                    this, codingEvent, _protocolContext.LastProjectPath)));
+                    this, codingEvent, _protocolContext.LastProjectPath,
+                    _protocolContext.CodingDefectPreviews)));
     }
 
     private void ImportEdit_Click(object sender, RoutedEventArgs e)

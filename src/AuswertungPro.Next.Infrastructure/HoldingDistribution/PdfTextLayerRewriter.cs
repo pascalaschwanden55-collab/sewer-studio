@@ -182,12 +182,17 @@ public sealed class PdfTextLayerRewriteService : IPdfTextLayerRewriter
 /// <summary>Kompatible Fassade für bestehende Verteiler-Aufrufe.</summary>
 public static class PdfTextLayerRewriter
 {
-    private static IPdfTextLayerRewriter _current = new PdfTextLayerRewriteService();
+    private static readonly IPdfTextLayerRewriter Default = new PdfTextLayerRewriteService();
 
-    public static IPdfTextLayerRewriter Current => Volatile.Read(ref _current);
+    public static IPdfTextLayerRewriter Current => Default;
 
-    public static void Use(IPdfTextLayerRewriter rewriter) =>
-        Volatile.Write(ref _current, rewriter ?? throw new ArgumentNullException(nameof(rewriter)));
+    [Obsolete("Die PDF-Textkorrektur-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(IPdfTextLayerRewriter rewriter)
+    {
+        ArgumentNullException.ThrowIfNull(rewriter);
+        throw new NotSupportedException(
+            "Die PDF-Textkorrektur-Fassade kann nicht mehr global ersetzt werden.");
+    }
 
     internal static bool CanRewrite(string? oldValue, string? newValue) =>
         Current.CanRewrite(oldValue, newValue);

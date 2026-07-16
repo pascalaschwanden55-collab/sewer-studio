@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class InspectionProtocolFileLocatorDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Protokoll_Pfadsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -19,10 +19,12 @@ public sealed class InspectionProtocolFileLocatorDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.InspectionProtocolFiles, DataPageProtocolPathResolver.CompatibilityService);
         Assert.Same(
             services.InspectionProtocolFiles,
             services.GetService(typeof(IInspectionProtocolFileLocator)));
+        Assert.Null(typeof(DataPageProtocolPathResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Theory]

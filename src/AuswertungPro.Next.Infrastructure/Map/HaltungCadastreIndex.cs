@@ -45,7 +45,8 @@ public interface IHaltungCadastreResolver
 /// </summary>
 public sealed class HaltungCadastreIndex : IHaltungCadastreResolver
 {
-    private static IHaltungCadastreIndexProvider _currentProvider = new HaltungCadastreIndexProvider();
+    private static readonly IHaltungCadastreIndexProvider DefaultProvider =
+        new HaltungCadastreIndexProvider();
 
     // pairKey ("864|865") -> distinkte amtliche Bezeichnungen ("865-864")
     private readonly Dictionary<string, HashSet<string>> _byPair;
@@ -64,12 +65,13 @@ public sealed class HaltungCadastreIndex : IHaltungCadastreResolver
         "SewerStudio", "map", "abwasserkataster_haltungen.tsv");
 
     public static IHaltungCadastreIndexProvider CurrentProvider
-        => Volatile.Read(ref _currentProvider);
+        => DefaultProvider;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void UseProvider(IHaltungCadastreIndexProvider provider) =>
-        Volatile.Write(
-            ref _currentProvider,
-            provider ?? throw new ArgumentNullException(nameof(provider)));
+        throw new NotSupportedException(
+            "Der globale Kataster-Indexdienst kann nicht mehr ausgetauscht werden. " +
+            "IHaltungCadastreIndexProvider bitte per Konstruktor uebergeben.");
 
     /// <summary>
     /// Stellt die feste Tabelle sicher (baut/aktualisiert sie aus der XTF, wenn sie fehlt

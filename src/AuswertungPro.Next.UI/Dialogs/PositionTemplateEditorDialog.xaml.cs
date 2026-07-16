@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Dialogs;
@@ -11,10 +13,22 @@ public partial class PositionTemplateEditorDialog : Window
     private string? _draggedItemKey;
     private Point _startPoint;
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Vorlagen-Speicher injizieren.")]
     public PositionTemplateEditorDialog(string? projectPath)
+        : this(
+            projectPath,
+            CostStoreCompatibility.Factory.CreatePositionTemplateStore(),
+            CostStoreCompatibility.Factory.CreateCostCatalogStore())
+    {
+    }
+
+    public PositionTemplateEditorDialog(
+        string? projectPath,
+        IPositionTemplateStore store,
+        ICostCatalogStore catalogStore)
     {
         InitializeComponent();
-        DataContext = new PositionTemplateEditorViewModel(projectPath, this);
+        DataContext = new PositionTemplateEditorViewModel(projectPath, this, store, catalogStore);
     }
         // Event-Handler für das Löschen einer Position per Button
         private void DeletePosition_Click(object sender, RoutedEventArgs e)

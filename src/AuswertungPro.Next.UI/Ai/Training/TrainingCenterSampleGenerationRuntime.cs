@@ -15,13 +15,31 @@ public static class TrainingCenterSampleGenerationRuntime
         TrainingCaseInput input,
         IReadOnlyCollection<string> existingSignatures,
         CancellationToken ct)
+        => await GenerateWithDiagnosticsAsync(
+            codeCatalog,
+            input,
+            existingSignatures,
+            TrainingCenterSettingsStore.Current,
+            FrameStore.Current,
+            ct).ConfigureAwait(false);
+
+    internal static async Task<TrainingSampleGenerationResult> GenerateWithDiagnosticsAsync(
+        ICodeCatalogProvider? codeCatalog,
+        TrainingCaseInput input,
+        IReadOnlyCollection<string> existingSignatures,
+        ITrainingCenterSettingsStore settingsStore,
+        ITrainingFrameStore frameStore,
+        CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(settingsStore);
+        ArgumentNullException.ThrowIfNull(frameStore);
+
         var cfg = new AppSettingsAiSettingsProvider()
             .Load()
             .ToRuntimeSettings();
-        var settings = await TrainingCenterSettingsStore.LoadAsync().ConfigureAwait(false);
+        var settings = await settingsStore.LoadAsync().ConfigureAwait(false);
         var meterSvc = TrainingMeterTimelineServiceFactory.Create(cfg, settings.GpuConcurrency);
-        var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, codeCatalog);
+        var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, codeCatalog, frameStore);
 
         return await generator.GenerateWithDiagnosticsAsync(
             input,

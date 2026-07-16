@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
@@ -32,6 +33,7 @@ public sealed class VideoFullAnalysisService
     private readonly string _ffprobePath;
     private readonly ILogger _logger;
     private readonly IPipelineTraceWriter _pipelineTraceWriter;
+    private readonly IProcessOutputReader _processOutputs;
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
@@ -44,8 +46,9 @@ public sealed class VideoFullAnalysisService
         EnhancedVisionAnalysisService vision,
         string ffmpegPath = "ffmpeg",
         string? ffprobePath = null,
-        ILogger? logger = null)
-        : this(PipelineTraceWriter.Current, vision, ffmpegPath, ffprobePath, logger)
+        ILogger? logger = null,
+        IProcessOutputReader? processOutputs = null)
+        : this(PipelineTraceWriter.Current, vision, ffmpegPath, ffprobePath, logger, processOutputs)
     {
     }
 
@@ -54,13 +57,15 @@ public sealed class VideoFullAnalysisService
         EnhancedVisionAnalysisService vision,
         string ffmpegPath = "ffmpeg",
         string? ffprobePath = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        IProcessOutputReader? processOutputs = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _vision = vision;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = ffprobePath ?? DeriveFFprobePath(ffmpegPath);
         _logger = logger ?? NullLogger.Instance;
+        _processOutputs = processOutputs ?? ProcessOutputReader.Current;
     }
 
     /// <summary>
@@ -80,12 +85,14 @@ public sealed class VideoFullAnalysisService
         string visionModel,
         string ffmpegPath = "ffmpeg",
         ICodeCatalogProvider? codeCatalog = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        IProcessOutputReader? processOutputs = null)
         => new(
             pipelineTraceWriter,
             new EnhancedVisionAnalysisService(client, visionModel, codeCatalog),
             ffmpegPath,
-            logger: logger);
+            logger: logger,
+            processOutputs: processOutputs);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,
@@ -278,7 +285,7 @@ public sealed class VideoFullAnalysisService
     }
 
     // Neue Methode: ffprobe mit Fehlerausgabe
-    private static async Task<(double? duration, string error)> TryWithFfprobeWithErrorAsync(string ffprobeExe, string videoPath, CancellationToken ct)
+    private async Task<(double? duration, string error)> TryWithFfprobeWithErrorAsync(string ffprobeExe, string videoPath, CancellationToken ct)
     {
         var psi = new ProcessStartInfo
         {
@@ -298,7 +305,7 @@ public sealed class VideoFullAnalysisService
 
         try
         {
-            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            var output = await _processOutputs.ReadToExitAsync(psi, ct).ConfigureAwait(false);
             if (output is null) return (null, "Process.Start failed");
 
             var stdout = output.StandardOutput;

@@ -109,6 +109,8 @@ public partial class TrainingCenterWindow : Window
     {
         _services = services;
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _teacherGalleryService = new TeacherAnnotationGalleryService(
+            services?.TeacherAnnotations ?? TeacherAnnotationStore.Current);
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(import);
         ArgumentNullException.ThrowIfNull(knowledgeBaseDiagnostics);
@@ -138,7 +140,18 @@ public partial class TrainingCenterWindow : Window
             uiThread: null,
             knowledgeBackup: services?.KnowledgeBackup ?? new KnowledgeBackupTransferService(),
             trainingSamples: services?.TrainingSamples ?? TrainingSamplesStore.Current,
-            trainingPreviewFrames: services?.TrainingPreviewFrames ?? TrainingPreviewFrameExtractor.Current);
+            trainingFrames: services?.TrainingFrames ?? FrameStore.Current,
+            trainingPreviewFrames: services?.TrainingPreviewFrames ?? TrainingPreviewFrameExtractor.Current,
+            trainingFfmpegPaths: services?.TrainingFfmpegPaths
+                ?? TrainingFfmpegPathResolver.CompatibilityService,
+            trainingSettings: services?.TrainingSettings ?? TrainingCenterSettingsStore.Current,
+            selfTrainingHistory: services?.SelfTrainingHistory ?? SelfTrainingHistoryStore.Current,
+            teacherAnnotations: services?.TeacherAnnotations ?? TeacherAnnotationStore.Current,
+            protocolTraining: services?.ProtocolTraining ?? ProtocolTrainingStore.Current,
+            processOutputs: services?.ProcessOutputs ?? ProcessOutputReader.Current,
+            sidecarTelemetry: services?.SidecarTelemetry ?? SidecarTelemetryWriter.Current,
+            vsaYoloClasses: services?.VsaYoloClasses ?? VsaYoloClassMap.Current,
+            dialogs: _dialogs);
 
         DataContext = Vm;
 
@@ -562,7 +575,7 @@ public partial class TrainingCenterWindow : Window
 
     private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)
     {
-        var dialogService = VsaCodeExplorerDialogServiceFactory.Create();
+        var dialogService = VsaCodeExplorerDialogServiceFactory.Create(_services?.CodeUsage);
         await TrainingCenterReviewCorrectionWorkflow.ExecuteAsync(
             new TrainingCenterReviewCorrectionRequest(Vm.SelectedReviewItem, CodeSelectionCatalog),
             new TrainingCenterReviewCorrectionActions(
@@ -578,7 +591,7 @@ public partial class TrainingCenterWindow : Window
     private List<TeacherAnnotation> _filteredTeacherAnnotations = new();
     private TeacherAnnotation? _selectedTeacherAnnotation;
     private bool _teacherLoaded;
-    private readonly TeacherAnnotationGalleryService _teacherGalleryService = new();
+    private readonly TeacherAnnotationGalleryService _teacherGalleryService;
     private readonly VideoLabelToolLauncher _videoLabelToolLauncher = new();
 
     private void VideoLabelToolOpen_Click(object sender, RoutedEventArgs e)

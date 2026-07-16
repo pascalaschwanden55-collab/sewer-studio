@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -12,7 +13,7 @@ public sealed record CostCatalogNpkDuplicateWarning(
     IReadOnlyList<string> Units,
     IReadOnlyList<string> ItemKeys);
 
-public sealed class CostCatalogStore
+public sealed class CostCatalogStore : ICostCatalogStore
 {
     private readonly string? _userOverridePath;
 

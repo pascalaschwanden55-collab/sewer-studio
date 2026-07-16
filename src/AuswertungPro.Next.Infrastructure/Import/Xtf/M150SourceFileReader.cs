@@ -39,12 +39,15 @@ public sealed class M150XmlTextFileReader : IM150SourceFileReader
 /// <summary>Kompatible Fassade fuer bestehende statische M150-Importwege.</summary>
 public static class M150SourceFileReader
 {
-    private static IM150SourceFileReader _current = new M150XmlTextFileReader();
+    private static readonly IM150SourceFileReader Default = new M150XmlTextFileReader();
 
-    public static IM150SourceFileReader Current => Volatile.Read(ref _current);
+    public static IM150SourceFileReader Current => Default;
 
-    public static void Use(IM150SourceFileReader reader) =>
-        Volatile.Write(
-            ref _current,
-            reader ?? throw new ArgumentNullException(nameof(reader)));
+    [Obsolete("Die M150-Quelldatei-Fassade ist unveraenderbar. Abhaengigkeit direkt uebergeben.")]
+    public static void Use(IM150SourceFileReader reader)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        throw new NotSupportedException(
+            "Die M150-Quelldatei-Fassade kann nicht mehr global ersetzt werden.");
+    }
 }

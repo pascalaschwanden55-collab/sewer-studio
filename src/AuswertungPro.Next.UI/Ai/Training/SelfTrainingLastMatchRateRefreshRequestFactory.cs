@@ -13,13 +13,14 @@ public sealed record SelfTrainingLastMatchRateRefreshDefaultRequestFactoryReques
 public static class SelfTrainingLastMatchRateRefreshRequestFactory
 {
     public static SelfTrainingLastMatchRateRefreshWorkflowRequest CreateWithDefaults(
-        SelfTrainingLastMatchRateRefreshDefaultRequestFactoryRequest request)
+        SelfTrainingLastMatchRateRefreshDefaultRequestFactoryRequest request,
+        ISelfTrainingHistoryStore? historyStore = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Ui);
 
         return Create(new SelfTrainingLastMatchRateRefreshRequestFactoryRequest(
-            SelfTrainingHistoryStore.LoadAsync,
+            (historyStore ?? SelfTrainingHistoryStore.Current).LoadAsync,
             request.Ui));
     }
 

@@ -52,6 +52,11 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
     public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
 
+    public ProjectPageViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(shell, services.Dialogs, services.DropdownOptions)
+    {
+    }
+
     public ProjectPageViewModel(
         ShellViewModel shell,
         IDialogService? dialogs = null,
@@ -59,7 +64,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
     {
         _shell = shell;
         _dialogs = dialogs ?? new DialogService();
-        _dropdownOptions = dropdownOptions ?? new FileDropdownOptionsStore();
+        _dropdownOptions = dropdownOptions ?? DropdownOptionsCompatibility.Default;
 
         // Dropdown-Optionen laden
         SanierenOptions = new ObservableCollection<string>(_dropdownOptions.LoadSanierenOptions());

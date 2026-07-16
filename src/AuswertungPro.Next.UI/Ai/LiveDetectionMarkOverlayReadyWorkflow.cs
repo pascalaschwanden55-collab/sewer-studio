@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
@@ -28,7 +29,8 @@ public sealed record LiveDetectionMarkOverlayReadyStateRequest(
     string VideoPath,
     AppSettings? Settings,
     ICodingSessionService? ExistingSessionService,
-    IOverlayToolService? ExistingOverlayService);
+    IOverlayToolService? ExistingOverlayService,
+    ITrainingSampleStore? TrainingSamples = null);
 
 public sealed record LiveDetectionMarkOverlayReadyApplyActions(
     Action<ICodingSessionService> SetSessionService,
@@ -59,7 +61,8 @@ public static class LiveDetectionMarkOverlayReadyWorkflow
                     request.VideoPath,
                     request.Settings,
                     request.ExistingSessionService,
-                    request.ExistingOverlayService),
+                    request.ExistingOverlayService,
+                    request.TrainingSamples),
                 SetSessionService: actions.SetSessionService,
                 SetOverlayService: actions.SetOverlayService,
                 SetViewModel: actions.SetViewModel));

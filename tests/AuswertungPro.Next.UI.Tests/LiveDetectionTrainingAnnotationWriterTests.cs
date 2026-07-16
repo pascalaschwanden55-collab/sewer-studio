@@ -25,7 +25,8 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             {
                 appended.Add(annotation);
                 return Task.CompletedTask;
-            });
+            },
+            exportPlanner: CreatePlanner());
 
         try
         {
@@ -43,6 +44,7 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             Assert.Equal("full.png", annotation.FullFramePath);
             Assert.Equal(frameBytes, exportService.SourceBytes);
             Assert.Equal("BAB", exportService.Code);
+            Assert.Equal(42, exportService.ClassId);
             Assert.Equal("det_abc123", exportService.BaseName);
             Assert.Same(annotation.BoundingBox, exportService.BoundingBox);
         }
@@ -68,7 +70,8 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             {
                 appended.Add(annotation);
                 return Task.CompletedTask;
-            });
+            },
+            exportPlanner: CreatePlanner());
 
         try
         {
@@ -112,7 +115,8 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             {
                 appended.Add(annotation);
                 return Task.CompletedTask;
-            });
+            },
+            exportPlanner: CreatePlanner());
 
         try
         {
@@ -169,7 +173,8 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
         var writer = new LiveDetectionTrainingAnnotationWriter(
             new LiveDetectionTrainingFrameExporter(exportService),
             () => "mark123",
-            _ => throw new InvalidOperationException("Annotation must not be appended."));
+            _ => throw new InvalidOperationException("Annotation must not be appended."),
+            CreatePlanner());
         var overlay = new OverlayGeometry
         {
             Points =
@@ -197,6 +202,7 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
         public byte[]? SourceBytes { get; private set; }
         public NormalizedBoundingBox? BoundingBox { get; private set; }
         public string? Code { get; private set; }
+        public int ClassId { get; private set; }
         public string? BaseName { get; private set; }
 
         public async Task<TrainingAnnotationResult> ExportAsync(
@@ -211,6 +217,7 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             SourceBytes = await File.ReadAllBytesAsync(sourceFramePath, ct);
             BoundingBox = bbox;
             Code = vsaCode;
+            ClassId = classId;
             BaseName = baseName;
 
             return new TrainingAnnotationResult
@@ -221,5 +228,17 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
                 YoloAnnotationPath = "label.txt"
             };
         }
+    }
+
+    private static LiveDetectionTrainingExportPlanner CreatePlanner()
+        => new(new FixedClassMap());
+
+    private sealed class FixedClassMap : IVsaYoloClassMapStore
+    {
+        public int GetClassId(string vsaCode) => 42;
+
+        public Dictionary<string, int> GetFullMap() => new() { ["TEST"] = 42 };
+
+        public Task ExportClassesTxtAsync(string outputPath) => Task.CompletedTask;
     }
 }

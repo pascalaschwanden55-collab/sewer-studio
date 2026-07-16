@@ -13,9 +13,11 @@ public sealed class CodingTrainingSamplePersister
     private readonly Func<List<TrainingSample>, Task> _mergeAndSaveAsync;
     private readonly Func<TrainingSample, Task>? _indexConfirmedSampleAsync;
 
-    public CodingTrainingSamplePersister(Func<ICodingSessionService?> sessionProvider)
+    public CodingTrainingSamplePersister(
+        Func<ICodingSessionService?> sessionProvider,
+        ITrainingSampleStore? trainingSamples = null)
         : this(
-            TrainingSamplesStore.MergeAndSaveAsync,
+            (trainingSamples ?? TrainingSamplesStore.Current).MergeAndSaveAsync,
             CreateIndexConfirmedSampleAsync(sessionProvider))
     {
     }

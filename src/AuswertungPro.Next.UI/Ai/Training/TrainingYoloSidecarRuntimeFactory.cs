@@ -11,12 +11,15 @@ public sealed record TrainingYoloSidecarRuntime(
 
 public static class TrainingYoloSidecarRuntimeFactory
 {
-    public static TrainingYoloSidecarRuntime CreateWithDefaults()
+    public static TrainingYoloSidecarRuntime CreateWithDefaults(
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
         => Create(
             loadPipelineConfig: () => new AppSettingsAiSettingsProvider().Load().ToPipelineConfig(),
             createClient: config => new VisionPipelineClient(
                 config.SidecarUrl,
-                sidecarToken: config.SidecarToken));
+                null,
+                config.SidecarToken,
+                sidecarTelemetry ?? SidecarTelemetryWriter.Current));
 
     public static TrainingYoloSidecarRuntime Create(
         Func<PipelineConfig> loadPipelineConfig,

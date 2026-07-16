@@ -350,17 +350,17 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
 /// <summary>Kompatible statische API fuer bestehende Aufrufer.</summary>
 public static class NpkLeistungsverzeichnisExcelExporter
 {
-    private static INpkLeistungsverzeichnisExcelExporter _current =
+    private static readonly INpkLeistungsverzeichnisExcelExporter Default =
         new NpkLeistungsverzeichnisExcelExportService();
 
     public static INpkLeistungsverzeichnisExcelExporter Current =>
-        Volatile.Read(ref _current);
+        Default;
 
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(INpkLeistungsverzeichnisExcelExporter exporter)
-    {
-        ArgumentNullException.ThrowIfNull(exporter);
-        Volatile.Write(ref _current, exporter);
-    }
+        => throw new NotSupportedException(
+            "Der globale NPK-Excel-Export kann nicht mehr ausgetauscht werden. " +
+            "INpkLeistungsverzeichnisExcelExporter bitte per Konstruktor uebergeben.");
 
     public static byte[] BuildWorkbook(
         IReadOnlyList<AggregatedPosition> positions,

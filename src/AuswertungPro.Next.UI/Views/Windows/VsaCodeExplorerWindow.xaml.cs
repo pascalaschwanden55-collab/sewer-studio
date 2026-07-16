@@ -23,6 +23,7 @@ public partial class VsaCodeExplorerWindow : Window
     private readonly VsaCodeExplorerViewModel _vm;
     private readonly string? _videoPath;
     private readonly TimeSpan? _currentVideoTime;
+    private readonly ICodeUsageTracker _codeUsage;
 
     /// <summary>
     /// Optionaler Callback: Liefert einen Snapshot vom aktuellen VLC-Player-Frame.
@@ -51,13 +52,15 @@ public partial class VsaCodeExplorerWindow : Window
 
     public VsaCodeExplorerWindow(VsaCodeExplorerViewModel vm,
                                   string? videoPath = null,
-                                  TimeSpan? currentVideoTime = null)
+                                  TimeSpan? currentVideoTime = null,
+                                  ICodeUsageTracker? codeUsage = null)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
         _vm = vm;
         _videoPath = videoPath;
         _currentVideoTime = currentVideoTime;
+        _codeUsage = codeUsage ?? CodeUsageTrackers.Current;
 
         // Buttons
         BtnApply.Click += (_, _) => ApplyAndClose();
@@ -665,7 +668,7 @@ public partial class VsaCodeExplorerWindow : Window
         SelectedEntry = _vm.BuildProtocolEntry();
 
         // Nutzung zaehlen -> naechstes Mal als Favoriten-Chip verfuegbar.
-        CodeUsageTrackers.Current.Erfasse(_vm.FinalCode);
+        _codeUsage.Erfasse(_vm.FinalCode);
 
         DialogResult = true;
         Close();
@@ -677,7 +680,7 @@ public partial class VsaCodeExplorerWindow : Window
 
     private void BuildFavoritenChips()
     {
-        var top = CodeUsageTrackers.Current.TopCodes(8);
+        var top = _codeUsage.TopCodes(8);
         if (top.Count == 0)
             return;
 

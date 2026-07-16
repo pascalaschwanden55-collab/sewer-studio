@@ -17,6 +17,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -41,8 +42,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IPdfMergeService _pdfMerge;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
-    private readonly ProjectCostStoreRepository _costRepo = new();
-    private readonly CostCatalogStore _catalogStore = new();
+    private readonly IProjectCostStoreRepository _costRepo;
+    private readonly ICostCatalogStore _catalogStore;
     private readonly DispatcherTimer _refreshDebounceTimer;
 
     private List<DruckcenterRowVm> _allRows = new();
@@ -133,6 +134,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             dialogs: services.Dialogs,
             protocolPdfExporter: services.ProtocolPdfExporter,
             costFieldSync: services.CostFieldSync,
+            costRepo: services.CostStores.CreateProjectCostStore(),
+            catalogStore: services.CostStores.CreateCostCatalogStore(),
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
             npkExcelExporter: services.NpkExcelExport)
@@ -140,6 +143,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _pdfMerge = services.PdfMerge;
     }
 
+    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public BuilderPageViewModel(
         ShellViewModel shell,
         AppSettings settings,
@@ -149,12 +153,39 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
+        : this(
+            shell,
+            settings,
+            dialogs,
+            protocolPdfExporter,
+            costFieldSync,
+            CostStoreCompatibility.Factory.CreateProjectCostStore(),
+            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            dossierPhotoAvailability,
+            inspectionProtocolFiles,
+            npkExcelExporter)
+    {
+    }
+
+    public BuilderPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        ProtocolPdfExporter protocolPdfExporter,
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IProjectCostStoreRepository costRepo,
+        ICostCatalogStore catalogStore,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _protocolPdfExporter = protocolPdfExporter ?? throw new ArgumentNullException(nameof(protocolPdfExporter));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
+        _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
+        _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPage.DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles

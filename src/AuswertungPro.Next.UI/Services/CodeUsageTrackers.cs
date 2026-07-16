@@ -10,7 +10,15 @@ namespace AuswertungPro.Next.UI.Services;
 /// </summary>
 public static class CodeUsageTrackers
 {
-    public static ICodeUsageTracker Current { get; set; } = new NoopCodeUsageTracker();
+    private static readonly ICodeUsageTracker Default = new NoopCodeUsageTracker();
+
+    public static ICodeUsageTracker Current
+    {
+        get => Default;
+        [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ICodeUsageTracker direkt uebergeben.")]
+        set => throw new NotSupportedException(
+            "CodeUsageTrackers.Current ist unveraenderlich. ICodeUsageTracker direkt uebergeben.");
+    }
 
     private sealed class NoopCodeUsageTracker : ICodeUsageTracker
     {

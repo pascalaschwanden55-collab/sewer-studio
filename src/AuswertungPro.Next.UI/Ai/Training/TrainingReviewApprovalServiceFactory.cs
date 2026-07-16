@@ -11,12 +11,15 @@ public static class TrainingReviewApprovalServiceFactory
 {
     public static IReviewApprovalService Create(
         Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> index,
-        Action<string> deindex)
+        Action<string> deindex,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(index);
         ArgumentNullException.ThrowIfNull(deindex);
 
         var indexer = new DelegatingKnowledgeBaseIndexer(index, deindex);
-        return new ReviewApprovalService(new TrainingSamplesStoreAdapter(), indexer);
+        return new ReviewApprovalService(
+            new TrainingSamplesStoreAdapter(trainingSamples ?? TrainingSamplesStore.Current),
+            indexer);
     }
 }

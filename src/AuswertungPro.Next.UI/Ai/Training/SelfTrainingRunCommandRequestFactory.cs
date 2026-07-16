@@ -1,6 +1,8 @@
 using System.Net.Http;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
@@ -40,8 +42,35 @@ public static class SelfTrainingRunCommandRequestFactory
         SelfTrainingRunCommandDefaultRequestFactoryRequest request,
         Func<SelfTrainingRunPreparationWorkflowRequest, Task<SelfTrainingRunPreparationWorkflowResult>>? prepareAsync = null,
         Func<SelfTrainingRunWorkflowRequest, Task>? runAsync = null)
+        => CreateWithDefaults(
+            request,
+            TrainingFfmpegPathResolver.CompatibilityService,
+            TrainingCenterSettingsStore.Current,
+            SelfTrainingHistoryStore.Current,
+            FrameStore.Current,
+            ProcessOutputReader.Current,
+            TrainingSamplesStore.Current,
+            prepareAsync,
+            runAsync);
+
+    internal static SelfTrainingRunCommandWorkflowRequest CreateWithDefaults(
+        SelfTrainingRunCommandDefaultRequestFactoryRequest request,
+        ITrainingFfmpegPathResolver trainingFfmpegPaths,
+        ITrainingCenterSettingsStore trainingSettings,
+        ISelfTrainingHistoryStore selfTrainingHistory,
+        ITrainingFrameStore trainingFrames,
+        IProcessOutputReader processOutputs,
+        ITrainingSampleStore trainingSamples,
+        Func<SelfTrainingRunPreparationWorkflowRequest, Task<SelfTrainingRunPreparationWorkflowResult>>? prepareAsync = null,
+        Func<SelfTrainingRunWorkflowRequest, Task>? runAsync = null)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(trainingFfmpegPaths);
+        ArgumentNullException.ThrowIfNull(trainingSettings);
+        ArgumentNullException.ThrowIfNull(selfTrainingHistory);
+        ArgumentNullException.ThrowIfNull(trainingFrames);
+        ArgumentNullException.ThrowIfNull(processOutputs);
+        ArgumentNullException.ThrowIfNull(trainingSamples);
 
         var prepare = prepareAsync ?? (workflowRequest => SelfTrainingRunPreparationWorkflow.RunAsync(workflowRequest));
         var run = runAsync ?? (workflowRequest => SelfTrainingRunWorkflow.RunAsync(workflowRequest));
@@ -58,7 +87,8 @@ public static class SelfTrainingRunCommandRequestFactory
                         request.SelectedCase,
                         request.SetSelectedCase,
                         request.ResetCancellation,
-                        request.SetStatusText))),
+                        request.SetStatusText),
+                    trainingSamples)),
             CreateRunRequest: (selectedCase, cancellationToken) =>
                 SelfTrainingRunRequestFactory.CreateWithDefaults(
                     new SelfTrainingRunRequestFactoryRequest(
@@ -81,7 +111,13 @@ public static class SelfTrainingRunCommandRequestFactory
                         LoadSamplesInternalAsync: request.LoadSamplesInternalAsync,
                         RefreshKbStatusAsync: request.RefreshKbStatusAsync,
                         ResetVisuals: request.ResetVisuals,
-                        CancellationToken: cancellationToken)),
+                        CancellationToken: cancellationToken),
+                    trainingFfmpegPaths,
+                    trainingSettings,
+                    selfTrainingHistory,
+                    trainingFrames,
+                    processOutputs,
+                    trainingSamples),
             RunAsync: run);
     }
 }

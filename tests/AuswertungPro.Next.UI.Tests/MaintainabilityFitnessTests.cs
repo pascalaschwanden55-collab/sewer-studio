@@ -17,6 +17,64 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.Infrastructure.HoldingFolderDistributor"] = 3_064
     };
 
+    private static readonly HashSet<string> ExistingMutableServiceFacades = new(StringComparer.Ordinal)
+    {
+    };
+
+    private static readonly HashSet<string> ImmutableCompatibilityFacades = new(StringComparer.Ordinal)
+    {
+        "AuswertungPro.Next.Infrastructure/Ai/Configuration/AiSettingsFactory.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/KnowledgeBase/KnowledgeBaseHealthChecker.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/KnowledgeBase/KnowledgeBasePaths.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Ollama/GpuModelSelector.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Pipeline/PipelineEnvironmentOptions.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Pipeline/PipelineTraceWriter.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Pipeline/SidecarTokenResolver.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Pipeline/SidecarTelemetryWriter.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/ProcessOutputReader.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Shared/FfmpegLocator.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Training/FrameStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Training/SelfTrainingHistoryStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Training/TrainingCenterSettingsStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Training/TrainingSamplesStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/VideoFrameExtractor.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Teacher/TeacherAnnotationStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Teacher/VsaYoloClassMap.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Sanierung/AiOptimizationSessionStore.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Startup/AiStartedProcessLifetime.cs",
+        "AuswertungPro.Next.Infrastructure/Ai/Startup/SidecarScriptLocator.cs",
+        "AuswertungPro.Next.Infrastructure/Backup/BackupManifestIntegrity.cs",
+        "AuswertungPro.Next.Infrastructure/Backup/RepoRootLocator.cs",
+        "AuswertungPro.Next.Infrastructure/Costs/NpkLeistungsverzeichnisExcelExporter.cs",
+        "AuswertungPro.Next.Infrastructure/HoldingDistribution/DistributionFileTransfer.cs",
+        "AuswertungPro.Next.Infrastructure/HoldingDistribution/DistributionPdfPageReader.cs",
+        "AuswertungPro.Next.Infrastructure/HoldingDistribution/PdfTextLayerRewriter.cs",
+        "AuswertungPro.Next.Infrastructure/HoldingDistribution/ShaftPdfSelectionExpander.cs",
+        "AuswertungPro.Next.Infrastructure/HoldingDistribution/VideoConflictArtifacts.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Ibak/IbakFdbConnectionOptions.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Ibak/KiasExportPattern.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Kins/KinsDbfWhitelistEnricher.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Kins/KinsDvdTextEnricher.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Kins/KinsGesamtprotokollLocator.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Pdf/AtomicPdfFileReplacer.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Pdf/PdfImportSafetyPolicy.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Pdf/PdfFormFieldExtractor.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Pdf/PdfOcrExtractor.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Pdf/PdfTextExtractor.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Xtf/M150MdbRowReader.cs",
+        "AuswertungPro.Next.Infrastructure/Import/Xtf/M150SourceFileReader.cs",
+        "AuswertungPro.Next.Infrastructure/Map/HaltungCadastreExtractor.cs",
+        "AuswertungPro.Next.Infrastructure/Map/HaltungCadastreIndex.cs",
+        "AuswertungPro.Next.Infrastructure/Media/PdfMergeHelper.cs",
+        "AuswertungPro.Next.Infrastructure/Telemetry/TelemetryPathResolver.cs",
+        "AuswertungPro.Next.Infrastructure/Vsa/VsaShadowTelemetryWriter.cs",
+        "AuswertungPro.Next.UI/Services/FullBackupSourcesFactory.cs",
+        "AuswertungPro.Next.UI/Services/CodeUsageTrackers.cs",
+        "AuswertungPro.Next.UI/Services/DialogHost.cs",
+        "AuswertungPro.Next.UI/Services/SafeShellOpen.cs",
+        "AuswertungPro.Next.UI/Theme/StatusColors.cs"
+    };
+
     [Fact]
     public void No_new_production_file_exceeds_1000_lines()
     {
@@ -102,8 +160,6 @@ public sealed class MaintainabilityFitnessTests
         var root = TestRepoPaths.FindRepoRoot();
         var expected = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["public static IStatusColorService Current"] = "src/AuswertungPro.Next.UI/Theme/StatusColors.cs",
-            ["public static ICodeUsageTracker Current"] = "src/AuswertungPro.Next.UI/Services/CodeUsageTrackers.cs",
             ["public static IDialogService Current"] = "src/AuswertungPro.Next.UI/Services/DialogHost.cs",
             ["public static ICodeCatalogProvider? CurrentCatalog"] = "src/AuswertungPro.Next.Infrastructure/Ai/VsaCodeResolver.cs"
         };
@@ -118,6 +174,44 @@ public sealed class MaintainabilityFitnessTests
 
             Assert.Equal(new[] { expectedFile }, matches);
         }
+    }
+
+    [Fact]
+    public void Mutable_service_facades_can_only_shrink()
+    {
+        var sourceRoot = Path.Combine(TestRepoPaths.FindRepoRoot(), "src");
+        var useMethod = new Regex(
+            @"\b(?:public|internal)\s+static\s+void\s+Use(?:Provider|Service)?\s*\(",
+            RegexOptions.CultureInvariant);
+        var settableCurrent = new Regex(
+            @"\bpublic\s+static\s+[^{;]+?\s+Current\s*\{[^}]*\bset\s*;",
+            RegexOptions.CultureInvariant | RegexOptions.Singleline);
+
+        var current = Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path =>
+            {
+                var source = File.ReadAllText(path);
+                var relative = Path.GetRelativePath(sourceRoot, path).Replace('\\', '/');
+                return useMethod.IsMatch(source) && !ImmutableCompatibilityFacades.Contains(relative)
+                    || settableCurrent.IsMatch(source)
+                    || relative == "AuswertungPro.Next.UI/Services/DialogHost.cs"
+                        && source.Contains("public static void Configure(", StringComparison.Ordinal);
+            })
+            .Select(path => Path.GetRelativePath(sourceRoot, path).Replace('\\', '/'))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var newFacades = current.Except(ExistingMutableServiceFacades).OrderBy(path => path).ToArray();
+        var removedFacades = ExistingMutableServiceFacades.Except(current).OrderBy(path => path).ToArray();
+
+        Assert.True(
+            newFacades.Length == 0,
+            "Neue veraenderbare Current/Use-Fassade gefunden. Neue Dienste muessen per Konstruktor " +
+            "injiziert werden:\n  " + string.Join("\n  ", newFacades));
+        Assert.True(
+            removedFacades.Length == 0,
+            "Diese Current/Use-Altstellen wurden entfernt. Bitte aus der Altliste loeschen, damit " +
+            "die Obergrenze dauerhaft sinkt:\n  " + string.Join("\n  ", removedFacades));
     }
 
     private static IReadOnlyList<PartialTypeSize> FindPartialTypeSizes()

@@ -16,13 +16,16 @@ public sealed class VisionPipelineTrainingReviewSamClient : ITrainingReviewSamCl
 {
     private readonly VisionPipelineClient _client;
 
-    public VisionPipelineTrainingReviewSamClient(PipelineConfig pipelineConfig)
+    public VisionPipelineTrainingReviewSamClient(
+        PipelineConfig pipelineConfig,
+        ISidecarTelemetryWriter? sidecarTelemetry = null)
     {
         var timeout = TimeSpan.FromSeconds(Math.Max(30, pipelineConfig.SidecarTimeoutSec));
         _client = new VisionPipelineClient(
             pipelineConfig.SidecarUrl,
             new HttpClient { Timeout = timeout },
-            pipelineConfig.SidecarToken);
+            pipelineConfig.SidecarToken,
+            sidecarTelemetry ?? SidecarTelemetryWriter.Current);
     }
 
     public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)

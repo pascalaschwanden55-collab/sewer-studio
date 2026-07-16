@@ -47,6 +47,17 @@ public sealed class SelfTrainingSessionControllerTests
         Assert.Equal(expected, SelfTrainingSessionController.ResolveVisionModel(configuredModel));
     }
 
+    [Fact]
+    public void ResolveFfmpegPath_verwendet_den_uebergebenen_Pfadfinder()
+    {
+        var resolver = new FfmpegPathResolverFake("direkt-verdrahtet");
+
+        var result = SelfTrainingSessionController.ResolveFfmpegPath("konfiguriert", resolver);
+
+        Assert.Equal("direkt-verdrahtet", result);
+        Assert.Equal("konfiguriert", resolver.ReceivedPath);
+    }
+
     private sealed class DisposableProbe : IDisposable
     {
         public int DisposeCount { get; private set; }
@@ -73,6 +84,17 @@ public sealed class SelfTrainingSessionControllerTests
 
         public void Resume()
         {
+        }
+    }
+
+    private sealed class FfmpegPathResolverFake(string result) : ITrainingFfmpegPathResolver
+    {
+        public string? ReceivedPath { get; private set; }
+
+        public string Resolve(string? configuredPath)
+        {
+            ReceivedPath = configuredPath;
+            return result;
         }
     }
 }

@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class OfflineBasemapPathResolverDependencyTests
 {
     [Fact]
-    public void ServiceProvider_und_statische_Fassade_verwenden_dieselbe_Instanz()
+    public void ServiceProvider_registriert_Offlinekarten_Pfadsuche_ohne_globalen_Umschalter()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -18,10 +18,12 @@ public sealed class OfflineBasemapPathResolverDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
 
-        Assert.Same(services.OfflineBasemapPaths, OfflineBasemapBaseResolver.CompatibilityService);
         Assert.Same(
             services.OfflineBasemapPaths,
             services.GetService(typeof(IOfflineBasemapPathResolver)));
+        Assert.Null(typeof(OfflineBasemapBaseResolver).GetMethod(
+            "Use",
+            BindingFlags.Static | BindingFlags.NonPublic));
     }
 
     [Fact]

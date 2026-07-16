@@ -18,7 +18,9 @@ public sealed record TrainingGoldKbReconcileCommandWorkflowRequest(
 
 public static class TrainingGoldKbReconcileCommandWorkflow
 {
-    public static async Task RunAsync(TrainingGoldKbReconcileCommandWorkflowRequest request)
+    public static async Task RunAsync(
+        TrainingGoldKbReconcileCommandWorkflowRequest request,
+        ITrainingSampleStore? trainingSamples = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.GetIsBusy);
@@ -30,12 +32,13 @@ public static class TrainingGoldKbReconcileCommandWorkflow
             return;
 
         var ct = request.ResetCancellation();
+        var samples = trainingSamples ?? TrainingSamplesStore.Current;
 
         await request.RunReconcileAsync(
             TrainingGoldKbReconcileRequestFactory.CreateWithDefaults(
                 request.SetBusy,
-                TrainingSamplesStore.LoadAsync,
-                TrainingSamplesStore.MergeOrUpdateAsync,
+                samples.LoadAsync,
+                samples.MergeOrUpdateAsync,
                 request.IndexAsync,
                 request.Log,
                 request.SetStatus,

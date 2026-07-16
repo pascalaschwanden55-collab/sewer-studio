@@ -2,7 +2,9 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
@@ -67,7 +69,9 @@ public sealed record PlayerWindowControllerSetDependencies(
     Action UpdateUi,
     Action<float> ShowUnsupportedRate,
     Func<(double offsetX, double trackWidth)> ResolveSliderTrackBounds,
-    Func<NormalizedPoint, Point> MapCodingOverlayPoint);
+    Func<NormalizedPoint, Point> MapCodingOverlayPoint,
+    IProcessOutputReader? ProcessOutputs = null,
+    IDialogService? Dialogs = null);
 
 public static class PlayerWindowControllerSetFactory
 {
@@ -144,7 +148,9 @@ public static class PlayerWindowControllerSetFactory
                 dependencies.VideoPath,
                 dependencies.EnsurePlaying,
                 dependencies.UpdateUi,
-                dependencies.ResolveSliderTrackBounds),
+                dependencies.ResolveSliderTrackBounds,
+                dependencies.ProcessOutputs ?? ProcessOutputReader.Current,
+                dependencies.Dialogs ?? DialogHost.Current),
             positionControls,
             positionInputController,
             positionSliderStateController,

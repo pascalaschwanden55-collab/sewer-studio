@@ -10,14 +10,11 @@ namespace AuswertungPro.Next.UI.Services;
 /// </summary>
 public static class ProtocolTrainingStore
 {
-    private static IProtocolTrainingStore _current = new ProtocolTrainingFileStore();
+    private static readonly IProtocolTrainingStore Default = new ProtocolTrainingFileStore();
 
     public static string DefaultPath => Current.StoragePath;
 
-    internal static IProtocolTrainingStore Current => Volatile.Read(ref _current);
-
-    internal static void Use(IProtocolTrainingStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+    internal static IProtocolTrainingStore Current => Default;
 
     public static void AddSample(ProtocolEntry entry, string? haltungId) =>
         Current.AddSample(entry, haltungId);

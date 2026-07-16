@@ -8,15 +8,18 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 /// </summary>
 public static class AiOptimizationSessionStore
 {
-    private static IAiOptimizationSessionStore _current = new AiOptimizationSessionFileStore();
+    private static readonly IAiOptimizationSessionStore Default =
+        new AiOptimizationSessionFileStore();
 
     public static string DefaultPath => Current.StoragePath;
 
-    public static IAiOptimizationSessionStore Current => Volatile.Read(ref _current);
+    public static IAiOptimizationSessionStore Current => Default;
 
-    /// <summary>Verbindet die Fassade mit der zentral aufgebauten Dienstinstanz.</summary>
+    [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IAiOptimizationSessionStore store) =>
-        Volatile.Write(ref _current, store ?? throw new ArgumentNullException(nameof(store)));
+        throw new NotSupportedException(
+            "Der globale Speicher fuer KI-Sanierungssitzungen kann nicht mehr ausgetauscht werden. " +
+            "IAiOptimizationSessionStore bitte per Konstruktor uebergeben.");
 
     public static Task SaveAsync(AiOptimizationSession session) =>
         Current.SaveAsync(session);
