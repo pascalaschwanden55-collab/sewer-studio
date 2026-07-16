@@ -68,7 +68,9 @@
 11. **Keine sichtbaren Symbolzeichen** (`→ ✓ ✕ ✎ ⚠`) in `Theme/Controls.xaml`, `TrainingCenterWindow.xaml`, `VideoAnalysisPipelineWindow.xaml`, `MeasureTemplateEditorWindow.xaml` und den beiden Editor-Dialogen — auch nicht in Kommentaren. `FluentIconTests` prueft die ganze Datei per Regex und wird sonst rot (bei der Umsetzung von Paket A passiert). Im Text „nach" schreiben, im UI ein Glyph verwenden.
 12. Der Alpha-Anteil in `DropShadowEffect.Color` wird ignoriert — siehe Alpha-Regel in Paket A2. Gilt fuer jeden Schatten und jeden Glow in allen Paketen.
 13. **Achtstellige Farbwerte immer pruefen:** WPF liest `#AARRGGBB`, nicht den CSS-Stil `#RRGGBBAA`. Wer `#2563EB15` als „Blau, schwach deckend" meint, bekommt ein transparentes Gruen (siehe H7).
-14. **Animationen in Templates wirklich ausloesen, nicht nur den Quelltext pruefen.** Ein Verlaufspinsel kann eingefroren werden — das faellt erst zur Laufzeit auf. Muster: `ProgressBarIndeterminateTemplateTests` (Style-Block aus der Datei schneiden, isoliert parsen, Fenster rendern, `IsFrozen` und echte Bewegung pruefen). `XamlReader` kann `Controls.xaml` wegen `x:Shared` nicht am Stueck laden, `pack://` braucht eine laufende Anwendung.
+14. **Animationen in Templates wirklich ausloesen, nicht nur den Quelltext pruefen.** Ein Verlaufspinsel kann eingefroren werden — das faellt erst zur Laufzeit auf. Muster: `ProgressBarIndeterminateTemplateTests` (Style-Block aus der Datei schneiden, isoliert parsen, Fenster rendern, `IsFrozen` und echte Bewegung pruefen). `XamlReader` kann `Controls.xaml` wegen `x:Shared` nicht am Stueck laden, `pack://` braucht eine laufende Anwendung. Die Theme-Dateien haben kein `x:Shared` und lassen sich am Stueck laden (`PageTitleUnderlineTests`).
+15. **Vor jedem neuen `x:Key` pruefen, ob er schon existiert** (`grep -n 'x:Key="Name"'`). Kompiliertes XAML nimmt bei doppelten Schluesseln stillschweigend den letzten — der Build meldet nichts. `ThemeResourceKeyUniquenessTests` faengt es jetzt ab; in Paket A ist genau das mit `GlowAccentColor` passiert.
+16. **Keine neuen Styles fuer Zusatz-Effekte.** Karten tragen bereits `Style="{StaticResource Card}"`, und WPF laesst nur einen zu. Angehaengte Eigenschaften nehmen (`ui:HoverFx.Lift`, `ui:WindowFx.Entrance`, `ui:EntranceFx.Stagger`) — sie wirken auch in ControlTemplates und erzeugen pro Element eigene Freezables.
 
 ---
 
@@ -335,6 +337,14 @@ In `Controls.xaml` (bei den Card-nahen Styles):
 
 ## PAKET G — Seiten-Charakter: Entrance-Stagger, Nav-Politur, Titellinien — Aufwand: M
 
+> **STATUS 16.07.: UMGESETZT** (Commit `294e0bd37`; Build 0/0, 9463 Tests gruen).
+>
+> - **G3 zentral statt elfmal:** Acht Seiten teilen sich `Style="{StaticResource PageTitle}"` — die Linie sitzt jetzt als `TextDecoration` **im Style** (Pen 2 px, `PenOffset=7`), nicht als Border je Seite. Alle Seiten bekommen sie automatisch, kuenftige auch. `NeuralUnderlineBrush` musste dafuer von `Controls.xaml` **in beide Theme-Dateien** wandern: GradientStops koennen keine DynamicResource aufnehmen, und der Style erreicht den Schluessel per StaticResource nur im eigenen Woerterbuch. Nebeneffekt und Gewinn: Die Linie ist jetzt **theme-abgestimmt** (dunkel heller).
+> - **G2 erledigt:** `AccentStrip` waechst per `ScaleY` 0.4→1 + Opacity ein (EnterActions/ExitActions). Der Icon-Pop (G2.2) wurde **weggelassen** — der wachsende Balken plus Farbwechsel reicht; ein zusaetzlich hüpfendes Icon waere die dritte Bewegung fuer dasselbe Ereignis. G2.3 (Hover-Uebergang) unveraendert gelassen: der bestehende Setter ist ausreichend, ein Umbau haette das Template zerlegt.
+> - **G1 eingeschraenkt auf die Cockpit-Karten der Uebersicht.** Beim Lesen fiel auf: Alle sechs Karten dort haengen an **Sichtbarkeits-Bindungen**, je Zustand sind nur ein bis drei zu sehen. `EntranceFx` staffelt darum **nur sichtbare Kinder** — sonst bekaeme die erste sichtbare Karte die Verzoegerung der vierten und die Seite wirkte traege. `DelayFor` ist gedeckelt (max. 405 ms) und getestet.
+> - **Fund und Fix (Fehler aus Paket A):** `GlowAccentColor` war **doppelt** — der Schluessel existierte laengst je Theme („DropShadow-Glows, Puls-Ringe", aus dem Design-Upgrade 11.07.), Paket A legte blind einen zweiten an. **Kompiliertes XAML nimmt bei doppelten Schluesseln stillschweigend den letzten**, der Build schwieg; nur weil beide Werte zufaellig gleich waren, blieb es folgenlos. Aufgefallen erst, als ein Test das Woerterbuch zur Laufzeit lud. Neuer Guard: `ThemeResourceKeyUniquenessTests` prueft alle drei Theme-Dateien auf eindeutige `x:Key`.
+> - Guards: `PageTitleUnderlineTests` (am echten Theme gerendert), `EntranceFxTests`, `Navigation_selection_grows_in_instead_of_flashing`, `Card_stagger_stays_on_fixed_panels_not_on_data_bound_lists`.
+
 ### G1 — Gestaffelte Karten-Einblendung `EntranceFx`
 **Neue Datei:** `src/AuswertungPro.Next.UI/EntranceFx.cs` (Root-Namespace): attached property `ui:EntranceFx.Stagger="True"` fuer `Panel`.
 - OnLoaded: die ersten max. 10 direkten Kinder (`FrameworkElement`) nacheinander einblenden — Opacity 0→1 + TranslateY 12→0, Dauer `AnimationTokens.Slow`, EaseOut, `BeginTime = Index × 45 ms`. Kinder mit eigenem RenderTransform: nur Opacity.
@@ -407,8 +417,8 @@ Nicht mitgefixt, weil es eine sichtbare Aenderung am Bestand ist und eine Entsch
 2. ~~**Paket C + D** (KI-Puls + NeuralSphere)~~ — **erledigt am 16.07.** (`4f5c1387d`, `abb65c3e1`). Das Motto ist sichtbar: Kugel und Puls laufen nur bei echter Arbeit.
 3. ~~**Paket E** (Neural Flow)~~ — **erledigt am 16.07.** (`bf5308341`). War mehr als Optik: der unbestimmte Wartebalken zeigte an neun Stellen gar nichts.
 4. ~~**Paket F** (Tiefe)~~ — **erledigt am 16.07.** (`e219fe6bd`). Nutze `ui:HoverFx.Lift` und `ui:WindowFx.Entrance` statt neuer Styles.
-5. **Paket G** (Seiten-Charakter) — **hier weitermachen.** Entrance + Navigation + Titellinien.
-6. **Paket H** (Mikrointeraktionen) — Feinschliff zuletzt.
+5. ~~**Paket G** (Seiten-Charakter)~~ — **erledigt am 16.07.** (`294e0bd37`).
+6. **Paket H** (Mikrointeraktionen) — **hier weitermachen.** Feinschliff zuletzt; H7 braucht vorher Pascals Entscheidung.
 
 Nach Paket D einen Zwischenstand bauen und die Sichtpruefungs-Punkte unten fuer die bis dahin fertigen Teile durchgehen — nicht alles blind bis zum Ende durchziehen.
 
