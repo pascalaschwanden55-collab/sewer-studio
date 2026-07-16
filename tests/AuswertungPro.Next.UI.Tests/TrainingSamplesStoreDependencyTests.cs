@@ -25,6 +25,39 @@ public sealed class TrainingSamplesStoreDependencyTests
     }
 
     [Fact]
+    public void ServiceProvider_setzt_den_Eval_Schutz_auch_auf_der_Kompatibilitaets_Fassade()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "sewer-eval-protection-test-" + Guid.NewGuid().ToString("N"));
+        var previousRoot = Path.Combine(root, "vorher");
+        var configuredRoot = Path.Combine(root, "eval-set");
+        TrainingSamplesStore.ConfigureEvalProtection(previousRoot);
+
+        try
+        {
+            using var loggerFactory = LoggerFactory.Create(_ => { });
+            _ = new ServiceProvider(
+                new AppSettings
+                {
+                    EnableRestorePoints = false,
+                    EvalSetRoot = configuredRoot
+                },
+                new Application.Diagnostics.DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+
+            Assert.Equal(
+                Path.GetFullPath(configuredRoot),
+                TrainingSamplesStore.EffectiveEvalSetRoot);
+        }
+        finally
+        {
+            TrainingSamplesStore.ConfigureEvalProtection(null);
+        }
+    }
+
+    [Fact]
     public void Statische_Trainingssample_Fassade_ist_unveraenderbar()
     {
         var before = TrainingSamplesStore.Current;
