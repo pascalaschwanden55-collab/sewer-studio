@@ -285,6 +285,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
@@ -335,8 +336,15 @@
                                            Foreground="{DynamicResource MutedBrush}"
                                            FontSize="11"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Bewegung" Style="{StaticResource SettingsFieldLabel}"/>
                                 <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                          Content="Dauer-Animationen reduzieren (Puls- und Leuchteffekte aus)"
+                                          IsChecked="{Binding ReduceMotion}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Schaltet dauerhafte Puls- und Leuchteffekte ab. Rueckmeldung beim Zeigen und Klicken bleibt erhalten. Wirkt ab dem naechsten Fensteraufbau. Nicht angehakt: SewerStudio folgt der Windows-Einstellung fuer Animationen."/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Fehlercodes anzeigen"
                                           IsChecked="{Binding EnableDiagnostics}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>

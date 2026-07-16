@@ -221,6 +221,26 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void Reduce_motion_setting_is_wired_from_settings_page_to_startup()
+    {
+        var settingsPage = ReadUiFile("Views", "Pages", "SettingsPage.xaml");
+        var viewModel = ReadUiFile("ViewModels", "Pages", "SettingsPageViewModel.cs");
+        var appSettings = ReadUiFile("AppSettings.cs");
+        var app = ReadUiFile("App.xaml.cs");
+
+        Assert.Contains("IsChecked=\"{Binding ReduceMotion}\"", settingsPage);
+        Assert.Contains("public bool ReduceMotion { get; set; }", appSettings);
+        Assert.Contains("ReduceMotion = _settings.ReduceMotion;", viewModel);
+
+        // Sofort wirksam: speichern und den statischen Schalter nachziehen.
+        Assert.Contains("partial void OnReduceMotionChanged(bool value)", viewModel);
+        Assert.Contains("MotionSettings.Configure(value);", viewModel);
+
+        // Beim Start neben den anderen statischen Schaltern uebernehmen.
+        Assert.Contains("MotionSettings.Configure(settings.ReduceMotion);", app);
+    }
+
+    [Fact]
     public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");

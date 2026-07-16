@@ -27,6 +27,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.LiveControl;
 using AuswertungPro.Next.UI.QgisBridge;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -88,6 +89,7 @@ namespace AuswertungPro.Next.UI
                     settingsMigration);
                 WindowStateManager.Configure(settings);
                 ViewCustomizationStore.Configure(settings);
+                MotionSettings.Configure(settings.ReduceMotion);
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
                 ThemeManager.ApplyTheme(Resources, settings.UiTheme);

@@ -100,6 +100,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public bool EnableRestorePoints { get; set; } = true;
     public string UiTheme { get; set; } = ThemeManager.Light;
 
+    // Darstellung: true = dauerhafte Puls-/Leuchteffekte aus. Ohne Eintrag in der settings.json
+    // gilt false, und MotionSettings folgt dann der Windows-Systemeinstellung.
+    public bool ReduceMotion { get; set; }
+
     // Video player tuning
     public bool VideoHwDecoding { get; set; } = true;
     public bool VideoDropLateFrames { get; set; } = true;

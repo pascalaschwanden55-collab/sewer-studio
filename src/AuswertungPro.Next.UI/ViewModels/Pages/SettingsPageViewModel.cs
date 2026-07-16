@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.Maintenance;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Maintenance;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Services;
 
@@ -61,6 +62,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _videoOutput = "direct3d11";
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
     [ObservableProperty] private bool _isDarkTheme;
+    [ObservableProperty] private bool _reduceMotion;
     [ObservableProperty] private bool _startAiOnProgramStart;
     [ObservableProperty] private double _pipelineYoloConfidence = DefaultYoloConfidence;
     [ObservableProperty] private double _pipelineDinoBoxThreshold = DefaultDinoBoxThreshold;
@@ -284,6 +286,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_settings.VideoOutput);
         UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
+        ReduceMotion = _settings.ReduceMotion;
         StartAiOnProgramStart = _settings.AiStartOnProgramStart;
         var pipelineConfig = AiSettingsFactory
             .Load(AppSettingsAiSettingsProvider.ToSource(_settings))
@@ -345,6 +348,15 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         _settings.FullBackupIncludeProjectVideos = value;
         _settings.SaveImmediate();
+    }
+
+    partial void OnReduceMotionChanged(bool value)
+    {
+        // Sofort speichern und uebernehmen (Muster wie der Backup-Schalter oben). Bereits offene
+        // Fenster behalten ihre laufenden Animationen — die Einstellung greift beim naechsten Aufbau.
+        _settings.ReduceMotion = value;
+        _settings.SaveImmediate();
+        MotionSettings.Configure(value);
     }
 
     partial void OnIsProgramCleanupRunningChanged(bool value)
