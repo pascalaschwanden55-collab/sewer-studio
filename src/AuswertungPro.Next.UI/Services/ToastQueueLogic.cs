@@ -48,6 +48,20 @@ public sealed class ToastQueueLogic
     public int PendingCount => _pending.Count;
 
     /// <summary>
+    /// Verbleibende Anzeigezeit eines sichtbaren Toasts in ms — fuer die ablaufende Lebenslinie.
+    /// Null, wenn der Toast unbekannt ist, noch wartet oder bis zum Klick bleibt (Fehler).
+    /// Nie negativ: ein ueberfaelliger Toast hat null Zeit uebrig, keine Schuld.
+    /// </summary>
+    public long? RemainingMs(long id, long nowMs)
+    {
+        var active = _active.FirstOrDefault(a => a.Item.Id == id);
+        if (active is null || active.Item.DurationMs is not { } duration)
+            return null;
+
+        return Math.Max(0, duration - (nowMs - active.ShownAtMs));
+    }
+
+    /// <summary>
     /// Reiht eine Meldung ein. Leere/Whitespace-Meldung wird verworfen (Rueckgabe null).
     /// Ist ein Slot frei, wird sie sofort sichtbar; sonst wandert sie in die Warteschlange.
     /// </summary>

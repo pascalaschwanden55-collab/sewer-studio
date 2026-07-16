@@ -87,6 +87,28 @@ public partial class ToastHost : UserControl
         translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(12d, 0d, duration) { EasingFunction = ease });
     }
 
+    /// <summary>
+    /// Laesst die Lebenslinie ueber die Anzeigedauer des Toasts von voller Breite auf null
+    /// schrumpfen — der Nutzer sieht, wie lange die Meldung noch bleibt. Linear, weil sie eine
+    /// Uhr abbildet: eine Beschleunigung waere schlicht gelogen.
+    /// </summary>
+    private void LifeLine_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Border line || line.DataContext is not ToastItem item)
+            return;
+
+        // Fehler bleiben bis zum Klick — ohne Ablauf gibt es nichts abzulaufen.
+        if (item.DurationMs is not { } durationMs)
+            return;
+
+        var remainingMs = _logic.RemainingMs(item.Id, NowMs()) ?? durationMs;
+        var scale = (ScaleTransform)line.RenderTransform;
+
+        scale.BeginAnimation(
+            ScaleTransform.ScaleXProperty,
+            new DoubleAnimation(1d, 0d, new Duration(TimeSpan.FromMilliseconds(Math.Max(remainingMs, 1)))));
+    }
+
     private static TranslateTransform EnsureMutableTranslateTransform(Border border)
     {
         if (border.RenderTransform is TranslateTransform { IsFrozen: false } translate)

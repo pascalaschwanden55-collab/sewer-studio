@@ -556,6 +556,18 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="5"
                             SnapsToDevicePixels="True">
+                        <!-- Fokus-Schein: ruht unsichtbar (Opacity 0) und wird nur im Fokus
+                             eingeblendet. Hier im Template statt ueber die AccentGlow-Ressource,
+                             weil Controls.xaml erst NACH diesem Woerterbuch gemergt wird und
+                             StaticResource es darum nicht erreicht. Eigene Instanz je Feld —
+                             geteilte Effekte liessen sich nicht einzeln animieren. -->
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="FocusGlow"
+                                              Color="{StaticResource GlowAccentColor}"
+                                              Opacity="0"
+                                              BlurRadius="12"
+                                              ShadowDepth="0"/>
+                        </Border.Effect>
                         <ScrollViewer x:Name="PART_ContentHost"
                                     Focusable="False"
                                     HorizontalScrollBarVisibility="Hidden"
@@ -572,6 +584,27 @@
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="2"/>
+                            <!-- Dauern hart geschrieben: die Anim-Tokens liegen in Controls.xaml und
+                                 sind von hier aus per StaticResource nicht erreichbar (Merge-Reihenfolge).
+                                 Werte entsprechen AnimDurationFast bzw. AnimDurationNormal. -->
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusGlow"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.45" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusGlow"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.18"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

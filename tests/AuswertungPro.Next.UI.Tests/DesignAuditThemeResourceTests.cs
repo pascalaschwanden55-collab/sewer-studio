@@ -377,6 +377,45 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void Micro_interactions_give_feedback_without_running_forever()
+    {
+        var controls = ReadUiFile("Theme", "Controls.xaml");
+        var emptyState = ReadUiFile("Controls", "EmptyStateControl.xaml.cs");
+        var toastXaml = ReadUiFile("Controls", "ToastHost.xaml");
+        var toastCode = ReadUiFile("Controls", "ToastHost.xaml.cs");
+
+        // Der Haken springt auf — gleiche Sprache wie der Punkt im RadioButton.
+        Assert.Contains("<ScaleTransform x:Name=\"CheckMarkScale\" ScaleX=\"0.6\" ScaleY=\"0.6\"/>", controls);
+        Assert.Contains("Storyboard.TargetName=\"CheckMarkScale\"", controls);
+
+        // Der Leerzustand schwebt — aber nur sichtbar und nur mit erlaubter Bewegung.
+        Assert.Contains("if (IsVisible && !MotionSettings.ReduceMotion)", emptyState);
+        Assert.Contains("IsVisibleChanged", emptyState);
+        Assert.Contains("Unloaded", emptyState);
+
+        // Die Lebenslinie haengt an der echten Anzeigedauer, nicht an einem geratenen Wert.
+        Assert.Contains("Loaded=\"LifeLine_Loaded\"", toastXaml);
+        Assert.Contains("_logic.RemainingMs(item.Id, NowMs())", toastCode);
+        // Fehler bleiben bis zum Klick — dort waere eine ablaufende Linie gelogen.
+        Assert.Contains("<Setter TargetName=\"LifeLine\" Property=\"Visibility\" Value=\"Collapsed\"/>", toastXaml);
+    }
+
+    [Fact]
+    public void Input_fields_glow_on_focus_in_both_themes()
+    {
+        foreach (var theme in new[] { "ThemeLight.xaml", "Theme.xaml" })
+        {
+            var xaml = ReadUiFile("Theme", theme);
+
+            // Eigener Effekt je Feld im Template: AccentGlow aus Controls.xaml ist von hier aus
+            // nicht per StaticResource erreichbar, weil Controls spaeter gemergt wird.
+            Assert.Contains("<DropShadowEffect x:Name=\"FocusGlow\"", xaml);
+            Assert.Contains("Color=\"{StaticResource GlowAccentColor}\"", xaml);
+            Assert.Contains("Storyboard.TargetName=\"FocusGlow\"", xaml);
+        }
+    }
+
+    [Fact]
     public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");

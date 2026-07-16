@@ -43,17 +43,34 @@
                             <TextBlock Grid.Column="1" Text="{Binding Message}"
                                        Margin="12,10,14,10" TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextBrush}" FontSize="13"/>
+                            <!-- Lebenslinie: schrumpft ueber die Anzeigedauer des Toasts, damit man
+                                 sieht, wie lange er noch bleibt. Fehler-Toasts bleiben bis zum Klick
+                                 und bekommen darum keine (Code-Behind blendet sie dann aus). -->
+                            <Border x:Name="LifeLine" Grid.Column="1"
+                                    Height="2" VerticalAlignment="Bottom"
+                                    CornerRadius="0,0,6,0"
+                                    Background="{DynamicResource AccentBrush}"
+                                    RenderTransformOrigin="0,0.5"
+                                    Loaded="LifeLine_Loaded">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="LifeLineScale"/>
+                                </Border.RenderTransform>
+                            </Border>
                         </Grid>
                     </Border>
                     <DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding Severity}" Value="Success">
                             <Setter TargetName="AccentBar" Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                            <Setter TargetName="LifeLine" Property="Background" Value="{DynamicResource SuccessBrush}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Severity}" Value="Warning">
                             <Setter TargetName="AccentBar" Property="Background" Value="{DynamicResource WarningBrush}"/>
+                            <Setter TargetName="LifeLine" Property="Background" Value="{DynamicResource WarningBrush}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Severity}" Value="Error">
                             <Setter TargetName="AccentBar" Property="Background" Value="{DynamicResource DangerBrush}"/>
+                            <!-- Fehler bleibt bis zum Klick: keine ablaufende Linie zeigen. -->
+                            <Setter TargetName="LifeLine" Property="Visibility" Value="Collapsed"/>
                         </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>

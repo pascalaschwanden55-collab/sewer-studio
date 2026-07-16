@@ -215,11 +215,18 @@
                                 BorderThickness="1.5"
                                 CornerRadius="4"
                                 Margin="0,0,8,0">
+                            <!-- Der Haken springt beim Setzen kurz auf — gleiche Sprache wie der
+                                 Punkt im RadioButton darunter. -->
                             <Path x:Name="CheckMark"
                                 Data="M2,6 L6,10 L14,2"
                                 Stroke="White"
                                 StrokeThickness="2"
-                                Visibility="Collapsed"/>
+                                Visibility="Collapsed"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <ScaleTransform x:Name="CheckMarkScale" ScaleX="0.6" ScaleY="0.6"/>
+                                </Path.RenderTransform>
+                            </Path>
                         </Border>
                         <ContentPresenter VerticalAlignment="Center"/>
                     </StackPanel>
@@ -228,6 +235,22 @@
                             <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="CheckBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CheckMarkScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="{StaticResource AnimDurationFast}" EasingFunction="{StaticResource AnimEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="CheckMarkScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="{StaticResource AnimDurationFast}" EasingFunction="{StaticResource AnimEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CheckMarkScale" Storyboard.TargetProperty="ScaleX" To="0.6" Duration="{StaticResource AnimDurationFast}"/>
+                                        <DoubleAnimation Storyboard.TargetName="CheckMarkScale" Storyboard.TargetProperty="ScaleY" To="0.6" Duration="{StaticResource AnimDurationFast}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>

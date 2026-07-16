@@ -22,6 +22,50 @@ public sealed class ToastQueueLogicTests
         Assert.Equal(ToastSeverity.Success, logic.Visible[0].Severity);
     }
 
+    // ── Restzeit fuer die ablaufende Lebenslinie im Toast ──
+
+    [Fact]
+    public void RemainingMs_counts_down_over_the_display_time()
+    {
+        var logic = new ToastQueueLogic();
+        var id = logic.Show("Export fertig", ToastSeverity.Success, nowMs: 1000)!.Value;
+
+        Assert.Equal(3000, logic.RemainingMs(id, nowMs: 1000));
+        Assert.Equal(1800, logic.RemainingMs(id, nowMs: 2200));
+    }
+
+    [Fact]
+    public void RemainingMs_never_goes_negative()
+    {
+        var logic = new ToastQueueLogic();
+        var id = logic.Show("Export fertig", ToastSeverity.Info, nowMs: 0)!.Value;
+
+        Assert.Equal(0, logic.RemainingMs(id, nowMs: 99_000));
+    }
+
+    [Fact]
+    public void RemainingMs_is_null_for_errors_that_stay_until_clicked()
+    {
+        var logic = new ToastQueueLogic();
+        var id = logic.Show("Import fehlgeschlagen", ToastSeverity.Error, nowMs: 0)!.Value;
+
+        Assert.Null(logic.RemainingMs(id, nowMs: 0));
+    }
+
+    [Fact]
+    public void RemainingMs_is_null_for_unknown_and_waiting_toasts()
+    {
+        var logic = new ToastQueueLogic();
+        for (var i = 0; i < ToastQueueLogic.MaxVisible; i++)
+            logic.Show($"Sichtbar {i}", ToastSeverity.Info, nowMs: 0);
+
+        // Der vierte wartet noch — seine Anzeigezeit laeuft erst beim Nachruecken.
+        var waiting = logic.Show("Wartet", ToastSeverity.Info, nowMs: 0)!.Value;
+
+        Assert.Null(logic.RemainingMs(waiting, nowMs: 0));
+        Assert.Null(logic.RemainingMs(id: 9999, nowMs: 0));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

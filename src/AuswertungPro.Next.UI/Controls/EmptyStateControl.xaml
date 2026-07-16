@@ -25,14 +25,22 @@
                 MaxWidth="440"
                 Margin="24"
                 TextElement.Foreground="{DynamicResource TextBrush}">
-        <Border Width="72"
+        <!-- Der Kreis schwebt ganz langsam. Ein Leerzustand hat die Flaeche fuer sich —
+             hier stoert die eine Dauerbewegung niemanden. Start im Code-Behind, damit der
+             Ruhe-Schalter greift. -->
+        <Border x:Name="IconCircle"
+                Width="72"
                 Height="72"
                 CornerRadius="36"
                 Background="{DynamicResource AccentSubtleBrush}"
                 BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1"
                 HorizontalAlignment="Center"
-                Margin="0,0,0,14">
+                Margin="0,0,0,14"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="IconCircleShift"/>
+            </Border.RenderTransform>
             <TextBlock Text="{Binding Icon, ElementName=Root}"
                        FontFamily="{DynamicResource FontIcon}"
                        FontSize="30"
