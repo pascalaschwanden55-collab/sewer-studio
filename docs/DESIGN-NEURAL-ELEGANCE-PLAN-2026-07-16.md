@@ -373,6 +373,16 @@ Unter die Seitentitel von: OverviewPage, DataPage, ImportPage, ExportPage, Build
 
 ## PAKET H — Mikrointeraktionen: Fokus-Glow, Haken-Pop, Feinschliff — Aufwand: M
 
+> **STATUS 16.07.: UMGESETZT** (Commit `ef2f66fd6`; Build 0/0, 9472 Tests gruen).
+>
+> - **H1 anders geloest als geplant:** Der Glow steckt **inline im TextBox-Template** (`x:Name="FocusGlow"`), nicht als `Effect="{StaticResource AccentGlow}"`. Grund: `AccentGlow` liegt in `Controls.xaml`, das **nach** den Theme-Dateien gemergt wird — StaticResource erreicht es von dort nicht (gleiche Falle wie bei `NeuralUnderlineBrush` in G3). Aus demselben Grund sind die Animationsdauern dort **hart geschrieben** (0.12/0.18 = Fast/Normal), mit Kommentar. Farbe kommt aus `GlowAccentColor` (gleiches Woerterbuch). **ComboBox-Glow weggelassen:** Sie hat kein Eingabefeld-Verhalten wie eine TextBox; ein zweiter Glow-Ort ohne Not.
+> - **H2 erledigt:** Haken skaliert 0.6→1 — exakt das Muster des `RadioButton` daneben (der hatte es schon).
+> - **H3 (ScrollBar-Hover) weggelassen:** Der Thumb hat bereits einen Hover-Setter. Ein Brush-Uebergang haette das Template zerlegt (Layout-Verbot fuer Breite), der Gewinn waere kaum sichtbar gewesen.
+> - **H4 erledigt, ehrlicher als geplant:** Die Lebenslinie haengt an `ToastQueueLogic.RemainingMs(id, now)` — einer neuen, UI-freien Lese-Methode mit vier Tests — statt an einem geratenen Wert. Linear, weil sie eine Uhr abbildet. Fehler-Toasts (bleiben bis Klick) bekommen **keine** Linie.
+> - **H5 erledigt:** Icon-Kreis schwebt 0→-3 px, 2 s je Richtung, `AutoReverse`, Start nur bei `IsVisible && !MotionSettings.ReduceMotion`, Stopp bei Unloaded.
+> - **H6 erledigt** (in Paket D). **H7 offen — braucht Pascals Entscheidung.**
+> - Guards: `TextBoxFocusGlowTests` (Fokus am echten Theme gesetzt, Verlauf gemessen, Einzel-Instanz belegt), `ToastQueueLogicTests` (+4), `Micro_interactions_give_feedback_without_running_forever`, `Input_fields_glow_on_focus_in_both_themes`.
+
 ### H1 — TextBox-Fokus-Glow (Dateien: `ThemeLight.xaml:515` UND `Theme.xaml:517` — synchron!)
 Im TextBox-Template (vor Ort lesen): dem Rahmen-Border `Effect={StaticResource AccentGlow}` geben (Basis-Opacity 0 → unsichtbar, kostet nichts). Trigger `IsKeyboardFocusWithin=True`:
 - EnterActions: Glow-Opacity 0→0.5 (`AnimDurationFast`), BorderBrush-Wechsel auf Accent behalten/ergaenzen (falls heute vorhanden — pruefen).
@@ -418,26 +428,32 @@ Nicht mitgefixt, weil es eine sichtbare Aenderung am Bestand ist und eine Entsch
 3. ~~**Paket E** (Neural Flow)~~ — **erledigt am 16.07.** (`bf5308341`). War mehr als Optik: der unbestimmte Wartebalken zeigte an neun Stellen gar nichts.
 4. ~~**Paket F** (Tiefe)~~ — **erledigt am 16.07.** (`e219fe6bd`). Nutze `ui:HoverFx.Lift` und `ui:WindowFx.Entrance` statt neuer Styles.
 5. ~~**Paket G** (Seiten-Charakter)~~ — **erledigt am 16.07.** (`294e0bd37`).
-6. **Paket H** (Mikrointeraktionen) — **hier weitermachen.** Feinschliff zuletzt; H7 braucht vorher Pascals Entscheidung.
+6. ~~**Paket H** (Mikrointeraktionen)~~ — **erledigt am 16.07.** (`ef2f66fd6`).
 
-Nach Paket D einen Zwischenstand bauen und die Sichtpruefungs-Punkte unten fuer die bis dahin fertigen Teile durchgehen — nicht alles blind bis zum Ende durchziehen.
+**Alle acht Pakete sind umgesetzt.** Offen bleiben nur: **H7** (Farb-Befund, braucht Pascals Entscheidung) und die **Sichtpruefung durch Pascal** — bis dahin ist kein einziger dieser Effekte von einem Menschen gesehen worden.
 
 ---
 
-## Abnahme-Checkliste (nach allen Paketen)
+## Abnahme-Checkliste — Stand 16.07.
 
-1. `dotnet build AuswertungPro.sln` — 0 Fehler, 0 neue Warnungen.
-2. `dotnet test AuswertungPro.sln` — alle Tests gruen (Baseline ~9400).
-3. `grep -rn "#2563EB" src/AuswertungPro.Next.UI/Views --include=*.xaml` → Fundstelle Zeile 412 im Pipeline-Fenster ist weg; neue Treffer nur mit Ausnahme-Kommentar (Gradients/Effekte).
-4. **CPU-Leerlauf-Check:** App gestartet, Hauptfenster sichtbar, keine Analyse → Task-Manager CPU der App ≈ 0–1 %. Analyse-Fenster offen ohne Lauf → ebenso (Sphere-Timer aus).
-5. **ReduceMotion-Check:** Schalter an → PulseDot statisch, Sphere statisch, EmptyState schwebt nicht; Hover/Fokus/Einblendungen funktionieren weiter; ProgressBar-Indeterminate darf weiter wandern.
-6. **Sichtpruefung durch Pascal (hell UND dunkel):**
-   - Analyse-Fenster: Sphere + Stepper-Puls waehrend eines Laufs; ruhig nach Abschluss.
+**Maschinell geprueft (erledigt):**
+
+1. ✅ `dotnet build AuswertungPro.sln` — 0 Fehler, 0 Warnungen.
+2. ✅ `dotnet test AuswertungPro.sln` — 9472 Tests gruen (Baseline vorher 9432; +40 neue Guards).
+3. ✅ Sechsstellige `#2563EB` im Analyse-Fenster sind weg (Paket D). Verbleibend nur die achtstelligen Abzeichen-Werte — bewusst offen, siehe **H7**.
+4. ✅ Kein Eintrag aendert Commands, Bindings oder Geschaeftslogik. Zusaetze ueber den reinen Plan hinaus: der Settings-Schalter (Paket B) und `ToastQueueLogic.RemainingMs` (reine Lese-Methode fuer die Lebenslinie, vier Tests).
+
+**Was nur Pascal pruefen kann — nichts davon hat je ein Mensch gesehen:**
+
+5. **CPU-Leerlauf:** App gestartet, keine Analyse → CPU ≈ 0–1 %. Analyse-Fenster offen ohne Lauf → ebenso (Kugel-Timer aus). *Der Fokus-Schein liegt als Effekt mit Opacity 0 an **jedem** Eingabefeld — falls die Einstellungsseite traege wirkt, ist das der erste Verdaechtige.*
+6. **Ruhe-Schalter** (Einstellungen → Darstellung): an → Puls, Kugel und Leerzustand stehen still; Hover, Fokus und Einblendungen laufen weiter; **Wartebalken-Lichtstreif und Busy-Spinner laufen bewusst weiter** (sie sind die Warteanzeige selbst).
+7. **Sichtpruefung (hell UND dunkel):**
+   - Analyse-Fenster: Kugel + Stepper-Puls waehrend eines echten Laufs; ruhig danach. Mica-Wirkung.
    - System-Monitor: LIVE-Puls dezent, lenkt nicht ab.
-   - Dialog oeffnen (z. B. Import-Vorschau): Entrance fluessig, kein Flackern.
-   - OverviewPage: Kachel-Stagger einmalig und schnell; Hover-Lift fuehlbar aber dezent.
-   - TextBox anklicken: Fokus-Glow sichtbar, nicht grell; Theme-Wechsel hell⇄dunkel → Glow-Farbe passt.
+   - Dialog oeffnen (z. B. Import-Vorschau): Auftritt fluessig, kein Flackern.
+   - Uebersicht: Karten-Staffelung einmalig und schnell (**wackeligster Effekt** — der Seitenwechsel ist bereits animiert, das koennte doppelt wirken); Hover-Lift auf der Projektkarte fuehlbar aber dezent.
+   - Seitentitel: Akzentlinie darunter — wirkt sie wie Design oder wie eine Unterstreichung?
+   - Eingabefeld anklicken: Schein sichtbar, nicht grell; Theme-Wechsel → Farbe passt.
    - Toast ausloesen: Lebenslinie laeuft synchron zur Anzeigedauer.
-   - Sidebar: Auswahlwechsel — Balken waechst ein, Icon-Pop einmalig.
-7. Kein Eintrag dieses Plans aendert Commands, Bindings oder Geschaeftslogik — reine Optik plus der eine Settings-Schalter (Paket B).
-8. Gesamteindruck-Frage an Pascal: „Wirkt es wie ein praezises KI-Instrument — oder wie ein Spielzeug?" Bei Spielzeug-Verdacht: zuerst Dauer-Loops halbieren (Opacity-Spitzen senken), dann erst Effekte entfernen.
+   - Seitenleiste: Auswahlwechsel — Balken waechst ein.
+8. **Gesamteindruck:** „Wirkt es wie ein praezises KI-Instrument — oder wie ein Spielzeug?" Bei Spielzeug-Verdacht zuerst die Dauer-Loops daempfen (Opacity-Spitzen senken), erst dann Effekte entfernen. Jeder einzelne Effekt ist ueber ein Attribut bzw. einen Setter zurueckrollbar.
