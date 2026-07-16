@@ -48,7 +48,10 @@ public sealed class ServiceProviderRegistrationTests
 
         Assert.NotNull(field);
         var registrations = Assert.IsAssignableFrom<IReadOnlyDictionary<Type, object>>(field!.GetValue(services));
-        Assert.Equal(110, registrations.Count);
+        Assert.Equal(111, registrations.Count);
+        Assert.Same(
+            services.ProjectOverviewCatalog,
+            registrations[typeof(IProjectOverviewCatalog)]);
         Assert.All(registrations, registration =>
             Assert.Same(registration.Value, services.GetService(registration.Key)));
     }

@@ -44,11 +44,11 @@ public static class CostCalculatorSummaryEntryBuilder
 
     private static void AddOwner(IDictionary<string, string> owners, HaltungRecord record)
     {
-        var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
+        var holding = (record.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
         if (string.IsNullOrWhiteSpace(holding))
             return;
 
-        var owner = (record.GetFieldValue("Eigentuemer") ?? "").Trim();
+        var owner = (record.GetFieldValue(FieldKeys.Owner) ?? "").Trim();
         if (string.IsNullOrWhiteSpace(owner))
             return;
 

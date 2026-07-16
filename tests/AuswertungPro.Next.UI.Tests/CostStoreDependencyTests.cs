@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.IO;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Costs;
@@ -39,6 +40,38 @@ public sealed class CostStoreDependencyTests
         Assert.IsAssignableFrom<IPositionTemplateStore>(factory.CreatePositionTemplateStore());
         Assert.IsAssignableFrom<IProjectCostStoreRepository>(factory.CreateProjectCostStore());
         Assert.NotSame(firstCatalog, secondCatalog);
+    }
+
+    [Fact]
+    public void Fabrik_buendelt_zusammengehoerende_Kosten_Speicher_als_frische_Instanzen()
+    {
+        ICostStoreFactory factory = new CostStoreFactory();
+
+        var first = factory.CreateCalculationStores("schacht_costs.json");
+        var second = factory.CreateCalculationStores("schacht_costs.json");
+
+        Assert.IsAssignableFrom<ICostCatalogStore>(first.Catalog);
+        Assert.IsAssignableFrom<IMeasureTemplateStore>(first.Templates);
+        Assert.IsAssignableFrom<IProjectCostStoreRepository>(first.ProjectCosts);
+        Assert.EndsWith(
+            Path.Combine("costs", "schacht_costs.json"),
+            first.ProjectCosts.GetStorePath(Path.GetTempPath()));
+        Assert.NotSame(first.Catalog, second.Catalog);
+        Assert.NotSame(first.Templates, second.Templates);
+        Assert.NotSame(first.ProjectCosts, second.ProjectCosts);
+    }
+
+    [Theory]
+    [InlineData(typeof(CostCalculatorViewModel))]
+    [InlineData(typeof(SanierungsMatrixPageViewModel))]
+    [InlineData(typeof(SchachtSanierungsMatrixPageViewModel))]
+    public void Kostenansichten_koennen_das_gebuendelte_Speicherpaket_entgegennehmen(Type viewModelType)
+    {
+        var acceptsBundle = viewModelType.GetConstructors()
+            .Any(constructor => constructor.GetParameters()
+                .Any(parameter => parameter.ParameterType == typeof(CostCalculationStores)));
+
+        Assert.True(acceptsBundle, $"{viewModelType.Name} nimmt das Kosten-Speicherpaket nicht an.");
     }
 
     [Theory]

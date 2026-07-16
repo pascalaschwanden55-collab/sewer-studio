@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -28,6 +29,8 @@ public sealed class StoredImportFileService : IStoredImportFileService
         IReadOnlyCollection<string> paths,
         Func<DateTime> now)
     {
+        ValidateImportKind(importKind);
+
         if (string.IsNullOrWhiteSpace(projectPath))
             return new StoredImportFilesResult(true, Array.Empty<string>());
 
@@ -36,43 +39,98 @@ public sealed class StoredImportFileService : IStoredImportFileService
             return new StoredImportFilesResult(false, Array.Empty<string>());
 
         var targetDirectory = Path.Combine(projectDirectory, "Imports", importKind);
-        Directory.CreateDirectory(targetDirectory);
-
         var storedPaths = new List<string>();
+        var errors = new List<StoredImportFileError>();
         foreach (var sourcePath in paths)
         {
             if (!File.Exists(sourcePath))
-                continue;
-
-            var fileName = Path.GetFileName(sourcePath);
-            var targetPath = Path.Combine(targetDirectory, fileName);
-            if (File.Exists(targetPath))
             {
-                if (FileContentsEqual(sourcePath, targetPath))
-                {
-                    storedPaths.Add(Path.GetRelativePath(projectDirectory, targetPath));
-                    continue;
-                }
-
-                var name = Path.GetFileNameWithoutExtension(fileName);
-                var extension = Path.GetExtension(fileName);
-                targetPath = Path.Combine(
-                    targetDirectory,
-                    $"{name}_{now():yyyyMMdd_HHmmss}{extension}");
+                var missingPath = sourcePath ?? string.Empty;
+                var error = new StoredImportFileError(missingPath, "Quelldatei wurde nicht gefunden.");
+                errors.Add(error);
+                BestEffort.ReportWarning(
+                    $"Importdatei '{missingPath}' konnte nicht im Projekt abgelegt werden: Quelldatei fehlt.");
+                continue;
             }
 
-            File.Copy(sourcePath, targetPath, overwrite: false);
-            storedPaths.Add(Path.GetRelativePath(projectDirectory, targetPath));
+            try
+            {
+                Directory.CreateDirectory(targetDirectory);
+                var fileName = Path.GetFileName(sourcePath);
+                var targetPath = Path.Combine(targetDirectory, fileName);
+                if (File.Exists(targetPath))
+                {
+                    if (FileContentsEqual(sourcePath, targetPath))
+                    {
+                        storedPaths.Add(Path.GetRelativePath(projectDirectory, targetPath));
+                        continue;
+                    }
+
+                    targetPath = ResolveCollisionPath(targetDirectory, fileName, now());
+                }
+
+                File.Copy(sourcePath, targetPath, overwrite: false);
+                storedPaths.Add(Path.GetRelativePath(projectDirectory, targetPath));
+            }
+            catch (Exception ex)
+            {
+                var error = new StoredImportFileError(sourcePath, ex.Message);
+                errors.Add(error);
+                BestEffort.ReportWarning(
+                    $"Importdatei '{sourcePath}' konnte nicht im Projekt abgelegt werden: "
+                    + $"{ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         if (storedPaths.Count == 0)
-            return new StoredImportFilesResult(false, Array.Empty<string>());
+        {
+            return new StoredImportFilesResult(false, Array.Empty<string>())
+            {
+                Errors = errors
+            };
+        }
 
         StoredImportFileRegistry.Save(
             metadata,
             $"{importKind}_StoredFiles",
             storedPaths);
-        return new StoredImportFilesResult(false, storedPaths);
+        return new StoredImportFilesResult(false, storedPaths)
+        {
+            Errors = errors
+        };
+    }
+
+    private static string ResolveCollisionPath(
+        string targetDirectory,
+        string fileName,
+        DateTime now)
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        var stem = $"{name}_{now:yyyyMMdd_HHmmss}";
+        var candidate = Path.Combine(targetDirectory, stem + extension);
+        var suffix = 2;
+        while (File.Exists(candidate))
+        {
+            candidate = Path.Combine(targetDirectory, $"{stem}_{suffix}{extension}");
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private static void ValidateImportKind(string importKind)
+    {
+        if (string.IsNullOrWhiteSpace(importKind)
+            || importKind is "." or ".."
+            || importKind.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            || importKind.Contains(Path.DirectorySeparatorChar)
+            || importKind.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new ArgumentException(
+                "Die Importart muss ein einzelner gueltiger Ordnername sein.",
+                nameof(importKind));
+        }
     }
 
     private static bool FileContentsEqual(string firstPath, string secondPath)

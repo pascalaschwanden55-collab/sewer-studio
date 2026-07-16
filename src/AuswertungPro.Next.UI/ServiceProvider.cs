@@ -156,6 +156,7 @@ namespace AuswertungPro.Next.UI
         public IProjectRepository Projects { get; }
         public IProjectPhotoReferenceNormalizer ProjectPhotoReferences { get; }
         public IProjectFileDiscovery ProjectFileDiscovery { get; }
+        public IProjectOverviewCatalog ProjectOverviewCatalog { get; }
         public IProjectDropPathResolver ProjectDropPaths { get; }
         #endregion
 
@@ -276,6 +277,7 @@ namespace AuswertungPro.Next.UI
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IVideoAnalysisPipelineFactory VideoAnalysisPipelines { get; }
         public IAiSanierungOptimizationFactory SanierungOptimizations { get; }
+        internal DataPage.IDataPageSanierungViewModelFactory DataPageSanierungViewModels { get; }
         internal DataPage.IDataPageWindowLauncher DataPageWindows { get; }
         public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
         public ITrainingCaseIdSource TrainingCases { get; }
@@ -418,6 +420,7 @@ namespace AuswertungPro.Next.UI
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
+            ProjectOverviewCatalog = new ProjectOverviewCatalogService(ProjectFileDiscovery);
             ProjectDropPaths = new ProjectDropFilePathResolver();
             ProjectStructure = new ProjectStructureInitializer();
             KiasExportPatterns = new KiasExportPatternDetectionService();
@@ -659,6 +662,14 @@ namespace AuswertungPro.Next.UI
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 Path.Combine(KnowledgeRoot, "measures_learning.json"),
                 Path.Combine(KnowledgeRoot, "measures-model.zip"));
+            DataPageSanierungViewModels = new DataPage.DataPageSanierungViewModelFactory(
+                Settings,
+                CostStores,
+                CostStores.CreateProjectCostStore(),
+                CostFieldSync,
+                DashboardRefresh,
+                SanierungOptimizations,
+                AiOptimizationSessions);
             DataPageWindows = new DataPage.DataPageWindowLauncher(this);
             _services = CreateServiceMap();
         }
@@ -838,6 +849,7 @@ namespace AuswertungPro.Next.UI
                 [typeof(ICostStoreFactory)] = CostStores,
                 [typeof(IProjectPhotoReferenceNormalizer)] = ProjectPhotoReferences,
                 [typeof(IProjectFileDiscovery)] = ProjectFileDiscovery,
+                [typeof(IProjectOverviewCatalog)] = ProjectOverviewCatalog,
                 [typeof(IProjectDropPathResolver)] = ProjectDropPaths,
                 [typeof(IProjectStructureInitializer)] = ProjectStructure,
                 [typeof(IKiasExportPatternDetector)] = KiasExportPatterns,

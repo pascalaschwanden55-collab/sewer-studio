@@ -52,7 +52,15 @@ Umgesetzt wurden:
 - Eine kleine Application-Schnittstelle fuer die Fall-IDs des Training Centers, damit `DataPageViewModel` keinen konkreten `TrainingCenterStore` mehr kennt.
 - Ein verschaerfter Schutztest. Er erkennt auch voll qualifizierte Typnamen und die Kurzschreibweise `Store x = new()`.
 - Der Schutz umfasst jetzt ViewModels, Views und die DataPage-Controller.
-- Die direkte Allowlist ist auf genau einen bewusst getrennten Notfall-Fallback des Training-Center-Fensters reduziert.
+- Der Notfall-Aufbau des Training-Center-Fensters liegt jetzt ebenfalls ausserhalb der View im zentralen Dienstbereich. Das Fenster erhaelt ein fertiges, unveraenderliches Abhaengigkeitspaket.
+- Damit enthaelt die direkte Allowlist fuer ViewModels, Views und DataPage-Controller keine Altstelle mehr.
+- Kostenkatalog, Massnahmenvorlagen und Projektkosten werden fuer Kostenrechner und beide Sanierungsmatrizen jetzt als gemeinsames Application-Paket erzeugt. Doppelte Ersatzpfade in Uebersicht und Vorlageneditor reichen ausserdem an einen einzigen Konstruktor weiter. Dadurch entfallen insgesamt zehn einzelne Uebergangszugriffe und falsche Speicherkombinationen werden vermieden.
+- Die haeufigen Feldnamen fuer Haltungsidentitaet, Geometrie, Zustand, Kosten und Sanierung liegen jetzt zentral in `FieldKeys`. Kosten-, Matrix-, Dashboard- und Hydraulikwege verwenden diese Domain-Schluessel statt freier Texte; die gespeicherten Namen bleiben unveraendert. Ein Schutztest verhindert neue direkte Rohtext-Zugriffe in diesen bereits bereinigten Wegen.
+- Die Projektliste der Uebersicht liest und sortiert Projektdateien jetzt ueber den Application-Vertrag `IProjectOverviewCatalog` und einen kleinen Infrastructure-Dienst. Das grosse `OverviewPageViewModel` kennt dadurch keine Projekt-JSON-Details mehr und ist um rund 40 Zeilen geschrumpft. Defekte Dateien bleiben als sichtbare Einzeleintraege erhalten; Duplikate, ausgeblendete Projekte und die bestehende Sortierung sind durch Verhaltenstests abgesichert.
+- Der Aufbau der Druckcenter-Tabellenzeilen liegt jetzt im zustandslosen `BuilderPageRowBuilder`. Feldwerte, Eigentuemer-Fallback, Kostenquelle und Massnahmenvorschau sind gemeinsam getestet, statt im ViewModel verteilt zu sein. Der bereits vorhandene Filtertext-Baustein wird nun ebenfalls verwendet. Dadurch sank `BuilderPageViewModel.cs` von 991 auf 821 Zeilen. Drei weitere persistierte Feldnamen wurden dabei in `FieldKeys` zentralisiert.
+- Die Exportseite verwendet fuer ausgewaehlte PDF- und TXT-Quellen jetzt denselben injizierten `IStoredImportFileService` wie die Importseite. Doppelte Datei- und JSON-Ablagelogik wurde aus dem ViewModel entfernt; `ExportPageViewModel.cs` sank von 997 auf 943 Zeilen. Der gemeinsame Infrastructure-Dienst prueft Ordnernamen, erkennt Dateien mit gleichem Namen aber anderem Inhalt und verarbeitet Kopierfehler einzeln weiter. Originaldateien werden nie veraendert.
+- Der Aufbau des Sanierungsfensters liegt jetzt in der kleinen `DataPageSanierungViewModelFactory`; der vorhandene Fensterstarter zeigt nur noch das fertige Fenster. Kosten-Speicher, projektweite Kostenfeld-Synchronisierung, Dashboard-Aktualisierung, KI-Fabrik und KI-Sitzungsspeicher sind damit nicht mehr direkt im `DataPageViewModel` verdrahtet. Auch Videoanalyse-, Mediensuch- und Hydraulikfenster werden jetzt ausschliesslich vom gemeinsamen `DataPageWindowLauncher` erzeugt. Speichern, KI-Transfer und die drei Fensterablaeufe sind durch Verhaltenstests und eine Architekturpruefung abgesichert. `DataPageViewModel.cs` sank dadurch von 998 auf 899 Zeilen.
+- Das Zeilenmodell der Sanierungs-Matrix liegt jetzt in einer eigenen Datei. Die Auswertung vorhandener `costs.json`-Eintraege erfolgt ueber die WPF-freie `SanierungsMatrixStoredRowProjection`. Bekannte, fremde und mehrfache Massnahmen sowie Hauptmenge und Zusatzoptionen sind direkt getestet. Die gemeinsam verwendeten Zusatzschluessel liegen zentral in `SanierungsMatrixOptionKeys` und werden auch von der Schachtmatrix benutzt. `SanierungsMatrixPageViewModel.cs` sank dadurch von 984 auf 830 Zeilen.
 - Bestehende oeffentliche Konstruktoren bleiben erhalten. Ihre zentralen Uebergangsfassaden sind separat gezaehlt und duerfen durch den Ratchet-Test nur noch sinken.
 
 Keine gespeicherten Datenformate und keine oeffentlichen Programmfassaden wurden geaendert.
@@ -123,7 +131,7 @@ Als vierundzwanzigstes Paket wurde der globale Umschalter der KI-Pipeline-Umgebu
 
 Als fuenfundzwanzigstes Paket wurde der globale Umschalter der GPU-Modellwahl stillgelegt. Der zentrale KI-Einstellungsdienst erhaelt den registrierten `IGpuModelSelector` weiterhin direkt. Die statischen Regeln und die automatische Modellwahl bleiben funktionsfaehig, koennen den Erkennungsdienst aber nicht mehr global austauschen. Die Ratchet-Obergrenze sank damit insgesamt um dreiunddreissig Altstellen.
 
-Als sechsundzwanzigstes Paket wurde der globale Umschalter des Speichers fuer KI-Sanierungssitzungen stillgelegt. Die Datenseite erhaelt den registrierten `IAiOptimizationSessionStore` direkt und reicht ihn an die Optimierungsansicht weiter. Die statischen Speicherhilfen bleiben funktionsfaehig, koennen den Dienst aber nicht mehr global austauschen. Die Ratchet-Obergrenze sank damit insgesamt um vierunddreissig Altstellen.
+Als sechsundzwanzigstes Paket wurde der globale Umschalter des Speichers fuer KI-Sanierungssitzungen stillgelegt. Die Sanierungs-ViewModel-Fabrik erhaelt den registrierten `IAiOptimizationSessionStore` direkt und reicht ihn an die Optimierungsansicht weiter. Die statischen Speicherhilfen bleiben funktionsfaehig, koennen den Dienst aber nicht mehr global austauschen. Die Ratchet-Obergrenze sank damit insgesamt um vierunddreissig Altstellen.
 
 Als siebenundzwanzigstes Paket wurden die drei globalen Umschalter fuer KI-Prozessverwaltung, Sidecar-Startpfadsuche und Sidecar-Token-Aufloesung stillgelegt. Automatischer Start, manueller Start und Start aus den Einstellungen erhalten die registrierten Dienste jetzt direkt; beim Programmende wird weiterhin dieselbe Prozessverwaltung verwendet. Die bestehenden statischen Hilfsmethoden bleiben funktionsfaehig, koennen ihre Dienste aber nicht mehr global austauschen. Die Ratchet-Obergrenze sank damit insgesamt um siebenunddreissig Altstellen.
 
@@ -172,22 +180,22 @@ Als siebenundvierzigstes Paket wurde auch der letzte globale Dienstaustausch in 
 - Das Test-Gate ist noch nicht als getrackter CI-Ablauf auf einer zweiten Umgebung abgesichert.
 - Viele Architekturpruefungen arbeiten mit Quelltext-Suche. Fuer echte Strukturgrenzen ist das nuetzlich, fuer Verhalten bleiben normale Tests vorzuziehen.
 - Mehrere grosse ViewModels liegen knapp unter der erlaubten Groessengrenze. Neue Verantwortung darf dort nicht mehr hinzukommen.
-- `HaltungRecord` und `SchachtRecord` enthalten weiterhin viele frei geschriebene Feldnamen. Nur ein kleiner Teil der fachlichen Schluessel ist typisiert.
+- `HaltungRecord` und `SchachtRecord` enthalten ausserhalb der bereinigten Kernwege weiterhin frei geschriebene Feldnamen. Die zentralen Identitaets-, Geometrie-, Zustands-, Kosten- und Sanierungsfelder sind jetzt typisiert; weitere Felder koennen schrittweise folgen.
 
 ## Pruefung dieses Arbeitspakets
 
 - Vollstaendiger Release-Build: **0 Warnungen, 0 Fehler**.
-- Infrastrukturtests: **2.740 bestanden, 1 bewusst uebersprungen**.
+- Infrastrukturtests: **2.760 bestanden, 1 bewusst uebersprungen**.
 - Pipeline-Tests: **1.856 bestanden, 1 bewusst uebersprungen**.
-- UI-Tests: **4.734 bestanden**.
+- UI-Tests: **4.752 bestanden**.
 - ProjectModernizer-Tests: **62 bestanden**.
-- Zusaetzlich: **32** gezielte Wissenspfad-, Speicher- und Architekturpruefungen bestanden.
+- Zusaetzlich: **75** gezielte Wissenspfad-, Speicher- und Architekturpruefungen bestanden.
 
-Insgesamt sind damit **9.392 Tests bestanden**. Zwei maschinengebundene beziehungsweise datenabhaengige Tests wurden wie vorgesehen uebersprungen.
+Insgesamt sind damit **9.430 Tests bestanden**. Zwei maschinengebundene beziehungsweise datenabhaengige Tests wurden wie vorgesehen uebersprungen.
 
 ## Empfohlene naechste Reihenfolge
 
 1. Den echten KI-Goldenlauf vor jedem Release verpflichtend ausfuehren und Ergebnis/Artefakte speichern.
 2. Das komplette Test-Gate in einen getrackten, auf einer zweiten Umgebung wiederholbaren Ablauf bringen.
-3. Direkte Infrastruktur-Erzeugung in Views und ViewModels hinter die bereits vorhandenen Schnittstellen legen.
+3. Die verbliebenen Uebergangsfassaden bei ohnehin anstehenden Aenderungen schrittweise reduzieren.
 4. Danach grosse ViewModels und die frei geschriebenen Domaenenfelder in kleinen, verhaltenstest-geschuetzten Paketen angehen.

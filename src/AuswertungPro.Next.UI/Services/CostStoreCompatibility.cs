@@ -10,4 +10,8 @@ namespace AuswertungPro.Next.UI.Services;
 internal static class CostStoreCompatibility
 {
     internal static ICostStoreFactory Factory { get; } = new CostStoreFactory();
+
+    internal static CostCalculationStores CreateCalculationStores(
+        string projectCostFileName = "costs.json")
+        => Factory.CreateCalculationStores(projectCostFileName);
 }

@@ -17,15 +17,10 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using System.Windows;
-using AuswertungPro.Next.UI.Views.Windows;
-using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Player;
 
@@ -41,13 +36,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
     private readonly IProtocolPdfExporter _protocolPdfExporter;
-    private readonly IDerivedCostFieldSynchronizer _costFieldSynchronizer;
-    private readonly DashboardRefreshNotifier _dashboardRefresh;
-    private readonly BatchMediaSearchService _batchMediaSearch;
     private readonly IProtocolService _protocols;
     private readonly IVideoAnalysisPipelineFactory _videoAnalysisPipelineFactory;
-    private readonly IAiSanierungOptimizationFactory _sanierungOptimizationFactory;
-    private readonly IAiOptimizationSessionStore _aiOptimizationSessions;
+    private readonly IDataPageSanierungViewModelFactory _sanierungViewModels;
     private readonly IDataPageWindowLauncher _windows;
     private readonly IHoldingRenameService _holdingRename;
     private readonly IDropdownOptionsStore _dropdownOptions;
@@ -70,7 +61,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageSanierungWindowController _sanierungWindowController;
     private readonly DataPageProjectBindingController _projectBindingController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
-    private readonly ICostStoreFactory _costStores;
     private readonly IProjectCostStoreRepository _projectCosts;
     private readonly IMeasureTemplateStore _measureTemplates;
     private readonly ITrainingCaseIdSource _trainingCases;
@@ -178,22 +168,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
         _protocolPdfExporter = services.ProtocolPdfExports;
-        _costFieldSynchronizer = services.CostFieldSync;
-        _dashboardRefresh = services.DashboardRefresh;
-        _batchMediaSearch = services.BatchMediaSearch;
         _protocols = services.Protocols;
         _videoAnalysisPipelineFactory = services.VideoAnalysisPipelines;
-        _sanierungOptimizationFactory = services.SanierungOptimizations;
-        _aiOptimizationSessions = services.AiOptimizationSessions;
+        _sanierungViewModels = services.DataPageSanierungViewModels;
         _windows = services.DataPageWindows;
         _holdingRename = services.HoldingRename;
         _dropdownOptions = services.DropdownOptions;
         _videoStartErrorLogs = services.VideoStartErrorLogs;
         _explorerReveal = services.ExplorerReveal;
         _inspectionProtocolFiles = services.InspectionProtocolFiles;
-        _costStores = services.CostStores;
-        _projectCosts = _costStores.CreateProjectCostStore();
-        _measureTemplates = _costStores.CreateMeasureTemplateStore();
+        _projectCosts = services.CostStores.CreateProjectCostStore();
+        _measureTemplates = services.CostStores.CreateMeasureTemplateStore();
         _trainingCases = services.TrainingCases;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
@@ -293,7 +278,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => Records,
             () => _settings.LastVideoSourceFolder,
             () => _settings.LastVideoFolder,
-            ShowMediaSearchWindow,
+            _windows.ShowMediaSearch,
             () =>
             {
                 _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -343,7 +328,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => _codeCatalog.AllowedCodes(),
             () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
             _videoAnalysisPipelineFactory.Create,
-            ShowVideoAnalysisPipelineWindow,
+            _windows.ShowVideoAnalysis,
             record => Selected?.Id == record.Id,
             _shell.MarkProjectDirty,
             RefreshRecordInGrid,
@@ -593,18 +578,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _videoAnalysisController.Open(record);
     }
 
-    private PipelineResult? ShowVideoAnalysisPipelineWindow(
-        PipelineRequest request,
-        IVideoAnalysisPipelineService pipeline)
-    {
-        var win = new VideoAnalysisPipelineWindow(request, pipeline)
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-
-        return win.ShowDialog() == true ? win.Result : null;
-    }
-
     /// <summary>
     /// Startet die KI-Videoanalyse fuer eine Haltung anhand ihres Namens erneut –
     /// genutzt von der Live-Control-Bruecke (MCP retry_holding).
@@ -710,54 +683,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private void ShowSanierungsmassnahmenWindow(DataPageSanierungWindowRequest request)
-    {
-        var costCalcVm = new CostCalculatorViewModel(
-            request.Holding,
-            null,
-            request.RecommendedTemplates,
-            _settings.LastProjectPath,
-            _costStores.CreateCostCatalogStore(),
-            _costStores.CreateMeasureTemplateStore(),
-            _costStores.CreateProjectCostStore(),
-            request.ApplyCosts,
-            haltungRecord: request.Record,
-            projectRecords: Records);
-
-        // Nach dem Speichern im Kostenfenster die abgeleiteten Kostenfelder ALLER Haltungen
-        // nach der Sanieren-Regel nachziehen. Das Fenster-VM kennt nur seine eine Haltung,
-        // darum laeuft der projektweite Sync hier (kennt Project + frisch gespeicherten Store).
-        costCalcVm.Saved += () =>
-        {
-            var syncProjectPath = _settings.LastProjectPath;
-            if (string.IsNullOrWhiteSpace(syncProjectPath))
-                return;
-            var syncStore = _projectCosts.Load(syncProjectPath, out var syncLoadError);
-            if (syncLoadError is null)
-            {
-                _costFieldSynchronizer.Sync(_shell.Project, syncStore);
-                _dashboardRefresh.NotifyCostsChanged();
-            }
-        };
-
-        SanierungOptimizationViewModel? optimizationVm = null;
-        if (request.RuntimeSettings is not null)
-        {
-            var aiService = _sanierungOptimizationFactory.Create(request.RuntimeSettings);
-            optimizationVm = new SanierungOptimizationViewModel(
-                request.Record,
-                aiService,
-                request.RuleRecommendation,
-                _aiOptimizationSessions);
-            optimizationVm.TransferredToPrimary += _ => request.OnOptimizationTransferred();
-        }
-
-        var vm = new SanierungsmassnahmenViewModel(costCalcVm, optimizationVm, request.Record, request.Focus);
-        var win = new SanierungsmassnahmenWindow(vm)
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-        win.ShowDialog();
-    }
+        => _windows.ShowSanierung(_sanierungViewModels.Create(_shell.Project, request));
 
 
     private string? EnsureVideoPath(HaltungRecord record)
@@ -801,36 +727,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _mediaSearchController.Open();
     }
 
-    private DataPageMediaSearchResult? ShowMediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initial)
-    {
-        var win = new MediaSearchWindow(
-            records.ToList(),
-            initial,
-            _dialogs,
-            _settings,
-            _batchMediaSearch);
-        win.Owner = System.Windows.Application.Current?.MainWindow;
-
-        return win.ShowDialog() == true
-            ? new DataPageMediaSearchResult(win.Applied, win.AppliedVideoCount, win.AppliedPdfCount, win.AppliedFotoCount)
-            : null;
-    }
-
     private void OpenHydraulikPanel(HaltungRecord? record)
-    {
-        var request = DataPageHydraulikPanelController.BuildOpenRequest(record);
-        ShowHydraulikPanel(request);
-    }
-
-    private void ShowHydraulikPanel(DataPageHydraulikPanelRequest request)
-    {
-        var vm = new HydraulikPanelViewModel(_settings);
-        vm.LoadFromRecord(request.DnMillimeters, request.Material, request.WasserstandMillimeters);
-
-        var win = new HydraulikPanelWindow(vm);
-        win.Owner = System.Windows.Application.Current?.MainWindow;
-        win.ShowDialog();
-    }
+        => _windows.ShowHydraulik(DataPageHydraulikPanelController.BuildOpenRequest(record));
 
     private void PrintAwuHaltungsprotokollPdf(HaltungRecord? record)
     {

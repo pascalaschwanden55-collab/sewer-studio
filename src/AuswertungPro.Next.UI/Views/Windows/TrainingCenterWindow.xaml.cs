@@ -54,28 +54,12 @@ public partial class TrainingCenterWindow : Window
     private Point _boxStart;
     private bool _drawing;
     public TrainingCenterWindow()
-        : this(
-            services: null,
-            TrainingCenterWindowFallbackDependencies.Dialogs,
-            TrainingCenterWindowFallbackDependencies.Store,
-            TrainingCenterWindowFallbackDependencies.Import,
-            TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics,
-            () => TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
-            TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam,
-            TrainingCenterWindowFallbackDependencies.CreateFewShotStore)
+        : this(services: null, TrainingCenterWindowDependencyFactory.Create(services: null))
     {
     }
 
     public TrainingCenterWindow(ServiceProvider? services)
-        : this(
-            services,
-            services?.Dialogs ?? TrainingCenterWindowFallbackDependencies.Dialogs,
-            services?.TrainingCenterStore ?? TrainingCenterWindowFallbackDependencies.Store,
-            services?.TrainingCenterImport ?? TrainingCenterWindowFallbackDependencies.Import,
-            services?.KnowledgeBaseDiagnostics ?? TrainingCenterWindowFallbackDependencies.KnowledgeBaseDiagnostics,
-            () => services?.TrainingReviewQueue ?? TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
-            () => services?.CreateTrainingReviewSam() ?? TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam(),
-            () => services?.CreateFewShotStore() ?? TrainingCenterWindowFallbackDependencies.CreateFewShotStore())
+        : this(services, TrainingCenterWindowDependencyFactory.Create(services))
     {
     }
 
@@ -87,13 +71,12 @@ public partial class TrainingCenterWindow : Window
         IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics)
         : this(
             services,
-            dialogs,
-            store,
-            import,
-            knowledgeBaseDiagnostics,
-            () => services?.TrainingReviewQueue ?? TrainingCenterWindowFallbackDependencies.TrainingReviewQueue,
-            () => services?.CreateTrainingReviewSam() ?? TrainingCenterWindowFallbackDependencies.CreateTrainingReviewSam(),
-            () => services?.CreateFewShotStore() ?? TrainingCenterWindowFallbackDependencies.CreateFewShotStore())
+            TrainingCenterWindowDependencyFactory.Create(
+                services,
+                dialogs,
+                store,
+                import,
+                knowledgeBaseDiagnostics))
     {
     }
 
@@ -106,18 +89,39 @@ public partial class TrainingCenterWindow : Window
         Func<InfraSelfImproving.ReviewQueueService> createReviewQueue,
         Func<TrainingReviewSamSegmentationService> createReviewSam,
         Func<FewShotExampleStore> createFewShotStore)
+        : this(
+            services,
+            new TrainingCenterWindowDependencies(
+                dialogs,
+                store,
+                import,
+                knowledgeBaseDiagnostics,
+                createReviewQueue,
+                createReviewSam,
+                createFewShotStore))
     {
+    }
+
+    private TrainingCenterWindow(
+        ServiceProvider? services,
+        TrainingCenterWindowDependencies dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(dependencies);
+
         _services = services;
-        _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _dialogs = dependencies.Dialogs
+            ?? throw new ArgumentException(
+                "Das Abhaengigkeitspaket enthaelt keinen Dialogdienst.",
+                nameof(dependencies));
         _teacherGalleryService = new TeacherAnnotationGalleryService(
             services?.TeacherAnnotations ?? TeacherAnnotationStore.Current);
-        ArgumentNullException.ThrowIfNull(store);
-        ArgumentNullException.ThrowIfNull(import);
-        ArgumentNullException.ThrowIfNull(knowledgeBaseDiagnostics);
+        ArgumentNullException.ThrowIfNull(dependencies.Store);
+        ArgumentNullException.ThrowIfNull(dependencies.Import);
+        ArgumentNullException.ThrowIfNull(dependencies.KnowledgeBaseDiagnostics);
         _trainingServices = new TrainingCenterLazyServices(
-            createReviewQueue,
-            createReviewSam,
-            createFewShotStore);
+            dependencies.CreateReviewQueue,
+            dependencies.CreateReviewSam,
+            dependencies.CreateFewShotStore);
 
         InitializeComponent();
         WindowStateManager.Track(this);
@@ -132,10 +136,10 @@ public partial class TrainingCenterWindow : Window
 
         var codeCatalog = services?.CodeCatalog;
         Vm = new TrainingCenterViewModel(
-            store,
-            import,
+            dependencies.Store,
+            dependencies.Import,
             codeCatalog,
-            knowledgeBaseDiagnostics,
+            dependencies.KnowledgeBaseDiagnostics,
             services?.Settings,
             uiThread: null,
             knowledgeBackup: services?.KnowledgeBackup ?? new KnowledgeBackupTransferService(),

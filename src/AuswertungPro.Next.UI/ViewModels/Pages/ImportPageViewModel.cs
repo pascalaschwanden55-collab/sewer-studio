@@ -542,6 +542,11 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             LastResult += $"\nHinweis: Projekt bitte speichern, um {displayName} im Projekt abzulegen.";
         }
+
+        if (result.Errors.Count > 0)
+        {
+            LastResult += $"\nHinweis: {result.Errors.Count} {displayName} konnten nicht im Projekt abgelegt werden.";
+        }
     }
 
     /// <summary>

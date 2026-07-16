@@ -8,13 +8,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SanierungsMatrixPageViewModel
 {
-    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public SanierungsMatrixPageViewModel(
         ShellViewModel shell,
         AppSettings settings,
         IDialogService dialogs,
         IDerivedCostFieldSynchronizer costFieldSync,
         DashboardRefreshNotifier dashboardRefresh,
+        CostCalculationStores costStores,
         string? holding,
         bool singleHoldingMode,
         HaltungRecord? targetRecord = null)
@@ -24,7 +24,9 @@ public sealed partial class SanierungsMatrixPageViewModel
             dialogs,
             costFieldSync,
             dashboardRefresh,
-            CostStoreCompatibility.CreateCalculationStores(),
+            costStores?.Catalog ?? throw new ArgumentNullException(nameof(costStores)),
+            costStores.Templates,
+            costStores.ProjectCosts,
             holding,
             singleHoldingMode,
             targetRecord)

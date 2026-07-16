@@ -25,6 +25,20 @@ public sealed class SanierungsMatrixPageViewModelDependencyTests : IDisposable
     }
 
     [Fact]
+    public void Zeilenmodell_und_gespeicherte_Kostenprojektion_bleiben_aus_der_Seitenklasse_getrennt()
+    {
+        var page = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SanierungsMatrixPageViewModel.cs"));
+        var row = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SanierungsMatrixRowViewModel.cs"));
+
+        Assert.DoesNotContain("class SanierungMatrixRowVm", page);
+        Assert.Contains("class SanierungMatrixRowVm", row);
+        Assert.Contains("SanierungsMatrixStoredRowProjection.Project", page);
+        Assert.DoesNotContain("VORARBEIT_VD", page);
+    }
+
+    [Fact]
     public void Laedt_Haltungen_und_Projektwurzel_aus_dem_aktuellen_Projekt()
     {
         using var temp = new TempDir();

@@ -13,33 +13,33 @@ public static class FieldCatalog
     {
         "NR",
         FieldKeys.HoldingName,
-        "Strasse",
-        "Rohrmaterial",
-        "DN_mm",
-        "Nutzungsart",
-        "Haltungslaenge_m",
+        FieldKeys.Street,
+        FieldKeys.PipeMaterial,
+        FieldKeys.NominalDiameterMm,
+        FieldKeys.UsageType,
+        FieldKeys.HoldingLengthMeters,
         "Inspektionsrichtung",
         "Primaere_Schaeden",
-        "Zustandsklasse",
+        FieldKeys.ConditionClass,
         "VSA_Zustandsnote_D",
         "Pruefungsresultat",
         "Referenzpruefung",
-        "Sanieren_JaNein",
-        "Empfohlene_Sanierungsmassnahmen",
-        "Kosten",
-        "Eigentuemer",
-        "Ausgefuehrt_durch",
-        "Bemerkungen",
+        FieldKeys.RenovationDecision,
+        FieldKeys.RecommendedRehabilitationMeasures,
+        FieldKeys.Cost,
+        FieldKeys.Owner,
+        FieldKeys.RehabilitationExecutor,
+        FieldKeys.Remarks,
         FieldKeys.Link,
-        "Renovierung_Inliner_Stk",
-        "Renovierung_Inliner_m",
-        "Anschluesse_verpressen",
-        "Reparatur_Manschette",
-        "Linerendmanschette_LEM",
-        "Reparatur_Kurzliner",
+        FieldKeys.LinerRenovationCount,
+        FieldKeys.LinerRenovationMeters,
+        FieldKeys.ConnectionsToGrout,
+        FieldKeys.RepairSleeve,
+        FieldKeys.LinerEndSleeve,
+        FieldKeys.ShortLinerRepair,
         "Erneuerung_Neubau_m",
-        "Offen_abgeschlossen",
-        "Datum_Jahr",
+        FieldKeys.WorkflowStatus,
+        FieldKeys.InspectionYear,
         "VSA_Zustandsnote_S",
         "VSA_Zustandsnote_B",
         "Gewaesserschutz",
@@ -50,12 +50,12 @@ public static class FieldCatalog
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ComboItems =
         new ReadOnlyDictionary<string, IReadOnlyList<string>>(new Dictionary<string, IReadOnlyList<string>>
         {
-            ["Rohrmaterial"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.PipeMaterial] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen",
                 "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser"
             }),
-            ["Nutzungsart"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.UsageType] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "Schmutzwasser", "Regenwasser", "Mischabwasser"
             }),
@@ -63,11 +63,11 @@ public static class FieldCatalog
             {
                 "", "In Fliessrichtung", "Gegen Fliessrichtung"
             }),
-            ["Zustandsklasse"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.ConditionClass] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "0", "1", "2", "3", "4", "5"
             }),
-            ["Sanieren_JaNein"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.RenovationDecision] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "Ja", "Nein"
             }),
@@ -75,11 +75,11 @@ public static class FieldCatalog
             {
                 "", "Ja", "Nein"
             }),
-            ["Ausgefuehrt_durch"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.RehabilitationExecutor] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "Kanalsanierer", "Baumeister", "Gartenbauer"
             }),
-            ["Offen_abgeschlossen"] = new ReadOnlyCollection<string>(new List<string>
+            [FieldKeys.WorkflowStatus] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "offen", "abgeschlossen"
             }),
@@ -104,33 +104,33 @@ public static class FieldCatalog
         {
             ["NR"] = new("NR", "NR.", FieldType.Int),
             [FieldKeys.HoldingName] = new(FieldKeys.HoldingName, "Haltungsname (ID)", FieldType.Text),
-            ["Strasse"] = new("Strasse", "Strasse", FieldType.Text),
-            ["Rohrmaterial"] = new("Rohrmaterial", "Rohrmaterial", FieldType.Combo, ComboItems["Rohrmaterial"]),
-            ["DN_mm"] = new("DN_mm", "DN mm", FieldType.Int),
-            ["Nutzungsart"] = new("Nutzungsart", "Nutzungsart", FieldType.Combo, ComboItems["Nutzungsart"]),
-            ["Haltungslaenge_m"] = new("Haltungslaenge_m", "Haltungslänge m", FieldType.Decimal),
+            [FieldKeys.Street] = new(FieldKeys.Street, "Strasse", FieldType.Text),
+            [FieldKeys.PipeMaterial] = new(FieldKeys.PipeMaterial, "Rohrmaterial", FieldType.Combo, ComboItems[FieldKeys.PipeMaterial]),
+            [FieldKeys.NominalDiameterMm] = new(FieldKeys.NominalDiameterMm, "DN mm", FieldType.Int),
+            [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo, ComboItems[FieldKeys.UsageType]),
+            [FieldKeys.HoldingLengthMeters] = new(FieldKeys.HoldingLengthMeters, "Haltungslänge m", FieldType.Decimal),
             ["Inspektionsrichtung"] = new("Inspektionsrichtung", "Inspektionsrichtung", FieldType.Combo, ComboItems["Inspektionsrichtung"]),
             ["Primaere_Schaeden"] = new("Primaere_Schaeden", "Primäre Schäden", FieldType.Multiline),
-            ["Zustandsklasse"] = new("Zustandsklasse", "Zustandsklasse", FieldType.Combo, ComboItems["Zustandsklasse"]),
+            [FieldKeys.ConditionClass] = new(FieldKeys.ConditionClass, "Zustandsklasse", FieldType.Combo, ComboItems[FieldKeys.ConditionClass]),
             ["VSA_Zustandsnote_D"] = new("VSA_Zustandsnote_D", "VSA-Zustandsnote D", FieldType.Decimal),
             ["Pruefungsresultat"] = new("Pruefungsresultat", "Prüfungsresultat", FieldType.Text),
             ["Referenzpruefung"] = new("Referenzpruefung", "Referenzpruefung", FieldType.Combo, ComboItems["Referenzpruefung"]),
-            ["Sanieren_JaNein"] = new("Sanieren_JaNein", "Sanieren Ja/Nein", FieldType.Combo, ComboItems["Sanieren_JaNein"]),
-            ["Empfohlene_Sanierungsmassnahmen"] = new("Empfohlene_Sanierungsmassnahmen", "Empfohlene Sanierungsmassnahmen", FieldType.Multiline),
-            ["Kosten"] = new("Kosten", "Kosten", FieldType.Decimal),
-            ["Ausgefuehrt_durch"] = new("Ausgefuehrt_durch", "Ausgefuehrt durch", FieldType.Combo, ComboItems["Ausgefuehrt_durch"]),
-            ["Eigentuemer"] = new("Eigentuemer", "Eigentümer", FieldType.Text),
-            ["Bemerkungen"] = new("Bemerkungen", "Bemerkungen", FieldType.Multiline),
+            [FieldKeys.RenovationDecision] = new(FieldKeys.RenovationDecision, "Sanieren Ja/Nein", FieldType.Combo, ComboItems[FieldKeys.RenovationDecision]),
+            [FieldKeys.RecommendedRehabilitationMeasures] = new(FieldKeys.RecommendedRehabilitationMeasures, "Empfohlene Sanierungsmassnahmen", FieldType.Multiline),
+            [FieldKeys.Cost] = new(FieldKeys.Cost, "Kosten", FieldType.Decimal),
+            [FieldKeys.RehabilitationExecutor] = new(FieldKeys.RehabilitationExecutor, "Ausgefuehrt durch", FieldType.Combo, ComboItems[FieldKeys.RehabilitationExecutor]),
+            [FieldKeys.Owner] = new(FieldKeys.Owner, "Eigentümer", FieldType.Text),
+            [FieldKeys.Remarks] = new(FieldKeys.Remarks, "Bemerkungen", FieldType.Multiline),
             [FieldKeys.Link] = new(FieldKeys.Link, "Link", FieldType.Text),
-            ["Renovierung_Inliner_Stk"] = new("Renovierung_Inliner_Stk", "Renovierung Inliner Stk.", FieldType.Int),
-            ["Renovierung_Inliner_m"] = new("Renovierung_Inliner_m", "Renovierung Inliner m", FieldType.Decimal),
-            ["Anschluesse_verpressen"] = new("Anschluesse_verpressen", "Anschlüsse verpressen", FieldType.Int),
-            ["Reparatur_Manschette"] = new("Reparatur_Manschette", "Reparatur Manschette", FieldType.Int),
-            ["Linerendmanschette_LEM"] = new("Linerendmanschette_LEM", "Linerendmanschette LEM", FieldType.Int),
-            ["Reparatur_Kurzliner"] = new("Reparatur_Kurzliner", "Reparatur Kurzliner", FieldType.Int),
+            [FieldKeys.LinerRenovationCount] = new(FieldKeys.LinerRenovationCount, "Renovierung Inliner Stk.", FieldType.Int),
+            [FieldKeys.LinerRenovationMeters] = new(FieldKeys.LinerRenovationMeters, "Renovierung Inliner m", FieldType.Decimal),
+            [FieldKeys.ConnectionsToGrout] = new(FieldKeys.ConnectionsToGrout, "Anschlüsse verpressen", FieldType.Int),
+            [FieldKeys.RepairSleeve] = new(FieldKeys.RepairSleeve, "Reparatur Manschette", FieldType.Int),
+            [FieldKeys.LinerEndSleeve] = new(FieldKeys.LinerEndSleeve, "Linerendmanschette LEM", FieldType.Int),
+            [FieldKeys.ShortLinerRepair] = new(FieldKeys.ShortLinerRepair, "Reparatur Kurzliner", FieldType.Int),
             ["Erneuerung_Neubau_m"] = new("Erneuerung_Neubau_m", "Erneuerung Neubau m", FieldType.Decimal),
-            ["Offen_abgeschlossen"] = new("Offen_abgeschlossen", "offen/abgeschlossen", FieldType.Combo, ComboItems["Offen_abgeschlossen"]),
-            ["Datum_Jahr"] = new("Datum_Jahr", "Datum/Jahr", FieldType.Text),
+            [FieldKeys.WorkflowStatus] = new(FieldKeys.WorkflowStatus, "offen/abgeschlossen", FieldType.Combo, ComboItems[FieldKeys.WorkflowStatus]),
+            [FieldKeys.InspectionYear] = new(FieldKeys.InspectionYear, "Datum/Jahr", FieldType.Text),
             ["VSA_Zustandsnote_S"] = new("VSA_Zustandsnote_S", "VSA-Zustandsnote S", FieldType.Decimal),
             ["VSA_Zustandsnote_B"] = new("VSA_Zustandsnote_B", "VSA-Zustandsnote B", FieldType.Decimal),
             ["Gewaesserschutz"] = new("Gewaesserschutz", "Gewässerschutz", FieldType.Combo, ComboItems["Gewaesserschutz"]),

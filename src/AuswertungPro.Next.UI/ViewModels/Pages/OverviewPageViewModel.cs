@@ -4,7 +4,6 @@ using AuswertungPro.Next.Domain.Models;
 using System.IO;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Text.Json;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +37,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly DashboardRefreshNotifier _dashboardRefresh;
         private readonly IDialogService _dialogs;
         private readonly IProjectRepository _projects;
-        private readonly IProjectFileDiscovery _projectFileDiscovery;
+        private readonly IProjectOverviewCatalog _projectOverviewCatalog;
         private readonly IProjectDropPathResolver _projectDropPaths;
         private readonly DispatcherTimer _dashboardRefreshTimer;
         private readonly DispatcherTimer _previewRefreshTimer;
@@ -99,7 +98,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.Projects,
                 sp.CostStores.CreateProjectCostStore(),
                 sp.CostStores.CreateProjectCostStore("schacht_costs.json"),
-                sp.ProjectFileDiscovery,
+                sp.ProjectOverviewCatalog,
                 sp.ProjectDropPaths)
         {
         }
@@ -117,8 +116,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 dashboardRefresh,
                 dialogs,
                 projects,
-                CostStoreCompatibility.Factory.CreateProjectCostStore(),
-                CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_costs.json"),
                 ProjectFileDiscovery.CompatibilityService,
                 ProjectDropPathResolver.CompatibilityService)
         {
@@ -156,6 +153,29 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             IProjectCostStoreRepository schachtCostRepo,
             IProjectFileDiscovery projectFileDiscovery,
             IProjectDropPathResolver? projectDropPaths = null)
+            : this(
+                shell,
+                settings,
+                dashboardRefresh,
+                dialogs,
+                projects,
+                haltungCostRepo,
+                schachtCostRepo,
+                ProjectOverviewCatalogCompatibility.Create(projectFileDiscovery),
+                projectDropPaths)
+        {
+        }
+
+        public OverviewPageViewModel(
+            ShellViewModel shell,
+            AppSettings settings,
+            DashboardRefreshNotifier dashboardRefresh,
+            IDialogService dialogs,
+            IProjectRepository projects,
+            IProjectCostStoreRepository haltungCostRepo,
+            IProjectCostStoreRepository schachtCostRepo,
+            IProjectOverviewCatalog projectOverviewCatalog,
+            IProjectDropPathResolver? projectDropPaths = null)
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -164,8 +184,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
             _haltungCostRepo = haltungCostRepo ?? throw new ArgumentNullException(nameof(haltungCostRepo));
             _schachtCostRepo = schachtCostRepo ?? throw new ArgumentNullException(nameof(schachtCostRepo));
-            _projectFileDiscovery = projectFileDiscovery
-                ?? throw new ArgumentNullException(nameof(projectFileDiscovery));
+            _projectOverviewCatalog = projectOverviewCatalog
+                ?? throw new ArgumentNullException(nameof(projectOverviewCatalog));
             _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
             _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
@@ -511,74 +531,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
     private void LoadAllProjects()
     {
-        _allEntries.Clear();
-        ProjectEntries.Clear();
-
-        var entries = new List<ProjectOverviewEntry>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        void AddEntry(string file, bool isLast)
-        {
-            if (string.IsNullOrWhiteSpace(file) || !File.Exists(file)) return;
-            // Aus der Uebersicht ausgeblendete Projekte nicht anzeigen (Dateien bleiben erhalten).
-            if (_settings.HiddenProjectPaths.Any(p => string.Equals(p, file, StringComparison.OrdinalIgnoreCase))) return;
-            if (!seen.Add(file)) return;
-
-            try
-            {
-                using var stream = File.OpenRead(file);
-                using var doc = JsonDocument.Parse(stream);
-                var root = doc.RootElement;
-
-                // Namens-Fallback: "projekt.json" heisst wie der Projektordner, nicht "projekt".
-                var fallbackName = Path.GetFileNameWithoutExtension(file);
-                if (string.Equals(fallbackName, "projekt", StringComparison.OrdinalIgnoreCase))
-                {
-                    var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(file);
-                    if (!string.IsNullOrWhiteSpace(projectRoot))
-                        fallbackName = Path.GetFileName(projectRoot);
-                }
-
-                var name = root.TryGetProperty("Name", out var n) && !string.IsNullOrWhiteSpace(n.GetString())
-                    ? n.GetString()
-                    : fallbackName;
-                var desc = root.TryGetProperty("Description", out var d) ? d.GetString() : "";
-                var modified = TryReadModifiedAt(root) ?? File.GetLastWriteTimeUtc(file);
-
-                // Record-Anzahl aus JSON lesen.
-                int recordCount = 0;
-                if (root.TryGetProperty("Data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
-                    recordCount = dataEl.GetArrayLength();
-                int schachtCount = 0;
-                if (root.TryGetProperty("SchaechteData", out var schaechteEl) && schaechteEl.ValueKind == JsonValueKind.Array)
-                    schachtCount = schaechteEl.GetArrayLength();
-
-                entries.Add(new ProjectOverviewEntry
-                {
-                    Name = name ?? fallbackName,
-                    Description = desc ?? string.Empty,
-                    Path = file,
-                    ModifiedAtUtc = modified,
-                    IsLastProject = isLast,
-                    RecordCount = recordCount,
-                    SchachtCount = schachtCount
-                });
-            }
-            catch
-            {
-                entries.Add(ProjectOverviewEntry.Corrupt(file, isLast));
-            }
-        }
-
-        // 1. Letztes Projekt
-        if (HasLastProject && LastProjectPath is not null)
-            AddEntry(LastProjectPath, true);
-
-        // 2. Alle RecentProjectPaths
-        foreach (var recentPath in _settings.RecentProjectPaths)
-            AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
-
-        // 3. Dateisystem-Scan als Wahrheitsquelle: gelernte Wurzeln (letztes Projekt,
+        // Dateisystem-Scan als Wahrheitsquelle: gelernte Wurzeln (letztes Projekt,
         //    Merkliste), konfiguriertes Verzeichnis und Standard-Fallbacks. Findet
         //    Alt-Projekte UND die neue Struktur <Projekt>\Projektdateien\projekt.json —
         //    auch wenn die Settings-Merkliste verloren ging.
@@ -588,13 +541,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _settings.LastProjectPath,
             _settings.RecentProjectPaths);
 
-        foreach (var file in _projectFileDiscovery.FindProjectFiles(baseDirs))
-            AddEntry(file, false);
-
-        _allEntries = entries
-            .OrderByDescending(e => e.IsLastProject)
-            .ThenByDescending(e => e.ModifiedAtUtc ?? DateTime.MinValue)
-            .ThenBy(e => e.Name)
+        var request = new ProjectOverviewCatalogRequest(
+            LastProjectPath,
+            _settings.RecentProjectPaths.ToList(),
+            _settings.HiddenProjectPaths.ToList(),
+            baseDirs);
+        _allEntries = _projectOverviewCatalog.Load(request)
+            .Select(ProjectOverviewEntry.FromDescriptor)
             .ToList();
 
         ApplyFilter();
@@ -889,21 +842,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         OnPropertyChanged(nameof(HasLastProject));
     }
 
-    private static DateTime? TryReadModifiedAt(JsonElement root)
-    {
-        if (!root.TryGetProperty("ModifiedAtUtc", out var m))
-            return null;
-        if (m.ValueKind != JsonValueKind.String)
-            return null;
-        var raw = m.GetString();
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-        if (DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt))
-            return dt;
-        if (DateTime.TryParse(raw, out dt))
-            return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        return null;
-    }
 }
 
     public class ProjectOverviewEntry
@@ -919,6 +857,23 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public string ModifiedAtDisplay => ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-";
         public string FolderName => string.IsNullOrEmpty(Path) ? "" : System.IO.Path.GetDirectoryName(Path) ?? "";
         public string StatsText => FormatStatsText(RecordCount, SchachtCount, IsCorrupt);
+
+        public static ProjectOverviewEntry FromDescriptor(ProjectOverviewDescriptor descriptor)
+        {
+            ArgumentNullException.ThrowIfNull(descriptor);
+
+            return new ProjectOverviewEntry
+            {
+                Name = descriptor.Name,
+                Description = descriptor.Description,
+                Path = descriptor.Path,
+                ModifiedAtUtc = descriptor.ModifiedAtUtc,
+                IsLastProject = descriptor.IsLastProject,
+                RecordCount = descriptor.HoldingCount,
+                SchachtCount = descriptor.SchachtCount,
+                IsCorrupt = descriptor.IsCorrupt
+            };
+        }
 
         public static ProjectOverviewEntry Corrupt(string file, bool isLast)
         {

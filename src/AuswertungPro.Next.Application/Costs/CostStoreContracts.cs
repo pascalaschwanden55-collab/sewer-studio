@@ -58,6 +58,27 @@ public interface IPositionTemplateStore
 }
 
 /// <summary>
+/// Zusammengehoerende Speicher fuer Kostenrechner und Sanierungsmatrizen.
+/// Das Paket verhindert, dass Katalog, Vorlagen und Projektkosten getrennt verdrahtet werden.
+/// </summary>
+public sealed class CostCalculationStores
+{
+    public CostCalculationStores(
+        ICostCatalogStore catalog,
+        IMeasureTemplateStore templates,
+        IProjectCostStoreRepository projectCosts)
+    {
+        Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        Templates = templates ?? throw new ArgumentNullException(nameof(templates));
+        ProjectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
+    }
+
+    public ICostCatalogStore Catalog { get; }
+    public IMeasureTemplateStore Templates { get; }
+    public IProjectCostStoreRepository ProjectCosts { get; }
+}
+
+/// <summary>
 /// Erzeugt frische Speicherinstanzen am zentralen Zusammensetzungspunkt.
 /// Katalog-Speicher bleiben absichtlich nicht global, weil sie Ladefehler pro Fenster merken.
 /// </summary>
@@ -67,4 +88,5 @@ public interface ICostStoreFactory
     ICostCatalogStore CreateCostCatalogStore(string? userOverridePath = null);
     IMeasureTemplateStore CreateMeasureTemplateStore(string? userOverridePath = null);
     IPositionTemplateStore CreatePositionTemplateStore(string? userOverridePath = null);
+    CostCalculationStores CreateCalculationStores(string projectCostFileName = "costs.json");
 }

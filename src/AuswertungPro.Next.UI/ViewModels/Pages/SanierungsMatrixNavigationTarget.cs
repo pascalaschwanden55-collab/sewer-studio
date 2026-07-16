@@ -6,7 +6,7 @@ public static class SanierungsMatrixNavigationTarget
 {
     public static string? FromRecord(HaltungRecord? record)
     {
-        var holding = (record?.GetFieldValue("Haltungsname") ?? "").Trim();
+        var holding = (record?.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
         return string.IsNullOrWhiteSpace(holding) ? null : holding;
     }
 

@@ -148,6 +148,19 @@ public sealed class ImportArchitectureGuardTests
     }
 
     [Fact]
+    public void ExportPage_reuses_injected_stored_file_service_instead_of_copying_files()
+    {
+        var path = RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ExportPageViewModel.cs");
+        var source = File.ReadAllText(path);
+
+        Assert.Contains("private readonly IStoredImportFileService _storedImportFiles;", source);
+        Assert.Contains("storedImportFiles: sp.StoredImportFiles", source);
+        Assert.Contains("_storedImportFiles.Store(", source);
+        Assert.DoesNotContain("File.Copy(", source);
+        Assert.DoesNotContain("JsonSerializer.Serialize", source);
+    }
+
+    [Fact]
     public void ImportPage_run_import_workflow_lives_in_controller()
     {
         var viewModelPath = RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");

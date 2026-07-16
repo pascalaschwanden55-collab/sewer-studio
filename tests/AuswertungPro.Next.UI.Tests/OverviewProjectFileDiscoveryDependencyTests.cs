@@ -46,6 +46,9 @@ public sealed class OverviewProjectFileDiscoveryDependencyTests
         Assert.Same(
             services.ProjectFileDiscovery,
             services.GetService(typeof(IProjectFileDiscovery)));
+        Assert.Same(
+            services.ProjectOverviewCatalog,
+            services.GetService(typeof(IProjectOverviewCatalog)));
         Assert.Contains(viewModel.ProjectEntries, entry =>
             string.Equals(entry.Path, projectPath, StringComparison.OrdinalIgnoreCase));
     }
@@ -54,14 +57,17 @@ public sealed class OverviewProjectFileDiscoveryDependencyTests
     public void ServiceProvider_und_Uebersicht_halten_den_Application_Vertrag()
     {
         var property = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.ProjectFileDiscovery));
+        var catalogProperty = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.ProjectOverviewCatalog));
         var field = typeof(OverviewPageViewModel).GetField(
-            "_projectFileDiscovery",
+            "_projectOverviewCatalog",
             BindingFlags.Instance | BindingFlags.NonPublic);
 
         Assert.NotNull(property);
         Assert.Equal(typeof(IProjectFileDiscovery), property!.PropertyType);
+        Assert.NotNull(catalogProperty);
+        Assert.Equal(typeof(IProjectOverviewCatalog), catalogProperty!.PropertyType);
         Assert.NotNull(field);
-        Assert.Equal(typeof(IProjectFileDiscovery), field!.FieldType);
+        Assert.Equal(typeof(IProjectOverviewCatalog), field!.FieldType);
     }
 
     private sealed class RecordingProjectFileDiscovery(string projectPath) : IProjectFileDiscovery

@@ -21,24 +21,23 @@ public sealed class ViewModelInfrastructureBoundaryTests
     // Format je Eintrag: "<Pfad relativ zu src/AuswertungPro.Next.UI> :: <Typname>"
     private static readonly HashSet<string> ErlaubteAltStellen = new(StringComparer.Ordinal)
     {
-        "Views/Windows/TrainingCenterWindowFallbackDependencies.cs :: TrainingCenterStore",
     };
 
     private static readonly HashSet<string> ErlaubteKompatibilitaetsFassaden = new(StringComparer.Ordinal)
     {
-        "DataPage/DataPagePrintController.cs :: CostStoreCompatibility.Factory :: 1",
-        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility.Factory :: 2",
-        "ViewModels/Pages/ExportPageViewModel.cs :: CostStoreCompatibility.Factory :: 1",
-        "ViewModels/Pages/OverviewPageViewModel.cs :: CostStoreCompatibility.Factory :: 4",
+        "DataPage/DataPagePrintController.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility :: 2",
+        "ViewModels/Pages/ExportPageViewModel.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Pages/OverviewPageViewModel.cs :: CostStoreCompatibility :: 2",
         "ViewModels/Pages/ProjectPageViewModel.cs :: DropdownOptionsCompatibility.Default :: 1",
-        "ViewModels/Pages/SanierungsMatrixPageViewModel.Compatibility.cs :: CostStoreCompatibility.Factory :: 3",
-        "ViewModels/Pages/SchachtSanierungsMatrixPageViewModel.cs :: CostStoreCompatibility.Factory :: 3",
-        "ViewModels/Pages/SchaechtePageViewModel.cs :: CostStoreCompatibility.Factory :: 1",
+        "ViewModels/Pages/SanierungsMatrixPageViewModel.Compatibility.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Pages/SchachtSanierungsMatrixPageViewModel.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Pages/SchaechtePageViewModel.cs :: CostStoreCompatibility :: 1",
         "ViewModels/Pages/SchaechtePageViewModel.cs :: DropdownOptionsCompatibility.Default :: 1",
-        "ViewModels/Windows/CostCalculatorViewModel.cs :: CostStoreCompatibility.Factory :: 3",
-        "ViewModels/Windows/CostCatalogEditorViewModel.cs :: CostStoreCompatibility.Factory :: 1",
-        "ViewModels/Windows/MeasureTemplateEditorViewModel.cs :: CostStoreCompatibility.Factory :: 4",
-        "ViewModels/Windows/PositionTemplateEditorViewModel.cs :: CostStoreCompatibility.Factory :: 2",
+        "ViewModels/Windows/CostCalculatorViewModel.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Windows/CostCatalogEditorViewModel.cs :: CostStoreCompatibility :: 1",
+        "ViewModels/Windows/MeasureTemplateEditorViewModel.cs :: CostStoreCompatibility :: 2",
+        "ViewModels/Windows/PositionTemplateEditorViewModel.cs :: CostStoreCompatibility :: 2",
     };
 
     private const string VerboteneTypen =
@@ -102,7 +101,7 @@ public sealed class ViewModelInfrastructureBoundaryTests
         var aktuell = new HashSet<string>(StringComparer.Ordinal);
         var marker = new[]
         {
-            "CostStoreCompatibility.Factory",
+            "CostStoreCompatibility",
             "DropdownOptionsCompatibility.Default",
         };
 

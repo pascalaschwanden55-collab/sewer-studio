@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
@@ -30,6 +30,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IProjectCostStoreRepository _projectCosts;
+    private readonly IStoredImportFileService _storedImportFiles;
     private readonly IDistributionPatternResolver _patternResolver;
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
@@ -67,6 +68,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             toasts: sp.Toasts,
             costFieldSync: sp.CostFieldSync,
             projectCosts: sp.CostStores.CreateProjectCostStore(),
+            storedImportFiles: sp.StoredImportFiles,
             patternResolver: sp.DistributionPatterns,
             directoryTreeResolver: sp.DistributionDirectoryTree,
             katasterXtfPaths: sp.KatasterXtfPaths,
@@ -113,6 +115,35 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDistributionDirectoryTreeResolver? directoryTreeResolver = null,
         IKatasterXtfPathResolver? katasterXtfPaths = null,
         IHaltungCadastreIndexProvider? haltungCadastreIndexes = null)
+        : this(
+            shell,
+            settings,
+            dialogs,
+            excelExport,
+            toasts,
+            costFieldSync,
+            projectCosts,
+            Services.StoredImportFileRegistry.CompatibilityService,
+            patternResolver,
+            directoryTreeResolver,
+            katasterXtfPaths,
+            haltungCadastreIndexes)
+    {
+    }
+
+    public ExportPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        IExcelExportService excelExport,
+        IToastService toasts,
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IProjectCostStoreRepository projectCosts,
+        IStoredImportFileService storedImportFiles,
+        IDistributionPatternResolver? patternResolver,
+        IDistributionDirectoryTreeResolver? directoryTreeResolver,
+        IKatasterXtfPathResolver? katasterXtfPaths,
+        IHaltungCadastreIndexProvider? haltungCadastreIndexes)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -121,6 +152,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
+        _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
         DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
@@ -882,116 +914,30 @@ public sealed partial class ExportPageViewModel : ObservableObject
     }
 
     private void StorePdfFiles(string[] paths)
-    {
-        var projectPath = _settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
-            return;
-
-        var projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir)) return;
-
-        var targetDir = Path.Combine(projectDir, "Imports", "PDF");
-        Directory.CreateDirectory(targetDir);
-
-        var stored = new List<string>();
-        foreach (var src in paths)
-        {
-            if (!File.Exists(src)) continue;
-            var fileName = Path.GetFileName(src);
-            var dest = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(dest))
-            {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
-                {
-                    var name = Path.GetFileNameWithoutExtension(fileName);
-                    var ext = Path.GetExtension(fileName);
-                    dest = Path.Combine(targetDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                }
-                else
-                {
-                    stored.Add(Path.GetRelativePath(projectDir, dest));
-                    continue;
-                }
-            }
-
-            File.Copy(src, dest, overwrite: false);
-            stored.Add(Path.GetRelativePath(projectDir, dest));
-        }
-
-        if (stored.Count == 0) return;
-
-        var existing = LoadStoredPdfFiles(projectDir);
-        foreach (var s in stored)
-            if (!existing.Contains(s, StringComparer.OrdinalIgnoreCase))
-                existing.Add(s);
-
-        _shell.Project.Metadata["PDF_StoredFiles"] = JsonSerializer.Serialize(existing);
-    }
+        => StoreImportFiles(paths, "PDF", "PDF-Dateien");
 
     private void StoreTxtFiles(string[] paths)
+        => StoreImportFiles(paths, "TXT", "TXT-Dateien");
+
+    private void StoreImportFiles(
+        IReadOnlyCollection<string> paths,
+        string importKind,
+        string displayName)
     {
-        var projectPath = _settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
-            return;
+        var result = _storedImportFiles.Store(
+            _settings.LastProjectPath,
+            _shell.Project.Metadata,
+            importKind,
+            paths);
 
-        var projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir)) return;
-
-        var targetDir = Path.Combine(projectDir, "Imports", "TXT");
-        Directory.CreateDirectory(targetDir);
-
-        var stored = new List<string>();
-        foreach (var src in paths)
+        if (result.MissingProjectPath)
         {
-            if (!File.Exists(src)) continue;
-            var fileName = Path.GetFileName(src);
-            var dest = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(dest))
-            {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
-                {
-                    var name = Path.GetFileNameWithoutExtension(fileName);
-                    var ext = Path.GetExtension(fileName);
-                    dest = Path.Combine(targetDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                }
-                else
-                {
-                    stored.Add(Path.GetRelativePath(projectDir, dest));
-                    continue;
-                }
-            }
-
-            File.Copy(src, dest, overwrite: false);
-            stored.Add(Path.GetRelativePath(projectDir, dest));
+            LastResult += $"{Environment.NewLine}Hinweis: Projekt bitte speichern, um {displayName} im Projekt abzulegen.";
         }
 
-        if (stored.Count == 0) return;
-
-        var existing = LoadStoredTxtFiles(projectDir);
-        foreach (var s in stored)
-            if (!existing.Contains(s, StringComparer.OrdinalIgnoreCase))
-                existing.Add(s);
-
-        _shell.Project.Metadata["TXT_StoredFiles"] = JsonSerializer.Serialize(existing);
-    }
-
-    private List<string> LoadStoredPdfFiles(string projectDir)
-    {
-        _ = projectDir;
-        _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw);
-        return StoredFileListParser.Parse(raw);
-    }
-
-    private List<string> LoadStoredTxtFiles(string projectDir)
-    {
-        _ = projectDir;
-        _shell.Project.Metadata.TryGetValue("TXT_StoredFiles", out var raw);
-        return StoredFileListParser.Parse(raw);
+        if (result.Errors.Count > 0)
+        {
+            LastResult += $"{Environment.NewLine}Hinweis: {result.Errors.Count} {displayName} konnten nicht im Projekt abgelegt werden.";
+        }
     }
 }

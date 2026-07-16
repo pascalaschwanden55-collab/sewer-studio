@@ -36,9 +36,6 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
     // Zusatzoptionen -> Katalog-ItemKey.
     private const string KeyReinigung = "SCHACHT_REINIGUNG";
-    private const string KeyVd = "VORARBEIT_VD";
-    private const string KeyWasser = "VORARBEIT_WASSERHALTUNG";
-    private const string KeyDoku = "QK_DOKUMENTATION";
 
     private readonly Func<Project> _getProject;
     private readonly Func<string?> _getProjectPath;
@@ -75,9 +72,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             getProjectPath: () => services.Settings.LastProjectPath,
             dialogs: services.Dialogs,
             dashboardRefresh: services.DashboardRefresh,
-            catalogStore: services.CostStores.CreateCostCatalogStore(),
-            templateStore: services.CostStores.CreateMeasureTemplateStore(),
-            costRepo: services.CostStores.CreateProjectCostStore("schacht_costs.json"))
+            costStores: services.CostStores.CreateCalculationStores("schacht_costs.json"))
     {
     }
 
@@ -92,9 +87,24 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             getProjectPath,
             dialogs,
             dashboardRefresh,
-            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
-            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
-            CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_costs.json"))
+            CostStoreCompatibility.CreateCalculationStores("schacht_costs.json"))
+    {
+    }
+
+    public SchachtSanierungsMatrixPageViewModel(
+        Func<Project> getProject,
+        Func<string?> getProjectPath,
+        IDialogService dialogs,
+        DashboardRefreshNotifier dashboardRefresh,
+        CostCalculationStores costStores)
+        : this(
+            getProject,
+            getProjectPath,
+            dialogs,
+            dashboardRefresh,
+            costStores?.Catalog ?? throw new ArgumentNullException(nameof(costStores)),
+            costStores.Templates,
+            costStores.ProjectCosts)
     {
     }
 
@@ -222,7 +232,14 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         var hauptLine = lines.FirstOrDefault(l => string.Equals(l.ItemKey, opt.HauptItemKey, StringComparison.OrdinalIgnoreCase));
         var menge = hauptLine?.Qty ?? 0m;
 
-        row.InitFrom(opt, existing.Total, menge, Sel(KeyReinigung), Sel(KeyVd), Sel(KeyWasser), Sel(KeyDoku));
+        row.InitFrom(
+            opt,
+            existing.Total,
+            menge,
+            Sel(KeyReinigung),
+            Sel(SanierungsMatrixOptionKeys.Verkehrsdienst),
+            Sel(SanierungsMatrixOptionKeys.Wasserhaltung),
+            Sel(SanierungsMatrixOptionKeys.Dokumentation));
     }
 
     private void RecomputeRow(SchachtMatrixRowVm row)
@@ -244,9 +261,9 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         var extras = new List<string>();
         if (row.OptReinigung) extras.Add(KeyReinigung);
-        if (row.OptVd) extras.Add(KeyVd);
-        if (row.OptWasserhaltung) extras.Add(KeyWasser);
-        if (row.OptDokumentation) extras.Add(KeyDoku);
+        if (row.OptVd) extras.Add(SanierungsMatrixOptionKeys.Verkehrsdienst);
+        if (row.OptWasserhaltung) extras.Add(SanierungsMatrixOptionKeys.Wasserhaltung);
+        if (row.OptDokumentation) extras.Add(SanierungsMatrixOptionKeys.Dokumentation);
 
         // Schaechte: Menge immer manuell. > 0 uebersteuert die Hauptarbeit; sonst Template-Default (1).
         decimal hauptMenge = row.Menge > 0m ? row.Menge : 1m;

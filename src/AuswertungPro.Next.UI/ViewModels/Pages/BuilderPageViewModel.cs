@@ -24,7 +24,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 {
     private const string AllFilterLabel = BuilderPageRowFilter.AllFilterLabel;
-    private const string UnknownOwnerLabel = "Unbekannt";
     private static readonly string[] DefaultExecutedByValues =
     [
         "Kanalsanierer",
@@ -472,96 +471,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
     private List<DruckcenterRowVm> BuildRows()
-    {
-        var rows = new List<DruckcenterRowVm>(_shell.Project.Data.Count);
-        foreach (var record in _shell.Project.Data)
-        {
-            var holding = SafeText(record.GetFieldValue("Haltungsname"));
-            if (holding.Length == 0)
-                holding = "(ohne Haltungsname)";
-
-            var owner = SafeText(record.GetFieldValue("Eigentuemer"));
-            if (owner.Length == 0 && _shell.Project.Metadata.TryGetValue("Eigentuemer", out var ownerMeta))
-                owner = SafeText(ownerMeta);
-            if (owner.Length == 0)
-                owner = UnknownOwnerLabel;
-
-            var sanieren = SafeText(record.GetFieldValue("Sanieren_JaNein"));
-            var executedBy = SafeText(record.GetFieldValue("Ausgefuehrt_durch"));
-            if (executedBy.Length == 0) executedBy = "(unbekannt)";
-            var material = SafeText(record.GetFieldValue("Rohrmaterial"));
-            if (material.Length == 0) material = "(unbekannt)";
-            var status = SafeText(record.GetFieldValue("Offen_abgeschlossen"));
-            var year = NormalizeYear(record.GetFieldValue("Datum_Jahr"));
-            var street = SafeText(record.GetFieldValue("Strasse"));
-            var zustand = SafeText(record.GetFieldValue("Zustandsklasse"));
-
-            var recommendedRaw = record.GetFieldValue("Empfohlene_Sanierungsmassnahmen");
-            var recommendedPreview = BuildMeasurePreview(recommendedRaw);
-
-            var recordCost = ParseDecimal(record.GetFieldValue("Kosten")) ?? 0m;
-            var storedCost = TryGetCostByHolding(holding);
-            var hasDetailedCost = storedCost is not null && HasSelectedLines(storedCost);
-            var netCost = storedCost is null ? recordCost : ResolveNetTotal(storedCost);
-            // Store-Eintrag mit Total 0 (z.B. alles abgewaehlt) darf den manuell gepflegten
-            // Tabellenwert "Kosten" nicht verdraengen (Audit W11) — sonst fehlt die Haltung
-            // still in Netto-Summe und Druck.
-            if (netCost <= 0m && recordCost > 0m)
-                netCost = recordCost;
-
-            if (netCost < 0m)
-                netCost = 0m;
-
-            rows.Add(new DruckcenterRowVm
-            {
-                Record = record,
-                Holding = holding,
-                Street = street,
-                Owner = owner,
-                Sanieren = sanieren,
-                ExecutedBy = executedBy,
-                Material = material,
-                Status = status,
-                Year = year,
-                Zustand = zustand,
-                NetCost = netCost,
-                StoredCost = storedCost,
-                HasDetailedCost = hasDetailedCost,
-                HasMeasures = hasDetailedCost || !string.IsNullOrWhiteSpace(recommendedPreview),
-                CostSource = hasDetailedCost
-                    ? "Positionsdetails"
-                    : netCost > 0m
-                        ? (storedCost is null ? "Tabellenwert" : "Kostenstore")
-                        : "Keine Kosten",
-                MeasuresRaw = recommendedRaw ?? "",
-                MeasuresPreview = recommendedPreview
-            });
-        }
-
-        return rows
-            .OrderBy(r => string.IsNullOrWhiteSpace(r.ExecutedBy) ? 1 : 0)
-            .ThenBy(r => r.ExecutedBy, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Owner, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Holding, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private HoldingCost? TryGetCostByHolding(string holding)
-    {
-        if (string.IsNullOrWhiteSpace(holding))
-            return null;
-
-        if (_costStore.ByHolding.TryGetValue(holding, out var direct))
-            return direct;
-
-        foreach (var kvp in _costStore.ByHolding)
-        {
-            if (string.Equals(kvp.Key, holding, StringComparison.OrdinalIgnoreCase))
-                return kvp.Value;
-        }
-
-        return null;
-    }
+        => BuilderPageRowBuilder.Build(
+            _shell.Project.Data,
+            _shell.Project.Metadata,
+            _costStore);
 
     private void RebuildFilterOptions()
     {
@@ -673,7 +586,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         FilteredRowsCount = filtered.Count;
         RowsWithDetailedCosts = filtered.Count(row => row.HasDetailedCost);
         RowsWithoutCosts = filtered.Count(row => row.NetCost <= 0m);
-        RowsWithoutOwner = filtered.Count(row => row.Owner.Equals(UnknownOwnerLabel, StringComparison.OrdinalIgnoreCase));
+        RowsWithoutOwner = filtered.Count(row => row.Owner.Equals(
+            BuilderPageRowBuilder.UnknownOwnerLabel,
+            StringComparison.OrdinalIgnoreCase));
         NetTotal = filtered.Sum(row => row.NetCost);
 
         var specialStats = BuilderPageSpecialStatsCalculator.Compute(filtered);
@@ -739,28 +654,19 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     }
 
     private string BuildFilterSummaryText()
-    {
-        var parts = new List<string>();
-
-        AddFilterPart(parts, "Eigentuemer", SelectedOwnerFilter);
-        AddFilterPart(parts, "Ausgefuehrt durch", SelectedExecutedByFilter);
-        AddFilterPart(parts, "Sanieren", SelectedSanierenFilter);
-        AddFilterPart(parts, "Material", SelectedMaterialFilter);
-        AddFilterPart(parts, "Status", SelectedStatusFilter);
-        AddFilterPart(parts, "Jahr", SelectedYearFilter);
-
-        if (OnlyWithCost)
-            parts.Add("nur mit Kosten");
-        if (OnlyWithMeasures)
-            parts.Add("nur mit Massnahmen");
-
-        var search = (SearchText ?? "").Trim();
-        if (search.Length > 0)
-            parts.Add($"Suche='{search}'");
-
-        parts.Add($"Treffer={FilteredRowsCount}/{TotalRows}");
-        return string.Join(" | ", parts);
-    }
+        => BuilderPageFilterSummaryBuilder.Build(
+            new BuilderPageFilterCriteria(
+                SelectedOwnerFilter,
+                SelectedExecutedByFilter,
+                SelectedSanierenFilter,
+                SelectedMaterialFilter,
+                SelectedStatusFilter,
+                SelectedYearFilter,
+                SearchText,
+                OnlyWithCost,
+                OnlyWithMeasures),
+            FilteredRowsCount,
+            TotalRows);
 
     private string BuildExportStateText()
     {
@@ -821,82 +727,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private bool CanPrintPdf()
         => !IsPdfExportInProgress;
-
-    private static void AddFilterPart(List<string> parts, string label, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Equals(AllFilterLabel, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        parts.Add($"{label}={value}");
-    }
-
-    private static bool HasSelectedLines(HoldingCost cost)
-        => TablePauschaleCostHelper.HasDetailedCost(cost);
-
-    private static decimal ResolveNetTotal(HoldingCost cost)
-        => TablePauschaleCostHelper.ResolveNetTotal(cost);
-
-    private static string SafeText(string? value)
-        => (value ?? "").Trim();
-
-    private static string NormalizeYear(string? value)
-    {
-        var text = SafeText(value);
-        if (text.Length >= 4 && int.TryParse(text[..4], out var year) && year >= 1900 && year <= 2200)
-            return year.ToString(CultureInfo.InvariantCulture);
-        return text;
-    }
-
-    private static decimal? ParseDecimal(string? value)
-    {
-        var text = SafeText(value);
-        if (text.Length == 0)
-            return null;
-
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out var current))
-            return current;
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant))
-            return invariant;
-
-        var normalized = text.Replace(',', '.');
-        if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var normalizedValue))
-            return normalizedValue;
-
-        return null;
-    }
-
-    private static string BuildMeasurePreview(string? raw)
-    {
-        var entries = ParseMeasureEntries(raw);
-        if (entries.Count == 0)
-            return "";
-        if (entries.Count == 1)
-            return entries[0];
-        if (entries.Count == 2)
-            return $"{entries[0]}; {entries[1]}";
-        return $"{entries[0]}; {entries[1]} (+{entries.Count - 2} weitere)";
-    }
-
-    private static List<string> ParseMeasureEntries(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        return raw
-            .Split(new[] { '\r', '\n', ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(NormalizeMeasureEntry)
-            .Where(v => v.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string NormalizeMeasureEntry(string? value)
-    {
-        var text = SafeText(value);
-        while (text.Length > 0 && (text[0] == '-' || text[0] == '*'))
-            text = text[1..].TrimStart();
-        return text;
-    }
 
     private static string SanitizeFilePart(string? value)
     {
@@ -973,7 +803,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private static bool IsSanierenYes(string value)
     {
-        var normalized = SafeText(value);
+        var normalized = value.Trim();
         return normalized.Equals("ja", StringComparison.OrdinalIgnoreCase)
                || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase)
                || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
@@ -982,7 +812,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private static bool IsSanierenNo(string value)
     {
-        var normalized = SafeText(value);
+        var normalized = value.Trim();
         return normalized.Equals("nein", StringComparison.OrdinalIgnoreCase)
                || normalized.Equals("no", StringComparison.OrdinalIgnoreCase)
                || normalized.Equals("false", StringComparison.OrdinalIgnoreCase)

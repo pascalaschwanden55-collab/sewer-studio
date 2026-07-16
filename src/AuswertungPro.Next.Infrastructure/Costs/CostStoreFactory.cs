@@ -15,4 +15,10 @@ public sealed class CostStoreFactory : ICostStoreFactory
 
     public IPositionTemplateStore CreatePositionTemplateStore(string? userOverridePath = null)
         => new PositionTemplateStore(userOverridePath);
+
+    public CostCalculationStores CreateCalculationStores(string projectCostFileName = "costs.json")
+        => new(
+            CreateCostCatalogStore(),
+            CreateMeasureTemplateStore(),
+            CreateProjectCostStore(projectCostFileName));
 }

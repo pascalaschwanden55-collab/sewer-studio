@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,134 +16,6 @@ using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
-
-/// <summary>Eine Haltungs-Zeile in der Sanierungs-Matrix.</summary>
-public sealed partial class SanierungMatrixRowVm : ObservableObject
-{
-    private readonly Action<SanierungMatrixRowVm>? _onChanged;
-    private bool _suppress;
-
-    public HaltungRecord Record { get; }
-    public string Holding { get; }
-    public string Dn { get; }
-    public string Laenge { get; }
-    public int Anschluesse { get; }
-    public HoldingCost? StoredCost { get; private set; }
-
-    [ObservableProperty] private MeasureOption? _selectedMeasure;
-    [ObservableProperty] private decimal _menge;
-    [ObservableProperty] private bool _isMengeEditierbar;
-
-    /// <summary>Mengen-Zelle nur bei Stk-Hauptarbeit (Reparatur) editierbar; bei m = Länge gesperrt.</summary>
-    public bool IsMengeReadOnly => !IsMengeEditierbar;
-    [ObservableProperty] private bool _optVerkehrsdienst;
-    [ObservableProperty] private bool _optWasserhaltung;
-    [ObservableProperty] private bool _optFraesen;
-    [ObservableProperty] private bool _optDichtheit;
-    [ObservableProperty] private bool _optDokumentation;
-    [ObservableProperty] private decimal _total;
-    [ObservableProperty] private string _hinweis = "";
-    [ObservableProperty] private bool _hasMultipleStoredMeasures;
-    [ObservableProperty] private string _measuresSummary = SanierungsMatrixMeasureSummaryFormatter.EmptySummary;
-
-    public bool IsMatrixEditable => !HasMultipleStoredMeasures;
-
-    public SanierungMatrixRowVm(HaltungRecord record, string holding, string dn, string laenge,
-        int anschluesse, Action<SanierungMatrixRowVm>? onChanged)
-    {
-        Record = record;
-        Holding = holding;
-        Dn = dn;
-        Laenge = laenge;
-        Anschluesse = anschluesse;
-        _onChanged = onChanged;
-    }
-
-    /// <summary>Vorbelegen aus gespeicherten Kosten ohne Neuberechnung.</summary>
-    public void InitFrom(MeasureOption? option, decimal total, decimal menge,
-        bool vd, bool wasser, bool fraesen, bool dichtheit, bool doku)
-    {
-        _suppress = true;
-        SelectedMeasure = option;
-        IsMengeEditierbar = option?.ManuelleMenge == true;
-        Menge = menge;
-        OptVerkehrsdienst = vd;
-        OptWasserhaltung = wasser;
-        OptFraesen = fraesen;
-        OptDichtheit = dichtheit;
-        OptDokumentation = doku;
-        Total = total;
-        _suppress = false;
-    }
-
-    public void SetStoredCost(HoldingCost? cost)
-    {
-        StoredCost = cost;
-        MeasuresSummary = SanierungsMatrixMeasureSummaryFormatter.FormatSummary(cost);
-    }
-
-    /// <summary>
-    /// Setzt die fuenf Zusatz-Haekchen passend zur Detailliste — OHNE Neuberechnung auszuloesen.
-    /// Der Detail-Editor ist die Quelle der Wahrheit; die Zeile spiegelt seine Auswahl nur.
-    /// Ohne <c>_suppress</c> wuerde jedes Setzen ein Recalc/Rebuild der Zeile ausloesen und die
-    /// offene Detail-Sitzung stoeren.
-    /// </summary>
-    public void SetOptionFlags(bool vd, bool wasser, bool fraesen, bool dichtheit, bool doku)
-    {
-        _suppress = true;
-        OptVerkehrsdienst = vd;
-        OptWasserhaltung = wasser;
-        OptFraesen = fraesen;
-        OptDichtheit = dichtheit;
-        OptDokumentation = doku;
-        _suppress = false;
-    }
-
-    public void MarkMultipleStoredMeasures()
-    {
-        HasMultipleStoredMeasures = true;
-        Hinweis = "Mehrfach-Massnahme: im Detail bearbeiten";
-    }
-
-    partial void OnSelectedMeasureChanged(MeasureOption? value)
-    {
-        if (_suppress)
-            return;
-
-        // Menge passend vorbelegen: manuelle Menge (Stk/h) -> 1 (editierbar), sonst Laenge.
-        _suppress = true;
-        IsMengeEditierbar = value?.ManuelleMenge == true;
-        if (value?.ManuelleMenge == true)
-        {
-            if (Menge <= 0m) Menge = 1m;
-        }
-        else
-        {
-            // Kulturunabhaengig parsen: "45.30" darf auf Komma-Locales nicht zu 4530 werden.
-            Menge = decimal.TryParse(
-                Laenge?.Trim().Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out var l) ? l : 0m;
-        }
-        _suppress = false;
-
-        _onChanged?.Invoke(this);
-    }
-
-    partial void OnIsMengeEditierbarChanged(bool value) => OnPropertyChanged(nameof(IsMengeReadOnly));
-    partial void OnHasMultipleStoredMeasuresChanged(bool value) => OnPropertyChanged(nameof(IsMatrixEditable));
-    partial void OnMengeChanged(decimal value) => Recalc();
-    partial void OnOptVerkehrsdienstChanged(bool value) => Recalc();
-    partial void OnOptWasserhaltungChanged(bool value) => Recalc();
-    partial void OnOptFraesenChanged(bool value) => Recalc();
-    partial void OnOptDichtheitChanged(bool value) => Recalc();
-    partial void OnOptDokumentationChanged(bool value) => Recalc();
-
-    private void Recalc()
-    {
-        if (!_suppress)
-            _onChanged?.Invoke(this);
-    }
-}
 
 /// <summary>
 /// Massen-Ansicht: alle Haltungen einer Zone als Tabelle, pro Zeile EINE Hauptarbeit
@@ -170,13 +41,6 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         ("ANSCHLUSS_DICHTEN", "Reparatur"),
         ("ANSCHLUSS_VERSCHLIESSEN", "Reparatur"),
     };
-
-    // Zusatzoptionen -> Katalog-ItemKey.
-    private const string KeyVd = "VORARBEIT_VD";
-    private const string KeyWasser = "VORARBEIT_WASSERHALTUNG";
-    private const string KeyFraesen = "VORARBEIT_FRAESEN";
-    private const string KeyDichtheit = "QK_DICHTHEITSPRUEFUNG";
-    private const string KeyDoku = "QK_DOKUMENTATION";
 
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
@@ -257,9 +121,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             dialogs: services.Dialogs,
             costFieldSync: services.CostFieldSync,
             dashboardRefresh: services.DashboardRefresh,
-            catalogStore: services.CostStores.CreateCostCatalogStore(),
-            templateStore: services.CostStores.CreateMeasureTemplateStore(),
-            costRepo: services.CostStores.CreateProjectCostStore(),
+            costStores: services.CostStores.CreateCalculationStores(),
             holding: holding,
             singleHoldingMode: singleHoldingMode,
             targetRecord: targetRecord)
@@ -406,12 +268,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         var loadedRows = new List<SanierungMatrixRowVm>();
         foreach (var record in _shell.Project.Data)
         {
-            var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
+            var holding = (record.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
             if (string.IsNullOrWhiteSpace(holding))
                 continue;
 
-            var dn = (record.GetFieldValue("DN_mm") ?? "").Trim();
-            var laenge = (record.GetFieldValue("Haltungslaenge_m") ?? "").Trim();
+            var dn = (record.GetFieldValue(FieldKeys.NominalDiameterMm) ?? "").Trim();
+            var laenge = (record.GetFieldValue(FieldKeys.HoldingLengthMeters) ?? "").Trim();
             var anschluesse = ConnectionCountEstimator.EstimateFromRecord(record) ?? 0;
 
             var row = new SanierungMatrixRowVm(record, holding, dn, laenge, anschluesse, RecomputeRow);
@@ -476,44 +338,21 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     private void InitRowFromStore(SanierungMatrixRowVm row, string holding)
     {
-        if (!_store.ByHolding.TryGetValue(holding, out var existing) || existing.Measures.Count == 0)
-        {
-            row.SetStoredCost(null);
-            row.InitFrom(MeasureOptions[0], 0m, 0m, false, false, false, false, false);
-            return;
-        }
+        var state = SanierungsMatrixStoredRowProjection.Project(_store, holding, MeasureOptions);
+        if (state.AdditionalOption is not null && !MeasureOptions.Contains(state.AdditionalOption))
+            MeasureOptions.Add(state.AdditionalOption);
 
-        row.SetStoredCost(existing);
-        var hasMultipleMeasures = existing.Measures.Count > 1;
-        var firstId = existing.Measures[0].MeasureId;
-        var opt = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase));
-        if (opt is null)
-        {
-            // Gespeicherte Massnahme ist (mehr) keine Matrix-Hauptarbeit (alte Daten oder aus dem
-            // Einzelfenster). Als Ad-hoc-Option anzeigen statt "keine" -> kein Datenverlust, UI bleibt
-            // konsistent zum Store. Bei Aenderung baut RecomputeRow neu (oder zeigt "nicht gefunden").
-            var name = string.IsNullOrWhiteSpace(existing.Measures[0].MeasureName)
-                ? firstId : existing.Measures[0].MeasureName;
-            var adhoc = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase))
-                        ?? new MeasureOption(firstId, name + " (gespeichert)", "Übrige", false, firstId);
-            if (!MeasureOptions.Contains(adhoc))
-                MeasureOptions.Add(adhoc);
-            row.InitFrom(adhoc, existing.Total, 0m, false, false, false, false, false);
-            if (hasMultipleMeasures)
-                row.MarkMultipleStoredMeasures();
-            return;
-        }
-
-        var lines = existing.Measures[0].Lines;
-        bool Sel(string key) => lines.Any(l => l.Selected &&
-            string.Equals(l.ItemKey, key, StringComparison.OrdinalIgnoreCase));
-        // Hauptmenge ueber den HauptItemKey der Option (bei Kanalroboter != MeasureId).
-        var hauptLine = lines.FirstOrDefault(l => string.Equals(l.ItemKey, opt.HauptItemKey, StringComparison.OrdinalIgnoreCase));
-        var menge = hauptLine?.Qty ?? 0m;
-
-        row.InitFrom(opt, existing.Total, menge,
-            Sel(KeyVd), Sel(KeyWasser), Sel(KeyFraesen), Sel(KeyDichtheit), Sel(KeyDoku));
-        if (hasMultipleMeasures)
+        row.SetStoredCost(state.StoredCost);
+        row.InitFrom(
+            state.SelectedMeasure,
+            state.Total,
+            state.Menge,
+            state.Verkehrsdienst,
+            state.Wasserhaltung,
+            state.Fraesen,
+            state.Dichtheitspruefung,
+            state.Dokumentation);
+        if (state.HasMultipleMeasures)
             row.MarkMultipleStoredMeasures();
     }
 
@@ -547,11 +386,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _clearedHoldings.Remove(row.Holding); // wieder belegt
 
         var extras = new List<string>();
-        if (row.OptVerkehrsdienst) extras.Add(KeyVd);
-        if (row.OptWasserhaltung) extras.Add(KeyWasser);
-        if (row.OptFraesen) extras.Add(KeyFraesen);
-        if (row.OptDichtheit) extras.Add(KeyDichtheit);
-        if (row.OptDokumentation) extras.Add(KeyDoku);
+        if (row.OptVerkehrsdienst) extras.Add(SanierungsMatrixOptionKeys.Verkehrsdienst);
+        if (row.OptWasserhaltung) extras.Add(SanierungsMatrixOptionKeys.Wasserhaltung);
+        if (row.OptFraesen) extras.Add(SanierungsMatrixOptionKeys.Fraesen);
+        if (row.OptDichtheit) extras.Add(SanierungsMatrixOptionKeys.Dichtheitspruefung);
+        if (row.OptDokumentation) extras.Add(SanierungsMatrixOptionKeys.Dokumentation);
 
         // Bei manueller Menge (Reparatur-Stk oder Roboter-Stunden) den Wert uebersteuern.
         decimal? hauptMenge = row.SelectedMeasure?.ManuelleMenge == true && row.Menge > 0m ? row.Menge : null;
@@ -616,7 +455,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
         var pauschalen = TablePauschaleCostHelper.SummarizeRows(Rows.Select(r =>
         {
-            var tableCost = TablePauschaleCostHelper.ParseTableNetCost(r.Record.GetFieldValue("Kosten"));
+            var tableCost = TablePauschaleCostHelper.ParseTableNetCost(
+                r.Record.GetFieldValue(FieldKeys.Cost));
             return (r.StoredCost, tableCost);
         }));
         PauschalenTotal = pauschalen.Total;
@@ -634,7 +474,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private HaltungRecord? FindRecordForHolding(string holding)
         => Rows.FirstOrDefault(r => string.Equals(r.Holding, holding, StringComparison.OrdinalIgnoreCase))?.Record
            ?? _shell.Project.Data.FirstOrDefault(rec =>
-               string.Equals((rec.GetFieldValue("Haltungsname") ?? "").Trim(), holding, StringComparison.OrdinalIgnoreCase));
+               string.Equals(
+                   (rec.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim(),
+                   holding,
+                   StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen.
@@ -789,7 +632,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             .SelectMany(m => m.Lines)
             .Select(l => ((string?)l.ItemKey, l.Selected));
         var flags = SanierungMatrixOptionDeriver.Derive(
-            lines, KeyVd, KeyWasser, KeyFraesen, KeyDichtheit, KeyDoku);
+            lines,
+            SanierungsMatrixOptionKeys.Verkehrsdienst,
+            SanierungsMatrixOptionKeys.Wasserhaltung,
+            SanierungsMatrixOptionKeys.Fraesen,
+            SanierungsMatrixOptionKeys.Dichtheitspruefung,
+            SanierungsMatrixOptionKeys.Dokumentation);
         _detailRow.SetOptionFlags(flags.Vd, flags.Wasser, flags.Fraesen, flags.Dichtheit, flags.Doku);
     }
 

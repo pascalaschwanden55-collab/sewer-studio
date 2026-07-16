@@ -106,20 +106,23 @@ public static class DashboardStatisticsBuilder
         var hCostMap = haltungCosts?.ByHolding ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
         var sCostMap = schachtCosts?.ByHolding ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
 
-        var hVerteilung = BuildZustandVerteilung(holdings.Select(r => r.GetFieldValue("Zustandsklasse")));
-        var sVerteilung = BuildZustandVerteilung(schaechte.Select(r => r.GetFieldValue("Zustandsklasse")));
+        var hVerteilung = BuildZustandVerteilung(
+            holdings.Select(r => r.GetFieldValue(FieldKeys.ConditionClass)));
+        var sVerteilung = BuildZustandVerteilung(
+            schaechte.Select(r => r.GetFieldValue(FieldKeys.ConditionClass)));
         var totalCost = hCostMap.Values.Sum(ResolveNetTotal) + sCostMap.Values.Sum(ResolveNetTotal);
 
         return new DashboardStatistics(
             holdings.Count,
             schaechte.Count,
-            Math.Round(holdings.Sum(r => ParseDouble(r.GetFieldValue("Haltungslaenge_m")) ?? 0d), 2),
+            Math.Round(holdings.Sum(r =>
+                ParseDouble(r.GetFieldValue(FieldKeys.HoldingLengthMeters)) ?? 0d), 2),
             totalCost,
             hVerteilung,
             sVerteilung,
             BuildDamageGroups(holdings),
             BuildDnCostGroups(holdings, hCostMap),
-            holdings.Count(r => IsJa(r.GetFieldValue("Sanieren_JaNein"))),
+            holdings.Count(r => IsJa(r.GetFieldValue(FieldKeys.RenovationDecision))),
             holdings.Count,
             sCostMap.Values.Count(c => ResolveNetTotal(c) > 0m),
             CountKeys(hVerteilung, "0", "1") + CountKeys(sVerteilung, "0", "1"),
@@ -201,11 +204,11 @@ public static class DashboardStatisticsBuilder
         var rows = records
             .Select(record =>
             {
-                var holding = (record.GetFieldValue("Haltungsname") ?? string.Empty).Trim();
+                var holding = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
                 var cost = TryGetCostByHolding(haltungCosts, holding);
                 return new
                 {
-                    DnKey = NormalizeDnKey(record.GetFieldValue("DN_mm")),
+                    DnKey = NormalizeDnKey(record.GetFieldValue(FieldKeys.NominalDiameterMm)),
                     Cost = cost is null ? 0m : ResolveNetTotal(cost)
                 };
             })

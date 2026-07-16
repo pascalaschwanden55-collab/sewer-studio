@@ -97,9 +97,32 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             date,
             recommendedTokens,
             projectPath,
-            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
-            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
-            CostStoreCompatibility.Factory.CreateProjectCostStore(),
+            CostStoreCompatibility.CreateCalculationStores(),
+            applyTotal,
+            haltungRecord,
+            projectRecords,
+            dialogs)
+    {
+    }
+
+    public CostCalculatorViewModel(
+        string holding,
+        DateTime? date,
+        IReadOnlyList<string> recommendedTokens,
+        string? projectPath,
+        CostCalculationStores stores,
+        Action<HoldingCost>? applyTotal = null,
+        HaltungRecord? haltungRecord = null,
+        IReadOnlyList<HaltungRecord>? projectRecords = null,
+        IDialogService? dialogs = null)
+        : this(
+            holding,
+            date,
+            recommendedTokens,
+            projectPath,
+            stores?.Catalog ?? throw new ArgumentNullException(nameof(stores)),
+            stores.Templates,
+            stores.ProjectCosts,
             applyTotal,
             haltungRecord,
             projectRecords,

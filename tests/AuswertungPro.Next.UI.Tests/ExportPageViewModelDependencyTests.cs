@@ -1,4 +1,5 @@
 using System.Reflection;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -13,5 +14,16 @@ public sealed class ExportPageViewModelDependencyTests
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+    }
+
+    [Fact]
+    public void ViewModel_verwendet_den_Application_Vertrag_fuer_Importdateien()
+    {
+        var field = typeof(ExportPageViewModel).GetField(
+            "_storedImportFiles",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(field);
+        Assert.Equal(typeof(IStoredImportFileService), field!.FieldType);
     }
 }

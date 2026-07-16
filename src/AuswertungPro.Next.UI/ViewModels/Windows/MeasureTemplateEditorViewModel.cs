@@ -116,9 +116,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         IDialogService? dialogs = null)
         : this(
             projectPath: null,
-            CostStoreCompatibility.Factory.CreateMeasureTemplateStore(),
-            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
-            dialogs)
+            dialogs: dialogs)
     {
     }
 

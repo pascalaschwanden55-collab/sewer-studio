@@ -28,8 +28,8 @@ public static class DataPageHydraulikReportCalculator
         ArgumentNullException.ThrowIfNull(record);
 
         return new DataPageHydraulikAvailability(
-            DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm")),
-            ParseGefaellePromille(record.GetFieldValue("Gefaelle_Promille")));
+            DnValueParser.TryParseMillimeters(record.GetFieldValue(FieldKeys.NominalDiameterMm)),
+            ParseGefaellePromille(record.GetFieldValue(FieldKeys.SlopePromille)));
     }
 
     public static HydraulikCalcResult? BuildReportCalculation(
@@ -41,8 +41,12 @@ public static class DataPageHydraulikReportCalculator
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(panel);
 
-        var dn = dnMm ?? DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm")) ?? 300d;
-        var material = HydraulikMaterialCatalog.Resolve(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
+        var dn = dnMm
+            ?? DnValueParser.TryParseMillimeters(record.GetFieldValue(FieldKeys.NominalDiameterMm))
+            ?? 300d;
+        var material = HydraulikMaterialCatalog.Resolve(
+            record.GetFieldValue(FieldKeys.PipeMaterial),
+            panel.MaterialKey);
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
 
         var input = new HydraulikInput(

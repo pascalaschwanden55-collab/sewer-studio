@@ -19,14 +19,14 @@ public static class SanierungCostFieldMapper
     /// </summary>
     public static readonly string[] CostFieldNames =
     {
-        "Kosten",
-        "Empfohlene_Sanierungsmassnahmen",
-        "Renovierung_Inliner_m",
-        "Renovierung_Inliner_Stk",
-        "Anschluesse_verpressen",
-        "Reparatur_Manschette",
-        "Linerendmanschette_LEM",
-        "Reparatur_Kurzliner",
+        FieldKeys.Cost,
+        FieldKeys.RecommendedRehabilitationMeasures,
+        FieldKeys.LinerRenovationMeters,
+        FieldKeys.LinerRenovationCount,
+        FieldKeys.ConnectionsToGrout,
+        FieldKeys.RepairSleeve,
+        FieldKeys.LinerEndSleeve,
+        FieldKeys.ShortLinerRepair,
     };
 
     /// <summary>
@@ -35,12 +35,12 @@ public static class SanierungCostFieldMapper
     /// </summary>
     public static readonly string[] QuantityFieldNames =
     {
-        "Renovierung_Inliner_m",
-        "Renovierung_Inliner_Stk",
-        "Anschluesse_verpressen",
-        "Reparatur_Manschette",
-        "Linerendmanschette_LEM",
-        "Reparatur_Kurzliner",
+        FieldKeys.LinerRenovationMeters,
+        FieldKeys.LinerRenovationCount,
+        FieldKeys.ConnectionsToGrout,
+        FieldKeys.RepairSleeve,
+        FieldKeys.LinerEndSleeve,
+        FieldKeys.ShortLinerRepair,
     };
 
     /// <summary>
@@ -50,20 +50,20 @@ public static class SanierungCostFieldMapper
     public static void ApplyRecommendation(HaltungRecord record, MeasureRecommendationResult recommendation)
     {
         var value = string.Join(Environment.NewLine, recommendation.Measures);
-        record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", value, FieldSource.Unknown, userEdited: false);
+        record.SetFieldValue(FieldKeys.RecommendedRehabilitationMeasures, value, FieldSource.Unknown, userEdited: false);
 
         if (recommendation.EstimatedTotalCost is not null)
-            record.SetFieldValue("Kosten", recommendation.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.Cost, recommendation.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
         if (recommendation.RenovierungInlinerM is not null)
-            record.SetFieldValue("Renovierung_Inliner_m", MeasuresTextBuilder.FormatDecimal(recommendation.RenovierungInlinerM.Value), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.LinerRenovationMeters, MeasuresTextBuilder.FormatDecimal(recommendation.RenovierungInlinerM.Value), FieldSource.Unknown, userEdited: false);
         if (recommendation.RenovierungInlinerStk is not null)
-            record.SetFieldValue("Renovierung_Inliner_Stk", MeasuresTextBuilder.FormatInt(recommendation.RenovierungInlinerStk.Value), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.LinerRenovationCount, MeasuresTextBuilder.FormatInt(recommendation.RenovierungInlinerStk.Value), FieldSource.Unknown, userEdited: false);
         if (recommendation.AnschluesseVerpressen is not null)
-            record.SetFieldValue("Anschluesse_verpressen", MeasuresTextBuilder.FormatInt(recommendation.AnschluesseVerpressen.Value), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.ConnectionsToGrout, MeasuresTextBuilder.FormatInt(recommendation.AnschluesseVerpressen.Value), FieldSource.Unknown, userEdited: false);
         if (recommendation.ReparaturManschette is not null)
-            record.SetFieldValue("Reparatur_Manschette", MeasuresTextBuilder.FormatInt(recommendation.ReparaturManschette.Value), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.RepairSleeve, MeasuresTextBuilder.FormatInt(recommendation.ReparaturManschette.Value), FieldSource.Unknown, userEdited: false);
         if (recommendation.ReparaturKurzliner is not null)
-            record.SetFieldValue("Reparatur_Kurzliner", MeasuresTextBuilder.FormatInt(recommendation.ReparaturKurzliner.Value), FieldSource.Unknown, userEdited: false);
+            record.SetFieldValue(FieldKeys.ShortLinerRepair, MeasuresTextBuilder.FormatInt(recommendation.ReparaturKurzliner.Value), FieldSource.Unknown, userEdited: false);
     }
 
     /// <summary>
@@ -77,11 +77,11 @@ public static class SanierungCostFieldMapper
             // Nettobetrag in Tabellenfeld "Kosten" uebertragen.
             var netTotal = ResolveNetTotal(cost);
             var totalText = netTotal.ToString("0.00", CultureInfo.InvariantCulture);
-            record.SetFieldValue("Kosten", totalText, FieldSource.Manual, userEdited: true);
+            record.SetFieldValue(FieldKeys.Cost, totalText, FieldSource.Manual, userEdited: true);
         }
 
         var massnahmenText = MeasuresTextBuilder.BuildMeasuresText(cost);
-        record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", massnahmenText, FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.RecommendedRehabilitationMeasures, massnahmenText, FieldSource.Manual, userEdited: true);
 
         var inlinerMeters = SumMeasureLengths(
             cost,
@@ -105,12 +105,12 @@ public static class SanierungCostFieldMapper
         var lem = SumSelectedQty(cost, "LINERENDMANSCHETTE_LEM");
         var kurzliner = SumSelectedQty(cost, "KURZLINER_PER_ST", "QUICKLOCK_PER_ST", "KURZLINER_PARTLINER");
 
-        record.SetFieldValue("Renovierung_Inliner_m", MeasuresTextBuilder.FormatDecimal(inlinerMeters), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Renovierung_Inliner_Stk", MeasuresTextBuilder.FormatInt(inlinerStk), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Anschluesse_verpressen", MeasuresTextBuilder.FormatInt(anschluesse), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Reparatur_Manschette", MeasuresTextBuilder.FormatInt(manschette), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Linerendmanschette_LEM", MeasuresTextBuilder.FormatInt(lem), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Reparatur_Kurzliner", MeasuresTextBuilder.FormatInt(kurzliner), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.LinerRenovationMeters, MeasuresTextBuilder.FormatDecimal(inlinerMeters), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.LinerRenovationCount, MeasuresTextBuilder.FormatInt(inlinerStk), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ConnectionsToGrout, MeasuresTextBuilder.FormatInt(anschluesse), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.RepairSleeve, MeasuresTextBuilder.FormatInt(manschette), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.LinerEndSleeve, MeasuresTextBuilder.FormatInt(lem), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ShortLinerRepair, MeasuresTextBuilder.FormatInt(kurzliner), FieldSource.Manual, userEdited: true);
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public static class SanierungCostFieldMapper
             return false;
 
         var toRenovate = string.Equals(
-            (record.GetFieldValue("Sanieren_JaNein") ?? "").Trim(), "Ja",
+            (record.GetFieldValue(FieldKeys.RenovationDecision) ?? "").Trim(), "Ja",
             StringComparison.OrdinalIgnoreCase);
 
         var target = new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal);
@@ -177,14 +177,14 @@ public static class SanierungCostFieldMapper
                 var lem = SumSelectedQty(cost!, "LINERENDMANSCHETTE_LEM");
                 var kurzliner = SumSelectedQty(cost!, "KURZLINER_PER_ST", "QUICKLOCK_PER_ST", "KURZLINER_PARTLINER");
 
-                target["Renovierung_Inliner_m"] = MeasuresTextBuilder.FormatDecimal(inlinerMeters);
-                target["Renovierung_Inliner_Stk"] = MeasuresTextBuilder.FormatInt(inlinerStk);
-                target["Anschluesse_verpressen"] = MeasuresTextBuilder.FormatInt(anschluesse);
-                target["Reparatur_Manschette"] = MeasuresTextBuilder.FormatInt(manschette);
-                target["Linerendmanschette_LEM"] = MeasuresTextBuilder.FormatInt(lem);
-                target["Reparatur_Kurzliner"] = MeasuresTextBuilder.FormatInt(kurzliner);
-                target["Kosten"] = ResolveNetTotal(cost!).ToString("0.00", CultureInfo.InvariantCulture);
-                target["Empfohlene_Sanierungsmassnahmen"] = MeasuresTextBuilder.BuildMeasuresText(cost!);
+                target[FieldKeys.LinerRenovationMeters] = MeasuresTextBuilder.FormatDecimal(inlinerMeters);
+                target[FieldKeys.LinerRenovationCount] = MeasuresTextBuilder.FormatInt(inlinerStk);
+                target[FieldKeys.ConnectionsToGrout] = MeasuresTextBuilder.FormatInt(anschluesse);
+                target[FieldKeys.RepairSleeve] = MeasuresTextBuilder.FormatInt(manschette);
+                target[FieldKeys.LinerEndSleeve] = MeasuresTextBuilder.FormatInt(lem);
+                target[FieldKeys.ShortLinerRepair] = MeasuresTextBuilder.FormatInt(kurzliner);
+                target[FieldKeys.Cost] = ResolveNetTotal(cost!).ToString("0.00", CultureInfo.InvariantCulture);
+                target[FieldKeys.RecommendedRehabilitationMeasures] = MeasuresTextBuilder.BuildMeasuresText(cost!);
             }
         }
 

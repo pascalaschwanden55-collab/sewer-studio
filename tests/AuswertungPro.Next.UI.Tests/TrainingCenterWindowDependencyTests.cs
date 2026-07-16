@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -99,6 +100,25 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.False(review.CanWrite);
         Assert.Equal(typeof(TrainingReviewSamSegmentationService), samFactory?.ReturnType);
         Assert.Equal(typeof(FewShotExampleStore), fewShotFactory?.ReturnType);
+    }
+
+    [Fact]
+    public void Fensterpaket_verwendet_die_zentral_registrierten_Dienste()
+    {
+        using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+
+        var dependencies = TrainingCenterWindowDependencyFactory.Create(services);
+
+        Assert.Same(services.Dialogs, dependencies.Dialogs);
+        Assert.Same(services.TrainingCenterStore, dependencies.Store);
+        Assert.Same(services.TrainingCenterImport, dependencies.Import);
+        Assert.Same(services.KnowledgeBaseDiagnostics, dependencies.KnowledgeBaseDiagnostics);
+        Assert.Same(services.TrainingReviewQueue, dependencies.CreateReviewQueue());
     }
 
     [Fact]

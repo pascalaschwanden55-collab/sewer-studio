@@ -28,13 +28,13 @@ public static class MeasureImportDefaultsResolver
     {
         // DN aus Import-Feld
         int? dn = null;
-        var dnValue = haltungRecord.GetFieldValue("DN_mm");
+        var dnValue = haltungRecord.GetFieldValue(FieldKeys.NominalDiameterMm);
         if (!string.IsNullOrWhiteSpace(dnValue) && int.TryParse(dnValue, out var parsedDn))
             dn = parsedDn;
 
         // Laenge kulturunabhaengig parsen
         decimal? lengthM = null;
-        var lengthValue = haltungRecord.GetFieldValue("Haltungslaenge_m");
+        var lengthValue = haltungRecord.GetFieldValue(FieldKeys.HoldingLengthMeters);
         if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(
                 lengthValue.Trim().Replace(',', '.'),
                 NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedLength))
