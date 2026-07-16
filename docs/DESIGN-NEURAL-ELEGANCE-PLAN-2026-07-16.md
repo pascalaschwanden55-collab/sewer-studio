@@ -65,10 +65,14 @@
 8. Timer-basiertes Zeichnen (NeuralSphere) bleibt bei 30 fps (`Interval=33ms`) und `DispatcherPriority.Render`.
 9. Wo ein XAML den Praefix `ui:` oder `ctrl:` nicht kennt: Namespace ergaenzen (`clr-namespace:AuswertungPro.Next.UI` bzw. `...UI.Controls`).
 10. Zeilenangaben in diesem Plan wurden am 16.07. verifiziert, koennen aber durch das Injizierbar-Refactoring leicht verschoben sein — vor jedem Edit die Datei lesen.
+11. **Keine sichtbaren Symbolzeichen** (`→ ✓ ✕ ✎ ⚠`) in `Theme/Controls.xaml`, `TrainingCenterWindow.xaml`, `VideoAnalysisPipelineWindow.xaml`, `MeasureTemplateEditorWindow.xaml` und den beiden Editor-Dialogen — auch nicht in Kommentaren. `FluentIconTests` prueft die ganze Datei per Regex und wird sonst rot (bei der Umsetzung von Paket A passiert). Im Text „nach" schreiben, im UI ein Glyph verwenden.
+12. Der Alpha-Anteil in `DropShadowEffect.Color` wird ignoriert — siehe Alpha-Regel in Paket A2. Gilt fuer jeden Schatten und jeden Glow in allen Paketen.
 
 ---
 
 ## PAKET A — Effekt-Fundament: Elevation-, Glow- und Bewegungs-Tokens — Aufwand: S
+
+> **STATUS 16.07.: UMGESETZT** (Commit `dadd31b24`, Build 0/0, 9434 Tests gruen). Abweichungen gegenueber der urspruenglichen Fassung sind unten eingearbeitet: Alpha-Regel in A2, Bestandsschatten bleiben unangetastet (A1). Guards: `DesignAuditThemeResourceTests.Effect_foundation_defines_elevation_glow_and_neural_underline` und `.Glow_accent_color_is_defined_in_light_and_dark_theme`.
 
 Alle Ergaenzungen in `Theme/Controls.xaml` direkt nach den bestehenden Animations-Tokens (Zeile 22), plus je eine Farbe in beiden Theme-Dateien.
 
@@ -81,15 +85,18 @@ Alle Ergaenzungen in `Theme/Controls.xaml` direkt nach den bestehenden Animation
 <DropShadowEffect x:Key="ShadowM" x:Shared="False" Color="#000000" Opacity="0.18" BlurRadius="16" ShadowDepth="3" Direction="270"/>
 <DropShadowEffect x:Key="ShadowL" x:Shared="False" Color="#000000" Opacity="0.26" BlurRadius="24" ShadowDepth="5" Direction="270"/>
 ```
-Bestehende Inline-Schatten (Menue-Popup `Controls.xaml:671`, ComboBox-Dropdown `:123`, BusyOverlay, ToastHost) in einem Aufwasch auf diese Ressourcen umstellen, wenn die Werte nahe genug sind (±20 %); exotische Werte unveraendert lassen.
+**Bestandsschatten NICHT umstellen** (Entscheid bei der Umsetzung am 16.07.): Die Inline-Schatten (Menue-Popup, ComboBox-Dropdown, BusyOverlay, ToastHost) nutzen `Color="#30000000"` ohne `Opacity` — wegen der Alpha-Regel unten sind das effektiv volldeckende Schatten, also weit von den neuen Stufen entfernt. Eine Umstellung waere eine sichtbare Aenderung am Bestand und gehoert nicht in ein Fundament-Paket. Wer sie spaeter angeht, macht daraus ein eigenes Paket mit eigener Sichtpruefung.
 
 ### A2 — Akzent-Glow (das „Neural-Licht")
+
+> **Alpha-Regel (bei der Umsetzung verifiziert):** `DropShadowEffect` wertet nur den **RGB-Anteil** von `Color` aus; die Deckkraft steuert ausschliesslich `Opacity`. Ein Alpha im Farbwert (`#802563EB`) wird ignoriert und taeuscht eine Wirkung vor, die es nicht gibt. Farben darum **immer volldeckend** (`#FF…`) schreiben und die Staerke ueber `Opacity` steuern — gilt fuer alle Effekt-Pakete.
+
 In **beide** Theme-Dateien (nach `ColorSecondaryAccentHover`):
 ```xml
 <!-- ThemeLight.xaml: -->
-<Color x:Key="GlowAccentColor">#802563EB</Color>
+<Color x:Key="GlowAccentColor">#FF2563EB</Color>
 <!-- Theme.xaml (dunkel, hellerer Accent): -->
-<Color x:Key="GlowAccentColor">#80539BF5</Color>
+<Color x:Key="GlowAccentColor">#FF539BF5</Color>
 ```
 In `Controls.xaml`:
 ```xml
@@ -98,7 +105,7 @@ In `Controls.xaml`:
 <DropShadowEffect x:Key="AccentGlow" x:Shared="False" Color="{DynamicResource GlowAccentColor}"
                   Opacity="0" BlurRadius="14" ShadowDepth="0"/>
 ```
-**Fallback:** Macht `DynamicResource` auf `Effect.Color` Probleme (leerer Glow nach Theme-Wechsel), stattdessen feste Farbe `#802563EB` + Kommentar — Blau funktioniert auf hell wie dunkel.
+**Fallback:** Macht `DynamicResource` auf `Effect.Color` Probleme (leerer Glow nach Theme-Wechsel), stattdessen feste Farbe `#FF2563EB` + Kommentar — Blau funktioniert auf hell wie dunkel.
 
 ### A3 — Bewegungs-Token ergaenzen
 ```xml
@@ -126,43 +133,27 @@ Und in `Controls/AnimationTokens.cs` das Pendant `public static readonly TimeSpa
 
 ## PAKET B — Ruhe-Schalter: MotionSettings („Animationen reduzieren") — Aufwand: S
 
+> **STATUS 16.07.: UMGESETZT** (Commit `778695e9c`, Build 0/0, 9439 Tests gruen). So gebaut — fuer die Pakete C–H ist B3 die verbindliche Regel:
+>
+> - `Controls/MotionSettings.cs`: `ReduceMotion` (get: ausdrueckliche Einstellung, sonst `!SystemParameters.ClientAreaAnimation`), `Configure(bool)`, `ResetForTests()`.
+> - **Wichtige Semantik:** `Configure(true)` reduziert immer, `Configure(false)` setzt auf „folge Windows" zurueck (`_override = null`) — der Schalter kann nur zusaetzlich beruhigen. Sonst haette der Standardwert `false` den Systemwunsch uebersteuert.
+> - `AppSettings.ReduceMotion` (Default false) + Checkbox im Abschnitt „Darstellung und Diagnose" (Zeile Bewegung, ueber Diagnose) + `OnReduceMotionChanged` (SaveImmediate + Configure) + `App.xaml.cs` neben `WindowStateManager.Configure`.
+> - Guards: `MotionSettingsTests` (4 Faelle) und `DesignAuditThemeResourceTests.Reduce_motion_setting_is_wired_from_settings_page_to_startup`.
+
 Muss VOR den Loop-Paketen (C/D/E) existieren, damit jeder Loop das Flag von Anfang an respektiert.
 
 ### B1 — Statische Einstellung (Muster: `AnimationTokens`)
-**Neue Datei:** `src/AuswertungPro.Next.UI/Controls/MotionSettings.cs`
-```csharp
-using System.Windows;
-
-namespace AuswertungPro.Next.UI.Controls;
-
-/// <summary>Zentraler Schalter fuer Dauer-Animationen (Puls, Shimmer, Float, NeuralSphere).
-/// Kurze Ereignis-Animationen (Hover, Fokus, Einblenden) laufen immer — sie sind Feedback, kein Schmuck.
-/// Windows-Systemeinstellung wird als Startwert uebernommen.</summary>
-public static class MotionSettings
-{
-    private static bool? _reduceMotionOverride;
-
-    /// <summary>True = keine Endlos-Animationen starten.</summary>
-    public static bool ReduceMotion
-    {
-        get => _reduceMotionOverride ?? !SystemParameters.ClientAreaAnimation;
-        set => _reduceMotionOverride = value;
-    }
-
-    /// <summary>Nur fuer Tests: Override zuruecksetzen.</summary>
-    public static void ResetForTests() => _reduceMotionOverride = null;
-}
-```
+Umgesetzt in `src/AuswertungPro.Next.UI/Controls/MotionSettings.cs` — siehe Status-Kasten.
 
 ### B2 — Einstellung in der SettingsPage
-`Views/Pages/SettingsPage.xaml` + zugehoeriges ViewModel: Checkbox **„Dauer-Animationen reduzieren (Puls- und Leuchteffekte aus)"** im Abschnitt Darstellung/Allgemein (vor Ort pruefen, wie die Seite Einstellungen persistiert — denselben Mechanismus verwenden, KEINEN neuen Settings-Store erfinden). Beim Laden der App und beim Umschalten `MotionSettings.ReduceMotion` setzen. Wirkung „ab naechstem Fensteraufbau" ist akzeptabel und wird im Tooltip gesagt — kein Live-Stopp noetig.
+Umgesetzt: Checkbox **„Dauer-Animationen reduzieren (Puls- und Leuchteffekte aus)"** in „Darstellung und Diagnose". Sie wirkt sofort (speichern + `MotionSettings.Configure`), greift optisch aber erst beim naechsten Fensteraufbau — so im ToolTip gesagt.
 
 ### B3 — Verwendungsregel (gilt fuer alle folgenden Pakete)
 - **Code-Behind-Loops** (NeuralSphere, NeuralPulseDot, BusyOverlay): vor `Storyboard.Begin()`/`_timer.Start()` `if (MotionSettings.ReduceMotion) return;` — statischer Endzustand bleibt sichtbar (z. B. Punkt gefuellt, aber ohne Ring).
 - **Reine XAML-Loops** vermeiden; wo noetig, den Start in den Code-Behind ziehen, damit das Flag greift.
 
-**Test:** `MotionSettingsTests` — Override gewinnt ueber Systemwert; Reset stellt Systemverhalten wieder her.
-**Commit:** `feat(ui): MotionSettings — Schalter fuer reduzierte Dauer-Animationen`
+**Test:** `MotionSettingsTests` — Override gewinnt ueber Systemwert; Reset stellt Systemverhalten wieder her; `Configure(false)` erzwingt keine Animationen.
+**Commit:** `feat(ui): MotionSettings — Schalter fuer reduzierte Dauer-Animationen` — erledigt (`778695e9c`).
 
 ---
 
@@ -354,8 +345,8 @@ Der Icon-Kreis schwebt: TranslateY 0→-3→0, Dauer 4 s, `AutoReverse`, EaseInO
 
 ## Reihenfolge / Prioritaet fuer Codex
 
-1. **Paket A + B** (Fundament + Ruhe-Schalter) — alles andere baut darauf.
-2. **Paket C + D** (KI-Puls + NeuralSphere) — das Motto „neuronales Netz" wird sichtbar; groesster Charakter-Gewinn.
+1. ~~**Paket A + B** (Fundament + Ruhe-Schalter)~~ — **erledigt am 16.07.** (`dadd31b24`, `778695e9c`). Alles Weitere baut darauf: Schatten/Glow ueber `ShadowS/M/L` + `AccentGlow`, Dauer-Loops immer hinter `MotionSettings.ReduceMotion`.
+2. **Paket C + D** (KI-Puls + NeuralSphere) — **hier weitermachen.** Das Motto „neuronales Netz" wird sichtbar; groesster Charakter-Gewinn.
 3. **Paket E** (Neural Flow) — Fortschritt/Warten, wirkt bei jeder Analyse.
 4. **Paket F** (Tiefe) — Dialoge und Karten, wirkt im Alltag ueberall.
 5. **Paket G** (Seiten-Charakter) — Entrance + Navigation + Titellinien.
