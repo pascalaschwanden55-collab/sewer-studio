@@ -650,14 +650,65 @@
                 <ControlTemplate TargetType="ProgressBar">
                     <Border Background="{TemplateBinding Background}"
                             CornerRadius="3"
-                            SnapsToDevicePixels="True">
-                        <Border x:Name="PART_Track" CornerRadius="3">
-                            <Border x:Name="PART_Indicator"
-                                    Background="{DynamicResource AccentBrush}"
-                                    CornerRadius="3"
-                                    HorizontalAlignment="Left"/>
-                        </Border>
+                            SnapsToDevicePixels="True"
+                            ClipToBounds="True">
+                        <Grid>
+                            <!-- Bestimmter Fortschritt: der Balken laeuft farblich von Blau nach Teal mit. -->
+                            <Border x:Name="PART_Track" CornerRadius="3">
+                                <Border x:Name="PART_Indicator"
+                                        Background="{DynamicResource AccentBarBrush}"
+                                        CornerRadius="3"
+                                        HorizontalAlignment="Left"/>
+                            </Border>
+                            <!-- Unbestimmtes Warten: ein Lichtstreif wandert durch den Balken.
+                                 Ohne diesen Zweig blieb der Balken bei IsIndeterminate leer — an neun
+                                 Stellen im Programm sah man beim Warten gar nichts.
+                                 Die Stops wandern in relativen Werten (0..1), darum passt sich der
+                                 Streif jeder Breite an, ohne dass Layout animiert wird.
+                                 Farbe fest: GradientStops koennen keine DynamicResource aufnehmen —
+                                 Blau ist auf hell wie dunkel lesbar. -->
+                            <Border x:Name="Sweep" CornerRadius="3" Visibility="Collapsed">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop x:Name="SweepLead" Color="#002563EB" Offset="-0.4"/>
+                                        <GradientStop x:Name="SweepPeak" Color="#FF2563EB" Offset="-0.2"/>
+                                        <GradientStop x:Name="SweepTail" Color="#002563EB" Offset="0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Nur laufen, wenn wirklich gewartet wird und der Balken sichtbar ist.
+                             Der Streif laeuft auch bei reduzierter Bewegung: er ist die Warteanzeige
+                             selbst, kein Schmuck — ohne ihn stuende das Programm scheinbar still. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsIndeterminate" Value="True"/>
+                                <Condition Property="IsVisible" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Track" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Sweep" Property="Visibility" Value="Visible"/>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard x:Name="SweepRun">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="SweepLead"
+                                                         Storyboard.TargetProperty="Offset"
+                                                         From="-0.4" To="1.0" Duration="0:0:1.4"/>
+                                        <DoubleAnimation Storyboard.TargetName="SweepPeak"
+                                                         Storyboard.TargetProperty="Offset"
+                                                         From="-0.2" To="1.2" Duration="0:0:1.4"/>
+                                        <DoubleAnimation Storyboard.TargetName="SweepTail"
+                                                         Storyboard.TargetProperty="Offset"
+                                                         From="0" To="1.4" Duration="0:0:1.4"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="SweepRun"/>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
