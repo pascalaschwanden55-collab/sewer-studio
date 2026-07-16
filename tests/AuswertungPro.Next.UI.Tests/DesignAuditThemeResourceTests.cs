@@ -241,6 +241,52 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void Ai_pulse_only_runs_where_work_actually_happens()
+    {
+        var pipeline = ReadUiFile("Views", "Windows", "VideoAnalysisPipelineWindow.xaml");
+        var monitor = ReadUiFile("Controls", "SystemMonitorPanel.xaml");
+        var training = ReadUiFile("Views", "Windows", "TrainingCenterWindow.xaml");
+
+        // Der Puls haengt an echten Arbeits-Flags, nie an einer festen Deko-Animation.
+        Assert.Contains("IsActive=\"{Binding VideoPhaseActive}\"", pipeline);
+        Assert.Contains("<controls:NeuralPulseDot", pipeline);
+        Assert.Contains("IsActive=\"{Binding IsBusy}\"", training);
+
+        // Der Live-Monitor misst dauerhaft — hier ist ein fester Puls richtig.
+        Assert.Contains("IsActive=\"True\"", monitor);
+        Assert.Contains("DotBrush=\"White\"", monitor);
+
+        // Ersetzte Textzeichen und hart kodierte Farben bleiben verschwunden.
+        // Suchmuster mit Anfuehrungszeichen: die noch offenen achtstelligen Badge-Werte
+        // (#2563EB15 und Geschwister) sind ein eigener Befund und hier bewusst nicht erfasst.
+        Assert.DoesNotContain("Text=\"● \"", pipeline);
+        Assert.DoesNotContain("#2563EB\"", pipeline);
+        Assert.DoesNotContain("Text=\"Busy...\"", training);
+    }
+
+    [Fact]
+    public void Neural_sphere_is_in_use_and_follows_theme_and_motion_settings()
+    {
+        var pipeline = ReadUiFile("Views", "Windows", "VideoAnalysisPipelineWindow.xaml");
+        var sphere = ReadUiFile("Controls", "NeuralSphereControl.xaml.cs");
+        var sphereXaml = ReadUiFile("Controls", "NeuralSphereControl.xaml");
+
+        // Die Kugel ist eingebaut — sie lag lange ungenutzt im Code.
+        Assert.Contains("<controls:NeuralSphereControl", pipeline);
+
+        // Farben aus dem Theme statt fester Blauwerte im Code.
+        Assert.Contains("TryFindResource(\"ColorAccent\")", sphere);
+        Assert.Contains("TryFindResource(\"ColorAccentLight\")", sphere);
+
+        // Rechnet nur bei Arbeit, Sichtbarkeit und erlaubter Bewegung.
+        Assert.Contains("if (IsActive && IsVisible && !MotionSettings.ReduceMotion)", sphere);
+        Assert.Contains("IsVisibleChanged", sphere);
+
+        // Viewbox: die 140er-Zeichnung skaliert auf die gesetzte Groesse.
+        Assert.Contains("<Viewbox", sphereXaml);
+    }
+
+    [Fact]
     public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");
@@ -388,7 +434,9 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Text=\"SAM segmentieren\"", training);
         Assert.Contains("Glyph=\"&#xE710;\"", training);
         Assert.DoesNotContain("Text=\"&#xE736;\"", training);
-        Assert.Contains("<Ellipse Width=\"10\" Height=\"10\"", pipeline);
+        // Die Stepper-Punkte waren rohe Ellipsen; seit dem KI-Puls steckt die runde Form im
+        // NeuralPulseDot. Die Absicht bleibt: eine Formsprache, keine Punkt-Textzeichen.
+        Assert.Contains("<controls:NeuralPulseDot", pipeline);
         Assert.Contains("Glyph=\"&#xE73E;\"", pipeline);
         Assert.DoesNotContain("Value=\"●\"", pipeline);
         Assert.DoesNotContain("Value=\"○\"", pipeline);

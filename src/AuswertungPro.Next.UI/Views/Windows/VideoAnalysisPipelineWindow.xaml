@@ -50,11 +50,7 @@
 
         <!-- Primär-Button -->
         <Style x:Key="BtnPrimary" TargetType="Button">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <SolidColorBrush Color="#2563EB"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground"   Value="White"/>
             <Setter Property="FontWeight"   Value="SemiBold"/>
             <Setter Property="FontSize"     Value="13"/>
@@ -123,11 +119,8 @@
                             <Border x:Name="PART_Track">
                                 <Border x:Name="PART_Indicator"
                                         CornerRadius="2"
-                                        HorizontalAlignment="Left">
-                                    <Border.Background>
-                                        <SolidColorBrush Color="#2563EB"/>
-                                    </Border.Background>
-                                </Border>
+                                        HorizontalAlignment="Left"
+                                        Background="{DynamicResource AccentBrush}"/>
                             </Border>
                         </Border>
                     </ControlTemplate>
@@ -157,9 +150,36 @@
                 <!-- Logo + Branding -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal"
                             VerticalAlignment="Center" Margin="0,0,16,0">
-                    <!-- Blue accent bar -->
+                    <!-- Neuronales Netz: dreht und feuert, solange die Analyse laeuft; danach ruhiges Standbild.
+                         Aktiv = Videophase laeuft ODER Video fertig und Ergebnis noch offen. Ein Fehler
+                         setzt IsDone mit, darum genuegt IsDone als Stopp-Bedingung. -->
+                    <controls:NeuralSphereControl Width="34" Height="34" Margin="0,0,8,0"
+                                                  VerticalAlignment="Center">
+                        <controls:NeuralSphereControl.Style>
+                            <Style TargetType="controls:NeuralSphereControl">
+                                <Setter Property="IsActive" Value="False"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding VideoPhaseActive}" Value="True"/>
+                                            <Condition Binding="{Binding IsDone}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="IsActive" Value="True"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding VideoPhaseDone}" Value="True"/>
+                                            <Condition Binding="{Binding IsDone}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="IsActive" Value="True"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </controls:NeuralSphereControl.Style>
+                    </controls:NeuralSphereControl>
+                    <!-- Akzentbalken -->
                     <Border Width="4" Height="28" CornerRadius="2" Margin="0,0,10,0"
-                            Background="#2563EB"/>
+                            Background="{DynamicResource AccentBrush}"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
                                    FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,1"/>
@@ -205,10 +225,13 @@
                     <Border CornerRadius="4" Padding="10,4"
                             Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="● " Foreground="#2563EB" FontSize="10"
-                                       VerticalAlignment="Center"
-                                       Visibility="{Binding VideoPhaseActive,
-                                           Converter={StaticResource BoolToVis}}"/>
+                            <!-- Pulst, solange die Kamera faehrt — der Meterstand laeuft dann mit. -->
+                            <controls:NeuralPulseDot Width="10" Height="10"
+                                                     Margin="0,0,6,0"
+                                                     VerticalAlignment="Center"
+                                                     IsActive="{Binding VideoPhaseActive}"
+                                                     Visibility="{Binding VideoPhaseActive,
+                                                         Converter={StaticResource BoolToVis}}"/>
                             <TextBlock FontFamily="Consolas" FontSize="12"
                                        Foreground="{DynamicResource AccentBrush}">
                                 <Run Text="Meter "/>
@@ -289,7 +312,7 @@
                             </Border>
                             <!-- Top accent line -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#2563EB" Margin="1,1,1,0"/>
+                                    Background="{DynamicResource AccentBrush}" Margin="1,1,1,0"/>
                         </Grid>
 
                         <!-- Säule 2: QUANTIFIZIERUNG -->
@@ -407,10 +430,9 @@
                                     </StackPanel>
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border CornerRadius="4" Padding="{TemplateBinding Padding}">
-                                                <Border.Background>
-                                                    <SolidColorBrush Color="#2563EB"/>
-                                                </Border.Background>
+                                            <Border CornerRadius="4"
+                                                    Padding="{TemplateBinding Padding}"
+                                                    Background="{DynamicResource AccentBrush}">
                                                 <ContentPresenter HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"/>
                                             </Border>
@@ -422,7 +444,9 @@
                             <!-- Video-Analyse -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
                                 <Grid Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
-                                    <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}"/>
+                                    <!-- Pulsiert nur, solange die Videophase wirklich laeuft. -->
+                                    <controls:NeuralPulseDot Width="12" Height="12"
+                                                             IsActive="{Binding VideoPhaseActive}"/>
                                     <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding VideoPhaseDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
@@ -435,23 +459,40 @@
                                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                            Margin="10,0,0,0"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" FontSize="10"
-                                       VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <!-- Verbindungspfeil: faerbt sich, sobald die Phase dahinter arbeitet — der Fluss zeigt zur Arbeit. -->
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="10"
+                                       VerticalAlignment="Center" Margin="0,0,16,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <!-- Code-Mapping -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
                                 <Grid Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
-                                    <Ellipse Width="10" Height="10">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="{DynamicResource MutedBrush}"/>
+                                    <!-- Aktiv = Video fertig, Mapping noch nicht: dann arbeitet diese Phase. -->
+                                    <controls:NeuralPulseDot Width="12" Height="12">
+                                        <controls:NeuralPulseDot.Style>
+                                            <Style TargetType="controls:NeuralPulseDot">
+                                                <Setter Property="IsActive" Value="False"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
-                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
-                                                    </DataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding VideoPhaseDone}" Value="True"/>
+                                                            <Condition Binding="{Binding MappingPhaseDone}" Value="False"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsActive" Value="True"/>
+                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
+                                        </controls:NeuralPulseDot.Style>
+                                    </controls:NeuralPulseDot>
                                     <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding MappingPhaseDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
@@ -460,23 +501,39 @@
                                     <Run Text="{Binding DetectionCount}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" FontSize="10"
-                                       VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="10"
+                                       VerticalAlignment="Center" Margin="0,0,16,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <!-- Protokoll -->
                             <StackPanel Orientation="Horizontal">
                                 <Grid Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
-                                    <Ellipse Width="10" Height="10">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="{DynamicResource MutedBrush}"/>
+                                    <!-- Aktiv = Mapping fertig, Ergebnis noch nicht da: die letzte Phase laeuft. -->
+                                    <controls:NeuralPulseDot Width="12" Height="12">
+                                        <controls:NeuralPulseDot.Style>
+                                            <Style TargetType="controls:NeuralPulseDot">
+                                                <Setter Property="IsActive" Value="False"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
-                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
-                                                    </DataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding MappingPhaseDone}" Value="True"/>
+                                                            <Condition Binding="{Binding IsDone}" Value="False"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsActive" Value="True"/>
+                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
+                                        </controls:NeuralPulseDot.Style>
+                                    </controls:NeuralPulseDot>
                                     <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding IsDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
@@ -501,7 +558,7 @@
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="Läuft"/>
-                                    <Setter Property="Foreground" Value="#2563EB"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="Text" Value="Fertig"/>

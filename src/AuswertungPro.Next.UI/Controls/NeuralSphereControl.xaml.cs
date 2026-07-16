@@ -36,8 +36,15 @@ public partial class NeuralSphereControl : UserControl
     private const int PulseCount = 6;
     private const double GoldenRatio = 1.6180339887498949;
 
-    private static readonly Color AccentColor = Color.FromRgb(0x25, 0x63, 0xEB);
-    private static readonly Color AccentLight = Color.FromRgb(0x3B, 0x82, 0xF6);
+    // Rueckfallfarben, falls das Theme-Dictionary die Schluessel nicht fuehrt (z. B. im Test).
+    private static readonly Color FallbackAccent = Color.FromRgb(0x25, 0x63, 0xEB);
+    private static readonly Color FallbackAccentLight = Color.FromRgb(0x3B, 0x82, 0xF6);
+
+    // Aus dem Theme gelesen, sobald die Visuals entstehen. Ein Theme-Wechsel zur Laufzeit faerbt
+    // die Kugel bewusst nicht um: die Knotenfarben stecken in Dutzenden erzeugter Brushes, und
+    // die Kugel lebt in Fenstern, die dabei ohnehin neu aufgebaut werden.
+    private Color _accentColor = FallbackAccent;
+    private Color _accentLight = FallbackAccentLight;
 
     // ── State ──────────────────────────────────────────────────────────
     private readonly double[] _theta = new double[NodeCount];
@@ -80,14 +87,39 @@ public partial class NeuralSphereControl : UserControl
         Loaded += (_, _) =>
         {
             EnsureVisuals();
+            UpdateTimerState();
             RenderFrame();
         };
+
+        // Unsichtbar heisst: nicht rechnen. Sonst dreht die Kugel in einem verdeckten Reiter weiter.
+        IsVisibleChanged += (_, _) => UpdateTimerState();
 
         Unloaded += (_, _) =>
         {
             _timer.Stop();
             _timer.Tick -= OnTick;
         };
+    }
+
+    /// <summary>
+    /// Die Kugel rechnet nur, wenn sie arbeitet, sichtbar ist und der Nutzer Dauer-Animationen
+    /// nicht abgeschaltet hat. Sonst bleibt das Netz als stilles Standbild stehen.
+    /// </summary>
+    private void UpdateTimerState()
+    {
+        if (IsActive && IsVisible && !MotionSettings.ReduceMotion)
+            _timer.Start();
+        else
+            _timer.Stop();
+    }
+
+    /// <summary>Holt die Akzentfarben aus dem aktiven Theme; ohne Treffer bleiben die Rueckfallwerte.</summary>
+    private void ResolveThemeColors()
+    {
+        if (TryFindResource("ColorAccent") is Color accent)
+            _accentColor = accent;
+        if (TryFindResource("ColorAccentLight") is Color accentLight)
+            _accentLight = accentLight;
     }
 
     // ── Fibonacci sphere distribution ──────────────────────────────────
@@ -106,6 +138,7 @@ public partial class NeuralSphereControl : UserControl
         if (_visualsCreated) return;
         _visualsCreated = true;
 
+        ResolveThemeColors();
         var canvas = SphereCanvas;
 
         // Central glow
@@ -121,8 +154,8 @@ public partial class NeuralSphereControl : UserControl
                 RadiusY = 0.5,
                 GradientStops =
                 {
-                    new GradientStop(Color.FromArgb(60, AccentColor.R, AccentColor.G, AccentColor.B), 0.0),
-                    new GradientStop(Color.FromArgb(0, AccentColor.R, AccentColor.G, AccentColor.B), 1.0)
+                    new GradientStop(Color.FromArgb(60, _accentColor.R, _accentColor.G, _accentColor.B), 0.0),
+                    new GradientStop(Color.FromArgb(0, _accentColor.R, _accentColor.G, _accentColor.B), 1.0)
                 }
             },
             Opacity = 0.15,
@@ -142,7 +175,7 @@ public partial class NeuralSphereControl : UserControl
             {
                 Width = 4,
                 Height = 4,
-                Fill = new SolidColorBrush(AccentColor),
+                Fill = new SolidColorBrush(_accentColor),
                 IsHitTestVisible = false
             };
             _nodeEllipses[i] = e;
@@ -156,7 +189,7 @@ public partial class NeuralSphereControl : UserControl
             {
                 Width = 6,
                 Height = 6,
-                Fill = new SolidColorBrush(AccentLight),
+                Fill = new SolidColorBrush(_accentLight),
                 Opacity = 0,
                 IsHitTestVisible = false
             };
@@ -192,7 +225,7 @@ public partial class NeuralSphereControl : UserControl
                 {
                     var line = new Line
                     {
-                        Stroke = new SolidColorBrush(Color.FromArgb(50, AccentColor.R, AccentColor.G, AccentColor.B)),
+                        Stroke = new SolidColorBrush(Color.FromArgb(50, _accentColor.R, _accentColor.G, _accentColor.B)),
                         StrokeThickness = 0.8,
                         IsHitTestVisible = false
                     };
@@ -208,11 +241,9 @@ public partial class NeuralSphereControl : UserControl
     {
         if (d is NeuralSphereControl ctrl)
         {
-            if ((bool)e.NewValue)
-                ctrl._timer.Start();
-            else
-                ctrl._timer.Stop();
-
+            ctrl.UpdateTimerState();
+            // Einmal neu zeichnen: der Ruhezustand ist gedimmt, der Arbeitszustand heller —
+            // das gilt auch, wenn gar nicht animiert wird.
             ctrl.RenderFrame();
         }
     }
@@ -320,7 +351,7 @@ public partial class NeuralSphereControl : UserControl
             var e = _nodeEllipses[i];
             e.Width = size;
             e.Height = size;
-            ((SolidColorBrush)e.Fill).Color = Color.FromArgb(alpha, AccentColor.R, AccentColor.G, AccentColor.B);
+            ((SolidColorBrush)e.Fill).Color = Color.FromArgb(alpha, _accentColor.R, _accentColor.G, _accentColor.B);
             Canvas.SetLeft(e, _px[i] - size / 2.0);
             Canvas.SetTop(e, _py[i] - size / 2.0);
         }
@@ -336,7 +367,7 @@ public partial class NeuralSphereControl : UserControl
 
             var avgDepth = (_pz[a] + _pz[b] + 2.0) / 4.0;
             var alpha = active ? (byte)(20 + avgDepth * 60) : (byte)(10 + avgDepth * 25);
-            ((SolidColorBrush)line.Stroke).Color = Color.FromArgb(alpha, AccentColor.R, AccentColor.G, AccentColor.B);
+            ((SolidColorBrush)line.Stroke).Color = Color.FromArgb(alpha, _accentColor.R, _accentColor.G, _accentColor.B);
         }
 
         // Update pulses
@@ -373,7 +404,7 @@ public partial class NeuralSphereControl : UserControl
                 target.Height = 7;
                 Canvas.SetLeft(target, _px[b] - 3.5);
                 Canvas.SetTop(target, _py[b] - 3.5);
-                ((SolidColorBrush)target.Fill).Color = AccentLight;
+                ((SolidColorBrush)target.Fill).Color = _accentLight;
             }
         }
     }

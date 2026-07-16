@@ -1086,8 +1086,16 @@
                 BorderThickness="1">
             <DockPanel>
                 <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Left" TextWrapping="Wrap"/>
-                <TextBlock Text="Busy..." DockPanel.Dock="Right"
-                           Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+                <!-- Arbeitsanzeige: pulst nur waehrend eines laufenden Stapels. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                    <ctrl:NeuralPulseDot Width="10" Height="10"
+                                         IsActive="{Binding IsBusy}"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,6,0"/>
+                    <TextBlock Text="Arbeitet..." VerticalAlignment="Center"/>
+                </StackPanel>
             </DockPanel>
         </Border>
     </Grid>

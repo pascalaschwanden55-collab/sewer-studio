@@ -1,7 +1,9 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Controls.NeuralSphereControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
+    <!-- Die Zeichnung ist fest auf 140x140 ausgelegt (Mittelpunkt 70/70, Radius 55).
+         Die Viewbox skaliert sie auf jede gesetzte Groesse, ohne die Rechnung anzufassen. -->
+    <Viewbox Stretch="Uniform">
         <Canvas x:Name="SphereCanvas" Width="140" Height="140" ClipToBounds="True"/>
-    </Grid>
+    </Viewbox>
 </UserControl>
