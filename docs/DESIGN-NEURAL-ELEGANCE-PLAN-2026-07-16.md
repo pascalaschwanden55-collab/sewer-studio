@@ -159,6 +159,15 @@ Umgesetzt: Checkbox **„Dauer-Animationen reduzieren (Puls- und Leuchteffekte a
 
 ## PAKET C — KI-Puls: `NeuralPulseDot` als Signature-Element — Aufwand: M
 
+> **STATUS 16.07.: UMGESETZT** (Commits `4f5c1387d`, `abb65c3e1`; Build 0/0, 9441 Tests gruen).
+>
+> - `Controls/NeuralPulseDot.xaml(.cs)`: DPs `IsActive`, `DotBrush`; Ring 0.5→1.5 + Opacity 0.9→0 ueber 1.6 s, danach 0.8 s Pause (Storyboard 2.4 s, Forever). Laeuft nur bei `IsActive && IsVisible && !MotionSettings.ReduceMotion`.
+> - Farben via `SetResourceReference` statt fester Zuweisung — sonst ueberlebt die Farbe keinen Theme-Wechsel. Viewbox innen: `Width/Height` skalieren sauber.
+> - Eingebaut: LIVE-Abzeichen (`IsActive="True"`, `DotBrush="White"`), drei Stepper-Punkte, Meter-Abzeichen (`VideoPhaseActive`), Training-Center-Statusleiste (`IsBusy`).
+> - **C4 entfaellt:** In der MainWindow-Statusleiste gibt es kein KI-/Sidecar-Status-Binding — es wurde bewusst keines erfunden.
+> - Aktiv-Ableitung im Stepper ohne neuen Converter: `VideoPhaseActive` direkt, Mapping/Protokoll ueber `MultiDataTrigger` (Vorphase fertig + eigene Phase offen).
+> - Guard: `DesignAuditThemeResourceTests.Ai_pulse_only_runs_where_work_actually_happens`.
+
 Ein kleines, ueberall einsetzbares „die KI lebt"-Element: gefuellter Punkt mit ruhig auslaufendem Ring.
 
 ### C1 — Neues Control `Controls/NeuralPulseDot.xaml(.cs)`
@@ -189,6 +198,14 @@ Ein kleines, ueberall einsetzbares „die KI lebt"-Element: gefuellter Punkt mit
 ---
 
 ## PAKET D — Die Neural-Sphere bekommt ihren Auftritt — Aufwand: M
+
+> **STATUS 16.07.: UMGESETZT** (Commit `abb65c3e1`).
+>
+> - D1 erledigt: Farben ueber `TryFindResource("ColorAccent"/"ColorAccentLight")` mit den alten Werten als Rueckfall; `UpdateTimerState()` startet nur bei `IsActive && IsVisible && !MotionSettings.ReduceMotion`; `IsVisibleChanged` abonniert. Eine **Viewbox** in `NeuralSphereControl.xaml` skaliert die fest auf 140×140 gerechnete Zeichnung — ohne sie wird die Kugel bei kleinerer Groesse abgeschnitten statt verkleinert.
+> - D2 erledigt: Kugel 34×34 im Kopf des Analyse-Fensters, links vom Akzentbalken. Aktiv ueber zwei `MultiDataTrigger` (Videophase laeuft **oder** Video fertig, Ergebnis offen — jeweils mit `IsDone=False`). `SetError` setzt `IsDone` mit, darum stoppt die Kugel auch im Fehlerfall.
+> - **D3 abgewandelt:** Im Training Center ist fuer die Kugel kein Platz — die Kopfzeile ist eine volle Werkzeugleiste (zehn Spalten), eine Titelzeile gibt es nicht. Statt eines Layout-Umbaus steht dort ein `NeuralPulseDot` in der Statusleiste (`IsBusy`), und "Busy..." heisst jetzt "Arbeitet...".
+> - **D4 offen:** Die Knoten am BusyOverlay-Spinner sind nicht gebaut — der Ring reicht, und der Nutzen stand in keinem Verhaeltnis zum Risiko am Bestandscontrol. Bei Bedarf spaeter mit eigener Sichtpruefung.
+> - Guard: `DesignAuditThemeResourceTests.Neural_sphere_is_in_use_and_follows_theme_and_motion_settings`.
 
 Das aufwendigste vorhandene Asset (`NeuralSphereControl`: 50 Knoten, Fibonacci-Verteilung, Puls-Impulse) ist nirgends eingebaut — das ist die groesste verschenkte Wirkung im Programm.
 
@@ -336,8 +353,20 @@ Im Toast-Border unten eine 2-px-Linie (`AccentBarBrush`, CornerRadius 0,0,6,6, `
 Der Icon-Kreis schwebt: TranslateY 0→-3→0, Dauer 4 s, `AutoReverse`, EaseInOut, Forever — Start im Code-Behind (`EmptyStateControl.xaml.cs`) NUR wenn `!MotionSettings.ReduceMotion` (Regel B3), Stopp bei Unloaded. EmptyStates sind per Definition allein auf der Flaeche → erfuellt die 1-Loop-Regel.
 
 ### H6 — Aufraeumen (verifizierte Reste)
-- `VideoAnalysisPipelineWindow.xaml:412`: hardcodiertes `#2563EB` → bereits in C3 gefixt (hier nur verifizieren).
+- Sechsstellige `#2563EB`-Werte im Analyse-Fenster: **erledigt** in `abb65c3e1` (Start-Button, Primaer-Button-Style, ThinProgress-Indikator, obere Akzentlinie, „Laeuft"-Text) — alle auf `AccentBrush`.
 - Beim Anfassen der Dateien aus diesem Plan: angetroffene hardcodierte Hex-Farben in umgebenden Elementen auf Theme-Brushes umstellen, wenn eindeutig zuordenbar (sonst liegen lassen und im Commit-Text notieren).
+
+### H7 — Achtstellige Abzeichen-Farben: vermutlich seit je die falsche Farbe — **braucht Pascals Entscheidung**
+
+**Befund vom 16.07.** (`VideoAnalysisPipelineWindow.xaml`, Zeilen ~209, ~687, ~727, ~820): Sechs Werte sind im CSS-Stil `#RRGGBBAA` geschrieben, WPF liest aber `#AARRGGBB`. Gemeint war „Akzentfarbe, schwach deckend" — angezeigt wird etwas voellig anderes:
+
+| Wert | Gemeint | Was WPF daraus macht |
+|---|---|---|
+| `#2563EB15` | Blau, ~8 % deckend | Alpha 14 %, Farbe **gruen** (R63 G EB B15) |
+| `#16A34A15` / `#16A34A40` | Gruen, schwach deckend | Alpha 9 %, Farbe **braun-rot** |
+| `#DC262610` / `#DC262630` | Rot, ~6 % deckend | **Alpha 86 %**, Farbe fast **schwarz** — der auffaelligste Fall |
+
+Nicht mitgefixt, weil es eine sichtbare Aenderung am Bestand ist und eine Entscheidung braucht: Sollen die Abzeichen die vorhandenen `AccentSubtleBrush`/`SecondaryAccentSubtleBrush` nutzen, oder eigene, je Theme definierte Subtle-Brushes bekommen (Success/Danger fehlen als Subtle-Variante)? **Empfehlung:** je Theme `SuccessSubtleBrush` und `DangerSubtleBrush` ergaenzen und alle sechs Stellen darauf umstellen — dann verschwindet der letzte hart kodierte Farbrest aus dem Fenster. Danach Sichtpruefung hell und dunkel.
 
 **Commit:** `feat(ui): Mikrointeraktionen — Fokus-Glow, Haken-Pop, Scroll-Akzent, Toast-Lebenslinie`
 
@@ -346,8 +375,8 @@ Der Icon-Kreis schwebt: TranslateY 0→-3→0, Dauer 4 s, `AutoReverse`, EaseInO
 ## Reihenfolge / Prioritaet fuer Codex
 
 1. ~~**Paket A + B** (Fundament + Ruhe-Schalter)~~ — **erledigt am 16.07.** (`dadd31b24`, `778695e9c`). Alles Weitere baut darauf: Schatten/Glow ueber `ShadowS/M/L` + `AccentGlow`, Dauer-Loops immer hinter `MotionSettings.ReduceMotion`.
-2. **Paket C + D** (KI-Puls + NeuralSphere) — **hier weitermachen.** Das Motto „neuronales Netz" wird sichtbar; groesster Charakter-Gewinn.
-3. **Paket E** (Neural Flow) — Fortschritt/Warten, wirkt bei jeder Analyse.
+2. ~~**Paket C + D** (KI-Puls + NeuralSphere)~~ — **erledigt am 16.07.** (`4f5c1387d`, `abb65c3e1`). Das Motto ist sichtbar: Kugel und Puls laufen nur bei echter Arbeit.
+3. **Paket E** (Neural Flow) — **hier weitermachen.** Fortschritt/Warten, wirkt bei jeder Analyse.
 4. **Paket F** (Tiefe) — Dialoge und Karten, wirkt im Alltag ueberall.
 5. **Paket G** (Seiten-Charakter) — Entrance + Navigation + Titellinien.
 6. **Paket H** (Mikrointeraktionen) — Feinschliff zuletzt.
