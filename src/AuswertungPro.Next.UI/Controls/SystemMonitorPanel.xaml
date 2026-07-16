@@ -80,10 +80,19 @@
                             Background="{DynamicResource SuccessBrush}"
                             BorderThickness="0"
                             VerticalAlignment="Center">
-                        <TextBlock Text="LIVE"
-                                   FontSize="8"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Der Monitor misst dauerhaft — der Puls laeuft darum fest. -->
+                            <ctrl:NeuralPulseDot Width="8" Height="8"
+                                                 IsActive="True"
+                                                 DotBrush="White"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,4,0"/>
+                            <TextBlock Text="LIVE"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       Foreground="White"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Border>
                     <TextBlock Text="Live-Monitor"
                                FontSize="10"
