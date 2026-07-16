@@ -67,6 +67,8 @@
 10. Zeilenangaben in diesem Plan wurden am 16.07. verifiziert, koennen aber durch das Injizierbar-Refactoring leicht verschoben sein — vor jedem Edit die Datei lesen.
 11. **Keine sichtbaren Symbolzeichen** (`→ ✓ ✕ ✎ ⚠`) in `Theme/Controls.xaml`, `TrainingCenterWindow.xaml`, `VideoAnalysisPipelineWindow.xaml`, `MeasureTemplateEditorWindow.xaml` und den beiden Editor-Dialogen — auch nicht in Kommentaren. `FluentIconTests` prueft die ganze Datei per Regex und wird sonst rot (bei der Umsetzung von Paket A passiert). Im Text „nach" schreiben, im UI ein Glyph verwenden.
 12. Der Alpha-Anteil in `DropShadowEffect.Color` wird ignoriert — siehe Alpha-Regel in Paket A2. Gilt fuer jeden Schatten und jeden Glow in allen Paketen.
+13. **Achtstellige Farbwerte immer pruefen:** WPF liest `#AARRGGBB`, nicht den CSS-Stil `#RRGGBBAA`. Wer `#2563EB15` als „Blau, schwach deckend" meint, bekommt ein transparentes Gruen (siehe H7).
+14. **Animationen in Templates wirklich ausloesen, nicht nur den Quelltext pruefen.** Ein Verlaufspinsel kann eingefroren werden — das faellt erst zur Laufzeit auf. Muster: `ProgressBarIndeterminateTemplateTests` (Style-Block aus der Datei schneiden, isoliert parsen, Fenster rendern, `IsFrozen` und echte Bewegung pruefen). `XamlReader` kann `Controls.xaml` wegen `x:Shared` nicht am Stueck laden, `pack://` braucht eine laufende Anwendung.
 
 ---
 
@@ -229,6 +231,15 @@ Das `BusyOverlay` (`Controls/BusyOverlay.xaml:18–26`) behaelt seinen Ring-Spin
 
 ## PAKET E — Neural Flow: Fortschritt & Warten — Aufwand: M
 
+> **STATUS 16.07.: UMGESETZT** (Commit `bf5308341`; Build 0/0, 9444 Tests gruen).
+>
+> - **Der Indeterminate-Zweig war kein Schmuck, sondern ein Fehler:** `IsIndeterminate` wird an **neun** Stellen benutzt (VsaPage, SettingsPage 2×, OverviewPage, ExportPage, BuilderPage, MediaSearchWindow) — ohne Template-Zweig blieb der Balken dort schlicht leer.
+> - Umgesetzt wie geplant: `PART_Indicator` auf `AccentBarBrush`; Sweep-Border mit drei benannten `GradientStop`s, deren `Offset` per `MultiTrigger` (`IsIndeterminate` + `IsVisible`) endlos von links nach rechts wandert; `StopStoryboard` in den ExitActions.
+> - **Verifiziert statt gehofft:** `ProgressBarIndeterminateTemplateTests` rendert ein echtes Fenster mit dem echten Style, prueft `IsFrozen == false` und misst, dass der Streif sich nach 400 ms bewegt hat. Der Zweifel war berechtigt — ein eingefrorener Verlaufspinsel im Template haette zur Laufzeit geworfen, an neun Stellen.
+> - **Test-Fallen (fuer kuenftige Template-Tests):** `XamlReader` kann `Theme/Controls.xaml` **nicht** als Ganzes laden (`x:Shared` ist nur in kompilierten Woerterbuechern erlaubt), und `pack://`-URIs brauchen eine laufende WPF-Anwendung. Loesung: den betroffenen Style-Block aus der Datei schneiden und isoliert per `XamlReader.Parse` laden — testet die gepflegte Definition ohne Kopie im Test.
+> - **E2 entfiel:** Das BusyOverlay blendet bereits ueber `AnimationTokens.Normal/Fast` mit `CubicEase` ein — nichts zu vereinheitlichen. Der Ring-Spinner laeuft weiter auch bei ReduceMotion (gleiche Begruendung wie der Streif: er ist die Warteanzeige selbst).
+> - E3 erledigt sich mit E1 (der Ausfallschutz-Balken nutzt den globalen Style) — nur Sichtpruefung.
+
 ### E1 — ProgressBar: Verlauf + Indeterminate-Shimmer (verifiziert: Template `Controls.xaml:617–637`)
 1. `PART_Indicator`-Background von flachem `AccentBrush` auf `{DynamicResource AccentBarBrush}` (Blau→Teal-Verlauf, existiert je Theme) — Fortschritt „fliesst" farblich nach rechts.
 2. **Indeterminate-Zustand ergaenzen** (fehlt heute komplett): Trigger `IsIndeterminate=True` →
@@ -376,8 +387,8 @@ Nicht mitgefixt, weil es eine sichtbare Aenderung am Bestand ist und eine Entsch
 
 1. ~~**Paket A + B** (Fundament + Ruhe-Schalter)~~ — **erledigt am 16.07.** (`dadd31b24`, `778695e9c`). Alles Weitere baut darauf: Schatten/Glow ueber `ShadowS/M/L` + `AccentGlow`, Dauer-Loops immer hinter `MotionSettings.ReduceMotion`.
 2. ~~**Paket C + D** (KI-Puls + NeuralSphere)~~ — **erledigt am 16.07.** (`4f5c1387d`, `abb65c3e1`). Das Motto ist sichtbar: Kugel und Puls laufen nur bei echter Arbeit.
-3. **Paket E** (Neural Flow) — **hier weitermachen.** Fortschritt/Warten, wirkt bei jeder Analyse.
-4. **Paket F** (Tiefe) — Dialoge und Karten, wirkt im Alltag ueberall.
+3. ~~**Paket E** (Neural Flow)~~ — **erledigt am 16.07.** (`bf5308341`). War mehr als Optik: der unbestimmte Wartebalken zeigte an neun Stellen gar nichts.
+4. **Paket F** (Tiefe) — **hier weitermachen.** Dialoge und Karten, wirkt im Alltag ueberall.
 5. **Paket G** (Seiten-Charakter) — Entrance + Navigation + Titellinien.
 6. **Paket H** (Mikrointeraktionen) — Feinschliff zuletzt.
 
