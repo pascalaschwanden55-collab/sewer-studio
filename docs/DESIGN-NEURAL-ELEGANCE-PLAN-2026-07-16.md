@@ -261,7 +261,22 @@ Das `BusyOverlay` (`Controls/BusyOverlay.xaml:18–26`) behaelt seinen Ring-Spin
 
 ## PAKET F — Tiefe: Hover-Lift, Fenster-Entrance, Mica-Rollout — Aufwand: M
 
-### F1 — Opt-in-Style `HoverLiftCard`
+> **STATUS 16.07.: UMGESETZT** (Commit `e219fe6bd`; Build 0/0, 9451 Tests gruen). **Wichtige Abweichung — F1 ist kein Style, sondern eine angehaengte Eigenschaft:**
+>
+> - **`ui:HoverFx.Lift="True"` statt `HoverLiftCard`-Style.** Grund: Die meisten Karten tragen bereits `Style="{StaticResource Card}"`, und WPF laesst nur **einen** Style zu — ein zweiter haette BasedOn-Ketten durch den ganzen Bestand erzwungen. Die angehaengte Eigenschaft laesst sich zusaetzlich anschalten und wirkt auch in ControlTemplates.
+> - `Controls/../HoverFx.cs` loest damit auch die x:Shared-Frage: Jedes Element bekommt im Code eigene Transform- und Effekt-Instanzen, geteilte Freezables kann es gar nicht geben. Der `LiftTransform`-Ressourcen-Vorschlag unten entfaellt.
+> - **Zwei Fallen, beide mit Test belegt** (`HoverFxTests`): Ein Schatten aus einem Ressourcen-Woerterbuch kann **eingefroren** sein — animieren wuerde werfen, darum wird er per `Clone()` aufgetaut. Und ein **fremder RenderTransform** wird nicht ueberschrieben; dann hebt sich nur der Schatten, statt das Layout zu zerstoeren.
+> - **Angewendet nur auf die Projektkarte der Uebersicht** (`OverviewPage.xaml`, ListBoxItem-Template): Sie oeffnet per Doppelklick. Export- und Projektseite haben nur Container ohne Klickziel — dort waere ein Lift ein Versprechen, das niemand einloest.
+> - **F2 vollstaendig:** alle vierzehn Dialoge/Editoren tragen `ui:WindowFx.Entrance="True"`; Player-, Live- und Startfenster bewusst nicht. Guard prueft beide Seiten.
+> - **F3 eingeschraenkt:** Mica nur auf `TrainingCenterWindow` und `VideoAnalysisPipelineWindow` — beide folgen dem Aufbau des MainWindow (theme-basierter Hintergrund, eigene Karten darauf). **Nicht** auf `KarteWindow` (Vollflaechen-Karte, kein Gewinn) und **nicht** auf `VsaCodeExplorerWindow`/`SanierungsmassnahmenWindow`/`SchachtMassnahmenWindow`: Die setzen keinen bzw. einen statischen Fenster-Hintergrund — da `WindowBackdropHelper` den Hintergrund auf `Transparent` setzt (`WindowBackdropHelper.cs:68`), waere die Wirkung ohne Sichtpruefung nicht abschaetzbar. Offen fuer eine spaetere Runde mit Blick aufs Bild.
+
+### F1 — Opt-in-Style `HoverLiftCard` — **verworfen, siehe Status-Kasten**
+
+> Der Entwurf unten steht nur noch als Beleg, warum es anders gemacht wurde: Ein zweiter Style ist an Karten mit `Style="{StaticResource Card}"` nicht anwendbar. Umgesetzt ist stattdessen `ui:HoverFx.Lift`. Nicht nachbauen.
+
+<details>
+<summary>Verworfener Style-Entwurf</summary>
+
 In `Controls.xaml` (bei den Card-nahen Styles):
 ```xml
 <!-- Instanz je Verwendung (x:Shared="False"), sonst teilen/frieren alle Karten EIN Transform
@@ -299,7 +314,10 @@ In `Controls.xaml` (bei den Card-nahen Styles):
     </Style.Triggers>
 </Style>
 ```
-**Anwenden NUR auf klickbare Karten** (Karte = fuehrt zu Aktion/Navigation): OverviewPage-Kacheln, ExportPage-Verteil-Karten, ProjectPage-Projektkarten (je Datei lesen; pro Seite max. die Karten der obersten Ebene, keine Karten in Scroll-Listen mit >20 Eintraegen).
+
+</details>
+
+**Anwenden NUR auf klickbare Karten** (Karte = fuehrt zu Aktion/Navigation) — bei der Umsetzung blieb davon **nur die Projektkarte der Uebersicht** uebrig; Export- und Projektseite haben keine klickbaren Karten, sondern Container mit Buttons darin.
 
 ### F2 — Fenster-Entrance als attached behavior
 **Neue Datei:** `src/AuswertungPro.Next.UI/WindowFx.cs` (Root-Namespace, Muster `Fluent.cs`): attached property `ui:WindowFx.Entrance="True"` fuer `Window`.
@@ -388,8 +406,8 @@ Nicht mitgefixt, weil es eine sichtbare Aenderung am Bestand ist und eine Entsch
 1. ~~**Paket A + B** (Fundament + Ruhe-Schalter)~~ — **erledigt am 16.07.** (`dadd31b24`, `778695e9c`). Alles Weitere baut darauf: Schatten/Glow ueber `ShadowS/M/L` + `AccentGlow`, Dauer-Loops immer hinter `MotionSettings.ReduceMotion`.
 2. ~~**Paket C + D** (KI-Puls + NeuralSphere)~~ — **erledigt am 16.07.** (`4f5c1387d`, `abb65c3e1`). Das Motto ist sichtbar: Kugel und Puls laufen nur bei echter Arbeit.
 3. ~~**Paket E** (Neural Flow)~~ — **erledigt am 16.07.** (`bf5308341`). War mehr als Optik: der unbestimmte Wartebalken zeigte an neun Stellen gar nichts.
-4. **Paket F** (Tiefe) — **hier weitermachen.** Dialoge und Karten, wirkt im Alltag ueberall.
-5. **Paket G** (Seiten-Charakter) — Entrance + Navigation + Titellinien.
+4. ~~**Paket F** (Tiefe)~~ — **erledigt am 16.07.** (`e219fe6bd`). Nutze `ui:HoverFx.Lift` und `ui:WindowFx.Entrance` statt neuer Styles.
+5. **Paket G** (Seiten-Charakter) — **hier weitermachen.** Entrance + Navigation + Titellinien.
 6. **Paket H** (Mikrointeraktionen) — Feinschliff zuletzt.
 
 Nach Paket D einen Zwischenstand bauen und die Sichtpruefungs-Punkte unten fuer die bis dahin fertigen Teile durchgehen — nicht alles blind bis zum Ende durchziehen.
