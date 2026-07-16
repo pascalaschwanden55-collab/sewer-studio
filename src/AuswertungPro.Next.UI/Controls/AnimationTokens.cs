@@ -17,4 +17,7 @@ public static class AnimationTokens
 
     /// <summary>Seiten-/Ansichtswechsel — 300 ms.</summary>
     public static readonly TimeSpan Slow = TimeSpan.FromMilliseconds(300);
+
+    /// <summary>Hero-/Entrance-Effekte (Fenster-Auftritt, gestaffelte Karten) — 450 ms.</summary>
+    public static readonly TimeSpan XSlow = TimeSpan.FromMilliseconds(450);
 }

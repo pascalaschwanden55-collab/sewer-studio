@@ -190,6 +190,37 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void Effect_foundation_defines_elevation_glow_and_neural_underline()
+    {
+        var controls = ReadUiFile("Theme", "Controls.xaml");
+
+        // Elevation-Stufen: eigene Instanz je Verwendung, sonst teilen sich alle Visuals einen
+        // eingefrorenen Effekt und Hover-/Fokus-Animationen schlagen fehl.
+        foreach (var key in new[] { "ShadowS", "ShadowM", "ShadowL", "AccentGlow" })
+            Assert.Contains($"x:Key=\"{key}\" x:Shared=\"False\"", controls);
+
+        // Glow ist ein Schein, kein Schatten (ShadowDepth=0), und startet unsichtbar.
+        Assert.Contains("Color=\"{DynamicResource GlowAccentColor}\"", controls);
+        Assert.Contains("Opacity=\"0\" BlurRadius=\"14\" ShadowDepth=\"0\"", controls);
+
+        Assert.Contains("x:Key=\"NeuralUnderlineBrush\"", controls);
+        Assert.Contains("x:Key=\"AnimDurationXSlow\"", controls);
+        Assert.Contains("x:Key=\"AnimEaseInOut\"", controls);
+    }
+
+    [Fact]
+    public void Glow_accent_color_is_defined_in_light_and_dark_theme()
+    {
+        // Beide Themes muessen die Leuchtfarbe fuehren, sonst faellt der Glow nach einem
+        // Theme-Wechsel aus. DropShadowEffect ignoriert Alpha -> Farben volldeckend halten.
+        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
+        var themeDark = ReadUiFile("Theme", "Theme.xaml");
+
+        Assert.Contains("<Color x:Key=\"GlowAccentColor\">#FF2563EB</Color>", themeLight);
+        Assert.Contains("<Color x:Key=\"GlowAccentColor\">#FF539BF5</Color>", themeDark);
+    }
+
+    [Fact]
     public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");

@@ -7,19 +7,46 @@
          ═══════════════════════════════════════════════════════════ -->
 
     <!-- ═══ ANIMATIONS-TOKENS (theme-unabhaengig; nur fuer Neucode verbindlich, kein Bestandsumbau) ═══ -->
-    <!-- Dauern: Fast=Hover/Press, Normal=Ein-/Ausblenden, Slow=Seiten-/Ansichtswechsel.
+    <!-- Dauern: Fast=Hover/Press, Normal=Ein-/Ausblenden, Slow=Seiten-/Ansichtswechsel, XSlow=Hero-/Entrance.
          Code-Pendant: Controls/AnimationTokens.cs (gleiche Werte). -->
     <Duration x:Key="AnimDurationFast">0:0:0.12</Duration>
     <Duration x:Key="AnimDurationNormal">0:0:0.18</Duration>
     <Duration x:Key="AnimDurationSlow">0:0:0.30</Duration>
+    <Duration x:Key="AnimDurationXSlow">0:0:0.45</Duration>
     <!-- Easings (Freezable, teilbar) -->
     <CubicEase x:Key="AnimEaseOut" EasingMode="EaseOut"/>
     <CubicEase x:Key="AnimEaseIn" EasingMode="EaseIn"/>
+    <CubicEase x:Key="AnimEaseInOut" EasingMode="EaseInOut"/>
     <!-- Eck-Radien -->
     <CornerRadius x:Key="RadiusS">4</CornerRadius>
     <CornerRadius x:Key="RadiusM">6</CornerRadius>
     <CornerRadius x:Key="RadiusL">8</CornerRadius>
     <CornerRadius x:Key="RadiusXL">10</CornerRadius>
+
+    <!-- ═══ ELEVATION (Tiefen-Hierarchie statt dicker Rahmen) ═══ -->
+    <!-- S=Karten/Chips, M=Popups/Toasts, L=Dialoge/Overlays.
+         DropShadowEffect wertet NUR den RGB-Anteil von Color aus; die Deckkraft steuert
+         ausschliesslich Opacity. Darum hier bewusst volldeckendes Schwarz + kleine Opacity.
+         x:Shared="False": jede Verwendung erhaelt eine eigene Instanz — Effects gehoeren zu genau
+         einem Visual und bleiben nur so einzeln animierbar (z. B. Hover-Lift). -->
+    <DropShadowEffect x:Key="ShadowS" x:Shared="False" Color="#FF000000" Opacity="0.10" BlurRadius="8"  ShadowDepth="1" Direction="270"/>
+    <DropShadowEffect x:Key="ShadowM" x:Shared="False" Color="#FF000000" Opacity="0.18" BlurRadius="16" ShadowDepth="3" Direction="270"/>
+    <DropShadowEffect x:Key="ShadowL" x:Shared="False" Color="#FF000000" Opacity="0.26" BlurRadius="24" ShadowDepth="5" Direction="270"/>
+
+    <!-- KI-/Fokus-Leuchten: ShadowDepth=0 ergibt einen gleichmaessigen Schein statt Schatten.
+         Basis-Opacity 0 — sichtbar wird der Glow nur ueber Trigger-Animationen, kostet sonst nichts.
+         Farbe kommt je Theme aus GlowAccentColor (hell: kraeftiges Blau, dunkel: helleres Blau). -->
+    <DropShadowEffect x:Key="AccentGlow" x:Shared="False" Color="{DynamicResource GlowAccentColor}"
+                      Opacity="0" BlurRadius="14" ShadowDepth="0"/>
+
+    <!-- Titel-Unterstreichung: Blau nach Teal, laeuft nach rechts ins Transparente aus (wie die
+         Logo-Linie in der Sidebar). GradientStops koennen keine DynamicResource aufnehmen —
+         die Stops sind darum bewusst fest und auf hell wie dunkel lesbar. -->
+    <LinearGradientBrush x:Key="NeuralUnderlineBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF2563EB" Offset="0"/>
+        <GradientStop Color="#FF0891B2" Offset="0.45"/>
+        <GradientStop Color="#000891B2" Offset="1"/>
+    </LinearGradientBrush>
 
     <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>

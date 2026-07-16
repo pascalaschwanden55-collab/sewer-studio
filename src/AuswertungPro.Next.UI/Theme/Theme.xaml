@@ -59,6 +59,9 @@
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
     <Color x:Key="ColorSecondaryAccentHover">#FF67E8F9</Color>
+    <!-- Leuchtfarbe fuer AccentGlow (Theme/Controls.xaml). Heller als im Hellthema, damit der
+         Schein auf dunklen Flaechen ueberhaupt sichtbar ist. Alpha ignoriert der Effekt — Staerke via Opacity. -->
+    <Color x:Key="GlowAccentColor">#FF539BF5</Color>
     <SolidColorBrush x:Key="SecondaryAccentBrush" Color="{StaticResource ColorSecondaryAccent}"/>
     <SolidColorBrush x:Key="SecondaryAccentHoverBrush" Color="{StaticResource ColorSecondaryAccentHover}"/>
     <SolidColorBrush x:Key="SecondaryAccentSubtleBrush" Color="#FF164E5C"/>
