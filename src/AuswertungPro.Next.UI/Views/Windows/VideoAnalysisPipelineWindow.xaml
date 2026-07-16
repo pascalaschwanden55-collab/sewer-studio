@@ -7,6 +7,7 @@
         Title="SewerStudio — Pipeline Analysis" Height="860" Width="1320"
         WindowStartupLocation="CenterOwner"
         WindowState="Normal"
+        ui:Fluent.Backdrop="Mica"
         Background="{DynamicResource BgBrush}"
         ResizeMode="CanResize"
         MinWidth="900" MinHeight="600">

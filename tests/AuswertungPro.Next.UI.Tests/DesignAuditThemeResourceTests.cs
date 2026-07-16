@@ -287,6 +287,51 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void Dialogs_enter_softly_and_the_lift_stays_on_clickable_cards()
+    {
+        // Entweder alle Dialoge treten auf oder keiner — halb wirkt zufaellig.
+        string[] dialogs =
+        [
+            "CorrectionDialog", "ImportPreviewWindow", "RecordDetailsWindow", "DossierPrintDialog",
+            "HydraulikPrintDialog", "MeasureSelectionWindow", "CatalogSelectorWindow", "TextPreviewWindow",
+            "BeobachtungenWindow", "ObservationCatalogWindow", "CodeCatalogEditorWindow",
+            "PriceCatalogEditorWindow", "MeasureTemplateEditorWindow", "SchachtMassnahmenKatalogEditorWindow"
+        ];
+
+        foreach (var dialog in dialogs)
+        {
+            var xaml = ReadUiFile("Views", "Windows", $"{dialog}.xaml");
+            Assert.True(
+                xaml.Contains("ui:WindowFx.Entrance=\"True\"", StringComparison.Ordinal),
+                $"{dialog} soll beim Oeffnen sanft auftreten.");
+            Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
+        }
+
+        // Video- und Startfenster bleiben bewusst aussen vor (Renderlast bzw. eigene Choreografie).
+        foreach (var excluded in new[] { "PlayerWindow", "LiveFrameWindow", "StartupSplashWindow" })
+            Assert.DoesNotContain("ui:WindowFx.Entrance", ReadUiFile("Views", "Windows", $"{excluded}.xaml"));
+
+        // Der Lift sitzt auf der Projektkarte — sie oeffnet per Doppelklick, das Versprechen wird eingeloest.
+        Assert.Contains("ui:HoverFx.Lift=\"True\"", ReadUiFile("Views", "Pages", "OverviewPage.xaml"));
+    }
+
+    [Fact]
+    public void Mica_stays_on_windows_that_follow_the_main_window_pattern()
+    {
+        // Nur Fenster mit theme-basiertem Hintergrund und eigenen Karten darauf — sonst wird
+        // Inhalt durchsichtig, denn der Helper setzt den Fenster-Hintergrund auf transparent.
+        foreach (var window in new[] { "TrainingCenterWindow", "VideoAnalysisPipelineWindow" })
+        {
+            var xaml = ReadUiFile("Views", "Windows", $"{window}.xaml");
+            Assert.Contains("ui:Fluent.Backdrop=\"Mica\"", xaml);
+            Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
+        }
+
+        // Video-Fenster bleiben ohne Backdrop (Renderlast).
+        Assert.DoesNotContain("Fluent.Backdrop", ReadUiFile("Views", "Windows", "PlayerWindow.xaml"));
+    }
+
+    [Fact]
     public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");

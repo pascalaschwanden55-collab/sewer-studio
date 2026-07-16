@@ -7,6 +7,7 @@
         xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Training Center" Height="900" Width="1400" MinWidth="1200" MinHeight="720"
         WindowStartupLocation="CenterOwner"
+        ui:Fluent.Backdrop="Mica"
         Background="{DynamicResource BgBrush}"
         Foreground="{DynamicResource TextBrush}">
     <Window.Resources>

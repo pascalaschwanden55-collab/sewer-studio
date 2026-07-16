@@ -4,6 +4,7 @@
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:anim="clr-namespace:AuswertungPro.Next.UI.Controls.Animations"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              AllowDrop="True"
              Drop="OverviewPage_Drop"
              DragOver="OverviewPage_DragOver">
@@ -156,13 +157,16 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
+                                            <!-- Projektkarte: Doppelklick oeffnet das Projekt — hier ist der
+                                                 Lift beim Zeigen ein Versprechen, das eingeloest wird. -->
                                             <Border x:Name="ItemBorder"
                                                     CornerRadius="6"
                                                     BorderThickness="1"
                                                     BorderBrush="{DynamicResource BorderLightBrush}"
                                                     Background="{DynamicResource CardBrush}"
                                                     MinHeight="74"
-                                                    Cursor="Hand">
+                                                    Cursor="Hand"
+                                                    ui:HoverFx.Lift="True">
                                                 <ContentPresenter/>
                                             </Border>
                                             <ControlTemplate.Triggers>
