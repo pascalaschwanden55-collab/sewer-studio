@@ -50,10 +50,15 @@ public static class FieldCatalog
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ComboItems =
         new ReadOnlyDictionary<string, IReadOnlyList<string>>(new Dictionary<string, IReadOnlyList<string>>
         {
+            // Rohrmaterial ist ein Auswahlfeld: Was hier fehlt, zeigt das Feld leer an, auch wenn
+            // der Wert in den Daten steht. Die Liste muss darum zu dem passen, was
+            // XtfValueNormalizer.NormalizeSiaMaterial aus SIA405-Katastern liefert.
+            // Ergaenzt 2026-07-17: Epoxydharz, Faserzement, Ton — kommen in echten IKAS-Exporten vor.
             [FieldKeys.PipeMaterial] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen",
-                "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser"
+                "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser",
+                "Epoxydharz", "Faserzement", "Ton"
             }),
             [FieldKeys.UsageType] = new ReadOnlyCollection<string>(new List<string>
             {

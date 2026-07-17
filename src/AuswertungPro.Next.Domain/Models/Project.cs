@@ -140,6 +140,8 @@ public sealed class Project
                 // Keep ProtocolEntry for roundtrip compatibility with legacy JSON contracts.
             }
 
+            MigrateLegacyPipeMaterial(rec);
+
             if (rec.Fields.TryGetValue("Fliessrichtung", out var oldVal) && !string.IsNullOrWhiteSpace(oldVal))
             {
                 var existing = rec.Fields.TryGetValue("Inspektionsrichtung", out var newVal) ? newVal : "";
@@ -160,6 +162,45 @@ public sealed class Project
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Alte Rohrmaterial-Werte, die der SIA405-Import bis Juli 2026 erzeugt hat. Sie standen nie in
+    /// der Auswahlliste des Feldes — dadurch zeigte das Programm sie als LEER an, obwohl der Wert
+    /// gespeichert war (betraf rund ein Drittel aller Haltungen).
+    /// Schluessel bewusst als Liste statt als Regel: Es sind genau die Werte, die in echten
+    /// Projekten vorkommen. Neue Importe liefern sie dank XtfValueNormalizer gar nicht mehr.
+    /// </summary>
+    private static readonly Dictionary<string, string> LegacyPipeMaterialValues =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Kunststoff Polyvinilchlorid"] = "Polyvinylchlorid",
+            ["Kunststoff Polyvinylchlorid"] = "Polyvinylchlorid",
+            ["Kunststoff PVC"] = "Polyvinylchlorid",
+            ["PVC Polyvinilchlorid"] = "Polyvinylchlorid",
+            ["Kunststoff PE"] = "Polyethylen",
+            ["Kunststoff PE-HD"] = "Hartpolyethylen",
+            ["Kunststoff Polypropylen"] = "Polypropylen",
+            ["Kunststoff Epoxydharz"] = "Epoxydharz",
+            ["Guss Grauguss"] = "Guss"
+        };
+
+    /// <summary>
+    /// Hebt alte, unwaehlbare Rohrmaterial-Werte auf die heutigen Auswahlwerte.
+    /// Von Hand gesetzte Werte bleiben unangetastet — sie sind die Entscheidung des Nutzers.
+    /// </summary>
+    private static void MigrateLegacyPipeMaterial(HaltungRecord rec)
+    {
+        if (!rec.Fields.TryGetValue(FieldKeys.PipeMaterial, out var value) || string.IsNullOrWhiteSpace(value))
+            return;
+
+        if (rec.FieldMeta.TryGetValue(FieldKeys.PipeMaterial, out var meta) && meta.UserEdited)
+            return;
+
+        if (!LegacyPipeMaterialValues.TryGetValue(value.Trim(), out var current))
+            return;
+
+        rec.Fields[FieldKeys.PipeMaterial] = current;
     }
 
     public HaltungRecord CreateNewRecord()

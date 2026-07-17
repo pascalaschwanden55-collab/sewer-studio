@@ -11,19 +11,60 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 internal static class XtfValueNormalizer
 {
     /// <summary>
-    /// Normalisiert SIA405-Materialbezeichnungen auf lesbare deutsche Texte.
+    /// Uebersetzt die Fliessrichtung der VSA-KEK-Untersuchung auf die Katalogwerte des Feldes
+    /// "Inspektionsrichtung" ("In Fliessrichtung" / "Gegen Fliessrichtung").
+    ///
+    /// Unbekannte Schreibweisen ergeben bewusst einen leeren Wert: Ein Wert, den die Auswahlliste
+    /// nicht kennt, waere im Programm unsichtbar — dann lieber ehrlich leer.
+    /// Wichtig: "gegen" zuerst pruefen, sonst schluckt die "in"-Regel auch "gegen_Fliessrichtung".
+    /// </summary>
+    public static string NormalizeInspectionDirection(string? richtung)
+    {
+        if (string.IsNullOrWhiteSpace(richtung))
+            return "";
+
+        if (Regex.IsMatch(richtung, "(?i)gegen[_ ]?flie(?:ss|ß|s)richtung"))
+            return "Gegen Fliessrichtung";
+        if (Regex.IsMatch(richtung, "(?i)(^|[_ ])in[_ ]?flie(?:ss|ß|s)richtung"))
+            return "In Fliessrichtung";
+
+        return "";
+    }
+
+    /// <summary>
+    /// Bildet SIA405-Materialbezeichnungen auf die Auswahlwerte des Feldes "Rohrmaterial" ab
+    /// (<see cref="Domain.Models.FieldCatalog"/>).
+    ///
+    /// Warum so streng: Rohrmaterial ist ein Auswahlfeld. Ein Wert, der nicht in der Liste steht,
+    /// wird im Programm als LEER angezeigt — die Daten sind da, man sieht sie nur nicht. Genau das
+    /// passierte mit den frueheren Ausgaben "Kunststoff PVC"/"Kunststoff PE", die es in der
+    /// Auswahlliste nie gab.
+    ///
+    /// Zwei Fallen stecken hier drin:
+    /// 1. Das Kataster schreibt "Polyvin*i*lchlorid" (mit i). Die Regex muss beide Schreibweisen
+    ///    treffen, sonst greift sie bei echten IKAS-Dateien nie.
+    /// 2. Reihenfolge: "Hartpolyethylen" enthaelt "polyethylen" — der speziellere Fall zuerst.
+    ///
+    /// Unbekanntes wird lesbar durchgereicht statt verworfen: nicht waehlbar, aber nicht verloren.
     /// </summary>
     public static string NormalizeSiaMaterial(string material)
     {
         material ??= "";
         if (string.IsNullOrWhiteSpace(material)) return "";
 
-        if (Regex.IsMatch(material, "Kunststoff_Hartpolyethylen", RegexOptions.IgnoreCase)) return "Kunststoff PE-HD";
-        if (Regex.IsMatch(material, "Kunststoff_Polyethylen", RegexOptions.IgnoreCase)) return "Kunststoff PE";
-        if (Regex.IsMatch(material, "Kunststoff_Polyvinylchlorid", RegexOptions.IgnoreCase)) return "Kunststoff PVC";
-        if (Regex.IsMatch(material, "Beton_Normalbeton", RegexOptions.IgnoreCase)) return "Beton";
-        if (Regex.IsMatch(material, "Beton_", RegexOptions.IgnoreCase)) return "Beton";
-        if (Regex.IsMatch(material, "Steinzeug", RegexOptions.IgnoreCase)) return "Steinzeug";
+        if (Regex.IsMatch(material, "(?i)hartpolyethylen|PE[-_ ]?HD")) return "Hartpolyethylen";
+        if (Regex.IsMatch(material, "(?i)polyethylen")) return "Polyethylen";
+        if (Regex.IsMatch(material, "(?i)polyvin[iy]lchlorid|(?:^|[_ ])PVC(?:[_ ]|$)")) return "Polyvinylchlorid";
+        if (Regex.IsMatch(material, "(?i)polypropylen")) return "Polypropylen";
+        if (Regex.IsMatch(material, "(?i)epoxydharz")) return "Epoxydharz";
+        if (Regex.IsMatch(material, "(?i)glasfaser|(?:^|[_ ])GFK(?:[_ ]|$)")) return "GFK";
+        // Faserzement vor Zement: sonst schluckt die Zement-Regel den Sonderfall.
+        if (Regex.IsMatch(material, "(?i)faserzement")) return "Faserzement";
+        if (Regex.IsMatch(material, "(?i)zement")) return "Zement";
+        if (Regex.IsMatch(material, "(?i)beton")) return "Beton";
+        if (Regex.IsMatch(material, "(?i)steinzeug")) return "Steinzeug";
+        if (Regex.IsMatch(material, "(?i)guss")) return "Guss";
+        if (Regex.IsMatch(material, "(?i)^ton$|(?:^|[_ ])Ton(?:[_ ]|$)")) return "Ton";
 
         material = material.Replace("_", " ").Trim();
         if (material.Length == 0) return "";

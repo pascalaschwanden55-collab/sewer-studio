@@ -7,16 +7,23 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// Charakterisierungstests fuer XtfValueNormalizer.
 /// Deckt das IST-Verhalten der Normalisierungs-Hilfsmethoden ab,
 /// bevor sie aus LegacyXtfImportService extrahiert wurden.
+///
+/// ACHTUNG (2026-07-17): Die Material-Erwartungen wurden bewusst geaendert. Die alten Ausgaben
+/// ("Kunststoff PVC", "Kunststoff PE", "Kunststoff PE-HD") standen nie in der Auswahlliste des
+/// Feldes Rohrmaterial — das Programm zeigte sie darum als leer an, obwohl der Wert gespeichert
+/// war (99 von 330 Haltungen ueber alle Projekte). Der Test hatte das nur festgeschrieben, nicht
+/// geprueft: Er sicherte eine Extraktion ab, nicht die Richtigkeit. Die neuen Erwartungen sind
+/// gegen FieldCatalog geprueft — siehe XtfMaterialNormalizerTests.
 /// </summary>
 public sealed class XtfValueNormalizerTests
 {
     // ===================== NormalizeSiaMaterial =====================
 
     [Theory]
-    [InlineData("Kunststoff_Hartpolyethylen", "Kunststoff PE-HD")]
-    [InlineData("kunststoff_hartpolyethylen", "Kunststoff PE-HD")]
-    [InlineData("Kunststoff_Polyethylen", "Kunststoff PE")]
-    [InlineData("Kunststoff_Polyvinylchlorid", "Kunststoff PVC")]
+    [InlineData("Kunststoff_Hartpolyethylen", "Hartpolyethylen")]
+    [InlineData("kunststoff_hartpolyethylen", "Hartpolyethylen")]
+    [InlineData("Kunststoff_Polyethylen", "Polyethylen")]
+    [InlineData("Kunststoff_Polyvinylchlorid", "Polyvinylchlorid")]
     [InlineData("Beton_Normalbeton", "Beton")]
     [InlineData("Beton_Stahlbeton", "Beton")]
     [InlineData("Steinzeug", "Steinzeug")]
@@ -32,9 +39,17 @@ public sealed class XtfValueNormalizerTests
     [Fact]
     public void NormalizeSiaMaterial_UnknownCode_CapitalizesFirst()
     {
-        // Unbekannte Codes: Unterstriche ersetzen, erstes Zeichen grossschreiben
-        var result = XtfValueNormalizer.NormalizeSiaMaterial("guss_eisen");
-        Assert.Equal("Guss eisen", result);
+        // Unbekannte Codes: Unterstriche ersetzen, erstes Zeichen grossschreiben.
+        // Beispiel bewusst gewechselt: "guss_eisen" trifft heute die Guss-Regel und ist damit
+        // kein unbekannter Code mehr.
+        var result = XtfValueNormalizer.NormalizeSiaMaterial("irgendwas_neues");
+        Assert.Equal("Irgendwas neues", result);
+    }
+
+    [Fact]
+    public void NormalizeSiaMaterial_GussEisen_MapsToSelectableGuss()
+    {
+        Assert.Equal("Guss", XtfValueNormalizer.NormalizeSiaMaterial("guss_eisen"));
     }
 
     // ===================== NormalizeNutzungsart =====================

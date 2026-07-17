@@ -527,7 +527,8 @@ public sealed partial class LegacyXtfImportService
 
             var vonKnoten = ResolveKnotenName(hd.VonRef);
             var nachKnoten = ResolveKnotenName(hd.NachRef);
-            // Inspektionsrichtung wird nicht beim XTF-Import gesetzt, sondern nur beim PDF-Import
+            // Keine Inspektionsrichtung: SIA405 ist der Kataster-Bestand und kennt keine Untersuchung.
+            // Sie kommt aus der VSA-KEK-Untersuchung (<Fliessrichtung>), siehe ParseVsaKek.
 
             var datum = NormalizeDate_yyyymmdd(hd.LetzteAenderung);
             if (!string.IsNullOrWhiteSpace(datum))
@@ -638,6 +639,8 @@ public sealed partial class LegacyXtfImportService
         public string Grund { get; set; } = "";
         public string VonPunkt { get; set; } = "";
         public string BisPunkt { get; set; } = "";
+        /// <summary>Rohwert aus der XTF: "in_Fliessrichtung" / "gegen_Fliessrichtung".</summary>
+        public string Fliessrichtung { get; set; } = "";
         public List<Schaden> Schaeden { get; } = new();
     }
 
@@ -690,6 +693,7 @@ public sealed partial class LegacyXtfImportService
                     case "Grund": u.Grund = child.Value; break;
                     case "vonPunktBezeichnung": u.VonPunkt = child.Value; break;
                     case "bisPunktBezeichnung": u.BisPunkt = child.Value; break;
+                    case "Fliessrichtung": u.Fliessrichtung = child.Value; break;
                 }
             }
 
@@ -926,7 +930,10 @@ public sealed partial class LegacyXtfImportService
             //     rec.SetFieldValue("VSA_Zustandsnote_D", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
             // }
 
-            // Inspektionsrichtung ist in den XTF-Daten nicht enthalten (nur in PDF-Reports)
+            // Inspektionsrichtung aus der Untersuchung (IKAS liefert sie als <Fliessrichtung>).
+            var richtung = XtfValueNormalizer.NormalizeInspectionDirection(u.Fliessrichtung);
+            if (!string.IsNullOrWhiteSpace(richtung))
+                rec.SetFieldValue("Inspektionsrichtung", richtung, FieldSource.Xtf, userEdited: false);
 
             // Bemerkungen mit Inspektionskontext anreichern. VSA_KEK ist Hauptquelle und darf Bemerkungen
             // setzen. Alle verfuegbaren Kontextangaben einbeziehen (nicht nur wenn Erfassungsart da ist),
