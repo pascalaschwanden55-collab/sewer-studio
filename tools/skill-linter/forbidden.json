@@ -1,0 +1,29 @@
+{
+  "_hinweis": "Negativliste fuer den Skill-Linter. Abgeleitet aus docs/SYSTEM-FAKTEN.md, Abschnitt 8. Nur affirmative Nennungen sind Funde; Negation/Meta (niemals, nicht, veraltet, entfernt, existiert nicht, <!-- lint-ok -->) ist erlaubt.",
+  "regeln": [
+    {"id": "pfad-3.1", "regex": "Sewer-StudioKI_3\\.1", "hinweis": "alter Projektpfad -> Sewer-Studio_KI_4.5"},
+    {"id": "pfad-4.0", "regex": "Sewer-Studio_KI_4\\.0", "hinweis": "alter Projektpfad -> 4.5"},
+    {"id": "pfad-4.1", "regex": "Sewer-Studio_KI_4\\.1", "hinweis": "alter Projektpfad -> 4.5"},
+    {"id": "qwen-32b", "regex": "qwen3-vl:32b", "hinweis": "kein 32B-Modell in HEAD"},
+    {"id": "qwen25", "regex": "qwen2\\.5-vl|qwen2\\.5:", "hinweis": "nie qwen2.5 in der Vision-Pipeline"},
+    {"id": "eskalation-32b", "regex": "->\\s*32[bB]|→\\s*32[bB]|32[bB][ -]?(Eskalation|Modell)", "hinweis": "keine automatische 8B->32B-Eskalation"},
+    {"id": "yolo-seg", "regex": "yolo26m-seg", "hinweis": "yolo26m.pt ist Detect, keine Segmentierung"},
+    {"id": "sam3", "regex": "\\bSAM 3\\b", "hinweis": "aktiv ist SAM 2.1 (SAM 3 default aus)"},
+    {"id": "vit_h", "regex": "vit_h", "hinweis": "SAM-1 vit_h entfernt"},
+    {"id": "route-predict", "regex": "/predict/", "hinweis": "echte Route /detect/... oder /classify/..."},
+    {"id": "route-reload", "regex": "/model/reload", "hinweis": "kein Reload-Endpunkt (Sidecar-Neustart)"},
+    {"id": "route-enhance", "regex": "/enhance", "hinweis": "kein /enhance-Endpunkt"},
+    {"id": "route-video", "regex": "/process/video", "hinweis": "kein /process/video-Endpunkt"},
+    {"id": "benchmark-metrics", "regex": "benchmark_metrics\\.json", "hinweis": "existiert nicht (kein Writer)"},
+    {"id": "vsa-codes-json", "regex": "vsa_codes\\.json", "hinweis": "real vsa_kek_2020_catalog_manifest.json"},
+    {"id": "fewshot", "regex": "FewShotExampleStore", "hinweis": "entfernt"},
+    {"id": "detagg", "regex": "DetectionAggregator", "hinweis": "existiert nicht"},
+    {"id": "yolodataset", "regex": "YoloDatasetExportService", "hinweis": "entfernt"},
+    {"id": "benchstore", "regex": "BenchmarkMetricsStore", "hinweis": "existiert nicht"},
+    {"id": "pdfproto", "regex": "PdfProtocolTableParser", "hinweis": "real PdfParser/PdfProtocolExtractor/PrimaryDamageRowParser"},
+    {"id": "pdftxtpath", "regex": "PdfToTextExePath", "hinweis": "real DiagnosticsOptions.ExplicitPdfToTextPath"},
+    {"id": "bytetrack", "regex": "ByteTrack|OC-SORT", "hinweis": "kein Tracking in HEAD"},
+    {"id": "updateactive", "regex": "UpdateActive", "hinweis": "veraltete Dedup-Annahme (TemporalFindingDeduplicator/TemporalCodeVotingService)"},
+    {"id": "mojibake", "regex": "Ã¤|Ã¶|Ã¼|â€“|â€ž|â€œ", "hinweis": "kaputte Zeichencodierung"}
+  ]
+}
