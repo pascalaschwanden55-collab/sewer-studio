@@ -17,6 +17,9 @@
 - **Skills verweisen nur, kopieren nicht.** In allen Merge-/Fix-Aufgaben gilt: Werte aus `SYSTEM-FAKTEN.md`/`CODEBASE-KARTE.md` **verlinken**, nicht duplizieren.
 - Die drei Waechter bleiben gesperrt (STOP-Kopf), bis ihre Verschlankung abgeschlossen, getestet und in einer **neuen Sitzung** freigegeben ist. Ein gruener Linter allein reicht dafuer nicht.
 - **Code und Tests sind massgebend.** `SYSTEM-FAKTEN.md` ist ein code-gepruefter Index, keine eigenstaendige Wahrheit.
+- **`sewer-codequalitaet`-Trigger** muessen auch „Tests schreiben", „Testluecke", „Regression absichern" abdecken — nicht nur Aufraeum-Formulierungen.
+- **`ehrliche-meinung.md`** wird nach `CLAUDE.md` uebernommen und archiviert (sonst wird die 12er-Zaehlung unklar).
+- **Kein Fakten-Kopieren zwischen `CLAUDE.md`, `SYSTEM-FAKTEN.md`, `CODEBASE-KARTE.md`** — veraenderliche Fakten nur gegenseitig verweisen, nie duplizieren.
 
 ---
 
