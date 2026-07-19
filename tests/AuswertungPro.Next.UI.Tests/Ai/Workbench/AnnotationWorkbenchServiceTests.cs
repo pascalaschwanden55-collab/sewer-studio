@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
@@ -144,6 +145,153 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.True(sug.IsBend);
     }
 
+    // ── Aufgabe 3: SaveAsync ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task SaveAsync_GoldenPfad_speichert_Sample_indexiert_und_Teacher_mit_Herkunft()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var teacherStore = new FakeTeacherStore();
+        var classMap = new FakeClassMap();
+        var export = new FakeExportService();
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore, classMap: classMap,
+            exportFactory: () => export, isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "287425-81162", 12.5, 12.5, "287425-81162", @"C:\vid.mpg", 300);
+        var seg = new WorkbenchSegmentation("0,500000", 1000, 500, 0.3, "Maske erstellt.", Degraded: false);
+        var decision = new WorkbenchDecision("BAB", WasCorrected: false, "Riss quer im Scheitel", ClockPosition: 12.0, Severity: 3, ConfirmedByUser: "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, seg, decision);
+
+        Assert.True(result.Saved);
+        Assert.Null(result.RefusalReason);
+        Assert.Equal("Indexed", result.KbIndexState);
+        Assert.NotNull(result.SampleId);
+        Assert.NotNull(result.TeacherAnnotationId);
+
+        // Genau EIN neues Sample mit exakten Gold-Fund-Feldern.
+        var savedBatch = Assert.Single(sampleStore.MergeAndSaveCalls);
+        var sample = Assert.Single(savedBatch);
+        Assert.Equal("BAB", sample.Code);
+        Assert.Equal("Riss quer im Scheitel", sample.Beschreibung);
+        Assert.Equal(TrainingSampleStatus.Approved, sample.Status);
+        Assert.True(sample.HumanConfirmed);
+        Assert.False(sample.Corrected);
+        Assert.Equal(MatchLevelNames.ReviewApproved, sample.MatchLevel);
+        Assert.Equal(SourceTypeNames.ManualCoding, sample.SourceType);
+        Assert.Equal("Green", sample.QualityGateLevel);
+        Assert.Equal("Pascal", sample.ConfirmedByUser);
+        Assert.Equal(TrainingSample.BuildCanonicalSignature("287425-81162", "BAB", 12.5, 12.5), sample.Signature);
+        Assert.Equal(0.5, sample.BboxXCenter);
+        Assert.Equal("0,500000", sample.SamMaskRle);
+        Assert.Equal(1000, sample.SamMaskImageWidth);
+
+        Assert.Equal(1, indexer.IndexCallCount);
+        Assert.Single(sampleStore.MergeOrUpdateCalls);   // KbIndexState-Nachtrag
+
+        // Teacher-Kandidat MIT Herkunft (schliesst die QuarantineOrigin-Luecke).
+        var teacher = Assert.Single(teacherStore.Appended);
+        Assert.Equal("287425-81162", teacher.HaltungName);
+        Assert.Equal(@"C:\vid.mpg", teacher.VideoPath);
+        Assert.Equal("BAB", teacher.VsaCode);
+        Assert.Equal(3, teacher.Severity);
+        Assert.Equal(12.0, teacher.ClockPosition);
+        Assert.Equal(12.5, teacher.MeterPosition);
+        Assert.Equal("BAB", classMap.LastAddedCode);
+        Assert.Equal(@"C:\teacher\crops\wb.png", teacher.CroppedRegionPath);
+        Assert.Equal(1, export.ExportCallCount);
+    }
+
+    [Fact]
+    public async Task SaveAsync_EvalHaltung_wird_abgewiesen_ohne_jeden_Schreibzugriff()
+    {
+        using var evalSet = new TempEvalSet(haltungKey: "287425-81162");
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer();
+        var teacherStore = new FakeTeacherStore();
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore,
+            resolveEvalSetRoot: () => evalSet.Root, isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "287425-81162", 5, 5, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, null, decision);
+
+        Assert.False(result.Saved);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("Eval", result.RefusalReason);
+        Assert.Empty(sampleStore.MergeAndSaveCalls);
+        Assert.Equal(0, indexer.IndexCallCount);
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
+    public async Task SaveAsync_zu_kurze_Beschreibung_wird_vor_allen_Schreibzugriffen_abgewiesen()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer();
+        var teacherStore = new FakeTeacherStore();
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore, isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "kurz", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, null, decision);
+
+        Assert.False(result.Saved);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Empty(sampleStore.MergeAndSaveCalls);
+        Assert.Equal(0, indexer.IndexCallCount);
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
+    public async Task SaveAsync_KbSkip_setzt_KbIndexState_Skipped_via_MergeOrUpdate()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.SkipAll };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, exportFactory: () => new FakeExportService(), isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, null, decision);
+
+        Assert.True(result.Saved);
+        Assert.Equal("Skipped", result.KbIndexState);
+        var updated = Assert.Single(sampleStore.MergeOrUpdateCalls);
+        Assert.Equal(KbIndexState.Skipped, updated[0].KbIndexState);
+    }
+
+    [Fact]
+    public async Task SaveAsync_TeacherFehler_laesst_Sample_bestehen_und_meldet_Warnung()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var teacherStore = new FakeTeacherStore();
+        var export = new FakeExportService { ThrowOnExport = new IOException("Bild nicht lesbar") };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore,
+            exportFactory: () => export, isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, null, decision);
+
+        Assert.True(result.Saved);                         // Sample bleibt gespeichert
+        Assert.Single(sampleStore.MergeAndSaveCalls);
+        Assert.Null(result.TeacherAnnotationId);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("Teacher", result.RefusalReason);  // Warnung im Result-Text
+        Assert.Empty(teacherStore.Appended);
+    }
+
     // ── Hilfen ─────────────────────────────────────────────────────────────
 
     private static SampleRecord Sample(string code)
@@ -159,7 +307,8 @@ public sealed class AnnotationWorkbenchServiceTests
         FakeClassMap? classMap = null,
         Func<string, byte[]>? readFileBytes = null,
         Func<string?>? resolveEvalSetRoot = null,
-        Func<ITrainingAnnotationExportService>? exportFactory = null)
+        Func<ITrainingAnnotationExportService>? exportFactory = null,
+        Func<string, bool>? isCodeKnown = null)
         => new(
             sam ?? new FakeSamSegmentationService(),
             client ?? new FakePipelineClient(),
@@ -170,7 +319,8 @@ public sealed class AnnotationWorkbenchServiceTests
             classMap ?? new FakeClassMap(),
             readFileBytes ?? (_ => new byte[] { 1, 2, 3 }),
             resolveEvalSetRoot ?? (() => null),
-            exportFactory);
+            exportFactory,
+            isCodeKnown);
 
     // ── Fakes ──────────────────────────────────────────────────────────────
 
@@ -252,18 +402,68 @@ public sealed class AnnotationWorkbenchServiceTests
 
     private sealed class FakeIndexer : IKnowledgeBaseIndexer
     {
+        public enum ResultKind { Empty, IndexAll, SkipAll }
+
         public List<TrainingSample> Indexed { get; } = new();
         public int IndexCallCount { get; private set; }
-        public KbIndexOutcome Outcome { get; set; } = KbIndexOutcome.Empty;
+        public ResultKind Mode { get; set; } = ResultKind.IndexAll;
 
         public Task<KbIndexOutcome> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct)
         {
             IndexCallCount++;
             Indexed.AddRange(samples);
-            return Task.FromResult(Outcome);
+            var ids = samples.Select(s => s.SampleId).ToList();
+            KbIndexOutcome outcome = Mode switch
+            {
+                ResultKind.IndexAll => new KbIndexOutcome(ids, new List<string>()),
+                ResultKind.SkipAll => new KbIndexOutcome(new List<string>(), ids),
+                _ => KbIndexOutcome.Empty,
+            };
+            return Task.FromResult(outcome);
         }
 
         public void Deindex(string sampleId) { }
+    }
+
+    private sealed class FakeExportService : ITrainingAnnotationExportService
+    {
+        public TrainingAnnotationResult Result { get; set; } = new()
+        {
+            Success = true,
+            FullFramePath = @"C:\teacher\images\wb.png",
+            CroppedRegionPath = @"C:\teacher\crops\wb.png",
+            YoloAnnotationPath = @"C:\teacher\labels\wb.txt",
+        };
+        public Exception? ThrowOnExport { get; set; }
+        public int ExportCallCount { get; private set; }
+
+        public Task<TrainingAnnotationResult> ExportAsync(
+            string sourceFramePath, NormalizedBoundingBox bbox, string vsaCode, int classId, string baseName, CancellationToken ct = default)
+        {
+            ExportCallCount++;
+            if (ThrowOnExport is not null) throw ThrowOnExport;
+            return Task.FromResult(Result);
+        }
+    }
+
+    /// <summary>Legt ein minimales Eval-Set an (_candidates.json mit haltung_key), das der Guard laedt.</summary>
+    private sealed class TempEvalSet : IDisposable
+    {
+        public string Root { get; }
+
+        public TempEvalSet(string haltungKey)
+        {
+            Root = Path.Combine(Path.GetTempPath(), "wb_evalset_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Root);
+            File.WriteAllText(
+                Path.Combine(Root, "_candidates.json"),
+                "[{\"haltung_key\":\"" + haltungKey + "\"}]");
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(Root, recursive: true); } catch { /* Aufraeumen best effort */ }
+        }
     }
 
     private sealed class FakeTeacherStore : ITeacherAnnotationStore
