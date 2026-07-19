@@ -166,6 +166,35 @@ public sealed class TrainingStudioViewModelTests
         Assert.Contains("dunkel", vm.QualityWarning);
     }
 
+    [Fact]
+    public async Task BoxDrawn_bei_Sidecar_Fehler_zeigt_Meldung_statt_Absturz()
+    {
+        var wb = new FakeWorkbench { SuggestThrows = new InvalidOperationException("Sidecar nicht erreichbar") };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+
+        // Darf NICHT werfen (sonst globaler App-Crash-Dialog).
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.Contains("Sidecar nicht erreichbar", vm.StatusText);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task Accept_bei_Speicher_Fehler_zeigt_Meldung_statt_Absturz()
+    {
+        var wb = new FakeWorkbench { SaveThrows = new InvalidOperationException("Speichern fehlgeschlagen") };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        // Darf NICHT werfen.
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Contains("Speichern fehlgeschlagen", vm.StatusText);
+        Assert.False(vm.IsBusy);
+    }
+
     // ── Fake ───────────────────────────────────────────────────────────────
 
     private sealed class FakeWorkbench : IAnnotationWorkbenchService
@@ -180,6 +209,8 @@ public sealed class TrainingStudioViewModelTests
         public List<WorkbenchDecision> SavedDecisions { get; } = new();
         public List<CancellationToken> SegmentTokens { get; } = new();
         public TaskCompletionSource? SegmentGate { get; set; }
+        public Exception? SuggestThrows { get; set; }
+        public Exception? SaveThrows { get; set; }
 
         public async Task<WorkbenchSegmentation> SegmentAsync(WorkbenchItem item, BoundingBox box, string codeHint, CancellationToken ct = default)
         {
@@ -191,10 +222,12 @@ public sealed class TrainingStudioViewModelTests
         }
 
         public Task<WorkbenchSuggestion> SuggestAsync(WorkbenchItem item, BoundingBox box, CancellationToken ct = default)
-            => Task.FromResult(SugResult);
+            => SuggestThrows is not null ? Task.FromException<WorkbenchSuggestion>(SuggestThrows) : Task.FromResult(SugResult);
 
         public Task<WorkbenchSaveResult> SaveAsync(WorkbenchItem item, BoundingBox box, WorkbenchSegmentation? segmentation, WorkbenchDecision decision, CancellationToken ct = default)
         {
+            if (SaveThrows is not null)
+                return Task.FromException<WorkbenchSaveResult>(SaveThrows);
             SavedDecisions.Add(decision);
             return Task.FromResult(SaveResult);
         }

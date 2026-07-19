@@ -150,6 +150,12 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         {
             // Abgebrochen durch einen neuen Box-Lauf: Zustand nicht uebernehmen.
         }
+        catch (Exception ex)
+        {
+            // Sidecar/Netzwerk/Modellfehler: sichtbare Meldung statt App-Absturz.
+            if (_boxCts == cts)
+                StatusText = $"KI-Vorschlag/Maske nicht moeglich: {ex.Message}";
+        }
         finally
         {
             if (_boxCts == cts)
@@ -241,6 +247,11 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
                 // Abweisung ist immer sichtbar, nie still.
                 StatusText = $"Nicht gespeichert: {result.RefusalReason}";
             }
+        }
+        catch (Exception ex)
+        {
+            // Store-/KB-/Netzwerkfehler: sichtbare Meldung statt App-Absturz.
+            StatusText = $"Nicht gespeichert: {ex.Message}";
         }
         finally
         {
