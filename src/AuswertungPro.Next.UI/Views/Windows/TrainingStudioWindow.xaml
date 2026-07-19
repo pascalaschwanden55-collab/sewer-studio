@@ -41,7 +41,7 @@
                     <Button Content="Fotos laden…" Style="{StaticResource ToolbarButton}"
                             Click="LoadPhotos_Click"/>
                     <Button Content="Warteschlange laden" Style="{StaticResource ToolbarButton}"
-                            Command="{Binding LoadQueueCommand}" Margin="6,0,0,0"/>
+                            Click="LoadReviewQueue_Click" Margin="6,0,0,0"/>
                     <TextBlock Text="Rohr-DN:" VerticalAlignment="Center" Margin="16,0,4,0"
                                Foreground="{DynamicResource MutedBrush}"/>
                     <TextBox Text="{Binding PipeDiameterInput, UpdateSourceTrigger=PropertyChanged}"

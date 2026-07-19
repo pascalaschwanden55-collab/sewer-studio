@@ -22,6 +22,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
+    private readonly WorkbenchQueueService _queueService;
 
     private Point _dragStart;
     private bool _dragging;
@@ -36,7 +37,9 @@ public partial class TrainingStudioWindow : Window
         WindowStateManager.Track(this);
 
         var workbench = TrainingStudioWindowDependencyFactory.Create(services);
-        // Review-Warteschlange ist in Etappe 1 (Aufgabe 5) noch leer; Aufgabe 6 liefert die echte Quelle.
+        _queueService = TrainingStudioWindowDependencyFactory.CreateQueueService(services);
+        // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
+        // der synchrone loadQueue-Delegate bleibt leer.
         _vm = new TrainingStudioViewModel(workbench, () => Array.Empty<WorkbenchItem>(), Environment.UserName);
         DataContext = _vm;
 
@@ -45,7 +48,7 @@ public partial class TrainingStudioWindow : Window
         Closed += (_, _) => _vm.PropertyChanged -= Vm_PropertyChanged;
     }
 
-    // ── Fotoquelle (minimal; Aufgabe 6 lagert dies in den WorkbenchQueueService) ──
+    // ── Quellen: Fotos + Review-Warteschlange (Logik im WorkbenchQueueService) ──
 
     private void LoadPhotos_Click(object sender, RoutedEventArgs e)
     {
@@ -58,20 +61,23 @@ public partial class TrainingStudioWindow : Window
         if (dlg.ShowDialog(this) != true)
             return;
 
-        var stamp = DateTime.Now.ToString("yyyyMMdd");
-        var dn = _vm.PipeDiameterMm;
-        var items = new List<WorkbenchItem>();
-        for (var i = 0; i < dlg.FileNames.Length; i++)
-        {
-            items.Add(new WorkbenchItem(
-                FramePath: dlg.FileNames[i],
-                CaseId: $"foto_{stamp}_{i + 1}",
-                MeterStart: 0, MeterEnd: 0,
-                HaltungName: null, VideoPath: null,
-                PipeDiameterMm: dn));
-        }
-
+        var items = WorkbenchQueueService.BuildPhotoItems(dlg.FileNames, DateTime.Now, _vm.PipeDiameterMm);
         _vm.LoadItems(items);
+    }
+
+    private async void LoadReviewQueue_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var items = await _queueService.LoadReviewQueueAsync();
+            _vm.LoadItems(items);
+            if (items.Count == 0)
+                _vm.StatusText = "Keine offenen Review-Faelle (Yellow/Red, noch nicht beurteilt).";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = $"Warteschlange konnte nicht geladen werden: {ex.Message}";
+        }
     }
 
     // ── Box-Zeichnen (reine Geometrie-Erfassung) ─────────────────────────────

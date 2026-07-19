@@ -67,6 +67,10 @@ internal static class TrainingStudioWindowDependencyFactory
             () => TrainingSamplesStore.EffectiveEvalSetRoot);
     }
 
+    /// <summary>Baut die Quellen (Fotos + Review-Warteschlange) fuer den Pruefplatz.</summary>
+    internal static WorkbenchQueueService CreateQueueService(ServiceProvider? services)
+        => new(services?.TrainingSamples ?? TrainingSamplesStore.Current);
+
     private static TrainingReviewSamSegmentationService CreateDefaultReviewSam()
     {
         var cfg = new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
