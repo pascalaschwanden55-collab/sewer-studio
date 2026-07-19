@@ -137,8 +137,17 @@
                             <TextBlock Text="Codierung" FontWeight="Bold" Margin="0,0,0,6"/>
 
                             <TextBlock Text="VSA-Code (Pflicht)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
-                            <TextBox Text="{Binding SelectedCode, UpdateSourceTrigger=PropertyChanged}"
-                                     FontWeight="Bold" Margin="0,2,0,8"/>
+                            <Grid Margin="0,2,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding SelectedCode}" IsReadOnly="True"
+                                         FontWeight="Bold" VerticalContentAlignment="Center"
+                                         ToolTip="Code ueber den VSA-Katalog waehlen (Knopf rechts)."/>
+                                <Button Grid.Column="1" Content="Codieren… (Katalog)" Style="{StaticResource PrimaryButton}"
+                                        Click="OpenCodeExplorer_Click" Margin="6,0,0,0"/>
+                            </Grid>
 
                             <TextBlock Text="Uhrlage (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
                             <TextBox Text="{Binding ClockPosition, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"

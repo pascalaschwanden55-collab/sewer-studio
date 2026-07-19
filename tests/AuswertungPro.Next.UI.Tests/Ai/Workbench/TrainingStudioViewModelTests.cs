@@ -195,6 +195,20 @@ public sealed class TrainingStudioViewModelTests
         Assert.False(vm.IsBusy);
     }
 
+    [Fact]
+    public void ApplyCodeSelection_uebernimmt_nichtleere_Werte_und_behaelt_Bestehendes()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+        vm.Severity = 2;   // am Pruefplatz gesetzte Stufe
+
+        vm.ApplyCodeSelection("BABBC", 3.0, severity: null);   // Codierfenster liefert keine Stufe
+
+        Assert.Equal("BABBC", vm.SelectedCode);
+        Assert.Equal(3.0, vm.ClockPosition);
+        Assert.Equal(2, vm.Severity);   // bleibt erhalten (nicht mit null ueberschrieben)
+        Assert.False(string.IsNullOrWhiteSpace(vm.Beschreibung));
+    }
+
     // ── Fake ───────────────────────────────────────────────────────────────
 
     private sealed class FakeWorkbench : IAnnotationWorkbenchService

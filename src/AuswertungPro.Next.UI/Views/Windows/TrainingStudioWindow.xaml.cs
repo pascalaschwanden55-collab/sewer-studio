@@ -8,9 +8,11 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.ViewModels.Windows;      // VsaCodeExplorerViewModel
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -23,6 +25,7 @@ public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
     private readonly WorkbenchQueueService _queueService;
+    private readonly ServiceProvider? _services;
 
     private Point _dragStart;
     private bool _dragging;
@@ -36,6 +39,7 @@ public partial class TrainingStudioWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
 
+        _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
         var workbench = TrainingStudioWindowDependencyFactory.Create(services);
         _queueService = TrainingStudioWindowDependencyFactory.CreateQueueService(services);
         // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
@@ -78,6 +82,36 @@ public partial class TrainingStudioWindow : Window
         {
             _vm.StatusText = $"Warteschlange konnte nicht geladen werden: {ex.Message}";
         }
+    }
+
+    // ── VSA-Codierfenster (dasselbe wie im Codiermodus) ──────────────────────
+
+    private void OpenCodeExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = _services?.CodeSelectionCatalog;
+        if (catalog is null)
+        {
+            _vm.StatusText = "VSA-Katalog nicht verfuegbar (kein Codier-Kontext).";
+            return;
+        }
+
+        // Bereits gewaehlten Code als Ausgangswert vorbelegen.
+        var seed = string.IsNullOrWhiteSpace(_vm.SelectedCode)
+            ? null
+            : new ProtocolEntry { Code = _vm.SelectedCode! };
+
+        var explorerVm = new VsaCodeExplorerViewModel(
+            existingEntry: seed, presetMeter: null, presetZeit: null, catalog: catalog);
+
+        var dialog = VsaCodeExplorerDialogServiceFactory.Create();
+        var result = dialog.Show(
+            explorerVm, videoPath: null, currentVideoTime: null, owner: this, liveSnapshotProvider: null);
+
+        if (!result.Accepted || result.SelectedEntry is null)
+            return;
+
+        var selection = WorkbenchCodeSelectionMapper.FromProtocolEntry(result.SelectedEntry);
+        _vm.ApplyCodeSelection(selection.Code, selection.ClockPosition, selection.Severity);
     }
 
     // ── Box-Zeichnen (reine Geometrie-Erfassung) ─────────────────────────────

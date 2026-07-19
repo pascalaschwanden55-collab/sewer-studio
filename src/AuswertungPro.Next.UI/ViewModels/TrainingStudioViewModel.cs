@@ -100,6 +100,21 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
             StatusText = "Keine Bilder geladen.";
     }
 
+    /// <summary>
+    /// Uebernimmt eine Auswahl aus dem VSA-Codierfenster: nicht-leere Werte gewinnen,
+    /// fehlende (null) lassen den bestehenden Pruefplatz-Wert unangetastet.
+    /// </summary>
+    public void ApplyCodeSelection(string? code, double? clockPosition, int? severity)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+            SelectedCode = code;
+        if (clockPosition.HasValue)
+            ClockPosition = clockPosition;
+        if (severity.HasValue)
+            Severity = severity;
+        Beschreibung = BuildBeschreibungVorlage(SelectedCode, ClockPosition);
+    }
+
     [RelayCommand]
     private void LoadQueue()
     {
