@@ -1,0 +1,239 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingStudioWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+        Title="Training Studio — Pruefplatz (Vorschau)"
+        Height="900" Width="1500"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Window.Resources>
+        <local:FileToImageConverter x:Key="FileToImage"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Key="A" Command="{Binding AcceptCommand}"/>
+        <KeyBinding Key="K" Command="{Binding CorrectCommand}"/>
+        <KeyBinding Key="V" Command="{Binding DiscardCommand}"/>
+        <KeyBinding Key="Right" Command="{Binding NextItemCommand}"/>
+        <KeyBinding Key="Left" Command="{Binding PreviousItemCommand}"/>
+    </Window.InputBindings>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ── Kopfzeile: Quellen + Fortschritt ───────────────────────────── -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                Padding="12,8" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="Fotos laden…" Style="{StaticResource ToolbarButton}"
+                            Click="LoadPhotos_Click"/>
+                    <Button Content="Warteschlange laden" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding LoadQueueCommand}" Margin="6,0,0,0"/>
+                    <TextBlock Text="Rohr-DN:" VerticalAlignment="Center" Margin="16,0,4,0"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBox Text="{Binding PipeDiameterInput, UpdateSourceTrigger=PropertyChanged}"
+                             Width="60" VerticalContentAlignment="Center"
+                             ToolTip="Optionaler Rohrdurchmesser in mm (leer = 300 mm Standard)."/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold"
+                           Text="{Binding CurrentImagePath, TargetNullValue='Keine Warteschlange geladen'}"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Geprueft:" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding QueueDoneCount}" Margin="4,0,0,0" FontWeight="Bold"
+                               Foreground="{DynamicResource SuccessBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ── Hauptbereich: Bild links, Codier-Panel rechts ──────────────── -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Bild + Box/Masken-Overlay -->
+            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    Padding="6" Margin="0,0,8,0">
+                <Grid>
+                    <Image x:Name="FrameImage" Stretch="Uniform"
+                           Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}}"/>
+                    <!-- Overlay: Box-Zeichnen + Maskenkontur (Code-behind, reine Geometrie) -->
+                    <Canvas x:Name="OverlayCanvas" Background="Transparent"
+                            MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
+                            MouseMove="OverlayCanvas_MouseMove"
+                            MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"/>
+                    <TextBlock Text="Ziehe mit der Maus eine Box um den Schaden."
+                               HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
+                               Foreground="{DynamicResource MutedBrush}" FontStyle="Italic"
+                               IsHitTestVisible="False"/>
+                </Grid>
+            </Border>
+
+            <!-- Codier-Panel -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- KI-Vorschlag -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="12,10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="KI-Vorschlag" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <Border Background="{DynamicResource WarningBrush}" CornerRadius="4" Padding="8,4"
+                                    Margin="0,0,0,6"
+                                    Visibility="{Binding ShowQualityWarning, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding QualityWarning}" Foreground="White" TextWrapping="Wrap"/>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding Suggestion.Candidates}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,2" HorizontalContentAlignment="Stretch"
+                                                Command="{Binding DataContext.SelectCodeCommand,
+                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding VsaCode}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding VsaCode}" FontWeight="Bold"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Confidence, StringFormat={}{0:P0}}"
+                                                           HorizontalAlignment="Right" Margin="8,0"
+                                                           Foreground="{DynamicResource MutedBrush}"/>
+                                                <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}"
+                                                        CornerRadius="3" Padding="5,1">
+                                                    <TextBlock Text="{Binding Quelle}" FontSize="10"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                </Border>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Codierung -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="12,10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Codierung" FontWeight="Bold" Margin="0,0,0,6"/>
+
+                            <TextBlock Text="VSA-Code (Pflicht)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBox Text="{Binding SelectedCode, UpdateSourceTrigger=PropertyChanged}"
+                                     FontWeight="Bold" Margin="0,2,0,8"/>
+
+                            <TextBlock Text="Uhrlage (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBox Text="{Binding ClockPosition, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                     Margin="0,2,0,8"/>
+
+                            <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                                <Button Content="1" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
+                                        Foreground="White" FontWeight="Bold"
+                                        Command="{Binding SetSeverityCommand}" CommandParameter="1"/>
+                                <Button Content="2" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
+                                        Foreground="White" FontWeight="Bold"
+                                        Command="{Binding SetSeverityCommand}" CommandParameter="2"/>
+                                <Button Content="3" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
+                                        Foreground="White" FontWeight="Bold"
+                                        Command="{Binding SetSeverityCommand}" CommandParameter="3"/>
+                                <Button Content="4" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
+                                        Foreground="White" FontWeight="Bold"
+                                        Command="{Binding SetSeverityCommand}" CommandParameter="4"/>
+                                <Button Content="5" Width="40" Background="{DynamicResource Severity5Brush}"
+                                        Foreground="White" FontWeight="Bold"
+                                        Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Severity, StringFormat='Gewaehlt: Stufe {0}', TargetNullValue='Keine Stufe gewaehlt'}"
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Beschreibung (mind. 10 Zeichen)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBox Text="{Binding Beschreibung, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap" AcceptsReturn="True" MinHeight="52" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Aktionen -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="12,10">
+                        <StackPanel>
+                            <Button Content="Akzeptieren (A)" Style="{StaticResource SuccessButton}"
+                                    Command="{Binding AcceptCommand}" Margin="0,0,0,6"/>
+                            <Button Content="Korrigieren (K)" Style="{StaticResource PrimaryButton}"
+                                    Command="{Binding CorrectCommand}" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="Verwerfen (V)" Style="{StaticResource ToolbarButtonDanger}"
+                                        Command="{Binding DiscardCommand}" Margin="0,0,4,0"/>
+                                <Button Grid.Column="1" Content="Naechstes (→)" Style="{StaticResource ToolbarButton}"
+                                        Command="{Binding NextItemCommand}" Margin="4,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ── Warteschlange (Thumbnails) ─────────────────────────────────── -->
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                Padding="8" Margin="0,8,0,0" MaxHeight="96">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="4"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}}"
+                                       Stretch="UniformToFill"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ── Statuszeile ────────────────────────────────────────────────── -->
+        <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                Padding="12,6" Margin="0,8,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="Arbeitet…" Foreground="{DynamicResource AccentBrush}"
+                           FontWeight="SemiBold" VerticalAlignment="Center"
+                           Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -112,6 +112,60 @@ public sealed class TrainingStudioViewModelTests
         await Task.WhenAll(first, second);
     }
 
+    [Fact]
+    public void LoadItems_setzt_Liste_und_zeigt_erstes_Bild()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+
+        vm.LoadItems(new[] { Foto(@"C:\x.jpg"), Foto(@"C:\y.jpg") });
+
+        Assert.Equal(2, vm.Items.Count);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\x.jpg", vm.CurrentImagePath);
+    }
+
+    [Fact]
+    public void SetSeverity_uebernimmt_gueltige_Stufe_und_ignoriert_Unfug()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+
+        vm.SetSeverityCommand.Execute("3");
+        Assert.Equal(3, vm.Severity);
+
+        vm.SetSeverityCommand.Execute("9");     // ausserhalb 1..5
+        Assert.Equal(3, vm.Severity);
+
+        vm.SetSeverityCommand.Execute("abc");   // kein int
+        Assert.Equal(3, vm.Severity);
+    }
+
+    [Fact]
+    public void SelectCode_uebernimmt_Kandidatencode()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+
+        vm.SelectCodeCommand.Execute("BAB");
+
+        Assert.Equal("BAB", vm.SelectedCode);
+    }
+
+    [Fact]
+    public async Task BoxDrawn_mit_unbrauchbarem_Frame_zeigt_QualityWarning()
+    {
+        var wb = new FakeWorkbench
+        {
+            SugResult = new WorkbenchSuggestion(
+                Array.Empty<WorkbenchCodeCandidate>(), FrameUsable: false, "zu dunkel", IsBend: false),
+        };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.True(vm.ShowQualityWarning);
+        Assert.Contains("dunkel", vm.QualityWarning);
+    }
+
     // ── Fake ───────────────────────────────────────────────────────────────
 
     private sealed class FakeWorkbench : IAnnotationWorkbenchService

@@ -49,7 +49,12 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     [ObservableProperty] private string? _currentImagePath;
     [ObservableProperty] private BoundingBox? _currentBox;
     [ObservableProperty] private WorkbenchSegmentation? _segmentation;
-    [ObservableProperty] private WorkbenchSuggestion? _suggestion;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowQualityWarning))]
+    [NotifyPropertyChangedFor(nameof(QualityWarning))]
+    private WorkbenchSuggestion? _suggestion;
+
     [ObservableProperty] private string? _selectedCode;
     [ObservableProperty] private string _beschreibung = string.Empty;
     [ObservableProperty] private double? _clockPosition;
@@ -58,9 +63,42 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private int _queueDoneCount;
 
+    /// <summary>Optionaler Rohrdurchmesser in mm fuer neu geladene Fotos (leer = 300-mm-Default).</summary>
+    [ObservableProperty] private string _pipeDiameterInput = string.Empty;
+
     /// <summary>Aktuell angezeigtes Item (oder null, wenn die Warteschlange leer/abgearbeitet ist).</summary>
     public WorkbenchItem? CurrentItem =>
         CurrentIndex >= 0 && CurrentIndex < Items.Count ? Items[CurrentIndex] : null;
+
+    /// <summary>true = Sidecar meldet unbrauchbaren Frame oder Bogen-Veto (Warnhinweis anzeigen).</summary>
+    public bool ShowQualityWarning => Suggestion is not null && (!Suggestion.FrameUsable || Suggestion.IsBend);
+
+    /// <summary>Warntext zu Frame-Qualitaet/Bogen (leer, wenn keine Warnung).</summary>
+    public string QualityWarning
+    {
+        get
+        {
+            if (Suggestion is null) return string.Empty;
+            if (!Suggestion.FrameUsable) return $"Frame nicht verwertbar: {Suggestion.QualityReason}";
+            if (Suggestion.IsBend) return "Bogen erkannt — hier kein BCE (Rohrende) codieren.";
+            return string.Empty;
+        }
+    }
+
+    /// <summary>Optionaler Rohrdurchmesser als Zahl (null, wenn leer/ungueltig → Service nutzt 300 mm).</summary>
+    public int? PipeDiameterMm =>
+        int.TryParse(PipeDiameterInput, out var dn) && dn > 0 ? dn : null;
+
+    /// <summary>Uebernimmt eine extern erzeugte Item-Liste (z. B. Fotos aus dem Dateidialog).</summary>
+    public void LoadItems(IReadOnlyList<WorkbenchItem> items)
+    {
+        Items = new ObservableCollection<WorkbenchItem>(items);
+        CurrentIndex = Items.Count > 0 ? 0 : -1;
+        QueueDoneCount = 0;
+        ResetForCurrent();
+        if (Items.Count == 0)
+            StatusText = "Keine Bilder geladen.";
+    }
 
     [RelayCommand]
     private void LoadQueue()
@@ -135,6 +173,19 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         Beschreibung = string.Empty;
         StatusText = "Markierung verworfen.";
     }
+
+    /// <summary>Uebernimmt einen Vorschlags-Code als aktuellen Code (Klick auf Kandidat).</summary>
+    [RelayCommand]
+    private void SelectCode(string? code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+            SelectedCode = code;
+    }
+
+    /// <summary>Setzt die Schadensstufe (1..5) aus dem Button-Parameter; sonst keine Aenderung.</summary>
+    [RelayCommand]
+    private void SetSeverity(string? level)
+        => Severity = int.TryParse(level, out var s) && s is >= 1 and <= 5 ? s : Severity;
 
     [RelayCommand]
     private void NextItem()

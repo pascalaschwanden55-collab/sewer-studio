@@ -101,6 +101,12 @@
                             <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="KI Videoanalyse – Training Studio (Vorschau)..." Click="OpenTrainingStudio_Click"
+                              ToolTip="Neuer Pruefplatz (Etappe 1): Foto laden, Box ziehen, Maske, KI-Vorschlag, codieren.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource AccentBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="Karte..." Click="OpenKarte_Click"
                               ToolTip="Kartenansicht in einem eigenen Fenster oeffnen.">
                         <MenuItem.Icon>

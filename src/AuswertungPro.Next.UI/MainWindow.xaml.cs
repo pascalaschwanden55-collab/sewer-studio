@@ -160,6 +160,12 @@ public partial class MainWindow : Window
         window.Show();
     }
 
+    private void OpenTrainingStudio_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new TrainingStudioWindow(GetServiceProvider()) { Owner = this };
+        window.Show();
+    }
+
     private async void StartAi_Click(object sender, RoutedEventArgs e)
     {
         var sp = GetServiceProvider();
