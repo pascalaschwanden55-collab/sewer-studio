@@ -110,7 +110,8 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 },
                 InferenceTimeMs: 1,
                 Usable: true,
-                QualityReason: "ok"));
+                QualityReason: "ok",
+                ClassifierLoaded: true));
     }
 
     /// <summary>Sidecar tot: YOLO wirft bei jedem Frame (befund-2: Totalausfall mitten im Video).</summary>

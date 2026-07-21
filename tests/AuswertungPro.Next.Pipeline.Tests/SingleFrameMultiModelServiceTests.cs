@@ -53,7 +53,8 @@ public sealed class SingleFrameMultiModelServiceTests
             "usable": true,
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
-            "model_source": "active.json"
+            "model_source": "active.json",
+            "classifier_loaded": true
         }
         """);
         var client = new VisionPipelineClient(
@@ -92,6 +93,7 @@ public sealed class SingleFrameMultiModelServiceTests
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
             "model_source": "active.json",
+            "classifier_loaded": true,
             "is_bend": true,
             "bend_shift": 0.13
         }
@@ -127,6 +129,7 @@ public sealed class SingleFrameMultiModelServiceTests
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
             "model_source": "active.json",
+            "classifier_loaded": true,
             "is_bend": true,
             "bend_shift": 0.18
         }
@@ -200,7 +203,8 @@ public sealed class SingleFrameMultiModelServiceTests
             "usable": true,
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
-            "model_source": "active.json"
+            "model_source": "active.json",
+            "classifier_loaded": true
         }
         """);
         var client = new VisionPipelineClient(
@@ -236,7 +240,8 @@ public sealed class SingleFrameMultiModelServiceTests
             "usable": true,
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
-            "model_source": "active.json"
+            "model_source": "active.json",
+            "classifier_loaded": true
         }
         """);
         var client = new VisionPipelineClient(
@@ -270,7 +275,8 @@ public sealed class SingleFrameMultiModelServiceTests
             "usable": true,
             "quality_reason": "ok",
             "model_name": "vsa_cls_v5_nocrop",
-            "model_source": "active.json"
+            "model_source": "active.json",
+            "classifier_loaded": true
         }
         """);
         var client = new VisionPipelineClient(
@@ -314,7 +320,8 @@ public sealed class SingleFrameMultiModelServiceTests
                     "usable": true,
                     "quality_reason": "ok",
                     "model_name": "vsa_cls_v5_nocrop",
-                    "model_source": "active.json"
+                    "model_source": "active.json",
+                    "classifier_loaded": true
                 }
                 """,
                 "/detect/yolo" => """

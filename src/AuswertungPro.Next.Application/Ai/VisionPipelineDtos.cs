@@ -103,10 +103,10 @@ public sealed record YoloClassifyResponse(
     // Modell-Governance (active.json-Weg): welches cls-Modell hat geantwortet
     [property: JsonPropertyName("model_name")] string ModelName = "",
     [property: JsonPropertyName("model_source")] string ModelSource = "",
-    // TODO (AP-6, Sidecar-Haertung): Default auf false umstellen (fail-closed wie der Sidecar,
-    // schemas/detection.py: classifier_loaded=False). Erfordert Anpassung mehrerer Klassifikator-
-    // Test-Fixtures, die einen geladenen Klassifikator simulieren, das Feld aber nicht setzen.
-    [property: JsonPropertyName("classifier_loaded")] bool ClassifierLoaded = true,
+    // Fail-closed wie der Sidecar (schemas/detection.py: classifier_loaded=False als Default):
+    // Fehlt das Feld in einer Antwort (aelterer/fremder Sidecar), gilt der Klassifikator als
+    // NICHT geladen, statt faelschlich Klassifikator-Codes anzuwenden.
+    [property: JsonPropertyName("classifier_loaded")] bool ClassifierLoaded = false,
     [property: JsonPropertyName("model_sha256")] string ModelSha256 = "",
     [property: JsonPropertyName("imgsz")] int Imgsz = 0,
     [property: JsonPropertyName("preprocessing")] string Preprocessing = "",
