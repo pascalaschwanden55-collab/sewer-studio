@@ -615,6 +615,21 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         HasPersistedProject = true;
 
         ReplaceProject(loaded);
+
+        // Absturzsichere Import-Transaktion: Wurde ein Import durch einen Prozess-Absturz
+        // unterbrochen, wird er beim Laden zurueckgenommen bzw. aufgeraeumt (Alles-oder-nichts).
+        var importRecoveryRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(path);
+        if (!string.IsNullOrWhiteSpace(importRecoveryRoot))
+        {
+            var importRecovery = _sp.ImportTransactionRecovery.RecoverIfNeeded(
+                importRecoveryRoot, loaded.LastCommittedImportTxId);
+            if (importRecovery.Outcome != AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.None
+                && !string.IsNullOrWhiteSpace(importRecovery.Message))
+            {
+                SetStatus(importRecovery.Message);
+            }
+        }
+
         if (Project.Dirty && !TrySaveProject())
         {
             SetStatus($"Geladen mit ungespeicherter Reparatur: {Path.GetFileName(path)}");
