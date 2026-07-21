@@ -19,8 +19,10 @@ public class VisionPipelineClientTests
     [Fact]
     public async Task HealthCheckAsync_UnreachableHost_ReturnsNull()
     {
-        // Use a port that is almost certainly not listening
-        var client = new VisionPipelineClient(new Uri("http://127.0.0.1:19999"));
+        // Stub-Handler statt echter TCP-Verbindung: ein "vermutlich freier" Port ist unzuverlaessig
+        // (fremder Dienst -> falsches Ergebnis; DROP-Firewall -> Blockade bis 15-Min-Timeout).
+        var http = new HttpClient(new ThrowingHandler(new HttpRequestException("connection refused")));
+        var client = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), http, sidecarToken: "t");
 
         var result = await client.HealthCheckAsync(CancellationToken.None);
 
