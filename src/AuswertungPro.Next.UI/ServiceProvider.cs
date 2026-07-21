@@ -715,6 +715,11 @@ namespace AuswertungPro.Next.UI
         public IQuickScanSession CreateQuickScanSession(AiRuntimeSettings cfg)
             => QuickScanSession.Create(cfg, ProcessOutputs);
 
+        // Baut den regelbasierten Plausibilitaetsdienst aus einer laufzeit-spezifischen
+        // Codemenge; haelt das new der Infrastruktur-Regelklasse im Composition-Root statt in der UI.
+        public IAiSuggestionPlausibilityService CreatePlausibility(IReadOnlySet<string> allowedCodes)
+            => new RuleBasedAiSuggestionPlausibilityService(allowedCodes);
+
         // ── Schattenauswertung: eigenstaendige Parallel-Auswertung (nur lesend) ──
         // Ergebnis-Ablage als eigene Datei im Projektordner, nie in projekt.json.
         public AuswertungPro.Next.Application.Schatten.ISchattenAuswertungStore SchattenStore { get; }

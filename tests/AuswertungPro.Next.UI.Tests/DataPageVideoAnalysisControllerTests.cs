@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
 using System.Net.Http;
@@ -208,6 +209,7 @@ public sealed class DataPageVideoAnalysisControllerTests
         Func<HaltungRecord, string?>? ensureVideoPath = null,
         Func<IReadOnlyList<string>?>? getAllowedCodes = null,
         Func<AiRuntimeSettings>? loadRuntimeSettings = null,
+        Func<IReadOnlySet<string>, IAiSuggestionPlausibilityService>? createPlausibility = null,
         Func<AiRuntimeSettings, IAiSuggestionPlausibilityService, HttpClient, IVideoAnalysisPipelineService>? createPipeline = null,
         Func<PipelineRequest, IVideoAnalysisPipelineService, PipelineResult?>? showPipelineWindow = null,
         Func<HaltungRecord, bool>? isSelected = null,
@@ -222,6 +224,7 @@ public sealed class DataPageVideoAnalysisControllerTests
             ensureVideoPath ?? (_ => "C:\\Videos\\haltung.mp4"),
             getAllowedCodes ?? (() => new[] { "BAA", "BAB" }),
             loadRuntimeSettings ?? (() => Settings(enabled: true)),
+            createPlausibility ?? (set => new RuleBasedAiSuggestionPlausibilityService(set)),
             createPipeline ?? ((_, _, _) => new NoopPipeline()),
             showPipelineWindow ?? ((_, _) => null),
             isSelected ?? (_ => false),

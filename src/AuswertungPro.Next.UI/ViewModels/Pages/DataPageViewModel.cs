@@ -335,6 +335,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             EnsureVideoPath,
             () => _codeCatalog.AllowedCodes(),
             () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
+            services.CreatePlausibility,
             _videoAnalysisPipelineFactory.Create,
             _windows.ShowVideoAnalysis,
             record => Selected?.Id == record.Id,

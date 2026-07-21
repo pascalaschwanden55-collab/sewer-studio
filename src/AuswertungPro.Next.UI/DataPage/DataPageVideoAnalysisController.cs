@@ -16,6 +16,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
     private readonly Func<HaltungRecord, string?> _ensureVideoPath;
     private readonly Func<IReadOnlyList<string>?> _getAllowedCodes;
     private readonly Func<AiRuntimeSettings> _loadRuntimeSettings;
+    private readonly Func<IReadOnlySet<string>, IAiSuggestionPlausibilityService> _createPlausibility;
     private readonly Func<AiRuntimeSettings, IAiSuggestionPlausibilityService, HttpClient, IVideoAnalysisPipelineService> _createPipeline;
     private readonly Func<PipelineRequest, IVideoAnalysisPipelineService, PipelineResult?> _showPipelineWindow;
     private readonly Func<HaltungRecord, bool> _isSelected;
@@ -32,6 +33,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
         Func<HaltungRecord, string?> ensureVideoPath,
         Func<IReadOnlyList<string>?> getAllowedCodes,
         Func<AiRuntimeSettings> loadRuntimeSettings,
+        Func<IReadOnlySet<string>, IAiSuggestionPlausibilityService> createPlausibility,
         Func<AiRuntimeSettings, IAiSuggestionPlausibilityService, HttpClient, IVideoAnalysisPipelineService> createPipeline,
         Func<PipelineRequest, IVideoAnalysisPipelineService, PipelineResult?> showPipelineWindow,
         Func<HaltungRecord, bool> isSelected,
@@ -46,6 +48,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
         _ensureVideoPath = ensureVideoPath ?? throw new ArgumentNullException(nameof(ensureVideoPath));
         _getAllowedCodes = getAllowedCodes ?? throw new ArgumentNullException(nameof(getAllowedCodes));
         _loadRuntimeSettings = loadRuntimeSettings ?? throw new ArgumentNullException(nameof(loadRuntimeSettings));
+        _createPlausibility = createPlausibility ?? throw new ArgumentNullException(nameof(createPlausibility));
         _createPipeline = createPipeline ?? throw new ArgumentNullException(nameof(createPipeline));
         _showPipelineWindow = showPipelineWindow ?? throw new ArgumentNullException(nameof(showPipelineWindow));
         _isSelected = isSelected ?? throw new ArgumentNullException(nameof(isSelected));
@@ -84,7 +87,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
             : TimeSpan.FromMinutes(30);
         var http = GetOrCreateHttpClient(timeout);
         var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
-        var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
+        var plausibility = _createPlausibility(allowedSet);
         var pipeline = _createPipeline(cfg, plausibility, http);
         var request = BuildRequest(record, videoPath, allowedCodes);
         var result = _showPipelineWindow(request, pipeline);
