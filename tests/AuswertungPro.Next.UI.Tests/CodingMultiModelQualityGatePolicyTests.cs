@@ -7,8 +7,10 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingMultiModelQualityGatePolicyTests
 {
     [Fact]
-    public void Evaluate_without_service_uses_existing_yellow_fallback()
+    public void Evaluate_without_service_uses_honest_red_fallback()
     {
+        // Ohne QualityGate gibt es keine echte Bewertung -> ehrlich Rot (konsistent zur
+        // CodingLiveFindingQualityGatePolicy), nicht DINO-Confidence als Pseudo-Gelb.
         var result = CodingMultiModelQualityGatePolicy.Evaluate(
             qualityGate: null,
             yoloMaxConfidence: null,
@@ -16,9 +18,9 @@ public sealed class CodingMultiModelQualityGatePolicyTests
             samMaskConfidence: 0.61,
             officialLabel: "Riss");
 
-        Assert.Equal(0.72, result.CompositeConfidence);
-        Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
-        Assert.Equal("Multi-Model", result.Explanation);
+        Assert.Equal(0.0, result.CompositeConfidence);
+        Assert.Equal(TrafficLight.Red, result.TrafficLight);
+        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
         Assert.Empty(result.WeightsUsed);
     }
 
