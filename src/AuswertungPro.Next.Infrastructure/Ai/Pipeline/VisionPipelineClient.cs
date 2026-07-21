@@ -15,10 +15,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// HTTP client for the Python FastAPI Vision Sidecar.
 /// Pattern mirrors OllamaClient – simple, typed HTTP calls.
 /// </summary>
-public sealed class VisionPipelineClient : IVisionPipelineClient
+public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
 {
     public const string ExpectedSidecarVersion = "1.2.0";
     private readonly HttpClient _http;
+    private readonly bool _ownsHttp;
     private readonly Uri _baseUri;
     private readonly string? _sidecarToken;
     private readonly bool _sendSidecarToken;
@@ -38,10 +39,18 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         Uri baseUri,
         HttpClient? httpClient,
         string? sidecarToken,
-        ISidecarTelemetryWriter telemetry)
+        ISidecarTelemetryWriter telemetry,
+        TimeSpan? ownedTimeout = null)
     {
         _baseUri = baseUri;
-        _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        // Besitz-Regel wie OllamaClient: nur ein SELBST erzeugter HttpClient wird bei Dispose
+        // freigegeben. Ein injizierter (geteilter) Client — z. B. der nach Timeout gecachte
+        // Client des VideoAnalysisPipelineService — bleibt unangetastet.
+        _ownsHttp = httpClient is null;
+        _http = httpClient ?? new HttpClient
+        {
+            Timeout = ownedTimeout is { } t && t > TimeSpan.Zero ? t : TimeSpan.FromMinutes(15)
+        };
         _telemetry = telemetry ?? throw new ArgumentNullException(nameof(telemetry));
         // KEIN _http.BaseAddress setzen: BuildUri() erzeugt immer absolute URIs. Ein gesetztes
         // BaseAddress auf einem GETEILTEN HttpClient (VideoAnalysisPipelineService nutzt fuer
@@ -51,6 +60,12 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         _sidecarToken = _sendSidecarToken
             ? SidecarTokenResolver.Resolve(sidecarToken)
             : null;
+    }
+
+    public void Dispose()
+    {
+        if (_ownsHttp)
+            _http.Dispose();
     }
 
     /// <summary>

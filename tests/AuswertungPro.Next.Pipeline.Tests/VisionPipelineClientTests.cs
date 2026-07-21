@@ -64,6 +64,37 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task Dispose_laesst_geteilten_HttpClient_unberuehrt()
+    {
+        // VideoAnalysisPipelineService teilt EINEN HttpClient ueber mehrere VisionPipelineClients.
+        // Dispose eines Clients darf den geteilten (injizierten) HttpClient NICHT freigeben.
+        var shared = new HttpClient(new CaptureHandler("""{"status":"ok","version":"1.1.0","gpu":null}"""));
+        var client = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared);
+
+        client.Dispose();
+
+        // Der geteilte Client bleibt voll funktionsfaehig (ein disposter Client wuerde beim
+        // HealthCheck eine ObjectDisposedException werfen -> health waere null).
+        var health = await new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared).HealthCheckAsync();
+        Assert.NotNull(health);
+        shared.Dispose();
+    }
+
+    [Fact]
+    public async Task Dispose_gibt_selbst_erzeugten_HttpClient_frei()
+    {
+        // Wird KEIN HttpClient injiziert, besitzt der Client seinen internen und gibt ihn frei.
+        var client = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), httpClient: null);
+        var http = (HttpClient)typeof(VisionPipelineClient)
+            .GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(client)!;
+
+        client.Dispose();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => http.GetAsync("http://127.0.0.1:8100"));
+    }
+
+    [Fact]
     public async Task DetectYoloAsync_Transportfehler_wird_als_SidecarUnavailableException_gemeldet()
     {
         var http = new HttpClient(new ThrowingHandler(new HttpRequestException("connection refused")));
