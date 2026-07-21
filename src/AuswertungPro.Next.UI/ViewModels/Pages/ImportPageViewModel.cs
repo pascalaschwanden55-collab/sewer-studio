@@ -13,6 +13,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Projects.IProjectRepository _projects;
+    private readonly AuswertungPro.Next.Application.Projects.IProjectContentSignature _contentSignature;
     private readonly IImportRunReportExporter _importRunReports;
     private readonly Services.ImportManualWorkflowController _manualWorkflowController;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
@@ -63,6 +64,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var dialogs = sp.Dialogs;
         _settings = sp.Settings;
         _projects = sp.Projects;
+        _contentSignature = sp.ProjectContentSignature;
         _importRunReports = sp.ImportRunReports;
         var oneClickImporter = sp.CreateOneClickProjectImportService();
         var resolvedCatalogPath = sp.VsaCatalogResolvedPath;
@@ -210,7 +212,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             GetDetailsText: () => DetailsText,
             SetDetailsText: value => DetailsText = value,
             SetLastReportPath: _reportNavigationController.SetLastReportPath,
-            CollectionLock: _shell.CollectionLock);
+            CollectionLock: _shell.CollectionLock,
+            ComputeSignature: _contentSignature.Compute);
 
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
     {

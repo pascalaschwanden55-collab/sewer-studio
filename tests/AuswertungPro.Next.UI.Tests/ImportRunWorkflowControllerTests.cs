@@ -680,6 +680,42 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.False(staging.Accepted);
     }
 
+    [Fact]
+    public async Task RunAsync_live_edit_during_import_discards_result()
+    {
+        // U4: Der Nutzer bearbeitet dasselbe Projekt (gleiche Instanz, gleicher Pfad) waehrend
+        // des Imports. Die Content-Signatur weicht beim finalen Check ab -> Ergebnis wird NICHT
+        // uebernommen, die manuellen Aenderungen bleiben erhalten.
+        var project = new Project { Name = "Original" };
+        var edited = false;
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) =>
+            {
+                // Simuliert eine Nutzerbearbeitung waehrend des laufenden Imports.
+                edited = true;
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                computeSignature: _ => edited ? "nach-edit" : "vor-import"),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Null(state.ReplacedProject);
+        Assert.Contains("waehrend des Imports bearbeitet", state.Summary);
+    }
+
     private static ImportRunWorkflowActions Actions(
         Project project,
         UiState state,
@@ -690,7 +726,8 @@ public sealed class ImportRunWorkflowControllerTests
         Func<Project>? getProject = null,
         Func<string?>? getProjectPath = null,
         Func<bool>? saveProject = null,
-        Func<string?>? getReportDir = null)
+        Func<string?>? getReportDir = null,
+        Func<Project, string>? computeSignature = null)
         => new(
             GetProject: getProject ?? (() => project),
             GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
@@ -733,7 +770,10 @@ public sealed class ImportRunWorkflowControllerTests
             GetDetailsText: () => state.Details,
             SetDetailsText: value => state.Details = value,
             SetLastReportPath: value => state.LastReportPath = value,
-            CollectionLock: new object());
+            CollectionLock: new object(),
+            // Standard: stabile Signatur -> kein U4-Konflikt. Der U4-Test uebergibt eine
+            // veraenderliche Signatur.
+            ComputeSignature: computeSignature ?? (_ => "sig"));
 
     private sealed class UiState
     {

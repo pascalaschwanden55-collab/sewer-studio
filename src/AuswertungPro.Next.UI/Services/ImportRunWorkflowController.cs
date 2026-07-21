@@ -38,7 +38,10 @@ public sealed record ImportRunWorkflowActions(
     Func<string> GetDetailsText,
     Action<string> SetDetailsText,
     Action<string> SetLastReportPath,
-    object? CollectionLock = null);
+    object? CollectionLock = null,
+    // Inhalts-Signatur des Live-Projekts (U4). Null = keine Signaturpruefung (Abwaertskompatibilitaet
+    // fuer Tests, die den Konfliktschutz nicht betreffen).
+    Func<Project, string>? ComputeSignature = null);
 
 public static class ImportRunWorkflowController
 {
@@ -50,9 +53,11 @@ public static class ImportRunWorkflowController
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(actions);
 
+        var liveProject = actions.GetProject();
         var projectSnapshot = new ActiveProjectSnapshot(
-            actions.GetProject(),
-            NormalizeProjectPath(actions.GetProjectPath()));
+            liveProject,
+            NormalizeProjectPath(actions.GetProjectPath()),
+            actions.ComputeSignature?.Invoke(liveProject) ?? string.Empty);
         var initialReportDirectory = actions.GetReportDir();
         return RunCoreAsync(
             request,
@@ -226,7 +231,9 @@ public static class ImportRunWorkflowController
                 }
             }
 
-            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+            // Finaler Check unmittelbar vor der Uebernahme: hier zusaetzlich die Inhalts-Signatur
+            // pruefen (U4 — Live-Edit waehrend des Imports).
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot, checkContentSignature: true))
                 return;
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -357,7 +364,8 @@ public static class ImportRunWorkflowController
         string label,
         ImportRunWorkflowActions actions,
         ImportRunLog runLog,
-        ActiveProjectSnapshot projectSnapshot)
+        ActiveProjectSnapshot projectSnapshot,
+        bool checkContentSignature = false)
     {
         var projectIsUnchanged = ReferenceEquals(actions.GetProject(), projectSnapshot.Project);
         var pathIsUnchanged = string.Equals(
@@ -365,7 +373,30 @@ public static class ImportRunWorkflowController
             projectSnapshot.ProjectPath,
             StringComparison.OrdinalIgnoreCase);
         if (projectIsUnchanged && pathIsUnchanged)
+        {
+            // U4: Wurde dasselbe Projekt waehrend des Imports inhaltlich bearbeitet, darf das
+            // Importergebnis die manuellen Aenderungen nicht still ueberschreiben. Nur beim
+            // finalen Check vor der Uebernahme geprueft (die Signaturberechnung ist nicht gratis).
+            if (checkContentSignature && actions.ComputeSignature is { } compute)
+            {
+                var currentSignature = compute(actions.GetProject());
+                if (!string.Equals(currentSignature, projectSnapshot.StartSignature, StringComparison.Ordinal))
+                {
+                    const string editDetail =
+                        "Waehrend des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
+                        "nicht uebernommen, damit die manuellen Aenderungen erhalten bleiben — " +
+                        "bitte erneut importieren.";
+                    runLog.AddEntry(label, "Projektinhalt", ImportLogStatus.Error, detail: editDetail);
+                    actions.SetSummaryText(
+                        $"{label} Import gestoppt: Projekt wurde waehrend des Imports bearbeitet. " +
+                        "Das Importergebnis wurde nicht uebernommen.");
+                    actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), editDetail));
+                    actions.SetStatus($"{label} Import gestoppt - Projekt wurde bearbeitet");
+                    return false;
+                }
+            }
             return true;
+        }
 
         const string detail =
             "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
@@ -432,5 +463,5 @@ public static class ImportRunWorkflowController
         return null;
     }
 
-    private sealed record ActiveProjectSnapshot(Project Project, string? ProjectPath);
+    private sealed record ActiveProjectSnapshot(Project Project, string? ProjectPath, string StartSignature);
 }

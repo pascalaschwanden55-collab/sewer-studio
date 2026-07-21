@@ -153,6 +153,7 @@ namespace AuswertungPro.Next.UI
         #region Persistenz
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
+        public IProjectContentSignature ProjectContentSignature { get; }
         public IProjectPhotoReferenceNormalizer ProjectPhotoReferences { get; }
         public IProjectFileDiscovery ProjectFileDiscovery { get; }
         public IProjectOverviewCatalog ProjectOverviewCatalog { get; }
@@ -418,6 +419,7 @@ namespace AuswertungPro.Next.UI
 
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
+            ProjectContentSignature = new JsonProjectContentSignature();
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
             ProjectOverviewCatalog = new ProjectOverviewCatalogService(ProjectFileDiscovery);
             ProjectDropPaths = new ProjectDropFilePathResolver();
