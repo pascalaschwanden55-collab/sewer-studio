@@ -186,12 +186,26 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService
         await _sampleStore.MergeAndSaveAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
 
         // 5) KB-Index; Zustand nachtragen (Skipped/Error werden nicht wiederholt).
-        var outcome = await _kbIndexer.IndexAsync(new[] { sample }, ct).ConfigureAwait(false);
-        sample.KbIndexState = outcome.IsIndexed(sampleId) ? KbIndexState.Indexed
-            : outcome.IsSkipped(sampleId) ? KbIndexState.Skipped
-            : KbIndexState.Error;
-        await _sampleStore.MergeOrUpdateAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
-        var kbState = sample.KbIndexState.ToString();
+        // Das Sample ist ab Schritt 4 dauerhaft gespeichert. Ein KB-Index- oder
+        // Nachtrags-Fehler (SQLite-Lock, DB-Fehler) darf den Save deshalb NICHT als
+        // "Nicht gespeichert" darstellen — sonst legt der Nutzer dasselbe Sample erneut an.
+        // Wie beim Teacher-Schritt wird der Fehler als sichtbare Warnung zurueckgegeben.
+        string kbState;
+        string? kbWarning = null;
+        try
+        {
+            var outcome = await _kbIndexer.IndexAsync(new[] { sample }, ct).ConfigureAwait(false);
+            sample.KbIndexState = outcome.IsIndexed(sampleId) ? KbIndexState.Indexed
+                : outcome.IsSkipped(sampleId) ? KbIndexState.Skipped
+                : KbIndexState.Error;
+            await _sampleStore.MergeOrUpdateAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
+            kbState = sample.KbIndexState.ToString();
+        }
+        catch (Exception ex)
+        {
+            kbState = KbIndexState.Error.ToString();
+            kbWarning = $"KB-Index nicht aktualisiert: {ex.Message}";
+        }
 
         // 6) Teacher-Kandidat. Ein Teacher-Fehler darf das gespeicherte Sample NICHT ruecknehmen.
         string? teacherId = null;
@@ -238,6 +252,14 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService
             teacherWarning = $"Teacher-Kandidat nicht gespeichert: {ex.Message}";
         }
 
-        return new WorkbenchSaveResult(true, teacherWarning, sampleId, kbState, teacherId);
+        // KB- und Teacher-Warnung gemeinsam sichtbar machen; das Sample selbst ist gespeichert.
+        var warning = CombineWarnings(kbWarning, teacherWarning);
+        return new WorkbenchSaveResult(true, warning, sampleId, kbState, teacherId);
+    }
+
+    private static string? CombineWarnings(params string?[] warnings)
+    {
+        var present = warnings.Where(w => !string.IsNullOrWhiteSpace(w)).ToArray();
+        return present.Length == 0 ? null : string.Join(" | ", present);
     }
 }

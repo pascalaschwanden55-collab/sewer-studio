@@ -269,6 +269,33 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_KbIndexFehler_laesst_Sample_bestehen_und_meldet_Warnung()
+    {
+        // Das Sample ist ab MergeAndSaveAsync dauerhaft gespeichert. Wirft danach der
+        // KB-Indexer (z. B. SQLite-Lock), darf das NICHT als "Nicht gespeichert" erscheinen —
+        // sonst legt der Nutzer dasselbe Sample erneut an.
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { ThrowOnIndex = new IOException("KB-DB gesperrt") };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer,
+            exportFactory: () => new FakeExportService(), isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, null, decision);
+
+        Assert.True(result.Saved);                          // Sample bleibt gespeichert
+        Assert.Single(sampleStore.MergeAndSaveCalls);
+        Assert.Equal("Error", result.KbIndexState);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("KB-Index", result.RefusalReason);  // Warnung sichtbar, nicht still
+        Assert.NotNull(result.SampleId);
+        // Teacher-Kandidat laeuft trotz KB-Fehler weiter (unabhaengiger Schritt).
+        Assert.NotNull(result.TeacherAnnotationId);
+    }
+
+    [Fact]
     public async Task SaveAsync_TeacherFehler_laesst_Sample_bestehen_und_meldet_Warnung()
     {
         var sampleStore = new FakeSampleStore();
@@ -407,10 +434,12 @@ public sealed class AnnotationWorkbenchServiceTests
         public List<TrainingSample> Indexed { get; } = new();
         public int IndexCallCount { get; private set; }
         public ResultKind Mode { get; set; } = ResultKind.IndexAll;
+        public Exception? ThrowOnIndex { get; set; }
 
         public Task<KbIndexOutcome> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct)
         {
             IndexCallCount++;
+            if (ThrowOnIndex is not null) throw ThrowOnIndex;
             Indexed.AddRange(samples);
             var ids = samples.Select(s => s.SampleId).ToList();
             KbIndexOutcome outcome = Mode switch
