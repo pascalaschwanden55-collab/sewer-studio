@@ -11,7 +11,10 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 /// </summary>
 internal static class VsaFindingProtocolSynchronizer
 {
-    public static void Sync(HaltungRecord record, IReadOnlyList<VsaFinding> findings)
+    public static void Sync(
+        HaltungRecord record,
+        IReadOnlyList<VsaFinding> findings,
+        IProtocolService? protocolService = null)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(findings);
@@ -28,7 +31,7 @@ internal static class VsaFindingProtocolSynchronizer
             var entries = BuildImportedEntries(findings);
             if (entries.Count > 0)
             {
-                record.Protocol = new ProtocolService().EnsureProtocol(
+                record.Protocol = (protocolService ?? new ProtocolService()).EnsureProtocol(
                     record.GetFieldValue("Haltungsname") ?? "",
                     entries,
                     null);

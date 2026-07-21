@@ -81,7 +81,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         var created = 0;
 
         var fileIndex = BuildFileIndex(exportRoot);
-        var protocolService = new ProtocolService();
+        var protocolService = _protocolService;
 
         var db3ImportFailed = false;
         try
@@ -481,7 +481,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
         => Common.MediaFileIndex.ResolveSingle(index, fileName);
 
-    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
+    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, IProtocolService protocolService)
         => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (WinCan DB)");
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)

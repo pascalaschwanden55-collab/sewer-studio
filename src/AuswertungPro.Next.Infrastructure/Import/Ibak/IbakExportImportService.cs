@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 public sealed class IbakExportImportService : IIbakImportService
 {
     private readonly IIbakFdbConnectionOptions _connectionOptions;
+    private readonly IProtocolService _protocolService;
 
     private static readonly HashSet<string> MediaExtensions = new(
         MediaFileTypes.VideoExtensions
@@ -31,9 +32,12 @@ public sealed class IbakExportImportService : IIbakImportService
     // Zeilen ohne Zeitstempel (Header-Einträge wie AEC, AED, AEF)
     private static readonly Regex HeaderLineRegex = IbakDatenTxtLineParser.HeaderLineRegex;
 
-    public IbakExportImportService(IIbakFdbConnectionOptions? connectionOptions = null)
+    public IbakExportImportService(
+        IIbakFdbConnectionOptions? connectionOptions = null,
+        IProtocolService? protocolService = null)
     {
         _connectionOptions = connectionOptions ?? IbakFdbConnectionOptions.Current;
+        _protocolService = protocolService ?? new ProtocolService();
     }
 
     public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
@@ -55,7 +59,7 @@ public sealed class IbakExportImportService : IIbakImportService
 
         var fileIndex = BuildFileIndex(exportRoot);
         var photoMap = LoadPhotoMap(exportRoot, fileIndex, messages);
-        var protocolService = new ProtocolService();
+        var protocolService = _protocolService;
         var created = 0;
 
         // Audit I2: Fehler pro Haltung isolieren — eine kaputte Haltung darf die
@@ -176,7 +180,7 @@ public sealed class IbakExportImportService : IIbakImportService
         return null;
     }
 
-    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
+    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, IProtocolService protocolService)
         => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (IBAK Daten.txt)");
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)

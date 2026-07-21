@@ -23,11 +23,16 @@ public sealed class KinsImportService : IKinsImportService
 
     private readonly IWinCanDbImportService _winCanImport;
     private readonly IIbakImportService _ibakImport;
+    private readonly IProtocolService _protocolService;
 
-    public KinsImportService(IWinCanDbImportService winCanImport, IIbakImportService ibakImport)
+    public KinsImportService(
+        IWinCanDbImportService winCanImport,
+        IIbakImportService ibakImport,
+        IProtocolService? protocolService = null)
     {
         _winCanImport = winCanImport ?? throw new ArgumentNullException(nameof(winCanImport));
         _ibakImport = ibakImport ?? throw new ArgumentNullException(nameof(ibakImport));
+        _protocolService = protocolService ?? new ProtocolService();
     }
 
     public Result<ImportStats> ImportKinsExport(string exportRoot, Project project, ImportRunContext? ctx = null)
@@ -76,7 +81,7 @@ public sealed class KinsImportService : IKinsImportService
         if (runKinsTxt)
         {
             executed++;
-            MergeResult("KINS-TXT", ImportKinsDvdText(exportRoot, project, ctx), messages,
+            MergeResult("KINS-TXT", ImportKinsDvdText(exportRoot, project, _protocolService, ctx), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
@@ -109,7 +114,7 @@ public sealed class KinsImportService : IKinsImportService
         return Result<ImportStats>.Success(stats);
     }
 
-    private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project, ImportRunContext? ctx = null)
+    private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project, IProtocolService protocolService, ImportRunContext? ctx = null)
     {
         var dataFiles = EnumerateFilesSafe(exportRoot, "kiDVDaten.txt");
         if (dataFiles.Count == 0)
@@ -121,7 +126,6 @@ public sealed class KinsImportService : IKinsImportService
         };
 
         var videoIndex = BuildVideoIndex(exportRoot);
-        var protocolService = new ProtocolService();
         var recordingDate = TryReadRecordingDate(exportRoot);
 
         var found = 0;
@@ -495,7 +499,7 @@ public sealed class KinsImportService : IKinsImportService
         return true;
     }
 
-    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService, string comment)
+    private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, IProtocolService protocolService, string comment)
     {
         // KINS klont die Eintraege vor der Uebergabe (Schreibschutz gegenueber der Quellliste).
         // KinsTextLineParser setzt niemals CodeMeta/Ai (bare ProtocolEntry), daher ist

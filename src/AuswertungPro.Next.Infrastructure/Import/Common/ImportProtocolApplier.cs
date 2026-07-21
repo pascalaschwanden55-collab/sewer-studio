@@ -25,7 +25,7 @@ internal static class ImportProtocolApplier
     internal static void Apply(
         HaltungRecord record,
         List<ProtocolEntry> entries,
-        ProtocolService protocolService,
+        IProtocolService protocolService,
         string comment)
     {
         if (record.Protocol is null)

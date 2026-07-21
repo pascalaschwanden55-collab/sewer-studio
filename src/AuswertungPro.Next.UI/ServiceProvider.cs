@@ -458,14 +458,17 @@ namespace AuswertungPro.Next.UI
                 VsaMediaPaths,
                 M150SourceFiles,
                 M150MdbRows);
-            WinCanImport = new WinCanDbImportService(M150MdbRows, XtfImport);
+            // Protocols wird vor den Import-Diensten gebaut, damit alle dieselbe Instanz erhalten
+            // (kein verstreutes new ProtocolService() mehr in den einzelnen Import-Diensten).
+            Protocols = new ProtocolService();
+            WinCanImport = new WinCanDbImportService(M150MdbRows, XtfImport, Protocols);
             XtfStammdatenSources = new XtfStammdatenSourceReader();
             XtfStammdatenExtractor.UseSourceReader(XtfStammdatenSources);
             IbakPdfStammdatenSources = new IbakPdfStammdatenSourceReader(PdfTextExtraction);
             IbakPdfStammdatenExtractor.UseSourceReader(IbakPdfStammdatenSources);
             IbakConnections = new IbakFdbConnectionOptionsService();
-            IbakImport = new IbakExportImportService(IbakConnections);
-            KinsImport = new KinsImportService(WinCanImport, IbakImport);
+            IbakImport = new IbakExportImportService(IbakConnections, Protocols);
+            KinsImport = new KinsImportService(WinCanImport, IbakImport, Protocols);
             KinsDvdTextEnrichment = new KinsDvdTextEnrichmentService();
             KinsDbfWhitelistEnrichment = new KinsDbfWhitelistEnrichmentService();
             KinsGesamtprotokolle = new KinsGesamtprotokollFileLocator();
@@ -502,8 +505,7 @@ namespace AuswertungPro.Next.UI
             NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService();
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
-            // Register protocol/photo/pdf services
-            Protocols = new ProtocolService();
+            // Register protocol/photo/pdf services (Protocols oben schon gebaut und injiziert)
             PhotoImport = new PhotoImportService();
             SchachtProtocolImport = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolImportService(
                 PdfTextExtraction,
