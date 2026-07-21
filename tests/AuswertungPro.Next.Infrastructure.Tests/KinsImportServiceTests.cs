@@ -148,6 +148,40 @@ public sealed class KinsImportServiceTests
     }
 
     [Fact]
+    public void ImportKinsExport_TxtWeg_LaesstHoeherwertigenXtfWert_stehen_und_protokolliertKonflikt()
+    {
+        using var dir = new TempDir();
+        // KINS-Header liefert DN 450 (Legacy). Der bestehende Record traegt aber "300" aus XTF.
+        var content = string.Join(Environment.NewLine, new[]
+        {
+            "Schmutzwasser 23654 -> 23038 UV 450 @Datei=A001.MPG",
+            "   0.0m Rohranfang  @Pos=0:00:00",
+            "  18.3m Rohrende  @Pos=0:02:23"
+        });
+        File.WriteAllText(Path.Combine(dir.Path, "kiDVDaten.txt"), content);
+
+        var project = new Project();
+        var existing = project.CreateNewRecord();
+        existing.SetFieldValue("Haltungsname", "23654-23038", FieldSource.Pdf, userEdited: false);
+        existing.SetFieldValue("DN_mm", "300", FieldSource.Xtf, userEdited: false);
+        project.AddRecord(existing);
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        var rec = Assert.Single(project.Data);
+        // U6/U16: KINS-Legacy (Prio 50) ueberschreibt den hoeherwertigen XTF-Wert (Prio 80) nicht.
+        Assert.Equal("300", rec.GetFieldValue("DN_mm"));
+        // Der frueher stille Konflikt ist jetzt in project.Conflicts sichtbar.
+        Assert.Contains(project.Conflicts, c =>
+            string.Equals(c["field"]?.ToString(), "DN_mm", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ImportKinsExport_BenenntBestehendeHaltungNichtUm()
     {
         using var dir = new TempDir();

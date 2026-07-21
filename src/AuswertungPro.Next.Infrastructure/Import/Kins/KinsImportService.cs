@@ -163,12 +163,17 @@ public sealed class KinsImportService : IKinsImportService
                     // "100-200-1" still auf den KINS-Namen "100-200" verkuerzt. Nur bei Neuanlage setzen.
                     if (isNewRecord)
                         ApplyImportedField(record, "Haltungsname", holdingName);
-                    ApplyImportedField(record, "Nutzungsart", header.Usage);
-                    ApplyImportedField(record, "Rohrmaterial", header.Material);
+
+                    // Stammdaten ueber die zentrale MergeEngine mergen (Leer-Schutz, Import-Prioritaet
+                    // Legacy < Pdf < Xtf, Konfliktprotokoll) statt bedingungsloser Direktschreibung —
+                    // schuetzt hoeherwertige XTF/PDF-Werte vor stillem Ueberschreiben.
+                    var source = new HaltungRecord();
+                    ApplyImportedField(source, "Nutzungsart", header.Usage);
+                    ApplyImportedField(source, "Rohrmaterial", header.Material);
                     if (!string.IsNullOrWhiteSpace(header.Diameter))
-                        ApplyImportedField(record, "DN_mm", header.Diameter);
+                        ApplyImportedField(source, "DN_mm", header.Diameter);
                     if (recordingDate.HasValue)
-                        ApplyImportedField(record, "Datum_Jahr", recordingDate.Value.ToString("yyyy", CultureInfo.InvariantCulture));
+                        ApplyImportedField(source, "Datum_Jahr", recordingDate.Value.ToString("yyyy", CultureInfo.InvariantCulture));
 
                     var maxMeter = currentEntries
                         .Select(e => e.MeterEnd ?? e.MeterStart)
@@ -177,7 +182,9 @@ public sealed class KinsImportService : IKinsImportService
                         .DefaultIfEmpty()
                         .Max();
                     if (maxMeter > 0)
-                        ApplyImportedField(record, "Haltungslaenge_m", maxMeter.ToString("0.0", CultureInfo.InvariantCulture));
+                        ApplyImportedField(source, "Haltungslaenge_m", maxMeter.ToString("0.0", CultureInfo.InvariantCulture));
+
+                    Common.LegacyStammdatenMerger.MergeLegacy(project, record, source, ctx);
 
                     var video = ResolveVideoPath(videoIndex, header.VideoFile);
                     if (video.IsMatched)
