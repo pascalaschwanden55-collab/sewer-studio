@@ -154,6 +154,7 @@ namespace AuswertungPro.Next.UI
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
         public IProjectContentSignature ProjectContentSignature { get; }
+        public IImportTransactionJournal ImportTransactionJournal { get; }
         public IProjectPhotoReferenceNormalizer ProjectPhotoReferences { get; }
         public IProjectFileDiscovery ProjectFileDiscovery { get; }
         public IProjectOverviewCatalog ProjectOverviewCatalog { get; }
@@ -420,6 +421,7 @@ namespace AuswertungPro.Next.UI
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
             ProjectContentSignature = new JsonProjectContentSignature();
+            ImportTransactionJournal = new FileImportTransactionJournal();
             ProjectFileDiscovery = new ProjectFileDiscoveryService();
             ProjectOverviewCatalog = new ProjectOverviewCatalogService(ProjectFileDiscovery);
             ProjectDropPaths = new ProjectDropFilePathResolver();

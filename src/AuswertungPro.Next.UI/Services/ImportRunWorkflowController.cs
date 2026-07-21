@@ -41,7 +41,10 @@ public sealed record ImportRunWorkflowActions(
     object? CollectionLock = null,
     // Inhalts-Signatur des Live-Projekts (U4). Null = keine Signaturpruefung (Abwaertskompatibilitaet
     // fuer Tests, die den Konfliktschutz nicht betreffen).
-    Func<Project, string>? ComputeSignature = null);
+    Func<Project, string>? ComputeSignature = null,
+    // Transaktions-Journal fuer die Absturz-Atomaritaet. Null = kein Marker (z.B. Tests ohne
+    // Datei-Staging). Wird nur zusammen mit einer File-Staging-Session genutzt.
+    IImportTransactionJournal? Journal = null);
 
 public static class ImportRunWorkflowController
 {
@@ -102,6 +105,7 @@ public static class ImportRunWorkflowController
         });
 
         IImportFileStagingSession? fileStaging = null;
+        var importTxId = Guid.NewGuid().ToString("N");
         var projectCommitted = false;
         var projectSaved = false;
         var followUpRunStarted = false;
@@ -127,6 +131,22 @@ public static class ImportRunWorkflowController
                 request.DryRun,
                 actions.CollectionLock,
                 fileStaging);
+
+            // Transaktions-Marker schreiben (nur mit Datei-Staging + Journal). Der Marker existiert
+            // ab der Veroeffentlichung bis zum sauberen Abschluss im finally; bleibt er liegen,
+            // starb der Prozess mitten in der Transaktion und das Recovery rollt zurueck.
+            void WriteTransactionMarker(IReadOnlyList<PublishedFileInfo> published)
+            {
+                if (fileStaging is null || actions.Journal is null)
+                    return;
+                actions.Journal.Begin(fileStaging.ProjectRoot, new ImportTransactionMarker(
+                    TxId: importTxId,
+                    StartedUtc: DateTime.UtcNow,
+                    Label: request.Label,
+                    StagingRoot: Path.Combine(fileStaging.ProjectRoot, ".import-staging"),
+                    PublishedTargets: published,
+                    RestorePointPath: null));
+            }
 
             // Vorschau UND echter Import arbeiten auf einer unabhaengigen Kopie.
             // Erst nach einem vollstaendig erfolgreichen Lauf wird die Live-Referenz getauscht.
@@ -204,7 +224,11 @@ public static class ImportRunWorkflowController
 
             // Erst jetzt werden vorbereitete Kopien an ihren endgueltigen Orten sichtbar.
             // Bis zur Live-Projektuebernahme kann Dispose sie noch sicher zuruecknehmen.
+            // Marker vor der Veroeffentlichung (Transaktion laeuft), danach mit den tatsaechlich
+            // veroeffentlichten Zielen (fuer das Recovery-Rollback).
+            WriteTransactionMarker(Array.Empty<PublishedFileInfo>());
             fileStaging?.Publish();
+            WriteTransactionMarker(fileStaging?.PublishedFiles ?? Array.Empty<PublishedFileInfo>());
 
             actions.DeduplicateAllPrimaryDamages(targetProject);
             await actions.RunAfterImportAsync(targetProject, request.Label);
@@ -240,6 +264,10 @@ public static class ImportRunWorkflowController
             actions.SetCanCancel(false);
 
             targetProject.Dirty = true;
+            // Commit-Beweis im projekt.json: gleicht die Marker-TxId, sobald der atomare Save
+            // durchgelaufen ist. Das Recovery unterscheidet daran „committed" von „abgebrochen".
+            if (fileStaging is not null && actions.Journal is not null)
+                targetProject.LastCommittedImportTxId = importTxId;
             actions.ReplaceProject(targetProject);
             projectCommitted = true;
             fileStaging?.Accept();
@@ -281,6 +309,16 @@ public static class ImportRunWorkflowController
         }
         finally
         {
+            // Marker loeschen: bei Erfolg ist committed, bei normalem Abbruch/Fehler hat
+            // Staging.Dispose zurueckgerollt — in beiden Faellen ist der Zustand konsistent.
+            // Nur wenn dieser finally durch einen Prozess-Absturz nie laeuft, bleibt der Marker
+            // stehen und triggert beim naechsten Laden das Recovery.
+            if (fileStaging is not null && actions.Journal is not null)
+            {
+                try { actions.Journal.Clear(fileStaging.ProjectRoot); }
+                catch { /* Marker-Rest ist unkritisch; Recovery ist idempotent. */ }
+            }
+
             try
             {
                 fileStaging?.Dispose();

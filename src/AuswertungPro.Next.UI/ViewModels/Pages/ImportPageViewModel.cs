@@ -14,6 +14,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Projects.IProjectRepository _projects;
     private readonly AuswertungPro.Next.Application.Projects.IProjectContentSignature _contentSignature;
+    private readonly AuswertungPro.Next.Application.Import.IImportTransactionJournal _transactionJournal;
     private readonly IImportRunReportExporter _importRunReports;
     private readonly Services.ImportManualWorkflowController _manualWorkflowController;
     private readonly Services.ImportProjectPortabilityController _projectPortabilityController;
@@ -65,6 +66,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _settings = sp.Settings;
         _projects = sp.Projects;
         _contentSignature = sp.ProjectContentSignature;
+        _transactionJournal = sp.ImportTransactionJournal;
         _importRunReports = sp.ImportRunReports;
         var oneClickImporter = sp.CreateOneClickProjectImportService();
         var resolvedCatalogPath = sp.VsaCatalogResolvedPath;
@@ -213,7 +215,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             SetDetailsText: value => DetailsText = value,
             SetLastReportPath: _reportNavigationController.SetLastReportPath,
             CollectionLock: _shell.CollectionLock,
-            ComputeSignature: _contentSignature.Compute);
+            ComputeSignature: _contentSignature.Compute,
+            Journal: _transactionJournal);
 
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
     {

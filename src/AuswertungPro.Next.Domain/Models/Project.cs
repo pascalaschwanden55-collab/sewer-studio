@@ -47,6 +47,13 @@ public sealed class Project
     [JsonIgnore]
     public bool Dirty { get; set; }
 
+    /// <summary>
+    /// TxId des zuletzt erfolgreich committeten Imports. Wird beim atomaren projekt.json-Save
+    /// gesetzt und dient dem Import-Transaktions-Recovery als Commit-Beweis (Marker-TxId ==
+    /// diese TxId ⇒ der Import wurde abgeschlossen). Fliesst NICHT in die Content-Signatur ein.
+    /// </summary>
+    public string? LastCommittedImportTxId { get; set; }
+
     public Project()
     {
         EnsureMetadataDefaults();

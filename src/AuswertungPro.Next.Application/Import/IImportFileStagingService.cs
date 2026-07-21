@@ -19,6 +19,13 @@ public interface IImportFileStagingSession : IDisposable
 {
     string ProjectRoot { get; }
 
+    /// <summary>
+    /// Die von <see cref="Publish"/> an ihre endgueltigen Ziele bewegten Dateien
+    /// (Pfad relativ zum <see cref="ProjectRoot"/> + Inhalts-Hash). Vor Publish leer.
+    /// Grundlage fuer den Transaktions-Marker und das Recovery-Rollback.
+    /// </summary>
+    IReadOnlyList<PublishedFileInfo> PublishedFiles { get; }
+
     string StageCopy(
         string sourcePath,
         string targetDirectory,

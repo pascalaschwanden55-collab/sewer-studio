@@ -681,6 +681,37 @@ public sealed class ImportRunWorkflowControllerTests
     }
 
     [Fact]
+    public async Task RunAsync_erfolg_schreibt_marker_setzt_txid_und_raeumt_marker_auf()
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var staging = new FileStagingSessionFake(calls);
+        var journal = new FakeTransactionJournal();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            SaveProjectAfterCommit: true,
+            BeginFileStaging: _ => staging);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls, journal: journal),
+            CancellationToken.None);
+
+        // Marker wurde geschrieben (vor + nach Publish) und am Ende wieder geloescht.
+        Assert.True(journal.BeginCalls.Count >= 2);
+        Assert.Equal(1, journal.ClearCalls);
+        Assert.Null(journal.TryRead(staging.ProjectRoot));
+        // Der uebernommene Record traegt die Commit-TxId des Markers.
+        var txId = journal.BeginCalls[0].TxId;
+        Assert.Equal(txId, state.ReplacedProject!.LastCommittedImportTxId);
+        // Nach der Veroeffentlichung enthaelt der Marker die veroeffentlichte Zieldatei.
+        Assert.Contains(journal.BeginCalls, m => m.PublishedTargets.Count == 1);
+    }
+
+    [Fact]
     public async Task RunAsync_live_edit_during_import_discards_result()
     {
         // U4: Der Nutzer bearbeitet dasselbe Projekt (gleiche Instanz, gleicher Pfad) waehrend
@@ -727,7 +758,8 @@ public sealed class ImportRunWorkflowControllerTests
         Func<string?>? getProjectPath = null,
         Func<bool>? saveProject = null,
         Func<string?>? getReportDir = null,
-        Func<Project, string>? computeSignature = null)
+        Func<Project, string>? computeSignature = null,
+        IImportTransactionJournal? journal = null)
         => new(
             GetProject: getProject ?? (() => project),
             GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
@@ -773,7 +805,8 @@ public sealed class ImportRunWorkflowControllerTests
             CollectionLock: new object(),
             // Standard: stabile Signatur -> kein U4-Konflikt. Der U4-Test uebergibt eine
             // veraenderliche Signatur.
-            ComputeSignature: computeSignature ?? (_ => "sig"));
+            ComputeSignature: computeSignature ?? (_ => "sig"),
+            Journal: journal);
 
     private sealed class UiState
     {
@@ -791,10 +824,32 @@ public sealed class ImportRunWorkflowControllerTests
         public List<string> Statuses { get; } = new();
     }
 
+    private sealed class FakeTransactionJournal : IImportTransactionJournal
+    {
+        public List<ImportTransactionMarker> BeginCalls { get; } = new();
+        public int ClearCalls { get; private set; }
+        private ImportTransactionMarker? _current;
+
+        public void Begin(string projectRoot, ImportTransactionMarker marker)
+        {
+            BeginCalls.Add(marker);
+            _current = marker;
+        }
+
+        public ImportTransactionMarker? TryRead(string projectRoot) => _current;
+
+        public void Clear(string projectRoot)
+        {
+            ClearCalls++;
+            _current = null;
+        }
+    }
+
     private sealed class FileStagingSessionFake(List<string> calls) : IImportFileStagingSession
     {
         public string ProjectRoot => @"C:\Projekte\Test";
         public bool Accepted { get; private set; }
+        public IReadOnlyList<PublishedFileInfo> PublishedFiles { get; private set; } = [];
 
         public string StageCopy(
             string sourcePath,
@@ -803,7 +858,11 @@ public sealed class ImportRunWorkflowControllerTests
             CancellationToken cancellationToken = default)
             => Path.Combine(targetDirectory, Path.GetFileName(sourcePath));
 
-        public void Publish() => calls.Add("publish-files");
+        public void Publish()
+        {
+            calls.Add("publish-files");
+            PublishedFiles = [new PublishedFileInfo("Bilder/1.jpg", "AABB")];
+        }
 
         public void Accept()
         {
