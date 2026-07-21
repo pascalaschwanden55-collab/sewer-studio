@@ -34,6 +34,9 @@ public sealed class VideoFullAnalysisService
     private readonly ILogger _logger;
     private readonly IPipelineTraceWriter _pipelineTraceWriter;
     private readonly IProcessOutputReader _processOutputs;
+    // Gemeinsame Videodauer-Ermittlung (ffprobe -> ffmpeg-Fallback) mit Timeout + Kill-Baum,
+    // identisch zum Multi-Model-Pfad statt eigener Inline-Prozessaufrufe.
+    private readonly Training.Services.VideoProbeService _videoProbe;
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
@@ -66,6 +69,8 @@ public sealed class VideoFullAnalysisService
         _ffprobePath = ffprobePath ?? DeriveFFprobePath(ffmpegPath);
         _logger = logger ?? NullLogger.Instance;
         _processOutputs = processOutputs ?? ProcessOutputReader.Current;
+        _videoProbe = new Training.Services.VideoProbeService(
+            ffprobePath: _ffprobePath, ffmpegPath: _ffmpegPath, processOutputs: _processOutputs);
     }
 
     /// <summary>
@@ -261,133 +266,12 @@ public sealed class VideoFullAnalysisService
 
     // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    // Dauer + Fehler
+    // Dauer + Fehler — delegiert an den gemeinsamen VideoProbeService (ffprobe -> ffmpeg-Fallback),
+    // der die Prozessaufrufe ueber den ProcessOutputReader mit Timeout und Kill-Baum absichert.
     private async Task<(double duration, string error)> GetVideoDurationWithErrorAsync(string videoPath, CancellationToken ct)
     {
-        var probe = ResolveFfprobe(_ffmpegPath, _ffprobePath);
-        if (probe is not null)
-        {
-            try
-            {
-                var (dur, err) = await TryWithFfprobeWithErrorAsync(probe, videoPath, ct);
-                if (dur is not null && dur > 0)
-                    return (dur.Value, "");
-                // ffprobe gestartet aber kein Ergebnis â†’ ffmpeg-Fallback versuchen
-            }
-            catch (OperationCanceledException) { throw; }
-            catch { /* ffprobe nicht gefunden oder Fehler â†’ ffmpeg-Fallback */ }
-        }
-
-        var fallback = await TryWithFfmpegAsync(_ffmpegPath, videoPath, ct);
-        return (fallback ?? 0, fallback == null
-            ? $"Videodauer konnte nicht ermittelt werden. Bitte ffmpeg/ffprobe im PATH oder per Env SEWERSTUDIO_FFMPEG konfigurieren."
-            : "");
-    }
-
-    // Neue Methode: ffprobe mit Fehlerausgabe
-    private async Task<(double? duration, string error)> TryWithFfprobeWithErrorAsync(string ffprobeExe, string videoPath, CancellationToken ct)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = ffprobeExe,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-v");
-        psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-show_entries");
-        psi.ArgumentList.Add("format=duration");
-        psi.ArgumentList.Add("-of");
-        psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
-        psi.ArgumentList.Add(videoPath);
-
-        try
-        {
-            var output = await _processOutputs.ReadToExitAsync(psi, ct).ConfigureAwait(false);
-            if (output is null) return (null, "Process.Start failed");
-
-            var stdout = output.StandardOutput;
-            var stderr = output.StandardError;
-
-            if (output.ExitCode != 0)
-                return (null, string.IsNullOrWhiteSpace(stderr) ? $"ExitCode {output.ExitCode}" : stderr);
-
-            if (double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
-                return (dur, "");
-
-            return (null, $"stdout: '{stdout.Trim()}', stderr: '{stderr.Trim()}'");
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { return (null, ex.Message); }
-    }
-
-    private static string? ResolveFfprobe(string ffmpegPath, string? ffprobePath)
-    {
-        // Absoluter Pfad zu ffprobe â†’ direkt nutzen
-        if (!string.IsNullOrWhiteSpace(ffprobePath) && File.Exists(ffprobePath))
-            return ffprobePath;
-
-        // Absoluter Pfad zu ffmpeg â†’ ffprobe.exe daneben suchen
-        if (!string.IsNullOrWhiteSpace(ffmpegPath) && File.Exists(ffmpegPath))
-        {
-            var dir = Path.GetDirectoryName(ffmpegPath);
-            if (!string.IsNullOrWhiteSpace(dir))
-            {
-                var candidate = Path.Combine(dir, "ffprobe.exe");
-                if (File.Exists(candidate)) return candidate;
-            }
-        }
-
-        // PATH-basierter Name (z.B. "ffprobe" oder "ffmpeg") â†’ als Fallback direkt verwenden
-        if (!string.IsNullOrWhiteSpace(ffprobePath))
-            return ffprobePath;
-
-        // Aus ffmpeg-Name "ffprobe" ableiten (z.B. "ffmpeg" â†’ "ffprobe")
-        if (!string.IsNullOrWhiteSpace(ffmpegPath))
-        {
-            var derived = DeriveFFprobePath(ffmpegPath);
-            if (!string.IsNullOrWhiteSpace(derived))
-                return derived;
-        }
-
-        return null;
-    }
-
-    private static async Task<double?> TryWithFfmpegAsync(string ffmpegExe, string videoPath, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegExe))
-            return null;
-        // Nur bei absolutem Pfad File.Exists prÃ¼fen; PATH-Namen ("ffmpeg") direkt verwenden
-        if (Path.IsPathRooted(ffmpegExe) && !File.Exists(ffmpegExe))
-            return null;
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = ffmpegExe,
-            UseShellExecute = false,
-            RedirectStandardError = true,  // Duration steht in stderr
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(videoPath);
-
-        try
-        {
-            using var p = Process.Start(psi);
-            if (p is null) return null;
-
-            var text = await p.StandardError.ReadToEndAsync();
-            await p.WaitForExitAsync(ct);
-
-            // Gemeinsamen Parser nutzen statt lokaler Inline-Regex (Vereinheitlichung).
-            var dur = AuswertungPro.Next.Infrastructure.Ai.Training.FfmpegDurationParser.Parse(text);
-            return dur > 0 ? dur : null;
-        }
-        catch (OperationCanceledException) { throw; }
-        catch { return null; }
+        var result = await _videoProbe.ProbeAsync(videoPath, ct).ConfigureAwait(false);
+        return (result.DurationSeconds, result.Success ? "" : result.Error);
     }
 
     private double _lastKnownMeter;
