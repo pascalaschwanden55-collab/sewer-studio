@@ -8,6 +8,25 @@ from PIL import Image
 from fastapi.testclient import TestClient
 
 
+def _custom_yolo_weights_present() -> bool:
+    """True, wenn echte Sewer-Gewichte lokal liegen. Reiner Pfad-Check, KEIN Modell-Load."""
+    try:
+        from sidecar.models.yolo_wrapper import get_yolo_info
+        return bool(get_yolo_info().get("custom_weights_present"))
+    except Exception:
+        return False
+
+
+# /detect/yolo laedt bei fehlenden Eigengewichten (require_custom_yolo=False) yolo11m.pt
+# aus dem Internet nach. Ohne echte Gewichte wird der Test uebersprungen, damit der
+# Sidecar-Testlauf hermetisch bleibt (kein Netzwerk-Download, keine GPU-Abhaengigkeit in CI).
+requires_custom_yolo_weights = pytest.mark.skipif(
+    not _custom_yolo_weights_present(),
+    reason="Kein echtes YOLO-Gewicht unter models/yolo26m/ — /detect/yolo wuerde "
+           "yolo11m.pt aus dem Internet ziehen. Test uebersprungen (hermetischer Lauf).",
+)
+
+
 def _make_test_image(w: int = 320, h: int = 240, color=(0, 0, 0)) -> str:
     """Create a minimal test image as base64."""
     img = Image.new("RGB", (w, h), color)
@@ -35,6 +54,7 @@ def test_health(client):
     assert "using_custom_weights" in data["yolo"]
 
 
+@requires_custom_yolo_weights
 def test_yolo_empty_frame(client):
     """A solid black image should produce no detections."""
     img_b64 = _make_test_image(color=(0, 0, 0))
