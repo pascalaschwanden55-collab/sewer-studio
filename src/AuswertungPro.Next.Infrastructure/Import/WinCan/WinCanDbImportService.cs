@@ -126,9 +126,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 // weder die restlichen blockieren noch den MDB-Fallback ausloesen.
                 try
                 {
-                    var key = NormalizeHoldingKey(section.Key);
-                    var record = project.Data.FirstOrDefault(r =>
-                        string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
+                    var record = FindRecord(project, section.Key);
                     if (record is null)
                     {
                         record = project.CreateNewRecord();
@@ -389,8 +387,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         {
             ctx?.CancellationToken.ThrowIfCancellationRequested();
             var key = NormalizeHoldingKey(imported.GetFieldValue("Haltungsname"));
-            var target = project.Data.FirstOrDefault(r =>
-                string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
+            var target = FindRecord(project, imported.GetFieldValue("Haltungsname"));
 
             var isNew = target is null;
             if (target is null)
@@ -679,6 +676,32 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
     private static string NormalizeHoldingKey(string? value)
         => Common.HoldingKeyNormalizer.Normalize(value);
+
+    // Haltungs-Matching einheitlich zu IBAK/KINS: exakt ODER Grenz-Praefix
+    // (100-200 == 100-200-1, aber NICHT 100-2000). Frueher matchte WinCan nur exakt
+    // und legte bei Segment-Suffix-Unterschieden ein Duplikat statt Zusammenfuehrung an.
+    private static HaltungRecord? FindRecord(Project project, string? holdingName)
+    {
+        var key = NormalizeHoldingKey(holdingName);
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var exact = project.Data.FirstOrDefault(r =>
+            string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+            return exact;
+
+        foreach (var record in project.Data)
+        {
+            var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
+            if (string.IsNullOrWhiteSpace(candidate))
+                continue;
+            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key))
+                return record;
+        }
+
+        return null;
+    }
 
     private static string? FindDb3(string exportRoot)
     {
