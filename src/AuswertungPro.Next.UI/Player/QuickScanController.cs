@@ -11,8 +11,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 using Rectangle = System.Windows.Shapes.Rectangle;
@@ -30,7 +28,9 @@ public sealed class QuickScanController
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
     private readonly Func<(double offsetX, double trackWidth)> _getSliderTrackBounds;
-    private readonly IProcessOutputReader _processOutputs;
+    // Baut die KI-Schnellscan-Pipeline (eigener Ollama-Client) ausserhalb der UI. Null,
+    // wenn kein ServiceProvider vorliegt; ToggleAsync meldet das dann sichtbar.
+    private readonly Func<AiRuntimeSettings, IQuickScanSession>? _createQuickScanSession;
     private readonly IDialogService _dialogs;
 
     private CancellationTokenSource? _quickScanCts;
@@ -47,7 +47,7 @@ public sealed class QuickScanController
         Action ensurePlaying,
         Action updateUi,
         Func<(double offsetX, double trackWidth)> getSliderTrackBounds,
-        IProcessOutputReader processOutputs,
+        Func<AiRuntimeSettings, IQuickScanSession>? createQuickScanSession,
         IDialogService dialogs)
     {
         _heatmapCanvas = heatmapCanvas ?? throw new ArgumentNullException(nameof(heatmapCanvas));
@@ -59,7 +59,7 @@ public sealed class QuickScanController
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
         _updateUi = updateUi ?? throw new ArgumentNullException(nameof(updateUi));
         _getSliderTrackBounds = getSliderTrackBounds ?? throw new ArgumentNullException(nameof(getSliderTrackBounds));
-        _processOutputs = processOutputs ?? throw new ArgumentNullException(nameof(processOutputs));
+        _createQuickScanSession = createQuickScanSession;
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
     }
 
@@ -96,15 +96,15 @@ public sealed class QuickScanController
             return;
         }
 
-        var ffmpegPath = cfg.FfmpegPath ?? FfmpegLocator.ResolveFfmpeg();
-        using var client = new OllamaClient(cfg.OllamaBaseUri,
-            ownedTimeout: cfg.OllamaRequestTimeout > TimeSpan.Zero ? cfg.OllamaRequestTimeout : TimeSpan.FromMinutes(10),
-            keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx);
-        var service = new QuickScanService(
-            client,
-            cfg.VisionModel,
-            ffmpegPath,
-            _processOutputs);
+        if (_createQuickScanSession is null)
+        {
+            _dialogs.Warn("KI-Schnellscan ist nicht verfuegbar.", "Schnell-Scan");
+            _quickScanButton.IsChecked = false;
+            return;
+        }
+
+        using var session = _createQuickScanSession(cfg);
+        var service = session.Service;
 
         _quickScanCts = new CancellationTokenSource();
         _isQuickScanning = true;

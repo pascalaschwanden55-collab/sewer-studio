@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -70,7 +71,7 @@ public sealed record PlayerWindowControllerSetDependencies(
     Action<float> ShowUnsupportedRate,
     Func<(double offsetX, double trackWidth)> ResolveSliderTrackBounds,
     Func<NormalizedPoint, Point> MapCodingOverlayPoint,
-    IProcessOutputReader? ProcessOutputs = null,
+    Func<AiRuntimeSettings, IQuickScanSession>? CreateQuickScanSession = null,
     IDialogService? Dialogs = null);
 
 public static class PlayerWindowControllerSetFactory
@@ -149,7 +150,7 @@ public static class PlayerWindowControllerSetFactory
                 dependencies.EnsurePlaying,
                 dependencies.UpdateUi,
                 dependencies.ResolveSliderTrackBounds,
-                dependencies.ProcessOutputs ?? ProcessOutputReader.Current,
+                dependencies.CreateQuickScanSession,
                 dependencies.Dialogs ?? DialogHost.Current),
             positionControls,
             positionInputController,

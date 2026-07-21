@@ -7,35 +7,17 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
-// ── Public records ───────────────────────────────────────────────────
-
-public sealed record QuickScanSegment(
-    double TimestampSeconds,
-    bool HasDamage,
-    int Severity,
-    string? Label,
-    string? Clock);
-
-public sealed record QuickScanProgress(
-    int FramesDone,
-    int FramesTotal,
-    string Status,
-    QuickScanSegment? LatestSegment);
-
-public sealed record QuickScanResult(
-    IReadOnlyList<QuickScanSegment> Segments,
-    double VideoDurationSeconds,
-    int FramesAnalyzed,
-    string? Error);
-
 // ── Service ──────────────────────────────────────────────────────────
+// Die Ergebnis-/Fortschritts-Records (QuickScanSegment/Progress/Result) liegen jetzt
+// im Vertrag AuswertungPro.Next.Application.Ai (QuickScanModels.cs).
 
-public sealed class QuickScanService
+public sealed class QuickScanService : IQuickScanService
 {
     private const double FrameStepSeconds = 5.0;
     private const int ScaleWidth = 640;

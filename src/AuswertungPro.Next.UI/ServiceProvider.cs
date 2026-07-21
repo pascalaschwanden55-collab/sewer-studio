@@ -710,6 +710,11 @@ namespace AuswertungPro.Next.UI
             return SanierungOptimizations.Create(cfg, http);
         }
 
+        // Baut eine kurzlebige Schnellscan-Sitzung (eigener Ollama-Client) fuer den Player,
+        // damit der UI-Controller die Infrastruktur-Pipeline nicht mehr selbst zusammensetzt.
+        public IQuickScanSession CreateQuickScanSession(AiRuntimeSettings cfg)
+            => QuickScanSession.Create(cfg, ProcessOutputs);
+
         // ── Schattenauswertung: eigenstaendige Parallel-Auswertung (nur lesend) ──
         // Ergebnis-Ablage als eigene Datei im Projektordner, nie in projekt.json.
         public AuswertungPro.Next.Application.Schatten.ISchattenAuswertungStore SchattenStore { get; }

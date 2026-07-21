@@ -71,6 +71,8 @@ dotnet test AuswertungPro.sln
 - `FullProtocolGenerationService` → KI-Befunde zu Protokolleintraegen mappen
 - `IOfferPdfExportService`         → Vertrag (Application/Output): kapselt Vorlagen-/Logo-Pfadbau + PDF-Renderer; ViewModels newen keinen Renderer mehr
 - `OfferPdfExportService`          → Impl (Infrastructure): loest Pfade auf, delegiert an `OfferHtmlToPdfRenderer` (injizierbarer Render-Delegate als Test-Seam); Modell typsicher ueber `IOfferPdfModel`
+- `IQuickScanService`/`IQuickScanSession` → Vertraege (Application/Ai): KI-Schnellscan + kurzlebige Sitzung (eigener Ollama-Client); DTOs `QuickScanSegment/Progress/Result` liegen ebenfalls in Application.Ai
+- `QuickScanSession`               → Impl (Infrastructure): baut ffmpeg-Pfad, eigenen `OllamaClient` und `QuickScanService`, besitzt den Client (`IDisposable`). Erzeugt ueber `ServiceProvider.CreateQuickScanSession(cfg)`; der Player-`QuickScanController` newt keine KI-Infrastruktur mehr
 - `KnowledgeBaseManager`          → SQLite-KB: Samples + Embeddings indexieren/retrieven
 - `TrainingSamplesStore`          → JSON-Trainingssamples speichern/mergen
 - `PhotoMeasurementGeometryService` → stabile oeffentliche Fassade fuer reine Fotomessungs-Geometrie

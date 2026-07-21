@@ -68,5 +68,11 @@ public sealed class PlayerWindowControllerArchitectureTests
         Assert.Contains(".SafeFireAndForget(\"QuickScan\")", quickScanPartial);
         Assert.Contains("private readonly List<(QuickScanSegment Seg", controller);
         Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);
+
+        // Thin-AI: der UI-Controller baut die KI-Pipeline nicht mehr selbst, sondern
+        // bezieht sie ueber die injizierte IQuickScanSession-Fabrik.
+        Assert.Contains("IQuickScanSession", controller);
+        Assert.DoesNotContain("new OllamaClient", controller);
+        Assert.DoesNotContain("new QuickScanService", controller);
     }
 }

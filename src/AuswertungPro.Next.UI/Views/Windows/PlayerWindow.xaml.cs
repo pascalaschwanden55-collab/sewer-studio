@@ -264,7 +264,9 @@ public partial class PlayerWindow : Window
                 UpdateUi: UpdateUi,
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
-                MapCodingOverlayPoint: CodingNormToPixel, ProcessOutputs: serviceProvider?.ProcessOutputs, Dialogs: _protocolContext.Dialogs));
+                MapCodingOverlayPoint: CodingNormToPixel,
+                CreateQuickScanSession: serviceProvider is null ? null : serviceProvider.CreateQuickScanSession,
+                Dialogs: _protocolContext.Dialogs));
         var liveDetectionControllers = PlayerWindowLiveDetectionControllerSetFactory.Create(
             new PlayerWindowLiveDetectionControllerSetDependencies(
                 RuntimeController: _liveDetectionController,

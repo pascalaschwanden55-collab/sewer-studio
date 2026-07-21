@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai;
 

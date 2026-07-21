@@ -339,8 +339,10 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Infrastructure",
             typeof(QuickScanService).Namespace!,
             StringComparison.Ordinal);
+        // QuickScanSegment/Progress/Result sind reine Ergebnis-DTOs des Vertrags und liegen
+        // bewusst in AuswertungPro.Next.Application.Ai (Vertrags-/DTO-Schicht), nicht in Infrastructure.
         Assert.StartsWith(
-            "AuswertungPro.Next.Infrastructure",
+            "AuswertungPro.Next.Application",
             typeof(QuickScanSegment).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(
