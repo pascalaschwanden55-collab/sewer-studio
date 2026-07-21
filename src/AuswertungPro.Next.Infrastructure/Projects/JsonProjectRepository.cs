@@ -9,7 +9,9 @@ public sealed class JsonProjectRepository : IProjectRepository
 {
     public const int CurrentVersion = 2;
 
-    private static readonly JsonSerializerOptions Opt = new()
+    // Oeffentlich, damit die Content-Signatur (JsonProjectContentSignature) exakt dieselbe
+    // Serialisierung nutzt wie der echte Save/Load.
+    public static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
@@ -41,7 +43,7 @@ public sealed class JsonProjectRepository : IProjectRepository
                 return Result<Project>.Fail("APP-NOTFOUND", $"Datei nicht gefunden: {path}");
 
             var json = File.ReadAllText(path);
-            var project = JsonSerializer.Deserialize<Project>(json, Opt) ?? new Project();
+            var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions) ?? new Project();
             if (project.Version > CurrentVersion)
             {
                 return Result<Project>.Fail(
@@ -77,8 +79,8 @@ public sealed class JsonProjectRepository : IProjectRepository
     public Project DeepCopy(Project source)
     {
         // Serialisieren + zurueck deserialisieren = unabhaengige Tiefenkopie.
-        var json = JsonSerializer.Serialize(source, Opt);
-        var copy = JsonSerializer.Deserialize<Project>(json, Opt) ?? new Project();
+        var json = JsonSerializer.Serialize(source, SerializerOptions);
+        var copy = JsonSerializer.Deserialize<Project>(json, SerializerOptions) ?? new Project();
         copy.EnsureMetadataDefaults();
         return copy;
     }
@@ -104,7 +106,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
             project.ModifiedAtUtc = DateTime.UtcNow;
-            var json = JsonSerializer.Serialize(project, Opt);
+            var json = JsonSerializer.Serialize(project, SerializerOptions);
 
             var fullPath = Path.GetFullPath(path);
             var directory = Path.GetDirectoryName(fullPath);
