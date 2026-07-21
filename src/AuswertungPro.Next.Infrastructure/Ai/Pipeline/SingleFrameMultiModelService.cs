@@ -159,6 +159,8 @@ public sealed class SingleFrameMultiModelService
 
             if (dinoResp.Detections.Count == 0)
             {
+                // Leere DINO-Detektionen bei degraded=true sind KEIN "kein Schaden", sondern ein
+                // Modellfehler — sonst erscheint ein DINO-Ausfall im Codiermodus als gruenes Rohr.
                 return new SingleFrameResult(
                     IsRelevant: true,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -169,7 +171,9 @@ public sealed class SingleFrameMultiModelService
                     ClassifierCode: classifierDecision?.Code,
                     ClassifierConfidence: classifierDecision?.Confidence,
                     ClassifierSource: classifierDecision?.Source,
-                    ClassifierTimeMs: classifierMs);
+                    ClassifierTimeMs: classifierMs,
+                    Degraded: dinoResp.Degraded,
+                    DegradedReason: dinoResp.Degraded ? $"DINO nicht verfuegbar: {dinoResp.Error}" : null);
             }
 
             // 3. SAM Segmentation (DINO-Boxes als Input)
@@ -190,6 +194,7 @@ public sealed class SingleFrameMultiModelService
                 quantified.Add(q);
             }
 
+            var degraded = dinoResp.Degraded || samResp.Degraded;
             return new SingleFrameResult(
                 IsRelevant: true,
                 DinoDetections: dinoResp.Detections,
@@ -200,7 +205,15 @@ public sealed class SingleFrameMultiModelService
                 ClassifierCode: classifierDecision?.Code,
                 ClassifierConfidence: classifierDecision?.Confidence,
                 ClassifierSource: classifierDecision?.Source,
-                ClassifierTimeMs: classifierMs);
+                ClassifierTimeMs: classifierMs,
+                Degraded: degraded,
+                DegradedReason: degraded
+                    ? string.Join("; ", new[]
+                        {
+                            dinoResp.Degraded ? $"DINO: {dinoResp.Error}" : null,
+                            samResp.Degraded ? $"SAM: {samResp.Error}" : null,
+                        }.Where(x => x is not null))
+                    : null);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -303,7 +316,11 @@ public sealed record SingleFrameResult(
     string? ClassifierCode = null,
     double? ClassifierConfidence = null,
     string? ClassifierSource = null,
-    double ClassifierTimeMs = 0)
+    double ClassifierTimeMs = 0,
+    // Degraded=true: ein Modell (DINO/SAM) meldete einen Inferenzfehler. Das leere Ergebnis darf
+    // dann NICHT als gruenes "kein Schaden" gewertet werden — die UI weist es aus.
+    bool Degraded = false,
+    string? DegradedReason = null)
 {
     public bool HasDetections => DinoDetections.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;

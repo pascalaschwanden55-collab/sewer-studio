@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -381,4 +382,46 @@ public sealed class SingleFrameMultiModelServiceTests
             });
         }
     }
+
+    [Fact]
+    public async Task DinoDegraded_wird_als_degraded_gemeldet_nicht_als_kein_schaden()
+    {
+        // U1: Ein DINO-Modellfehler (degraded=true, leere Detektionen) darf im Codiermodus NICHT
+        // als gruenes "kein Schaden" erscheinen, sondern muss als degraded durchgereicht werden.
+        var service = new SingleFrameMultiModelService(new DinoDegradedClient());
+
+        var result = await service.AnalyzeFrameAsync(
+            new byte[] { 1, 2, 3 }, pipeDiameterMm: 300, calibration: null,
+            currentMeterM: 25.0, reachLengthM: 50.0);
+
+        Assert.True(result.IsRelevant);
+        Assert.False(result.HasDetections);
+        Assert.True(result.Degraded, "DINO-Modellfehler muss als degraded markiert sein.");
+        Assert.Contains("DINO", result.DegradedReason ?? "");
+    }
+
+    private sealed class DinoDegradedClient : IVisionPipelineClient
+    {
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(null);
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+            => Task.FromResult(new PipelineHealthCheckResult(true, true, 200, null, null));
+
+        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+            => Task.FromResult(new YoloResponse(
+                IsRelevant: true, Detections: Array.Empty<YoloDetectionDto>(),
+                FrameClass: "structural", InferenceTimeMs: 1));
+
+        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+            => Task.FromResult(new DinoResponse(Array.Empty<DinoDetectionDto>(), 1, Degraded: true, Error: "boom"));
+
+        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
+            => Task.FromResult(new SamResponse(Array.Empty<SamMaskResult>(), 640, 480, 1));
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
+            => Task.FromResult(new YoloClassifyResponse(
+                Array.Empty<YoloClassifyPrediction>(), 1, Usable: true, QualityReason: "ok", ClassifierLoaded: true));
+    }
+
 }
