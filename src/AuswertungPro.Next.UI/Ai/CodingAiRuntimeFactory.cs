@@ -19,12 +19,23 @@ public sealed record CodingAiRuntime(
     IVisionPipelineClient? VisionClient,
     SingleFrameMultiModelService? MultiModel,
     MarkBoxSegmentationService? BoxSegmentation,
-    string? MultiModelError)
+    string? MultiModelError,
+    OllamaClient? OwnedOllamaClient = null) : IDisposable
 {
     public bool QwenAvailable => LiveDetection is not null || EnhancedVision is not null;
 
     public bool MultiModelAvailable
         => VisionClient is not null && MultiModel is not null && BoxSegmentation is not null;
+
+    // Gibt die selbst erzeugten HTTP-Ressourcen dieser Runtime frei. VisionClient und
+    // OllamaClient wurden pro Codiermodus-Session mit eigenem HttpClient gebaut; ohne
+    // Dispose leakt jeder Wiedereintritt zwei HttpClients. Ein geteilter VisionClient
+    // (injizierter HttpClient) bleibt dank _ownsHttp unberuehrt.
+    public void Dispose()
+    {
+        (VisionClient as IDisposable)?.Dispose();
+        OwnedOllamaClient?.Dispose();
+    }
 }
 
 public static class CodingAiRuntimeFactory
@@ -55,9 +66,10 @@ public static class CodingAiRuntimeFactory
         // zu einem getrennten Eval im Schattenbetrieb.
         var qualityGate = LearnedWeightsGateFactory.Create();
 
+        VisionPipelineClient? visionClient = null;
         try
         {
-            var visionClient = new VisionPipelineClient(
+            visionClient = new VisionPipelineClient(
                 pipelineConfig.SidecarUrl,
                 null,
                 pipelineConfig.SidecarToken,
@@ -76,10 +88,14 @@ public static class CodingAiRuntimeFactory
                 visionClient,
                 multiModel,
                 boxSegmentation,
-                MultiModelError: null);
+                MultiModelError: null,
+                OwnedOllamaClient: ollamaClient);
         }
         catch (Exception ex)
         {
+            // Falls der VisionClient schon stand, aber ein Folge-Ctor warf: seinen eigenen
+            // HttpClient nicht leaken. Der OllamaClient wird ueber die Runtime freigegeben.
+            visionClient?.Dispose();
             return new CodingAiRuntime(
                 runtimeSettings,
                 pipelineConfig,
@@ -91,7 +107,8 @@ public static class CodingAiRuntimeFactory
                 VisionClient: null,
                 MultiModel: null,
                 BoxSegmentation: null,
-                MultiModelError: ex.Message);
+                MultiModelError: ex.Message,
+                OwnedOllamaClient: ollamaClient);
         }
     }
 

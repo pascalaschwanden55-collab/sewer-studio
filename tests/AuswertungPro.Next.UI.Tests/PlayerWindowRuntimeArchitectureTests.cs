@@ -114,8 +114,10 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         Assert.Contains("TryBeginAnalysis: _codingAiRuntimeOwner.Controller.TryBeginAnalysis", ai);
         Assert.Contains("actions.TryBeginAnalysis()", analysisCommandWorkflow);
         Assert.Contains("actions.EndAnalysis()", analysisCommandWorkflow);
+        // Exit-Teardown bindet Controller.Dispose: gibt Analyse-Cancellation UND die Runtime
+        // (eigener VisionClient + OllamaClient je Codiermodus-Session) frei — nicht inline im Fenster.
         Assert.Contains(
-            "dependencies.AiStates.RuntimeOwner.Controller.DisposeAnalysisCancellation",
+            "dependencies.AiStates.RuntimeOwner.Controller.Dispose,",
             exit);
         Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
         Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", wiring);

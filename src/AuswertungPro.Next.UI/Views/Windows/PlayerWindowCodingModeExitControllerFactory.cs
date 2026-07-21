@@ -105,8 +105,12 @@ internal static class PlayerWindowCodingModeExitControllerFactory
             StopCodingLiveAiTimers: dependencies.AiStates.LiveTimerOwner.Stop,
             StopCodingAiPulse: dependencies.LiveDetectionPulseController.Stop,
             StopPipelineHealthMonitor: dependencies.PipelineHealthController.Stop,
+            // Controller.Dispose gibt die Analyse-Cancellation UND die Runtime frei (eigener
+            // VisionClient + OllamaClient je Codiermodus-Session). Laeuft nach dem Stopp des
+            // PipelineHealthMonitors, der denselben VisionClient nutzt — daher kein Race.
+            // Beim Fenster-Schliessen wird ueber ExitCodingMode ebenfalls dieser Teardown ausgefuehrt.
             DisposeAnalysisCancellation:
-                dependencies.AiStates.RuntimeOwner.Controller.DisposeAnalysisCancellation,
+                dependencies.AiStates.RuntimeOwner.Controller.Dispose,
             ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(
                 dependencies.ProtocolStates.ImportReferenceEvents.Events),
             ResetProtocolMatchState: () =>

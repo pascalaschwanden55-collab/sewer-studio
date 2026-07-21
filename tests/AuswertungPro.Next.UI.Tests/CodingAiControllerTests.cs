@@ -100,12 +100,47 @@ public sealed class CodingAiControllerTests
         Assert.Equal(1, received);
     }
 
+    [Fact]
+    public void Dispose_gibt_VisionClient_der_Runtime_frei()
+    {
+        var vision = new DisposableFakeVisionClient();
+        var controller = new CodingAiController();
+        controller.ApplyRuntime(Runtime(
+            enabled: true, liveDetection: null, enhancedVision: null, qualityGate: null, visionClient: vision));
+
+        controller.Dispose();
+
+        Assert.True(vision.Disposed);
+    }
+
+    [Fact]
+    public void ApplyRuntime_gibt_vorherige_Runtime_frei_aber_nicht_die_aktuelle()
+    {
+        // Jeder Codiermodus-Wiedereintritt baut einen neuen VisionClient. Die vorherige Runtime
+        // muss beim naechsten ApplyRuntime freigegeben werden, sonst leaken die HttpClients.
+        var oldVision = new DisposableFakeVisionClient();
+        var newVision = new DisposableFakeVisionClient();
+        var controller = new CodingAiController();
+
+        controller.ApplyRuntime(Runtime(
+            enabled: true, liveDetection: null, enhancedVision: null, qualityGate: null, visionClient: oldVision));
+        controller.ApplyRuntime(Runtime(
+            enabled: true, liveDetection: null, enhancedVision: null, qualityGate: null, visionClient: newVision));
+
+        Assert.True(oldVision.Disposed);    // vorherige Runtime freigegeben
+        Assert.False(newVision.Disposed);   // aktuelle bleibt nutzbar
+
+        controller.Dispose();
+        Assert.True(newVision.Disposed);
+    }
+
     private static CodingAiRuntime Runtime(
         bool enabled,
         LiveDetectionService? liveDetection,
         EnhancedVisionAnalysisService? enhancedVision,
         QualityGateService? qualityGate,
-        GuidedVerificationService? protocolVerifier = null)
+        GuidedVerificationService? protocolVerifier = null,
+        IVisionPipelineClient? visionClient = null)
         => new(
             new AiRuntimeSettings(
                 enabled,
@@ -133,7 +168,7 @@ public sealed class CodingAiControllerTests
             enhancedVision,
             qualityGate,
             protocolVerifier,
-            VisionClient: null,
+            VisionClient: visionClient,
             MultiModel: null,
             BoxSegmentation: null,
             MultiModelError: null);
@@ -175,5 +210,18 @@ public sealed class CodingAiControllerTests
 
         public void RaiseStatus()
             => StatusChanged?.Invoke(this, CurrentStatus);
+    }
+
+    private sealed class DisposableFakeVisionClient : IVisionPipelineClient, IDisposable
+    {
+        public bool Disposed { get; private set; }
+        public void Dispose() => Disposed = true;
+
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

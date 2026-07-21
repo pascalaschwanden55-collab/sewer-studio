@@ -11,8 +11,9 @@ using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
 
-public sealed class CodingAiController
+public sealed class CodingAiController : IDisposable
 {
+    private CodingAiRuntime? _runtime;
     private CancellationTokenSource? _analysisCancellation;
     private IPipelineHealthMonitor? _healthMonitor;
     private EventHandler<PipelineHealthStatus>? _healthStatusChanged;
@@ -37,6 +38,16 @@ public sealed class CodingAiController
     public void ApplyRuntime(CodingAiRuntime runtime)
     {
         ArgumentNullException.ThrowIfNull(runtime);
+
+        // Eine zuvor angewandte Runtime hielt einen eigenen VisionClient/OllamaClient. Vor dem
+        // Setzen einer neuen wird die alte freigegeben — sonst leakt jeder Codiermodus-
+        // Wiedereintritt zwei HttpClients. Eine laufende Analyse wird zuvor abgebrochen.
+        if (!ReferenceEquals(_runtime, runtime))
+        {
+            CancelAnalysisIfPresent();
+            _runtime?.Dispose();
+        }
+        _runtime = runtime;
 
         PipelineConfig = runtime.PipelineConfig;
         ModelName = runtime.ModelName;
@@ -120,5 +131,14 @@ public sealed class CodingAiController
             MultiModel = create(VisionClient, PipelineConfig);
 
         return MultiModel;
+    }
+
+    // Gibt die aktuelle Runtime (eigener VisionClient/OllamaClient) und die Analyse-
+    // Cancellation frei. Der PipelineHealthMonitor wird zuvor ueber StopHealthMonitor beendet.
+    public void Dispose()
+    {
+        DisposeAnalysisCancellation();
+        _runtime?.Dispose();
+        _runtime = null;
     }
 }
