@@ -204,6 +204,16 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!videoResult.IsSuccess)
             return PipelineResult.Failed($"Video-Analyse fehlgeschlagen: {videoResult.Error}");
 
+        // befund-2: Ein degradierter Lauf (Sidecar-Ausfall mitten im Video) darf nicht wie ein
+        // sauberes Ergebnis wirken — deutlich sichtbar machen statt still weiterzulaufen.
+        if (videoResult.Degraded)
+        {
+            _logger.LogWarning("Videoanalyse degradiert: {Reason}", videoResult.DegradedReason);
+            progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
+                "WARNUNG: " + (videoResult.DegradedReason ?? "Analyse unvollstaendig (Sidecar-Ausfall)."),
+                FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
+        }
+
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
             $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,

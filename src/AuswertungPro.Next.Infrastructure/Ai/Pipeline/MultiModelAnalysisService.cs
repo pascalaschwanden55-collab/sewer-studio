@@ -24,7 +24,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// YOLO (pre-screening) -> DINO (detection) -> SAM (segmentation) -> Quantification -> Qwen VSA-Code.
 /// Output is convertible to the existing <see cref="EnhancedFrameAnalysis"/> / <see cref="RawVideoDetection"/>.
 /// </summary>
-public sealed class MultiModelAnalysisService
+public sealed partial class MultiModelAnalysisService
 {
     private readonly IVisionPipelineClient _client;
     private readonly PipelineConfig _config;
@@ -177,6 +177,12 @@ public sealed class MultiModelAnalysisService
         bool yoloFallbackWarned = false;
         _codeVoting.Reset();   // Voting-Fenster gilt pro Video-Lauf
         _lastFinding = null;   // Vorheriger-Befund-Kontext darf nicht ueber Video-Grenzen lecken
+        // befund-2: Stirbt der Sidecar mitten im Video, scheitert YOLO Frame um Frame. Statt das
+        // still als Erfolg mit Teil-/Leerergebnis durchzureichen, brechen wir nach genug
+        // Folgefehlern ab und kennzeichnen den Lauf als degraded.
+        const int sidecarOutageLimit = 8;
+        int consecutiveYoloErrors = 0;
+        bool sidecarOutage = false;
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
@@ -429,11 +435,19 @@ public sealed class MultiModelAnalysisService
                     trace.DropReason = "yolo_error";
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
+                    if (++consecutiveYoloErrors >= sidecarOutageLimit)
+                    {
+                        sidecarOutage = true;
+                        _logger.LogError("Sidecar antwortet seit {Count} Frames nicht — Analyse abgebrochen (degraded).",
+                            consecutiveYoloErrors);
+                        break;
+                    }
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
             }
 
+            consecutiveYoloErrors = 0;   // YOLO hat geantwortet -> Sidecar lebt, Folgefehler-Zaehler zuruecksetzen
             trace.YoloRelevant = yoloResult.IsRelevant;
             trace.YoloDetectionCount = yoloResult.Detections.Count;
 
@@ -896,7 +910,11 @@ public sealed class MultiModelAnalysisService
             .ConfigureAwait(false);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
-            detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
+            detections.OrderBy(d => d.MeterStart).ToList(), null, summary,
+            Degraded: sidecarOutage,
+            DegradedReason: sidecarOutage
+                ? $"Sidecar antwortete ab Frame {frameIndex} nicht mehr — Analyse unvollstaendig."
+                : null);
     }
 
     /// <summary>Modell-Tag fuer den Trace: Name + Kurz-Hash aus der Sidecar-Response.</summary>
@@ -935,66 +953,6 @@ public sealed class MultiModelAnalysisService
         var estimated = t / Math.Max(duration, 1.0) * EstimatedReachLengthM;
         lastMeter = Math.Max(lastMeter, estimated);
         return Math.Round(lastMeter, 2);
-    }
-
-    private static string NormalizePath(string path)
-    {
-        path = path.Trim();
-        if (path.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
-            path = new Uri(path).LocalPath;
-        return Path.GetFullPath(path);
-    }
-
-    /// <summary>
-    /// Standard-Frame-Quelle: oeffnet einen VideoFrameStream und gibt seine Frames zurueck.
-    /// Als separater Helper, damit der await-using-Dispose korrekt ablaeuft.
-    /// </summary>
-    private static async IAsyncEnumerable<FrameData> DefaultFrameSource(
-        string ffmpegPath,
-        string videoPath,
-        double stepSeconds,
-        double duration,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
-    {
-        await using var stream = VideoFrameStream.Open(ffmpegPath, videoPath, stepSeconds, duration, ct);
-        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
-            yield return frame;
-    }
-
-    private async Task<double> GetVideoDurationAsync(string videoPath, CancellationToken ct)
-    {
-        var result = await _videoProbe.ProbeAsync(videoPath, ct).ConfigureAwait(false);
-        if (result.Success)
-            return result.DurationSeconds;
-
-        _logger.LogWarning("Videodauer konnte nicht ermittelt werden: {Error}", result.Error);
-        return 0;
-    }
-
-    // Delegiert an gemeinsamen Helfer in FfmpegLocator (verhaltensneutral).
-    private static string DeriveFfprobePath(string ffmpegPath) =>
-        FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
-
-    /// <summary>
-    /// Normalisiert Clock-Positionen — delegiert an kanonische Implementierung in VsaCodeResolver.
-    /// </summary>
-    private static string? NormalizeClockPosition(string? clock) =>
-        VsaCodeResolver.NormalizeClock(clock);
-
-    private static bool CanUseClassifierDecision(YoloClassifyResponse cls)
-        => cls.ClassifierLoaded && !cls.BendVetoFailed;
-
-    private static void MarkTraceDegraded(PipelineFrameTrace trace, string reason)
-    {
-        trace.Degraded = true;
-        if (string.IsNullOrWhiteSpace(trace.DegradedReason))
-        {
-            trace.DegradedReason = reason;
-            return;
-        }
-
-        if (!trace.DegradedReason.Contains(reason, StringComparison.OrdinalIgnoreCase))
-            trace.DegradedReason += $";{reason}";
     }
 
 }

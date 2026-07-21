@@ -74,7 +74,12 @@ public sealed record VideoAnalysisResult(
     int FramesAnalyzed,
     IReadOnlyList<RawVideoDetection> Detections,
     string? Error,
-    TelemetrySummary? Telemetry = null)
+    TelemetrySummary? Telemetry = null,
+    // Degraded=true: Lauf ist durchgelaufen, aber wichtige Frames scheiterten (z. B. Sidecar-
+    // Ausfall mitten im Video). Das Ergebnis ist unvollstaendig und darf NICHT wie ein sauberes
+    // Rohr behandelt werden; die UI weist es aus. IsSuccess bleibt true (Ergebnis ist nutzbar).
+    bool Degraded = false,
+    string? DegradedReason = null)
 {
     public bool IsSuccess => Error is null;
 

@@ -111,6 +111,29 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 InferenceTimeMs: 1,
                 Usable: true,
                 QualityReason: "ok"));
+    }
+
+    /// <summary>Sidecar tot: YOLO wirft bei jedem Frame (befund-2: Totalausfall mitten im Video).</summary>
+    private sealed class DeadSidecarYoloClient : IVisionPipelineClient
+    {
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(null);
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+            => Task.FromResult(new PipelineHealthCheckResult(true, true, 200, null, null));
+
+        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+            => throw new InvalidOperationException("Sidecar nicht erreichbar (Test).");
+
+        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+            => Task.FromResult(new DinoResponse(Array.Empty<DinoDetectionDto>(), 1));
+
+        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
+            => Task.FromResult(new SamResponse(Array.Empty<SamMaskResult>(), 640, 480, 1));
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
+            => Task.FromResult(new YoloClassifyResponse(
+                Array.Empty<YoloClassifyPrediction>(), 1, Usable: true, QualityReason: "ok"));
 
     }
 
@@ -146,6 +169,28 @@ public sealed class MultiModelAnalysisServiceE2ETests
     }
 
     // ── Tests ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Sidecar_dauerhaft_tot_bricht_ab_und_markiert_degraded()
+    {
+        var svc = new MultiModelAnalysisService(
+            client: new DeadSidecarYoloClient(),
+            config: MinimalConfig(),
+            ffmpegPath: "ffmpeg",
+            frameSource: TenFrameSource,
+            durationProbe: (_, _) => Task.FromResult(10.0));
+        svc.FrameStepSeconds = 1.0;
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        // Kein harter Fehler (Ergebnis ist nutzbar), aber ehrlich als degraded gekennzeichnet und
+        // nach genug Folgefehlern abgebrochen — statt still alle 10 Frames als "Erfolg" durchzureichen.
+        Assert.True(result.IsSuccess, $"Unerwarteter Fehler: {result.Error}");
+        Assert.True(result.Degraded, "Lauf mit totem Sidecar muss degraded sein.");
+        Assert.Contains("Sidecar", result.DegradedReason ?? "");
+        Assert.True(result.FramesAnalyzed <= 8,
+            $"Erwartet Abbruch nach 8 Folgefehlern, tatsaechlich {result.FramesAnalyzed} Frames.");
+    }
 
     [Fact]
     public async Task DinoEmpty_WithConfirmedBcd_ProducesStructuralFinding()
