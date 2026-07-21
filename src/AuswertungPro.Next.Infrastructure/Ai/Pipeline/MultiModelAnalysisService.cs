@@ -718,8 +718,16 @@ public sealed partial class MultiModelAnalysisService
             }
 
             // Build per-frame EvidenceVector with pipeline signals
+            // U7: echte YOLO-Confidence des staerksten Treffers statt binaer 1.0. Auf
+            // Telemetrie-Bypass-Frames ("sweep") lief YOLO nie -> null (kein Signal), damit das
+            // QualityGate keine erfundene Volltreffer-Confidence bewertet.
+            double? yoloConfEvidence = yoloResult.Detections.Count > 0
+                ? yoloResult.Detections.Max(d => d.Confidence)
+                : string.Equals(yoloResult.FrameClass, "sweep", StringComparison.Ordinal)
+                    ? null
+                    : (yoloResult.IsRelevant ? 1.0 : 0.0);
             var frameEvidence = new EvidenceVector(
-                YoloConf: yoloResult.IsRelevant ? 1.0 : 0.0,
+                YoloConf: yoloConfEvidence,
                 DinoConf: maxDinoConf,
                 SamMaskStability: null, // populated when SamStabilityCheckEnabled
                 QwenVisionConf: null,   // populated after Qwen enrichment
