@@ -27,6 +27,7 @@ internal sealed class DataPageSanierungViewModelFactory : IDataPageSanierungView
     private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly IAiSanierungOptimizationFactory _sanierungOptimizations;
     private readonly IAiOptimizationSessionStore _optimizationSessions;
+    private readonly Application.Output.IOfferPdfExportService _offerPdfExport;
 
     public DataPageSanierungViewModelFactory(
         AppSettings settings,
@@ -35,7 +36,8 @@ internal sealed class DataPageSanierungViewModelFactory : IDataPageSanierungView
         IDerivedCostFieldSynchronizer costFieldSynchronizer,
         DashboardRefreshNotifier dashboardRefresh,
         IAiSanierungOptimizationFactory sanierungOptimizations,
-        IAiOptimizationSessionStore optimizationSessions)
+        IAiOptimizationSessionStore optimizationSessions,
+        Application.Output.IOfferPdfExportService offerPdfExport)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _costStores = costStores ?? throw new ArgumentNullException(nameof(costStores));
@@ -47,6 +49,7 @@ internal sealed class DataPageSanierungViewModelFactory : IDataPageSanierungView
             ?? throw new ArgumentNullException(nameof(sanierungOptimizations));
         _optimizationSessions = optimizationSessions
             ?? throw new ArgumentNullException(nameof(optimizationSessions));
+        _offerPdfExport = offerPdfExport ?? throw new ArgumentNullException(nameof(offerPdfExport));
     }
 
     public SanierungsmassnahmenViewModel Create(
@@ -64,7 +67,8 @@ internal sealed class DataPageSanierungViewModelFactory : IDataPageSanierungView
             _costStores.CreateCalculationStores(),
             request.ApplyCosts,
             haltungRecord: request.Record,
-            projectRecords: project.Data);
+            projectRecords: project.Data,
+            pdfExport: _offerPdfExport);
 
         costCalculator.Saved += () => SynchronizeProjectCosts(project);
 

@@ -235,6 +235,7 @@ namespace AuswertungPro.Next.UI
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IPdfMergeService PdfMerge { get; }
+        public AuswertungPro.Next.Application.Output.IOfferPdfExportService OfferPdfExport { get; }
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
         public IDichtheitProtocolFileLocator DichtheitProtocolFiles { get; }
@@ -475,6 +476,7 @@ namespace AuswertungPro.Next.UI
             PlanPdfImport = new PlanPdfImportService();
             ProtocolPdfExporter = new ProtocolPdfExporter();
             PdfMerge = new PdfMergeService();
+            OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             StoredImportFiles = new StoredImportFileService();
             StoredImportFilePaths = new StoredImportFilePathResolver();
@@ -687,7 +689,8 @@ namespace AuswertungPro.Next.UI
                 CostFieldSync,
                 DashboardRefresh,
                 SanierungOptimizations,
-                AiOptimizationSessions);
+                AiOptimizationSessions,
+                OfferPdfExport);
             DataPageWindows = new DataPage.DataPageWindowLauncher(this);
             _services = ServiceProviderRegistrationMap.Create(this);
         }

@@ -29,6 +29,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly IProjectCostStoreRepository _costRepo;
     private readonly Action<HoldingCost>? _applyTotal;
     private readonly IDialogService _dialogs;
+    // Nur ueber die Factory (ServiceProvider) gesetzt; Alt-/Test-Konstruktoren lassen ihn
+    // null, der PDF-Export wacht dann mit klarer Meldung statt selbst einen Renderer zu newen.
+    private readonly AuswertungPro.Next.Application.Output.IOfferPdfExportService? _offerPdfExport;
     private readonly string? _projectPath;
     private readonly Dictionary<string, CostCatalogItem> _catalogItems;
     private readonly Dictionary<string, MeasureTemplate> _templateItems;
@@ -91,7 +94,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         Action<HoldingCost>? applyTotal = null,
         HaltungRecord? haltungRecord = null,
         IReadOnlyList<HaltungRecord>? projectRecords = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        AuswertungPro.Next.Application.Output.IOfferPdfExportService? pdfExport = null)
         : this(
             holding,
             date,
@@ -101,7 +105,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             applyTotal,
             haltungRecord,
             projectRecords,
-            dialogs)
+            dialogs,
+            pdfExport)
     {
     }
 
@@ -114,7 +119,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         Action<HoldingCost>? applyTotal = null,
         HaltungRecord? haltungRecord = null,
         IReadOnlyList<HaltungRecord>? projectRecords = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        AuswertungPro.Next.Application.Output.IOfferPdfExportService? pdfExport = null)
         : this(
             holding,
             date,
@@ -126,7 +132,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             applyTotal,
             haltungRecord,
             projectRecords,
-            dialogs)
+            dialogs,
+            pdfExport)
     {
     }
 
@@ -141,7 +148,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         Action<HoldingCost>? applyTotal = null,
         HaltungRecord? haltungRecord = null,
         IReadOnlyList<HaltungRecord>? projectRecords = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        AuswertungPro.Next.Application.Output.IOfferPdfExportService? pdfExport = null)
     {
         Holding = holding;
         Date = date;
@@ -151,6 +159,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
         _applyTotal = applyTotal;
         _dialogs = dialogs ?? new DialogService();
+        _offerPdfExport = pdfExport;
 
         var catalog = _catalogStore.LoadMerged(projectPath);
         _catalogItems = catalog.Items.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
@@ -356,11 +365,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
                 return;
             }
 
-            var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "cost_summary.sbnhtml");
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-
-            var renderer = new OfferHtmlToPdfRenderer();
-            await renderer.RenderAsync(pdfExport.Model, templatePath, output, logoPath);
+            var exporter = _offerPdfExport
+                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfuegbar.");
+            await exporter.ExportAsync(pdfExport.Model, output);
 
             _dialogs.Info($"PDF-Kostenzusammenstellung wurde erstellt:\n{output}", "PDF-Export");
         }

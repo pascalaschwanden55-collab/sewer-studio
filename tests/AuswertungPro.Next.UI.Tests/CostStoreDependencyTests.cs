@@ -122,7 +122,7 @@ public sealed class CostStoreDependencyTests
             "ShellViewModel", "AppSettings", "DashboardRefreshNotifier", "IDialogService", "IProjectRepository");
         AssertPublicConstructor(
             typeof(CostCalculatorViewModel),
-            "String", "Nullable`1", "IReadOnlyList`1", "String", "Action`1", "HaltungRecord", "IReadOnlyList`1", "IDialogService");
+            "String", "Nullable`1", "IReadOnlyList`1", "String", "Action`1", "HaltungRecord", "IReadOnlyList`1", "IDialogService", "IOfferPdfExportService");
         AssertPublicConstructor(
             typeof(MeasureTemplateEditorViewModel),
             "String", "IDialogService", "MeasureTemplateStore", "CostCatalogStore", "String", "String");

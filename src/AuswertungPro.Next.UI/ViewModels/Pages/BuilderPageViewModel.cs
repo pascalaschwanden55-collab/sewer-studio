@@ -40,6 +40,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IPdfMergeService _pdfMerge;
+    // Nur auf dem produktiven ServiceProvider-Weg gesetzt; die Alt-/Test-Konstruktoren
+    // ohne ServiceProvider lassen ihn null (der PDF-Export wacht dann mit klarer Meldung).
+    private readonly AuswertungPro.Next.Application.Output.IOfferPdfExportService? _pdfExport;
     private readonly ISafeShellOpenService _shellOpen;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly IProjectCostStoreRepository _costRepo;
@@ -142,6 +145,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             npkExcelExporter: services.NpkExcelExport)
     {
         _pdfMerge = services.PdfMerge;
+        _pdfExport = services.OfferPdfExport;
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]

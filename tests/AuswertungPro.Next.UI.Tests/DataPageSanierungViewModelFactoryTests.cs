@@ -115,7 +115,8 @@ public sealed class DataPageSanierungViewModelFactoryTests
             synchronizer,
             dashboardRefresh,
             optimizationFactory ?? new RecordingOptimizationFactory(),
-            sessionStore ?? new RecordingOptimizationSessionStore());
+            sessionStore ?? new RecordingOptimizationSessionStore(),
+            new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService());
 
     private static HaltungRecord Record()
     {

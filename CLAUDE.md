@@ -69,6 +69,8 @@ dotnet test AuswertungPro.sln
 - `VisionPipelineClient`          → C#-HTTP-Client zum Sidecar
 - `QualityGateService`            → Green/Yellow/Red aus verfuegbaren Evidence-Signalen
 - `FullProtocolGenerationService` → KI-Befunde zu Protokolleintraegen mappen
+- `IOfferPdfExportService`         → Vertrag (Application/Output): kapselt Vorlagen-/Logo-Pfadbau + PDF-Renderer; ViewModels newen keinen Renderer mehr
+- `OfferPdfExportService`          → Impl (Infrastructure): loest Pfade auf, delegiert an `OfferHtmlToPdfRenderer` (injizierbarer Render-Delegate als Test-Seam); Modell typsicher ueber `IOfferPdfModel`
 - `KnowledgeBaseManager`          → SQLite-KB: Samples + Embeddings indexieren/retrieven
 - `TrainingSamplesStore`          → JSON-Trainingssamples speichern/mergen
 - `PhotoMeasurementGeometryService` → stabile oeffentliche Fassade fuer reine Fotomessungs-Geometrie

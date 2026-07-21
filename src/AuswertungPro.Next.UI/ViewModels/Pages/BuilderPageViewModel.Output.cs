@@ -156,12 +156,10 @@ public sealed partial class BuilderPageViewModel
                 includePositionSummary: IncludePositionSummarySection,
                 holdingDataLines: dataLines);
 
-            var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "cost_summary.sbnhtml");
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-
-            var renderer = new OfferHtmlToPdfRenderer();
+            var pdfExport = _pdfExport
+                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfuegbar.");
             PdfExportProgress = "PDF wird gerendert...";
-            await renderer.RenderAsync(model, templatePath, output, logoPath);
+            await pdfExport.ExportAsync(model, output);
 
             LastExportedPdfPath = output;
             LastExportedAt = DateTimeOffset.Now;

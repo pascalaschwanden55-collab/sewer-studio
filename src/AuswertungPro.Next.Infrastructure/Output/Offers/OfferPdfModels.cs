@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using AuswertungPro.Next.Application.Output;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 
-public sealed class OfferPdfModel
+public sealed class OfferPdfModel : IOfferPdfModel
 {
     public string LogoDataUri { get; set; } = "";
     public string DocumentKindLabel { get; set; } = "Offerte";

@@ -168,6 +168,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IPipelineEnvironmentOptions)] = services.PipelineEnvironment,
             [typeof(IProtocolService)] = services.Protocols,
             [typeof(IPdfMergeService)] = services.PdfMerge,
+            [typeof(AuswertungPro.Next.Application.Output.IOfferPdfExportService)] = services.OfferPdfExport,
             [typeof(IDossierPhotoAvailabilityService)] = services.DossierPhotoAvailability,
             [typeof(IInspectionProtocolFileLocator)] = services.InspectionProtocolFiles,
             [typeof(IDichtheitProtocolFileLocator)] = services.DichtheitProtocolFiles,
