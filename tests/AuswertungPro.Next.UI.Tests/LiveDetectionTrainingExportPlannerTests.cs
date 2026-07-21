@@ -73,7 +73,10 @@ public sealed class LiveDetectionTrainingExportPlannerTests
             ["BCA"] = 2
         };
 
-        public int GetClassId(string vsaCode) => Classes[vsaCode];
+        public int GetClassId(string vsaCode)
+            => throw new InvalidOperationException("Der Live-Teacher-Weg muss GetOrAddClassId verwenden.");
+
+        public int GetOrAddClassId(string vsaCode) => Classes[vsaCode];
 
         public Dictionary<string, int> GetFullMap() => new(Classes, StringComparer.OrdinalIgnoreCase);
 

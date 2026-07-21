@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -10,6 +11,7 @@ internal static class SchaechteShaftRenameController
 {
     internal static bool Apply(
         IShaftRenameService renameService,
+        IPdfTextLayerRewriter pdfTextLayerRewrite,
         SchachtRecord record,
         string? oldValue,
         string? newValue,
@@ -18,6 +20,7 @@ internal static class SchaechteShaftRenameController
         Action<string, string> showError)
     {
         ArgumentNullException.ThrowIfNull(renameService);
+        ArgumentNullException.ThrowIfNull(pdfTextLayerRewrite);
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(showError);
 
@@ -40,7 +43,7 @@ internal static class SchaechteShaftRenameController
         if (pdfPaths.Count == 0)
             return true;
 
-        var rewrite = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+        var rewrite = pdfTextLayerRewrite.RewriteIdentifierInPlace(
             pdfPaths,
             oldNumber,
             newNumber);

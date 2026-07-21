@@ -24,6 +24,18 @@ def test_health_401_without_or_wrong_token(app, monkeypatch):
     assert client.get("/health", headers={"X-Sidecar-Token": "secret-123"}).status_code == 200  # korrekt
 
 
+def test_non_ascii_token_header_yields_401_not_500(app, monkeypatch):
+    from sidecar.config import settings
+    monkeypatch.setattr(settings, "auth_token", "secret-123", raising=False)
+    client = TestClient(app)
+
+    # Non-ASCII im Token-Header (als Latin-1-Bytes gesendet, wie ein fremder Client es koennte)
+    # darf nicht mit TypeError einen 500 ausloesen, sondern sauber 401 liefern.
+    response = client.get("/health", headers={"X-Sidecar-Token": "tökén".encode("latin-1")})
+
+    assert response.status_code == 401
+
+
 def test_empty_server_token_fails_closed(app, monkeypatch):
     from sidecar.config import settings
     monkeypatch.setattr(settings, "auth_token", "", raising=False)

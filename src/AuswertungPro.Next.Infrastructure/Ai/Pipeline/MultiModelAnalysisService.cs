@@ -176,7 +176,7 @@ public sealed class MultiModelAnalysisService
         double lastMeter = 0;
         bool yoloFallbackWarned = false;
         _codeVoting.Reset();   // Voting-Fenster gilt pro Video-Lauf
-
+        _lastFinding = null;   // Vorheriger-Befund-Kontext darf nicht ueber Video-Grenzen lecken
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 

@@ -89,14 +89,16 @@ public sealed class IbakExportImportService : IIbakImportService
                 var record = FindRecord(project, key);
                 if (record is null)
                 {
-                    // Auto-Create: Neue Haltung aus IBAK-Daten anlegen
-                    record = new HaltungRecord();
+                    // Auto-Create: Neue Haltung aus IBAK-Daten anlegen — mit NR-Vergabe und
+                    // Namens-Duplikatschutz (einheitlich zu WinCan/KINS statt project.Data.Add am
+                    // Schutz vorbei). Ein Duplikat wirft und wird vom aeusseren catch je Haltung gemeldet.
+                    record = project.CreateNewRecord();
                     record.SetFieldValue("Haltungsname", key, FieldSource.Legacy, userEdited: false);
                     ApplyHeaderFields(record, holding.Entries);
                     if (ctx is null)
-                        project.Data.Add(record);
+                        project.AddRecord(record);
                     else
-                        ctx.WithCollectionLock(() => project.Data.Add(record));
+                        ctx.WithCollectionLock(() => project.AddRecord(record));
                     created++;
                     messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
                 }

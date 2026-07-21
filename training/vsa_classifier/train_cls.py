@@ -46,6 +46,7 @@ def main():
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=args.batch,
+        workers=0,  # Windows: stabiles Dataloading (pin_memory-Fix)
         patience=args.patience,   # Early Stopping
         device=args.device,
         seed=42,

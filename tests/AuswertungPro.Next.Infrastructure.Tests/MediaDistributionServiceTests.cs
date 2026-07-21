@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 
@@ -276,6 +278,87 @@ public sealed class MediaDistributionServiceTests
         var neueDatei = dateien.Single(f => !string.Equals(f, bestehend, StringComparison.OrdinalIgnoreCase));
         Assert.StartsWith("inspektion_", Path.GetFileName(neueDatei));
         Assert.Equal("neuer-deutlich-laengerer-inhalt", File.ReadAllText(neueDatei));
+    }
+
+    [Fact]
+    public void DistributeImportedMedia_Namenskollision_GleicheGroesse_AndererInhalt_WirdNichtWiederverwendet()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var quelle = temp.CreateSubdir("quelle");
+        var videoQuelle = Path.Combine(quelle, "inspektion.mpg");
+        File.WriteAllText(videoQuelle, "NEU1");
+
+        var zielDir = Path.Combine(projectFolder, "Haltungen_Verteilt", "06.123-456", "Video");
+        Directory.CreateDirectory(zielDir);
+        var bestehend = Path.Combine(zielDir, "inspektion.mpg");
+        File.WriteAllText(bestehend, "ALT1");
+        var project = NewProject("06.123-456", "Link", videoQuelle);
+
+        var result = new MediaDistributionService()
+            .DistributeImportedMedia(projectFolder, project);
+
+        Assert.Equal(1, result.FilesCopied);
+        Assert.Equal("ALT1", File.ReadAllText(bestehend));
+        var neueDatei = Directory.GetFiles(zielDir)
+            .Single(path => !path.Equals(bestehend, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("NEU1", File.ReadAllText(neueDatei));
+        Assert.Equal(
+            ProjectPathResolver.MakeRelative(neueDatei, projectFolder),
+            project.Data[0].GetFieldValue("Link"));
+    }
+
+    [Fact]
+    public void DistributeImportedMedia_mit_Staging_setzt_Zielpfad_aber_kopiert_erst_beim_Publish()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var projectFiles = Path.Combine(projectFolder, "Projektdateien");
+        Directory.CreateDirectory(projectFiles);
+        var projectPath = Path.Combine(projectFiles, "projekt.json");
+        File.WriteAllText(projectPath, "{}");
+        var quelle = temp.CreateSubdir("quelle");
+        var videoQuelle = Path.Combine(quelle, "inspektion.mpg");
+        File.WriteAllText(videoQuelle, "videodaten");
+        var project = NewProject("06.123-456", "Link", videoQuelle);
+        using var staging = new ImportFileStagingService().Begin(projectPath)!;
+
+        IImportMediaDistributionService service = new MediaDistributionService();
+        var result = service.Distribute(new ImportMediaDistributionRequest(
+            ProjectFolder: projectFolder,
+            Project: project,
+            FileStaging: staging));
+
+        Assert.Equal(1, result.FilesCopied);
+        var relative = project.Data[0].GetFieldValue("Link");
+        var target = Path.Combine(projectFolder, relative);
+        Assert.False(File.Exists(target));
+
+        staging.Publish();
+        staging.Accept();
+
+        Assert.Equal("videodaten", File.ReadAllText(target));
+    }
+
+    [Fact]
+    public void DistributeImportedMedia_behaelt_den_bisherigen_oeffentlichen_Vertrag()
+    {
+        var method = typeof(MediaDistributionService).GetMethod(
+            nameof(MediaDistributionService.DistributeImportedMedia),
+            [
+                typeof(string),
+                typeof(Project),
+                typeof(IProgress<MediaDistributionService.CopyProgress>),
+                typeof(CancellationToken),
+                typeof(bool),
+                typeof(object),
+                typeof(bool),
+                typeof(bool),
+                typeof(bool)
+            ]);
+
+        Assert.NotNull(method);
+        Assert.Equal(typeof(MediaDistributionService.CopyResult), method!.ReturnType);
     }
 
     [Fact]

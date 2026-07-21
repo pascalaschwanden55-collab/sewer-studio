@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
@@ -84,7 +85,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Contains("replace", calls);
         Assert.Contains("save", calls);
         Assert.Contains("report:PDF:False", calls);
-        Assert.Equal("report.txt", state.LastReportPath);
+        Assert.Equal("import-report.txt", state.LastReportPath);
         Assert.Equal(100, state.ProgressPercent);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
@@ -123,11 +124,12 @@ public sealed class ImportRunWorkflowControllerTests
             CancellationToken.None);
 
         Assert.Equal(["restore:XTF", "report:XTF:False"], calls);
-        Assert.Equal("XTF Import fehlgeschlagen - Projekt unveraendert: kaputt", state.Summary);
-        Assert.Equal("XTF Import fehlgeschlagen - Projekt unveraendert", state.Statuses[^1]);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: kaputt", state.Summary);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen", state.Statuses[^1]);
         Assert.Null(state.ReplacedProject);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
+        Assert.Equal("import-report.txt", state.LastReportPath);
         Assert.Equal("", state.Phase);
     }
 
@@ -191,6 +193,7 @@ public sealed class ImportRunWorkflowControllerTests
             calls);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
+        Assert.Equal("import-report.txt", state.LastReportPath);
     }
 
     [Fact]
@@ -216,7 +219,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projekt unveraendert", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
     }
 
     [Fact]
@@ -242,7 +245,439 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projekt unveraendert", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_project_switch_during_import_discards_result_before_post_processing()
+    {
+        var originalProject = new Project { Name = "Original" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
+        var activeProject = originalProject;
+        var activePath = @"C:\Projekte\Original\projekt.json";
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) =>
+            {
+                calls.Add("import");
+                activeProject = openedProject;
+                activePath = @"C:\Projekte\Neu\projekt.json";
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            },
+            PostImportAsync: (_, _, _) =>
+            {
+                calls.Add("post");
+                return Task.CompletedTask;
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                originalProject,
+                state,
+                calls,
+                getProject: () => activeProject,
+                getProjectPath: () => activePath),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("post", calls);
+        Assert.DoesNotContain("dedup", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Null(state.ReplacedProject);
+        Assert.Same(openedProject, activeProject);
+        Assert.Contains("Projekt wurde gewechselt", state.Summary);
+        Assert.Contains("nicht uebernommen", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_project_path_change_discards_result_without_saving()
+    {
+        var project = new Project { Name = "Gleiches Objekt" };
+        var activePath = @"C:\Projekte\Original\projekt.json";
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "XTF",
+            "source.xtf",
+            (_, _, _) =>
+            {
+                activePath = @"C:\Projekte\SpeichernUnter\projekt.json";
+                return Result<ImportStats>.Success(new ImportStats(1, 0, 1, 0, 0, []));
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                getProjectPath: () => activePath),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Null(state.ReplacedProject);
+        Assert.Contains("Projekt wurde gewechselt", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_project_switch_in_post_processing_stops_before_commit()
+    {
+        var originalProject = new Project { Name = "Original" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
+        var activeProject = originalProject;
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "WinCan",
+            Source: "folder",
+            Import: (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            PostImportAsync: (_, _, _) =>
+            {
+                calls.Add("post");
+                activeProject = openedProject;
+                return Task.CompletedTask;
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                originalProject,
+                state,
+                calls,
+                getProject: () => activeProject),
+            CancellationToken.None);
+
+        Assert.Contains("post", calls);
+        Assert.DoesNotContain("dedup", calls);
+        Assert.DoesNotContain("after:WinCan", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Same(openedProject, activeProject);
+        Assert.Contains("Projekt wurde gewechselt", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_confirmed_preview_keeps_original_project_identity()
+    {
+        var originalProject = new Project { Name = "Original" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
+        var activeProject = originalProject;
+        var activePath = @"C:\Projekte\Original\projekt.json";
+        var importCalls = 0;
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) =>
+            {
+                importCalls++;
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            },
+            DryRun: true,
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                originalProject,
+                state,
+                calls,
+                showPreview: (_, _) =>
+                {
+                    activeProject = openedProject;
+                    activePath = @"C:\Projekte\Neu\projekt.json";
+                    return true;
+                },
+                getProject: () => activeProject,
+                getProjectPath: () => activePath),
+            CancellationToken.None);
+
+        Assert.Equal(1, importCalls);
+        Assert.DoesNotContain("restore:PDF", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Same(openedProject, activeProject);
+        Assert.Contains("Projekt wurde gewechselt", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_cancellation_after_import_result_stops_before_post_and_commit()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var project = new Project { Name = "Original" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) =>
+            {
+                calls.Add("import");
+                cancellation.Cancel();
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            },
+            PostImportAsync: (_, _, _) =>
+            {
+                calls.Add("post");
+                return Task.CompletedTask;
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            cancellation.Token);
+
+        Assert.DoesNotContain("post", calls);
+        Assert.DoesNotContain("dedup", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Null(state.ReplacedProject);
+        Assert.Contains("abgebrochen", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_cancellation_in_post_processing_stops_before_commit()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var project = new Project { Name = "Original" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "XTF",
+            Source: "source.xtf",
+            Import: (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 0, 1, 0, 0, [])),
+            PostImportAsync: (_, _, _) =>
+            {
+                calls.Add("post");
+                cancellation.Cancel();
+                return Task.CompletedTask;
+            },
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            cancellation.Token);
+
+        Assert.Contains("post", calls);
+        Assert.DoesNotContain("dedup", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Null(state.ReplacedProject);
+        Assert.Contains("abgebrochen", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_failed_save_reports_imported_but_not_saved()
+    {
+        var project = new Project { Name = "Original" };
+        var reportDirectory = "original-reports";
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "IBAK",
+            "folder",
+            (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                saveProject: () =>
+                {
+                    reportDirectory = "wrong-new-reports";
+                    return false;
+                },
+                getReportDir: () => reportDirectory),
+            CancellationToken.None);
+
+        Assert.Contains("replace", calls);
+        Assert.Contains("save", calls);
+        Assert.NotNull(state.ReplacedProject);
+        Assert.True(state.ReplacedProject!.Dirty);
+        Assert.Contains("nicht gespeichert", state.Summary);
+        Assert.Equal("IBAK importiert, aber nicht gespeichert", state.Statuses[^1]);
+        Assert.NotEqual(100, state.ProgressPercent);
+        Assert.Equal("original-reports", state.LastExportReportDirectory);
+        Assert.Equal(1, state.LastExportLog?.TotalErrors);
+    }
+
+    [Fact]
+    public async Task RunAsync_save_exception_reports_committed_project_as_not_saved()
+    {
+        var project = new Project { Name = "Original" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "IBAK",
+            "folder",
+            (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                saveProject: () => throw new IOException("Datentraeger nicht erreichbar")),
+            CancellationToken.None);
+
+        Assert.Contains("replace", calls);
+        Assert.NotNull(state.ReplacedProject);
+        Assert.True(state.ReplacedProject!.Dirty);
+        Assert.Contains("nicht gespeichert", state.Summary);
+        Assert.DoesNotContain("Projekt unveraendert", state.Summary);
+        Assert.Equal("IBAK importiert, aber nicht gespeichert", state.Statuses[^1]);
+        Assert.Equal(1, state.LastExportLog?.TotalErrors);
+    }
+
+    [Fact]
+    public async Task RunAsync_post_processing_error_is_visible_as_import_with_notice()
+    {
+        var project = new Project { Name = "Original" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "WinCan",
+            Source: "folder",
+            Import: (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            PostImportAsync: (_, _, _) => throw new IOException("Foto konnte nicht kopiert werden"),
+            SaveProjectAfterCommit: true);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            CancellationToken.None);
+
+        Assert.Contains("replace", calls);
+        Assert.Contains("save", calls);
+        Assert.Contains("Nacharbeiten unvollstaendig", state.Summary);
+        Assert.Contains("Foto konnte nicht kopiert werden", state.Details);
+        Assert.Equal("WinCan importiert mit Hinweisen", state.Statuses[^1]);
+        Assert.Equal(1, state.LastExportLog?.TotalErrors);
+    }
+
+    [Fact]
+    public async Task RunAsync_project_switch_writes_report_to_original_report_directory()
+    {
+        var originalProject = new Project { Name = "Original" };
+        var openedProject = new Project { Name = "Neu" };
+        var activeProject = originalProject;
+        var reportDirectory = @"C:\Projekte\Original\Importberichte";
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "KINS",
+            "folder",
+            (_, _, _) =>
+            {
+                activeProject = openedProject;
+                reportDirectory = @"C:\Projekte\Neu\Importberichte";
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            });
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                originalProject,
+                state,
+                calls,
+                getProject: () => activeProject,
+                getReportDir: () => reportDirectory),
+            CancellationToken.None);
+
+        Assert.Equal(@"C:\Projekte\Original\Importberichte", state.LastExportReportDirectory);
+    }
+
+    [Fact]
+    public async Task RunAsync_veroeffentlicht_Dateien_vor_Nachlauf_und_bestaetigt_sie_nach_Projektuebernahme()
+    {
+        var project = new Project { Name = "Original" };
+        var calls = new List<string>();
+        var state = new UiState();
+        var staging = new FileStagingSessionFake(calls);
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, context) =>
+            {
+                Assert.Same(staging, context.FileStaging);
+                calls.Add("import");
+                return Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, []));
+            },
+            PostImportAsync: (_, _, context) =>
+            {
+                Assert.Same(staging, context.FileStaging);
+                calls.Add("post");
+                return Task.CompletedTask;
+            },
+            SaveProjectAfterCommit: true,
+            BeginFileStaging: projectPath =>
+            {
+                Assert.Equal(@"C:\Projekte\Test\projekt.json", projectPath);
+                calls.Add("begin-files");
+                return staging;
+            });
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls),
+            CancellationToken.None);
+
+        Assert.True(calls.IndexOf("publish-files") < calls.IndexOf("after:PDF"));
+        Assert.True(calls.IndexOf("replace") < calls.IndexOf("accept-files"));
+        Assert.True(calls.IndexOf("accept-files") < calls.IndexOf("save"));
+        Assert.Contains("dispose-files", calls);
+        Assert.True(staging.Accepted);
+    }
+
+    [Fact]
+    public async Task RunAsync_Projektwechsel_nach_Dateivorbereitung_veroeffentlicht_nichts_und_raeumt_auf()
+    {
+        var originalProject = new Project { Name = "Original" };
+        var openedProject = new Project { Name = "Neu" };
+        var activeProject = originalProject;
+        var calls = new List<string>();
+        var state = new UiState();
+        var staging = new FileStagingSessionFake(calls);
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "XTF",
+            Source: "source.xtf",
+            Import: (_, _, _) => Result<ImportStats>.Success(new ImportStats(1, 1, 0, 0, 0, [])),
+            PostImportAsync: (_, _, _) =>
+            {
+                activeProject = openedProject;
+                return Task.CompletedTask;
+            },
+            BeginFileStaging: _ => staging);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                originalProject,
+                state,
+                calls,
+                getProject: () => activeProject),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("publish-files", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.Contains("dispose-files", calls);
+        Assert.False(staging.Accepted);
     }
 
     private static ImportRunWorkflowActions Actions(
@@ -251,9 +686,14 @@ public sealed class ImportRunWorkflowControllerTests
         List<string> calls,
         Func<Project, Project>? deepCopyProject = null,
         Func<ImportPreviewResult, string, bool>? showPreview = null,
-        Func<Project, IReadOnlyList<string>>? validatePlausibility = null)
+        Func<Project, IReadOnlyList<string>>? validatePlausibility = null,
+        Func<Project>? getProject = null,
+        Func<string?>? getProjectPath = null,
+        Func<bool>? saveProject = null,
+        Func<string?>? getReportDir = null)
         => new(
-            GetProject: () => project,
+            GetProject: getProject ?? (() => project),
+            GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
             DeepCopyProject: deepCopyProject ?? (p => new Project { Name = p.Name }),
             ReplaceProject: replacement =>
             {
@@ -261,11 +701,13 @@ public sealed class ImportRunWorkflowControllerTests
                 calls.Add("replace");
             },
             CreateRestorePoint: label => calls.Add($"restore:{label}"),
-            GetReportDir: () => "reports",
-            ExportReport: (log, _) =>
+            GetReportDir: getReportDir ?? (() => "reports"),
+            ExportReport: (log, reportDir) =>
             {
+                state.LastExportReportDirectory = reportDir;
+                state.LastExportLog = log;
                 calls.Add($"report:{log.ImportType}:{log.WasDryRun}");
-                return "report.txt";
+                return log.WasDryRun ? "preview-report.txt" : "import-report.txt";
             },
             ShowPreview: showPreview ?? ((_, _) => false),
             ValidatePlausibility: validatePlausibility ?? (_ => Array.Empty<string>()),
@@ -275,7 +717,11 @@ public sealed class ImportRunWorkflowControllerTests
                 calls.Add($"after:{label}");
                 return Task.CompletedTask;
             },
-            SaveProject: () => calls.Add("save"),
+            SaveProject: () =>
+            {
+                calls.Add("save");
+                return saveProject?.Invoke() ?? true;
+            },
             SetStatus: state.Statuses.Add,
             SetCanCancel: value => state.CanCancel = value,
             SetIsImportInProgress: value => state.IsImportInProgress = value,
@@ -296,10 +742,35 @@ public sealed class ImportRunWorkflowControllerTests
         public string Phase { get; set; } = "";
         public string Progress { get; set; } = "";
         public string LastReportPath { get; set; } = "";
+        public string LastExportReportDirectory { get; set; } = "";
+        public ImportRunLog? LastExportLog { get; set; }
         public double ProgressPercent { get; set; }
         public bool CanCancel { get; set; }
         public bool IsImportInProgress { get; set; }
         public Project? ReplacedProject { get; set; }
         public List<string> Statuses { get; } = new();
+    }
+
+    private sealed class FileStagingSessionFake(List<string> calls) : IImportFileStagingSession
+    {
+        public string ProjectRoot => @"C:\Projekte\Test";
+        public bool Accepted { get; private set; }
+
+        public string StageCopy(
+            string sourcePath,
+            string targetDirectory,
+            Func<DateTime>? now = null,
+            CancellationToken cancellationToken = default)
+            => Path.Combine(targetDirectory, Path.GetFileName(sourcePath));
+
+        public void Publish() => calls.Add("publish-files");
+
+        public void Accept()
+        {
+            Accepted = true;
+            calls.Add("accept-files");
+        }
+
+        public void Dispose() => calls.Add("dispose-files");
     }
 }

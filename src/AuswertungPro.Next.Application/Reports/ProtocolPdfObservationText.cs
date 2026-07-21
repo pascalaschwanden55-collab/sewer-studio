@@ -1,17 +1,11 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Reports;
 
 internal static class ProtocolPdfObservationText
 {
-    private static readonly Regex RawMeterRegex =
-        new(@"@?\s*(\d+(?:[.,]\d+)?)\s*m(?!m)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex RawTimeRegex =
-        new(@"\b(\d{1,2}:\d{2}(?::\d{2})?)\b", RegexOptions.Compiled);
-
     internal static string BuildRangeText(ProtocolEntry entry, string rangeLabel)
     {
         if (entry.MeterStart is null && entry.MeterEnd is null)
@@ -300,20 +294,7 @@ internal static class ProtocolPdfObservationText
         => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
 
     internal static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
-    }
+        => ProtocolTimeParser.ParseMpegTime(raw);
 
     internal static double? TryParseDouble(string? raw)
     {
@@ -328,30 +309,13 @@ internal static class ProtocolPdfObservationText
     }
 
     internal static double? TryParseMeterFromRaw(string raw)
-    {
-        var match = RawMeterRegex.Match(raw);
-        if (!match.Success)
-            return null;
-
-        var text = match.Groups[1].Value.Replace(',', '.');
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
-    }
+        => ProtocolFindingRawParser.TryParseMeterFromRaw(raw);
 
     internal static double? TryParseSecondMeterFromRaw(string raw)
-    {
-        var matches = RawMeterRegex.Matches(raw);
-        if (matches.Count < 2)
-            return null;
-
-        var text = matches[1].Groups[1].Value.Replace(',', '.');
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
-    }
+        => ProtocolFindingRawParser.TryParseSecondMeterFromRaw(raw);
 
     internal static string? TryParseTimeFromRaw(string raw)
-    {
-        var match = RawTimeRegex.Match(raw);
-        return match.Success ? match.Groups[1].Value : null;
-    }
+        => ProtocolFindingRawParser.TryParseTimeFromRaw(raw);
 
     internal static string? GetParam(IReadOnlyDictionary<string, string> parameters, string key)
         => parameters.TryGetValue(key, out var value) ? value : null;

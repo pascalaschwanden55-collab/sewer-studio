@@ -52,6 +52,7 @@ using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.ClassMaps;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Reports;
 
@@ -65,6 +66,9 @@ using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Training.ClassMaps;
+using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
+using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
 
@@ -100,6 +104,7 @@ namespace AuswertungPro.Next.UI
         public ISidecarTokenResolver SidecarTokens { get; }
         public IAiStartedProcessLifetime AiStartedProcesses { get; }
         public IVsaYoloClassMapStore VsaYoloClasses { get; }
+        public ITrainingYoloClassMapStore TrainingYoloClasses { get; }
         public IGitCommitResolver GitCommit { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -138,13 +143,7 @@ namespace AuswertungPro.Next.UI
         public ILogTailReader LogTailReader { get; }
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
         public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
-        public IKnowledgeWalCheckpoint KnowledgeWalCheckpoint { get; }
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
-        public IBackupTargetMarkerGuard BackupTargetMarkers { get; }
-        public ISqliteSnapshotCopier SqliteSnapshots { get; }
-        public IBackupManifestIntegrityService BackupManifestIntegrity { get; }
-        public IFullBackupSourcesProvider BackupSources { get; }
-        public IFullBackupService FullBackup { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         public ProgramCleanupService ProgramCleanup { get; } = new();
@@ -205,6 +204,9 @@ namespace AuswertungPro.Next.UI
         public IImportRunReportExporter ImportRunReports { get; }
         public IImportSummaryExporter ImportSummaryExporter { get; }
         public IStoredImportFileService StoredImportFiles { get; }
+        public IStoredImportFilePathResolver StoredImportFilePaths { get; }
+        public IImportFileStagingService ImportFileStaging { get; }
+        public IImportMediaDistributionService ImportMediaDistribution { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
         public IProjectStructureInitializer ProjectStructure { get; }
         public IKiasExportPatternDetector KiasExportPatterns { get; }
@@ -286,9 +288,6 @@ namespace AuswertungPro.Next.UI
 
         public TrainingReviewSamSegmentationService CreateTrainingReviewSam()
             => new(new VisionPipelineTrainingReviewSamClient(PipelineCfg, SidecarTelemetry));
-
-        public FewShotExampleStore CreateFewShotStore()
-            => new(message => Logger.LogWarning("{Message}", message));
 
         // Globale, selbst gepflegte Schacht-Massnahmen-Liste (einfacher Weg ohne NPK):
         // Name + manueller Preis, projektuebergreifend unter %AppData%.
@@ -435,7 +434,9 @@ namespace AuswertungPro.Next.UI
             PdfTextPrefixes = new PdfTextPrefixReaderService();
             PdfDokumentTypErkennung.UseTextPrefixReader(PdfTextPrefixes);
             PdfImport = new PdfImportServiceAdapter(PdfTextExtraction, PdfOcrExtraction);
-            PdfTextLayerRewrite = new PdfTextLayerRewriteService();
+            PdfTextLayerRewrite = new PdfTextLayerRewriteService(
+                PdfFileReplacement,
+                loggerFactory.CreateLogger<PdfTextLayerRewriteService>());
             DistributionPdfPages = new DistributionPdfPageReadingService(PdfTextExtraction, PdfFileSafety);
             DistributionFileTransfers = new DistributionFileTransferService();
             VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
@@ -469,7 +470,11 @@ namespace AuswertungPro.Next.UI
             ProtocolPdfExporter = new ProtocolPdfExporter();
             PdfMerge = new PdfMergeService();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
-            InspectionProtocolFiles = new InspectionProtocolFileLocator();
+            StoredImportFiles = new StoredImportFileService();
+            StoredImportFilePaths = new StoredImportFilePathResolver();
+            ImportFileStaging = new ImportFileStagingService();
+            ImportMediaDistribution = new MediaDistributionService();
+            InspectionProtocolFiles = new InspectionProtocolFileLocator(StoredImportFilePaths);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
@@ -478,7 +483,6 @@ namespace AuswertungPro.Next.UI
             OneClickImportReports = new OneClickImportReportWriter(Logger);
             ImportRunReports = new ImportRunReportFileExporter();
             ImportSummaryExporter = new ImportSummaryExporter();
-            StoredImportFiles = new StoredImportFileService();
             ProjectRestorePoints = new ProjectRestorePointStore();
             ProjectRecovery = new ProjectRecoveryService();
             ImportSourceArchiver = new ImportSourceArchiveService();
@@ -503,20 +507,12 @@ namespace AuswertungPro.Next.UI
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
             KnowledgeBaseHealth = knowledgeBaseHealth ?? new KnowledgeBaseHealthInspectionService();
             GitCommit = new GitCommitFileResolver();
-            BackupTargetMarkers = new BackupTargetMarkerGuardService();
-            BackupTargetGuard.UseMarkerGuard(BackupTargetMarkers);
-            SqliteSnapshots = new SqliteSnapshotCopyService();
-            BackupManifestIntegrity = new BackupManifestIntegrityService();
             BackupSources = new FullBackupSourcesProvider(RepositoryRootLocator);
-            FullBackup = new FullBackupService(
+            _fullBackupComposition = FullBackupComposition.Create(
                 () => BackupSources.Resolve(settings),
-                KnowledgeWalCheckpoint.TryCheckpoint,
-                ct => OllamaListAsync(ct),
-                availableBytes: null,
-                gitCommitResolver: GitCommit,
-                targetMarkerGuard: BackupTargetMarkers,
-                sqliteSnapshots: SqliteSnapshots,
-                manifestIntegrity: BackupManifestIntegrity);
+                KnowledgeWalCheckpoint,
+                OllamaListAsync,
+                GitCommit);
             KnowledgeBackup = new KnowledgeBackupTransferService();
 
 
@@ -529,11 +525,27 @@ namespace AuswertungPro.Next.UI
             var catalogPaths = VsaCatalogPaths.Resolve(
                 Services.VsaCatalogPathResolver.ToRequest(settings));
             VsaCatalogResolvedPath = catalogPaths.DisplayPath;
+            var vsaManifestPath = !string.IsNullOrWhiteSpace(catalogPaths.KekManifestPath)
+                ? catalogPaths.KekManifestPath
+                : Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
+            TrainingYoloClasses = new TrainingYoloClassMapFileStore(
+                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v2.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_migration_v2.candidate.json"),
+                vsaManifestPath);
             CodeCatalog = CreateCodeCatalog(
                 settings,
                 VsaCatalogPaths,
                 catalogPaths.KekManifestPath,
                 catalogPaths.XmlCatalogPaths);
+            _trainingYoloExportComposition = TrainingYoloExportComposition.Create(
+                KnowledgeRoot,
+                settings.EvalSetRoot,
+                TrainingSamples,
+                CodeCatalog,
+                TrainingYoloClasses,
+                PipelineCfg,
+                SidecarTelemetry,
+                TimeProvider.System);
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
                 PipelineTrace,
                 ProcessOutputs,
@@ -671,7 +683,7 @@ namespace AuswertungPro.Next.UI
                 SanierungOptimizations,
                 AiOptimizationSessions);
             DataPageWindows = new DataPage.DataPageWindowLauncher(this);
-            _services = CreateServiceMap();
+            _services = ServiceProviderRegistrationMap.Create(this);
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
@@ -812,122 +824,6 @@ namespace AuswertungPro.Next.UI
 
             return new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers);
         }
-
-        private IReadOnlyDictionary<Type, object> CreateServiceMap()
-            => new Dictionary<Type, object>
-            {
-                [typeof(IFullBackupService)] = FullBackup,
-                [typeof(IFullBackupSourcesProvider)] = BackupSources,
-                [typeof(IBackupTargetMarkerGuard)] = BackupTargetMarkers,
-                [typeof(ISqliteSnapshotCopier)] = SqliteSnapshots,
-                [typeof(IBackupManifestIntegrityService)] = BackupManifestIntegrity,
-                [typeof(ISettingsRestorePointStore)] = SettingsRestorePoints,
-                [typeof(ISettingsFileStore)] = SettingsFiles,
-                [typeof(ISettingsQuarantineStore)] = SettingsQuarantine,
-                [typeof(ISettingsMigrationService)] = SettingsMigration,
-                [typeof(IExplorerRevealService)] = ExplorerReveal,
-                [typeof(ISafeShellOpenService)] = ShellOpen,
-                [typeof(IFolderOpenService)] = FolderOpen,
-                [typeof(IProgramRootLocator)] = ProgramRootLocator,
-                [typeof(IRepositoryRootLocator)] = RepositoryRootLocator,
-                [typeof(IFfmpegExecutableLocator)] = FfmpegExecutables,
-                [typeof(IProcessOutputReader)] = ProcessOutputs,
-                [typeof(IVideoFrameExtractor)] = VideoFrameExtraction,
-                [typeof(ITrainingFfmpegPathResolver)] = TrainingFfmpegPaths,
-                [typeof(ISidecarScriptLocator)] = SidecarScripts,
-                [typeof(ISidecarTokenResolver)] = SidecarTokens,
-                [typeof(IAiStartedProcessLifetime)] = AiStartedProcesses,
-                [typeof(IVsaYoloClassMapStore)] = VsaYoloClasses,
-                [typeof(IKatasterXtfPathResolver)] = KatasterXtfPaths,
-                [typeof(IHaltungCadastreTableStore)] = HaltungCadastreTables,
-                [typeof(IHaltungCadastreIndexProvider)] = HaltungCadastreIndexes,
-                [typeof(IOfflineBasemapPathResolver)] = OfflineBasemapPaths,
-                [typeof(Mapping.IKarteBasemapLayerFactory)] = BasemapLayers,
-                [typeof(IVsaCatalogPathResolver)] = VsaCatalogPaths,
-                [typeof(IGitCommitResolver)] = GitCommit,
-                [typeof(IProjectRepository)] = Projects,
-                [typeof(ICostStoreFactory)] = CostStores,
-                [typeof(IProjectPhotoReferenceNormalizer)] = ProjectPhotoReferences,
-                [typeof(IProjectFileDiscovery)] = ProjectFileDiscovery,
-                [typeof(IProjectOverviewCatalog)] = ProjectOverviewCatalog,
-                [typeof(IProjectDropPathResolver)] = ProjectDropPaths,
-                [typeof(IProjectStructureInitializer)] = ProjectStructure,
-                [typeof(IKiasExportPatternDetector)] = KiasExportPatterns,
-                [typeof(IKanalExportDetectionService)] = KanalExportDetection,
-                [typeof(ISchaechteTemplateColumnReader)] = SchaechteTemplateColumns,
-                [typeof(IVideoStartErrorLogWriter)] = VideoStartErrorLogs,
-                [typeof(IKnowledgeWalCheckpoint)] = KnowledgeWalCheckpoint,
-                [typeof(IKnowledgeBaseHealthInspector)] = KnowledgeBaseHealth,
-                [typeof(IKnowledgeBasePathService)] = KnowledgePaths,
-                [typeof(IPdfFileSafetyChecker)] = PdfFileSafety,
-                [typeof(IAtomicPdfFileReplacer)] = PdfFileReplacement,
-                [typeof(IPdfTextExtractor)] = PdfTextExtraction,
-                [typeof(IPdfOcrExtractor)] = PdfOcrExtraction,
-                [typeof(ISchachtProtocolOcrReader)] = SchachtProtocolOcr,
-                [typeof(IPdfFormFieldReader)] = PdfFormFields,
-                [typeof(IPdfTextPrefixReader)] = PdfTextPrefixes,
-                [typeof(IPdfImportService)] = PdfImport,
-                [typeof(IPdfTextLayerRewriter)] = PdfTextLayerRewrite,
-                [typeof(IDistributionPdfPageReader)] = DistributionPdfPages,
-                [typeof(IDistributionFileTransfer)] = DistributionFileTransfers,
-                [typeof(IVideoConflictCandidateCopier)] = VideoConflictCandidates,
-                [typeof(IShaftPdfSelectionExpander)] = ShaftPdfSelectionExpansion,
-                [typeof(INameBasedProtocolDistributor)] = NameBasedProtocolDistributor,
-                [typeof(IVsaMediaPathResolver)] = VsaMediaPaths,
-                [typeof(IXtfHoldingFileReader)] = XtfHoldingFiles,
-                [typeof(IM150SourceFileReader)] = M150SourceFiles,
-                [typeof(IM150MdbRowReader)] = M150MdbRows,
-                [typeof(IXtfImportService)] = XtfImport,
-                [typeof(IWinCanDbImportService)] = WinCanImport,
-                [typeof(IXtfStammdatenSourceReader)] = XtfStammdatenSources,
-                [typeof(IIbakPdfStammdatenSourceReader)] = IbakPdfStammdatenSources,
-                [typeof(IIbakFdbConnectionOptions)] = IbakConnections,
-                [typeof(IIbakImportService)] = IbakImport,
-                [typeof(IKinsImportService)] = KinsImport,
-                [typeof(IKinsDvdTextEnricher)] = KinsDvdTextEnrichment,
-                [typeof(IKinsDbfWhitelistEnricher)] = KinsDbfWhitelistEnrichment,
-                [typeof(IKinsGesamtprotokollLocator)] = KinsGesamtprotokolle,
-                [typeof(IImportRunReportExporter)] = ImportRunReports,
-                [typeof(ISchachtProtocolImportService)] = SchachtProtocolImport,
-                [typeof(ISchachtStammdatenErgaenzungsService)] = SchachtStammdatenErgaenzung,
-                [typeof(IExcelExportService)] = ExcelExport,
-                [typeof(INpkLeistungsverzeichnisExcelExporter)] = NpkExcelExport,
-                [typeof(IDistributionPatternResolver)] = DistributionPatterns,
-                [typeof(IDistributionDirectoryTreeResolver)] = DistributionDirectoryTree,
-                [typeof(IVsaEvaluationService)] = Vsa,
-                [typeof(IVsaShadowTelemetryWriter)] = VsaShadowTelemetry,
-                [typeof(ISidecarTelemetryWriter)] = SidecarTelemetry,
-                [typeof(IPipelineTraceWriter)] = PipelineTrace,
-                [typeof(ITelemetryPathResolver)] = TelemetryPaths,
-                [typeof(IGpuModelSelector)] = GpuModels,
-                [typeof(IAiPlatformSettingsResolver)] = AiSettings,
-                [typeof(IPipelineEnvironmentOptions)] = PipelineEnvironment,
-                [typeof(IProtocolService)] = Protocols,
-                [typeof(IPdfMergeService)] = PdfMerge,
-                [typeof(IDossierPhotoAvailabilityService)] = DossierPhotoAvailability,
-                [typeof(IInspectionProtocolFileLocator)] = InspectionProtocolFiles,
-                [typeof(IDichtheitProtocolFileLocator)] = DichtheitProtocolFiles,
-                [typeof(ISchachtFileTargetResolver)] = SchachtFileTargets,
-                [typeof(IProtocolTrainingStore)] = ProtocolTraining,
-                [typeof(ITrainingCenterSettingsStore)] = TrainingSettings,
-                [typeof(ITrainingCaseIdSource)] = TrainingCases,
-                [typeof(ISelfTrainingHistoryStore)] = SelfTrainingHistory,
-                [typeof(ITeacherAnnotationStore)] = TeacherAnnotations,
-                [typeof(IAiOptimizationSessionStore)] = AiOptimizationSessions,
-                [typeof(ITrainingSampleStore)] = TrainingSamples,
-                [typeof(ITrainingFrameStore)] = TrainingFrames,
-                [typeof(ITrainingPreviewFrameExtractor)] = TrainingPreviewFrames,
-                [typeof(ICodingFramePhotoStore)] = CodingFramePhotos,
-                [typeof(ICodingDefectPreviewRenderer)] = CodingDefectPreviews,
-                [typeof(IKnowledgeBaseDiagnosticsRunner)] = KnowledgeBaseDiagnostics,
-                [typeof(IDiagnosticsPackageService)] = DiagnosticsPackages,
-                [typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)] = CodeCatalog,
-                [typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)] = CodeSelectionCatalog,
-                [typeof(ILogger)] = Logger,
-                [typeof(ILoggerFactory)] = LoggerFactory,
-                [typeof(IStatusColorService)] = StatusColors,
-                [typeof(ICodeUsageTracker)] = CodeUsage,
-            };
 
         private static async Task<string?> OllamaListAsync(CancellationToken ct)
         {

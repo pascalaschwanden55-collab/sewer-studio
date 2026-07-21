@@ -31,6 +31,9 @@ unter anderem:
 - Riskante Änderungen zuerst mit einem fokussierten Verhaltenstest schützen.
 - Laufendes SewerStudio nicht automatisch beenden. Vor einem Build darf nur ein
   hängen gebliebener `testhost`-Prozess beendet werden.
+- Nach Änderungen an Services, Schnittstellen, Datenmodellen, Import/Export oder
+  KI-Pipeline den Skill `sewer-architektur` mit dem echten Code abgleichen,
+  aktualisieren und validieren.
 
 ## Build und Tests
 

@@ -1,7 +1,7 @@
 using System.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
-using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -94,27 +94,16 @@ public sealed partial class SchaechtePageViewModel
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            var recordsById = Records.ToDictionary(record => record.Id);
-            var geaenderteSchaechte = 0;
-            var ergaenzteFelder = 0;
+            var applyResult = SchachtStammdatenResultApplier.Apply(
+                Records,
+                result,
+                beforeApply: () =>
+                {
+                    if (result.Ergaenzungen.Count > 0)
+                        _shell.TryCreateImportRestorePoint("Schacht-PDF-Stammdaten");
+                });
 
-            if (result.Ergaenzungen.Count > 0)
-                _shell.TryCreateImportRestorePoint("Schacht-PDF-Stammdaten");
-
-            foreach (var ergaenzung in result.Ergaenzungen)
-            {
-                if (!recordsById.TryGetValue(ergaenzung.RecordId, out var record))
-                    continue;
-
-                var recordChanged = false;
-                recordChanged |= SetIfMissing(record, "Schachtform", ergaenzung.Schachtform, ref ergaenzteFelder);
-                recordChanged |= SetIfMissing(record, "Dimension", ergaenzung.Dimension, ref ergaenzteFelder);
-                recordChanged |= SetIfMissing(record, "Schachttiefe", ergaenzung.Schachttiefe, ref ergaenzteFelder);
-                if (recordChanged)
-                    geaenderteSchaechte++;
-            }
-
-            if (geaenderteSchaechte > 0)
+            if (applyResult.ChangedShaftCount > 0)
             {
                 _shell.MarkProjectDirty();
                 if (!_shell.TrySaveProject())
@@ -126,20 +115,9 @@ public sealed partial class SchaechtePageViewModel
             }
 
             StammdatenErgaenzungProgress = 100;
-            var summary = $"Ergaenzt: {geaenderteSchaechte} Schaechte / {ergaenzteFelder} Felder. " +
-                          $"PDF gefunden: {result.PdfGefunden}, ohne PDF: {result.PdfNichtGefunden}, " +
-                          $"kein passendes Schachtprotokoll: {result.NichtLesbar}, " +
-                          $"bereits vollstaendig: {result.BereitsVollstaendig}.";
-            LastResult = summary;
-            StammdatenErgaenzungText = summary;
-
-            var details = result.Meldungen.Count == 0
-                ? string.Empty
-                : "\n\nHinweise:\n" + string.Join("\n", result.Meldungen.Take(12));
-            if (result.Meldungen.Count > 12)
-                details += $"\n... und {result.Meldungen.Count - 12} weitere Hinweise.";
-
-            _dialogs.Info(summary + details, "PDF-Stammdaten ergaenzen");
+            LastResult = applyResult.Summary;
+            StammdatenErgaenzungText = applyResult.Summary;
+            _dialogs.Info(applyResult.DialogText, "PDF-Stammdaten ergaenzen");
         }
         catch (OperationCanceledException)
         {
@@ -161,18 +139,4 @@ public sealed partial class SchaechtePageViewModel
         }
     }
 
-    private static bool SetIfMissing(
-        SchachtRecord record,
-        string fieldName,
-        string? value,
-        ref int ergaenzteFelder)
-    {
-        if (!string.IsNullOrWhiteSpace(record.GetFieldValue(fieldName))
-            || string.IsNullOrWhiteSpace(value))
-            return false;
-
-        record.SetFieldValue(fieldName, value.Trim());
-        ergaenzteFelder++;
-        return true;
-    }
 }

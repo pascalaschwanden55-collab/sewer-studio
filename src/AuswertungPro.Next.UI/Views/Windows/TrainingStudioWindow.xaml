@@ -42,6 +42,9 @@
                             Click="LoadPhotos_Click"/>
                     <Button Content="Warteschlange laden" Style="{StaticResource ToolbarButton}"
                             Click="LoadReviewQueue_Click" Margin="6,0,0,0"/>
+                    <Button Content="KI starten" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding StartAiCommand}" Margin="6,0,0,0"
+                            ToolTip="Lokale Vision-KI starten oder erneut pruefen."/>
                     <TextBlock Text="Rohr-DN:" VerticalAlignment="Center" Margin="16,0,4,0"
                                Foreground="{DynamicResource MutedBrush}"/>
                     <TextBox Text="{Binding PipeDiameterInput, UpdateSourceTrigger=PropertyChanged}"
@@ -99,7 +102,7 @@
                                     Visibility="{Binding ShowQualityWarning, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding QualityWarning}" Foreground="White" TextWrapping="Wrap"/>
                             </Border>
-                            <ItemsControl ItemsSource="{Binding Suggestion.Candidates}">
+                            <ItemsControl ItemsSource="{Binding SuggestionCandidates}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button Margin="0,2" HorizontalContentAlignment="Stretch"
@@ -108,16 +111,21 @@
                                                 CommandParameter="{Binding VsaCode}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding VsaCode}" FontWeight="Bold"/>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding Klartext}" FontSize="11"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="{Binding Confidence, StringFormat={}{0:P0}}"
-                                                           HorizontalAlignment="Right" Margin="8,0"
+                                                           VerticalAlignment="Center" Margin="8,0"
                                                            Foreground="{DynamicResource MutedBrush}"/>
                                                 <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}"
-                                                        CornerRadius="3" Padding="5,1">
+                                                        CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Quelle}" FontSize="10"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </Border>
@@ -142,12 +150,17 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding SelectedCode}" IsReadOnly="True"
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding SelectedCode, UpdateSourceTrigger=PropertyChanged}"
+                                         CharacterCasing="Upper"
                                          FontWeight="Bold" VerticalContentAlignment="Center"
-                                         ToolTip="Code ueber den VSA-Katalog waehlen (Knopf rechts)."/>
+                                         ToolTip="Code direkt korrigieren oder ueber den VSA-Katalog waehlen."/>
                                 <Button Grid.Column="1" Content="Codieren… (Katalog)" Style="{StaticResource PrimaryButton}"
                                         Click="OpenCodeExplorer_Click" Margin="6,0,0,0"/>
                             </Grid>
+                            <TextBlock Text="{Binding SelectedCodeLabel}" FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" Margin="0,-5,0,8"/>
 
                             <TextBlock Text="Uhrlage (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
                             <TextBox Text="{Binding ClockPosition, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
@@ -187,8 +200,11 @@
                         <StackPanel>
                             <Button Content="Akzeptieren (A)" Style="{StaticResource SuccessButton}"
                                     Command="{Binding AcceptCommand}" Margin="0,0,0,6"/>
-                            <Button Content="Korrigieren (K)" Style="{StaticResource PrimaryButton}"
+                            <Button Content="Korrektur speichern (K)" Style="{StaticResource PrimaryButton}"
                                     Command="{Binding CorrectCommand}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Ein geaenderter Code wird als Lernkorrektur zurueckgegeben."
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>

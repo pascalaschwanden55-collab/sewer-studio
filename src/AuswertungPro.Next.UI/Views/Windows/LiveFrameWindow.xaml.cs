@@ -1,12 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
@@ -21,6 +16,7 @@ public partial class LiveFrameWindow : Window
     {
         InitializeComponent();
         WindowStateManager.Track(this);
+        OverlayCanvas.SizeChanged += (_, _) => RenderOverlay();
     }
 
     public void UpdateFrame(ImageSource? image, IReadOnlyList<LiveFrameFinding>? findings,
@@ -50,169 +46,20 @@ public partial class LiveFrameWindow : Window
 
     private void RenderOverlay()
     {
-        OverlayCanvas.Children.Clear();
-
         var width = OverlayCanvas.ActualWidth;
         var height = OverlayCanvas.ActualHeight;
-        if (width < 60 || height < 60 || LiveImage.Source is null)
+        if (width < 60 || height < 60)
             return;
 
-        var size = Math.Min(width, height) * 0.78;
-        var cx = width / 2.0;
-        var cy = height / 2.0;
-        var ringOuter = size * 0.42;
-        var ringInner = size * 0.28;
-
-        // Outer guide
-        var guide = new Ellipse
-        {
-            Width = ringOuter * 2,
-            Height = ringOuter * 2,
-            Stroke = new SolidColorBrush(Color.FromArgb(125, 197, 209, 134)),
-            StrokeDashArray = new DoubleCollection { 3, 3 },
-            StrokeThickness = 1.0,
-            Fill = Brushes.Transparent
-        };
-        Canvas.SetLeft(guide, cx - ringOuter);
-        Canvas.SetTop(guide, cy - ringOuter);
-        OverlayCanvas.Children.Add(guide);
-
-        // Inner guide
-        var guideInner = new Ellipse
-        {
-            Width = ringInner * 2,
-            Height = ringInner * 2,
-            Stroke = new SolidColorBrush(Color.FromArgb(105, 197, 209, 134)),
-            StrokeDashArray = new DoubleCollection { 3, 3 },
-            StrokeThickness = 0.9,
-            Fill = Brushes.Transparent
-        };
-        Canvas.SetLeft(guideInner, cx - ringInner);
-        Canvas.SetTop(guideInner, cy - ringInner);
-        OverlayCanvas.Children.Add(guideInner);
-
-        // Clock ticks
-        for (var hour = 1; hour <= 12; hour++)
-        {
-            var angleDeg = -90 + (hour % 12) * 30;
-            var rad = DegToRad(angleDeg);
-            var x1 = cx + Math.Cos(rad) * (ringInner - 4);
-            var y1 = cy + Math.Sin(rad) * (ringInner - 4);
-            var x2 = cx + Math.Cos(rad) * (ringOuter + 4);
-            var y2 = cy + Math.Sin(rad) * (ringOuter + 4);
-            OverlayCanvas.Children.Add(new Line
-            {
-                X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
-                Stroke = new SolidColorBrush(Color.FromArgb(65, 227, 227, 201)),
-                StrokeThickness = 0.8
-            });
-        }
-
-        if (_findings.Count == 0)
+        OverlayCanvas.Children.Clear();
+        if (LiveImage.Source is null)
             return;
 
-        for (var i = 0; i < _findings.Count; i++)
-        {
-            var finding = _findings[i];
-            var parsedClock = ParseClockHour(finding.PositionClock);
-            var centerDeg = parsedClock.HasValue
-                ? -90 + (parsedClock.Value % 12) * 30
-                : -90 + i * (360.0 / _findings.Count);
-
-            var sweep = finding.ExtentPercent is > 0
-                ? Math.Clamp(finding.ExtentPercent.Value * 3.6, 14.0, 160.0)
-                : 18.0;
-
-            var startDeg = centerDeg - sweep / 2.0;
-            var color = MapSeverityColor(finding.Severity);
-
-            var sector = new Path
-            {
-                Data = BuildRingSectorGeometry(cx, cy, ringInner, ringOuter, startDeg, sweep),
-                Fill = new SolidColorBrush(Color.FromArgb(98, color.R, color.G, color.B)),
-                Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
-                StrokeThickness = 1.0
-            };
-            OverlayCanvas.Children.Add(sector);
-
-            var rad = DegToRad(centerDeg);
-            var markerRadius = ringOuter + 2;
-            var mx = cx + Math.Cos(rad) * markerRadius;
-            var my = cy + Math.Sin(rad) * markerRadius;
-
-            var dot = new Ellipse
-            {
-                Width = 8, Height = 8,
-                Fill = new SolidColorBrush(color),
-                Stroke = Brushes.White,
-                StrokeThickness = 0.8
-            };
-            Canvas.SetLeft(dot, mx - 4);
-            Canvas.SetTop(dot, my - 4);
-            OverlayCanvas.Children.Add(dot);
-
-            var labelText = BuildFindingLabel(finding);
-            var label = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(228, 17, 19, 24)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(210, color.R, color.G, color.B)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(5, 2, 5, 2),
-                Child = new TextBlock
-                {
-                    Text = labelText,
-                    FontSize = 11,
-                    Foreground = new SolidColorBrush(Color.FromRgb(225, 234, 245))
-                }
-            };
-            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            var desired = label.DesiredSize;
-            var lx = Math.Cos(rad) >= 0 ? mx + 8 : mx - desired.Width - 8;
-            var ly = my - desired.Height / 2.0;
-            Canvas.SetLeft(label, Math.Clamp(lx, 2, width - desired.Width - 2));
-            Canvas.SetTop(label, Math.Clamp(ly, 2, height - desired.Height - 2));
-            OverlayCanvas.Children.Add(label);
-        }
+        LiveFrameRingOverlayRenderer.Draw(
+            OverlayCanvas,
+            _findings,
+            LiveFrameRingOverlayMode.Detail,
+            width,
+            height);
     }
-
-    private static string BuildFindingLabel(LiveFrameFinding f)
-    {
-        var baseText = string.IsNullOrWhiteSpace(f.VsaCodeHint)
-            ? f.Label : $"{f.VsaCodeHint} {f.Label}";
-        if (baseText.Length > 24) baseText = baseText[..24] + "...";
-
-        var clock = string.IsNullOrWhiteSpace(f.PositionClock) ? "?" : f.PositionClock;
-        var extent = f.ExtentPercent is > 0 ? $"{f.ExtentPercent}%" : "n/a";
-        var extra = "";
-        if (f.HeightMm is > 0) extra += $" H:{f.HeightMm}mm";
-        if (f.IntrusionPercent is > 0) extra += $" Einr:{f.IntrusionPercent}%";
-        if (f.CrossSectionReductionPercent is > 0) extra += $" QV:{f.CrossSectionReductionPercent}%";
-        return $"{clock} / {extent}{extra} - {baseText}";
-    }
-
-    // Ring liegt UEBER dem Videobild -> gesaettigte Overlay-Rampe aus der zentralen Farbquelle
-    // (bewusst theme-unabhaengig, Werte identisch zur bisherigen Rampe).
-    private static Color MapSeverityColor(int severity)
-        => Theme.StatusColors.Current.SeverityOverlay(severity);
-
-    private static int? ParseClockHour(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var m = System.Text.RegularExpressions.Regex.Match(raw, @"\b(?<h>1[0-2]|0?[1-9])\b");
-        if (!m.Success) return null;
-        if (!int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour))
-            return null;
-        if (hour == 0) return 12;
-        if (hour > 12) hour %= 12;
-        return hour == 0 ? 12 : hour;
-    }
-
-    // Gemeinsame Formsprache: Sektor-Geometrie liegt zentral in RingSectorGeometry
-    // (auch vom Rohrquerschnitt-Eingabe-Control genutzt).
-    private static Geometry BuildRingSectorGeometry(
-        double cx, double cy, double innerR, double outerR, double startDeg, double sweepDeg)
-        => AuswertungPro.Next.UI.Controls.RingSectorGeometry.Build(cx, cy, innerR, outerR, startDeg, sweepDeg);
-
-    private static double DegToRad(double deg) => deg * Math.PI / 180.0;
 }

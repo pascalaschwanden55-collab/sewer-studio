@@ -265,7 +265,10 @@ public sealed class CodingSessionService : ICodingSessionService
             var caseId = session.HaltungName ?? "unknown";
             var samples = new List<TrainingSample>();
 
-            foreach (var ev in session.Events)
+            // Snapshot: der UI-Thread darf session.Events waehrend dieser Fire-and-Forget-
+            // Persistierung weiter mutieren (AddEvent/RemoveEvent). Ohne Kopie wuerde die Iteration
+            // mit InvalidOperationException abbrechen und die Samples der Session still verlieren.
+            foreach (var ev in session.Events.ToList())
             {
                 // Erstes Foto als Frame-Pfad verwenden (falls vorhanden)
                 var framePath = ev.Entry.FotoPaths.Count > 0
@@ -324,11 +327,13 @@ public sealed class CodingSessionService : ICodingSessionService
     {
         if (approved is null || approved.Count == 0) return;
 
-        var cfg = _ollamaConfigProvider();
-        if (cfg is null) return;
-
         try
         {
+            // Innerhalb des try: _ollamaConfigProvider() kann werfen; bei Fire-and-Forget (Session-
+            // Abschluss) wuerde der Task sonst unbeobachtet faulten und der Docstring "Wirft nie" waere verletzt.
+            var cfg = _ollamaConfigProvider();
+            if (cfg is null) return;
+
             // HttpClient besitzen + disponieren -> kein Socket-/Handle-Leck pro Aufruf.
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);

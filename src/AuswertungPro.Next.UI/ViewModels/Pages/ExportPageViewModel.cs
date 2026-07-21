@@ -182,40 +182,20 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DateTime datum,
         string? fallbackFilePattern = null,
         bool forceFallback = false)
-    {
-        if (string.IsNullOrWhiteSpace(sharedRoot))
-            return null;
-
-        // Excel ist eine einzelne Datei -> keine Ordner-Ebenen, nur Ziel-Wurzel + Datei-Muster.
-        var selectedPattern = forceFallback || string.IsNullOrWhiteSpace(cfg.DateiPattern)
-            ? fallbackFilePattern
-            : cfg.DateiPattern;
-        if (string.IsNullOrWhiteSpace(selectedPattern))
-            selectedPattern = "Export";
-
-        var relativ = resolver.ResolveRelativePath(
-            ordnerPattern: null,
-            unterordnerPattern: null,
-            dateiPattern: selectedPattern,
-            context: new DistributionPatternContext(datum),
-            extension: ".xlsx");
-        return Path.Combine(sharedRoot, relativ);
-    }
+        => ExportExcelPathPolicy.BuildConfiguredPath(
+            sharedRoot,
+            cfg,
+            resolver,
+            datum,
+            fallbackFilePattern,
+            forceFallback);
 
     /// <summary>
     /// Baut den Excel-Zielpfad nur aus dem gemeinsamen Zielordner und dem festen Exportnamen.
     /// Die Oberflaeche bietet bewusst keine Dateinamens- oder Verzeichnisbaum-Muster fuer Excel an.
     /// </summary>
     internal static string? BuildFixedExcelPath(string? sharedRoot, string fileNameWithoutExtension)
-    {
-        if (string.IsNullOrWhiteSpace(sharedRoot))
-            return null;
-        if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
-            throw new ArgumentException("Der feste Excel-Dateiname darf nicht leer sein.", nameof(fileNameWithoutExtension));
-
-        var safeFileName = ProjectPathResolver.SanitizePathSegment(fileNameWithoutExtension.Trim());
-        return Path.Combine(sharedRoot.Trim(), safeFileName + ".xlsx");
-    }
+        => ExportExcelPathPolicy.BuildFixedPath(sharedRoot, fileNameWithoutExtension);
 
     /// <summary>Rueckwaertskompatibler Test-/Hilfsweg fuer alte Aufrufer.</summary>
     internal static string? BuildConfiguredExcelPath(
@@ -236,24 +216,14 @@ public sealed partial class ExportPageViewModel : ObservableObject
         string otherFallbackFilePattern,
         IDistributionPatternResolver resolver,
         DateTime datum)
-    {
-        var target = BuildConfiguredExcelPath(
-            sharedRoot, cfg, resolver, datum, fallbackFilePattern);
-        if (target is null)
-            return null;
-
-        var other = BuildConfiguredExcelPath(
-            sharedRoot, otherCfg, resolver, datum, otherFallbackFilePattern);
-        return string.Equals(target, other, StringComparison.OrdinalIgnoreCase)
-            ? BuildConfiguredExcelPath(
-                sharedRoot,
-                cfg,
-                resolver,
-                datum,
-                fallbackFilePattern,
-                forceFallback: true)
-            : target;
-    }
+        => ExportExcelPathPolicy.BuildCollisionSafePath(
+            sharedRoot,
+            cfg,
+            fallbackFilePattern,
+            otherCfg,
+            otherFallbackFilePattern,
+            resolver,
+            datum);
 
     /// <summary>
     /// Baut die drei Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheit.

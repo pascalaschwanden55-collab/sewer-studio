@@ -1,16 +1,14 @@
 using AuswertungPro.Next.Application.Ai.Teacher;
-using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 /// <summary>
 /// Datenlogik fuer die Lehrer-Annotationen-Galerie.
-/// Haelt Store-/FewShot-/Dateioperationen aus dem WPF-Window heraus.
+/// Haelt Store- und Dateioperationen aus dem WPF-Window heraus.
 /// </summary>
 public sealed class TeacherAnnotationGalleryService
 {
     private const string AllFilter = "Alle";
-    private const string TeacherSourcePrefix = "teacher:";
     private readonly ITeacherAnnotationStore _annotations;
 
     public TeacherAnnotationGalleryService()
@@ -23,17 +21,15 @@ public sealed class TeacherAnnotationGalleryService
         _annotations = annotations ?? throw new ArgumentNullException(nameof(annotations));
     }
 
-    public async Task<TeacherAnnotationGallerySnapshot> LoadPendingAsync(CancellationToken ct = default)
+    public async Task<TeacherAnnotationGallerySnapshot> LoadAsync(CancellationToken ct = default)
     {
-        var all = await _annotations.LoadAsync();
-        var trainedIds = await LoadTrainedAnnotationIdsAsync(ct);
-        var pending = trainedIds.Count > 0
-            ? all.Where(a => !trainedIds.Contains(a.AnnotationId)).ToList()
-            : all;
+        ct.ThrowIfCancellationRequested();
+        var annotations = await _annotations.LoadAsync();
+        ct.ThrowIfCancellationRequested();
 
         return new TeacherAnnotationGallerySnapshot(
-            PendingAnnotations: pending,
-            FilterCodes: BuildFilterCodes(pending));
+            Annotations: annotations,
+            FilterCodes: BuildFilterCodes(annotations));
     }
 
     public static IReadOnlyList<string> BuildFilterCodes(IEnumerable<TeacherAnnotation> annotations)
@@ -68,27 +64,6 @@ public sealed class TeacherAnnotationGalleryService
         await _annotations.DeleteAsync(annotation.AnnotationId);
     }
 
-    private static async Task<HashSet<string>> LoadTrainedAnnotationIdsAsync(CancellationToken ct)
-    {
-        try
-        {
-            var store = new FewShotExampleStore();
-            await store.LoadAsync(ct);
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var example in store.Examples)
-            {
-                if (example.Source.StartsWith(TeacherSourcePrefix, StringComparison.Ordinal))
-                    ids.Add(example.Source[TeacherSourcePrefix.Length..]);
-            }
-
-            return ids;
-        }
-        catch
-        {
-            return new HashSet<string>(StringComparer.Ordinal);
-        }
-    }
-
     private static void TryDeleteFile(string? path)
     {
         try
@@ -104,5 +79,5 @@ public sealed class TeacherAnnotationGalleryService
 }
 
 public sealed record TeacherAnnotationGallerySnapshot(
-    IReadOnlyList<TeacherAnnotation> PendingAnnotations,
+    IReadOnlyList<TeacherAnnotation> Annotations,
     IReadOnlyList<string> FilterCodes);

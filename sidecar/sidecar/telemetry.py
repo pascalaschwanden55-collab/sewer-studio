@@ -15,6 +15,22 @@ from .schemas.detection import YoloResponse
 logger = logging.getLogger(__name__)
 _write_lock = threading.Lock()
 
+# 10 MB, identisch zum C#-SidecarTelemetryFileWriter. Beide Prozesse schreiben in dieselbe
+# sidecar.jsonl; ohne eigene Rotation waechst die Datei unbegrenzt, wenn nur der Sidecar schreibt
+# (Standalone-Batch, deaktivierte C#-Telemetrie).
+_MAX_TELEMETRY_BYTES = 10 * 1024 * 1024
+
+
+def _rotate_if_too_large(path: Path) -> None:
+    try:
+        if path.exists() and path.stat().st_size >= _MAX_TELEMETRY_BYTES:
+            rotated = path.with_name(path.name + ".1")
+            if rotated.exists():
+                rotated.unlink()
+            path.rename(rotated)
+    except OSError as exc:
+        logger.warning("Could not rotate sidecar telemetry: %s", exc)
+
 
 def telemetry_path() -> Path:
     configured_dir = (settings.telemetry_dir or "").strip()
@@ -51,6 +67,7 @@ def write_event(event_type: str, fields: dict) -> None:
 
         with _write_lock:
             path.parent.mkdir(parents=True, exist_ok=True)
+            _rotate_if_too_large(path)
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(line)
                 handle.write("\n")

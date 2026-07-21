@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -26,15 +24,11 @@ public sealed class PhotoImportService : IPhotoImportService
             result.ImportedRelativePaths.Add(rel);
 
             // Auto-Zuordnung via Meter im Dateinamen (optional)
-            var meter = TryParseMeterFromFileName(Path.GetFileNameWithoutExtension(file));
+            var meter = PhotoFileMeterParser.TryParseFromPath(file);
             if (meter is not null)
             {
-                var best = revision.Entries
-                    .Where(e => !e.IsDeleted && e.MeterStart is not null)
-                    .OrderBy(e => Math.Abs(e.MeterStart!.Value - meter.Value))
-                    .FirstOrDefault();
-
-                if (best is not null && Math.Abs(best.MeterStart!.Value - meter.Value) <= 1.0)
+                var best = PhotoProtocolEntryMatcher.FindNearestActiveEntry(revision.Entries, meter.Value);
+                if (best is not null)
                 {
                     best.FotoPaths.Add(rel);
                     revision.Changes.Add(new ProtocolChange
@@ -51,17 +45,5 @@ public sealed class PhotoImportService : IPhotoImportService
         }
 
         return result;
-    }
-
-    private static double? TryParseMeterFromFileName(string name)
-    {
-        var m = Regex.Match(name, @"(?<m>\d{1,3}([.,]\d{1,2})?)\s*m?$", RegexOptions.IgnoreCase);
-        if (!m.Success) return null;
-
-        var s = m.Groups["m"].Value.Replace(',', '.');
-        if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
-            return val;
-
-        return null;
     }
 }

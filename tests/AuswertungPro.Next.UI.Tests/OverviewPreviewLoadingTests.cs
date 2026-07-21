@@ -52,6 +52,46 @@ public sealed class OverviewPreviewLoadingTests
     }
 
     [Fact]
+    public void Rueckkehr_zur_bereits_angezeigten_auswahl_verwirft_fremde_wartende_vorschau()
+    {
+        RunOnStaThread(() =>
+        {
+            using var temp = new TempDir();
+            var first = SaveProject(temp.Path, "A", "Erstes Projekt");
+            var second = SaveProject(temp.Path, "B", "Zweites Projekt");
+
+            using var loggerFactory = LoggerFactory.Create(_ => { });
+            var settings = new AppSettings
+            {
+                EnableRestorePoints = false,
+                ProjectsRootDirectory = temp.Path
+            };
+            var services = new ServiceProvider(
+                settings,
+                new DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+            using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+            var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+            var firstEntry = vm.ProjectEntries.Single(e => e.Path == first);
+            var secondEntry = vm.ProjectEntries.Single(e => e.Path == second);
+
+            vm.SelectedProjectEntry = firstEntry;
+            PumpDispatcherUntil(
+                () => !vm.IsPreviewLoading && vm.SelectedPreview?.Path == first,
+                TimeSpan.FromSeconds(3));
+
+            vm.SelectedProjectEntry = secondEntry;
+            vm.SelectedProjectEntry = firstEntry;
+            PumpDispatcherFor(TimeSpan.FromMilliseconds(350));
+
+            Assert.False(vm.IsPreviewLoading);
+            Assert.Equal(first, vm.SelectedPreview?.Path);
+            Assert.Equal("Erstes Projekt", vm.SelectedPreview?.Name);
+        });
+    }
+
+    [Fact]
     public void BuildPreview_Steigt_bei_geoeffnetem_Projekt_frueh_aus()
     {
         RunOnStaThread(() =>

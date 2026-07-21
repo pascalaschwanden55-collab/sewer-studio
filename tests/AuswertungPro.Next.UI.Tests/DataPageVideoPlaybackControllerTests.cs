@@ -77,6 +77,119 @@ public sealed class DataPageVideoPlaybackControllerTests
     }
 
     [Fact]
+    public void PlayCounterInspection_ignoriert_null_ohne_pfadaufloesung()
+    {
+        var dialogs = new CapturingDialogService();
+        var shown = new List<DataPageVideoPlaybackRequest>();
+        var controller = CreateController(dialogs, showPlayer: shown.Add);
+
+        controller.PlayCounterInspection(
+            null,
+            _ => throw new InvalidOperationException("path should not be resolved"));
+
+        Assert.Empty(shown);
+        Assert.Null(dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void PlayCounterInspection_meldet_fehlenden_aufgeloesten_pfad(string? resolvedPath)
+    {
+        var dialogs = new CapturingDialogService();
+        var shown = new List<DataPageVideoPlaybackRequest>();
+        var record = new HaltungRecord();
+        record.SetFieldValue(
+            "Link_G",
+            @"Video\gegeninspektion.mp4",
+            FieldSource.Manual,
+            userEdited: true);
+        var controller = CreateController(
+            dialogs,
+            getOptions: () => throw new InvalidOperationException("options should not be requested"),
+            buildOverlay: _ => throw new InvalidOperationException("overlay should not be built"),
+            showPlayer: shown.Add);
+
+        controller.PlayCounterInspection(
+            record,
+            rawPath =>
+            {
+                Assert.Equal(@"Video\gegeninspektion.mp4", rawPath);
+                return resolvedPath;
+            });
+
+        Assert.Empty(shown);
+        Assert.Equal(
+            ("Für diese Haltung ist keine Gegeninspektion vorhanden.", "Gegeninspektion"),
+            dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public void PlayCounterInspection_startet_player_mit_spaet_aufgeloestem_link_g()
+    {
+        var dialogs = new CapturingDialogService();
+        var record = new HaltungRecord();
+        record.SetFieldValue(
+            "Link_G",
+            @"Video\gegeninspektion.mp4",
+            FieldSource.Manual,
+            userEdited: true);
+        var options = PlayerWindowOptions.Default with { VideoOutput = "direct3d9" };
+        var overlay = new PlayerDamageOverlayData(15, []);
+        var shown = new List<DataPageVideoPlaybackRequest>();
+        var controller = CreateController(
+            dialogs,
+            getOptions: () => options,
+            buildOverlay: _ => overlay,
+            showPlayer: shown.Add);
+
+        controller.PlayCounterInspection(
+            record,
+            rawPath =>
+            {
+                Assert.Equal(@"Video\gegeninspektion.mp4", rawPath);
+                return @"C:\Projekt\Video\gegeninspektion.mp4";
+            });
+
+        var call = Assert.Single(shown);
+        Assert.Equal(@"C:\Projekt\Video\gegeninspektion.mp4", call.Path);
+        Assert.Same(options, call.Options);
+        Assert.Same(overlay, call.DamageOverlay);
+        Assert.Same(record, call.Record);
+        Assert.Null(dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public void PlayCounterInspection_laesst_pfadaufloesungsfehler_durch()
+    {
+        var dialogs = new CapturingDialogService();
+        var record = new HaltungRecord();
+        record.SetFieldValue(
+            "Link_G",
+            @"Video\gegeninspektion.mp4",
+            FieldSource.Manual,
+            userEdited: true);
+        var expected = new InvalidOperationException("Pfadauflösung fehlgeschlagen");
+        var controller = CreateController(
+            dialogs,
+            getOptions: () => throw new InvalidOperationException("options should not be requested"),
+            showPlayer: _ => throw new InvalidOperationException("player should not be shown"),
+            writeStartErrorLog: (_, _) =>
+                throw new InvalidOperationException("resolver errors should not be logged as start errors"));
+
+        var thrown = Assert.Throws<InvalidOperationException>(() =>
+            controller.PlayCounterInspection(record, _ => throw expected));
+
+        Assert.Same(expected, thrown);
+        Assert.Null(dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
     public void Play_meldet_startfehler_mit_logpfad()
     {
         var dialogs = new CapturingDialogService();
@@ -136,6 +249,8 @@ public sealed class DataPageVideoPlaybackControllerTests
 
     private sealed class CapturingDialogService : IDialogService
     {
+        public (string Message, string Title)? LastInfo { get; private set; }
+
         public (string Message, string Title)? LastError { get; private set; }
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null)
@@ -151,7 +266,7 @@ public sealed class DataPageVideoPlaybackControllerTests
             => throw new NotSupportedException();
 
         public void Info(string message, string title = "Hinweis")
-            => throw new NotSupportedException();
+            => LastInfo = (message, title);
 
         public void Warn(string message, string title = "Warnung")
             => throw new NotSupportedException();

@@ -22,12 +22,19 @@ public static class HydraulikMaterialCatalog
                 string.Equals(m.Key, settingsMaterialKey, StringComparison.OrdinalIgnoreCase))
             ?? Materials[0];
 
+        return ResolveRecordMaterial(recordMaterial, material)!;
+    }
+
+    public static MaterialOption? ResolveRecordMaterial(
+        string? recordMaterial,
+        MaterialOption? fallbackMaterial)
+    {
         if (string.IsNullOrWhiteSpace(recordMaterial))
-            return material;
+            return fallbackMaterial;
 
         return Materials.FirstOrDefault(m =>
                 m.Label.Contains(recordMaterial, StringComparison.OrdinalIgnoreCase)
                 || m.Key.Equals(recordMaterial, StringComparison.OrdinalIgnoreCase))
-            ?? material;
+            ?? fallbackMaterial;
     }
 }

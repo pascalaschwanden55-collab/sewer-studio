@@ -219,6 +219,8 @@ public partial class DataPage : UserControl
         _beobachtungenWindow = new BeobachtungenWindow(
             request.Entries,
             Settings,
+            Vm.InspectionProtocolFiles,
+            Vm.ShellOpen,
             request.HoldingName,
             request.OpenProtocolCommand,
             request.Record,

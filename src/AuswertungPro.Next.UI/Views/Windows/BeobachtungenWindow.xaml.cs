@@ -1,13 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -16,6 +15,7 @@ public partial class BeobachtungenWindow : Window
 {
     private readonly ObservableCollection<ProtocolEntry> _entries;
     private readonly AppSettings _settings;
+    private readonly BeobachtungenPhotoOpenController _photoOpenController;
     private readonly ICommand? _openProtocolCommand;
     private readonly object? _commandParameter;
     private Action? _vsaUpdateAction;
@@ -32,6 +32,8 @@ public partial class BeobachtungenWindow : Window
         : this(
             entries,
             services?.Settings ?? throw new ArgumentNullException(nameof(services)),
+            services.InspectionProtocolFiles,
+            services.ShellOpen,
             holdingName,
             openProtocolCommand,
             commandParameter,
@@ -43,6 +45,8 @@ public partial class BeobachtungenWindow : Window
     internal BeobachtungenWindow(
         ObservableCollection<ProtocolEntry> entries,
         AppSettings settings,
+        IInspectionProtocolFileLocator inspectionProtocolFiles,
+        ISafeShellOpenService shellOpen,
         string? holdingName,
         ICommand? openProtocolCommand,
         object? commandParameter,
@@ -54,6 +58,9 @@ public partial class BeobachtungenWindow : Window
 
         _entries = entries;
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _photoOpenController = new BeobachtungenPhotoOpenController(
+            inspectionProtocolFiles,
+            shellOpen);
         _openProtocolCommand = openProtocolCommand;
         _commandParameter = commandParameter;
         _vsaUpdateAction = vsaUpdateAction;
@@ -117,19 +124,16 @@ public partial class BeobachtungenWindow : Window
             return;
 
         var rawPath = fe.Tag as string;
-        if (string.IsNullOrWhiteSpace(rawPath))
-            return;
-
-        var resolved = TryResolvePath(rawPath, _settings.LastProjectPath) ?? rawPath;
-        if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
+        var result = _photoOpenController.Open(rawPath, _settings.LastProjectPath);
+        if (result.Status == BeobachtungenPhotoOpenStatus.NotFound)
         {
             DialogHost.Current.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");
             return;
         }
 
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(resolved, out var error))
+        if (result.Status == BeobachtungenPhotoOpenStatus.OpenFailed)
         {
-            DialogHost.Current.Error($"Foto konnte nicht geöffnet werden:\n{error}", "Foto");
+            DialogHost.Current.Error($"Foto konnte nicht geöffnet werden:\n{result.Error}", "Foto");
         }
     }
 
@@ -142,46 +146,10 @@ public partial class BeobachtungenWindow : Window
         if (entry is null)
             return;
 
-        var targetTime = entry.Zeit ?? ParseMpegTime(entry.Mpeg);
+        var targetTime = entry.Zeit ?? ProtocolTimeParser.ParseMpegTime(entry.Mpeg);
         if (targetTime is null)
             return;
 
         PlayerWindow.TrySeekTo(targetTime.Value);
-    }
-
-    private static string? TryResolvePath(string? raw, string? lastProjectPath)
-    {
-        var path = raw?.Trim();
-        if (string.IsNullOrWhiteSpace(path))
-            return null;
-        if (File.Exists(path))
-            return path;
-        if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
-        {
-            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath);
-            if (!string.IsNullOrWhiteSpace(baseDir))
-            {
-                var combined = Path.GetFullPath(Path.Combine(baseDir, path));
-                if (File.Exists(combined))
-                    return combined;
-            }
-        }
-        return null;
-    }
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
     }
 }

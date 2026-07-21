@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -147,15 +148,5 @@ internal static class XtfValueNormalizer
     /// Gibt null zurueck wenn das Format nicht erkannt wird.
     /// </summary>
     public static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed) ? parsed : null;
-    }
+        => ProtocolTimeParser.ParseMpegTime(raw);
 }

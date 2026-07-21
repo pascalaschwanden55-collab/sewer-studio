@@ -40,6 +40,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IPdfMergeService _pdfMerge;
+    private readonly ISafeShellOpenService _shellOpen;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly IProjectCostStoreRepository _costRepo;
     private readonly ICostCatalogStore _catalogStore;
@@ -135,6 +136,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             costFieldSync: services.CostFieldSync,
             costRepo: services.CostStores.CreateProjectCostStore(),
             catalogStore: services.CostStores.CreateCostCatalogStore(),
+            shellOpen: services.ShellOpen,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
             npkExcelExporter: services.NpkExcelExport)
@@ -160,6 +162,34 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             costFieldSync,
             CostStoreCompatibility.Factory.CreateProjectCostStore(),
             CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            SafeShellOpen.CompatibilityService,
+            dossierPhotoAvailability,
+            inspectionProtocolFiles,
+            npkExcelExporter)
+    {
+    }
+
+    [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer sollen ISafeShellOpenService injizieren.")]
+    public BuilderPageViewModel(
+        ShellViewModel shell,
+        AppSettings settings,
+        IDialogService dialogs,
+        ProtocolPdfExporter protocolPdfExporter,
+        IDerivedCostFieldSynchronizer costFieldSync,
+        IProjectCostStoreRepository costRepo,
+        ICostCatalogStore catalogStore,
+        IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
+        : this(
+            shell,
+            settings,
+            dialogs,
+            protocolPdfExporter,
+            costFieldSync,
+            costRepo,
+            catalogStore,
+            SafeShellOpen.CompatibilityService,
             dossierPhotoAvailability,
             inspectionProtocolFiles,
             npkExcelExporter)
@@ -174,6 +204,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         IDerivedCostFieldSynchronizer costFieldSync,
         IProjectCostStoreRepository costRepo,
         ICostCatalogStore catalogStore,
+        ISafeShellOpenService shellOpen,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
@@ -185,6 +216,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
+        _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPage.DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles

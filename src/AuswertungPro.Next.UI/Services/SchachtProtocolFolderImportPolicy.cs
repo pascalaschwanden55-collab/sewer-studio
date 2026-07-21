@@ -66,6 +66,52 @@ internal static class SchachtProtocolFolderImportPolicy
             .OrderBy(candidate => candidate.ParseResult.Schachtnummer, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    internal static string BuildFolderImportSummary(
+        int sourcePdfCount,
+        int preparedPdfCount,
+        int created,
+        int updated,
+        int archivedOlderProtocols,
+        int skippedDirectoryCount,
+        IReadOnlyList<string> failures)
+    {
+        var lines = new List<string>
+        {
+            $"Gefundene PDF-Dateien: {sourcePdfCount}",
+            $"Eingelesene Schachtprotokolle: {preparedPdfCount}",
+            $"Schaechte neu angelegt: {created}",
+            $"Schaechte aktualisiert: {updated}"
+        };
+
+        if (archivedOlderProtocols > 0)
+            lines.Add($"Aeltere Protokolle archiviert: {archivedOlderProtocols} (Stammdaten stammen aus dem neuesten Protokoll)");
+        if (skippedDirectoryCount > 0)
+            lines.Add($"Nicht lesbare Unterordner uebersprungen: {skippedDirectoryCount}");
+        if (failures.Count > 0)
+        {
+            lines.Add($"Fehler: {failures.Count}");
+            lines.AddRange(failures.Take(8).Select(failure => $"- {failure}"));
+            if (failures.Count > 8)
+                lines.Add($"- ... und {failures.Count - 8} weitere");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    internal static string? ResolveCanonicalShaftFolder(
+        string pdfPath,
+        params string[] distributionRoots)
+    {
+        var parentFolder = Path.GetDirectoryName(pdfPath);
+        if (string.IsNullOrWhiteSpace(parentFolder))
+            return null;
+
+        if (distributionRoots.Any(root => PathsEqual(parentFolder, root)))
+            return null;
+
+        return Path.GetFileName(Path.TrimEndingDirectorySeparator(parentFolder));
+    }
+
     private static DateTime ParseProtocolDate(string? rawDate, string pdfPath)
     {
         var formats = new[] { "dd.MM.yyyy", "dd.MM.yy", "yyyy-MM-dd", "yyyyMMdd" };
@@ -103,6 +149,21 @@ internal static class SchachtProtocolFolderImportPolicy
 
             var prefix = fullFolder + Path.DirectorySeparatorChar;
             return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        try
+        {
+            return string.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+                StringComparison.OrdinalIgnoreCase);
         }
         catch
         {

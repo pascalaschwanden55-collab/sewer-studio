@@ -4,7 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -14,10 +17,32 @@ using UglyToad.PdfPig.Writer;
 namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
 /// <summary>
-/// Erstellt eine korrigierte PDF-Kopie. Das Ersetzen der Originaldatei bleibt beim Aufrufer.
+/// Erstellt korrigierte PDF-Kopien und kann sie atomar am bestehenden Zielpfad veroeffentlichen.
 /// </summary>
 public sealed class PdfTextLayerRewriteService : IPdfTextLayerRewriter
 {
+    private readonly IAtomicPdfFileReplacer _atomicPdfFileReplacer;
+    private readonly ILogger<PdfTextLayerRewriteService> _logger;
+
+    public PdfTextLayerRewriteService()
+        : this(AtomicPdfFileReplacer.Current, NullLogger<PdfTextLayerRewriteService>.Instance)
+    {
+    }
+
+    public PdfTextLayerRewriteService(IAtomicPdfFileReplacer atomicPdfFileReplacer)
+        : this(atomicPdfFileReplacer, NullLogger<PdfTextLayerRewriteService>.Instance)
+    {
+    }
+
+    public PdfTextLayerRewriteService(
+        IAtomicPdfFileReplacer atomicPdfFileReplacer,
+        ILogger<PdfTextLayerRewriteService> logger)
+    {
+        _atomicPdfFileReplacer = atomicPdfFileReplacer
+            ?? throw new ArgumentNullException(nameof(atomicPdfFileReplacer));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
     public bool CanRewrite(string? oldValue, string? newValue)
         => BuildRenameReplacements(oldValue, newValue).Count > 0;
 
@@ -26,6 +51,108 @@ public sealed class PdfTextLayerRewriteService : IPdfTextLayerRewriter
         string? oldValue,
         string? newValue)
         => TryRewrite(sourcePdfPath, BuildRenameReplacements(oldValue, newValue));
+
+    public PdfTextLayerBatchRewriteResult RewriteIdentifierInPlace(
+        IReadOnlyList<string> pdfPaths,
+        string? oldValue,
+        string? newValue)
+    {
+        if (pdfPaths is null || pdfPaths.Count == 0 || !CanRewrite(oldValue, newValue))
+            return new PdfTextLayerBatchRewriteResult(0, 0, 0);
+
+        var rewritten = 0;
+        var skipped = 0;
+        var failed = 0;
+        var failures = new List<PdfTextLayerBatchFailure>();
+        foreach (var pdfPath in pdfPaths)
+        {
+            if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            string? temporaryPdfPath = null;
+            try
+            {
+                var result = TryRewriteHoldingNumber(pdfPath, oldValue, newValue);
+                if (!result.Success)
+                {
+                    failed++;
+                    RecordFailure(failures, pdfPath, result.Message);
+                    continue;
+                }
+
+                if (!result.Corrected)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                temporaryPdfPath = result.OutputPdfPath;
+                if (string.IsNullOrWhiteSpace(temporaryPdfPath)
+                    || string.Equals(temporaryPdfPath, pdfPath, StringComparison.OrdinalIgnoreCase)
+                    || !File.Exists(temporaryPdfPath))
+                {
+                    failed++;
+                    RecordFailure(
+                        failures,
+                        pdfPath,
+                        "Die erzeugte PDF-Korrekturdatei fehlt oder verweist auf die Quelldatei.");
+                    continue;
+                }
+
+                _atomicPdfFileReplacer.ReplaceValidated(temporaryPdfPath, pdfPath);
+                rewritten++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                RecordFailure(failures, pdfPath, ex.Message, ex);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(temporaryPdfPath)
+                    && !string.Equals(temporaryPdfPath, pdfPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    TryDelete(temporaryPdfPath);
+                }
+            }
+        }
+
+        return new PdfTextLayerBatchRewriteResult(
+            rewritten,
+            skipped,
+            failed,
+            failures.ToArray());
+    }
+
+    private void RecordFailure(
+        ICollection<PdfTextLayerBatchFailure> failures,
+        string pdfPath,
+        string? message,
+        Exception? exception = null)
+    {
+        var effectiveMessage = string.IsNullOrWhiteSpace(message)
+            ? "Unbekannter Fehler bei der PDF-Textkorrektur."
+            : message.Trim();
+        failures.Add(new PdfTextLayerBatchFailure(pdfPath, effectiveMessage));
+
+        if (exception is null)
+        {
+            _logger.LogWarning(
+                "PDF-Textkorrektur fehlgeschlagen fuer {PdfPath}: {Message}",
+                pdfPath,
+                effectiveMessage);
+            return;
+        }
+
+        _logger.LogWarning(
+            exception,
+            "PDF-Textkorrektur fehlgeschlagen fuer {PdfPath}: {Message}",
+            pdfPath,
+            effectiveMessage);
+    }
 
     private static IReadOnlyList<PdfTextReplacementTarget> BuildRenameReplacements(
         string? oldValue,

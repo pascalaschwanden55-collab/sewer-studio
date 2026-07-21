@@ -41,6 +41,18 @@ public sealed class EvalSetV2Candidate
     [JsonPropertyName("meter")]
     public double? Meter { get; set; }
 
+    [JsonPropertyName("expected_severity")]
+    public int? ExpectedSeverity { get; set; }
+
+    [JsonPropertyName("event_id")]
+    public string? EventId { get; set; }
+
+    [JsonPropertyName("meter_start")]
+    public double? MeterStart { get; set; }
+
+    [JsonPropertyName("meter_end")]
+    public double? MeterEnd { get; set; }
+
     [JsonPropertyName("expected_code")]
     public string? ExpectedCode { get; set; }
 
@@ -267,7 +279,10 @@ public static class EvalSetV2Builder
             }
 
             ValidateGroupCode(candidate);
+            ValidateEventMetadata(candidate);
         }
+
+        ValidateEventConsistency(candidates);
 
         var represented = candidates.Select(c => c.Group).ToHashSet();
         var missingGroups = Enum.GetValues<EvalSetV2Group>()
@@ -306,6 +321,79 @@ public static class EvalSetV2Builder
         }
     }
 
+    private static void ValidateEventMetadata(EvalSetV2Candidate candidate)
+    {
+        if (candidate.Meter is { } meter && (!double.IsFinite(meter) || meter < 0))
+            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterwert ist ungueltig.");
+
+        if (candidate.ExpectedSeverity is < 1 or > 5)
+            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Severity muss zwischen 1 und 5 liegen.");
+
+        if (candidate.Group == EvalSetV2Group.Damage)
+        {
+            if (candidate.ExpectedSeverity is null)
+                throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Schadens-Severity fehlt.");
+            if (string.IsNullOrWhiteSpace(candidate.EventId))
+                throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Schadens-Ereignis-ID fehlt.");
+        }
+
+        if (candidate.EventId is not null && string.IsNullOrWhiteSpace(candidate.EventId))
+        {
+            throw new InvalidDataException(
+                $"V2-Kandidat {candidate.Id}: Eine vorhandene Ereignis-ID darf nicht leer sein.");
+        }
+
+        if (candidate.EventId is not null
+            && (!candidate.EventId.Equals(candidate.EventId.Trim(), StringComparison.Ordinal)
+                || !candidate.EventId.IsNormalized(NormalizationForm.FormC)))
+        {
+            throw new InvalidDataException(
+                $"V2-Kandidat {candidate.Id}: Ereignis-ID muss normalisiert und ohne Rand-Leerzeichen sein.");
+        }
+
+        var hasStart = candidate.MeterStart.HasValue;
+        var hasEnd = candidate.MeterEnd.HasValue;
+        if (hasStart != hasEnd)
+        {
+            throw new InvalidDataException(
+                $"V2-Kandidat {candidate.Id}: MeterStart und MeterEnd muessen gemeinsam gesetzt sein.");
+        }
+
+        if (!hasStart)
+            return;
+
+        var start = candidate.MeterStart!.Value;
+        var end = candidate.MeterEnd!.Value;
+        if (!double.IsFinite(start) || !double.IsFinite(end) || start < 0 || end < 0 || start > end)
+            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterbereich ist ungueltig.");
+        if (candidate.Meter is { } frameMeter && (frameMeter < start || frameMeter > end))
+        {
+            throw new InvalidDataException(
+                $"V2-Kandidat {candidate.Id}: Frame-Meter liegt ausserhalb des Ereignisbereichs.");
+        }
+    }
+
+    private static void ValidateEventConsistency(IReadOnlyList<EvalSetV2Candidate> candidates)
+    {
+        var events = new Dictionary<EventKey, EventMetadata>();
+        foreach (var candidate in candidates.Where(item => !string.IsNullOrWhiteSpace(item.EventId)))
+        {
+            var eventId = candidate.EventId!.Trim();
+            var eventKey = EventKey.Create(NormalizeHolding(candidate.CaseId), eventId);
+            var metadata = new EventMetadata(
+                NormalizeCode(candidate.ExpectedCode),
+                candidate.ExpectedSeverity,
+                candidate.MeterStart,
+                candidate.MeterEnd);
+
+            if (!events.TryAdd(eventKey, metadata) && events[eventKey] != metadata)
+            {
+                throw new InvalidDataException(
+                    $"V2-Kandidat {candidate.Id}: Haltung '{candidate.CaseId}', Ereignis '{eventId}' hat widerspruechliche Metadaten.");
+            }
+        }
+    }
+
     private static void WriteStagingSet(
         string stagingRoot,
         IReadOnlyList<PreparedCandidate> candidates,
@@ -337,6 +425,10 @@ public static class EvalSetV2Builder
             frame_path = candidate.FrameName,
             haltung_key = candidate.Source.CaseId.Trim(),
             meter = candidate.Source.Meter,
+            expected_severity = candidate.Source.ExpectedSeverity,
+            event_id = candidate.Source.EventId?.Trim(),
+            meter_start = candidate.Source.MeterStart,
+            meter_end = candidate.Source.MeterEnd,
             code_full = candidate.ExpectedCode,
             code_main = MainCode(candidate.ExpectedCode),
             korrektur = candidate.ExpectedCode,
@@ -552,4 +644,18 @@ public static class EvalSetV2Builder
         IReadOnlyDictionary<string, int> DnBands,
         IReadOnlyDictionary<string, int> Materials,
         IReadOnlyDictionary<string, int> ImageQualities);
+
+    private readonly record struct EventKey(string HoldingKey, string EventId)
+    {
+        public static EventKey Create(string holdingKey, string eventId)
+            => new(
+                holdingKey.Normalize(NormalizationForm.FormC).ToUpperInvariant(),
+                eventId.Normalize(NormalizationForm.FormC).ToUpperInvariant());
+    }
+
+    private sealed record EventMetadata(
+        string ExpectedCode,
+        int? ExpectedSeverity,
+        double? MeterStart,
+        double? MeterEnd);
 }

@@ -1,10 +1,12 @@
 using System.IO;
 using System.Reflection;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -18,9 +20,17 @@ public sealed class MediaConflictsPageViewModelDependencyTests
 
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ShellViewModel));
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
+        Assert.Contains(fields, field => field.FieldType == typeof(ISafeShellOpenService));
+        Assert.Contains(fields, field => field.FieldType == typeof(IExplorerRevealService));
         Assert.Equal(
             typeof(MediaConflictCenterService),
             typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.MediaConflictCenter))?.PropertyType);
+
+        var source = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "MediaConflictsPageViewModel.cs"));
+        Assert.DoesNotContain("Process.Start", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessStartInfo", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SafeShellOpen.TryOpen", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -65,10 +75,88 @@ public sealed class MediaConflictsPageViewModelDependencyTests
         }
     }
 
+    [Fact]
+    public void Pdf_oeffnen_nutzt_den_eingespeisten_Shelldienst()
+    {
+        const string pdfPath = @"C:\Projekt\haltung.pdf";
+        var shellOpen = new ShellOpenFake(result: true);
+        var explorer = new ExplorerRevealFake(_ => true);
+        var vm = CreateViewModel(
+            new Project(),
+            getProjectFolder: () => null,
+            playVideo: _ => { },
+            shellOpen,
+            explorer);
+        vm.SelectedConflict = CreateConflict(sourcePdfPath: pdfPath);
+
+        vm.OpenPdfCommand.Execute(null);
+
+        Assert.Equal(pdfPath, Assert.Single(shellOpen.Paths));
+        Assert.Empty(explorer.Paths);
+    }
+
+    [Fact]
+    public void Info_oeffnen_faellt_bei_Shellfehler_auf_den_Explorer_zurueck()
+    {
+        const string infoPath = @"C:\Projekt\info.txt";
+        var shellOpen = new ShellOpenFake(result: false);
+        var explorer = new ExplorerRevealFake(_ => true);
+        var vm = CreateViewModel(
+            new Project(),
+            getProjectFolder: () => null,
+            playVideo: _ => { },
+            shellOpen,
+            explorer);
+        vm.SelectedConflict = CreateConflict(infoPath: infoPath);
+
+        vm.OpenInfoCommand.Execute(null);
+
+        Assert.Equal(infoPath, Assert.Single(shellOpen.Paths));
+        Assert.Equal(infoPath, Assert.Single(explorer.Paths));
+    }
+
+    [Fact]
+    public void Kandidat_oeffnen_versucht_bei_fehlendem_Ziel_den_Elternordner()
+    {
+        const string candidatePath = @"C:\Projekt\Videos\fehlend.mp4";
+        var explorer = new ExplorerRevealFake(_ => false);
+        var vm = CreateViewModel(
+            new Project(),
+            getProjectFolder: () => null,
+            playVideo: _ => { },
+            new ShellOpenFake(result: true),
+            explorer);
+        vm.SelectedConflict = CreateConflict(candidates: [candidatePath]);
+
+        vm.OpenSelectedCandidateCommand.Execute(null);
+
+        Assert.Equal([candidatePath, @"C:\Projekt\Videos"], explorer.Paths);
+    }
+
+    [Fact]
+    public void Haltungsordner_oeffnen_nutzt_den_eingespeisten_Shelldienst()
+    {
+        const string holdingFolder = @"C:\Projekt\Haltungen\KS1";
+        var shellOpen = new ShellOpenFake(result: true);
+        var vm = CreateViewModel(
+            new Project(),
+            getProjectFolder: () => null,
+            playVideo: _ => { },
+            shellOpen,
+            new ExplorerRevealFake(_ => true));
+        vm.SelectedConflict = CreateConflict(holdingFolder: holdingFolder);
+
+        vm.OpenHoldingFolderCommand.Execute(null);
+
+        Assert.Equal(holdingFolder, Assert.Single(shellOpen.Paths));
+    }
+
     private static MediaConflictsPageViewModel CreateViewModel(
         Project project,
         Func<string?> getProjectFolder,
-        Action<string> playVideo)
+        Action<string> playVideo,
+        ISafeShellOpenService? shellOpen = null,
+        IExplorerRevealService? explorerReveal = null)
         => new(
             getProject: () => project,
             getProjectFolder: getProjectFolder,
@@ -77,7 +165,52 @@ public sealed class MediaConflictsPageViewModelDependencyTests
             dialogs: new DialogFake(),
             service: new MediaConflictCenterService(),
             setStatus: _ => { },
-            playVideo: playVideo);
+            playVideo: playVideo,
+            shellOpen: shellOpen ?? new ShellOpenFake(result: true),
+            explorerReveal: explorerReveal ?? new ExplorerRevealFake(_ => true));
+
+    private static MediaConflictRowViewModel CreateConflict(
+        string infoPath = "info.txt",
+        string holdingFolder = "Haltungen/KS1",
+        string? sourcePdfPath = null,
+        IReadOnlyList<string>? candidates = null)
+        => new(new MediaConflictCenterService.MediaConflictCase(
+            InfoPath: infoPath,
+            HoldingFolder: holdingFolder,
+            HoldingFolderName: "KS1",
+            HoldingRaw: "KS1",
+            SourcePdfPath: sourcePdfPath,
+            DateStamp: null,
+            Date: null,
+            ExpectedVideoName: null,
+            Type: MediaConflictCenterService.ConflictType.Ambiguous,
+            Candidates: candidates ?? [],
+            Fingerprint: "test"));
+
+    private sealed class ShellOpenFake(bool result) : ISafeShellOpenService
+    {
+        public List<string?> Paths { get; } = [];
+
+        public bool TryOpen(string? path, out string? error)
+        {
+            Paths.Add(path);
+            error = result ? null : "Start blockiert";
+            return result;
+        }
+    }
+
+    private sealed class ExplorerRevealFake(Func<string?, bool> result) : IExplorerRevealService
+    {
+        public List<string?> Paths { get; } = [];
+
+        public bool TryReveal(string? targetPath, out string? error)
+        {
+            Paths.Add(targetPath);
+            var success = result(targetPath);
+            error = success ? null : "Ziel fehlt";
+            return success;
+        }
+    }
 
     private sealed class DialogFake : IDialogService
     {

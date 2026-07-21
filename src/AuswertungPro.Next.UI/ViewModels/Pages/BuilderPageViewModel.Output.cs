@@ -198,6 +198,7 @@ public sealed partial class BuilderPageViewModel
             () => _shell.GetProjectFolder(),
             _pdfMerge,
             _costRepo,
+            openPdf: path => _shellOpen.TryOpen(path, out _),
             buildHydraulikCalculation: record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
@@ -636,7 +637,7 @@ public sealed partial class BuilderPageViewModel
             return;
         }
 
-        if (AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(LastExportedPdfPath, out var error))
+        if (_shellOpen.TryOpen(LastExportedPdfPath, out var error))
         {
             LastResult = $"PDF geoeffnet: {Path.GetFileName(LastExportedPdfPath)}";
             return;

@@ -9,9 +9,9 @@ public sealed class AtomicPersistenceArchitectureTests
     public static TheoryData<string> DirectOverwriteTargets => new()
     {
         Path.Combine("src", "AuswertungPro.Next.Application", "Protocol", "JsonCodeCatalogProvider.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Evaluation", "EvalSetBenchmark.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Evaluation", "YoloDetectBaselineScorer.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Evaluation", "EvalSetBenchmarkScorer.cs"),
         Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Evaluation", "EvalSetManifestHasher.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Training", "StageAExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Import", "ImportRunReportFileExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Application", "Common", "ProjectFileLocator.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "MeasureRecommendationService.cs"),
@@ -19,8 +19,7 @@ public sealed class AtomicPersistenceArchitectureTests
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "HoldingFolderDistributor.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Import", "ImportSummaryExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "HaltungCadastreTableFileStore.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "NetworkGeometryCache.cs"),
-        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "YoloDatasetExportService.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "XtfJsonGeometryCache.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "TrainingCenterImportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Teacher", "TrainingAnnotationExportService.cs"),

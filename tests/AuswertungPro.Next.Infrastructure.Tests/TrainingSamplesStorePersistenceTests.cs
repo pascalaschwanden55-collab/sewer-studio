@@ -96,6 +96,41 @@ public sealed class TrainingSamplesStorePersistenceTests
         }
     }
 
+    [Fact]
+    public async Task ZweiInstanzen_gleicheDatei_parallelesMerge_verliertKeineSamples()
+    {
+        // Bildet den echten Aufbau nach: die ServiceProvider-Instanz und die statische Fassade
+        // sind zwei getrennte Store-Instanzen auf DERSELBEN training_samples.json. Ohne geteiltes
+        // Lock koennten sich parallele Merges (Self-Training vs. Pruefplatz) gegenseitig ueberschreiben.
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "sewer-training-sample-file-store-two-instances",
+            Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(root, "training_samples.json");
+        var storeA = new TrainingSampleFileStore(path);
+        var storeB = new TrainingSampleFileStore(path);
+        storeA.ConfigureEvalProtection(Path.Combine(root, "empty-eval"));
+        storeB.ConfigureEvalProtection(Path.Combine(root, "empty-eval"));
+
+        try
+        {
+            var mergesA = Enumerable.Range(0, 30)
+                .Select(i => storeA.MergeAndSaveAsync([Sample($"a-{i}", $"sig-a-{i}")]));
+            var mergesB = Enumerable.Range(0, 30)
+                .Select(i => storeB.MergeAndSaveAsync([Sample($"b-{i}", $"sig-b-{i}")]));
+            await Task.WhenAll(mergesA.Concat(mergesB));
+
+            var samples = await storeA.LoadAsync();
+
+            Assert.Equal(60, samples.Count);
+            Assert.Equal(60, samples.Select(sample => sample.Signature).Distinct().Count());
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     private static TrainingSample Sample(
         string id,
         string signature,

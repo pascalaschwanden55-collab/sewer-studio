@@ -44,7 +44,7 @@ public partial class PlayerWindow
                             code,
                             label),
                         (meter, _, frameBytes) => _codingBoundaryContext.EnsureStartAsync(meter, frameBytes),
-                        CloseTrackedStreckenschaeden,
+                        _codingStreckenschadenTrackingController.CloseTracked,
                         (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes),
                         () => _codingSessionHost.EventCollection?.Count ?? 0,
                         (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)))));

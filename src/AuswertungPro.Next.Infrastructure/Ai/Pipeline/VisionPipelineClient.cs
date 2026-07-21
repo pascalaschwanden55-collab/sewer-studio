@@ -155,14 +155,6 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         return await PostAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", request, ct).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Export training data to YOLO format.
-    /// </summary>
-    public async Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
-    {
-        return await PostAsync<TrainingExportRequestDto, TrainingExportResponseDto>("/training/export-yolo", request, ct).ConfigureAwait(false);
-    }
-
     // ── Internal ──────────────────────────────────────────────────────────
 
     private async Task<TResponse> PostAsync<TRequest, TResponse>(
@@ -192,6 +184,17 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
                     ex);
             }
         }
+    }
+
+    public async Task<TrainingExportPlanResponseDto> ExportPlannedTrainingAsync(
+        TrainingExportPlanRequestDto request,
+        CancellationToken ct = default)
+    {
+        return await PostAsync<TrainingExportPlanRequestDto, TrainingExportPlanResponseDto>(
+                "/training/export-yolo",
+                request,
+                ct)
+            .ConfigureAwait(false);
     }
 
     private static bool IsTransientSidecarError(Exception ex)

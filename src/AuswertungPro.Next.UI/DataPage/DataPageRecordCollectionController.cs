@@ -77,6 +77,23 @@ public sealed class DataPageRecordCollectionController
         _scheduleAutoSave();
     }
 
+    public void RemoveMany(IReadOnlyCollection<HaltungRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        if (records.Count == 0)
+            return;
+
+        if (!_confirmDelete($"{records.Count} Haltung(en) wirklich loeschen?", "Loeschen"))
+            return;
+
+        var project = _getProject();
+        foreach (var record in records.ToArray())
+            project.RemoveRecord(record.Id);
+
+        _setSelected(project.Data.FirstOrDefault());
+        _scheduleAutoSave();
+    }
+
     public void MoveUp()
     {
         if (!DataPageRecordOrderController.TryMoveByOffset(_getProject().Data, _getSelected(), -1))

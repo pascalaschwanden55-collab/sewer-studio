@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -37,23 +36,16 @@ public sealed class TeacherAnnotationGalleryServiceTests
     }
 
     [Fact]
-    public async Task LoadPendingAsync_blendet_bereits_uebernommene_teacher_fewshots_aus()
+    public async Task LoadAsync_liefert_alle_Annotationen()
     {
         await WithTempKnowledgeRoot(async () =>
         {
-            await TeacherAnnotationStore.AppendAsync(Make("trained", "BAB"), Make("open", "BDD"));
-            await File.WriteAllTextAsync(
-                Path.Combine(KnowledgeBasePaths.GetRoot(), "fewshot_examples.json"),
-                JsonSerializer.Serialize(new[]
-                {
-                    new { Source = "teacher:trained", VsaCode = "BAB", Category = "BA", ImageRelativePath = "missing.png" }
-                }));
+            await TeacherAnnotationStore.AppendAsync(Make("first", "BAB"), Make("second", "BDD"));
 
-            var snapshot = await new TeacherAnnotationGalleryService().LoadPendingAsync();
+            var snapshot = await new TeacherAnnotationGalleryService().LoadAsync();
 
-            var pending = Assert.Single(snapshot.PendingAnnotations);
-            Assert.Equal("open", pending.AnnotationId);
-            Assert.Equal(["BDD"], snapshot.FilterCodes);
+            Assert.Equal(["first", "second"], snapshot.Annotations.Select(a => a.AnnotationId));
+            Assert.Equal(["BAB", "BDD"], snapshot.FilterCodes);
         });
     }
 

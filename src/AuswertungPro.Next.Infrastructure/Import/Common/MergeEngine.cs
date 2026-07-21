@@ -33,16 +33,17 @@ public static class MergeEngine
         var res = new MergeResult();
         var recordKey = (target.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
 
-        try
-        {
-            // Zu mergende Felder = Katalog-Spalten PLUS dynamische Felder, die die Quelle gesetzt hat
-            // (z.B. Schacht_oben/Schacht_unten). Ohne die dynamischen Felder wuerde der Merge sie
-            // verwerfen und das Datagrid bliebe unnoetig leer.
-            var fieldsToMerge = FieldCatalog.ColumnOrder
-                .Concat(source.FieldMeta.Keys.Where(k =>
-                    !FieldCatalog.ColumnOrder.Contains(k, StringComparer.Ordinal)));
+        // Zu mergende Felder = Katalog-Spalten PLUS dynamische Felder, die die Quelle gesetzt hat
+        // (z.B. Schacht_oben/Schacht_unten). Ohne die dynamischen Felder wuerde der Merge sie
+        // verwerfen und das Datagrid bliebe unnoetig leer.
+        var fieldsToMerge = FieldCatalog.ColumnOrder
+            .Concat(source.FieldMeta.Keys.Where(k =>
+                !FieldCatalog.ColumnOrder.Contains(k, StringComparer.Ordinal)));
 
-            foreach (var field in fieldsToMerge)
+        foreach (var field in fieldsToMerge)
+        {
+            // Ein Fehler in EINEM Feld darf nicht die restlichen Felder des Records ueberspringen.
+            try
             {
                 // Key-Feld nicht "kaputt-mergen"
                 if (string.Equals(field, FieldKeys.HoldingName, StringComparison.Ordinal))
@@ -138,13 +139,13 @@ public static class MergeEngine
                     recordKey: recordKey, field: field,
                     detail: $"DifferentSource '{existing}' ({existingSource}) vs '{incoming}' ({importSource})");
             }
-        }
-        catch (Exception)
-        {
-            res.Errors++;
-            ctx?.Log.AddEntry("Merge", "Exception", ImportLogStatus.Error,
-                recordKey: recordKey, detail: "Unerwarteter Fehler bei Merge");
-            // bewusst nicht werfen: Import soll weiterlaufen und Stats zeigen
+            catch (Exception)
+            {
+                res.Errors++;
+                ctx?.Log.AddEntry("Merge", "Exception", ImportLogStatus.Error,
+                    recordKey: recordKey, field: field, detail: "Unerwarteter Fehler bei Merge");
+                // bewusst nicht werfen: die restlichen Felder dieses Records weiter mergen
+            }
         }
 
         return res;

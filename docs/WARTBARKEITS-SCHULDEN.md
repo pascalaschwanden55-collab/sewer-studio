@@ -109,6 +109,39 @@ Damit ist die feste Altliste von 20 auf 0 Produktionsdateien über 1.000 Zeilen
 gesunken. Die Ausnahmeliste ist leer; der Fitness-Test verhindert neue
 Großdateien weiterhin automatisch.
 
+Zehnte Aufräumrunde begonnen am 2026-07-17:
+
+- Winkel-, Abzweig-, Kreis- und Bogenplanung der Fotomessung liegt im reinen
+  `PhotoMeasurementAnglePlanBuilder`. Die öffentliche
+  `PhotoMeasurementGeometryService`-Fassade und ihre Ergebnisse bleiben unverändert;
+  die Hauptdatei sank von 837 auf 720 Zeilen. 52 Geometrie-Tests schützen den Schnitt.
+
+- Die Rohr-Radar-Zeichnung der Videoanalyse liegt jetzt im zustandslosen
+  `PipelinePipeRadarRenderer`. Das Fenster sank von 831 auf 552 Zeilen; Detail,
+  Kompakt, Sortierung, Grenzen, Texte und kleine Zeichenflächen sind durch
+  Verhaltenstests geschützt. Auch 250 neue Befunde lösen nur eine Radarzeichnung
+  aus.
+- Die dreifache Live-Ring-Zeichnung aus Hauptfenster, abgedocktem Fenster und
+  Player-Rückfall liegt im `LiveFrameRingOverlayRenderer`. Die drei sichtbaren
+  Stile bleiben getrennt; Uhrwinkel, Ringform und Schadensfarben haben je eine
+  gemeinsame Quelle. Das Hauptfenster sank zunächst auf 406 Zeilen, das abgedockte
+  Fenster von 218 auf 65 Zeilen. Pro Fortschrittsmeldung wird höchstens einmal
+  gezeichnet.
+- Die Fortschrittsabbildung der Videoanalyse liegt jetzt im laufbezogenen
+  `PipelineProgressMapper`. Er übernimmt Phasen, ETA, Parserwerte, Maximalzähler,
+  Bild und die ersten acht Live-Befunde, greift aber weder auf Canvas noch auf das
+  abgedockte Fenster zu. Dafür liefert er nur zwei Wirkungshinweise zurück. Das
+  Hauptfenster sank damit zunächst auf 312 Zeilen; fokussierte Tests schützen auch
+  den Unterschied zwischen fehlender und bewusst leerer Befundliste.
+- Die erfolgreiche Abschlussabbildung liegt jetzt im zustandslosen
+  `PipelineResultPresenter`. Er berechnet Statistik, Telemetrie, Rohdaten-Zähler und
+  höchstens 250 sichtbare `DetectionItem`-Zeilen. Gemappte Einträge haben dabei weiter
+  Vorrang; die endgültigen Säulenzähler kommen weiterhin aus allen Rohbefunden. Das
+  Fenster behält Fehler, Lifecycle, Sammelersetzung und genau eine Radarzeichnung und
+  sank auf 285 Zeilen. Offen bleibt eine bestehende fachliche Grenze: Die 250 sichtbaren
+  Zeilen steuern zugleich die spätere Übernahme. Weitere gemappte Befunde wären damit
+  nicht auswählbar und würden verworfen. Das nicht still in einer Aufräumänderung ändern.
+
 Regel für jeden Umbau: Erst bestehendes Verhalten durch Tests festhalten, dann
 eine Verantwortung verschieben, vollständige Tests ausführen und erst danach das
 nächste Teilstück beginnen. Kein Komplett-Umbau der gesamten Klasse in einem Zug.

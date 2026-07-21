@@ -1,7 +1,9 @@
 """End-to-end pipeline test."""
 
 import base64
+import hashlib
 import io
+import json
 
 import pytest
 from PIL import Image
@@ -40,30 +42,71 @@ def test_full_pipeline_health_then_yolo(client):
 
 
 def test_training_export(client, tmp_path, monkeypatch):
-    """Smoke test: training export creates valid response.
-
-    Isoliert: schreibt in pytest tmp_path statt in den festen ./test_export_tmp (vermied
-    PermissionError + nicht aufgeraeumte Artefakte). Die Export-Route erzwingt eine Sandbox
-    (output_dir muss in training_export_root liegen), daher wird der Root auf tmp_path
-    gepatcht und output_dir relativ dazu gesetzt.
-    """
+    """Smoke-Test: Ein fertiger Plan wird ohne eigene Entscheidungen ausgefuehrt."""
     from sidecar.config import settings
     monkeypatch.setattr(settings, "training_export_root", str(tmp_path), raising=False)
 
     img_b64 = _make_test_image(w=100, h=100)
-    resp = client.post("/training/export-yolo", json={
-        "samples": [
-            {
-                "image_base64": img_b64,
-                "labels": [
-                    {"class_name": "crack", "x_center": 0.5, "y_center": 0.5, "width": 0.2, "height": 0.1}
-                ],
-            }
+    image_bytes = base64.b64decode(img_b64)
+    image_sha256 = hashlib.sha256(image_bytes).hexdigest()
+    plan_id = "a" * 64
+    plan_sha256 = plan_id
+    sample = {
+        "image_sha256": image_sha256,
+        "image_base64": img_b64,
+        "split": "train",
+        "target_file_name": f"img_{image_sha256}.png",
+        "labels": [
+            {"class_id": 0, "x_center": 0.5, "y_center": 0.5, "width": 0.2, "height": 0.1}
         ],
-        "output_dir": "export",
-        "train_split": 0.8,
+    }
+    manifest = (
+        json.dumps(
+            {
+                "schema_version": "2.0",
+                "plan_id": plan_id,
+                "class_map_version": 2,
+                "vsa_manifest_hash": "c" * 64,
+                "registry_hash": "d" * 64,
+                "classes": ["BAB_riss"],
+                "images": [
+                    {
+                        "image_sha256": image_sha256,
+                        "target": "train",
+                        "target_file_name": f"img_{image_sha256}.png",
+                        "labels": [
+                            {
+                                "class_id": 0,
+                                "class_name": "BAB_riss",
+                                "bounding_box": {
+                                    "x_center": 0.5,
+                                    "y_center": 0.5,
+                                    "width": 0.2,
+                                    "height": 0.1,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode()
+    resp = client.post("/training/export-yolo", json={
+        "schema_version": "2.0",
+        "plan_id": plan_id,
+        "plan_sha256": plan_sha256,
+        "class_map_version": 2,
+        "vsa_manifest_hash": "c" * 64,
+        "registry_hash": "d" * 64,
+        "classes": ["BAB_riss"],
+        "manifest_json_base64": base64.b64encode(manifest).decode(),
+        "manifest_sha256": hashlib.sha256(manifest).hexdigest(),
+        "samples": [sample],
     })
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_samples"] == 1
-    assert len(data["classes_used"]) > 0
+    assert data["class_count"] == 1
+    assert data["status"] == "created"

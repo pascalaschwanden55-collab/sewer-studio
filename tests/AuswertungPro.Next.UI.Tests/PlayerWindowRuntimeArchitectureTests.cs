@@ -80,7 +80,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
-        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
@@ -114,7 +114,9 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         Assert.Contains("TryBeginAnalysis: _codingAiRuntimeOwner.Controller.TryBeginAnalysis", ai);
         Assert.Contains("actions.TryBeginAnalysis()", analysisCommandWorkflow);
         Assert.Contains("actions.EndAnalysis()", analysisCommandWorkflow);
-        Assert.Contains("DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", exit);
+        Assert.Contains(
+            "dependencies.AiStates.RuntimeOwner.Controller.DisposeAnalysisCancellation",
+            exit);
         Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
         Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", wiring);
         Assert.Contains("actions.DisposeCodingAnalysisCancellation()", closedWorkflow);

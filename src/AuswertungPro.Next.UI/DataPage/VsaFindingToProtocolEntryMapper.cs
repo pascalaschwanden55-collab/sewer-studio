@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -27,7 +28,7 @@ public static class VsaFindingToProtocolEntryMapper
         {
             var mStart = f.MeterStart;
             var mEnd = f.MeterEnd;
-            var time = ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay);
+            var time = ProtocolTimeParser.ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay);
 
             var beschreibung = f.Raw?.Trim() ?? string.Empty;
             // Beschreibung aus dem VSA-Katalog aufloesen, wenn Raw leer oder nur Kuerzel
@@ -91,20 +92,4 @@ public static class VsaFindingToProtocolEntryMapper
         => value is > 0 and <= 12
             ? value.Value.ToString("0.##", CultureInfo.InvariantCulture)
             : null;
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
-    }
 }

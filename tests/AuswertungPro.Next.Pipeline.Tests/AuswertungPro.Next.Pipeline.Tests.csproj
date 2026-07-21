@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
     <ProjectReference Include="..\..\tools\SidecarE2eSmoke\SidecarE2eSmoke.csproj" />
     <ProjectReference Include="..\..\tools\NightlySoakRunner\NightlySoakRunner.csproj" />
+    <ProjectReference Include="..\..\tools\StageAExporter\StageAExporter.csproj" />
   </ItemGroup>
 
   <ItemGroup>

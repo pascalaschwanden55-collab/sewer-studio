@@ -77,6 +77,25 @@ public static class AtomicTextFileWriter
         }
     }
 
+    public static async Task WriteAllBytesAsync(
+        string path,
+        ReadOnlyMemory<byte> content,
+        CancellationToken ct = default)
+    {
+        var write = PrepareWrite(path);
+        try
+        {
+            await File.WriteAllBytesAsync(write.TempPath, content.ToArray(), ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            CompleteWrite(write);
+        }
+        catch
+        {
+            DeleteTemp(write.TempPath);
+            throw;
+        }
+    }
+
     private static AtomicWrite PrepareWrite(string path)
     {
         var fullPath = Path.GetFullPath(path);
@@ -114,6 +133,13 @@ public static class AtomicTextFileWriter
         try
         {
             File.Replace(sourcePath, targetPath, backupPath, ignoreMetadataErrors: true);
+        }
+        catch (FileNotFoundException)
+        {
+            // Ziel ist zwischen Existenzpruefung und Replace verschwunden (AV-Scanner, Cloud-Sync,
+            // externes Loeschen). Dann genuegt ein einfacher Move ohne Backup-Kopie — der
+            // Fallback unten wuerde an File.Copy(targetPath, ...) erneut mit FileNotFound scheitern.
+            File.Move(sourcePath, targetPath, overwrite: true);
         }
         catch (Exception ex) when (ex is PlatformNotSupportedException || ex is IOException || ex is UnauthorizedAccessException)
         {

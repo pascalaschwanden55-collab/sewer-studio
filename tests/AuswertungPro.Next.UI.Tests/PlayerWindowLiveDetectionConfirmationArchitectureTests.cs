@@ -179,7 +179,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("BestEffort.Try", frameExporter);
         Assert.Contains("public sealed class LiveDetectionTrainingExportPlanner", exportPlanner);
         Assert.Contains("IVsaYoloClassMapStore", exportPlanner);
-        Assert.Contains("_classMap.GetClassId", exportPlanner);
+        Assert.Contains("_classMap.GetOrAddClassId", exportPlanner);
         Assert.Contains("LiveDetectionGeometryMapper.BBoxFromClockPosition", exportPlanner);
         Assert.Contains("public interface ILiveDetectionTrainingAnnotationWriter", annotationWriter);
         Assert.Contains("public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTrainingAnnotationWriter", annotationWriter);

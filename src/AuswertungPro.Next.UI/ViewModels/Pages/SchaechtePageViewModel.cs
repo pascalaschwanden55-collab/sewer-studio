@@ -6,10 +6,12 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
@@ -21,23 +23,20 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
+    private readonly SchachtProtocolRefreshController _schachtProtocolRefreshController;
+    private readonly SchachtProtocolSingleImportController _schachtProtocolSingleImportController;
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
     private readonly IProjectCostStoreRepository _schachtRecommendationCosts;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IShaftRenameService _shaftRename;
+    private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly ISafeShellOpenService _shellOpen;
     private readonly ISchaechteTemplateColumnReader _templateColumnReader;
     private readonly ISchachtFileTargetResolver _schachtFileTargets;
     private readonly ShellViewModel _shell;
-    private readonly DropdownOptionGroupController _sanierenDropdownOptions;
-    private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
-    private readonly DropdownOptionGroupController _pruefungsresultatDropdownOptions;
-    private readonly DropdownOptionGroupController _referenzpruefungDropdownOptions;
-    private readonly DropdownCommandGroup _sanierenDropdownCommands;
-    private readonly DropdownCommandGroup _eigentuemerDropdownCommands;
-    private readonly DropdownCommandGroup _pruefungsresultatDropdownCommands;
-    private readonly DropdownCommandGroup _referenzpruefungDropdownCommands;
+    private readonly SchaechteDropdownCommands _dropdownCommands;
     private bool _suppressRequiredFieldWarning;
 
     internal AppSettings Settings => _settings;
@@ -45,7 +44,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
     internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
     internal IShaftRenameService ShaftRename => _shaftRename;
+    internal IPdfTextLayerRewriter PdfTextLayerRewrite => _pdfTextLayerRewrite;
     internal IExplorerRevealService ExplorerReveal => _explorerReveal;
+    internal ISafeShellOpenService ShellOpen => _shellOpen;
     internal ISchachtFileTargetResolver SchachtFileTargets => _schachtFileTargets;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
@@ -75,29 +76,29 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand ImportProtocolCommand { get; }
     public IRelayCommand ClearSearchCommand { get; }
 
-    public IRelayCommand EditSanierenOptionsCommand => _sanierenDropdownCommands.Edit;
-    public IRelayCommand PreviewSanierenOptionsCommand => _sanierenDropdownCommands.Preview;
-    public IRelayCommand ResetSanierenOptionsCommand => _sanierenDropdownCommands.Reset;
-    public IRelayCommand<object?> AddSanierenOptionCommand => _sanierenDropdownCommands.Add;
-    public IRelayCommand<object?> RemoveSanierenOptionCommand => _sanierenDropdownCommands.Remove;
+    public IRelayCommand EditSanierenOptionsCommand => _dropdownCommands.Sanieren.Edit;
+    public IRelayCommand PreviewSanierenOptionsCommand => _dropdownCommands.Sanieren.Preview;
+    public IRelayCommand ResetSanierenOptionsCommand => _dropdownCommands.Sanieren.Reset;
+    public IRelayCommand<object?> AddSanierenOptionCommand => _dropdownCommands.Sanieren.Add;
+    public IRelayCommand<object?> RemoveSanierenOptionCommand => _dropdownCommands.Sanieren.Remove;
 
-    public IRelayCommand EditEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Edit;
-    public IRelayCommand PreviewEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Preview;
-    public IRelayCommand ResetEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Reset;
-    public IRelayCommand<object?> AddEigentuemerOptionCommand => _eigentuemerDropdownCommands.Add;
-    public IRelayCommand<object?> RemoveEigentuemerOptionCommand => _eigentuemerDropdownCommands.Remove;
+    public IRelayCommand EditEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Edit;
+    public IRelayCommand PreviewEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Preview;
+    public IRelayCommand ResetEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Reset;
+    public IRelayCommand<object?> AddEigentuemerOptionCommand => _dropdownCommands.Eigentuemer.Add;
+    public IRelayCommand<object?> RemoveEigentuemerOptionCommand => _dropdownCommands.Eigentuemer.Remove;
 
-    public IRelayCommand EditPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Edit;
-    public IRelayCommand PreviewPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Preview;
-    public IRelayCommand ResetPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Reset;
-    public IRelayCommand<object?> AddPruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Add;
-    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Remove;
+    public IRelayCommand EditPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Edit;
+    public IRelayCommand PreviewPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Preview;
+    public IRelayCommand ResetPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Reset;
+    public IRelayCommand<object?> AddPruefungsresultatOptionCommand => _dropdownCommands.Pruefungsresultat.Add;
+    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand => _dropdownCommands.Pruefungsresultat.Remove;
 
-    public IRelayCommand EditReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Edit;
-    public IRelayCommand PreviewReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Preview;
-    public IRelayCommand ResetReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Reset;
-    public IRelayCommand<object?> AddReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Add;
-    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Remove;
+    public IRelayCommand EditReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Edit;
+    public IRelayCommand PreviewReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Preview;
+    public IRelayCommand ResetReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Reset;
+    public IRelayCommand<object?> AddReferenzpruefungOptionCommand => _dropdownCommands.Referenzpruefung.Add;
+    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _dropdownCommands.Referenzpruefung.Remove;
 
     public SchaechtePageViewModel(ShellViewModel shell, ServiceProvider services)
         : this(
@@ -110,6 +111,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtRecommendationCosts: services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
             dropdownOptions: services.DropdownOptions,
             shaftRename: services.ShaftRename,
+            pdfTextLayerRewrite: services.PdfTextLayerRewrite,
+            shellOpen: services.ShellOpen,
             explorerReveal: services.ExplorerReveal,
             templateColumnReader: services.SchaechteTemplateColumns,
             schachtFileTargets: services.SchachtFileTargets)
@@ -138,6 +141,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtMassnahmenKatalog,
             CostStoreCompatibility.Factory.CreateProjectCostStore("schacht_empfehlungen.json"),
             dropdownOptions ?? DropdownOptionsCompatibility.Default,
+            PdfTextLayerRewriter.Current,
+            SafeShellOpen.CompatibilityService,
             shaftRename,
             explorerReveal,
             templateColumnReader,
@@ -154,6 +159,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         ISchachtMassnahmenKatalogStore schachtMassnahmenKatalog,
         IProjectCostStoreRepository schachtRecommendationCosts,
         IDropdownOptionsStore dropdownOptions,
+        IPdfTextLayerRewriter pdfTextLayerRewrite,
+        ISafeShellOpenService shellOpen,
         IShaftRenameService? shaftRename = null,
         IExplorerRevealService? explorerReveal = null,
         ISchaechteTemplateColumnReader? templateColumnReader = null,
@@ -167,10 +174,36 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
         _schachtRecommendationCosts = schachtRecommendationCosts ?? throw new ArgumentNullException(nameof(schachtRecommendationCosts));
         _dropdownOptions = dropdownOptions ?? throw new ArgumentNullException(nameof(dropdownOptions));
+        _pdfTextLayerRewrite = pdfTextLayerRewrite ?? throw new ArgumentNullException(nameof(pdfTextLayerRewrite));
+        _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _shaftRename = shaftRename ?? new ShaftRenameFileService();
         _explorerReveal = explorerReveal ?? ExplorerRevealService.DefaultService;
         _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;
         _schachtFileTargets = schachtFileTargets ?? SchachtFileTargetResolver.CompatibilityService;
+        _schachtProtocolRefreshController = new SchachtProtocolRefreshController(
+            _dialogs,
+            new SchachtProtocolRefreshActions(
+                GetProjectFolder: _shell.GetProjectFolder,
+                CaptureProject: () => new ProjectOperationContext(
+                    _shell.Project,
+                    _settings.LastProjectPath),
+                ResolveLinkedFile: ProjectPathResolver.ResolveFilePathFromProjectFolder,
+                ReadProtocolAsync: ReadProtocolAsync,
+                ProjectIsStillOpen: ProjectIsStillOpen,
+                Apply: _schachtProtocolImport.Apply,
+                SaveProject: _shell.TrySaveProject,
+                SetLastResult: value => LastResult = value));
+        _schachtProtocolSingleImportController = new SchachtProtocolSingleImportController(
+            _dialogs,
+            _schachtProtocolImport,
+            new SchachtProtocolSingleImportActions(
+                ReadProtocolAsync: ReadProtocolAsync,
+                ProjectIsStillOpen: ProjectIsStillOpen,
+                CollectionLock: _shell.CollectionLock,
+                SaveProject: _shell.TrySaveProject,
+                SetSelected: record => Selected = record,
+                ClearSelectedIfSame: ClearSelectedIfSame,
+                SetLastResult: value => LastResult = value));
 
         var uiLayout = _settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
@@ -190,30 +223,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
         EnforceEigentuemerOptionsExact();
 
-        _sanierenDropdownOptions = CreateDropdownOptionGroup(
-            SanierenOptions,
-            "Sanieren-Liste",
-            new[] { "Nein", "Ja" });
-        _eigentuemerDropdownOptions = CreateDropdownOptionGroup(
-            EigentuemerOptions,
-            "Eigentuemer-Liste",
-            _dropdownOptions.FixedEigentuemerOptions,
-            lockedToResetItems: true);
-        _pruefungsresultatDropdownOptions = CreateDropdownOptionGroup(
-            PruefungsresultatOptions,
-            "Pruefungsresultat-Liste",
-            new[]
-            {
-                "Pruefung bestanden",
-                "Pruefung knapp nicht bestanden",
-                "Pruefung nicht bestanden (grob undicht)",
-                "Keine"
-            });
-        _referenzpruefungDropdownOptions = CreateDropdownOptionGroup(
-            ReferenzpruefungOptions,
-            "Referenzpruefung-Liste",
-            new[] { "Ja", "Nein" });
-
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(Remove, () => Selected is not null);
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
@@ -228,31 +237,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             CancelStammdatenErgaenzung,
             () => IsStammdatenErgaenzungInProgress);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
-
-        _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            _sanierenDropdownOptions.Edit,
-            _sanierenDropdownOptions.Preview,
-            _sanierenDropdownOptions.Reset,
-            _sanierenDropdownOptions.Add,
-            _sanierenDropdownOptions.Remove));
-        _eigentuemerDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            _eigentuemerDropdownOptions.Edit,
-            _eigentuemerDropdownOptions.Preview,
-            _eigentuemerDropdownOptions.Reset,
-            _eigentuemerDropdownOptions.Add,
-            _eigentuemerDropdownOptions.Remove));
-        _pruefungsresultatDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            _pruefungsresultatDropdownOptions.Edit,
-            _pruefungsresultatDropdownOptions.Preview,
-            _pruefungsresultatDropdownOptions.Reset,
-            _pruefungsresultatDropdownOptions.Add,
-            _pruefungsresultatDropdownOptions.Remove));
-        _referenzpruefungDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            _referenzpruefungDropdownOptions.Edit,
-            _referenzpruefungDropdownOptions.Preview,
-            _referenzpruefungDropdownOptions.Reset,
-            _referenzpruefungDropdownOptions.Add,
-            _referenzpruefungDropdownOptions.Remove));
+        _dropdownCommands = SchaechteDropdownCommandFactory.Create(
+            new SchaechteDropdownOptionCollections(
+                SanierenOptions,
+                EigentuemerOptions,
+                PruefungsresultatOptions,
+                ReferenzpruefungOptions),
+            _dropdownOptions.FixedEigentuemerOptions,
+            new DropdownOptionGroupActions(
+                OptionsEditorDialogService.Show,
+                _dialogs.Info,
+                SaveDropdownOptions));
 
         LoadColumnsFromTemplate();
         EnsureRecordColumns();
@@ -336,19 +331,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             AddOptionIfMissing(AusgefuehrtDurchOptions, text);
     }
 
-    private DropdownOptionGroupController CreateDropdownOptionGroup(
-        ObservableCollection<string> options,
-        string previewTitle,
-        IReadOnlyList<string> resetItems,
-        bool lockedToResetItems = false)
-        => new(
-            options,
-            new DropdownOptionGroupSettings(previewTitle, resetItems, lockedToResetItems),
-            new DropdownOptionGroupActions(
-                OptionsEditorDialogService.Show,
-                _dialogs.Info,
-                SaveDropdownOptions));
-
     private void LoadColumnsFromTemplate()
     {
         Columns.Clear();
@@ -387,137 +369,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         }
     }
 
-    private void Add()
-    {
-        var rec = new SchachtRecord();
-        foreach (var col in Columns)
-            rec.Fields[col] = "";
-
-        var nrCol = SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
-
-        if (!string.IsNullOrWhiteSpace(nrCol))
-            rec.Fields[nrCol] = (Records.Count + 1).ToString();
-
-        // WPF-Sync-Vertrag: SchaechteData nutzt EnableCollectionSynchronization —
-        // JEDE Mutation (auch vom UI-Thread) muss den gemeinsamen Lock halten.
-        lock (_shell.CollectionLock)
-        {
-            Records.Add(rec);
-        }
-        SetSelectedWithoutRequiredFieldWarning(rec);
-        UpdateSearchResultInfo(Records.Count);
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-    }
-
-    private void Remove()
-    {
-        if (Selected is null)
-            return;
-
-        SchachtRecord? neueAuswahl;
-        lock (_shell.CollectionLock)
-        {
-            var idx = Records.IndexOf(Selected);
-            if (idx < 0)
-                return;
-
-            Records.RemoveAt(idx);
-            neueAuswahl = idx < Records.Count ? Records[idx] : Records.LastOrDefault();
-        }
-
-        SetSelectedWithoutRequiredFieldWarning(neueAuswahl);
-        UpdateNr();
-        UpdateSearchResultInfo(Records.Count);
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-    }
-
-    private bool CanMoveUp()
-    {
-        if (Selected is null)
-            return false;
-
-        var idx = Records.IndexOf(Selected);
-        return idx > 0;
-    }
-
-    private bool CanMoveDown()
-    {
-        if (Selected is null)
-            return false;
-
-        var idx = Records.IndexOf(Selected);
-        return idx >= 0 && idx < Records.Count - 1;
-    }
-
-    private void MoveUp()
-    {
-        if (Selected is null)
-            return;
-
-        lock (_shell.CollectionLock)
-        {
-            var idx = Records.IndexOf(Selected);
-            if (idx <= 0)
-                return;
-
-            Records.Move(idx, idx - 1);
-        }
-        UpdateNr();
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
-    }
-
-    private void MoveDown()
-    {
-        if (Selected is null)
-            return;
-
-        lock (_shell.CollectionLock)
-        {
-            var idx = Records.IndexOf(Selected);
-            if (idx < 0 || idx >= Records.Count - 1)
-                return;
-
-            Records.Move(idx, idx + 1);
-        }
-        UpdateNr();
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
-    }
-
-    /// <summary>
-    /// Verschiebt den ausgewaehlten Schacht auf die angegebene 1-basierte Position
-    /// (analog zur Haltungsansicht). Liefert false, wenn nichts ausgewaehlt ist oder
-    /// der Zug ins Leere laeuft. Renummeriert danach ueber <see cref="UpdateNr"/>.
-    /// </summary>
-    public bool MoveToPosition(int targetPosition)
-    {
-        if (Selected is null)
-            return false;
-
-        lock (_shell.CollectionLock)
-        {
-            var oldIndex = Records.IndexOf(Selected);
-            if (!RecordMovePositionCalculator.TryResolveTargetIndex(
-                    oldIndex, Records.Count, targetPosition, out var targetIndex))
-                return false;
-
-            Records.Move(oldIndex, targetIndex);
-        }
-        UpdateNr();
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
-        return true;
-    }
-
     private void Save()
     {
         var ok = _shell.TrySaveProject();
@@ -547,16 +398,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _dropdownOptions.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
     }
 
-    private void UpdateNr()
-    {
-        var nrField = SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
-        if (string.IsNullOrWhiteSpace(nrField))
-            return;
-
-        for (var i = 0; i < Records.Count; i++)
-            Records[i].SetFieldValue(nrField, (i + 1).ToString());
-    }
-
     public bool MatchesSearch(SchachtRecord record)
         => SchaechteFieldLogic.MatchesSearch(record, SearchText ?? "");
 
@@ -576,19 +417,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void EnforceEigentuemerOptionsExact()
     {
         DropdownOptionList.EnsureExact(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
-    }
-
-    private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)
-    {
-        _suppressRequiredFieldWarning = true;
-        try
-        {
-            Selected = record;
-        }
-        finally
-        {
-            _suppressRequiredFieldWarning = false;
-        }
     }
 
     private static string ResolveSchachtNummer(SchachtRecord record)

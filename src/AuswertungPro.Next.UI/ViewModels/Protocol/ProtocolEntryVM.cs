@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.ViewModels.Protocol;
@@ -195,7 +196,7 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         MeterStart = meterStart;
         MeterEnd = meterEnd;
 
-        var normalizedParams = NormalizeSecAliases(parameters, code);
+        var normalizedParams = VsaParameterMerger.NormalizeAliases(parameters, code);
 
         Model.CodeMeta ??= new ProtocolEntryCodeMeta();
         Model.CodeMeta.Code = code;
@@ -217,10 +218,10 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
             SetParamAliases(Code, "vsa.code", "Code");
 
         if (string.IsNullOrWhiteSpace(VsaDistanz) && MeterStart is not null)
-            VsaDistanz = MeterStart.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            VsaDistanz = ProtocolEntryInputNormalizer.FormatDouble(MeterStart.Value);
 
         if (string.IsNullOrWhiteSpace(VsaVideo) && Zeit is not null)
-            VsaVideo = FormatTime(Zeit.Value);
+            VsaVideo = ProtocolEntryInputNormalizer.FormatTime(Zeit.Value);
     }
 
     public void ApplyStreckenLogik()
@@ -231,27 +232,12 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
             return;
         }
 
-        var strecke = (GetParam("vsa.strecke") ?? string.Empty).Trim().ToUpperInvariant();
-        if (string.IsNullOrWhiteSpace(strecke))
-        {
-            SetParam("vsa.strecke", "A1");
-            return;
-        }
-
-        if (strecke.Length == 1 && (strecke == "A" || strecke == "B" || strecke == "C"))
-        {
-            SetParam("vsa.strecke", strecke + "1");
-            return;
-        }
-
-        if (strecke.Length >= 2 && (strecke[0] == 'A' || strecke[0] == 'B' || strecke[0] == 'C')
-            && strecke.Substring(1).All(char.IsDigit))
-        {
-            SetParam("vsa.strecke", strecke);
-            return;
-        }
-
-        SetParam("vsa.strecke", "A1");
+        var raw = GetParam("vsa.strecke");
+        var isValid = ProtocolEntryInputNormalizer.TryNormalizeStrecke(
+            raw,
+            out var normalized,
+            out var hasValue);
+        SetParam("vsa.strecke", isValid && hasValue ? normalized : "A1");
     }
 
     // --- KI/Model Mapping Methoden ---
@@ -345,49 +331,4 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         }
     }
 
-    private static Dictionary<string, string> NormalizeSecAliases(
-        IReadOnlyDictionary<string, string> parameters,
-        string code)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kv in parameters)
-        {
-            if (string.IsNullOrWhiteSpace(kv.Key))
-                continue;
-            var value = kv.Value?.Trim();
-            if (string.IsNullOrWhiteSpace(value))
-                continue;
-            result[kv.Key.Trim()] = value;
-        }
-
-        void Mirror(string[] keys)
-        {
-            var value = keys
-                .Select(k => result.TryGetValue(k, out var v) ? v : null)
-                .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-            if (string.IsNullOrWhiteSpace(value))
-                return;
-            foreach (var key in keys)
-                result[key] = value;
-        }
-
-        Mirror(new[] { "vsa.code", "Code" });
-        Mirror(new[] { "vsa.distanz", "Distance" });
-        Mirror(new[] { "vsa.video", "TimeCtr" });
-        Mirror(new[] { "vsa.uhr.von", "ClockPos1" });
-        Mirror(new[] { "vsa.uhr.bis", "ClockPos2" });
-        Mirror(new[] { "vsa.q1", "Q1", "Quantifizierung1" });
-        Mirror(new[] { "vsa.q2", "Q2", "Quantifizierung2" });
-
-        if (!string.IsNullOrWhiteSpace(code))
-        {
-            result["vsa.code"] = code.Trim();
-            result["Code"] = code.Trim();
-        }
-
-        return result;
-    }
-
-    private static string FormatTime(TimeSpan value)
-        => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
 }

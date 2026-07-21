@@ -26,6 +26,9 @@ public static class VsaYoloClassMap
     public static int GetClassId(string vsaCode)
         => Current.GetClassId(vsaCode);
 
+    public static int GetOrAddClassId(string vsaCode)
+        => Current.GetOrAddClassId(vsaCode);
+
     public static Dictionary<string, int> GetFullMap()
         => Current.GetFullMap();
 

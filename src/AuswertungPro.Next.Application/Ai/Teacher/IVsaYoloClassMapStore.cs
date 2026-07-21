@@ -5,6 +5,8 @@ public interface IVsaYoloClassMapStore
 {
     int GetClassId(string vsaCode);
 
+    int GetOrAddClassId(string vsaCode);
+
     Dictionary<string, int> GetFullMap();
 
     Task ExportClassesTxtAsync(string outputPath);

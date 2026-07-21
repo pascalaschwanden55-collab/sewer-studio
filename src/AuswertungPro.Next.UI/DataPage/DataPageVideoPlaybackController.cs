@@ -43,6 +43,27 @@ public sealed class DataPageVideoPlaybackController
         PlayResolved(record, _ensureVideoPath(record));
     }
 
+    internal void PlayCounterInspection(
+        HaltungRecord? record,
+        Func<string?, string?> resolveExistingPath)
+    {
+        if (record is null)
+            return;
+
+        ArgumentNullException.ThrowIfNull(resolveExistingPath);
+
+        var path = resolveExistingPath(record.GetFieldValue("Link_G"));
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            _dialogs.Info(
+                "Für diese Haltung ist keine Gegeninspektion vorhanden.",
+                "Gegeninspektion");
+            return;
+        }
+
+        PlayResolved(record, path);
+    }
+
     /// <summary>
     /// Spielt einen BEREITS aufgelösten Videopfad ab (z.B. Gegeninspektions-Video aus Link_G).
     /// </summary>

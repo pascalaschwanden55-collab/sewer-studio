@@ -162,6 +162,9 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
     public void PlayerWindow_manual_photo_slot_logic_lives_in_policy()
     {
         var photosPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var windowStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPhotoAttachmentController.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoSlotPolicy.cs");
         var applierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventPhotoApplier.cs");
         var timestampScopePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventPhotoTimestampScope.cs");
@@ -177,8 +180,12 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.True(File.Exists(commandWorkflowPath), "Manueller Foto-Command soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(attachmentWorkflowPath), "Analysierter Frame vs. Snapshot-Fallback soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(framePhotoAttacherPath), "Konkreter KI-Frame-Foto-Service soll hinter einem kleinen Adapter liegen.");
+        Assert.True(File.Exists(controllerPath), "Foto-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var windowState = File.ReadAllText(windowStatePath);
+        var controller = File.ReadAllText(controllerPath);
         var policy = File.ReadAllText(policyPath);
         var applier = File.ReadAllText(applierPath);
         var timestampScope = File.Exists(timestampScopePath) ? File.ReadAllText(timestampScopePath) : "";
@@ -187,13 +194,40 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         var attachmentWorkflow = File.Exists(attachmentWorkflowPath) ? File.ReadAllText(attachmentWorkflowPath) : "";
         var framePhotoAttacher = File.Exists(framePhotoAttacherPath) ? File.ReadAllText(framePhotoAttacherPath) : "";
 
-        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", photos);
-        Assert.Contains("CodingEventPhotoApplier.Apply", photos);
-        Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
-        Assert.Contains("CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync", photos);
-        Assert.Contains("CodingAnalyzedFramePhotoAttacher.AttachWithStore", photos);
-        Assert.Contains("_protocolContext.CodingFramePhotos", photos);
+        Assert.Contains("_codingPhotoAttachmentController.AttachAnalyzedFramePhoto(entry)", photos);
+        Assert.Contains("_codingPhotoAttachmentController.AttachBoundaryAnalyzedFramePhoto", photos);
+        Assert.Contains("_codingPhotoAttachmentController.TakePhotoForSelectedEvent", photos);
+        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingEventPhotoApplier.Apply", controller);
+        Assert.Contains("CodingEventPhotoTimestampScope.Apply", controller);
+        Assert.Contains("CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync", controller);
+        Assert.Contains("SafeFireAndForget(\"AttachAnalyzedFramePhoto\")", controller);
+        Assert.Contains("CodingAnalyzedFramePhotoAttacher.AttachWithStore", windowRoot);
+        Assert.Contains("_protocolContext.CodingFramePhotos", windowRoot);
+        Assert.Equal(1, CountOccurrences(windowRoot, "new CodingPhotoAttachmentController("));
+        Assert.Equal(
+            1,
+            CountOccurrences(
+                windowState,
+                "ICodingPhotoAttachmentController _codingPhotoAttachmentController"));
+        Assert.Contains("GetPreferredFrameBytesAsync: TryExtractAnalyzedFrameBytesAsync", windowRoot);
+        Assert.Contains(
+            "GetBufferedFrameBytes: () => _liveDetectionController.PendingConfirmationFrameBytes",
+            windowRoot);
+        Assert.Contains("ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service", windowRoot);
+        Assert.Contains("RefreshEvents: RefreshCodingEventsList", windowRoot);
+        Assert.DoesNotContain("CodingTakePhotoCommandWorkflow", photos);
+        Assert.DoesNotContain("CodingAnalyzedFramePhotoAttachmentWorkflow", photos);
         Assert.DoesNotContain("CodingAiFramePhotoService.AttachAnalyzedFramePhoto", photos);
+        var orchestrationOffenders = FindPlayerWindowPartialTokenOffenders(
+            "CodingTakePhotoCommandWorkflow.Execute",
+            "CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync",
+            "CodingEventPhotoApplier.Apply",
+            "CodingEventPhotoTimestampScope.Apply");
+        Assert.True(
+            orchestrationOffenders.Length == 0,
+            "PlayerWindow-Partials duerfen die Foto-Orchestrierung nicht wieder direkt uebernehmen:\n"
+            + string.Join("\n", orchestrationOffenders));
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
         Assert.Contains("photoPaths.Count >= 2", policy);
         Assert.Contains("CodingPhotoSlotPolicy.Apply", applier);
@@ -209,6 +243,19 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddDistinctNonBlank", attachmentWorkflow);
         Assert.Contains("ICodingFramePhotoStore framePhotoStore", framePhotoAttacher);
         Assert.Contains("framePhotoStore.AttachAnalyzedFramePhoto", framePhotoAttacher);
+    }
+
+    private static int CountOccurrences(string source, string token)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = source.IndexOf(token, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += token.Length;
+        }
+
+        return count;
     }
 
 }

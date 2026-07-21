@@ -6,11 +6,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai;   // VsaCodeResolver (Default-Label-Lookup)
 
 namespace AuswertungPro.Next.UI.ViewModels;
+
+/// <summary>Darstellung eines KI-Kandidaten mit VSA-Code und lesbarem Katalogtext.</summary>
+public sealed record TrainingStudioSuggestionItem(
+    string VsaCode,
+    string Klartext,
+    double Confidence,
+    string Quelle);
 
 /// <summary>
 /// Pruefplatz-ViewModel (Etappe 1): duenn ueber <see cref="IAnnotationWorkbenchService"/>.
@@ -23,19 +32,23 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     private readonly Func<IReadOnlyList<WorkbenchItem>> _loadQueue;
     private readonly string _confirmedByUser;
     private readonly Func<string, string?> _codeLabelLookup;
+    private readonly Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? _ensureAiReady;
 
     private CancellationTokenSource? _boxCts;
+    private bool _isStartingAi;
 
     public TrainingStudioViewModel(
         IAnnotationWorkbenchService workbench,
         Func<IReadOnlyList<WorkbenchItem>> loadQueue,
         string confirmedByUser,
-        Func<string, string?>? codeLabelLookup = null)
+        Func<string, string?>? codeLabelLookup = null,
+        Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? ensureAiReady = null)
     {
         _workbench = workbench;
         _loadQueue = loadQueue;
         _confirmedByUser = confirmedByUser;
         _codeLabelLookup = codeLabelLookup ?? VsaCodeResolver.LookupLabel;
+        _ensureAiReady = ensureAiReady;
     }
 
     [ObservableProperty]
@@ -53,14 +66,19 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowQualityWarning))]
     [NotifyPropertyChangedFor(nameof(QualityWarning))]
+    [NotifyPropertyChangedFor(nameof(SuggestionCandidates))]
     private WorkbenchSuggestion? _suggestion;
 
-    [ObservableProperty] private string? _selectedCode;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedCodeLabel))]
+    private string? _selectedCode;
     [ObservableProperty] private string _beschreibung = string.Empty;
     [ObservableProperty] private double? _clockPosition;
     [ObservableProperty] private int? _severity;
     [ObservableProperty] private string _statusText = string.Empty;
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartAiCommand))]
+    private bool _isBusy;
     [ObservableProperty] private int _queueDoneCount;
 
     /// <summary>Optionaler Rohrdurchmesser in mm fuer neu geladene Fotos (leer = 300-mm-Default).</summary>
@@ -82,6 +100,30 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
             if (!Suggestion.FrameUsable) return $"Frame nicht verwertbar: {Suggestion.QualityReason}";
             if (Suggestion.IsBend) return "Bogen erkannt — hier kein BCE (Rohrende) codieren.";
             return string.Empty;
+        }
+    }
+
+    /// <summary>KI-Kandidaten mit Klartext aus dem aktiven VSA-Katalog.</summary>
+    public IReadOnlyList<TrainingStudioSuggestionItem> SuggestionCandidates =>
+        Suggestion?.Candidates
+            .Select(candidate => new TrainingStudioSuggestionItem(
+                candidate.VsaCode,
+                ResolveCodeLabel(candidate.VsaCode),
+                candidate.Confidence,
+                candidate.Quelle))
+            .ToArray()
+        ?? Array.Empty<TrainingStudioSuggestionItem>();
+
+    /// <summary>Lesbare Bedeutung des aktuell eingetragenen Codes.</summary>
+    public string SelectedCodeLabel => ResolveCodeLabel(SelectedCode);
+
+    partial void OnSelectedCodeChanging(string? oldValue, string? newValue)
+    {
+        var previousTemplate = BuildBeschreibungVorlage(oldValue, ClockPosition);
+        if (string.IsNullOrWhiteSpace(Beschreibung)
+            || string.Equals(Beschreibung, previousTemplate, StringComparison.Ordinal))
+        {
+            Beschreibung = BuildBeschreibungVorlage(newValue, ClockPosition);
         }
     }
 
@@ -107,12 +149,47 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     public void ApplyCodeSelection(string? code, double? clockPosition, int? severity)
     {
         if (!string.IsNullOrWhiteSpace(code))
-            SelectedCode = code;
+            SelectedCode = NormalizeCode(code);
         if (clockPosition.HasValue)
             ClockPosition = clockPosition;
         if (severity.HasValue)
             Severity = severity;
         Beschreibung = BuildBeschreibungVorlage(SelectedCode, ClockPosition);
+    }
+
+    private bool CanStartAi() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanStartAi), AllowConcurrentExecutions = false)]
+    private async Task StartAiAsync(CancellationToken ct)
+    {
+        if (_ensureAiReady is null)
+        {
+            StatusText = "KI-Start ist nur im laufenden SewerStudio verfuegbar.";
+            return;
+        }
+
+        _isStartingAi = true;
+        IsBusy = true;
+        try
+        {
+            var progress = new Progress<string>(message => StatusText = message);
+            var result = await _ensureAiReady(progress, ct);
+            StatusText = result.StatusText;
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "KI-Start abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "KI konnte nicht gestartet werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio KI-Start");
+        }
+        finally
+        {
+            _isStartingAi = false;
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -132,6 +209,11 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         var item = CurrentItem;
         if (item is null)
             return;
+        if (_isStartingAi)
+        {
+            StatusText = "KI startet noch. Bitte kurz warten und die Box danach erneut ziehen.";
+            return;
+        }
 
         // Eigenes CTS je Aufruf; einen laufenden Vorgaenger abbrechen (KEIN geteilter Abbruch).
         _boxCts?.Cancel();
@@ -139,43 +221,85 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         _boxCts = cts;
         var ct = cts.Token;
 
+        // Eine neue Box darf nie zusammen mit der Maske/dem Vorschlag der alten Box
+        // sichtbar sein. Sonst wirken beide geometrisch gegeneinander verschoben.
+        Segmentation = null;
+        Suggestion = null;
         CurrentBox = box;
         IsBusy = true;
+        Task<WorkbenchSegmentation>? segTask = null;
+        Task<WorkbenchSuggestion>? sugTask = null;
         try
         {
             var codeHint = Suggestion?.Candidates.FirstOrDefault()?.VsaCode ?? "damage";
-            var segTask = _workbench.SegmentAsync(item, box, codeHint, ct);
-            var sugTask = _workbench.SuggestAsync(item, box, ct);
+            segTask = _workbench.SegmentAsync(item, box, codeHint, ct);
+            sugTask = _workbench.SuggestAsync(item, box, ct);
             await Task.WhenAll(segTask, sugTask);
 
             if (ct.IsCancellationRequested)
                 return;   // ein neuerer Lauf hat uebernommen
 
-            Segmentation = segTask.Result;
-            Suggestion = sugTask.Result;
+            ApplyCompletedBoxResults(segTask, sugTask);
 
-            var top = Suggestion.Candidates.FirstOrDefault()?.VsaCode;
-            SelectedCode = top;
-            Beschreibung = BuildBeschreibungVorlage(top, ClockPosition);
-            StatusText = Suggestion.FrameUsable
-                ? Segmentation.StatusText
-                : $"Frame nicht verwertbar: {Suggestion.QualityReason}";
+            StatusText = Suggestion is { FrameUsable: false }
+                ? $"Frame nicht verwertbar: {Suggestion.QualityReason}"
+                : Segmentation?.StatusText ?? "KI-Vorschlag erstellt.";
         }
         catch (OperationCanceledException)
         {
             // Abgebrochen durch einen neuen Box-Lauf: Zustand nicht uebernehmen.
         }
+        catch (SidecarUnavailableException ex)
+        {
+            if (_boxCts == cts)
+            {
+                ApplyCompletedBoxResults(segTask, sugTask);
+                var partial = BuildPartialResultPrefix();
+                UserError.DescribeAndReport(ex, "Training-Studio Segmentierung");
+                StatusText = partial
+                    + "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' waehlen und die Box erneut ziehen.";
+            }
+        }
         catch (Exception ex)
         {
             // Sidecar/Netzwerk/Modellfehler: sichtbare Meldung statt App-Absturz.
             if (_boxCts == cts)
-                StatusText = $"KI-Vorschlag/Maske nicht moeglich: {ex.Message}";
+            {
+                ApplyCompletedBoxResults(segTask, sugTask);
+                StatusText = BuildPartialResultPrefix() + "KI-Vorschlag/Maske nicht moeglich: "
+                    + UserError.DescribeAndReport(ex, "Training-Studio Segmentierung");
+            }
         }
         finally
         {
             if (_boxCts == cts)
                 IsBusy = false;
         }
+    }
+
+    private void ApplyCompletedBoxResults(
+        Task<WorkbenchSegmentation>? segmentationTask,
+        Task<WorkbenchSuggestion>? suggestionTask)
+    {
+        if (segmentationTask?.Status == TaskStatus.RanToCompletion)
+            Segmentation = segmentationTask.Result;
+
+        if (suggestionTask?.Status != TaskStatus.RanToCompletion)
+            return;
+
+        Suggestion = suggestionTask.Result;
+        var top = Suggestion.Candidates.FirstOrDefault()?.VsaCode;
+        SelectedCode = top;
+        Beschreibung = BuildBeschreibungVorlage(top, ClockPosition);
+    }
+
+    private string BuildPartialResultPrefix()
+    {
+        if (Segmentation is not null)
+            return "Maske ist sichtbar. ";
+        if (Suggestion is not null)
+            return "KI-Vorschlag ist sichtbar. ";
+        return string.Empty;
     }
 
     [RelayCommand]
@@ -200,7 +324,10 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     private void SelectCode(string? code)
     {
         if (!string.IsNullOrWhiteSpace(code))
-            SelectedCode = code;
+        {
+            SelectedCode = NormalizeCode(code);
+            Beschreibung = BuildBeschreibungVorlage(SelectedCode, ClockPosition);
+        }
     }
 
     /// <summary>Setzt die Schadensstufe (1..5) aus dem Button-Parameter; sonst keine Aenderung.</summary>
@@ -235,15 +362,18 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     private async Task SaveInternalAsync(bool asCorrection)
     {
         var item = CurrentItem;
-        if (item is null || CurrentBox is null || string.IsNullOrWhiteSpace(SelectedCode))
+        var normalizedCode = NormalizeCode(SelectedCode);
+        if (item is null || CurrentBox is null || string.IsNullOrWhiteSpace(normalizedCode))
         {
             StatusText = "Zum Speichern fehlen Box oder Code.";
             return;
         }
 
         var topCode = Suggestion?.Candidates.FirstOrDefault()?.VsaCode;
-        var wasCorrected = asCorrection && !string.Equals(SelectedCode, topCode, StringComparison.OrdinalIgnoreCase);
-        var decision = new WorkbenchDecision(SelectedCode!, wasCorrected, Beschreibung, ClockPosition, Severity, _confirmedByUser);
+        var wasCorrected = !string.IsNullOrWhiteSpace(topCode)
+            && !string.Equals(normalizedCode, topCode, StringComparison.OrdinalIgnoreCase);
+        SelectedCode = normalizedCode;
+        var decision = new WorkbenchDecision(normalizedCode, wasCorrected, Beschreibung, ClockPosition, Severity, _confirmedByUser);
 
         IsBusy = true;
         try
@@ -251,11 +381,16 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
             var result = await _workbench.SaveAsync(item, CurrentBox.Value, Segmentation, decision);
             if (result.Saved)
             {
-                StatusText = result.RefusalReason is null
+                var savedStatus = result.RefusalReason is null
                     ? $"Gespeichert + {result.KbIndexState}."
                     : $"Gespeichert ({result.KbIndexState}) — Hinweis: {result.RefusalReason}";
+                if (wasCorrected)
+                    savedStatus = $"Korrektur gespeichert und an die Lerndaten zurueckgegeben. {savedStatus}";
+                else if (asCorrection)
+                    savedStatus = $"Code entspricht dem KI-Vorschlag und wurde bestaetigt. {savedStatus}";
+
                 QueueDoneCount++;
-                NextItem();
+                MoveToNextItemAfterSave(savedStatus);
             }
             else
             {
@@ -266,12 +401,26 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         catch (Exception ex)
         {
             // Store-/KB-/Netzwerkfehler: sichtbare Meldung statt App-Absturz.
-            StatusText = $"Nicht gespeichert: {ex.Message}";
+            StatusText = "Nicht gespeichert: "
+                + UserError.DescribeAndReport(ex, "Training-Studio speichern");
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private void MoveToNextItemAfterSave(string savedStatus)
+    {
+        if (CurrentIndex < Items.Count - 1)
+        {
+            CurrentIndex++;
+            ResetForCurrent();
+            StatusText = $"{savedStatus} Naechstes Bild: {CurrentIndex + 1} von {Items.Count}.";
+            return;
+        }
+
+        StatusText = $"{savedStatus} Warteschlange abgearbeitet.";
     }
 
     private void ResetForCurrent()
@@ -292,9 +441,21 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(code))
             return string.Empty;
-        var label = _codeLabelLookup(code) ?? code;
+        var normalizedCode = NormalizeCode(code);
+        var label = _codeLabelLookup(normalizedCode) ?? normalizedCode;
         return clock.HasValue
             ? $"{label} bei {clock.Value:0.#} Uhr — Ausmass ergaenzen"
             : $"{label} — Lage und Ausmass ergaenzen";
     }
+
+    private string ResolveCodeLabel(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return string.Empty;
+
+        return _codeLabelLookup(NormalizeCode(code)) ?? "Code nicht im VSA-Katalog gefunden";
+    }
+
+    private static string NormalizeCode(string? code)
+        => code?.Trim().ToUpperInvariant() ?? string.Empty;
 }

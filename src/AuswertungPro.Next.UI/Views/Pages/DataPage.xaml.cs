@@ -32,13 +32,12 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
+    private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly DataPageDetailItemFactory _haltungDetailItemFactory;
     private readonly DataPageRecordDetailsDialogController _recordDetailsDialogController;
     private readonly DataPageBeobachtungenController _beobachtungenController;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
-    private bool _updatingAlignmentButtons;
     private bool _isUndocking;
-    private DataGridColumn? _activeColumn;
     private bool _startFilterApplied;
 
     public DataPage()
@@ -91,6 +90,16 @@ public partial class DataPage : System.Windows.Controls.UserControl
             SaveLayoutToSettings();
         };
         _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
+        _columnAlignmentToolbar = new DataGridColumnAlignmentToolbar(
+            Grid,
+            _columnLayoutController,
+            new DataGridColumnAlignmentButtons(
+                AlignLeftButton,
+                AlignCenterButton,
+                AlignRightButton,
+                AlignTopButton,
+                AlignMiddleButton,
+                AlignBottomButton));
 
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -99,7 +108,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             ApplyHaltungsansichtSettings();
             EnsureColumns();
             ApplyStartFilter();
-            UpdateAlignmentButtonsForCurrentColumn();
+            _columnAlignmentToolbar.UpdateButtons();
         };
         Unloaded += (_, __) =>
         {
@@ -159,7 +168,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         _columnsBuilt = true;
         _columnLayoutController.Clear();
-        _activeColumn = null;
+        _columnAlignmentToolbar.ClearActiveColumn();
 
         foreach (var field in FieldCatalog.ColumnOrder)
         {
@@ -173,7 +182,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var setup = DataPageColumnSetup.Apply(col, field);
             Grid.Columns.Add(col);
 
-            ApplyColumnAlignment(col, setup.DefaultHorizontalAlignment, setup.DefaultVerticalAlignment);
+            _columnAlignmentToolbar.SetAlignment(
+                col,
+                setup.DefaultHorizontalAlignment,
+                setup.DefaultVerticalAlignment);
         }
 
         Grid.FrozenColumnCount = 2;
@@ -420,17 +432,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private void DeleteSelectedRows()
     {
         if (DataContext is not DataPageViewModel vm) return;
-
-        var items = Grid.SelectedItems.OfType<HaltungRecord>().ToList();
-        if (items.Count == 0) return;
-
-        if (!Dialogs.Confirm($"{items.Count} Haltung(en) wirklich loeschen?", "Loeschen")) return;
-
-        foreach (var item in items)
-            vm.Project.RemoveRecord(item.Id);
-
-        vm.Selected = vm.Records.FirstOrDefault();
-        vm.ScheduleAutoSave();
+        vm.RemoveRecords(Grid.SelectedItems.OfType<HaltungRecord>().ToList());
     }
 
     // ── Haltung Record Details ──────────────────────────────────────────
@@ -595,63 +597,16 @@ public partial class DataPage : System.Windows.Controls.UserControl
     /// UND dem Formular-Detail-Editor aufgerufen, damit die Verteilung in beiden Faellen konsistent bleibt.
     /// </summary>
     private bool ApplyHoldingNameChange(HaltungRecord record, string? oldValue, string? newValue, DataPageViewModel vm)
-    {
-        var oldName = oldValue ?? string.Empty;
-        var newName = newValue ?? string.Empty;
-        if (string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (vm.Project.HasDuplicateHoldingName(newName, record.Id))
-        {
-            Dialogs.Warn($"Die Haltungsnummer '{newName.Trim()}' ist bereits vorhanden.", "Doppelte Haltungsnummer");
-            return false;
-        }
-
-        var projectPath = Settings.LastProjectPath;
-
-        // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
-        var renameResult = vm.HoldingRename.Rename(
-            record, oldName, newName, projectPath);
-
-        if (!renameResult.Success)
-        {
-            Dialogs.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
-            return false;
-        }
-
-        record.SetFieldValue("Haltungsname", newName, FieldSource.Manual, userEdited: true);
-        PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldName, newName);
-
-        // Haltungsnummer auch im Protokoll-PDF-Text mitziehen (best-effort, nur Text-PDFs;
-        // Bild-/Scan-PDFs bleiben unveraendert). Die PDF-Pfade wurden vom Rename bereits aktualisiert.
-        var pdfSet = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        void CollectPdf(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return;
-            foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
-                if (!string.IsNullOrWhiteSpace(resolved) && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                    pdfSet.Add(resolved);
-            }
-        }
-        CollectPdf(record.GetFieldValue("PDF_Path"));
-        CollectPdf(record.GetFieldValue("PDF_All"));
-        if (pdfSet.Count > 0)
-        {
-            var pdfRewrite = AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
-                new System.Collections.Generic.List<string>(pdfSet), oldName, newName);
-            if (pdfRewrite.Failed > 0)
-            {
-                Dialogs.Error(
-                    $"{pdfRewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                    "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
-                    "PDF nicht aktualisiert");
-            }
-        }
-
-        return true;
-    }
+        => DataPageHoldingRenameController.Apply(
+            vm.HoldingRename,
+            vm.PdfTextLayerRewrite,
+            record,
+            oldValue,
+            newValue,
+            Settings.LastProjectPath,
+            vm.Project,
+            (message, title) => Dialogs.Warn(message, title),
+            (message, title) => Dialogs.Error(message, title));
 
     private static readonly SolidColorBrush TrainedRowBrush = new(Color.FromArgb(60, 220, 40, 40));
 
@@ -702,7 +657,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(plan.ResolvedPath!, out var error))
+        if (!Vm.ShellOpen.TryOpen(plan.ResolvedPath!, out var error))
         {
             Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
         }

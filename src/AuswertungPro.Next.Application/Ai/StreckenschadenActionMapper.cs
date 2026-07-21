@@ -8,8 +8,8 @@ namespace AuswertungPro.Next.Application.Ai;
 /// Uebersetzt eine <see cref="StreckenschadenTracker.SegmentAction"/> in eine konkrete, UI-freie
 /// Anweisung an den Codierpfad: einen offenen Streckenschaden-Eintrag anlegen, einen bestehenden
 /// schliessen, oder nichts tun. Reine, testbare Application-Logik (gleiche Bauweise wie
-/// <see cref="CodingFeedbackDecisionMapper"/>) — der Aufrufer (PlayerWindow) fuehrt die Anweisung
-/// nur aus (AddEvent / UpdateEvent), damit die Fachregel nicht in der UI-God-Class verteilt wird.
+/// <see cref="CodingFeedbackDecisionMapper"/>) — der UI-Controller fuehrt die Anweisung nur aus
+/// (AddEvent / UpdateEvent), damit die Fachregel nicht in der UI-God-Class verteilt wird.
 ///
 /// Die Identitaet eines offenen Eintrags wird ueber Hauptcode + Anfangs-Meter bestimmt — das ist
 /// genau das, was der Tracker als StartMeter pro Segment fuehrt.

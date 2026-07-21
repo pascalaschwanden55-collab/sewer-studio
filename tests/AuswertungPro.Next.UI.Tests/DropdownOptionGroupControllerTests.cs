@@ -99,6 +99,26 @@ public sealed class DropdownOptionGroupControllerTests
         Assert.Equal(3, saveCalls);
     }
 
+    [Fact]
+    public void Unlocked_group_does_not_save_for_empty_duplicate_or_missing_values()
+    {
+        var options = new ObservableCollection<string> { "Privat" };
+        var saveCalls = 0;
+        var controller = Create(
+            options,
+            resetItems: new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" },
+            save: () => saveCalls++);
+
+        controller.Add(null);
+        controller.Add("   ");
+        controller.Add("privat");
+        controller.Remove(null);
+        controller.Remove("fehlt");
+
+        Assert.Equal(new[] { "Privat" }, options);
+        Assert.Equal(0, saveCalls);
+    }
+
     private static DropdownOptionGroupController Create(
         ObservableCollection<string> options,
         IReadOnlyList<string>? resetItems = null,

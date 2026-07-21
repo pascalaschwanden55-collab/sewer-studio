@@ -1,9 +1,7 @@
 using System;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
@@ -20,6 +18,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
     private readonly object _collectionLock;
     private readonly Func<string?> _getProjectPath;
     private readonly Func<string?> _getExplicitPdfToTextPath;
+    private readonly IStoredImportFilePathResolver _storedImportFilePaths;
     private readonly IXtfImportService _xtfImport;
     private readonly IPdfImportService _pdfImport;
     private readonly IVsaEvaluationService _vsaEvaluation;
@@ -41,6 +40,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
             collectionLock: shell.CollectionLock,
             getProjectPath: () => sp.Settings.LastProjectPath,
             getExplicitPdfToTextPath: () => sp.Diagnostics.ExplicitPdfToTextPath,
+            storedImportFilePaths: sp.StoredImportFilePaths,
             xtfImport: sp.XtfImport,
             pdfImport: sp.PdfImport,
             vsaEvaluation: sp.Vsa,
@@ -56,6 +56,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         object collectionLock,
         Func<string?> getProjectPath,
         Func<string?> getExplicitPdfToTextPath,
+        IStoredImportFilePathResolver storedImportFilePaths,
         IXtfImportService xtfImport,
         IPdfImportService pdfImport,
         IVsaEvaluationService vsaEvaluation,
@@ -68,6 +69,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         _collectionLock = collectionLock ?? throw new ArgumentNullException(nameof(collectionLock));
         _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
         _getExplicitPdfToTextPath = getExplicitPdfToTextPath ?? throw new ArgumentNullException(nameof(getExplicitPdfToTextPath));
+        _storedImportFilePaths = storedImportFilePaths ?? throw new ArgumentNullException(nameof(storedImportFilePaths));
         _xtfImport = xtfImport ?? throw new ArgumentNullException(nameof(xtfImport));
         _pdfImport = pdfImport ?? throw new ArgumentNullException(nameof(pdfImport));
         _vsaEvaluation = vsaEvaluation ?? throw new ArgumentNullException(nameof(vsaEvaluation));
@@ -128,8 +130,12 @@ public sealed partial class VsaPageViewModel : ObservableObject
     private void Run()
     {
         var project = _getProject();
+        var projectPath = _getProjectPath();
         // Import-Reihenfolge: XTF/M150/MDB primaer, PDF sekundaer
-        var xtfFiles = LoadStoredXtfFiles(project, _getProjectPath());
+        var xtfFiles = _storedImportFilePaths.ResolveExistingFiles(
+            project.Metadata,
+            "XTF_StoredFiles",
+            projectPath);
         var importSb = new StringBuilder();
         importSb.AppendLine($"Import-Quellen: XTF/M150/MDB={xtfFiles.Count}");
 
@@ -156,7 +162,10 @@ public sealed partial class VsaPageViewModel : ObservableObject
             xtfErrors += resImport.Value.Errors;
         }
 
-        var pdfFiles = LoadStoredPdfFiles(project, _getProjectPath());
+        var pdfFiles = _storedImportFilePaths.ResolveExistingFiles(
+            project.Metadata,
+            "PDF_StoredFiles",
+            projectPath);
         importSb.AppendLine($"Import-Quellen: PDF={pdfFiles.Count}");
 
         var pdfFound = 0;
@@ -217,64 +226,6 @@ public sealed partial class VsaPageViewModel : ObservableObject
                   measureInfo +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
         _setStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Maßnahmen" : ""));
-    }
-
-    private static List<string> LoadStoredXtfFiles(Project project, string? projectPath)
-    {
-        if (!project.Metadata.TryGetValue("XTF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        List<string>? list = null;
-        try
-        {
-            list = JsonSerializer.Deserialize<List<string>>(raw);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        list ??= raw.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-
-        var projectDir = string.IsNullOrWhiteSpace(projectPath) ? "" : (Path.GetDirectoryName(projectPath) ?? "");
-        var resolved = new List<string>();
-        foreach (var p in list)
-        {
-            if (string.IsNullOrWhiteSpace(p)) continue;
-            var full = Path.IsPathRooted(p) ? p : (string.IsNullOrWhiteSpace(projectDir) ? p : Path.GetFullPath(Path.Combine(projectDir, p)));
-            if (File.Exists(full))
-                resolved.Add(full);
-        }
-        return resolved;
-    }
-
-    private static List<string> LoadStoredPdfFiles(Project project, string? projectPath)
-    {
-        if (!project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        List<string>? list = null;
-        try
-        {
-            list = JsonSerializer.Deserialize<List<string>>(raw);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        list ??= raw.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-
-        var projectDir = string.IsNullOrWhiteSpace(projectPath) ? "" : (Path.GetDirectoryName(projectPath) ?? "");
-        var resolved = new List<string>();
-        foreach (var p in list)
-        {
-            if (string.IsNullOrWhiteSpace(p)) continue;
-            var full = Path.IsPathRooted(p) ? p : (string.IsNullOrWhiteSpace(projectDir) ? p : Path.GetFullPath(Path.Combine(projectDir, p)));
-            if (File.Exists(full))
-                resolved.Add(full);
-        }
-        return resolved;
     }
 
     private record struct MeasureBatchResult(int Filled, int Skipped, int NoSuggestion);

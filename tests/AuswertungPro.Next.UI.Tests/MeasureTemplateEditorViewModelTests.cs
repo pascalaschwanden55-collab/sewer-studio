@@ -61,6 +61,80 @@ public sealed class MeasureTemplateEditorViewModelTests
         Assert.Null(dialogs.LastInfo);
     }
 
+    [Fact]
+    public void Constructor_migrates_newer_legacy_templates_replaces_existing_id_and_saves()
+    {
+        using var temp = new TempDirectory();
+        var legacyPath = Path.Combine(temp.Path, "legacy", "measure_templates.json");
+        var activePath = Path.Combine(temp.Path, "measure_templates.user.json");
+        var store = new MeasureTemplateStore(activePath);
+        var existing = new MeasureTemplateCatalog
+        {
+            Measures =
+            [
+                new MeasureTemplate { Id = "KEEP", Name = "Behalten" },
+                new MeasureTemplate { Id = "REPLACE", Name = "Alt" }
+            ]
+        };
+        Assert.True(store.SaveUserOverrides(existing, out var saveError), saveError);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyPath)!);
+        File.WriteAllText(
+            legacyPath,
+            """
+            {
+              "schema_version": 2,
+              "templates": [
+                {
+                  "id": " replace ",
+                  "name": " Neu ",
+                  "lines": [
+                    { "group": " Gruppe ", "item_ref": " POSITION ", "qty": "2,5" }
+                  ]
+                },
+                { "id": "NEW", "name": "Neue Vorlage", "lines": [] }
+              ]
+            }
+            """);
+        var now = DateTime.UtcNow;
+        File.SetLastWriteTimeUtc(activePath, now.AddMinutes(-2));
+        File.SetLastWriteTimeUtc(legacyPath, now);
+        var dialogs = new DialogFake();
+
+        _ = new MeasureTemplateEditorViewModel(
+            projectPath: null,
+            store,
+            new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")),
+            dialogs,
+            legacyPath,
+            activePath);
+
+        var saved = store.LoadUserOverrides();
+        Assert.Collection(
+            saved.Measures,
+            keep =>
+            {
+                Assert.Equal("KEEP", keep.Id);
+                Assert.Equal("Behalten", keep.Name);
+            },
+            replacement =>
+            {
+                Assert.Equal("replace", replacement.Id);
+                Assert.Equal("Neu", replacement.Name);
+                var line = Assert.Single(replacement.Lines);
+                Assert.Equal("Gruppe", line.Group);
+                Assert.Equal("POSITION", line.ItemKey);
+                Assert.Equal(2.5m, line.DefaultQty);
+            },
+            added =>
+            {
+                Assert.Equal("NEW", added.Id);
+                Assert.Equal("Neue Vorlage", added.Name);
+            });
+        Assert.Contains("uebernommen", dialogs.LastInfo, StringComparison.Ordinal);
+        Assert.Null(dialogs.LastError);
+    }
+
     private static MeasureTemplateEditorViewModel CreateViewModel(
         string root,
         MeasureTemplateStore templateStore,

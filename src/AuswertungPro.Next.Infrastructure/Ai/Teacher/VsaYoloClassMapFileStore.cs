@@ -6,7 +6,7 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 /// <summary>
-/// Hält stabile YOLO-Klassen-IDs und speichert neue VSA-Hauptcodes atomar.
+/// Haelt stabile YOLO-Klassen-IDs. Lesen ist strikt und ohne Schreibwirkung.
 /// </summary>
 public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
 {
@@ -33,41 +33,108 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
 
     private readonly object _sync = new();
     private readonly Func<string> _mapPathProvider;
-    private Dictionary<string, int>? _map;
+    private readonly bool _allowAutomaticClassCreation;
+    private VsaYoloClassMapDocument? _document;
+    private bool _mapFileExists;
 
     public VsaYoloClassMapFileStore()
-        : this(() => Path.Combine(KnowledgeBasePaths.GetRoot(), "yolo_class_map.json"))
+        : this(
+            () => Path.Combine(KnowledgeBasePaths.GetRoot(), "yolo_class_map.json"),
+            allowAutomaticClassCreation: true)
     {
     }
 
     public VsaYoloClassMapFileStore(string mapPath)
-        : this(() => mapPath)
+        : this(mapPath, allowAutomaticClassCreation: true)
+    {
+    }
+
+    public VsaYoloClassMapFileStore(
+        string mapPath,
+        bool allowAutomaticClassCreation)
+        : this(() => mapPath, allowAutomaticClassCreation)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mapPath);
     }
 
     internal VsaYoloClassMapFileStore(Func<string> mapPathProvider)
+        : this(mapPathProvider, allowAutomaticClassCreation: true)
+    {
+    }
+
+    internal VsaYoloClassMapFileStore(
+        Func<string> mapPathProvider,
+        bool allowAutomaticClassCreation)
     {
         _mapPathProvider = mapPathProvider
             ?? throw new ArgumentNullException(nameof(mapPathProvider));
+        _allowAutomaticClassCreation = allowAutomaticClassCreation;
     }
 
     public int GetClassId(string vsaCode)
     {
-        if (string.IsNullOrWhiteSpace(vsaCode))
-            return 0;
+        ArgumentException.ThrowIfNullOrWhiteSpace(vsaCode);
 
-        var category = ExtractCategory(vsaCode);
         lock (_sync)
         {
             EnsureLoaded();
-            if (_map!.TryGetValue(category, out var id))
+            if (VsaYoloClassMapResolver.TryResolveClassId(
+                    _document!,
+                    vsaCode,
+                    Defaults,
+                    out var id))
                 return id;
 
-            var nextId = _map.Count > 0 ? _map.Values.Max() + 1 : 0;
-            _map[category] = nextId;
-            SaveSync();
-            return nextId;
+            throw new KeyNotFoundException(
+                $"Keine YOLO-Klasse fuer '{vsaCode.Trim()}' in der Klassenkarte vorhanden.");
+        }
+    }
+
+    public int GetOrAddClassId(string vsaCode)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(vsaCode);
+
+        if (!_allowAutomaticClassCreation)
+        {
+            throw new InvalidOperationException(
+                "Das automatische Anlegen von YOLO-Klassen ist fuer diesen Store deaktiviert.");
+        }
+
+        lock (_sync)
+        {
+            EnsureLoaded();
+            if (VsaYoloClassMapResolver.TryResolveClassId(
+                    _document!,
+                    vsaCode,
+                    Defaults,
+                    out var id))
+            {
+                if (!_mapFileExists)
+                {
+                    Save(_document!);
+                    _mapFileExists = true;
+                }
+
+                return id;
+            }
+
+            var key = VsaYoloClassMapResolver.GetKeyForAddition(
+                _document!,
+                vsaCode,
+                Defaults);
+            var classes = new Dictionary<string, int>(
+                _document!.Classes,
+                StringComparer.OrdinalIgnoreCase)
+            {
+                [key] = _document.Classes.Count
+            };
+            var updated = _document.WithClasses(classes);
+            VsaYoloClassMapDocumentValidator.Validate(updated);
+
+            Save(updated);
+            _document = updated;
+            _mapFileExists = true;
+            return classes[key];
         }
     }
 
@@ -76,7 +143,9 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
         lock (_sync)
         {
             EnsureLoaded();
-            return new Dictionary<string, int>(_map!, StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, int>(
+                _document!.Classes,
+                StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -86,87 +155,56 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
             .OrderBy(item => item.Value)
             .Select(item => item.Key)
             .ToArray();
-        await AtomicTextFileWriter.WriteAllTextAsync(outputPath, BuildClassesText(lines))
+        await AtomicTextFileWriter.WriteAllTextAsync(
+                outputPath,
+                VsaYoloClassMapDocumentWriter.BuildClassesText(lines))
             .ConfigureAwait(false);
     }
 
     private void EnsureLoaded()
     {
-        if (_map is not null)
+        if (_document is not null)
             return;
 
-        var path = _mapPathProvider();
-        if (File.Exists(path))
+        var path = GetMapPath();
+        if (!File.Exists(path))
         {
-            try
-            {
-                var json = File.ReadAllText(path);
-                _map = JsonSerializer.Deserialize<Dictionary<string, int>>(json)
-                       ?? CreateDefaultMap();
-                return;
-            }
-            catch
-            {
-                _map = CreateDefaultMap();
-                return;
-            }
+            _document = new VsaYoloClassMapDocument(
+                VsaYoloClassMapFormat.Legacy,
+                CreateDefaultMap());
+            _mapFileExists = false;
+            return;
         }
 
-        _map = CreateDefaultMap();
-        SaveSync();
-    }
-
-    private void SaveSync()
-    {
         try
         {
-            var path = _mapPathProvider();
-            var directory = Path.GetDirectoryName(path);
-            if (directory is not null)
-                Directory.CreateDirectory(directory);
-
-            var json = JsonSerializer.Serialize(_map, JsonDefaults.Indented);
-            AtomicTextFileWriter.WriteAllText(path, json);
-
-            var classesPath = Path.Combine(directory!, "classes.txt");
-            var lines = _map!
-                .OrderBy(item => item.Value)
-                .Select(item => item.Key)
-                .ToArray();
-            AtomicTextFileWriter.WriteAllText(classesPath, BuildClassesText(lines));
+            _document = VsaYoloClassMapDocumentReader.Read(path);
+            _mapFileExists = true;
         }
-        catch
+        catch (Exception ex) when (ex is JsonException
+                                   or IOException
+                                   or UnauthorizedAccessException
+                                   or InvalidDataException
+                                   or NotSupportedException
+                                   or ArgumentException)
         {
-            // Die Klassenkarte bleibt im Speicher nutzbar, auch wenn die Ausgabe fehlschlägt.
+            throw new InvalidDataException(
+                $"YOLO-Klassenkarte '{path}' ist nicht lesbar oder ungueltig: {ex.Message}",
+                ex);
         }
     }
+
+    private void Save(VsaYoloClassMapDocument document)
+        => VsaYoloClassMapDocumentWriter.Write(GetMapPath(), document);
 
     private static Dictionary<string, int> CreateDefaultMap()
         => new(Defaults, StringComparer.OrdinalIgnoreCase);
 
-    private static string ExtractCategory(string vsaCode)
+    private string GetMapPath()
     {
-        var clean = vsaCode.Replace(".", string.Empty).Trim().ToUpperInvariant();
-        if (clean.Length < 2)
-            return clean;
-
-        if (clean.StartsWith("BCD", StringComparison.Ordinal)) return "BCD";
-        if (clean.StartsWith("BCE", StringComparison.Ordinal)) return "BCE";
-        if (clean.StartsWith("BCA", StringComparison.Ordinal)) return "BCA";
-        if (clean.StartsWith("BCC", StringComparison.Ordinal)) return "BCC";
-
-        if (clean.Length >= 3)
-        {
-            var prefix = clean[..3];
-            if (Defaults.ContainsKey(prefix))
-                return prefix;
-        }
-
-        return clean.Length >= 3 ? clean[..3] : clean;
+        var path = _mapPathProvider();
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Path.GetFullPath(path);
     }
 
-    private static string BuildClassesText(IReadOnlyCollection<string> lines)
-        => lines.Count == 0
-            ? string.Empty
-            : string.Join(Environment.NewLine, lines) + Environment.NewLine;
 }

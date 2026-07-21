@@ -12,9 +12,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
-using LegacyMeasureTemplate = AuswertungPro.Next.Domain.Models.Costs.MeasureTemplate;
 using LegacyMeasureTemplates = AuswertungPro.Next.Domain.Models.Costs.MeasureTemplates;
-using LegacyPriceItem = AuswertungPro.Next.Domain.Models.Costs.PriceItem;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -390,7 +388,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             var json = File.ReadAllText(_legacyTemplatePath);
             var legacy = JsonSerializer.Deserialize<LegacyMeasureTemplates>(json, LegacyJsonOptions)
                          ?? new LegacyMeasureTemplates();
-            var converted = ConvertLegacyTemplates(legacy);
+            var converted = LegacyMeasureTemplateConverter.Convert(legacy);
             var overrides = _templateStore.LoadUserOverrides();
 
             foreach (var template in converted.Measures)
@@ -416,53 +414,6 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
                 $"Alte Vorlagen konnten nicht gelesen werden:\n{UserError.DescribeAndReport(ex, "Alte Vorlagen lesen")}",
                 "Vorlagen");
         }
-    }
-
-    private static MeasureTemplateCatalog ConvertLegacyTemplates(LegacyMeasureTemplates legacy)
-    {
-        var catalog = new MeasureTemplateCatalog { Version = Math.Max(1, legacy.SchemaVersion) };
-        foreach (var legacyTemplate in legacy.Templates ?? new())
-        {
-            var template = ConvertLegacyTemplate(legacyTemplate);
-            if (!string.IsNullOrWhiteSpace(template.Id))
-                catalog.Measures.Add(template);
-        }
-
-        return catalog;
-    }
-
-    private static MeasureTemplate ConvertLegacyTemplate(LegacyMeasureTemplate legacy)
-    {
-        var template = new MeasureTemplate
-        {
-            Id = legacy.Id?.Trim() ?? "",
-            Name = string.IsNullOrWhiteSpace(legacy.Name) ? legacy.Id?.Trim() ?? "" : legacy.Name.Trim()
-        };
-
-        foreach (var line in legacy.Lines ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(line.ItemRef))
-                continue;
-
-            template.Lines.Add(new MeasureLineTemplate
-            {
-                Group = line.Group?.Trim() ?? "",
-                ItemKey = line.ItemRef.Trim(),
-                Enabled = true,
-                DefaultQty = ParseLegacyQtyOrDefault(line.Qty)
-            });
-        }
-
-        return template;
-    }
-
-    private static decimal ParseLegacyQtyOrDefault(JsonElement qty)
-    {
-        if (qty.ValueKind == JsonValueKind.Number && qty.TryGetDecimal(out var number))
-            return number;
-        if (qty.ValueKind == JsonValueKind.String)
-            return ParseQtyOrDefault(qty.GetString());
-        return 1m;
     }
 
     private static decimal ParseQtyOrDefault(string? raw)

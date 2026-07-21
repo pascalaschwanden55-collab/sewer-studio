@@ -20,12 +20,14 @@ public static class CodingMultiModelQualityGatePolicy
         QualityGateService? qualityGate,
         EvidenceVector evidence)
     {
+        // Ohne Gate gibt es keine echte Bewertung — ehrlich Rot statt DINO-Konfidenz als
+        // Pseudo-Gelb (konsistent zu CodingLiveFindingQualityGatePolicy).
         return qualityGate?.Evaluate(evidence)
             ?? new QualityGateResult(
-                evidence.DinoConf ?? 0,
-                TrafficLight.Yellow,
+                0.0,
+                TrafficLight.Red,
                 new Dictionary<string, double>(),
-                "Multi-Model");
+                "QualityGate nicht verfuegbar");
     }
 
     public static QualityGateResult Evaluate(

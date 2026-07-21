@@ -1,7 +1,5 @@
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -24,7 +22,7 @@ public partial class ProtocolEntryEditorDialog : Window
     private readonly ProtocolEntryEditorValidationViewModel _validationVm;
     private readonly string? _haltungId;
     private readonly string? _videoPath;
-    private readonly string? _projectFolder;
+    private readonly ProtocolEntryEditorMediaPathResolver _mediaPathResolver;
     private CancellationTokenSource? _kiSuggestionCts;
     private bool _isKiBusy;
     private bool _isNormalizingCode;
@@ -48,7 +46,9 @@ public partial class ProtocolEntryEditorDialog : Window
         _sp = sp;
         _haltungId = haltungId;
         _videoPath = videoPath;
-        _projectFolder = projectFolder;
+        _mediaPathResolver = new ProtocolEntryEditorMediaPathResolver(
+            projectFolder,
+            () => _sp?.Settings.LastProjectPath);
 
         _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
         _kiVm = _paramVm is null || _sp is null
@@ -452,15 +452,15 @@ public partial class ProtocolEntryEditorDialog : Window
         }
 
         var request = new ProtocolEntryKiSuggestionRequest(
-            ProjectFolderAbs: ResolveProjectFolder(),
+            ProjectFolderAbs: _mediaPathResolver.ResolveProjectFolder(),
             HaltungId: _haltungId,
             MeterStartText: MeterStartTextBox.Text ?? string.Empty,
             MeterEndText: MeterEndTextBox.Text ?? string.Empty,
             ZeitText: ZeitTextBox.Text ?? string.Empty,
             ExistingCode: CodeTextBox.Text ?? string.Empty,
             ExistingText: BeschreibungTextBox.Text ?? string.Empty,
-            VideoPathAbs: ResolveExistingPath(_videoPath),
-            ImagePathsAbs: ResolveImagePaths(_entryVm.Model.FotoPaths));
+            VideoPathAbs: _mediaPathResolver.ResolveExistingPath(_videoPath),
+            ImagePathsAbs: _mediaPathResolver.ResolveImagePaths(_entryVm.Model.FotoPaths));
 
         _isKiBusy = true;
         KiSuggestButton.IsEnabled = false;
@@ -671,59 +671,6 @@ public partial class ProtocolEntryEditorDialog : Window
 
         DialogResult = true;
         Close();
-    }
-
-    private string ResolveProjectFolder()
-    {
-        if (!string.IsNullOrWhiteSpace(_projectFolder))
-            return _projectFolder;
-
-        var fromSettings = _sp?.Settings.LastProjectPath;
-        if (!string.IsNullOrWhiteSpace(fromSettings))
-        {
-            // Projekt-ROOT (nicht GetDirectoryName): projekt.json kann unter Projektdateien\ liegen.
-            var dir = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(fromSettings)
-                      ?? Path.GetDirectoryName(fromSettings);
-            if (!string.IsNullOrWhiteSpace(dir))
-                return dir;
-        }
-
-        return AppDomain.CurrentDomain.BaseDirectory;
-    }
-
-    private string? ResolveExistingPath(string? raw)
-    {
-        var path = raw?.Trim();
-        if (string.IsNullOrWhiteSpace(path))
-            return null;
-
-        if (File.Exists(path))
-            return path;
-
-        if (Path.IsPathRooted(path))
-            return null;
-
-        var baseDir = ResolveProjectFolder();
-        if (string.IsNullOrWhiteSpace(baseDir))
-            return null;
-
-        var combined = Path.GetFullPath(Path.Combine(baseDir, path));
-        return File.Exists(combined) ? combined : null;
-    }
-
-    private IReadOnlyList<string> ResolveImagePaths(IReadOnlyList<string> rawPaths)
-    {
-        var result = new List<string>();
-        foreach (var raw in rawPaths)
-        {
-            var path = ResolveExistingPath(raw);
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-            if (!result.Contains(path, StringComparer.OrdinalIgnoreCase))
-                result.Add(path);
-        }
-
-        return result;
     }
 
     // Delegation an ProtocolEntryInputNormalizer (Application-Schicht)

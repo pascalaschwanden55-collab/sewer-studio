@@ -86,22 +86,21 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
-        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
         var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionInputBuilder.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
 
         Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionsausfuehrung muss den Action-Input-Builder nutzen.");
 
-        var ai = File.ReadAllText(aiPath);
-        var strecken = File.ReadAllText(streckenPath);
+        var playerWindowSource = ReadPlayerWindowSource(uiRoot);
+        var controller = File.ReadAllText(controllerPath);
         var builder = File.ReadAllText(builderPath);
         var applier = File.ReadAllText(applierPath);
 
         Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", applier);
         AssertNoForbiddenTokens(
-            ai + strecken,
+            playerWindowSource + controller,
             ".Where(e => e.Entry.IsStreckenschaden",
             "StreckenschadenActionMapper.OpenEntry(");
         Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
@@ -112,27 +111,26 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
-        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplyCommandWorkflow.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
 
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Aktions-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionen muessen ausserhalb der PlayerWindow-Partials angewendet werden.");
 
-        var ai = File.ReadAllText(aiPath);
-        var strecken = File.ReadAllText(streckenPath);
+        var playerWindowSource = ReadPlayerWindowSource(uiRoot);
+        var controller = File.ReadAllText(controllerPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var applier = File.ReadAllText(applierPath);
 
-        Assert.Contains("CodingStreckenschadenActionApplyCommandWorkflow.Execute", strecken);
-        Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
+        Assert.Contains("CodingStreckenschadenActionApplyCommandWorkflow.Execute", controller);
+        Assert.Contains("CodingStreckenschadenActionApplier.Apply", controller);
         AssertNoForbiddenTokens(
-            ai + strecken,
+            playerWindowSource + controller,
             "private void ApplyStreckenschadenActions",
             "StreckenschadenActionMapper.MapAll");
         AssertNoForbiddenTokens(
-            strecken,
+            playerWindowSource + controller,
             "if (codingSessionService == null || codingEvents == null || actions.Count == 0)",
             "codingSessionService.AddEvent(draft.Entry)",
             "codingSessionService.UpdateEvent");
@@ -148,19 +146,18 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
-        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
         var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenObservationBuilder.cs");
 
         Assert.True(File.Exists(builderPath), "Segment-zu-Streckenschaden-Observation-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var ai = File.ReadAllText(aiPath);
-        var strecken = File.ReadAllText(streckenPath);
+        var playerWindowSource = ReadPlayerWindowSource(uiRoot);
+        var controller = File.ReadAllText(controllerPath);
         var builder = File.ReadAllText(builderPath);
 
-        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
+        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", controller);
         AssertNoForbiddenTokens(
-            ai + strecken,
+            playerWindowSource + controller,
             "new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>",
             "observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation");
         Assert.Contains("public static CodingStreckenschadenObservationBuildResult Build", builder);
@@ -168,57 +165,83 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_stretch_damage_tracking_lives_in_ai_stretch_damage_partial()
+    public void PlayerWindow_stretch_damage_tracking_lives_in_one_dedicated_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
-        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
-        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var oldPartialPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var exitFactoryPath = Path.Combine(windowsRoot, "PlayerWindowCodingModeExitControllerFactory.cs");
+        var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
+        var importPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenTrackingCommandWorkflow.cs");
-        var trackerOwnerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackerOwner.cs");
 
-        Assert.True(File.Exists(streckenPath), "Streckenschaden-Tracking soll aus dem allgemeinen AI-Partial heraus.");
+        Assert.False(File.Exists(oldPartialPath), "Die alte PlayerWindow-Streckenschaden-Teilklasse soll entfernt bleiben.");
+        Assert.True(File.Exists(controllerPath), "Streckenschaden-Tracking soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Tracking-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(trackerOwnerPath), "Streckenschaden-Tracker-Besitz soll nicht als Rohfeld im PlayerWindow liegen.");
 
-        var ai = File.ReadAllText(aiPath);
-        var strecken = File.ReadAllText(streckenPath);
+        var playerWindowSource = ReadPlayerWindowSource(uiRoot);
         var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var exitFactory = File.ReadAllText(exitFactoryPath);
+        var multiModel = File.ReadAllText(multiModelPath);
+        var boundary = File.ReadAllText(boundaryPath);
+        var import = File.ReadAllText(importPath);
+        var controller = File.ReadAllText(controllerPath);
         var workflow = File.ReadAllText(workflowPath);
-        var trackerOwner = File.Exists(trackerOwnerPath) ? File.ReadAllText(trackerOwnerPath) : "";
 
         AssertNoForbiddenTokens(
-            ai,
+            playerWindowSource,
             "private HashSet<SegmentedFinding> ApplyStreckenschadenTracking",
-            "private void ApplyStreckenschadenActions",
-            "private void CloseTrackedStreckenschaeden");
-        AssertNoForbiddenTokens(state, "private readonly StreckenschadenTracker _streckenTracker = new();");
-        Assert.Contains("private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();", state);
-        Assert.Contains("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", strecken);
-        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking", strecken);
-        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.CloseTracked", strecken);
+            "private bool TryApplyStreckenschadenActions",
+            "private void CloseTrackedStreckenschaeden",
+            "CodingStreckenschadenTrackerOwner",
+            "CodingStreckenschadenTrackingCommandWorkflow",
+            "CodingStreckenschadenObservationBuilder",
+            "CodingStreckenschadenActionApplier");
+        Assert.Contains(
+            "private readonly ICodingStreckenschadenTrackingController _codingStreckenschadenTrackingController;",
+            state);
+        Assert.Contains("public sealed class CodingStreckenschadenTrackingController", controller);
+        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking", controller);
+        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.CloseTracked", controller);
         AssertNoForbiddenTokens(
-            strecken,
+            controller,
             "if (codingSessionService == null || !_codingSessionHost.HasViewModel)",
             "var trackingInput = CodingStreckenschadenObservationBuilder.Build",
             "var actions = _streckenTracker.CloseAll",
             "if (TryApplyStreckenschadenActions(actions, videoTime))",
             "if (actions.Count == 0) return");
-        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
-        Assert.Contains("UpdateTracker: _streckenschadenTracker.Update", strecken);
-        Assert.Contains("CloseAll: _streckenschadenTracker.CloseAll", strecken);
-        Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
+        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", controller);
+        Assert.Contains("UpdateTracker: _trackerOwner.Update", controller);
+        Assert.Contains("CloseAll: _trackerOwner.CloseAll", controller);
+        Assert.Contains("CodingStreckenschadenActionApplier.Apply", controller);
         Assert.Contains("if (!request.HasCodingSessionService || !request.HasCodingViewModel)", workflow);
         Assert.Contains("actions.BuildObservations", workflow);
         Assert.Contains("actions.UpdateTracker", workflow);
         Assert.Contains("actions.ApplyActions", workflow);
         Assert.Contains("actions.RefreshEvents()", workflow);
         Assert.Contains("actions.CloseAll", workflow);
-        Assert.Contains("public sealed class CodingStreckenschadenTrackerOwner", trackerOwner);
-        Assert.Contains("public IReadOnlyList<StreckenschadenTracker.SegmentAction> Update", trackerOwner);
-        Assert.Contains("public IReadOnlyList<StreckenschadenTracker.SegmentAction> CloseAll", trackerOwner);
-        Assert.Contains("public void Reset", trackerOwner);
+
+        Assert.Equal(1, CountOccurrences(playerWindowSource, "new CodingStreckenschadenTrackingController("));
+        Assert.Contains("ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service", windowRoot);
+        Assert.Contains("ResolveCode: _codingFindingContext.ResolveCode", windowRoot);
+        Assert.Contains("LookupLabel: _codingFindingContext.LookupLabel", windowRoot);
+        Assert.Contains("AttachAnalyzedFramePhoto: AttachAnalyzedFramePhoto", windowRoot);
+        Assert.Contains("ResolveCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);
+        Assert.Contains("RefreshEvents: RefreshCodingEventsList", windowRoot);
+        Assert.Contains("ApplyStretchTracking: _codingStreckenschadenTrackingController.ApplyTracking", multiModel);
+        Assert.Contains("_codingStreckenschadenTrackingController.CloseTracked", boundary);
+        Assert.Contains("ResetStretchTracker: _codingStreckenschadenTrackingController.Reset", import);
+        Assert.Contains("dependencies.StreckenschadenTrackingController.CloseTracked", exitFactory);
+
+        var refreshControllerIndex = windowRoot.IndexOf("_codingEventsRefreshController =", StringComparison.Ordinal);
+        var stretchControllerIndex = windowRoot.IndexOf("_codingStreckenschadenTrackingController =", StringComparison.Ordinal);
+        Assert.True(refreshControllerIndex >= 0 && refreshControllerIndex < stretchControllerIndex);
     }
 
     [Fact]
@@ -305,5 +328,16 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         Assert.True(
             hits.Count == 0,
             "Verbotene alte Streckenschaden-Logik gefunden: " + string.Join(", ", hits));
+    }
+
+    private static int CountOccurrences(string source, string token)
+        => source.Split(token, StringSplitOptions.None).Length - 1;
+
+    private static string ReadPlayerWindowSource(string uiRoot)
+    {
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        return string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
     }
 }

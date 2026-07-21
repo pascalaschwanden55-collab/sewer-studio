@@ -112,13 +112,6 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 Usable: true,
                 QualityReason: "ok"));
 
-        public Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
-            => Task.FromResult(new TrainingExportResponseDto(
-                TotalSamples: 0,
-                TrainCount: 0,
-                ValCount: 0,
-                ClassesUsed: Array.Empty<string>(),
-                DataYamlPath: ""));
     }
 
     private sealed class ThrowingRecordingPipelineTraceWriter : IPipelineTraceWriter

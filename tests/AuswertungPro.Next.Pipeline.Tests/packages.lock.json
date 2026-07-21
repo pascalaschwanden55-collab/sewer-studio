@@ -327,6 +327,13 @@
           "AuswertungPro.Next.Application": "[1.0.0, )",
           "AuswertungPro.Next.Infrastructure": "[1.0.0, )"
         }
+      },
+      "stageaexporter": {
+        "type": "Project",
+        "dependencies": {
+          "AuswertungPro.Next.Application": "[1.0.0, )",
+          "AuswertungPro.Next.Infrastructure": "[1.0.0, )"
+        }
       }
     }
   }

@@ -84,7 +84,16 @@ public sealed class DirectoryMirror
         CancellationToken ct = default)
     {
         if (!Directory.Exists(source.SourceRoot))
+        {
+            // Fehlende Quelle (getrenntes Laufwerk, umbenannter Ordner, falsch gesetzter Root)
+            // nicht still uebergehen: sonst raeumt RemoveOrphans den bisherigen Spiegelinhalt
+            // dieser Quelle in die Versions-Rotation, waehrend der Lauf Erfolg meldet. Warnung
+            // protokollieren UND den vorhandenen Spiegelbestand als "erwartet" markieren.
+            stats.Errors.Add(
+                $"{source.SourceRoot}: Quellordner nicht gefunden - uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
+            PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
             return;
+        }
 
         foreach (var file in EnumerateFiles(source.SourceRoot, source.IsDirExcluded, stats))
         {
@@ -104,6 +113,24 @@ public sealed class DirectoryMirror
 
             await CopyIfChangedAsync(file, backupRoot, targetRel, stats, onFileDone, ct)
                 .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Markiert den vorhandenen Spiegelbestand einer (jetzt fehlenden) Quelle als erwartet,
+    /// damit <see cref="RemoveOrphans"/> ihn nicht in die Versions-Rotation verschiebt.
+    /// </summary>
+    private static void PreserveExistingMirror(
+        string backupRoot, string targetRelativeRoot, ISet<string> expectedTargets)
+    {
+        var existingRoot = Path.Combine(backupRoot, targetRelativeRoot);
+        if (!Directory.Exists(existingRoot))
+            return;
+
+        foreach (var file in Directory.EnumerateFiles(existingRoot, "*", SearchOption.AllDirectories))
+        {
+            var relToTarget = Path.GetRelativePath(existingRoot, file);
+            expectedTargets.Add(Path.Combine(targetRelativeRoot, relToTarget));
         }
     }
 

@@ -18,6 +18,18 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var oldExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var exitControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingModeExitController.cs");
+        var exitControllerFactoryPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindowCodingModeExitControllerFactory.cs");
+        var frameReadinessPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.Coding.FrameReadiness.cs");
         var importPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var importReferencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
@@ -37,6 +49,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.False(File.Exists(oldExitPath), "Codiermodus-Exit darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(File.Exists(exitControllerPath), "Codiermodus-Exit soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(exitControllerFactoryPath), "Codiermodus-Exit soll ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll aus dem allgemeinen Lifecycle-Partial heraus.");
         Assert.True(File.Exists(sessionPath), "Codiermodus-Session-Aufbau soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(importReferencePath), "Codiermodus-Importreferenz-Aufbau soll aus dem Enter-Partial heraus.");
@@ -57,6 +70,8 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var lifecycle = File.ReadAllText(lifecyclePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var exitController = File.ReadAllText(exitControllerPath);
+        var exitControllerFactory = File.ReadAllText(exitControllerFactoryPath);
+        var frameReadiness = File.ReadAllText(frameReadinessPath);
         var import = File.ReadAllText(importPath);
         var session = File.ReadAllText(sessionPath);
         var importReference = File.ReadAllText(importReferencePath);
@@ -72,6 +87,8 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var exitCommandWorkflow = File.Exists(exitCommandWorkflowPath) ? File.ReadAllText(exitCommandWorkflowPath) : "";
         var sessionStateCreationWorkflow = File.Exists(sessionStateCreationWorkflowPath) ? File.ReadAllText(sessionStateCreationWorkflowPath) : "";
         var sessionStartWorkflow = File.Exists(sessionStartWorkflowPath) ? File.ReadAllText(sessionStartWorkflowPath) : "";
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         AssertNoForbiddenTokens(
             coding,
@@ -110,7 +127,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("private void CodingModeExit_Click", session);
         Assert.Contains("_codingModeExitController.Exit", session);
         AssertNoForbiddenTokens(
-            windowRoot + exitController,
+            windowRoot + exitController + exitControllerFactory,
             "if (!_isCodingMode) return",
             "_isCodingMode = false",
             "_isCodingMode = true",
@@ -191,22 +208,95 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("InitializeCodingImportReferences: InitializeCodingImportReferences", lifecycle);
         Assert.Contains("actions.CreateCodingSessionState()", enterWorkflow);
         Assert.Contains("actions.InitializeCodingImportReferences()", enterWorkflow);
-        Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", windowRoot);
-        Assert.Contains("_codingProtocolMatchState.Reset", windowRoot);
-        Assert.Contains("_codingSessionHost.EventCollection", windowRoot);
-        Assert.Contains("_codingSessionHost.EndMeter", windowRoot);
-        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", windowRoot);
+        Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exitControllerFactory);
+        Assert.Contains("dependencies.ProtocolStates.ProtocolMatchState.Reset", exitControllerFactory);
+        Assert.Contains("dependencies.SessionRuntime.SessionHost.EventCollection", exitControllerFactory);
+        Assert.Contains("dependencies.SessionRuntime.SessionHost.EndMeter", exitControllerFactory);
+        Assert.Contains("HasCodingViewModel: dependencies.SessionRuntime.SessionHost.HasViewModel", exitControllerFactory);
         Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
         Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", preparePlaybackWorkflow);
         Assert.Contains("actions.StopLiveDetection()", preparePlaybackWorkflow);
         Assert.Contains("CodingModeChromeControls.HideLiveDetectionEntry", ui);
-        Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", windowRoot);
-        Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", windowRoot);
-        Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", windowRoot);
-        Assert.Contains("CodingModeChromeControls.HideCodingSurface", windowRoot);
+        Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", exitControllerFactory);
+        Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", exitControllerFactory);
+        Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", exitControllerFactory);
+        Assert.Contains("CodingModeChromeControls.HideCodingSurface", exitControllerFactory);
         Assert.Contains("CodingModeChromeControls.ShowCodingSurface", ui);
+        Assert.Contains("PlayerWindowCodingModeExitControllerFactory.Create", windowRoot);
+        Assert.DoesNotContain("new CodingModeExitController", windowRoot);
+        Assert.DoesNotContain("CodingModeExitControllerBindings", windowRoot);
+        Assert.Contains(
+            "_codingModeExitController=PlayerWindowCodingModeExitControllerFactory.Create(",
+            compactWindowRoot);
+        Assert.Equal(
+            1,
+            compactWindowRoot.Split(
+                "PlayerWindowCodingModeExitControllerFactory.Create(",
+                StringSplitOptions.None).Length - 1);
+        var expectedExitFactoryBindings = new[]
+        {
+            "RuntimeStates:_codingRuntimeStates",
+            "SchemaStates:_codingSchemaStates",
+            "OverlayStates:_codingOverlayStates",
+            "AiStates:_codingAiStates",
+            "ProtocolStates:_codingProtocolStates",
+            "SessionRuntime:codingSessionRuntime",
+            "OsdMeterController:_codingOsdMeterController",
+            "TimelineHost:_playerTimelineHost",
+            "DetectionController:_liveDetectionController",
+            "StreckenschadenTrackingController:_codingStreckenschadenTrackingController",
+            "BoundaryContext:_codingBoundaryContext",
+            "LiveDetectionPulseController:_liveDetectionPulseController",
+            "PipelineHealthController:_codingPipelineHealthController",
+            "ProtocolMatchController:_codingProtocolMatchController",
+            "OverlayInputVisibilityController:_codingOverlayInputVisibilityController",
+            "ImportEventsList:LstImportEvents",
+            "CodingConfirmationPanel:CodingConfirmationPanel",
+            "DetectionConfirmationPanel:DetectionConfirmationPanel",
+            "DetectionCanvas:DetectionCanvas",
+            "DetectionOverlay:DetectionOverlayGrid",
+            "CodingOverlayPopup:CodingOverlayPopup",
+            "CodingOverlayCanvas:CodingOverlayCanvas",
+            "CodingSidePanel:CodingSidePanel",
+            "CodingSidePanelColumn:CodingSidePanelColumn",
+            "CodingToolbar:CodingToolbar",
+            "CodingTimelinePanel:CodingTimelinePanel",
+            "CodingCalibrationHint:CodingCalibrationHint",
+            "CodingMeasurementPanel:CodingMeasurementPanel",
+            "OsdMeterBadge:OsdMeterBadge",
+            "LiveDetectionButton:LiveDetectionButton",
+            "LiveDetectionStatusText:LiveDetectionStatusText",
+            "ActiveToolLabel:TxtActiveToolLabel",
+            "CodingLiveAiToggle:BtnCodingLiveAi",
+            "CodingAiStageText:TxtCodingAiStage",
+            "CloseOpenStreckenschaeden:CloseOpenStreckenschaeden",
+            "HideInlineDefectDetail:HideInlineDefectDetail",
+            "ResetFrameReadiness:ResetFrameReadiness"
+        };
+        foreach (var expectedExitFactoryBinding in expectedExitFactoryBindings)
+            Assert.Contains(expectedExitFactoryBinding, compactWindowRoot);
+        Assert.Contains("private void ResetFrameReadiness()", frameReadiness);
+        Assert.Contains("_codingFrameReadinessController.Reset();", frameReadiness);
+        Assert.Contains("_codingOsdMeterController.ResetRecentMeter();", frameReadiness);
+        var exitFactoryIndex = compactWindowRoot.IndexOf(
+            "_codingModeExitController=PlayerWindowCodingModeExitControllerFactory.Create(",
+            StringComparison.Ordinal);
+        foreach (var dependencyAssignment in new[]
+                 {
+                     "_codingStreckenschadenTrackingController=",
+                     "_codingOverlayInputVisibilityController=",
+                     "_codingProtocolMatchController="
+                 })
+        {
+            var dependencyIndex = compactWindowRoot.IndexOf(
+                dependencyAssignment,
+                StringComparison.Ordinal);
+            Assert.True(
+                dependencyIndex >= 0 && dependencyIndex < exitFactoryIndex,
+                $"Der Exit-Controller muss nach seiner Abhaengigkeit {dependencyAssignment} entstehen.");
+        }
         Assert.Contains("public static int ClearEvents", importReferenceResetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
     }
@@ -216,6 +306,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     {
         var oldExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingModeExitController.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitFinalizationWorkflow.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
@@ -226,14 +317,15 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
+        var controllerFactory = File.ReadAllText(controllerFactoryPath);
         var controller = File.ReadAllText(controllerPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", controller);
-        Assert.Contains("_codingSessionHost.EventCollection", windowRoot);
-        Assert.Contains("_codingSessionHost.EndMeter", windowRoot);
-        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", windowRoot);
+        Assert.Contains("dependencies.SessionRuntime.SessionHost.EventCollection", controllerFactory);
+        Assert.Contains("dependencies.SessionRuntime.SessionHost.EndMeter", controllerFactory);
+        Assert.Contains("HasCodingViewModel: dependencies.SessionRuntime.SessionHost.HasViewModel", controllerFactory);
         AssertNoForbiddenTokens(windowRoot + controller, "CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode");
         Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", workflow);
         AssertNoForbiddenTokens(

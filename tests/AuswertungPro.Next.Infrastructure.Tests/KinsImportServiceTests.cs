@@ -117,6 +117,66 @@ public sealed class KinsImportServiceTests
     }
 
     [Fact]
+    public void ImportKinsExport_LeererImportwert_ueberschreibt_gefuelltes_Feld_nicht()
+    {
+        using var dir = new TempDir();
+        // KINS-Header ohne Material und ohne DN (nur Nutzungsart + Von/Nach).
+        var content = string.Join(Environment.NewLine, new[]
+        {
+            "Schmutzwasser 23654 -> 23038 @Datei=A001.MPG",
+            "   0.0m Rohranfang  @Pos=0:00:00"
+        });
+        File.WriteAllText(Path.Combine(dir.Path, "kiDVDaten.txt"), content);
+
+        // Bestehende Haltung mit gefuelltem Rohrmaterial (z. B. aus XTF-Import).
+        var project = new Project();
+        var existing = project.CreateNewRecord();
+        existing.SetFieldValue("Haltungsname", "23654-23038", FieldSource.Xtf, userEdited: false);
+        existing.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+        project.AddRecord(existing);
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        var rec = Assert.Single(project.Data);
+        // Der leere KINS-Materialwert darf "Beton" nicht leer wischen.
+        Assert.Equal("Beton", rec.GetFieldValue("Rohrmaterial"));
+    }
+
+    [Fact]
+    public void ImportKinsExport_BenenntBestehendeHaltungNichtUm()
+    {
+        using var dir = new TempDir();
+        var content = string.Join(Environment.NewLine, new[]
+        {
+            "Schmutzwasser 23654 -> 23038 @Datei=A001.MPG",
+            "   0.0m Rohranfang  @Pos=0:00:00"
+        });
+        File.WriteAllText(Path.Combine(dir.Path, "kiDVDaten.txt"), content);
+
+        // Bestehende Haltung mit breiterem Namen; wird per Grenz-Praefix gefunden.
+        var project = new Project();
+        var existing = project.CreateNewRecord();
+        existing.SetFieldValue("Haltungsname", "23654-23038-1", FieldSource.Xtf, userEdited: false);
+        project.AddRecord(existing);
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        var rec = Assert.Single(project.Data);
+        // Der Schluessel darf nicht auf den kuerzeren KINS-Namen "23654-23038" verkuerzt werden.
+        Assert.Equal("23654-23038-1", rec.GetFieldValue("Haltungsname"));
+    }
+
+    [Fact]
     public void ImportKinsExport_DoesNotLinkVideo_WhenFileNameIsAmbiguous()
     {
         using var dir = new TempDir();

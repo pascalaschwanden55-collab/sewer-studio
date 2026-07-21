@@ -11,7 +11,7 @@ public sealed class PlayerWindowCodingToolSelectionArchitectureTests
         var overlayInputPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var toolsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
         var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
-        var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionPolicy.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionWorkflow.cs");
@@ -36,7 +36,7 @@ public sealed class PlayerWindowCodingToolSelectionArchitectureTests
         Assert.Contains("CodingToolSelectionWorkflow.Execute", tools);
         Assert.Contains("_codingActiveToolNameState.ActiveToolName", tools + calibration);
         Assert.Contains("_codingActiveToolNameState.Set", tools + calibration);
-        Assert.Contains("_codingActiveToolNameState.Clear", calibration + exit);
+        Assert.Contains("dependencies.OverlayStates.ActiveToolNameState.Clear", calibration + exit);
         Assert.Contains("_codingActiveToolNameState", state);
         Assert.Contains("_codingSessionHost", tools);
         Assert.Contains("LiveDetectionStatusControls.ShowStatusMessage", tools);

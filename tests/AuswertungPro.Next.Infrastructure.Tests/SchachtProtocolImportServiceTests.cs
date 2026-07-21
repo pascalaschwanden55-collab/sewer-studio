@@ -226,13 +226,43 @@ public sealed class SchachtProtocolImportServiceTests
             File.WriteAllText(src, "%PDF-1.4 dummy");
             var svc = new SchachtProtocolImportService();
 
-            var rel = svc.DistributePdf(root, "74467", src);
+            var result = svc.DistributePdfWithResult(root, "74467", src);
+            string legacyPath = svc.DistributePdf(root, "74467", src);
+            var existingResult = svc.DistributePdfWithResult(root, "74467", src);
 
             var expected = Path.Combine(ProjectStructure.SchachtVerteiltDir(root, "74467"), "quelle.pdf");
             Assert.True(File.Exists(expected));
-            Assert.Equal(ProjectPathResolver.MakeRelative(expected, root), rel);
-            Assert.Contains("74467", rel);
-            Assert.Contains("quelle.pdf", rel);
+            Assert.Equal(ProjectPathResolver.MakeRelative(expected, root), result.RelativePath);
+            Assert.Contains("74467", result.RelativePath);
+            Assert.Contains("quelle.pdf", result.RelativePath);
+            Assert.True(result.FileCreated);
+            Assert.False(existingResult.FileCreated);
+            Assert.Equal(result.RelativePath, existingResult.RelativePath);
+            Assert.Equal(result.RelativePath, legacyPath);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { /* Best effort. */ }
+        }
+    }
+
+    [Fact]
+    public void DistributePdf_legacy_facade_copies_a_fresh_file()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sst_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var source = Path.Combine(root, "legacy.pdf");
+            File.WriteAllText(source, "%PDF-1.4 legacy");
+            ISchachtProtocolImportService service = new SchachtProtocolImportService();
+
+            string relativePath = service.DistributePdf(root, "L-1", source);
+
+            var expected = Path.Combine(ProjectStructure.SchachtVerteiltDir(root, "L-1"), "legacy.pdf");
+            Assert.True(File.Exists(expected));
+            Assert.Equal(ProjectPathResolver.MakeRelative(expected, root), relativePath);
+            Assert.Equal("%PDF-1.4 legacy", File.ReadAllText(expected));
         }
         finally
         {

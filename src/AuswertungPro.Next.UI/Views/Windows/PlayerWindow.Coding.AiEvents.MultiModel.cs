@@ -39,7 +39,7 @@ public partial class PlayerWindow
             new CodingMultiModelFindingEventCommandActions(
                 ResolveMeterForFrame: (timestamp, osdMeter) =>
                     ResolveCodingMeterForFrame(timestamp, osdMeter),
-                ApplyStretchTracking: ApplyStreckenschadenTracking,
+                ApplyStretchTracking: _codingStreckenschadenTrackingController.ApplyTracking,
                 ExecuteFindingWorkflow: request => CodingMultiModelFindingEventWorkflow.Execute(
                     request,
                     new CodingMultiModelFindingEventWorkflowActions(

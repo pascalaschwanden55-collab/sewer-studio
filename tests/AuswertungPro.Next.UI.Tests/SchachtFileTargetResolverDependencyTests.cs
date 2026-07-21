@@ -62,6 +62,8 @@ public sealed class SchachtFileTargetResolverDependencyTests
             services.SchachtMassnahmenKatalog,
             services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
             services.DropdownOptions,
+            services.PdfTextLayerRewrite,
+            services.ShellOpen,
             services.ShaftRename,
             services.ExplorerReveal,
             services.SchaechteTemplateColumns,

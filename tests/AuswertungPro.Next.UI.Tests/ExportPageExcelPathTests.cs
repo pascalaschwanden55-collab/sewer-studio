@@ -15,6 +15,47 @@ public sealed class ExportPageExcelPathTests
     private static readonly IDistributionPatternResolver Resolver = new DistributionPatternResolver();
 
     [Fact]
+    public void Policy_baut_konfigurierten_datumspfad_ohne_dateisystemzugriff()
+    {
+        var cfg = new DistributionTargetConfig { DateiPattern = "Schaechte_{Datum}" };
+
+        var pfad = ExportExcelPathPolicy.BuildConfiguredPath(
+            @"D:\Export",
+            cfg,
+            Resolver,
+            Datum);
+
+        Assert.Equal(@"D:\Export\Schaechte_20260626.xlsx", pfad);
+    }
+
+    [Fact]
+    public void Policy_bereinigt_festen_namen_und_verlangt_einen_namen()
+    {
+        var pfad = ExportExcelPathPolicy.BuildFixedPath(@"D:\Export", "  Haltungen  ");
+
+        Assert.Equal(@"D:\Export\Haltungen.xlsx", pfad);
+        Assert.Throws<ArgumentException>(() => ExportExcelPathPolicy.BuildFixedPath(@"D:\Export", "  "));
+    }
+
+    [Fact]
+    public void Policy_verhindert_kollision_mit_typbezogenem_standardnamen()
+    {
+        var haltung = new DistributionTargetConfig { DateiPattern = "Auswertung_{Jahr}" };
+        var schacht = new DistributionTargetConfig { DateiPattern = "Auswertung_{Jahr}" };
+
+        var pfad = ExportExcelPathPolicy.BuildCollisionSafePath(
+            @"D:\Export",
+            haltung,
+            "Haltungen",
+            schacht,
+            "Schaechte",
+            Resolver,
+            Datum);
+
+        Assert.Equal(@"D:\Export\Haltungen.xlsx", pfad);
+    }
+
+    [Fact]
     public void Ohne_wurzel_kein_pfad_dialog_bleibt()
     {
         var cfg = new DistributionTargetConfig { Root = @"D:\AlterEinzelordner", DateiPattern = "Haltungen" };

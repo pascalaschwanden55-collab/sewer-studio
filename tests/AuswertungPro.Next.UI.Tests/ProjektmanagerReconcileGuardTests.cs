@@ -11,7 +11,7 @@ public sealed class ProjektmanagerReconcileGuardTests
     {
         var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "Services", "ImportPostProcessingController.cs");
 
-        Assert.Contains("includeVideos: false", src);
+        Assert.Contains("IncludeVideos: false", src);
         Assert.Contains("Fotos/PDFs", src);
     }
 

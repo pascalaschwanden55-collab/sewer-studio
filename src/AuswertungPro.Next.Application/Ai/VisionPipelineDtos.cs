@@ -103,6 +103,9 @@ public sealed record YoloClassifyResponse(
     // Modell-Governance (active.json-Weg): welches cls-Modell hat geantwortet
     [property: JsonPropertyName("model_name")] string ModelName = "",
     [property: JsonPropertyName("model_source")] string ModelSource = "",
+    // TODO (AP-6, Sidecar-Haertung): Default auf false umstellen (fail-closed wie der Sidecar,
+    // schemas/detection.py: classifier_loaded=False). Erfordert Anpassung mehrerer Klassifikator-
+    // Test-Fixtures, die einen geladenen Klassifikator simulieren, das Feld aber nicht setzen.
     [property: JsonPropertyName("classifier_loaded")] bool ClassifierLoaded = true,
     [property: JsonPropertyName("model_sha256")] string ModelSha256 = "",
     [property: JsonPropertyName("imgsz")] int Imgsz = 0,
@@ -200,32 +203,50 @@ public sealed record SamResponse(
 
 // ── Training Export ─────────────────────────────────────────────────────────
 
-public sealed record TrainingExportSampleLabel(
-    [property: JsonPropertyName("class_name")] string ClassName,
+// Plan-gesteuerter v2-Vertrag. Split, Klassen-IDs und Dateinamen stammen
+// ausschliesslich aus dem zuvor erzeugten C#-Exportplan.
+public sealed record TrainingExportPlanLabelDto(
+    [property: JsonPropertyName("class_id")] int ClassId,
     [property: JsonPropertyName("x_center")] double XCenter,
     [property: JsonPropertyName("y_center")] double YCenter,
     [property: JsonPropertyName("width")] double Width,
     [property: JsonPropertyName("height")] double Height
 );
 
-public sealed record TrainingExportSample(
+public sealed record TrainingExportPlanSampleDto(
+    [property: JsonPropertyName("image_sha256")] string ImageSha256,
     [property: JsonPropertyName("image_base64")] string ImageBase64,
-    [property: JsonPropertyName("labels")] IReadOnlyList<TrainingExportSampleLabel> Labels
+    [property: JsonPropertyName("split")] string Split,
+    [property: JsonPropertyName("target_file_name")] string TargetFileName,
+    [property: JsonPropertyName("labels")] IReadOnlyList<TrainingExportPlanLabelDto> Labels
 );
 
-public sealed record TrainingExportRequestDto(
-    [property: JsonPropertyName("samples")] IReadOnlyList<TrainingExportSample> Samples,
-    [property: JsonPropertyName("output_dir")] string OutputDir,
-    [property: JsonPropertyName("train_split")] double TrainSplit,
-    [property: JsonPropertyName("overwrite")] bool Overwrite = true
+public sealed record TrainingExportPlanRequestDto(
+    [property: JsonPropertyName("schema_version")] string SchemaVersion,
+    [property: JsonPropertyName("plan_id")] string PlanId,
+    [property: JsonPropertyName("plan_sha256")] string PlanSha256,
+    [property: JsonPropertyName("class_map_version")] int ClassMapVersion,
+    [property: JsonPropertyName("vsa_manifest_hash")] string VsaManifestHash,
+    [property: JsonPropertyName("registry_hash")] string RegistryHash,
+    [property: JsonPropertyName("classes")] IReadOnlyList<string> Classes,
+    [property: JsonPropertyName("manifest_json_base64")] string ManifestJsonBase64,
+    [property: JsonPropertyName("manifest_sha256")] string ManifestSha256,
+    [property: JsonPropertyName("samples")] IReadOnlyList<TrainingExportPlanSampleDto> Samples
 );
 
-public sealed record TrainingExportResponseDto(
+public sealed record TrainingExportPlanResponseDto(
+    [property: JsonPropertyName("schema_version")] string SchemaVersion,
+    [property: JsonPropertyName("plan_id")] string PlanId,
+    [property: JsonPropertyName("plan_sha256")] string PlanSha256,
+    [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("total_samples")] int TotalSamples,
     [property: JsonPropertyName("train_count")] int TrainCount,
-    [property: JsonPropertyName("val_count")] int ValCount,
-    [property: JsonPropertyName("classes_used")] IReadOnlyList<string> ClassesUsed,
-    [property: JsonPropertyName("data_yaml_path")] string DataYamlPath
+    [property: JsonPropertyName("val_count")] int ValidationCount,
+    [property: JsonPropertyName("class_count")] int ClassCount,
+    [property: JsonPropertyName("dataset_path")] string DatasetPath,
+    [property: JsonPropertyName("data_yaml_path")] string DataYamlPath,
+    [property: JsonPropertyName("manifest_path")] string ManifestPath,
+    [property: JsonPropertyName("written_image_sha256")] IReadOnlyList<string> WrittenImageSha256
 );
 
 // ── Multi-Model Frame Result (internal) ────────────────────────────────────

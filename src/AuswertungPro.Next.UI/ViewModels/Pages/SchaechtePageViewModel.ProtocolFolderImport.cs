@@ -9,8 +9,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SchaechtePageViewModel
 {
-    private async Task ImportProtocolFolderAsync(string projectFolder, string sourceFolder)
+    private async Task ImportProtocolFolderAsync(
+        ProjectOperationContext projectContext,
+        string projectFolder,
+        string sourceFolder)
     {
+        var expectedProject = projectContext.Project;
         var destinationFolder = Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt);
         var legacyDestinationFolder = Path.Combine(projectFolder, "Schaechte_Verteilt");
         var readsExistingDistribution =
@@ -52,6 +56,12 @@ public sealed partial class SchaechtePageViewModel
             return;
         }
 
+        if (!ProjectIsStillOpen(
+                projectContext,
+                "Protokoll importieren",
+                ProjectOperationImpact.None))
+            return;
+
         if (!_dialogs.ConfirmWarn(
                 $"Gefunden: {sourcePdfs.Count} PDF-Dateien.\n\n" +
                 (readsExistingDistribution
@@ -64,6 +74,12 @@ public sealed partial class SchaechtePageViewModel
             LastResult = "Ordnerimport abgebrochen.";
             return;
         }
+
+        if (!ProjectIsStillOpen(
+                projectContext,
+                "Protokoll importieren",
+                ProjectOperationImpact.None))
+            return;
 
         _shell.TryCreateImportRestorePoint("Schachtprotokoll-Ordnerimport");
 
@@ -92,7 +108,7 @@ public sealed partial class SchaechtePageViewModel
                     destGemeindeFolder: destinationFolder,
                     moveInsteadOfCopy: false,
                     overwrite: false,
-                    project: _shell.Project,
+                    project: expectedProject,
                     progress: distributionProgress));
             }
             catch (Exception ex)
@@ -114,7 +130,13 @@ public sealed partial class SchaechtePageViewModel
                 .ToArray();
         }
 
-        if (!ProjectIsStillOpen(projectFolder, "Protokoll importieren"))
+        var distributionImpact = !readsExistingDistribution && preparedPdfs.Length > 0
+            ? ProjectOperationImpact.ProjectFilesWritten
+            : ProjectOperationImpact.None;
+        if (!ProjectIsStillOpen(
+                projectContext,
+                "Protokoll importieren",
+                distributionImpact))
             return;
 
         var candidates = new List<SchachtProtocolFolderCandidate>();
@@ -133,7 +155,7 @@ public sealed partial class SchaechtePageViewModel
                     continue;
                 }
 
-                var canonicalShaft = ResolveCanonicalShaftFolder(
+                var canonicalShaft = SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(
                     pdfPath,
                     destinationFolder,
                     legacyDestinationFolder);
@@ -149,7 +171,10 @@ public sealed partial class SchaechtePageViewModel
             }
         }
 
-        if (!ProjectIsStillOpen(projectFolder, "Protokoll importieren"))
+        if (!ProjectIsStillOpen(
+                projectContext,
+                "Protokoll importieren",
+                distributionImpact))
             return;
 
         var currentProtocols = SchachtProtocolFolderImportPolicy.SelectCurrentPerShaft(candidates);
@@ -160,13 +185,15 @@ public sealed partial class SchaechtePageViewModel
 
         foreach (var candidate in currentProtocols)
         {
-            var target = _schachtProtocolImport.FindSchacht(_shell.Project, candidate.ParseResult.Schachtnummer);
+            var target = _schachtProtocolImport.FindSchacht(
+                expectedProject,
+                candidate.ParseResult.Schachtnummer);
             if (target is null)
             {
                 target = new SchachtRecord();
                 lock (_shell.CollectionLock)
                 {
-                    Records.Add(target);
+                    expectedProject.SchaechteData.Add(target);
                 }
                 created++;
             }
@@ -180,16 +207,39 @@ public sealed partial class SchaechtePageViewModel
             lastTarget = target;
         }
 
-        if (created + updated > 0)
+        var hasChanges = created + updated > 0;
+        if (hasChanges)
+        {
+            expectedProject.ModifiedAtUtc = DateTime.UtcNow;
+            expectedProject.Dirty = true;
+        }
+
+        var committedImpact = hasChanges
+            ? distributionImpact | ProjectOperationImpact.ProjectDataChanged
+            : distributionImpact;
+        if (!ProjectIsStillOpen(
+                projectContext,
+                "Protokoll importieren",
+                committedImpact))
+            return;
+
+        if (hasChanges)
         {
             UpdateNr();
             Selected = lastTarget;
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
+            if (!ProjectIsStillOpen(
+                    projectContext,
+                    "Protokoll importieren",
+                    committedImpact))
+            {
+                ClearSelectedIfSame(lastTarget);
+                return;
+            }
+
             _shell.TrySaveProject();
         }
 
-        var summary = BuildFolderImportSummary(
+        var summary = SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(
             sourcePdfs.Count,
             preparedPdfs.Length,
             created,
@@ -206,67 +256,4 @@ public sealed partial class SchaechtePageViewModel
             _dialogs.Info(summary, "Ordnerimport abgeschlossen");
     }
 
-    private static string BuildFolderImportSummary(
-        int sourcePdfCount,
-        int preparedPdfCount,
-        int created,
-        int updated,
-        int archivedOlderProtocols,
-        int skippedDirectoryCount,
-        IReadOnlyList<string> failures)
-    {
-        var lines = new List<string>
-        {
-            $"Gefundene PDF-Dateien: {sourcePdfCount}",
-            $"Eingelesene Schachtprotokolle: {preparedPdfCount}",
-            $"Schaechte neu angelegt: {created}",
-            $"Schaechte aktualisiert: {updated}"
-        };
-
-        if (archivedOlderProtocols > 0)
-            lines.Add($"Aeltere Protokolle archiviert: {archivedOlderProtocols} (Stammdaten stammen aus dem neuesten Protokoll)");
-        if (skippedDirectoryCount > 0)
-            lines.Add($"Nicht lesbare Unterordner uebersprungen: {skippedDirectoryCount}");
-        if (failures.Count > 0)
-        {
-            lines.Add($"Fehler: {failures.Count}");
-            lines.AddRange(failures.Take(8).Select(failure => $"- {failure}"));
-            if (failures.Count > 8)
-                lines.Add($"- ... und {failures.Count - 8} weitere");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string? ResolveCanonicalShaftFolder(
-        string pdfPath,
-        params string[] distributionRoots)
-    {
-        var parentFolder = Path.GetDirectoryName(pdfPath);
-        if (string.IsNullOrWhiteSpace(parentFolder))
-            return null;
-
-        if (distributionRoots.Any(root =>
-                PathsEqual(parentFolder, root)))
-        {
-            return null;
-        }
-
-        return Path.GetFileName(Path.TrimEndingDirectorySeparator(parentFolder));
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        try
-        {
-            return string.Equals(
-                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
-                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
-                StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

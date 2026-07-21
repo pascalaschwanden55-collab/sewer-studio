@@ -20,7 +20,7 @@ public partial class PlayerWindow
             new CodingSelectCodeCommandActions(
                 PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(
                     _playerPlaybackControlHost.SetPause),
-                RunWithSuspendedOverlayInputAsync: RunWithSuspendedCodingOverlayInputAsync,
+                RunWithSuspendedOverlayInputAsync: _codingOverlayInputVisibilityController.RunAsync,
                 GetCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero,
                 ReadOsdMeterAsync: CodingReadOsdMeterAsync,
                 ResolveManualEntryMeter: osdMeter => CodingCurrentMeterResolver.ResolveManualEntry(

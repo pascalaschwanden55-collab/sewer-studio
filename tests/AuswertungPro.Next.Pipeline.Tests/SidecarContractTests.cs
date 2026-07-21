@@ -29,9 +29,10 @@ public class SidecarContractTests
         yield return Contract<SamRequest>("sidecar/sidecar/schemas/segmentation.py", "SamRequest");
         yield return Contract<SamMaskResult>("sidecar/sidecar/schemas/segmentation.py", "MaskResult");
         yield return Contract<SamResponse>("sidecar/sidecar/schemas/segmentation.py", "SamResponse");
-        yield return Contract<TrainingExportSample>("sidecar/sidecar/schemas/segmentation.py", "TrainingSample");
-        yield return Contract<TrainingExportRequestDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingExportRequest");
-        yield return Contract<TrainingExportResponseDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingExportResponse");
+        yield return Contract<TrainingExportPlanLabelDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingExportLabel");
+        yield return Contract<TrainingExportPlanSampleDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingSample");
+        yield return Contract<TrainingExportPlanRequestDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingExportRequest");
+        yield return Contract<TrainingExportPlanResponseDto>("sidecar/sidecar/schemas/segmentation.py", "TrainingExportResponse");
     }
 
     [Theory]
@@ -62,14 +63,23 @@ public class SidecarContractTests
     {
         var fullPath = Path.Combine(RepoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
         var source = File.ReadAllText(fullPath);
-        var classMatch = Regex.Match(
+        var classHeader = Regex.Match(
             source,
-            $@"(?ms)^class\s+{Regex.Escape(className)}\(BaseModel\):(?<body>.*?)(?=^class\s+\w+\(BaseModel\):|\z)");
+            $@"(?m)^class\s+{Regex.Escape(className)}\([^)]*\):[^\r\n]*(?:\r?\n)?");
 
-        Assert.True(classMatch.Success, $"Python schema class not found: {className} in {relativePath}");
+        Assert.True(classHeader.Success, $"Python schema class not found: {className} in {relativePath}");
+        var remainder = source.Substring(classHeader.Index + classHeader.Length);
+        var classBody = string.Join(
+            '\n',
+            remainder
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Split('\n')
+                .TakeWhile(line => string.IsNullOrWhiteSpace(line)
+                    || char.IsWhiteSpace(line[0])
+                    || line.StartsWith('#')));
 
         return Regex.Matches(
-                classMatch.Groups["body"].Value,
+                classBody,
                 @"^\s{4}([a-zA-Z_][a-zA-Z0-9_]*)\s*:",
                 RegexOptions.Multiline)
             .Select(match => match.Groups[1].Value)

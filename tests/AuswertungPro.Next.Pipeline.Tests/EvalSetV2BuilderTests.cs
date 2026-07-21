@@ -49,7 +49,14 @@ public sealed class EvalSetV2BuilderTests : IDisposable
         var v2FirstImage = Directory.EnumerateFiles(Path.Combine(output, "images")).First();
         Assert.Contains(EvalContaminationGuard.ComputeFileHash(v2FirstImage)!, protectedHashes);
         Assert.Contains("100-200", EvalContaminationGuard.LoadEvalHaltungKeys(v1));
-        Assert.Equal(5, EvalSetBenchmarkDataset.Load(output).Count);
+        var benchmarkCases = EvalSetBenchmarkDataset.Load(output);
+        Assert.Equal(5, benchmarkCases.Count);
+        var damage = Assert.Single(benchmarkCases, item => item.Id == "damage");
+        Assert.Equal("100-200", damage.HoldingKey);
+        Assert.Equal(4, damage.ExpectedSeverity);
+        Assert.Equal("damage-event-1", damage.EventId);
+        Assert.Equal(0.0, damage.MeterStart);
+        Assert.Equal(1.0, damage.MeterEnd);
     }
 
     [Fact]
@@ -98,6 +105,78 @@ public sealed class EvalSetV2BuilderTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(v1, "v2")));
     }
 
+    [Theory]
+    [InlineData(true, false, "Severity")]
+    [InlineData(false, true, "Ereignis-ID")]
+    public void Build_BlockiertSchadenOhnePflichtmetadaten(
+        bool omitSeverity,
+        bool omitEventId,
+        string expectedMessage)
+    {
+        var v1 = CreateV1();
+        var candidateFile = CreateV2Candidates(
+            omitDamageSeverity: omitSeverity,
+            omitDamageEventId: omitEventId);
+
+        var error = Assert.Throws<InvalidDataException>(() => EvalSetV2Builder.Build(
+            new EvalSetV2BuildOptions(candidateFile, Path.Combine(v1, "v2"), v1, MinimumHoldings: 5)));
+
+        Assert.Contains(expectedMessage, error.Message);
+    }
+
+    [Fact]
+    public void Build_BlockiertUngueltigenMeterbereich()
+    {
+        var v1 = CreateV1();
+        var candidateFile = CreateV2Candidates(invalidDamageMeterRange: true);
+
+        var error = Assert.Throws<InvalidDataException>(() => EvalSetV2Builder.Build(
+            new EvalSetV2BuildOptions(candidateFile, Path.Combine(v1, "v2"), v1, MinimumHoldings: 5)));
+
+        Assert.Contains("Meterbereich", error.Message);
+    }
+
+    [Fact]
+    public void Build_BlockiertWiderspruechlicheBereicheDesselbenEreignisses()
+    {
+        var v1 = CreateV1();
+        var candidateFile = CreateV2Candidates(inconsistentDamageEventRange: true);
+
+        var error = Assert.Throws<InvalidDataException>(() => EvalSetV2Builder.Build(
+            new EvalSetV2BuildOptions(candidateFile, Path.Combine(v1, "v2"), v1, MinimumHoldings: 5)));
+
+        Assert.Contains("widerspruechliche Metadaten", error.Message);
+    }
+
+    [Fact]
+    public void Build_AkzeptiertGleicheEreignisIdInVerschiedenenHaltungen()
+    {
+        var v1 = CreateV1();
+        var candidateFile = CreateV2Candidates(sameEventIdInDifferentHolding: true);
+
+        var result = EvalSetV2Builder.Build(new EvalSetV2BuildOptions(
+            candidateFile,
+            Path.Combine(v1, "v2"),
+            v1,
+            DryRun: true,
+            MinimumHoldings: 5));
+
+        Assert.Equal(6, result.CandidateCount);
+        Assert.Equal(6, result.HoldingCount);
+    }
+
+    [Fact]
+    public void Build_BlockiertLeereOptionaleEreignisId()
+    {
+        var v1 = CreateV1();
+        var candidateFile = CreateV2Candidates(blankOptionalEventId: true);
+
+        var error = Assert.Throws<InvalidDataException>(() => EvalSetV2Builder.Build(
+            new EvalSetV2BuildOptions(candidateFile, Path.Combine(v1, "v2"), v1, MinimumHoldings: 5)));
+
+        Assert.Contains("vorhandene Ereignis-ID", error.Message);
+    }
+
     private string CreateV1()
     {
         var v1 = Path.Combine(_root, "eval_set");
@@ -119,7 +198,14 @@ public sealed class EvalSetV2BuilderTests : IDisposable
         return v1;
     }
 
-    private string CreateV2Candidates(string? firstImageOverride = null)
+    private string CreateV2Candidates(
+        string? firstImageOverride = null,
+        bool omitDamageSeverity = false,
+        bool omitDamageEventId = false,
+        bool invalidDamageMeterRange = false,
+        bool inconsistentDamageEventRange = false,
+        bool sameEventIdInDifferentHolding = false,
+        bool blankOptionalEventId = false)
     {
         var sources = Path.Combine(_root, "sources");
         Directory.CreateDirectory(sources);
@@ -148,11 +234,44 @@ public sealed class EvalSetV2BuilderTests : IDisposable
                 source_image_path = source,
                 haltung_key = definition.Case,
                 meter = i + 0.5,
+                expected_severity = i == 0 && !omitDamageSeverity ? 4 : (int?)null,
+                event_id = i == 0 && !omitDamageEventId
+                    ? "damage-event-1"
+                    : i == 1 && blankOptionalEventId
+                        ? " "
+                        : null,
+                meter_start = i == 0 ? (invalidDamageMeterRange ? 1.0 : 0.0) : (double?)null,
+                meter_end = i == 0 ? (invalidDamageMeterRange ? 0.0 : 1.0) : (double?)null,
                 expected_code = definition.Code,
                 group = definition.Group,
                 dn_mm = definition.Dn,
                 pipe_material = definition.Material,
                 image_quality = definition.Quality,
+                human_reviewed = true,
+                reviewed_by = "Tester",
+                reviewed_at_utc = "2026-07-11T12:00:00Z"
+            });
+        }
+
+        if (inconsistentDamageEventRange || sameEventIdInDifferentHolding)
+        {
+            var source = Path.Combine(sources, "damage-second-frame.png");
+            File.WriteAllBytes(source, [91, 92, 93]);
+            rows.Add(new
+            {
+                id = "damage-second-frame",
+                source_image_path = source,
+                haltung_key = sameEventIdInDifferentHolding ? "200-300" : "100-200",
+                meter = 1.5,
+                expected_severity = 4,
+                event_id = "damage-event-1",
+                meter_start = 1.0,
+                meter_end = 2.0,
+                expected_code = "BAB",
+                group = "damage",
+                dn_mm = 200,
+                pipe_material = "PVC",
+                image_quality = "good",
                 human_reviewed = true,
                 reviewed_by = "Tester",
                 reviewed_at_utc = "2026-07-11T12:00:00Z"

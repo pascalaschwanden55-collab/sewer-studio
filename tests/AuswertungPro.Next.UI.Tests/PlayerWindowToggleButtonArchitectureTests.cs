@@ -14,10 +14,11 @@ public sealed class PlayerWindowToggleButtonArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var controlsPath = Path.Combine(windowsRoot, "PlayerToggleButtonControls.cs");
-        var relevantPartials = new[]
+        var relevantFiles = new[]
         {
             "PlayerWindow.Coding.Ai.Live.cs",
             "PlayerWindow.xaml.cs",
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs",
             "PlayerWindow.Coding.cs",
             "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",
@@ -28,7 +29,7 @@ public sealed class PlayerWindowToggleButtonArchitectureTests
 
         var joinedPartials = string.Join(
             Environment.NewLine,
-            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
+            relevantFiles.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("PlayerToggleButtonControls.IsChecked", joinedPartials);

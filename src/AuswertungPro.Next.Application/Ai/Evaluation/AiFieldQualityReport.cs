@@ -571,45 +571,7 @@ public static class AiFieldQualityReportAnalyzer
     }
 
     internal static double BinomialUpper95(int trials, int errors)
-    {
-        if (trials <= 0)
-            return 1.0;
-        errors = Math.Clamp(errors, 0, trials);
-        if (errors == trials)
-            return 1.0;
-
-        const double alpha = 0.05;
-        var low = (double)errors / trials;
-        var high = 1.0;
-        for (var i = 0; i < 80; i++)
-        {
-            var mid = (low + high) / 2.0;
-            var cdf = BinomialCdf(errors, trials, mid);
-            if (cdf > alpha)
-                low = mid;
-            else
-                high = mid;
-        }
-
-        return (low + high) / 2.0;
-    }
-
-    private static double BinomialCdf(int maxErrors, int trials, double probability)
-    {
-        if (probability <= 0)
-            return 1.0;
-        if (probability >= 1)
-            return maxErrors >= trials ? 1.0 : 0.0;
-
-        var term = Math.Pow(1.0 - probability, trials);
-        var sum = term;
-        for (var k = 0; k < maxErrors; k++)
-        {
-            term *= (trials - k) / (double)(k + 1) * probability / (1.0 - probability);
-            sum += term;
-        }
-        return Math.Clamp(sum, 0.0, 1.0);
-    }
+        => BinomialStatistics.ExactUpper95(trials, errors);
 
     private static QualityFindingIssue ToIssue(
         string category,

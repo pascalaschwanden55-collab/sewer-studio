@@ -71,7 +71,14 @@ public sealed class AiStartupServiceTests
                 && string.Equals(host, "127.0.0.1:11434", StringComparison.Ordinal));
             Assert.Contains(launcher.StartedProcesses, p =>
                 p.Arguments.Contains("start_sidecar.ps1", StringComparison.OrdinalIgnoreCase)
-                && p.Hidden);
+                && p.Hidden
+                && p.EnvironmentVariables is not null
+                && p.EnvironmentVariables.TryGetValue(
+                    "SEWER_SIDECAR_TRAINING_EXPORT_ROOT",
+                    out var exportRoot)
+                && exportRoot.EndsWith(
+                    Path.Combine("training", "datasets"),
+                    StringComparison.OrdinalIgnoreCase));
             Assert.Contains(result.Messages, m => m.Contains("KI aktiviert", StringComparison.OrdinalIgnoreCase));
             Assert.Contains("Modelle geladen", status.StatusText, StringComparison.OrdinalIgnoreCase);
         }

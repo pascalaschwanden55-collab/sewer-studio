@@ -185,16 +185,25 @@ public sealed class MeasurePricingEngineTests
         Assert.True(lines[0].Selected);
     }
 
-    [Fact]
-    public void ApplyConnectionsToLines_ZeroConnections_DisablesLines()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-2)]
+    public void ApplyConnectionsToLines_NonPositiveConnections_DisablesLines(int connections)
     {
-        var lines = Lines(Line("ANSCHLUSS_A", qty: 2m, unit: "Stk", selected: true));
+        var lines = Lines(Line(
+            "ANSCHLUSS_A",
+            qty: 2m,
+            unit: "Stk",
+            selected: true,
+            transferMarked: true,
+            qtyOverridden: true));
 
-        MeasurePricingEngine.ApplyConnectionsToLines(lines, 0m);
+        MeasurePricingEngine.ApplyConnectionsToLines(lines, connections);
 
         Assert.Equal(0m, lines[0].Qty);
         Assert.False(lines[0].Selected);
         Assert.False(lines[0].TransferMarked);
+        Assert.False(lines[0].IsQtyOverridden);
     }
 
     [Fact]
@@ -217,6 +226,60 @@ public sealed class MeasurePricingEngineTests
         MeasurePricingEngine.ApplyConnectionsToLines(lines, 2m);
 
         Assert.Equal(5m, lines[0].Qty); // manuell eingetragen, nicht ueberschreiben
+    }
+
+    [Fact]
+    public void ApplyConnectionsToLines_ReactivatesZeroLineWithoutOverwritingManualQty()
+    {
+        var lines = Lines(Line(
+            "ANSCHLUSS_A",
+            qty: 0m,
+            unit: "Stk",
+            selected: false,
+            qtyOverridden: true));
+
+        MeasurePricingEngine.ApplyConnectionsToLines(lines, 2m);
+
+        Assert.True(lines[0].Selected);
+        Assert.Equal(0m, lines[0].Qty);
+        Assert.True(lines[0].IsQtyOverridden);
+    }
+
+    [Fact]
+    public void ApplyConnectionsToLines_DoesNotReactivateDeselectedPositiveLine()
+    {
+        var lines = Lines(Line(
+            "ANSCHLUSS_A",
+            qty: 5m,
+            unit: "Stk",
+            selected: false,
+            transferMarked: true));
+
+        MeasurePricingEngine.ApplyConnectionsToLines(lines, 2m);
+
+        Assert.False(lines[0].Selected);
+        Assert.Equal(2m, lines[0].Qty);
+        Assert.True(lines[0].TransferMarked);
+        Assert.False(lines[0].IsQtyOverridden);
+    }
+
+    [Fact]
+    public void ApplyConnectionsToLines_LeavesNonConnectionLineUnchanged()
+    {
+        var lines = Lines(Line(
+            "POSITION",
+            qty: 5m,
+            unit: "Stk",
+            selected: true,
+            transferMarked: true,
+            qtyOverridden: true));
+
+        MeasurePricingEngine.ApplyConnectionsToLines(lines, 0m);
+
+        Assert.Equal(5m, lines[0].Qty);
+        Assert.True(lines[0].Selected);
+        Assert.True(lines[0].TransferMarked);
+        Assert.True(lines[0].IsQtyOverridden);
     }
 
     // -------------------------------------------------------------------------
@@ -265,7 +328,8 @@ public sealed class MeasurePricingEngineTests
         string unit = "Stk",
         bool selected = true,
         bool priceOverridden = false,
-        bool qtyOverridden = false)
+        bool qtyOverridden = false,
+        bool transferMarked = false)
         => new()
         {
             ItemKey = itemKey,
@@ -275,6 +339,7 @@ public sealed class MeasurePricingEngineTests
             UnitPrice = unitPrice,
             Unit = unit,
             Selected = selected,
+            TransferMarked = transferMarked,
             IsPriceOverridden = priceOverridden,
             IsQtyOverridden = qtyOverridden
         };

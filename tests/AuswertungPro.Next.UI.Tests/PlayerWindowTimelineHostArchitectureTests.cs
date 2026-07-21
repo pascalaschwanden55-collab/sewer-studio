@@ -50,7 +50,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.AiEvents.cs",
             "PlayerWindow.Coding.AiEvents.Live.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",
-            "PlayerWindow.Coding.Ai.Streckenschaden.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs"
@@ -67,6 +66,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         Assert.Contains("FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);
+        Assert.Contains("ResolveCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);
         Assert.Contains("SeekMilliseconds: _playerTimelineHost.SeekMilliseconds", windowRoot);
     }
 
@@ -131,7 +131,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.AiEvents.cs",
             "PlayerWindow.Coding.AiEvents.Live.cs",
             "PlayerWindow.Coding.AiEvents.MultiModel.cs",
-            "PlayerWindow.Coding.Ai.Streckenschaden.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs",

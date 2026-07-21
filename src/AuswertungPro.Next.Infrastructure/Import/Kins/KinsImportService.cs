@@ -146,6 +146,7 @@ public sealed class KinsImportService : IKinsImportService
                     var header = currentHeader.Value;
                     var holdingName = $"{header.From}-{header.To}";
                     var record = FindRecord(project, holdingName);
+                    var isNewRecord = record is null;
                     if (record is null)
                     {
                         record = project.CreateNewRecord();
@@ -157,7 +158,11 @@ public sealed class KinsImportService : IKinsImportService
                     }
 
                     found++;
-                    ApplyImportedField(record, "Haltungsname", holdingName);
+                    // Haltungsname ist der Schluessel: bei einem bestehenden (auch per Grenz-Praefix
+                    // gefundenen) Record NICHT ueberschreiben, sonst wird ein breiterer Name wie
+                    // "100-200-1" still auf den KINS-Namen "100-200" verkuerzt. Nur bei Neuanlage setzen.
+                    if (isNewRecord)
+                        ApplyImportedField(record, "Haltungsname", holdingName);
                     ApplyImportedField(record, "Nutzungsart", header.Usage);
                     ApplyImportedField(record, "Rohrmaterial", header.Material);
                     if (!string.IsNullOrWhiteSpace(header.Diameter))
@@ -472,6 +477,10 @@ public sealed class KinsImportService : IKinsImportService
     {
         var normalized = (value ?? string.Empty).Trim();
         var before = (record.GetFieldValue(fieldName) ?? string.Empty).Trim();
+        // Ein leerer KINS-Importwert (z. B. fehlendes Material im Header) darf einen bereits
+        // gefuellten Bestandswert NICHT leer wischen. Nur leer->leer und leer->neu sind erlaubt.
+        if (normalized.Length == 0 && before.Length > 0)
+            return false;
         if (string.Equals(before, normalized, StringComparison.Ordinal))
             return false;
 

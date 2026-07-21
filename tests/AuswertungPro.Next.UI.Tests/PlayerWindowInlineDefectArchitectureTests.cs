@@ -126,20 +126,24 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_coding_event_list_item_coloring_lives_in_list_items_partial()
+    public void PlayerWindow_coding_event_list_item_coloring_lives_in_visual_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var detailPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
-        var listItemsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs");
+        var oldListItemsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs");
+        var visualControllerPath = Path.Combine(uiRoot, "Player", "CodingEventListVisualController.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListItemColorizeWorkflow.cs");
 
-        Assert.True(File.Exists(listItemsPath), "Event-ListBox-Einfaerbung soll aus dem Inline-Detail-Partial heraus.");
+        Assert.True(File.Exists(visualControllerPath), "Event-ListBox-Einfaerbung soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(workflowPath), "Event-ListBox-Einfaerbungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.False(File.Exists(oldListItemsPath), "Das alte ListItems-Partial muss entfernt bleiben.");
 
         var detail = File.ReadAllText(detailPath);
-        var listItems = File.ReadAllText(listItemsPath);
+        var visualController = File.ReadAllText(visualControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         AssertNoForbiddenTokens(
@@ -147,12 +151,16 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
             "private void ColorizeCodingEventListItems",
             "\"ZoneDot\"",
             "\"TxtConfidence\"");
-        Assert.Contains("private void ColorizeCodingEventListItems", listItems);
-        Assert.Contains("CodingEventListItemColorizeWorkflow.Execute", listItems);
-        AssertNoForbiddenTokens(listItems, "for (int i = 0; i < LstCodingEvents.Items.Count; i++)");
-        Assert.Contains("\"ZoneDot\"", listItems);
-        Assert.Contains("\"TxtConfidence\"", listItems);
-        Assert.Contains("RefreshHighlights: ApplyCodingProtocolMatchListHighlights", listItems);
+        Assert.Contains("public void ColorizeCodingEvents", visualController);
+        Assert.Contains("CodingEventListItemColorizeWorkflow.Execute", visualController);
+        AssertNoForbiddenTokens(visualController, "for (int i = 0; i < LstCodingEvents.Items.Count; i++)");
+        Assert.Contains("\"ZoneDot\"", visualController);
+        Assert.Contains("\"TxtConfidence\"", visualController);
+        Assert.Contains("\"TxtStatusIcon\"", visualController);
+        Assert.Contains("RefreshHighlights: ApplyProtocolMatchHighlights", visualController);
+        Assert.Contains(
+            "ColorizeListItems: _codingEventListVisualController.ColorizeCodingEvents",
+            windowRoot);
         Assert.Contains("actions.TryApplyItem(i)", workflow);
         Assert.Contains("actions.RefreshHighlights()", workflow);
     }

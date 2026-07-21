@@ -969,14 +969,6 @@
                                         <TextBlock Text="Aktualisieren"/>
                                     </StackPanel>
                                 </Button>
-                                <Button x:Name="BtnTeacherAddFewShot"
-                                        Click="TeacherAddToFewShot_Click" Margin="0,0,8,0"
-                                        Padding="8,4" FontSize="12" IsEnabled="False">
-                                    <StackPanel Orientation="Horizontal">
-                                        <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="Zu FewShot"/>
-                                    </StackPanel>
-                                </Button>
                                 <Button x:Name="BtnTeacherDelete"
                                         Click="TeacherDelete_Click"
                                         Padding="8,4" FontSize="12" IsEnabled="False"

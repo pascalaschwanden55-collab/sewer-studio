@@ -561,7 +561,6 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Glyph=\"&#xE896;\"", training);
         Assert.Contains("Text=\"Box ziehen\"", training);
         Assert.Contains("Text=\"SAM segmentieren\"", training);
-        Assert.Contains("Glyph=\"&#xE710;\"", training);
         Assert.DoesNotContain("Text=\"&#xE736;\"", training);
         // Die Stepper-Punkte waren rohe Ellipsen; seit dem KI-Puls steckt die runde Form im
         // NeuralPulseDot. Die Absicht bleibt: eine Formsprache, keine Punkt-Textzeichen.

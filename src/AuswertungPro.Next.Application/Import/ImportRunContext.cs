@@ -11,19 +11,22 @@ public sealed class ImportRunContext
     public ImportRunLog Log { get; }
     public bool DryRun { get; }
     public object? CollectionLock { get; }
+    public IImportFileStagingSession? FileStaging { get; }
 
     public ImportRunContext(
         CancellationToken cancellationToken,
         IProgress<ImportProgress>? progress,
         ImportRunLog log,
         bool dryRun = false,
-        object? collectionLock = null)
+        object? collectionLock = null,
+        IImportFileStagingSession? fileStaging = null)
     {
         CancellationToken = cancellationToken;
         Progress = progress;
         Log = log ?? throw new ArgumentNullException(nameof(log));
         DryRun = dryRun;
         CollectionLock = collectionLock;
+        FileStaging = fileStaging;
     }
 
     private ImportRunContext()
@@ -32,6 +35,7 @@ public sealed class ImportRunContext
         Progress = null;
         Log = new ImportRunLog();
         DryRun = false;
+        FileStaging = null;
     }
 
     public static ImportRunContext Default { get; } = new();

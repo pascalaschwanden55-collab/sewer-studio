@@ -7,6 +7,9 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+// Setzt globale Umgebungsvariablen — muss in dieselbe nicht-parallele Gruppe wie die
+// uebrigen env-setzenden Tests, sonst Race beim gemeinsamen Backup/Restore.
+[Collection("EnvironmentVars")]
 public sealed class AiSettingsTests
 {
     [Fact]

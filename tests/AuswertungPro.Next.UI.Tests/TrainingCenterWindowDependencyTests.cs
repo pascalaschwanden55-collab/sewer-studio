@@ -26,7 +26,11 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.Contains("Vm.CancelOutstandingOperations();", source);
         Assert.Contains("_lifetime.Dispose();", source);
         Assert.Contains("catch (OperationCanceledException) when (ct.IsCancellationRequested)", source);
-        Assert.Contains("ResolveReviewPipeDiameterMm(),\n                ct", source.Replace("\r\n", "\n"));
+        Assert.Contains("_trainingServices.GetReviewSamWorkflow().ExecuteAsync", source);
+        Assert.DoesNotContain("File.Exists(card.FramePath)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateTrainingSegmentationMask", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildSamStatus", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new AppSettingsAiSettingsProvider", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -48,8 +52,7 @@ public sealed class TrainingCenterWindowDependencyTests
             typeof(TrainingCenterImportService),
             typeof(IKnowledgeBaseDiagnosticsRunner),
             typeof(Func<ReviewQueueService>),
-            typeof(Func<TrainingReviewSamSegmentationService>),
-            typeof(Func<FewShotExampleStore>)
+            typeof(Func<TrainingReviewSamSegmentationService>)
         ]);
 
         Assert.NotNull(compatibilityConstructor);
@@ -69,7 +72,6 @@ public sealed class TrainingCenterWindowDependencyTests
         var previewFrames = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingPreviewFrames));
         var review = typeof(ServiceProvider).GetProperty(nameof(ServiceProvider.TrainingReviewQueue));
         var samFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateTrainingReviewSam));
-        var fewShotFactory = typeof(ServiceProvider).GetMethod(nameof(ServiceProvider.CreateFewShotStore));
 
         Assert.NotNull(store);
         Assert.Equal(typeof(TrainingCenterStore), store.PropertyType);
@@ -99,7 +101,6 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.Equal(typeof(ReviewQueueService), review.PropertyType);
         Assert.False(review.CanWrite);
         Assert.Equal(typeof(TrainingReviewSamSegmentationService), samFactory?.ReturnType);
-        Assert.Equal(typeof(FewShotExampleStore), fewShotFactory?.ReturnType);
     }
 
     [Fact]
@@ -126,10 +127,9 @@ public sealed class TrainingCenterWindowDependencyTests
     {
         var reviewCount = 0;
         var samCount = 0;
-        var fewShotCount = 0;
+        var diameterCount = 0;
         var review = new ReviewQueueService();
         var sam = new TrainingReviewSamSegmentationService(new UnusedSamClient());
-        var fewShot = new FewShotExampleStore();
         var services = new TrainingCenterLazyServices(
             createReviewQueue: () =>
             {
@@ -141,26 +141,48 @@ public sealed class TrainingCenterWindowDependencyTests
                 samCount++;
                 return sam;
             },
-            createFewShotStore: () =>
+            resolveReviewPipeDiameterMm: () =>
             {
-                fewShotCount++;
-                return fewShot;
+                diameterCount++;
+                return 300;
             });
 
         Assert.Equal(0, reviewCount);
         Assert.Equal(0, samCount);
-        Assert.Equal(0, fewShotCount);
+        Assert.Equal(0, diameterCount);
 
         Assert.Same(review, services.GetReviewQueue());
         Assert.Same(review, services.GetReviewQueue());
+        Assert.Same(services.GetReviewSamWorkflow(), services.GetReviewSamWorkflow());
+        Assert.Equal(0, samCount);
+        Assert.Equal(0, diameterCount);
         Assert.Same(sam, services.GetReviewSam());
         Assert.Same(sam, services.GetReviewSam());
-        Assert.Same(fewShot, services.CreateFewShotStore());
-        Assert.Same(fewShot, services.CreateFewShotStore());
 
         Assert.Equal(1, reviewCount);
         Assert.Equal(1, samCount);
-        Assert.Equal(2, fewShotCount);
+        Assert.Equal(0, diameterCount);
+    }
+
+    [Fact]
+    public void Alter_Bild_FewShot_Weg_bleibt_entfernt_aber_in_der_Sicherung_erhalten()
+    {
+        Assert.False(File.Exists(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "FewShotExampleStore.cs")));
+        Assert.False(File.Exists(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "FewShotExampleBuilder.cs")));
+        Assert.False(File.Exists(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "FewShotExampleClassifier.cs")));
+
+        var xaml = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingCenterWindow.xaml"));
+        Assert.DoesNotContain("BtnTeacherAddFewShot", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Zu FewShot", xaml, StringComparison.Ordinal);
+
+        var backupCatalog = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services", "KnowledgeBackupFileCatalog.cs"));
+        Assert.Contains("\"fewshot_examples.json\"", backupCatalog, StringComparison.Ordinal);
+        Assert.Contains("\"fewshot_images\"", backupCatalog, StringComparison.Ordinal);
     }
 
     private sealed class UnusedSamClient : ITrainingReviewSamClient

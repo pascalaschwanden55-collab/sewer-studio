@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +12,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.PhotoMeasurement;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -25,6 +25,7 @@ public partial class PhotoMeasurementWindow : Window
     // --- Zustand ---
     private readonly string _photoPath;
     private readonly OverlayToolService _overlayService;
+    private readonly IPhotoMeasurementOverlayExporter _overlayExporter;
     private PipeCalibration _calibration;
     private PhotoTool _activeTool = PhotoTool.None;
     private LevelMode _activeLevelMode = LevelMode.Water;
@@ -75,6 +76,7 @@ public partial class PhotoMeasurementWindow : Window
                                    OverlayToolService? overlayService = null)
     {
         InitializeComponent();
+        _overlayExporter = new PhotoMeasurementOverlayExporter();
 
         _photoPath = photoPath;
         _calibration = calibration ?? new PipeCalibration
@@ -591,28 +593,18 @@ public partial class PhotoMeasurementWindow : Window
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
     {
-        string? overlayPath = null;
-        if (_currentGeometry != null)
-        {
-            try
-            {
-                overlayPath = BurnOverlayToPhoto();
-            }
-            catch (Exception ex)
-            {
-                // Overlay-Export fehlgeschlagen → trotzdem Ergebnis zurueckgeben (ohne Overlay-Foto)
-                TxtStatus.Text = "Overlay-Export fehlgeschlagen: "
-                                 + UserError.DescribeAndReport(ex, "Messfoto-Overlay exportieren");
-            }
-        }
-
-        Result = new PhotoMeasurementResult
-        {
-            Geometry = _currentGeometry,
-            OverlayPhotoPath = overlayPath,
-            Confirmed = true,
-            UpdatedCalibration = _calibration
-        };
+        Result = PhotoMeasurementCompletionWorkflow.Execute(
+            new PhotoMeasurementCompletionRequest(_currentGeometry, _calibration),
+            new PhotoMeasurementCompletionActions(
+                ExportOverlayPhoto: () => _overlayExporter.Export(
+                    PhotoImage.Source as BitmapSource,
+                    OverlayCanvas,
+                    GetImageRenderedRect(PhotoImage),
+                    _photoPath),
+                DescribeExportError: ex => UserError.DescribeAndReport(
+                    ex,
+                    "Messfoto-Overlay exportieren"),
+                ShowStatus: status => TxtStatus.Text = status));
         DialogResult = true;
         Close();
     }

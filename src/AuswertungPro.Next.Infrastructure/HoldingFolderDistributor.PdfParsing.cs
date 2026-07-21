@@ -763,7 +763,26 @@ public static partial class HoldingFolderDistributor
             builder.AddPage(doc, pageNumber);
 
         var bytes = builder.Build();
-        File.WriteAllBytes(destPdfPath, bytes);
+
+        // Atomar schreiben: erst in eine Temp-Datei im Zielordner (gleiches Volume -> File.Move ist
+        // atomar), dann verschieben. Ein Absturz mitten im direkten Schreiben hinterliess sonst ein
+        // halbes PDF unter dem finalen Namen (der Dichtheits-Multi-Split zielt direkt in den Haltungsordner).
+        var dir = Path.GetDirectoryName(destPdfPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+        var tempPath = destPdfPath + $".{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllBytes(tempPath, bytes);
+            File.Move(tempPath, destPdfPath, overwrite: true);
+        }
+        catch
+        {
+            BestEffort.Try(
+                () => { if (File.Exists(tempPath)) File.Delete(tempPath); },
+                "PDF-Seitensplit Temp-Datei loeschen");
+            throw;
+        }
     }
 
 
@@ -840,70 +859,11 @@ public static partial class HoldingFolderDistributor
     public static (int Rewritten, int Skipped, int Failed) RewriteHoldingInPdfFiles(
         IReadOnlyList<string> pdfPaths, string oldHolding, string newHolding)
     {
-        if (pdfPaths is null || pdfPaths.Count == 0)
-            return (0, 0, 0);
-
-        if (!PdfTextLayerRewriter.CanRewrite(oldHolding, newHolding))
-            return (0, 0, 0);
-
-        int rewritten = 0, skipped = 0, failed = 0;
-        foreach (var pdf in pdfPaths)
-        {
-            if (string.IsNullOrWhiteSpace(pdf) || !File.Exists(pdf))
-            {
-                skipped++;
-                continue;
-            }
-
-            string? temporaryPdf = null;
-            try
-            {
-                var res = PdfTextLayerRewriter.TryRewriteHoldingNumber(pdf, oldHolding, newHolding);
-                if (!res.Success)
-                {
-                    failed++;
-                    continue;
-                }
-
-                if (!res.Corrected)
-                {
-                    skipped++; // kein Text-Treffer (z.B. Bild-/Scan-PDF)
-                    continue;
-                }
-
-                temporaryPdf = res.OutputPdfPath;
-                if (string.IsNullOrWhiteSpace(temporaryPdf)
-                    || string.Equals(temporaryPdf, pdf, StringComparison.OrdinalIgnoreCase)
-                    || !File.Exists(temporaryPdf))
-                {
-                    failed++;
-                    continue;
-                }
-
-                AtomicPdfFileReplacer.ReplaceValidated(temporaryPdf, pdf);
-                rewritten++;
-            }
-            catch
-            {
-                failed++;
-            }
-            finally
-            {
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(temporaryPdf)
-                        && !string.Equals(temporaryPdf, pdf, StringComparison.OrdinalIgnoreCase)
-                        && File.Exists(temporaryPdf))
-                        File.Delete(temporaryPdf);
-                }
-                catch
-                {
-                    // Best-effort: Ein Aufraeumfehler darf die Original-PDF nicht gefaehrden.
-                }
-            }
-        }
-
-        return (rewritten, skipped, failed);
+        var result = PdfTextLayerRewriter.Current.RewriteIdentifierInPlace(
+            pdfPaths,
+            oldHolding,
+            newHolding);
+        return (result.Rewritten, result.Skipped, result.Failed);
     }
 
 

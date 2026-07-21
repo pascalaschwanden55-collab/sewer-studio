@@ -37,6 +37,9 @@ public sealed class LiveDetectionTrainingExportPlanner
     public int GetClassId(string code)
         => _classMap.GetClassId(code);
 
+    public int GetOrAddClassId(string code)
+        => _classMap.GetOrAddClassId(code);
+
     [Obsolete("Klassenkarte direkt ueber den Konstruktor uebergeben.")]
     public static LiveDetectionTrainingExportPlan BuildAccepted(
         LiveFrameFinding finding,
@@ -61,7 +64,7 @@ public sealed class LiveDetectionTrainingExportPlanner
         string baseName)
         => new(
             code,
-            _classMap.GetClassId(code),
+            _classMap.GetOrAddClassId(code),
             baseName,
             LiveDetectionGeometryMapper.BBoxFromClockPosition(finding));
 }

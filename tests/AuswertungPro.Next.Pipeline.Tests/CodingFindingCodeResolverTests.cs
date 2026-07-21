@@ -5,8 +5,14 @@ using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Collection(VsaCodeResolverTestCollection.Name)]
 public sealed class CodingFindingCodeResolverTests
 {
+    public CodingFindingCodeResolverTests()
+    {
+        VsaResolverTestCatalog.ConfigureDefault();
+    }
+
     [Fact]
     public void Resolve_uses_normalized_hint_and_refines_with_import_event()
     {
@@ -48,6 +54,17 @@ public sealed class CodingFindingCodeResolverTests
         var code = CodingFindingCodeResolver.Resolve(finding, currentMeter: 7.0, importEvents: []);
 
         Assert.Null(code);
+    }
+
+    [Fact]
+    public void Resolve_maps_yolo_bbd_class_to_persistable_bbd_subcode()
+    {
+        var finding = Finding(label: "BBD_boden", codeHint: null);
+
+        var code = CodingFindingCodeResolver.Resolve(finding, currentMeter: 7.0, importEvents: []);
+
+        Assert.Equal("BBDZ", code);
+        Assert.NotEqual("BBD", code);
     }
 
     private static CodingEvent Event(string code, double meter)

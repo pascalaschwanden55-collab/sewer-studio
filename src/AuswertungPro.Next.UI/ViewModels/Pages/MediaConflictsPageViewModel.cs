@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -109,6 +108,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     private readonly MediaConflictCenterService _service;
     private readonly Action<string> _setStatus;
     private readonly Action<string> _playVideo;
+    private readonly ISafeShellOpenService _shellOpen;
+    private readonly IExplorerRevealService _explorerReveal;
 
     [ObservableProperty] private MediaConflictRowViewModel? _selectedConflict;
     [ObservableProperty] private string _summaryText = "";
@@ -148,7 +149,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             dialogs: sp.Dialogs,
             service: sp.MediaConflictCenter,
             setStatus: shell.SetStatus,
-            playVideo: MediaConflictVideoLauncher.Create(sp))
+            playVideo: MediaConflictVideoLauncher.Create(sp),
+            shellOpen: sp.ShellOpen,
+            explorerReveal: sp.ExplorerReveal)
     {
     }
 
@@ -160,7 +163,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         IDialogService dialogs,
         MediaConflictCenterService service,
         Action<string> setStatus,
-        Action<string> playVideo)
+        Action<string> playVideo,
+        ISafeShellOpenService shellOpen,
+        IExplorerRevealService explorerReveal)
     {
         _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -170,6 +175,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _setStatus = setStatus ?? throw new ArgumentNullException(nameof(setStatus));
         _playVideo = playVideo ?? throw new ArgumentNullException(nameof(playVideo));
+        _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
+        _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
 
         RefreshCommand = new RelayCommand(Refresh);
         ResolveFromCandidateCommand = new RelayCommand(ResolveFromCandidate);
@@ -427,51 +434,27 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         }
     }
 
-    private static bool TryOpenWithShell(string? path)
-    {
-        return AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out _);
-    }
+    private bool TryOpenWithShell(string? path)
+        => _shellOpen.TryOpen(path, out _);
 
-    private static void TryOpenFolder(string folder)
+    private void TryOpenFolder(string? folder)
+        => _shellOpen.TryOpen(folder, out _);
+
+    private void TryOpenSelectInExplorer(string? path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        if (_explorerReveal.TryReveal(path, out _))
+            return;
+
         try
         {
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
-                return;
-
-            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(folder, out _);
+            _explorerReveal.TryReveal(Path.GetDirectoryName(path), out _);
         }
-        catch
+        catch (Exception)
         {
-            // Ignore UI helper errors.
-        }
-    }
-
-    private static void TryOpenSelectInExplorer(string? path)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return;
-
-            if (File.Exists(path))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{path}\"",
-                    UseShellExecute = false
-                });
-                return;
-            }
-
-            var dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
-                TryOpenFolder(dir);
-        }
-        catch
-        {
-            // Ignore UI helper errors.
+            // Ein ungueltiger Fremdpfad darf die Seite nicht unbedienbar machen.
         }
     }
 }

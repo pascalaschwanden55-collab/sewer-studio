@@ -36,7 +36,17 @@ public sealed record TrainingReviewSamResult(
     SamResponse Response,
     IReadOnlyList<MaskQuantificationService.QuantifiedMask> QuantifiedMasks);
 
-public sealed class TrainingReviewSamSegmentationService
+public interface ITrainingReviewSamSegmentationService
+{
+    Task<TrainingReviewSamResult> SegmentFrameFileAsync(
+        string framePath,
+        BoundingBox box,
+        string code,
+        int? pipeDiameterMm = null,
+        CancellationToken ct = default);
+}
+
+public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSegmentationService
 {
     private const int DefaultPipeDiameterMm = 300;
 

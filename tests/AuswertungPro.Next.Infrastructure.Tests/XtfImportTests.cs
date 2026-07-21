@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -29,6 +30,41 @@ public sealed class XtfImportTests
             Assert.True(File.Exists(Path.Combine(archiveDir, "test.xml")));
             Assert.True(File.Exists(Path.Combine(archiveDir, "alt.xtf")));
             Assert.False(File.Exists(Path.Combine(legacyDir, "alt.xtf")));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Vorschau_SchreibtUndMigriertKeinRohdatenarchiv()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"xtf-preview-archive-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var archiveDir = Path.Combine(root, "archive");
+        var legacyDir = Path.Combine(root, "legacy");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(legacyDir);
+        var source = Path.Combine(sourceDir, "preview.xtf");
+        var legacyFile = Path.Combine(legacyDir, "alt.xtf");
+        File.WriteAllText(source, "<root />");
+        File.WriteAllText(legacyFile, "alt");
+
+        try
+        {
+            var context = new ImportRunContext(
+                CancellationToken.None,
+                progress: null,
+                log: new ImportRunLog(),
+                dryRun: true);
+            var service = new LegacyXtfImportService(archiveDir, legacyDir);
+
+            service.ImportXtfFiles([source], new Project(), context);
+
+            Assert.False(Directory.Exists(archiveDir));
+            Assert.True(File.Exists(source));
+            Assert.True(File.Exists(legacyFile));
         }
         finally
         {

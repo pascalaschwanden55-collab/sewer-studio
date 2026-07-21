@@ -56,6 +56,9 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var segmentationFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionMarkSegmentationControllerFactory.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var oldSegmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
@@ -71,6 +74,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             .ToArray();
 
         Assert.False(File.Exists(oldSegmentationPath), "SAM-Segmentierung darf nicht als PlayerWindow-Partial zurueckkehren.");
+        Assert.True(File.Exists(segmentationFactoryPath), "SAM-Segmentierungsverdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(segmentationControllerPath), "SAM-Segmentierung und Maskensteuerung sollen in einem eigenen Controller liegen.");
         Assert.True(File.Exists(maskOverlayControllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
         Assert.True(File.Exists(segmentWorkflowPath), "SAM-Segmentierungsentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -79,6 +83,12 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Equal(typeof(ILiveDetectionMarkSegmentationController), controllerField.FieldType);
 
         var windowRoot = File.ReadAllText(windowRootPath);
+        var segmentationFactory = File.ReadAllText(segmentationFactoryPath);
+        var playerWindowSource = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText));
         var marking = File.ReadAllText(markingPath);
         var segmentationController = File.ReadAllText(segmentationControllerPath);
         var maskOverlayController = File.Exists(maskOverlayControllerPath) ? File.ReadAllText(maskOverlayControllerPath) : "";
@@ -97,18 +107,63 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync", segmentationController);
         Assert.Contains("LiveDetectionMarkSamMaskRenderWorkflow.Execute", segmentationController);
         Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentationController);
-        Assert.Contains("CodingSamMaskOverlayController.RenderMasks", windowRoot);
+        Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentationFactory);
         AssertNoForbiddenTokens(
             segmentationController,
             "var result = await boxSegmentation.SegmentBoxAsync",
             "new Infrastructure.Ai.Pipeline.SamResponse",
             "Ai.Pipeline.SamMaskRenderer.RenderMasks");
         Assert.Contains("SamMaskRenderer.RenderMasks", maskOverlayController);
-        Assert.Contains("CodingBendMarkerOverlayController.Show", windowRoot);
+        Assert.Contains("CodingBendMarkerOverlayController.Show", segmentationFactory);
         Assert.Contains("actions.SegmentBoxAsync", segmentWorkflow);
         Assert.Contains("actions.ApplyQuantification", segmentWorkflow);
         Assert.Contains("actions.RenderMasks", renderWorkflow);
         Assert.Contains("BendMarkerShown", renderWorkflow);
+
+        var compactWindowRoot = string.Concat(windowRoot.Where(character => !char.IsWhiteSpace(character)));
+        var compactFactory = string.Concat(segmentationFactory.Where(character => !char.IsWhiteSpace(character)));
+        Assert.Equal(
+            1,
+            CountOccurrences(
+                playerWindowSource,
+                "PlayerWindowLiveDetectionMarkSegmentationControllerFactory.Create("));
+        Assert.Contains(
+            "_liveDetectionMarkSegmentationController=PlayerWindowLiveDetectionMarkSegmentationControllerFactory.Create(",
+            compactWindowRoot);
+        Assert.DoesNotContain("new LiveDetectionMarkSegmentationController", windowRoot);
+        Assert.DoesNotContain("LiveDetectionMarkSegmentationControllerBindings", windowRoot);
+        Assert.Equal(
+            1,
+            CountOccurrences(segmentationFactory, "new LiveDetectionMarkSegmentationController("));
+        foreach (var expectedBinding in new[]
+                 {
+                     "AiController:_codingAiRuntimeOwner.Controller",
+                     "OverlayToolHost:_codingOverlayToolHost",
+                     "OverlayCanvas:CodingOverlayCanvas",
+                     "ResolveContentRect:GetCodingContentRect"
+                 })
+        {
+            Assert.Contains(expectedBinding, compactWindowRoot);
+        }
+        Assert.Contains("dependencies.AiController.BoxSegmentation", segmentationFactory);
+        Assert.Contains("dependencies.OverlayToolHost.Calibration", segmentationFactory);
+        Assert.Contains(
+            "CodingBendMarkerOverlayController.Show(dependencies.OverlayCanvas,",
+            compactFactory);
+        Assert.Contains(
+            "CodingSamMaskOverlayController.RenderMasks(dependencies.OverlayCanvas,",
+            compactFactory);
+        Assert.Contains("PlayerTrace.WriteLine", segmentationFactory);
+
+        var overlayHostIndex = compactWindowRoot.IndexOf(
+            "_codingOverlayToolHost=codingSessionRuntime.OverlayToolHost;",
+            StringComparison.Ordinal);
+        var segmentationFactoryIndex = compactWindowRoot.IndexOf(
+            "_liveDetectionMarkSegmentationController=PlayerWindowLiveDetectionMarkSegmentationControllerFactory.Create(",
+            StringComparison.Ordinal);
+        Assert.True(
+            overlayHostIndex >= 0 && overlayHostIndex < segmentationFactoryIndex,
+            "Der Segmentierungs-Controller muss nach seinem Overlay-Host entstehen.");
     }
 
     [Fact]
@@ -362,7 +417,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_mark_tool_wiring_lives_in_controller()
+    public void PlayerWindow_mark_tool_wiring_lives_in_controller_factory()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
@@ -373,6 +428,12 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkToolController.cs");
+        var controllerFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionMarkToolControllerFactory.cs");
+        var eingabemarkerFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var liveDetectionControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
         var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkOverlayReadyWorkflow.cs");
@@ -385,7 +446,9 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             .ToArray();
 
         Assert.False(File.Exists(markToolsPath), "Markierwerkzeug-Wiring darf nicht als PlayerWindow-Partial zurueckkehren.");
-        Assert.True(File.Exists(controllerPath), "Markierwerkzeug-Wiring soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(controllerPath), "Markierwerkzeug-Ablauf soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(controllerFactoryPath), "Markierwerkzeug-Controller soll ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
+        Assert.True(File.Exists(eingabemarkerFactoryPath), "Der Eingabemarker-Verbraucher soll ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
         Assert.True(File.Exists(controlsPath), "Markierwerkzeug-UI-Zustand soll in einem Player-Controller gekapselt sein.");
         Assert.True(File.Exists(activationWorkflowPath), "Markierwerkzeug-Aktivierungsentscheidung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(overlayReadyWorkflowPath), "Markier-Overlay-Bereitstellung soll ausserhalb von PlayerWindow entschieden werden.");
@@ -397,9 +460,13 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var state = File.ReadAllText(statePath);
         var controls = File.ReadAllText(controlsPath);
         var controller = File.ReadAllText(controllerPath);
+        var controllerFactory = File.ReadAllText(controllerFactoryPath);
+        var eingabemarkerFactory = File.ReadAllText(eingabemarkerFactoryPath);
         var liveDetectionController = File.ReadAllText(liveDetectionControllerPath);
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var overlayReadyWorkflow = File.Exists(overlayReadyWorkflowPath) ? File.ReadAllText(overlayReadyWorkflowPath) : "";
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         AssertNoForbiddenTokens(
             marking,
@@ -438,15 +505,49 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             "private bool _isManualMarkMode");
         Assert.Contains("OverlayToolType MarkToolType", liveDetectionController);
         Assert.Contains("bool IsManualMarkMode", liveDetectionController);
-        Assert.Contains("new LiveDetectionMarkToolController", windowRoot);
-        Assert.Contains("_markToolControls.BeginActivation", windowRoot);
-        Assert.Contains("_markToolControls.ActivatePointTool", windowRoot);
-        Assert.Contains("_markToolControls.OpenCodingOverlay", windowRoot);
-        Assert.Contains("_markToolControls.DeactivateDetectionSide", windowRoot);
+        Assert.Contains("PlayerWindowLiveDetectionMarkToolControllerFactory.Create", windowRoot);
+        Assert.DoesNotContain("new LiveDetectionMarkToolController", windowRoot);
+        Assert.DoesNotContain("LiveDetectionMarkToolControllerBindings", windowRoot);
+        Assert.Contains("new LiveDetectionMarkToolController", controllerFactory);
+        Assert.Contains("dependencies.MarkToolControls.BeginActivation", controllerFactory);
+        Assert.Contains("dependencies.MarkToolControls.ActivatePointTool", controllerFactory);
+        Assert.Contains("dependencies.MarkToolControls.OpenCodingOverlay", controllerFactory);
+        Assert.Contains("dependencies.MarkToolControls.DeactivateDetectionSide", controllerFactory);
+        Assert.Contains(
+            "EnsureMarkOverlayReady: dependencies.MarkToolController.EnsureOverlayReady",
+            eingabemarkerFactory);
+        Assert.Contains(
+            "MarkToolController:_liveDetectionMarkToolController",
+            compactWindowRoot);
+        var expectedFactoryBindings = new[]
+        {
+            "MarkToolControls:_markToolControls",
+            "DetectionController:_liveDetectionController",
+            "PlaybackControlHost:_playerPlaybackControlHost",
+            "RuntimeStates:_codingRuntimeStates",
+            "SchemaStates:_codingSchemaStates",
+            "SessionRuntime:codingSessionRuntime",
+            "ResolveVideoPath:()=>_playbackContext.VideoPath",
+            "ResolveSettings:()=>_protocolContext.Settings",
+            "ResolveTrainingSamples:()=>_protocolContext.TrainingSamples",
+            "UpdateCodingOverlayViewport:UpdateCodingOverlayViewport"
+        };
+        foreach (var expectedFactoryBinding in expectedFactoryBindings)
+            Assert.Contains(expectedFactoryBinding, compactWindowRoot);
+        var factoryCreationIndex = compactWindowRoot.IndexOf(
+            "_liveDetectionMarkToolController=PlayerWindowLiveDetectionMarkToolControllerFactory.Create(",
+            StringComparison.Ordinal);
+        var inputControllerIndex = compactWindowRoot.IndexOf(
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.Create(",
+            StringComparison.Ordinal);
+        Assert.True(
+            factoryCreationIndex >= 0
+            && factoryCreationIndex < inputControllerIndex,
+            "Das Markierwerkzeug muss vor seinem Eingabemarker-Verbraucher entstehen.");
         Assert.Contains("OverlayToolType.Point", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("CodingSessionStateFactory.Create", overlayReadyWorkflow);
-        Assert.Contains("new LiveDetectionMarkOverlayReadyStateRequest", windowRoot);
+        Assert.Contains("new LiveDetectionMarkOverlayReadyStateRequest", controllerFactory);
         Assert.DoesNotContain("CodingSessionStateFactory.Create", windowRoot);
         Assert.Contains("if (request.HasOverlayService && request.HasViewModel)", overlayReadyWorkflow);
         Assert.Contains("actions.CreateState()", overlayReadyWorkflow);

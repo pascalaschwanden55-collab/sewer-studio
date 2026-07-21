@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import;
 using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.Infrastructure.Media;
@@ -12,10 +14,25 @@ namespace AuswertungPro.Next.Infrastructure.Media;
 /// <summary>
 /// Dateibasierte Such- und Pfadaufloesung fuer Inspektionsprotokoll-PDFs.
 /// Aus DataPageViewModel extrahiert: keine ViewModel-Abhaengigkeit mehr —
-/// alle Umgebungswerte (Einstellungen, gespeicherte PDF-Liste) kommen als Parameter.
+/// alle Umgebungswerte kommen als Parameter; gespeicherte Importpfade werden ueber
+/// den gemeinsamen IStoredImportFilePathResolver aufgeloest.
 /// </summary>
 public sealed class InspectionProtocolFileLocator : IInspectionProtocolFileLocator
 {
+    private const string StoredPdfFilesMetadataKey = "PDF_StoredFiles";
+    private readonly IStoredImportFilePathResolver _storedImportFilePaths;
+
+    public InspectionProtocolFileLocator()
+        : this(new StoredImportFilePathResolver())
+    {
+    }
+
+    public InspectionProtocolFileLocator(IStoredImportFilePathResolver storedImportFilePaths)
+    {
+        _storedImportFilePaths = storedImportFilePaths
+            ?? throw new ArgumentNullException(nameof(storedImportFilePaths));
+    }
+
     /// <summary>
     /// Loest einen Roh-Pfad zu einer existierenden Datei auf. Relative Pfade werden
     /// gegen den Ordner des Projekts (<paramref name="projectPath"/>) aufgeloest.
@@ -100,10 +117,14 @@ public sealed class InspectionProtocolFileLocator : IInspectionProtocolFileLocat
             if (!string.IsNullOrWhiteSpace(fromImportFiles))
                 return fromImportFiles;
 
-            var fromStored = TryFindProtocolFromStoredPdfFiles(storedFilesRaw, projectDir, holdingTokens);
-            if (!string.IsNullOrWhiteSpace(fromStored))
-                return fromStored;
         }
+
+        var fromStored = TryFindProtocolFromStoredPdfFiles(
+            storedFilesRaw,
+            projectPath,
+            holdingTokens);
+        if (!string.IsNullOrWhiteSpace(fromStored))
+            return fromStored;
 
         return null;
     }
@@ -208,14 +229,6 @@ public sealed class InspectionProtocolFileLocator : IInspectionProtocolFileLocat
     private static string? PickBestPdfCandidate(IEnumerable<string> candidates, IReadOnlyList<string> holdingTokens)
         => PdfCandidateSelector.PickBest(candidates, holdingTokens);
 
-    /// <summary>
-    /// Parst die in den Projekt-Metadaten gespeicherte PDF-Liste (JSON-Array; faellt
-    /// auf Semikolon-Trennung zurueck).
-    /// Delegiert an <see cref="PdfCandidateSelector.ParseStoredPathList"/>.
-    /// </summary>
-    private static IReadOnlyList<string> ParseStoredPathList(string raw)
-        => PdfCandidateSelector.ParseStoredPathList(raw);
-
     private static string? TryResolveProtocolFromLink(string? resolvedLink, IReadOnlyList<string> holdingTokens)
     {
         if (string.IsNullOrWhiteSpace(resolvedLink))
@@ -274,21 +287,26 @@ public sealed class InspectionProtocolFileLocator : IInspectionProtocolFileLocat
         return TryFindPdfInDirectory(rootDir, holdingTokens, SearchOption.AllDirectories);
     }
 
-    private static string? TryFindProtocolFromStoredPdfFiles(string? storedFilesRaw, string projectDir, IReadOnlyList<string> holdingTokens)
+    private string? TryFindProtocolFromStoredPdfFiles(
+        string? storedFilesRaw,
+        string? projectPath,
+        IReadOnlyList<string> holdingTokens)
     {
         if (string.IsNullOrWhiteSpace(storedFilesRaw))
             return null;
 
-        var candidates = new List<string>();
-        foreach (var stored in ParseStoredPathList(storedFilesRaw))
+        var metadata = new Dictionary<string, string>
         {
-            var resolved = TryResolveStoredPath(projectDir, stored);
-            if (string.IsNullOrWhiteSpace(resolved))
-                continue;
-            if (!string.Equals(Path.GetExtension(resolved), ".pdf", StringComparison.OrdinalIgnoreCase))
-                continue;
-            candidates.Add(resolved);
-        }
+            [StoredPdfFilesMetadataKey] = storedFilesRaw
+        };
+        var candidates = _storedImportFilePaths.ResolveExistingFiles(
+                metadata,
+                StoredPdfFilesMetadataKey,
+                projectPath)
+            .Where(path => string.Equals(
+                Path.GetExtension(path),
+                ".pdf",
+                StringComparison.OrdinalIgnoreCase));
 
         return PickBestPdfCandidate(candidates, holdingTokens);
     }
@@ -446,25 +464,6 @@ public sealed class InspectionProtocolFileLocator : IInspectionProtocolFileLocat
         catch
         {
             return Array.Empty<string>();
-        }
-    }
-
-    private static string? TryResolveStoredPath(string projectDir, string rawPath)
-    {
-        var path = (rawPath ?? string.Empty).Trim();
-        if (path.Length == 0)
-            return null;
-
-        try
-        {
-            var full = Path.IsPathRooted(path)
-                ? path
-                : Path.GetFullPath(Path.Combine(projectDir, path));
-            return File.Exists(full) ? full : null;
-        }
-        catch
-        {
-            return null;
         }
     }
 

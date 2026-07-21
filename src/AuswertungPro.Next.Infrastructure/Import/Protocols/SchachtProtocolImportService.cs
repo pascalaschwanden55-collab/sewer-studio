@@ -10,7 +10,9 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// Nutzt die bestehende Lese-/Schaden-Parser-Technik (PdfTextExtractor,
 /// SchachtProtocolParser) und die gemeinsame Anwende-Logik (SchachtProtocolApplier).
 /// </summary>
-public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
+public sealed class SchachtProtocolImportService :
+    ISchachtProtocolImportService,
+    ISchachtProtocolDistributionResultService
 {
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly ISchachtProtocolOcrReader _ocrReader;
@@ -137,15 +139,30 @@ public sealed class SchachtProtocolImportService : ISchachtProtocolImportService
         SchachtProtocolApplier.Apply(ziel, key, pf, ergebnis.Schaeden, pdfPfadFuerFeld);
     }
 
-    public string DistributePdf(string projektOrdner, string schachtnummer, string pdfQuelle)
+    public string DistributePdf(
+        string projektOrdner,
+        string schachtnummer,
+        string pdfQuelle)
+        => DistributePdfWithResult(
+            projektOrdner,
+            schachtnummer,
+            pdfQuelle).RelativePath;
+
+    public SchachtProtocolDistributionResult DistributePdfWithResult(
+        string projektOrdner,
+        string schachtnummer,
+        string pdfQuelle)
     {
         var destDir = ProjectStructure.SchachtVerteiltDir(projektOrdner, schachtnummer);
         Directory.CreateDirectory(destDir);
 
         var dest = Path.Combine(destDir, Path.GetFileName(pdfQuelle));
-        if (!File.Exists(dest))
+        var fileCreated = !File.Exists(dest);
+        if (fileCreated)
             File.Copy(pdfQuelle, dest, overwrite: false);
 
-        return ProjectPathResolver.MakeRelative(dest, projektOrdner);
+        return new SchachtProtocolDistributionResult(
+            ProjectPathResolver.MakeRelative(dest, projektOrdner),
+            fileCreated);
     }
 }

@@ -46,19 +46,19 @@ public partial class PlayerWindow
 
     private void PlayerWindow_Deactivated(object? sender, EventArgs e)
         => PlayerWindowActivationWorkflow.Deactivate(
-            new PlayerWindowDeactivationRequest(_codingOverlayInputVisibilityState.SuspendDepth),
+            new PlayerWindowDeactivationRequest(_codingOverlayInputVisibilityController.SuspendDepth),
             CreateWindowActivationActions());
 
     private void PlayerWindow_Activated(object? sender, EventArgs e)
         => PlayerWindowActivationWorkflow.Activate(
-            new PlayerWindowActivationRequest(_codingOverlayInputVisibilityState.DeactivatedByExternalWindow),
+            new PlayerWindowActivationRequest(_codingOverlayInputVisibilityController.DeactivatedByExternalWindow),
             CreateWindowActivationActions());
 
     private PlayerWindowActivationWorkflowActions CreateWindowActivationActions()
         => new(
-            SetDeactivatedByExternalWindow: _codingOverlayInputVisibilityState.SetDeactivatedByExternalWindow,
-            HideCodingOverlayForExternalWindow,
-            RestoreCodingOverlayAfterExternalWindow);
+            SetDeactivatedByExternalWindow: _codingOverlayInputVisibilityController.SetDeactivatedByExternalWindow,
+            HideCodingOverlayForExternalWindow: _codingOverlayInputVisibilityController.HideForExternalWindow,
+            RestoreCodingOverlayAfterExternalWindow: _codingOverlayInputVisibilityController.RestoreAfterExternalWindow);
 
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         => PlayerWindowLoadedWorkflow.Execute(

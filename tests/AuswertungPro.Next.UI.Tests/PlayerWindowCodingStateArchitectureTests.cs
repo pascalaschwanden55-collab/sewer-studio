@@ -111,7 +111,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         Assert.Contains("public sealed class CodingAiStateControllerSet", codingAiStateControllerSet);
         Assert.Contains("private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();", state);
         Assert.Contains("private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState", state);
-        Assert.Contains("private CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState => _codingOverlayStates.InputVisibilityState", state);
+        Assert.Contains("private readonly ICodingOverlayInputVisibilityController _codingOverlayInputVisibilityController;", state);
         Assert.Contains("private CodingOverlayRenderStateController _codingOverlayRenderState => _codingOverlayStates.RenderState", state);
         Assert.Contains("private CodingActiveToolNameStateController _codingActiveToolNameState => _codingOverlayStates.ActiveToolNameState", state);
         Assert.Contains("public sealed class CodingOverlayStateControllerSet", overlayStateControllerSet);
@@ -215,9 +215,10 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
-        var highlightPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var listVisualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventListVisualController.cs");
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var exitFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var importReferencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var protocolStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchStateController.cs");
 
@@ -225,9 +226,10 @@ public sealed class PlayerWindowCodingStateArchitectureTests
 
         var state = File.ReadAllText(statePath);
         var controller = File.ReadAllText(controllerPath);
-        var highlight = File.ReadAllText(highlightPath);
+        var listVisualController = File.ReadAllText(listVisualControllerPath);
         var training = File.ReadAllText(trainingPath);
         var exit = File.ReadAllText(exitPath);
+        var exitFactory = File.ReadAllText(exitFactoryPath);
         var importReference = File.ReadAllText(importReferencePath);
         var protocolState = File.Exists(protocolStatePath) ? File.ReadAllText(protocolStatePath) : "";
 
@@ -237,12 +239,33 @@ public sealed class PlayerWindowCodingStateArchitectureTests
             "private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets");
         Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", state);
         Assert.Contains("private readonly ICodingProtocolMatchController _codingProtocolMatchController", state);
+        Assert.Contains("private readonly CodingEventListVisualController _codingEventListVisualController", state);
+        const string visualControllerStart =
+            "_codingEventListVisualController = new CodingEventListVisualController(";
+        var visualControllerStartIndex = exit.IndexOf(visualControllerStart, StringComparison.Ordinal);
+        Assert.True(visualControllerStartIndex >= 0, "Der Listen-Controller wird im PlayerWindow nicht aufgebaut.");
+        var visualControllerEndIndex = exit.IndexOf(");", visualControllerStartIndex, StringComparison.Ordinal);
+        Assert.True(visualControllerEndIndex > visualControllerStartIndex, "Der Aufbau des Listen-Controllers ist unvollstaendig.");
+        var visualControllerConstruction = exit[
+            visualControllerStartIndex..(visualControllerEndIndex + 2)];
+        Assert.Equal(
+            new[]
+            {
+                visualControllerStart,
+                "LstCodingEvents,",
+                "LstImportEvents,",
+                "_codingProtocolMatchState);"
+            },
+            visualControllerConstruction
+                .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .ToArray());
         Assert.False(File.Exists(protocolMatchPath), "Der Protokollabgleich darf nicht wieder als PlayerWindow-Partial erscheinen.");
         Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", controller);
         Assert.Contains("StoreMatch: _bindings.StoreMatch", controller);
-        Assert.Contains("_codingProtocolMatchState.TryGetBucket", highlight);
+        Assert.Contains("_protocolMatchState.TryGetBucket", listVisualController);
         Assert.Contains("_codingProtocolMatchState.LastMatch", training);
-        Assert.Contains("_codingProtocolMatchState.Reset", exit);
+        Assert.Contains("dependencies.ProtocolStates.ProtocolMatchState.Reset", exitFactory);
         Assert.Contains("_codingProtocolMatchState.Reset", importReference);
         Assert.Contains("public sealed class CodingProtocolMatchStateController", protocolState);
         Assert.Contains("public CodingMatchRouting? LastMatch", protocolState);
@@ -312,4 +335,5 @@ public sealed class PlayerWindowCodingStateArchitectureTests
             hits.Count == 0,
             "Verbotene alte Coding-State-Logik gefunden: " + string.Join(", ", hits));
     }
+
 }

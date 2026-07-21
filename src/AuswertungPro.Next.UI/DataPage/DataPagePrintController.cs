@@ -54,6 +54,7 @@ public sealed class DataPagePrintController
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IProjectCostStoreRepository _projectCosts;
 
+    [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
         IDialogService dialogs,
         ProtocolPdfExporter protocolPdfExporter,
@@ -70,6 +71,7 @@ public sealed class DataPagePrintController
             (IProtocolPdfExporter)protocolPdfExporter,
             getProjectFolder,
             CreateCompatibilityProjectCosts(),
+            path => DataPageOriginalPdfController.TryShellOpen(path).Success,
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -80,6 +82,7 @@ public sealed class DataPagePrintController
     {
     }
 
+    [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
         IDialogService dialogs,
         ProtocolPdfExporter protocolPdfExporter,
@@ -98,6 +101,7 @@ public sealed class DataPagePrintController
             getProjectFolder,
             pdfMerge,
             CreateCompatibilityProjectCosts(),
+            path => DataPageOriginalPdfController.TryShellOpen(path).Success,
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -113,6 +117,7 @@ public sealed class DataPagePrintController
         IProtocolPdfExporter protocolPdfExporter,
         Func<string?> getProjectFolder,
         IProjectCostStoreRepository projectCosts,
+        Func<string, bool> openPdf,
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
@@ -134,6 +139,7 @@ public sealed class DataPagePrintController
                 ? null
                 : (project, folder, record, document) =>
                     protocolRegeneration.RegenerateOne(project, folder, record, document),
+            openPdf: openPdf,
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles)
     {
@@ -145,6 +151,7 @@ public sealed class DataPagePrintController
         Func<string?> getProjectFolder,
         IPdfMergeService pdfMerge,
         IProjectCostStoreRepository projectCosts,
+        Func<string, bool> openPdf,
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<string?>? getLastProjectPath = null,
         Func<string?, SchachtRecord?>? findSchachtByNummer = null,
@@ -157,6 +164,7 @@ public sealed class DataPagePrintController
             protocolPdfExporter,
             getProjectFolder,
             projectCosts,
+            openPdf,
             buildHydraulikCalculation,
             getLastProjectPath,
             findSchachtByNummer,
@@ -168,6 +176,7 @@ public sealed class DataPagePrintController
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
 
+    [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
         IDialogService dialogs,
         Func<string?> getProjectFolder,
@@ -201,6 +210,7 @@ public sealed class DataPagePrintController
             buildAwuPdf,
             baseDirectory,
             CreateCompatibilityProjectCosts(),
+            openPdf ?? (path => DataPageOriginalPdfController.TryShellOpen(path).Success),
             fileExists,
             writeAllBytes,
             writeAllBytesAsync,
@@ -220,7 +230,6 @@ public sealed class DataPagePrintController
             mergeOriginals,
             mergeWithOriginals,
             regenerateOne,
-            openPdf,
             dossierPhotoAvailability,
             inspectionProtocolFiles)
     {
@@ -232,6 +241,7 @@ public sealed class DataPagePrintController
         Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> buildAwuPdf,
         string baseDirectory,
         IProjectCostStoreRepository projectCosts,
+        Func<string, bool> openPdf,
         Func<string, bool>? fileExists = null,
         Action<string, byte[]>? writeAllBytes = null,
         Func<string, byte[], Task>? writeAllBytesAsync = null,
@@ -251,7 +261,6 @@ public sealed class DataPagePrintController
         Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
-        Func<string, bool>? openPdf = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
     {
@@ -287,7 +296,7 @@ public sealed class DataPagePrintController
         _regenerateOne = regenerateOne
             ?? ((project, folder, record, doc) =>
                 AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
-        _openPdf = openPdf ?? (path => DataPageOriginalPdfController.TryShellOpen(path).Success);
+        _openPdf = openPdf ?? throw new ArgumentNullException(nameof(openPdf));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles

@@ -119,6 +119,15 @@ public static class VsaCodeResolver
             .Replace("ä", "ae").Replace("ö", "oe")
             .Replace("ü", "ue").Replace("ß", "ss");
 
+        // Versionierte YOLO-Klassenschluessel zuerst exakt aufloesen. Besonders
+        // wichtig: BBD_boden darf nie zum ungueltigen nackten Basiscode BBD werden.
+        if (text.Contains('_', StringComparison.Ordinal))
+        {
+            var detectorCode = Pipeline.YoloClassVsaMapper.ToPersistableVsaCode(label);
+            if (detectorCode is not null)
+                return CatalogValidated(detectorCode);
+        }
+
         // Grundstruktur
         if (Has(text, "anschluss") || Has(text, "abzweig") || Has(text, "stutzen")
             || Has(text, "zulauf") || Has(text, "lateral connection") || HasWord(text, "lateral"))

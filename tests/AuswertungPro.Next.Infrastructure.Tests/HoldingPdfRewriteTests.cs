@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -119,6 +121,7 @@ public sealed class HoldingPdfRewriteTests
         Directory.CreateDirectory(dir);
         var pdf = Path.Combine(dir, "kaputt.pdf");
         File.WriteAllText(pdf, "keine PDF");
+        var originalBytes = File.ReadAllBytes(pdf);
 
         try
         {
@@ -130,6 +133,97 @@ public sealed class HoldingPdfRewriteTests
             Assert.Equal(0, rewritten);
             Assert.Equal(0, skipped);
             Assert.Equal(1, failed);
+            Assert.Equal(originalBytes, File.ReadAllBytes(pdf));
+            Assert.False(File.Exists(pdf + ".bak"));
+        }
+        finally { TryDelete(dir); }
+    }
+
+    [Fact]
+    public void PdfTextLayerRewriteService_RewriteIdentifierInPlace_StelltBatchVertragBereit()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfrw-service-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var pdf = Path.Combine(dir, "haltung.pdf");
+        WritePdf(pdf, "Haltung (06-001)");
+
+        try
+        {
+            var service = new PdfTextLayerRewriteService();
+
+            var result = service.RewriteIdentifierInPlace(
+                new List<string> { pdf },
+                "06-001",
+                "06-999");
+
+            Assert.Equal(1, result.Rewritten);
+            Assert.Equal(0, result.Skipped);
+            Assert.Equal(0, result.Failed);
+            Assert.True(File.Exists(pdf + ".bak"));
+        }
+        finally { TryDelete(dir); }
+    }
+
+    [Fact]
+    public void RewriteIdentifierInPlace_DefektePdfStopptGueltigePdfNicht()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfrw-continue-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var invalidPdf = Path.Combine(dir, "kaputt.pdf");
+        var validPdf = Path.Combine(dir, "gueltig.pdf");
+        File.WriteAllText(invalidPdf, "keine PDF");
+        WritePdf(validPdf, "Haltung (06-001)");
+
+        try
+        {
+            var service = new PdfTextLayerRewriteService();
+
+            var result = service.RewriteIdentifierInPlace(
+                new List<string> { invalidPdf, validPdf },
+                "06-001",
+                "06-999");
+
+            Assert.Equal(1, result.Rewritten);
+            Assert.Equal(0, result.Skipped);
+            Assert.Equal(1, result.Failed);
+            var failure = Assert.Single(result.Failures);
+            Assert.Equal(invalidPdf, failure.PdfPath, ignoreCase: true);
+            Assert.NotEmpty(failure.Message);
+            using var rewritten = PdfDocument.Open(validPdf);
+            Assert.Contains("06-999", rewritten.GetPage(1).Text, StringComparison.Ordinal);
+        }
+        finally { TryDelete(dir); }
+    }
+
+    [Fact]
+    public void RewriteIdentifierInPlace_ErsetzungsfehlerLaesstOriginalUndRaeumtTempDateiAuf()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"pdfrw-replace-fail-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var pdf = Path.Combine(dir, "haltung.pdf");
+        WritePdf(pdf, "Haltung (06-001)");
+        var originalBytes = File.ReadAllBytes(pdf);
+        var replacer = new ThrowingAtomicPdfFileReplacer();
+
+        try
+        {
+            var service = new PdfTextLayerRewriteService(replacer);
+
+            var result = service.RewriteIdentifierInPlace(
+                new List<string> { pdf },
+                "06-001",
+                "06-999");
+
+            Assert.Equal(0, result.Rewritten);
+            Assert.Equal(0, result.Skipped);
+            Assert.Equal(1, result.Failed);
+            var failure = Assert.Single(result.Failures);
+            Assert.Equal(pdf, failure.PdfPath, ignoreCase: true);
+            Assert.Contains("Testfehler beim Ersetzen", failure.Message, StringComparison.Ordinal);
+            Assert.Equal(originalBytes, File.ReadAllBytes(pdf));
+            Assert.False(File.Exists(pdf + ".bak"));
+            Assert.NotNull(replacer.GeneratedPdfPath);
+            Assert.False(File.Exists(replacer.GeneratedPdfPath));
         }
         finally { TryDelete(dir); }
     }
@@ -173,5 +267,16 @@ public sealed class HoldingPdfRewriteTests
     private static void TryDelete(string dir)
     {
         try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); } catch { }
+    }
+
+    private sealed class ThrowingAtomicPdfFileReplacer : IAtomicPdfFileReplacer
+    {
+        public string? GeneratedPdfPath { get; private set; }
+
+        public void ReplaceValidated(string generatedPdfPath, string targetPdfPath)
+        {
+            GeneratedPdfPath = generatedPdfPath;
+            throw new IOException("Testfehler beim Ersetzen.");
+        }
     }
 }

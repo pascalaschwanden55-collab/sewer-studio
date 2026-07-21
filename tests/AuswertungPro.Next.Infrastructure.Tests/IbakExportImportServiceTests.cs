@@ -46,6 +46,40 @@ public sealed class IbakExportImportServiceTests
     }
 
     [Fact]
+    public void ImportIbakExport_NeuAngelegteHaltung_BekommtFortlaufendeNr()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-nr-{Guid.NewGuid():N}");
+        var film = Path.Combine(root, "Film");
+        Directory.CreateDirectory(film);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        File.WriteAllText(Path.Combine(film, "Daten.txt"),
+            "100-200\n" +
+            "\t00:00:05    1.00 m  BCD     Schaden 1@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+
+        try
+        {
+            // Bestehender Record mit NR=1, damit die naechste NR deterministisch 2 ist.
+            var project = new Project();
+            var existing = project.CreateNewRecord();
+            existing.SetFieldValue("Haltungsname", "900-901", FieldSource.Pdf, userEdited: false);
+            project.AddRecord(existing);
+
+            var result = new IbakExportImportService().ImportIbakExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            var neu = Assert.Single(project.Data, r => r.GetFieldValue("Haltungsname") == "100-200");
+            // Neu angelegte IBAK-Haltung bekommt eine fortlaufende NR (einheitlich zu WinCan/KINS,
+            // frueher legte IBAK per project.Data.Add ohne NR an).
+            Assert.Equal("2", neu.GetFieldValue("NR"));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void ImportIbakExport_NormalisiertSchachtSchachtHaltungUndFuehrtMitBestehendemRecordZusammen()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ibak-ss-{System.Guid.NewGuid():N}");

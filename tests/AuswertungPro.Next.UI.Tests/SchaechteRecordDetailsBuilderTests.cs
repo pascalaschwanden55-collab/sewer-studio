@@ -1,5 +1,7 @@
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using System.IO;
@@ -95,6 +97,7 @@ public sealed class SchaechteRecordDetailsBuilderTests
 
         var success = SchaechteShaftRenameController.Apply(
             new ShaftRenameFileService(),
+            new PdfTextLayerRewriteService(),
             record,
             "A-1",
             "B-2",
@@ -131,6 +134,116 @@ public sealed class SchaechteRecordDetailsBuilderTests
         finally
         {
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ShaftRename_RuftBatchdienstMitDedupliziertenPdfPfadenAuf()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "schacht-rename-pdfs", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var projectPath = Path.Combine(root, "projekt.json");
+        var pdfPath = Path.Combine(root, "a.pdf");
+        File.WriteAllText(pdfPath, "Testdatei fuer Pfadauflösung");
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "A-1");
+        record.SetFieldValue(FieldKeys.PdfPath, "a.pdf;a.pdf");
+        record.SetFieldValue(FieldKeys.PdfAll, "a.pdf");
+        var rewriter = new RecordingPdfTextLayerRewriter
+        {
+            BatchResult = new PdfTextLayerBatchRewriteResult(0, 0, 1)
+        };
+        var errors = new List<string>();
+
+        try
+        {
+            var success = SchaechteShaftRenameController.Apply(
+                new RecordingShaftRenameService(ShaftRenameService.ShaftRenameResult.Ok(false, 0)),
+                rewriter,
+                record,
+                "A-1",
+                "B-2",
+                projectPath,
+                new Project(),
+                (message, _) => errors.Add(message));
+
+            Assert.True(success);
+            Assert.Equal(1, rewriter.BatchCalls);
+            Assert.Equal("A-1", rewriter.OldValue);
+            Assert.Equal("B-2", rewriter.NewValue);
+            Assert.Equal(pdfPath, Assert.Single(rewriter.PdfPaths!), ignoreCase: true);
+            Assert.Single(errors);
+            Assert.Contains("1 Protokoll-PDF(s)", errors[0], StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ShaftRename_RenameFehlerStartetKeinePdfKorrektur()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "A-1");
+        record.SetFieldValue(FieldKeys.PdfPath, "a.pdf");
+        var rewriter = new RecordingPdfTextLayerRewriter();
+        var errors = new List<string>();
+
+        var success = SchaechteShaftRenameController.Apply(
+            new RecordingShaftRenameService(ShaftRenameService.ShaftRenameResult.Fail("Testfehler")),
+            rewriter,
+            record,
+            "A-1",
+            "B-2",
+            projectPath: null,
+            new Project(),
+            (message, _) => errors.Add(message));
+
+        Assert.False(success);
+        Assert.Equal(0, rewriter.BatchCalls);
+        Assert.Equal("A-1", record.GetFieldValue("Schachtnummer"));
+        Assert.Single(errors);
+        Assert.Contains("Testfehler", errors[0], StringComparison.Ordinal);
+    }
+
+    private sealed class RecordingShaftRenameService(
+        ShaftRenameService.ShaftRenameResult result) : IShaftRenameService
+    {
+        public ShaftRenameService.ShaftRenameResult Rename(
+            SchachtRecord record,
+            string oldShaftNumber,
+            string newShaftNumber,
+            string? projectFilePath)
+            => result;
+    }
+
+    private sealed class RecordingPdfTextLayerRewriter : IPdfTextLayerRewriter
+    {
+        public PdfTextLayerBatchRewriteResult BatchResult { get; init; } = new(0, 0, 0);
+        public int BatchCalls { get; private set; }
+        public IReadOnlyList<string>? PdfPaths { get; private set; }
+        public string? OldValue { get; private set; }
+        public string? NewValue { get; private set; }
+
+        public bool CanRewrite(string? oldValue, string? newValue) => true;
+
+        public PdfTextLayerRewriteResult TryRewriteHoldingNumber(
+            string sourcePdfPath,
+            string? oldValue,
+            string? newValue)
+            => throw new NotSupportedException();
+
+        public PdfTextLayerBatchRewriteResult RewriteIdentifierInPlace(
+            IReadOnlyList<string> pdfPaths,
+            string? oldValue,
+            string? newValue)
+        {
+            BatchCalls++;
+            PdfPaths = pdfPaths.ToArray();
+            OldValue = oldValue;
+            NewValue = newValue;
+            return BatchResult;
         }
     }
 }

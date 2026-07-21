@@ -1,4 +1,5 @@
 using System.Globalization;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -15,7 +16,7 @@ public static class DataPageProtocolMediaLinkController
     public static TimeSpan? ResolveTargetTime(ProtocolEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        return entry.Zeit ?? ParseMpegTime(entry.Mpeg);
+        return entry.Zeit ?? ProtocolTimeParser.ParseMpegTime(entry.Mpeg);
     }
 
     public static string BuildOverlayText(ProtocolEntry entry)
@@ -35,21 +36,5 @@ public static class DataPageProtocolMediaLinkController
         }
 
         return string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
-    }
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
     }
 }

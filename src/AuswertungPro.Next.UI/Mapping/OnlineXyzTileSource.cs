@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using BruTile;
@@ -47,7 +48,9 @@ public sealed class OnlineXyzTileSource : ILocalTileSource
 
     private static HttpClient CreateClient()
     {
-        var http = new HttpClient();
+        // Kacheln sind klein; bei totem Netz (Blackhole/Captive Portal) soll die Karte schnell
+        // auf "leer" fallen statt bis zum 100-s-Default zu haengen und Anfragen zu stauen.
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         // OSM-Kachelserver verlangen einen aussagekraeftigen, ehrlichen User-Agent, der die
         // Anwendung identifiziert (sonst "403 Access blocked"). OSM ist hier nur die Online-
         // Ausweichkarte — Standard ist die Offline-Satellitenkarte, damit OSM nicht bei jedem

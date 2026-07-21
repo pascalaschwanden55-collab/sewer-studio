@@ -9,6 +9,21 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ProjectRootPathArchitectureTests
 {
     [Fact]
+    public void BeobachtungenWindow_delegiert_Fotopfad_und_Oeffnen_an_Dienste()
+    {
+        var source = ReadRepoFile(
+            "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml.cs");
+
+        Assert.Contains("IInspectionProtocolFileLocator inspectionProtocolFiles", source);
+        Assert.Contains("ISafeShellOpenService shellOpen", source);
+        Assert.Contains("new BeobachtungenPhotoOpenController(", source);
+        Assert.DoesNotContain("File.Exists", source);
+        Assert.DoesNotContain("Path.IsPathRooted", source);
+        Assert.DoesNotContain("SafeShellOpen.TryOpen", source);
+        Assert.DoesNotContain("private readonly ServiceProvider _services;", source);
+    }
+
+    [Fact]
     public void Project_json_paths_resolve_via_ProjectFileLocator()
     {
         var checkedFiles = new[]

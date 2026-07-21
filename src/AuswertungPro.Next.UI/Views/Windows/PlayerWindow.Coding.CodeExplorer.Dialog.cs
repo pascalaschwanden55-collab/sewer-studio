@@ -26,5 +26,5 @@ public partial class PlayerWindow
         => new(
             CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(CreateVsaCodeExplorerViewModel, _protocolContext.CodeUsage),
             CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider,
-            RunWithSuspendedOverlayInput: callback => RunWithSuspendedCodingOverlayInput(callback));
+            RunWithSuspendedOverlayInput: callback => _codingOverlayInputVisibilityController.Run(callback));
 }

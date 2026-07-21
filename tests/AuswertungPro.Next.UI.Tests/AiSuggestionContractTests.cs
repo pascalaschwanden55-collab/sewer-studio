@@ -13,6 +13,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
@@ -302,11 +303,11 @@ public sealed class AiSuggestionContractTests
         AssertSimpleTypeNamespace("SelfTrainingOrchestrator", "AuswertungPro.Next.Infrastructure");
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
-            typeof(YoloDatasetExportService).Namespace!,
+            typeof(TrainingYoloExportRuntime).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
-            typeof(YoloExportResult).Namespace!,
+            typeof(TrainingYoloExportCoordinator).Namespace!,
             StringComparison.Ordinal);
         AssertSimpleTypeNamespace("MeterTimelineService", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("TrainingSampleGenerator", "AuswertungPro.Next.Infrastructure");
@@ -322,11 +323,6 @@ public sealed class AiSuggestionContractTests
         AssertSimpleTypeNamespace("TrainingSamplesStore", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("TrainingCenterSettingsStore", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("SelfTrainingHistoryStore", "AuswertungPro.Next.Infrastructure");
-        AssertSimpleTypeNamespace("FewShotExampleStore", "AuswertungPro.Next.Infrastructure");
-        AssertSimpleTypeNamespace("FewShotExample", "AuswertungPro.Next.Infrastructure");
-        AssertSimpleTypeNamespace("FewShotExampleBuilder", "AuswertungPro.Next.Infrastructure");
-        AssertSimpleTypeNamespace("FewShotBuildProgress", "AuswertungPro.Next.Infrastructure");
-        AssertSimpleTypeNamespace("FewShotBuildResult", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]
@@ -475,11 +471,11 @@ public sealed class AiSuggestionContractTests
             StringComparison.Ordinal);
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
-            typeof(TrainingExportService).Namespace!,
+            typeof(TrainingExportPlanLocalExecutor).Namespace!,
             StringComparison.Ordinal);
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
-            typeof(TrainingExportResult).Namespace!,
+            typeof(TrainingExportSidecarRequestBuilder).Namespace!,
             StringComparison.Ordinal);
     }
 

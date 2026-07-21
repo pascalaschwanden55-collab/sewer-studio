@@ -18,6 +18,7 @@ public sealed class OllamaClient : IDisposable
 {
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
+    private readonly Uri _baseUri;
     private readonly string _keepAlive;
     private readonly int _numCtx;
 
@@ -25,7 +26,11 @@ public sealed class OllamaClient : IDisposable
     {
         _ownsHttp = http is null;
         _http = http ?? new HttpClient();
-        _http.BaseAddress = baseUri;
+        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
+        // WICHTIG: Auf einem geteilten HttpClient darf BaseAddress nicht gesetzt werden — .NET
+        // wirft, sobald der Client bereits eine Anfrage gesendet hat (z. B. den Sidecar-Health-
+        // Check in der Videoanalyse-Pipeline). Deshalb bauen wir jeden Endpunkt absolut aus
+        // _baseUri; das funktioniert fuer eigene und fremde Clients gleich.
         _keepAlive = keepAlive;
         _numCtx = numCtx;
         if (_ownsHttp)
@@ -33,6 +38,9 @@ public sealed class OllamaClient : IDisposable
                 ? timeout
                 : TimeSpan.FromMinutes(5);
     }
+
+    // Absoluter Endpunkt relativ zur Basis-Adresse (ersetzt den Pfad, behaelt Schema/Host/Port).
+    private Uri Endpoint(string path) => new(_baseUri, path);
 
     public void Dispose()
     {
@@ -44,7 +52,7 @@ public sealed class OllamaClient : IDisposable
     {
         try
         {
-            using var resp = await _http.GetAsync("/api/tags", ct).ConfigureAwait(false);
+            using var resp = await _http.GetAsync(Endpoint("/api/tags"), ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
             var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(body);
@@ -86,7 +94,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+        using var req = new HttpRequestMessage(HttpMethod.Post, Endpoint("/api/generate"))
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
@@ -124,7 +132,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        using var req = new HttpRequestMessage(HttpMethod.Post, Endpoint("/api/chat"))
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
@@ -179,7 +187,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        using var req = new HttpRequestMessage(HttpMethod.Post, Endpoint("/api/chat"))
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };

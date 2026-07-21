@@ -107,6 +107,9 @@ public partial class SchaechtePage : UserControl
         };
         Unloaded += (_, __) =>
         {
+            // Beide Debounce-Timer stoppen (wie DataPage), sonst laeuft ein Such-Tick auf der
+            // bereits entladenen Seite nach.
+            _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
         };
@@ -430,19 +433,17 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
 
-        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
-            return;
-
         if (DataContext is not SchaechtePageViewModel vm)
             return;
 
-        const double step = 0.05d;
-        var delta = e.Delta > 0 ? step : -step;
-        var next = Math.Clamp(vm.GridZoom + delta, 0.5d, 2.0d);
-        if (Math.Abs(next - vm.GridZoom) < 0.001d)
+        var zoom = DataPageGridZoomController.Resolve(
+            vm.GridZoom,
+            e.Delta,
+            hasControlModifier: (Keyboard.Modifiers & ModifierKeys.Control) != 0);
+        if (!zoom.Handled)
             return;
 
-        vm.GridZoom = next;
+        vm.GridZoom = zoom.NextZoom;
         e.Handled = true;
     }
 
@@ -513,23 +514,13 @@ public partial class SchaechtePage : UserControl
         if (!DataGridEditedTextValueResolver.TryResolve(e.EditingElement, out var value))
             return;
 
-        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-        {
-            var oldShaftNumber = record.GetFieldValue("Schachtnummer");
-            if (!ApplySchachtNumberChange(record, oldShaftNumber, value))
-                return;
-        }
-        else
-        {
-            record.SetFieldValue(recordField, value);
-        }
-
-        if (_vm is not null)
-        {
-            var optionField = ResolveOptionField(recordField);
-            if (!string.IsNullOrWhiteSpace(optionField))
-                _vm.EnsureOptionForField(optionField, value);
-        }
+        if (!SchaechteFieldEditController.Apply(
+                recordField,
+                record,
+                value,
+                ApplySchachtNumberChange,
+                EnsureSchachtOption))
+            return;
 
         MarkProjectDirty();
         ApplySearchFilter();
@@ -711,27 +702,20 @@ public partial class SchaechtePage : UserControl
     private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
     {
         var next = value ?? string.Empty;
-        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-        {
-            var oldShaftNumber = record.GetFieldValue("Schachtnummer");
-            if (!ApplySchachtNumberChange(record, oldShaftNumber, next))
-                return;
-        }
-        else
-        {
-            record.SetFieldValue(recordField, next);
-        }
-
-        if (_vm is not null)
-        {
-            var optionField = ResolveOptionField(recordField);
-            if (!string.IsNullOrWhiteSpace(optionField))
-                _vm.EnsureOptionForField(optionField, next);
-        }
+        if (!SchaechteFieldEditController.Apply(
+                recordField,
+                record,
+                next,
+                ApplySchachtNumberChange,
+                EnsureSchachtOption))
+            return;
 
         MarkProjectDirty();
         ApplySearchFilter();
     }
+
+    private void EnsureSchachtOption(string optionField, string? value)
+        => _vm?.EnsureOptionForField(optionField, value);
 
     // Schreibt den Wert auf ALLE Encoding-Varianten des Feldes, damit keine "Geister-Duplikate"
     // mit altem Wert zurueckbleiben (die der Konsolidierer sonst wieder anzeigen wuerde).
@@ -766,6 +750,7 @@ public partial class SchaechtePage : UserControl
     private bool ApplySchachtNumberChange(SchachtRecord record, string? oldValue, string? newValue)
         => SchaechteShaftRenameController.Apply(
             Vm.ShaftRename,
+            Vm.PdfTextLayerRewrite,
             record,
             oldValue,
             newValue,
@@ -816,32 +801,15 @@ public partial class SchaechtePage : UserControl
 
     private void ProtokollMenu_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm is null)
+        _ = sender;
+        _ = e;
+
+        if (_vm is not { } vm)
             return;
 
-        var record = _vm.Selected;
-        if (record is null)
-        {
-            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll");
-            return;
-        }
-
-        var pdfPath = ResolvePdfPath(record);
-        if (string.IsNullOrWhiteSpace(pdfPath))
-        {
-            var schacht = GetSchachtNumber(record);
-            DialogHost.Current.Info(
-                string.IsNullOrWhiteSpace(schacht)
-                    ? "Kein Schachtprotokoll-PDF verknüpft."
-                    : $"Kein Schachtprotokoll-PDF verknüpft für Schacht {schacht}.",
-                "Protokoll");
-            return;
-        }
-
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(pdfPath, out var error))
-        {
-            DialogHost.Current.Error($"PDF konnte nicht geöffnet werden:\n{error}", "Protokoll");
-        }
+        CreateFileActionController(vm).OpenProtocol(
+            vm.Selected,
+            vm.Settings.LastProjectPath);
     }
 
     private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)
@@ -849,30 +817,12 @@ public partial class SchaechtePage : UserControl
         _ = sender;
         _ = e;
 
-        if (_vm is null)
+        if (_vm is not { } vm)
             return;
 
-        var record = _vm.Selected;
-        if (record is null)
-        {
-            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf eine Zeile rechtsklicken.", "Ordner");
-            return;
-        }
-
-        var target = ResolveExplorerTarget(record);
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            var schacht = GetSchachtNumber(record);
-            DialogHost.Current.Info(
-                string.IsNullOrWhiteSpace(schacht)
-                    ? "Kein Datei- oder Ordnerpfad verknüpft."
-                    : $"Kein Datei- oder Ordnerpfad verknüpft für Schacht {schacht}.",
-                "Ordner");
-            return;
-        }
-
-        if (!Vm.ExplorerReveal.TryReveal(target, out var error))
-            DialogHost.Current.Error($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
+        CreateFileActionController(vm).RevealContainingFolder(
+            vm.Selected,
+            vm.Settings.LastProjectPath);
     }
 
     private void DetailsMenu_Click(object sender, RoutedEventArgs e)
@@ -913,9 +863,12 @@ public partial class SchaechtePage : UserControl
     private void OpenSchachtMassnahmen(SchachtRecord record)
         => _massnahmenController?.Open(record);
 
-    private string? ResolvePdfPath(SchachtRecord record)
-        => Vm.SchachtFileTargets.ResolvePdfPath(record, Settings.LastProjectPath);
+    private static SchaechteFileActionController CreateFileActionController(
+        SchaechtePageViewModel viewModel)
+        => new(
+            viewModel.SchachtFileTargets,
+            viewModel.ShellOpen,
+            viewModel.ExplorerReveal,
+            viewModel.Dialogs);
 
-    private string? ResolveExplorerTarget(SchachtRecord record)
-        => Vm.SchachtFileTargets.ResolveExplorerTarget(record, Settings.LastProjectPath);
 }

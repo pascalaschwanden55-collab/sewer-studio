@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
@@ -41,9 +42,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IDataPageSanierungViewModelFactory _sanierungViewModels;
     private readonly IDataPageWindowLauncher _windows;
     private readonly IHoldingRenameService _holdingRename;
+    private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IVideoStartErrorLogWriter _videoStartErrorLogs;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly ISafeShellOpenService _shellOpen;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
@@ -75,6 +78,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
     internal IHoldingRenameService HoldingRename => _holdingRename;
+    internal IPdfTextLayerRewriter PdfTextLayerRewrite => _pdfTextLayerRewrite;
+    internal ISafeShellOpenService ShellOpen => _shellOpen;
 
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
@@ -173,9 +178,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _sanierungViewModels = services.DataPageSanierungViewModels;
         _windows = services.DataPageWindows;
         _holdingRename = services.HoldingRename;
+        _pdfTextLayerRewrite = services.PdfTextLayerRewrite;
         _dropdownOptions = services.DropdownOptions;
         _videoStartErrorLogs = services.VideoStartErrorLogs;
         _explorerReveal = services.ExplorerReveal;
+        _shellOpen = services.ShellOpen;
         _inspectionProtocolFiles = services.InspectionProtocolFiles;
         _projectCosts = services.CostStores.CreateProjectCostStore();
         _measureTemplates = services.CostStores.CreateMeasureTemplateStore();
@@ -201,6 +208,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             protocolRegeneration: services.ProtocolSingleRegeneration,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
+            openPdf: path => TryOpenFile(path).Success,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
@@ -211,13 +219,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             EnsureProtocolPath,
             () => _shell.GetProjectFolder(),
             _inspectionProtocolFiles.ResolveOriginalPdfPaths,
-            DataPageOriginalPdfController.TryShellOpen);
+            TryOpenFile);
         _dichtheitPdfController = new DataPageDichtheitPdfController(
             _dialogs,
             services.DichtheitProtocolFiles,
             () => _shell.GetProjectFolder(),
             () => _settings.DichtheitDistribution?.Root,
-            DataPageOriginalPdfController.TryShellOpen);
+            TryOpenFile);
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
         LiveControl.LiveControlRetryBridge.Register(TryStartVideoAiPipelineByName);
@@ -478,6 +486,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _recordCollectionController.Remove();
     }
 
+    internal void RemoveRecords(IReadOnlyCollection<HaltungRecord> records)
+    {
+        _recordCollectionController.RemoveMany(records);
+    }
+
     private void MoveUp()
     {
         _recordCollectionController.MoveUp();
@@ -547,21 +560,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _videoPlaybackController.Play(record);
     }
 
-    // Spielt das Gegeninspektions-Video (Feld Link_G) ab, relativ gegen den Projekt-Root aufgelöst.
     private void PlayGegenVideo(HaltungRecord? record)
-    {
-        if (record is null)
-            return;
-
-        var path = ResolveExistingPath(record.GetFieldValue("Link_G"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            _dialogs.Info("Für diese Haltung ist keine Gegeninspektion vorhanden.", "Gegeninspektion");
-            return;
-        }
-
-        _videoPlaybackController.PlayResolved(record, path);
-    }
+        => _videoPlaybackController.PlayCounterInspection(record, ResolveExistingPath);
 
     private void OpenProtocol(HaltungRecord? record)
     {
@@ -847,12 +847,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             var learnedNow = _measureRecommendationService.Learn(record);
             if (learnedNow)
                 _measureRecommendationService.TrainModel(LearningReadinessPresenter.MinimumSamplesForTraining);
-            UpdateLearningInfo();
         }
 
+        UpdateLearningInfo();
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
     }
+
+    private (bool Success, string? Error) TryOpenFile(string? path)
+        => _shellOpen.TryOpen(path, out var error)
+            ? (true, null)
+            : (false, error);
 
     public void RefreshSelectedRecord()
     {

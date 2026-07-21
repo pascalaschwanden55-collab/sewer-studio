@@ -1,6 +1,8 @@
 using System.Reflection;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using Microsoft.Extensions.Logging;
@@ -22,6 +24,15 @@ public sealed class InspectionProtocolFileLocatorDependencyTests
         Assert.Same(
             services.InspectionProtocolFiles,
             services.GetService(typeof(IInspectionProtocolFileLocator)));
+        var resolverField = typeof(InspectionProtocolFileLocator).GetField(
+            "_storedImportFilePaths",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(resolverField);
+        Assert.Same(
+            services.StoredImportFilePaths,
+            resolverField!.GetValue(services.InspectionProtocolFiles));
+        Assert.IsAssignableFrom<IStoredImportFilePathResolver>(
+            resolverField.GetValue(services.InspectionProtocolFiles));
         Assert.Null(typeof(DataPageProtocolPathResolver).GetMethod(
             "Use",
             BindingFlags.Static | BindingFlags.NonPublic));

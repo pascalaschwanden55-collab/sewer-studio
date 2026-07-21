@@ -176,7 +176,10 @@ public static class AiStartupOrchestrator
                         FileName: input.PowerShellExe,
                         Arguments: $"-NoProfile -ExecutionPolicy Bypass -File {Quote(script)}",
                         WorkingDirectory: System.IO.Path.GetDirectoryName(script),
-                        Hidden: true),
+                        Hidden: true)
+                    {
+                        EnvironmentVariables = input.SidecarEnvironmentVariables
+                    },
                     out var error);
 
                 if (sidecarStarted)
@@ -299,4 +302,5 @@ public sealed record AiStartupOrchestratorInput(
     IReadOnlyList<AiStartupModelPreloadRequest> PreloadRequests,
     string? SidecarScriptPath,
     string PowerShellExe,
-    bool SettingsChanged);
+    bool SettingsChanged,
+    IReadOnlyDictionary<string, string>? SidecarEnvironmentVariables = null);

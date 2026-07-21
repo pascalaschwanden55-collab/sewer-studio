@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using System.Windows;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
@@ -167,117 +164,11 @@ public partial class MediaSearchWindow : Window
     {
         if (_rows is null) return;
 
-        int videoCount = 0;
-        int pdfCount = 0;
-        int fotoCount = 0;
-
-        foreach (var row in _rows.Where(r => r.Apply))
-        {
-            if (!string.IsNullOrWhiteSpace(row.VideoPath)
-                && row.Match.VideoStatus is MediaMatchStatus.Found or MediaMatchStatus.Ambiguous)
-            {
-                var projectRoot = ProjectFileLocator.ProjectRootFromFile(_settings.LastProjectPath);
-                var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(row.VideoPath, projectRoot);
-                row.Match.Record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: false);
-                videoCount++;
-            }
-
-            if (!string.IsNullOrWhiteSpace(row.PdfPath)
-                && row.Match.PdfStatus is MediaMatchStatus.Found or MediaMatchStatus.Ambiguous)
-            {
-                row.Match.Record.SetFieldValue("PDF_Path", row.PdfPath, FieldSource.Unknown, userEdited: false);
-                pdfCount++;
-            }
-
-            // Apply photos to protocol entries
-            if (row.Match.FotoPaths.Count > 0)
-            {
-                var record = row.Match.Record;
-
-                // Protokoll anlegen falls keines existiert
-                if (record.Protocol is null)
-                {
-                    var haltungId = record.GetFieldValue("Haltungsname") ?? "";
-                    record.Protocol = new AuswertungPro.Next.Domain.Protocol.ProtocolDocument
-                    {
-                        HaltungId = haltungId,
-                        Original = new AuswertungPro.Next.Domain.Protocol.ProtocolRevision
-                        {
-                            Comment = "Medien-Import",
-                            Entries = new List<AuswertungPro.Next.Domain.Protocol.ProtocolEntry>()
-                        },
-                        Current = new AuswertungPro.Next.Domain.Protocol.ProtocolRevision
-                        {
-                            Comment = "Arbeitskopie",
-                            Entries = new List<AuswertungPro.Next.Domain.Protocol.ProtocolEntry>()
-                        }
-                    };
-                }
-
-                record.Protocol.Current ??= new AuswertungPro.Next.Domain.Protocol.ProtocolRevision
-                {
-                    Comment = "Arbeitskopie",
-                    Entries = new List<AuswertungPro.Next.Domain.Protocol.ProtocolEntry>()
-                };
-
-                var entries = record.Protocol.Current.Entries
-                    .Where(entry => !entry.IsDeleted)
-                    .ToList();
-
-                foreach (var fotoPath in row.Match.FotoPaths)
-                {
-                    var meter = TryParseMeterFromFileName(Path.GetFileNameWithoutExtension(fotoPath));
-                    if (meter is not null && entries.Count > 0)
-                    {
-                        var best = entries
-                            .Where(entry => entry.MeterStart is not null)
-                            .OrderBy(entry => Math.Abs(entry.MeterStart!.Value - meter.Value))
-                            .FirstOrDefault();
-
-                        if (best is not null && Math.Abs(best.MeterStart!.Value - meter.Value) <= 1.0)
-                        {
-                            if (!best.FotoPaths.Contains(fotoPath, StringComparer.OrdinalIgnoreCase))
-                            {
-                                best.FotoPaths.Add(fotoPath);
-                                fotoCount++;
-                            }
-                            continue;
-                        }
-                    }
-
-                    // Kein Meter-Match oder keine Entries: Foto-Entry anlegen
-                    if (entries.Count > 0)
-                    {
-                        var first = entries[0];
-                        if (!first.FotoPaths.Contains(fotoPath, StringComparer.OrdinalIgnoreCase))
-                        {
-                            first.FotoPaths.Add(fotoPath);
-                            fotoCount++;
-                        }
-                    }
-                    else
-                    {
-                        // Keine Beobachtungen vorhanden: Platzhalter-Entry anlegen
-                        var placeholder = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
-                        {
-                            Code = "",
-                            Beschreibung = "Foto (automatisch zugeordnet)",
-                            MeterStart = meter,
-                            Source = AuswertungPro.Next.Domain.Protocol.ProtocolEntrySource.Imported,
-                            FotoPaths = new List<string> { fotoPath }
-                        };
-                        record.Protocol.Current.Entries.Add(placeholder);
-                        entries.Add(placeholder);
-                        fotoCount++;
-                    }
-                }
-            }
-        }
-
-        AppliedVideoCount = videoCount;
-        AppliedPdfCount = pdfCount;
-        AppliedFotoCount = fotoCount;
-        Applied = videoCount > 0 || pdfCount > 0 || fotoCount > 0;
+        var result = MediaSearchApplyController.Apply(_rows, _settings.LastProjectPath);
+        AppliedVideoCount = result.VideoCount;
+        AppliedPdfCount = result.PdfCount;
+        AppliedFotoCount = result.FotoCount;
+        Applied = result.Applied;
 
         // Persist last folder
         _settings.LastVideoSourceFolder = FolderBox.Text.Trim();
@@ -302,18 +193,6 @@ public partial class MediaSearchWindow : Window
         if (Top < area.Top) Top = area.Top;
         if (Left + Width > area.Right) Left = area.Right - Width;
         if (Top + Height > area.Bottom) Top = area.Bottom - Height;
-    }
-
-    private static double? TryParseMeterFromFileName(string name)
-    {
-        var m = Regex.Match(name, @"(?<m>\d{1,3}([.,]\d{1,2})?)\s*m?$", RegexOptions.IgnoreCase);
-        if (!m.Success) return null;
-
-        var s = m.Groups["m"].Value.Replace(',', '.');
-        if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
-            return val;
-
-        return null;
     }
 }
 

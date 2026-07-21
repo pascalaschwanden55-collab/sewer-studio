@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 
@@ -288,7 +289,7 @@ public partial class ObservationCatalogWindow : Window
     {
         var errors = new List<string>();
 
-        vsaDistanzOk = TryParseOptionalDouble(VsaDistanzTextBox.Text, out var distanz);
+        vsaDistanzOk = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaDistanzTextBox.Text, out var distanz);
         if (!vsaDistanzOk)
             errors.Add("VSA: Distanz ist ungueltig.");
         else if (codeSelected && !distanz.HasValue)
@@ -297,27 +298,36 @@ public partial class ObservationCatalogWindow : Window
             errors.Add("VSA: Distanz (m) ist erforderlich.");
         }
 
-        vsaVideoOk = TryParseOptionalTimeSpan(VsaVideoTextBox.Text, out _);
+        vsaVideoOk = ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(VsaVideoTextBox.Text, out _);
         if (!vsaVideoOk)
             errors.Add("VSA: Uhrzeit (Video) ist ungueltig.");
 
-        vsaUhrVonOk = TryNormalizeClockPosition(VsaUhrVonComboBox.Text, out _, out var hasUhrVon);
+        vsaUhrVonOk = ProtocolEntryInputNormalizer.TryNormalizeClockPosition(
+            VsaUhrVonComboBox.Text,
+            out _,
+            out var hasUhrVon);
         if (!vsaUhrVonOk)
             errors.Add("VSA: Uhrzeit von nur 00 bis 12.");
 
-        vsaUhrBisOk = TryNormalizeClockPosition(VsaUhrBisComboBox.Text, out _, out var hasUhrBis);
+        vsaUhrBisOk = ProtocolEntryInputNormalizer.TryNormalizeClockPosition(
+            VsaUhrBisComboBox.Text,
+            out _,
+            out var hasUhrBis);
         if (!vsaUhrBisOk)
             errors.Add("VSA: Uhrzeit bis nur 00 bis 12.");
 
-        vsaQ1Ok = TryParseOptionalDouble(VsaQ1TextBox.Text, out _);
+        vsaQ1Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaQ1TextBox.Text, out _);
         if (!vsaQ1Ok)
             errors.Add("VSA: Quantifizierung 1 ist ungueltig.");
 
-        vsaQ2Ok = TryParseOptionalDouble(VsaQ2TextBox.Text, out _);
+        vsaQ2Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaQ2TextBox.Text, out _);
         if (!vsaQ2Ok)
             errors.Add("VSA: Quantifizierung 2 ist ungueltig.");
 
-        vsaStreckeOk = TryNormalizeStrecke(VsaStreckeTextBox.Text, out _, out var hasStrecke);
+        vsaStreckeOk = ProtocolEntryInputNormalizer.TryNormalizeStrecke(
+            VsaStreckeTextBox.Text,
+            out _,
+            out var hasStrecke);
         if (!vsaStreckeOk)
             errors.Add("VSA: Strecke nur im Format A1/B1/C1...");
         if (_vm.IsStreckenschaden && !hasStrecke)
@@ -326,11 +336,14 @@ public partial class ObservationCatalogWindow : Window
             errors.Add("VSA: Strecke ist bei Streckenschaden erforderlich.");
         }
 
-        vsaEzOk = TryNormalizeEz(VsaEzComboBox.Text, out _, out _);
+        vsaEzOk = ProtocolEntryInputNormalizer.TryNormalizeEz(VsaEzComboBox.Text, out _, out _);
         if (!vsaEzOk)
             errors.Add("VSA: EZ nur EZ0 bis EZ4.");
 
-        vsaSchachtbereichOk = TryNormalizeSchachtbereich(VsaSchachtbereichTextBox.Text, out _, out _);
+        vsaSchachtbereichOk = ProtocolEntryInputNormalizer.TryNormalizeSchachtbereich(
+            VsaSchachtbereichTextBox.Text,
+            out _,
+            out _);
         if (!vsaSchachtbereichOk)
             errors.Add("VSA: Schachtbereich nur A/B/D/F/H/I/J.");
 
@@ -404,7 +417,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeNumberText(TextBox textBox, bool revalidate = true)
     {
-        if (!TryParseOptionalDouble(textBox.Text, out var value))
+        if (!ProtocolEntryInputNormalizer.TryParseOptionalDouble(textBox.Text, out var value))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -423,7 +436,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeTimeText(TextBox textBox, bool revalidate = true)
     {
-        if (!TryParseOptionalTimeSpan(textBox.Text, out var value))
+        if (!ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(textBox.Text, out var value))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -442,7 +455,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeStreckeText(TextBox textBox, bool revalidate = true)
     {
-        if (!TryNormalizeStrecke(textBox.Text, out var normalized, out _))
+        if (!ProtocolEntryInputNormalizer.TryNormalizeStrecke(textBox.Text, out var normalized, out _))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -458,7 +471,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeClockCombo(ComboBox comboBox, bool revalidate = true)
     {
-        if (!TryNormalizeClockPosition(comboBox.Text, out var normalized, out _))
+        if (!ProtocolEntryInputNormalizer.TryNormalizeClockPosition(comboBox.Text, out var normalized, out _))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -474,7 +487,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeEzCombo(ComboBox comboBox, bool revalidate = true)
     {
-        if (!TryNormalizeEz(comboBox.Text, out var normalized, out _))
+        if (!ProtocolEntryInputNormalizer.TryNormalizeEz(comboBox.Text, out var normalized, out _))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -490,7 +503,7 @@ public partial class ObservationCatalogWindow : Window
 
     private void NormalizeSchachtbereichText(TextBox textBox, bool revalidate = true)
     {
-        if (!TryNormalizeSchachtbereich(textBox.Text, out var normalized, out _))
+        if (!ProtocolEntryInputNormalizer.TryNormalizeSchachtbereich(textBox.Text, out var normalized, out _))
         {
             if (revalidate)
                 ApplyLiveValidation();
@@ -504,111 +517,4 @@ public partial class ObservationCatalogWindow : Window
             ApplyLiveValidation();
     }
 
-    private static bool TryParseOptionalDouble(string raw, out double? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var normalized = raw.Trim().Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            return false;
-
-        value = parsed;
-        return true;
-    }
-
-    private static bool TryParseOptionalTimeSpan(string raw, out TimeSpan? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryNormalizeClockPosition(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim();
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 12)
-            return false;
-
-        normalized = value.ToString("00", CultureInfo.InvariantCulture);
-        return true;
-    }
-
-    private static bool TryNormalizeStrecke(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim().ToUpperInvariant();
-        if (text.Length == 1 && (text == "A" || text == "B" || text == "C"))
-        {
-            normalized = text + "1";
-            return true;
-        }
-
-        if (text.Length >= 2 && (text[0] == 'A' || text[0] == 'B' || text[0] == 'C') && text.Skip(1).All(char.IsDigit))
-        {
-            normalized = text;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryNormalizeEz(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim().ToUpperInvariant();
-        if (text.StartsWith("EZ", StringComparison.Ordinal))
-            text = text.Substring(2);
-
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 4)
-            return false;
-
-        normalized = $"EZ{value}";
-        return true;
-    }
-
-    private static bool TryNormalizeSchachtbereich(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        normalized = raw!.Trim().ToUpperInvariant();
-        return normalized is "A" or "B" or "D" or "F" or "H" or "I" or "J";
-    }
 }

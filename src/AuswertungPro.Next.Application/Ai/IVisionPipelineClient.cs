@@ -15,5 +15,9 @@ public interface IVisionPipelineClient
     Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default);
     Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default);
     Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default);
-    Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default);
+    Task<TrainingExportPlanResponseDto> ExportPlannedTrainingAsync(
+        TrainingExportPlanRequestDto request,
+        CancellationToken ct = default)
+        => Task.FromException<TrainingExportPlanResponseDto>(
+            new NotSupportedException("Dieser Vision-Client unterstuetzt den plan-gesteuerten Export v2 nicht."));
 }

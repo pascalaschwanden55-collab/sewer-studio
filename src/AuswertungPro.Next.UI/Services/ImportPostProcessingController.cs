@@ -3,7 +3,6 @@ using System.IO;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
-using AuswertungPro.Next.Infrastructure.Import;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -13,6 +12,7 @@ internal sealed record ImportPostProcessingRequest(
     Project Project,
     string? ProjectFolder,
     IPdfImportService PdfImport,
+    IImportMediaDistributionService MediaDistribution,
     string? PdfToTextPath,
     bool FillMissingOnly,
     ImportRunContext? Context,
@@ -153,7 +153,7 @@ internal static class ImportPostProcessingController
 
         actions.SetProgressText(
             $"{request.SourceLabel}: Fotos/PDFs von {holdingCount} Haltungen werden in Projektordner kopiert (Videos erst beim Verteilen)...");
-        var progress = new Progress<MediaDistributionService.CopyProgress>(value =>
+        var progress = new Progress<ImportMediaDistributionProgress>(value =>
         {
             actions.SetProgressText($"Kopiere: {value.Processed}/{value.Total} ({value.CurrentFile})");
             if (value.Total > 0)
@@ -163,14 +163,16 @@ internal static class ImportPostProcessingController
         var cancellationToken = request.Context?.CancellationToken ?? CancellationToken.None;
         var dryRun = request.Context?.DryRun ?? false;
         var distribution = await Task.Run(() =>
-            new MediaDistributionService().DistributeImportedMedia(
-                request.ProjectFolder,
-                request.Project,
-                progress,
-                cancellationToken,
-                dryRun,
-                request.CollectionLock,
-                includeVideos: false));
+            request.MediaDistribution.Distribute(
+                new ImportMediaDistributionRequest(
+                    ProjectFolder: request.ProjectFolder,
+                    Project: request.Project,
+                    Progress: progress,
+                    CancellationToken: cancellationToken,
+                    DryRun: dryRun,
+                    CollectionLock: request.CollectionLock,
+                    IncludeVideos: false,
+                    FileStaging: request.Context?.FileStaging)));
 
         actions.AppendSummaryText(
             $"\nMedien-Verteilung ({holdingCount} Haltungen):\n  {distribution.FilesCopied} Dateien kopiert\n  {distribution.FilesSkipped} uebersprungen\n  {distribution.Errors} Fehler");

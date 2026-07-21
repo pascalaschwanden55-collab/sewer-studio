@@ -17,20 +17,55 @@ public sealed class OllamaClientTests
 
         var http = ExtractHttpClient(client);
 
-        Assert.Equal(uri, http.BaseAddress);
+        // BaseAddress wird bewusst NICHT mehr gesetzt: Endpunkte werden absolut gebaut,
+        // damit ein geteilter (bereits benutzter) HttpClient nicht wirft.
+        Assert.Null(http.BaseAddress);
         Assert.Equal(TimeSpan.FromMinutes(42), http.Timeout);
     }
 
     [Fact]
-    public void Constructor_ProvidedClient_PreservesExistingTimeout()
+    public void Constructor_ProvidedClient_DoesNotTouchSharedClient()
     {
         var uri = new Uri("http://localhost:11434");
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
 
         _ = new OllamaClient(uri, http, TimeSpan.FromMinutes(42));
 
-        Assert.Equal(uri, http.BaseAddress);
+        // Der geteilte Client bleibt unangetastet (keine BaseAddress, kein Timeout-Overwrite).
+        Assert.Null(http.BaseAddress);
         Assert.Equal(TimeSpan.FromMinutes(3), http.Timeout);
+    }
+
+    [Fact]
+    public void Constructor_SharedClientThatAlreadySent_DoesNotThrow()
+    {
+        // Bildet den Videoanalyse-Pfad nach: ein geteilter HttpClient hat vor dem Ollama-Aufruf
+        // bereits eine Anfrage gesendet (Sidecar-Health-Check). Vor dem Fix warf hier das
+        // BaseAddress-Setzen im Konstruktor InvalidOperationException und die Batch-Analyse brach ab.
+        var handler = new CaptureOllamaHandler("{\"ok\":true}");
+        using var http = new HttpClient(handler);
+        using (http.GetAsync("http://127.0.0.1:8000/health").GetAwaiter().GetResult()) { }
+
+        var ex = Record.Exception(() => new OllamaClient(new Uri("http://localhost:11434"), http));
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task ChatAsync_SharedClientThatAlreadySent_HitsAbsoluteEndpoint()
+    {
+        var handler = new CaptureOllamaHandler("antwort");
+        using var http = new HttpClient(handler);
+        // Client zuerst als "gestartet" markieren (wie der vorausgehende Sidecar-Health-Check).
+        using (http.GetAsync("http://127.0.0.1:8000/health").GetAwaiter().GetResult()) { }
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
+
+        await client.ChatAsync(
+            "qwen-test",
+            [new OllamaClient.ChatMessage("user", "ping")],
+            CancellationToken.None);
+
+        Assert.Equal("http://localhost:11434/api/chat", handler.LastRequestUri);
     }
 
     [Fact]
@@ -78,11 +113,13 @@ public sealed class OllamaClientTests
     private sealed class CaptureOllamaHandler(string structuredContent) : HttpMessageHandler
     {
         public string LastRequestJson { get; private set; } = "";
+        public string LastRequestUri { get; private set; } = "";
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            LastRequestUri = request.RequestUri?.ToString() ?? "";
             LastRequestJson = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? "";
 
             var responseJson = $$"""

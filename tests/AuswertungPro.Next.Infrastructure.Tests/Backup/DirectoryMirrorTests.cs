@@ -59,6 +59,34 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task MirrorSourceAsync_FehlendeQuelle_WarntUndBehaeltSpiegelbestand()
+    {
+        var source = Path.Combine(_root, "nicht_vorhanden");   // existiert bewusst nicht
+        var backupRoot = Path.Combine(_root, "backup");
+        // Vorheriger Spiegelbestand dieser Quelle liegt bereits im Backup.
+        var mirrored = Path.Combine(backupRoot, "Programm", "sub", "alt.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(mirrored)!);
+        File.WriteAllText(mirrored, "bestehend");
+
+        var mirror = new DirectoryMirror(null);
+        var stats = new DirectoryMirror.MirrorStats();
+        var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Programm"),
+            backupRoot,
+            expected,
+            stats);
+
+        // Fehlende Quelle wird als Warnung sichtbar (kein stiller Erfolg).
+        Assert.Single(stats.Errors);
+        Assert.Contains(source, stats.Errors[0]);
+        // Der vorhandene Spiegelbestand ist als "erwartet" markiert -> RemoveOrphans schont ihn.
+        Assert.Contains(Path.Combine("Programm", "sub", "alt.txt"), expected);
+        Assert.True(File.Exists(mirrored));
+    }
+
+    [Fact]
     public async Task MirrorSourceAsync_Groessenaenderung_KopiertNeu()
     {
         var source = Path.Combine(_root, "source");

@@ -191,21 +191,25 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_protocol_match_highlighting_lives_in_highlighting_partial()
+    public void PlayerWindow_protocol_match_highlighting_lives_in_list_visual_controller()
     {
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
-        var highlightingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var oldHighlightingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var listVisualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventListVisualController.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchHighlightControls.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchListHighlightWorkflow.cs");
 
-        Assert.True(File.Exists(highlightingPath), "ProtocolMatch-Listenhighlighting soll aus dem Match-Partial heraus.");
+        Assert.True(File.Exists(listVisualControllerPath), "ProtocolMatch-Listenhighlighting soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(controlsPath), "ProtocolMatch-Listenhighlighting-Control-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Listenhighlighting-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         Assert.False(File.Exists(protocolMatchPath), "Der alte Match-Partial muss entfernt bleiben.");
+        Assert.False(File.Exists(oldHighlightingPath), "Das alte Highlighting-Partial muss entfernt bleiben.");
         var controller = File.ReadAllText(controllerPath);
-        var highlighting = File.ReadAllText(highlightingPath);
+        var listVisualController = File.ReadAllText(listVisualControllerPath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
@@ -213,18 +217,19 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
             controller,
             "private void ApplyCodingProtocolMatchListHighlights()",
             "private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)");
-        Assert.Contains("private void ApplyCodingProtocolMatchListHighlights()", highlighting);
-        Assert.Contains("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", highlighting);
-        Assert.Contains("CodingProtocolMatchListHighlightWorkflow.Execute", highlighting);
+        Assert.Contains("public void ApplyProtocolMatchHighlights()", listVisualController);
+        Assert.Contains("private void ApplyProtocolMatchHighlights(ListBox listBox)", listVisualController);
+        Assert.Contains("CodingProtocolMatchListHighlightWorkflow.Execute", listVisualController);
         AssertNoForbiddenTokens(
-            highlighting,
+            listVisualController,
             "for (var i = 0; i < listBox.Items.Count; i++)",
             "CodingProtocolMatchDisplayPolicy.BackgroundColor",
             "CodingProtocolMatchDisplayPolicy.BadgeText",
             "badge.Visibility = Visibility.Visible",
             "emptyBadge.Visibility = Visibility.Collapsed");
-        Assert.Contains("CodingProtocolMatchHighlightControls.Clear", highlighting);
-        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", highlighting);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Clear", listVisualController);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", listVisualController);
+        Assert.Contains("_codingEventListVisualController.ApplyProtocolMatchHighlights", windowRoot);
         Assert.Contains("actions.HighlightItem(i)", workflow);
         Assert.Contains("CodingProtocolMatchDisplayPolicy.BackgroundColor", controls);
         Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", controls);

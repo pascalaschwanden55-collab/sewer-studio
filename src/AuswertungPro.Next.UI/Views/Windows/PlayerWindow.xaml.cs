@@ -64,45 +64,26 @@ public partial class PlayerWindow : Window
                 RefreshCodingEventsList));
 
         InitializeComponent();
-        _liveDetectionPulseController = new LiveDetectionPulseController(
+        var liveDetectionStatusControllers = PlayerWindowLiveDetectionStatusInitializer.Create(
+            new PlayerWindowLiveDetectionStatusControls(
+                PulseRing: CodingAiPulseRing,
+                Badge: AiStatusBadge,
+                BadgeStatusText: AiStatusText,
+                BadgeDot: AiStatusDot,
+                YoloStatusBar: YoloStatusBar,
+                YoloStatusText: TxtYoloStatus,
+                YoloDot: YoloDot,
+                YoloModelText: TxtYoloModel,
+                CodingAiStatusText: TxtCodingAiStatus,
+                CodingAiStageText: TxtCodingAiStage,
+                CodingAiDot: CodingAiDot,
+                DetectionStatusText: LiveDetectionStatusText,
+                FindingSummaryPanel: FindingSummaryPanel,
+                FindingSummaryText: FindingSummaryText),
             _codingAiPulseStateController,
-            new LiveDetectionPulseControllerActions(
-                StartAnimation: () => LiveDetectionPulseControls.Start(CodingAiPulseRing),
-                StopAnimation: () => LiveDetectionPulseControls.Stop(CodingAiPulseRing)));
-        _liveDetectionStatusController = new LiveDetectionStatusController(
-            new LiveDetectionStatusControllerActions(
-                HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher),
-                DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action),
-                ShowLiveDetectionBadge: (status, color, stage) =>
-                    LiveDetectionStatusControls.ShowLiveDetectionBadge(
-                        AiStatusBadge,
-                        AiStatusText,
-                        AiStatusDot,
-                        status,
-                        color,
-                        stage),
-                ShowYoloStatus: (status, color, model) => LiveDetectionStatusControls.ShowYoloStatus(
-                    YoloStatusBar,
-                    TxtYoloStatus,
-                    YoloDot,
-                    TxtYoloModel,
-                    status,
-                    color,
-                    model),
-                ShowCodingAiState: (status, color, stage) => LiveDetectionStatusControls.ShowCodingAiState(
-                    TxtCodingAiStatus,
-                    TxtCodingAiStage,
-                    CodingAiDot,
-                    status,
-                    color,
-                    stage),
-                StartPulse: _liveDetectionPulseController.Start,
-                StopPulse: _liveDetectionPulseController.Stop,
-                ShowDetectionStatus: result => LiveDetectionStatusControls.ShowDetectionStatus(
-                    LiveDetectionStatusText,
-                    FindingSummaryPanel,
-                    FindingSummaryText,
-                    result)));
+            Dispatcher);
+        _liveDetectionPulseController = liveDetectionStatusControllers.Pulse;
+        _liveDetectionStatusController = liveDetectionStatusControllers.Status;
         _codingSchemaOverlayController = new CodingSchemaOverlayController(
             _codingSchemaManager,
             _codingSchemaTypeState,
@@ -160,8 +141,26 @@ public partial class PlayerWindow : Window
                     _codingOverlayRenderController.RenderCalibrationPreview(start, current),
                 ApplyPreview: preview => CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview),
                 ApplyCalibration: (start, end) => _codingManualCalibrationController.Apply(start, end)));
+        _codingOverlayInputVisibilityController = new CodingOverlayInputVisibilityController(
+            _codingOverlayStates.InputVisibilityState,
+            new CodingOverlayInputVisibilityControllerBindings(
+                IsPopupOpen: () => CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup),
+                HasCurrentOverlay: () => _codingSessionHost.CurrentOverlay is not null,
+                EndDrag: _codingSchemaManager.EndDrag,
+                CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
+                SuspendCanvas: () => CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas),
+                ResumeCanvas: () => CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas),
+                OpenPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
+                ClosePopup: () => CodingOverlayInputControls.ClosePopup(CodingOverlayPopup),
+                UpdateViewport: UpdateCodingOverlayViewport,
+                RedrawCanvas: RedrawCodingCanvas,
+                UpdateCursor: UpdateCodingOverlayCursor));
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
+        _codingEventListVisualController = new CodingEventListVisualController(
+            LstCodingEvents,
+            LstImportEvents,
+            _codingProtocolMatchState);
         _codingEventsRefreshController = new CodingEventsRefreshController(
             _codingSessionHost,
             _codingSidePanelControllers.EventsList,
@@ -169,7 +168,16 @@ public partial class PlayerWindow : Window
             CodingSessionViewModel.GetDefectStatus,
             new CodingEventsRefreshControllerActions(
                 ScheduleLoaded: action => PlayerDispatcherScheduler.ScheduleLoaded(Dispatcher, action),
-                ColorizeListItems: ColorizeCodingEventListItems));
+                ColorizeListItems: _codingEventListVisualController.ColorizeCodingEvents));
+        _codingStreckenschadenTrackingController = new CodingStreckenschadenTrackingController(
+            _codingSessionHost,
+            new CodingStreckenschadenTrackingControllerBindings(
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                ResolveCode: _codingFindingContext.ResolveCode,
+                LookupLabel: _codingFindingContext.LookupLabel,
+                AttachAnalyzedFramePhoto: AttachAnalyzedFramePhoto,
+                ResolveCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero,
+                RefreshEvents: RefreshCodingEventsList));
         PlayerCodingConfirmationPanelInitializer.Initialize(
             _codingConfirmationPanelControls,
             CodingConfirmationPanel,
@@ -187,6 +195,21 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
+        _codingPhotoAttachmentController = new CodingPhotoAttachmentController(
+            new CodingPhotoAttachmentControllerBindings(
+                GetPreferredFrameBytesAsync: TryExtractAnalyzedFrameBytesAsync,
+                GetBufferedFrameBytes: () => _liveDetectionController.PendingConfirmationFrameBytes,
+                AttachAnalyzedFramePhoto: (entry, frameBytes) =>
+                    CodingAnalyzedFramePhotoAttacher.AttachWithStore(
+                        entry,
+                        frameBytes,
+                        _playbackContext.VideoPath,
+                        _protocolContext.CodingFramePhotos),
+                CaptureSnapshot: CodingCaptureSnapshot,
+                GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp,
+                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                ShowOverlay: ShowOverlay,
+                RefreshEvents: RefreshCodingEventsList));
         _codingPipelineHealthController = new CodingPipelineHealthController(
             _codingAiRuntimeOwner.Controller,
             new CodingPipelineHealthControllerActions(
@@ -242,205 +265,78 @@ public partial class PlayerWindow : Window
                 ShowUnsupportedRate: PlayerPlaybackDialogWorkflow.ShowUnsupportedRate,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel, ProcessOutputs: serviceProvider?.ProcessOutputs, Dialogs: _protocolContext.Dialogs));
-        _liveDetectionStopController = new LiveDetectionStopController(
-            new LiveDetectionStopControllerSources(
-                StopRuntime: _liveDetectionController.Stop,
-                ShouldUpdateUi: () => !_shutdownState.IsUnavailable,
-                HideOverlay: () => !_liveDetectionController.IsManualMarkMode,
+        var liveDetectionControllers = PlayerWindowLiveDetectionControllerSetFactory.Create(
+            new PlayerWindowLiveDetectionControllerSetDependencies(
+                RuntimeController: _liveDetectionController,
+                ShutdownState: _shutdownState,
                 GetTotalEvents: () => _codingSessionHost.EventCollection?.Count ?? 0,
-                HasPlayer: () => !_shutdownState.IsPlaybackDisposed,
-                IsPlaybackDisposed: () => _shutdownState.IsPlaybackDisposed,
-                IsPlayerPlaying: () => !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying,
-                IsDetecting: () => _liveDetectionController.IsDetecting),
-            new LiveDetectionStopControllerActions(
-                SetStoppedStatus: () => _liveDetectionStatusController.SetYoloStatus(
-                    "Gestoppt",
-                    PlayerStatusColors.Muted),
-                ClearOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
-                    DetectionCanvas,
-                    DetectionOverlayGrid,
-                    hideOverlay),
-                ShowStoppedDetectionStatus: totalEvents => LiveDetectionStatusControls.ShowStoppedDetectionStatus(
-                    AiStatusBadge,
-                    FindingSummaryPanel,
-                    LiveDetectionStatusText,
-                    totalEvents),
-                SetPause: _playerPlaybackControlHost.SetPause,
-                ScheduleHideStatusTimer: actions => LiveDetectionHideStatusTimerWorkflow.Schedule(actions),
-                HideDetectionStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
-        _liveDetectionLifecycleController = new LiveDetectionLifecycleController(
-            new LiveDetectionLifecycleControllerActions(
-                IsDetecting: () => _liveDetectionController.IsDetecting,
-                StopLiveDetection: _liveDetectionStopController.Stop,
-                UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
-                StartWithDisplayAsync: LiveDetectionStartupDisplayWorkflow.StartAsync,
-                StartRuntime: _liveDetectionController.StartRuntime,
-                ShowOverlay: () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
-                ApplyActiveStatus: status =>
-                {
-                    _liveDetectionStatusController.SetLiveDetectionBadge(
-                        status.BadgeText,
-                        status.StatusColor,
-                        status.BadgeDetails);
-                    _liveDetectionStatusController.SetYoloStatus(
-                        status.YoloText,
-                        status.StatusColor,
-                        status.ModelLabel);
-                },
-                ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
+                PlaybackControlHost: _playerPlaybackControlHost,
+                StatusController: _liveDetectionStatusController,
+                Controls: new PlayerWindowLiveDetectionLifecycleControls(
+                    DetectionCanvas: DetectionCanvas,
+                    DetectionOverlay: DetectionOverlayGrid,
+                    StatusBadge: AiStatusBadge,
+                    FindingSummaryPanel: FindingSummaryPanel,
+                    DetectionStatusText: LiveDetectionStatusText,
+                    LiveDetectionToggle: LiveDetectionButton),
                 TimerTick: DetectionTimer_Tick,
-                RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
-        _liveDetectionMarkToolController = new LiveDetectionMarkToolController(
-            new LiveDetectionMarkToolControllerBindings(
-                ToggleManualMarkPopup: _markToolControls.ToggleManualMarkPopup,
-                ToggleToolsDropdown: _markToolControls.ToggleToolsDropdown,
-                CreateActivationActions: ensureOverlayReady => new LiveDetectionManualMarkActivationWorkflowActions(
-                    BeginActivation: _markToolControls.BeginActivation,
-                    SetMarkToolType: _liveDetectionController.SetMarkToolType,
-                    SetPause: _playerPlaybackControlHost.SetPause,
-                    CancelSchema: _codingSchemaManager.Cancel,
-                    ClearSchemaType: _codingSchemaTypeState.Clear,
-                    SetManualMarkMode: _liveDetectionController.SetManualMarkMode,
-                    ActivatePointTool: _markToolControls.ActivatePointTool,
-                    EnsureOverlayReady: ensureOverlayReady,
-                    SetActiveTool: selectedTool => _codingOverlayToolHost.SetActiveTool(selectedTool),
-                    ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
-                    OpenCodingOverlay: _markToolControls.OpenCodingOverlay,
-                    UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
-                    EnableCodingOverlayInput: _markToolControls.EnableCodingOverlayInput),
-                CreateOverlayReadyRequest: () => new LiveDetectionMarkOverlayReadyStateRequest(
-                    _codingOverlayRuntimeOwner.HasService,
-                    _codingSessionHost.HasViewModel,
-                    _playbackContext.VideoPath,
-                    _protocolContext.Settings,
-                    _codingSessionRuntimeOwner.Service,
-                    _codingOverlayRuntimeOwner.Service, _protocolContext.TrainingSamples),
-                OverlayReadyActions: new LiveDetectionMarkOverlayReadyApplyActions(
-                    SetSessionService: _codingSessionRuntimeOwner.Set,
-                    SetOverlayService: _codingOverlayRuntimeOwner.Set,
-                    SetViewModel: viewModel => _codingSessionViewModelOwner.Set(
-                        viewModel,
-                        observePropertyChanged: false)),
-                CreateDeactivationRequest: () => new LiveDetectionManualMarkDeactivationWorkflowRequest(
-                    _codingModeState.IsCodingMode,
-                    _liveDetectionController.IsDetecting),
-                DeactivationActions: new LiveDetectionManualMarkDeactivationWorkflowActions(
-                    SetMarkToolType: _liveDetectionController.SetMarkToolType,
-                    SetManualMarkMode: _liveDetectionController.SetManualMarkMode,
-                    ResetToolLabel: _markToolControls.ResetToolLabel,
-                    DeactivateDetectionSide: _markToolControls.DeactivateDetectionSide,
-                    CancelSchema: _codingSchemaManager.Cancel,
-                    CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
-                    SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
-                    DeactivateCodingOverlay: _markToolControls.DeactivateCodingOverlay)));
-        _codingEingabemarkerInteractionController = new CodingEingabemarkerInteractionController(
-            new CodingEingabemarkerInteractionControllerBindings(
-                PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(
-                    _playerPlaybackControlHost.SetPause),
-                EnsureMarkOverlayReady: _liveDetectionMarkToolController.EnsureOverlayReady,
-                OpenCodingOverlayPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
-                UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
-                EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),
-                ShowDrawingStatus: () => _liveDetectionStatusController.SetCodingAiState(
-                    "Eingabemarker: Rechteck um die Beobachtung ziehen",
-                    PlayerStatusColors.Info,
-                    "Klicken + Ziehen = Bereich markieren"),
-                UncheckButton: () => PlayerToggleButtonControls.Uncheck(BtnEingabemarker),
-                HideInputPopup: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
-                ClearPreview: preview => CodingEingabemarkerPreviewRenderer.Clear(
-                    CodingOverlayCanvas,
-                    preview),
-                ResetCanvasCursor: () => CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas),
-                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
-                CreatePreview: point => CodingEingabemarkerPreviewRenderer.Create(CodingOverlayCanvas, point),
-                UpdatePreview: CodingEingabemarkerPreviewRenderer.Update,
-                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
-                ResolveCanvasSize: () => CodingOverlayInputControls.GetCanvasActualSize(CodingOverlayCanvas),
-                DisableDrawingCanvas: () => CodingOverlayInputControls.DisableDrawingCanvas(CodingOverlayCanvas),
-                ShowInputPopup: () => CodingEingabemarkerPopupControls.ShowInput(
-                    EingabemarkerPopup,
-                    TxtEingabemarker,
-                    CmbEingabemarker),
-                FocusInput: () => PlayerDispatcherScheduler.ScheduleInput(
-                    Dispatcher,
-                    () => PlayerFocusControls.FocusElement(TxtEingabemarker)),
-                ShowInputStatus: () => _liveDetectionStatusController.SetCodingAiState(
-                    "Beschreibung eingeben oder Stichwort wÃ¤hlen, dann Enter",
-                    PlayerStatusColors.Info,
-                    "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));
-        _codingEingabemarkerSubmissionController = new CodingEingabemarkerSubmissionController(
-            new CodingEingabemarkerSubmissionControllerBindings(
-                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
-                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
-                HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
-                SetAnalyzingPhase: _codingEingabemarkerInteractionController.SetAnalyzingPhase,
-                ResolveCodeHint: PlayerVsaCodeHintResolver.ResolveKeyword,
-                ResolveEvents: () => _codingSessionHost.Events,
-                ShowDuplicateStatus: (codeHint, meter) => _liveDetectionStatusController.SetCodingAiState(
-                    $"{codeHint} bereits vorhanden bei {meter:F2}m - Duplikat",
-                    PlayerStatusColors.Warning,
-                    ""),
-                ResolveCurrentOverlay: () => _codingSessionHost.CurrentOverlay,
-                ResolveMeter: () => _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
-                ResolveVideoTime: () => _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero,
-                LookupLabel: _codingFindingContext.LookupLabel,
-                CapturePhoto: CodingCaptureSnapshot,
-                RefreshEvents: RefreshCodingEventsList,
-                UpdateToolBadge: UpdateToolBadge,
-                PersistTraining: ev => _codingTrainingPersistenceContext
-                    .PersistSingleEventAsync(ev)
-                    .SafeFireAndForget("TrainingSaveSingle"),
-                ShowSuccessStatus: (code, label, meter) => _liveDetectionStatusController.SetCodingAiState(
-                    $"{code} {label} bei {meter:F2}m eingetragen",
-                    PlayerStatusColors.Success,
-                    ""),
-                ShowAiFallbackStatus: keyword => _liveDetectionStatusController.SetCodingAiState(
-                    $"KI analysiert: \"{keyword}\" ...",
-                    PlayerStatusColors.Warning,
-                    "Qwen analysiert"),
-                RunAiFallbackAsync: keyword => RunCodingAnalysisAsync(
-                    $"Eingabemarker: {keyword}",
-                    disableAnalyzeButton: true,
-                    keywordHint: keyword,
-                    codeHint: null),
-                ShowErrorStatus: message => _liveDetectionStatusController.SetCodingAiState(
-                    $"Fehler: {message}",
-                    PlayerStatusColors.Error,
-                    ""),
-                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel()));
-        _codingEingabemarkerInputController = new CodingEingabemarkerInputController(
-            new CodingEingabemarkerInputControllerBindings(
-                CancelMarker: () => _codingEingabemarkerInteractionController.Cancel(),
-                ClearDetectionOverlays: ClearDetectionOverlays,
-                Submit: () => _codingEingabemarkerSubmissionController
-                    .SubmitAsync(TxtEingabemarker.Text)
-                    .SafeFireAndForget("SubmitEingabemarker"),
-                ApplyQuickSelection: text => CodingEingabemarkerPopupControls.ApplyQuickSelection(
-                    TxtEingabemarker,
-                    text)));
-        _liveDetectionMarkSegmentationController = new LiveDetectionMarkSegmentationController(
-            new LiveDetectionMarkSegmentationControllerBindings(
-                HasBoxSegmentation: () => _codingAiRuntimeOwner.Controller.BoxSegmentation is not null,
-                SegmentBoxAsync: (frameBytes, box, dn, calibration) =>
-                    _codingAiRuntimeOwner.Controller.BoxSegmentation!.SegmentBoxAsync(
-                        frameBytes,
-                        box,
-                        dn,
-                        calibration,
-                        System.Threading.CancellationToken.None),
-                GetCalibration: () => _codingOverlayToolHost.Calibration,
-                GetContentRect: GetCodingContentRect,
-                ShowBendMarker: (x, y, rect) => CodingBendMarkerOverlayController.Show(
-                    CodingOverlayCanvas,
-                    x,
-                    y,
-                    rect),
-                RenderMasks: (samResponse, quantifications, rect) => CodingSamMaskOverlayController.RenderMasks(
-                    CodingOverlayCanvas,
-                    samResponse,
-                    quantifications,
-                    rect),
-                TraceError: message => PlayerTrace.WriteLine(message)));
+                RunFirstDetection: () =>
+                    RunDetectionAsync().SafeFireAndForget("LiveDetection")));
+        _liveDetectionStopController = liveDetectionControllers.Stop;
+        _liveDetectionLifecycleController = liveDetectionControllers.Lifecycle;
+        _liveDetectionMarkToolController = PlayerWindowLiveDetectionMarkToolControllerFactory.Create(
+            new PlayerWindowLiveDetectionMarkToolControllerDependencies(
+                MarkToolControls: _markToolControls,
+                DetectionController: _liveDetectionController,
+                PlaybackControlHost: _playerPlaybackControlHost,
+                RuntimeStates: _codingRuntimeStates,
+                SchemaStates: _codingSchemaStates,
+                SessionRuntime: codingSessionRuntime,
+                ResolveVideoPath: () => _playbackContext.VideoPath,
+                ResolveSettings: () => _protocolContext.Settings,
+                ResolveTrainingSamples: () => _protocolContext.TrainingSamples,
+                UpdateCodingOverlayViewport: UpdateCodingOverlayViewport));
+        var eingabemarkerControllers =
+            PlayerWindowCodingEingabemarkerControllerSetFactory.Create(
+                new PlayerWindowCodingEingabemarkerControllerSetDependencies(
+                    Controls: new PlayerWindowCodingEingabemarkerControls(
+                        CodingOverlayPopup: CodingOverlayPopup,
+                        CodingOverlayCanvas: CodingOverlayCanvas,
+                        Toggle: BtnEingabemarker,
+                        InputPopup: EingabemarkerPopup,
+                        InputText: TxtEingabemarker,
+                        QuickSelection: CmbEingabemarker),
+                    PlaybackControlHost: _playerPlaybackControlHost,
+                    MarkToolController: _liveDetectionMarkToolController,
+                    StatusController: _liveDetectionStatusController,
+                    SessionHost: _codingSessionHost,
+                    SessionServiceOwner: _codingSessionRuntimeOwner,
+                    OsdMeterController: _codingOsdMeterController,
+                    TimelineHost: _playerTimelineHost,
+                    FindingContext: _codingFindingContext,
+                    TrainingPersistence: _codingTrainingPersistenceContext,
+                    Dispatcher: Dispatcher,
+                    Actions: new PlayerWindowCodingEingabemarkerActions(
+                        UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+                        CapturePhoto: CodingCaptureSnapshot,
+                        RefreshEvents: RefreshCodingEventsList,
+                        UpdateToolBadge: UpdateToolBadge,
+                        RunAiFallbackAsync: keyword => RunCodingAnalysisAsync(
+                            $"Eingabemarker: {keyword}",
+                            disableAnalyzeButton: true,
+                            keywordHint: keyword,
+                            codeHint: null),
+                        ClearDetectionOverlays: ClearDetectionOverlays)));
+        _codingEingabemarkerInteractionController = eingabemarkerControllers.Interaction;
+        _codingEingabemarkerSubmissionController = eingabemarkerControllers.Submission;
+        _codingEingabemarkerInputController = eingabemarkerControllers.Input;
+        _liveDetectionMarkSegmentationController =
+            PlayerWindowLiveDetectionMarkSegmentationControllerFactory.Create(
+                new PlayerWindowLiveDetectionMarkSegmentationDependencies(
+                    AiController: _codingAiRuntimeOwner.Controller,
+                    OverlayToolHost: _codingOverlayToolHost,
+                    OverlayCanvas: CodingOverlayCanvas,
+                    ResolveContentRect: GetCodingContentRect));
         _codingApplyController = new CodingApplyController(
             new CodingApplyControllerBindings(
                 HasCodingViewModel: () => _codingSessionHost.HasViewModel,
@@ -459,7 +355,7 @@ public partial class PlayerWindow : Window
                 SaveProjectAfterCoding: CodingProjectPersistenceWorkflow.TrySaveProjectIfReady,
                 ShowOverlay: ShowOverlay,
                 ConfirmUnappliedChanges: applyChanges => CodingUnappliedChangesCloseDialogWorkflow.Execute(
-                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
+                    runWithSuspendedOverlay: callback => _codingOverlayInputVisibilityController.Run(callback),
                     applyChanges: applyChanges)));
         _codingInlineDefectController = new CodingInlineDefectController(
             new CodingInlineDefectControllerBindings(
@@ -511,80 +407,48 @@ public partial class PlayerWindow : Window
                 RefreshEvents: RefreshCodingEventsList,
                 ScheduleHighlights: () => PlayerDispatcherScheduler.ScheduleLoaded(
                     Dispatcher,
-                    ApplyCodingProtocolMatchListHighlights)));
-        _codingModeExitController = new CodingModeExitController(
-            new CodingModeExitControllerBindings(
-                IsCodingMode: () => _codingModeState.IsCodingMode,
-                SetCodingMode: _codingModeState.Set,
-                CreateFinalizationRequest: () => new CodingModeExitFinalizationWorkflowRequest(
-                    _codingSessionHost.EventCollection,
-                    _codingOsdMeterController.LastMeter,
-                    _codingSessionHost.EndMeter,
-                    _playerTimelineHost.DurationTimeOrZero,
-                    _liveDetectionController.PendingConfirmationFrameBytes),
-                FinalizationActions: new CodingModeExitFinalizationWorkflowActions(
-                    CloseTrackedStreckenschaeden,
-                    CloseOpenStreckenschaeden,
-                    (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes)),
-                CreateTeardownRequest: () => new CodingModeExitTeardownWorkflowRequest(
-                    HasCodingLiveAiTimers: _codingLiveAiTimerOwner.HasController,
-                    HasCodingViewModel: _codingSessionHost.HasViewModel,
-                    IsLiveDetectionRunning: _liveDetectionController.IsDetecting),
-                TeardownActions: new CodingModeExitTeardownWorkflowActions(
-                    StopCodingOsdTimer: StopCodingOsdTimer,
-                    DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
-                    StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop,
-                    StopCodingAiPulse: _liveDetectionPulseController.Stop,
-                    StopPipelineHealthMonitor: _codingPipelineHealthController.Stop,
-                    DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
-                    ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportReferenceEvents.Events),
-                    ResetProtocolMatchState: () =>
-                    {
-                        _codingProtocolMatchState.Reset();
-                    },
-                    UpdateProtocolMatchSummary: () => _codingProtocolMatchController.UpdateSummary(_codingProtocolMatchState.LastMatch),
-                    ClearImportEventsListSource: () => CodingImportReferenceControls.ClearItemsSource(LstImportEvents),
-                    HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
-                        CodingConfirmationPanel,
-                        DetectionConfirmationPanel),
-                    ClearPendingConfirmation: _codingPendingConfirmationState.Clear,
-                    ClearDetectionConfirmationBuffer: _liveDetectionController.ClearConfirmationBuffer,
-                    ClearDetectionOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
-                        DetectionCanvas,
-                        DetectionOverlayGrid,
-                        hideOverlay),
-                    HideCodingSurface: () => CodingModeChromeControls.HideCodingSurface(
-                        CodingOverlayPopup,
-                        CodingOverlayCanvas,
-                        CodingSidePanel,
-                        CodingSidePanelColumn,
-                        CodingToolbar,
-                        CodingTimelinePanel,
-                        CodingCalibrationHint,
-                        CodingMeasurementPanel),
+                    _codingEventListVisualController.ApplyProtocolMatchHighlights)));
+        _codingModeExitController = PlayerWindowCodingModeExitControllerFactory.Create(
+            new PlayerWindowCodingModeExitControllerDependencies(
+                RuntimeStates: _codingRuntimeStates,
+                SchemaStates: _codingSchemaStates,
+                OverlayStates: _codingOverlayStates,
+                AiStates: _codingAiStates,
+                ProtocolStates: _codingProtocolStates,
+                SessionRuntime: codingSessionRuntime,
+                OsdMeterController: _codingOsdMeterController,
+                TimelineHost: _playerTimelineHost,
+                DetectionController: _liveDetectionController,
+                StreckenschadenTrackingController: _codingStreckenschadenTrackingController,
+                BoundaryContext: _codingBoundaryContext,
+                LiveDetectionPulseController: _liveDetectionPulseController,
+                PipelineHealthController: _codingPipelineHealthController,
+                ProtocolMatchController: _codingProtocolMatchController,
+                OverlayInputVisibilityController: _codingOverlayInputVisibilityController,
+                Controls: new PlayerWindowCodingModeExitControls(
+                    ImportEventsList: LstImportEvents,
+                    CodingConfirmationPanel: CodingConfirmationPanel,
+                    DetectionConfirmationPanel: DetectionConfirmationPanel,
+                    DetectionCanvas: DetectionCanvas,
+                    DetectionOverlay: DetectionOverlayGrid,
+                    CodingOverlayPopup: CodingOverlayPopup,
+                    CodingOverlayCanvas: CodingOverlayCanvas,
+                    CodingSidePanel: CodingSidePanel,
+                    CodingSidePanelColumn: CodingSidePanelColumn,
+                    CodingToolbar: CodingToolbar,
+                    CodingTimelinePanel: CodingTimelinePanel,
+                    CodingCalibrationHint: CodingCalibrationHint,
+                    CodingMeasurementPanel: CodingMeasurementPanel,
+                    OsdMeterBadge: OsdMeterBadge,
+                    LiveDetectionButton: LiveDetectionButton,
+                    LiveDetectionStatusText: LiveDetectionStatusText,
+                    ActiveToolLabel: TxtActiveToolLabel,
+                    CodingLiveAiToggle: BtnCodingLiveAi,
+                    CodingAiStageText: TxtCodingAiStage),
+                Actions: new PlayerWindowCodingModeExitActions(
+                    CloseOpenStreckenschaeden: CloseOpenStreckenschaeden,
                     HideInlineDefectDetail: HideInlineDefectDetail,
-                    HideOsdBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge),
-                    ShowLiveDetectionEntry: isDetecting => CodingModeChromeControls.ShowLiveDetectionEntry(
-                        LiveDetectionButton,
-                        LiveDetectionStatusText,
-                        isDetecting),
-                    ClearActiveCodingToolName: _codingActiveToolNameState.Clear,
-                    ResetCodingIndicators: () => CodingModeChromeControls.ResetCodingIndicators(
-                        TxtActiveToolLabel,
-                        BtnCodingLiveAi,
-                        TxtCodingAiStage),
-                    CancelCodingSchema: _codingSchemaManager.Cancel,
-                    ClearCodingSchemaType: _codingSchemaTypeState.Clear,
-                    DetachCodingViewModelPropertyChanged: _codingSessionViewModelOwner.DetachPropertyChanged,
-                    ClearCodingSessionReferences: () =>
-                    {
-                        _codingSessionViewModelOwner.Clear();
-                        _codingSessionRuntimeOwner.Clear();
-                        _codingOverlayRuntimeOwner.Clear();
-                    },
-                    ClearCodingCalibrationState: _codingCalibrationState.Reset,
-                    ResetFrameReadiness: ResetFrameReadiness,
-                    ResetCodingOverlaySuspendState: _codingOverlayInputVisibilityState.ResetSuspendState)));
+                    ResetFrameReadiness: ResetFrameReadiness)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(
@@ -605,35 +469,20 @@ public partial class PlayerWindow : Window
                 ResumeDetection: ResumeDetection, TeacherAnnotations: _protocolContext.TeacherAnnotations, CodeUsage: _protocolContext.CodeUsage, VsaYoloClasses: _protocolContext.VsaYoloClasses));
         _liveDetectionConfirmationTrainingController = liveDetectionTrainingControllers.Confirmation;
         _liveDetectionManualMarkTrainingController = liveDetectionTrainingControllers.ManualMark;
-        var codingConfirmationDecisionController = new CodingConfirmationDecisionController(
-            _codingPendingConfirmationState,
-            new CodingConfirmationDecisionControllerActions(
-                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
-                ResolveCodingEvents: () => _codingSessionHost.EventCollection,
-                PersistTrainingSample: (codingEvent, operation) =>
-                    _codingTrainingPersistenceContext.PersistSingleEventAsync(codingEvent).SafeFireAndForget(operation),
-                RefreshCodingEvents: RefreshCodingEventsList,
-                HideConfirmationPanel: _codingConfirmationPanelControls.Hide,
-                SelectEvent: _codingSidePanelControllers.EventsList.SelectEvent,
-                IsLiveAiEnabled: () => PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
-                ResolveModelName: () => _codingAiRuntimeOwner.Controller.ModelName,
-                SetPause: _playerPlaybackControlHost.SetPause,
-                ApplyResumeStatus: status => _liveDetectionStatusController.SetCodingAiState(
-                    status.StatusText,
-                    PlayerStatusColors.Success,
-                    status.DetailText)));
-        _codingConfirmationController = new CodingConfirmationController(
-            _codingPendingConfirmationState,
-            new CodingConfirmationControllerBindings(
-                ResolveCurrentStatusText: () => TxtCodingAiStatus.Text,
-                ResolveCodingSessionService: () => _codingSessionRuntimeOwner.Service,
-                SetPause: _playerPlaybackControlHost.SetPause,
-                ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply,
-                ShowStatus: (status, color, detail) =>
-                    _liveDetectionStatusController.SetCodingAiState(status, color, detail),
-                Accept: codingConfirmationDecisionController.Accept,
-                Edit: codingConfirmationDecisionController.Edit,
-                Reject: codingConfirmationDecisionController.Reject));
+        _codingConfirmationController = PlayerWindowCodingConfirmationControllerFactory.Create(
+            new PlayerWindowCodingConfirmationControllerDependencies(
+                PendingState: _codingPendingConfirmationState,
+                SessionRuntimeOwner: _codingSessionRuntimeOwner,
+                SessionHost: _codingSessionHost,
+                TrainingPersistence: _codingTrainingPersistenceContext,
+                RefreshEvents: RefreshCodingEventsList,
+                ConfirmationPanel: _codingConfirmationPanelControls,
+                EventsList: _codingSidePanelControllers.EventsList,
+                CurrentStatusText: TxtCodingAiStatus,
+                LiveAiToggle: BtnCodingLiveAi,
+                AiRuntimeOwner: _codingAiRuntimeOwner,
+                PlaybackControlHost: _playerPlaybackControlHost,
+                StatusController: _liveDetectionStatusController));
         _codingNavigationController = new CodingNavigationController(
             _codingSessionHost,
             _codingNavigationPendingState,

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Training;
@@ -7,14 +8,21 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
-/// Dateibasierter Trainingssample-Speicher. Ein Instanz-Lock schuetzt alle
-/// Lese-Aendern-Schreiben-Ablaeufe vor verlorenen Aktualisierungen.
+/// Dateibasierter Trainingssample-Speicher. Ein pfad-basiertes Lock schuetzt alle
+/// Lese-Aendern-Schreiben-Ablaeufe vor verlorenen Aktualisierungen — auch wenn mehrere
+/// Instanzen (z. B. die ServiceProvider-Instanz und die statische Fassade) auf DIESELBE
+/// Datei zeigen.
 /// </summary>
 public sealed class TrainingSampleFileStore : ITrainingSampleStore
 {
     private const string DefaultEvalSetRoot = @"C:\KI_BRAIN\eval_set";
+
+    // Ein Lock je Zieldatei, ueber ALLE Instanzen geteilt. Getrennte Instanz-Locks auf
+    // derselben Datei koennten sonst parallele Merges verlieren (Lost Update).
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private readonly Func<string> _storagePathProvider;
-    private readonly SemaphoreSlim _fileLock = new(1, 1);
     private string? _configuredEvalSetRoot;
 
     public TrainingSampleFileStore()
@@ -37,6 +45,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
 
     public string StoragePath => Path.GetFullPath(_storagePathProvider());
 
+    // Das ueber alle Instanzen geteilte Lock fuer die aktuelle Zieldatei.
+    private SemaphoreSlim FileLock => FileLocks.GetOrAdd(StoragePath, static _ => new SemaphoreSlim(1, 1));
+
     public string EffectiveEvalSetRoot =>
         Volatile.Read(ref _configuredEvalSetRoot)
         ?? Environment.GetEnvironmentVariable("SEWERSTUDIO_EVAL_SET_ROOT")
@@ -49,33 +60,36 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
 
     public async Task<List<TrainingSample>> LoadAsync()
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             return FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
         }
         finally
         {
-            _fileLock.Release();
+            fileLock.Release();
         }
     }
 
     public async Task SaveAsync(List<TrainingSample> samples)
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             await SaveInternalAsync(FilterEvalContamination(samples)).ConfigureAwait(false);
         }
         finally
         {
-            _fileLock.Release();
+            fileLock.Release();
         }
     }
 
     public async Task MergeAndSaveAsync(List<TrainingSample> samples)
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var incoming = FilterEvalContamination(samples);
@@ -99,13 +113,14 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
         finally
         {
-            _fileLock.Release();
+            fileLock.Release();
         }
     }
 
     public async Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var incoming = FilterEvalContamination(samples);
@@ -135,7 +150,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
         finally
         {
-            _fileLock.Release();
+            fileLock.Release();
         }
     }
 

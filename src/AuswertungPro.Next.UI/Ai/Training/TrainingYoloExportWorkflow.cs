@@ -1,59 +1,36 @@
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.KnowledgeBase;
-using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.UI.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 public sealed record TrainingYoloExportWorkflowRequest(
     Func<bool> IsBusy,
-    IEnumerable<TrainingSample> Samples,
-    Func<TrainingSample, bool> IsTrainingExportEligible,
-    Func<Task> PersistSamplesAsync,
-    Func<string?> SelectOutputDirectory,
+    IReadOnlyList<TrainingSample> Samples,
+    ITrainingYoloExportCoordinator Coordinator,
     Func<CancellationToken> ResetCancellation,
-    Func<TrainingYoloSidecarRuntime> CreateSidecarRuntime,
-    Func<EvalContaminationSets> LoadEvalSets,
-    Func<TrainingYoloSidecarExportPayloadRequest, Task<TrainingYoloSidecarExportPayloadResult>> BuildSidecarPayloadAsync,
-    Func<TrainingYoloSidecarExportCompletionRequest, Task> RunSidecarCompletionAsync,
-    Func<TrainingYoloLocalExportWorkflowRequest, Task> RunLocalExportAsync,
+    Func<DateTimeOffset> UtcNow,
     Action<bool> SetBusy,
     Action<string> Log,
     Action<int> SetProgressMax,
     Action<int> SetProgressValue,
-    Action<string> SetStatusText,
-    ITeacherAnnotationStore? TeacherAnnotations = null,
-    IVsaYoloClassMapStore? VsaYoloClasses = null);
+    Action<string> SetStatusText);
 
 public static class TrainingYoloExportRequestFactory
 {
-    public static TrainingYoloExportWorkflowRequest CreateWithDefaults(
+    public static TrainingYoloExportWorkflowRequest Create(
         IEnumerable<TrainingSample> samples,
-        AppSettings? settings,
-        ICodeCatalogProvider? codeCatalog,
+        TrainingYoloExportDependencies dependencies,
         Func<bool> isBusy,
-        Func<Task> persistSamplesAsync,
         Func<CancellationToken> resetCancellation,
         Action<bool> setBusy,
         Action<string> log,
         Action<int> setProgressMax,
         Action<int> setProgressValue,
-        Action<string> setStatusText,
-        ITeacherAnnotationStore? teacherAnnotations = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null,
-        IVsaYoloClassMapStore? vsaYoloClasses = null)
+        Action<string> setStatusText)
     {
         ArgumentNullException.ThrowIfNull(samples);
+        ArgumentNullException.ThrowIfNull(dependencies);
         ArgumentNullException.ThrowIfNull(isBusy);
-        ArgumentNullException.ThrowIfNull(persistSamplesAsync);
         ArgumentNullException.ThrowIfNull(resetCancellation);
         ArgumentNullException.ThrowIfNull(setBusy);
         ArgumentNullException.ThrowIfNull(log);
@@ -63,151 +40,69 @@ public static class TrainingYoloExportRequestFactory
 
         return new TrainingYoloExportWorkflowRequest(
             IsBusy: isBusy,
-            Samples: samples,
-            IsTrainingExportEligible: sample => TrainingSampleExportEligibility.EvaluateAndUpdate(sample, codeCatalog),
-            PersistSamplesAsync: persistSamplesAsync,
-            SelectOutputDirectory: TrainingYoloExportTargetFolderSelector.SelectFolder,
+            Samples: samples.ToArray(),
+            Coordinator: dependencies.Coordinator,
             ResetCancellation: resetCancellation,
-            CreateSidecarRuntime: () => TrainingYoloSidecarRuntimeFactory.CreateWithDefaults(sidecarTelemetry),
-            LoadEvalSets: () => EvalContaminationSetProvider.Load(settings),
-            BuildSidecarPayloadAsync: TrainingYoloSidecarExportPayloadWorkflow.BuildAsync,
-            RunSidecarCompletionAsync: TrainingYoloSidecarExportCompletionWorkflow.RunAsync,
-            RunLocalExportAsync: TrainingYoloLocalExportWorkflow.RunAsync,
+            UtcNow: () => DateTimeOffset.UtcNow,
             SetBusy: setBusy,
             Log: log,
             SetProgressMax: setProgressMax,
             SetProgressValue: setProgressValue,
-            SetStatusText: setStatusText,
-            TeacherAnnotations: teacherAnnotations,
-            VsaYoloClasses: vsaYoloClasses);
+            SetStatusText: setStatusText);
     }
-
 }
 
+/// <summary>
+/// Duenne UI-Huelle: Busy-, Fortschritts- und Fehlermeldungen bleiben hier.
+/// Inventar, Plan, Sidecar-/Lokalwahl und Abschluss liegen im injizierten Koordinator.
+/// </summary>
 public static class TrainingYoloExportWorkflow
 {
-    private const int SidecarExportMaxSamplesPerRequest = 500;
-
     public static async Task RunAsync(TrainingYoloExportWorkflowRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-
         if (request.IsBusy())
             return;
 
-        var selection = TrainingYoloExportCandidateSelector.SelectWithFileSystem(
-            request.Samples,
-            request.IsTrainingExportEligible);
-        var approved = selection.Approved;
-
-        if (selection.RequiresPersistence)
-            await request.PersistSamplesAsync().ConfigureAwait(false);
-
-        if (approved.Count == 0)
-        {
-            request.SetStatusText("Keine Approved-Samples mit gueltigen Frames vorhanden.");
-            request.Log("YOLO-Export: Keine exportierbaren Samples gefunden.");
-            return;
-        }
-
-        var outputDir = request.SelectOutputDirectory();
-        if (string.IsNullOrWhiteSpace(outputDir))
-            return;
-
-        var ct = request.ResetCancellation();
-
+        var cancellationToken = request.ResetCancellation();
         try
         {
             request.SetBusy(true);
-            request.Log($"YOLO-Export: {approved.Count} Samples \u2192 {outputDir}");
-            request.SetStatusText($"YOLO-Export: {approved.Count} Samples werden vorbereitet...");
+            request.SetProgressMax(0);
+            request.SetProgressValue(0);
+            request.SetStatusText("YOLO-Export: Datenbestand wird geprueft...");
 
-            var sidecarRuntime = request.CreateSidecarRuntime();
-            var pipelineCfg = sidecarRuntime.PipelineConfig;
-            var client = sidecarRuntime.Client;
+            var progress = new UiContextProgress<TrainingYoloExportProgress>(value =>
+                ApplyProgress(request, value));
+            var result = await request.Coordinator.RunAsync(
+                    new TrainingYoloExportCommand(
+                        request.UtcNow(),
+                        UpdateTargets: request.Samples),
+                    progress,
+                    cancellationToken);
 
-            var healthCheck = await client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
-            if (!healthCheck.IsReachable)
+            if (result.Status == TrainingYoloExportResultStatus.NoImages)
             {
-                request.Log($"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}). Versuche lokalen Export...");
-                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
+                const string emptyMessage =
+                    "YOLO-Export: Der gepruefte Plan enthaelt keine exportierbaren Bilder.";
+                request.Log(emptyMessage);
+                request.SetStatusText(emptyMessage);
                 return;
             }
 
-            if (!healthCheck.IsAuthorized)
-            {
-                var statusText = healthCheck.StatusCode is { } statusCode
-                    ? $"HTTP {statusCode}"
-                    : "Auth-Fehler";
-                request.Log($"Sidecar erreichbar, aber Token/Auth fehlgeschlagen ({statusText}: {healthCheck.Error ?? "Token fehlt oder ist ungueltig"}). Versuche lokalen Export...");
-                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
-                return;
-            }
-
-            var health = healthCheck.Health;
-            if (health is null)
-            {
-                var detail = healthCheck.StatusCode is { } statusCode
-                    ? $"HTTP {statusCode}"
-                    : (healthCheck.Error ?? "keine Health-Antwort");
-                request.Log($"Sidecar erreichbar, aber Health-Check fehlgeschlagen ({detail}). Versuche lokalen Export...");
-                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
-                return;
-            }
-
-            request.Log($"Sidecar erreichbar: v{health.Version}, GPU: {health.Gpu?.CurrentModel ?? "?"}");
-
-            var sidecarEvalSets = request.LoadEvalSets();
-            var payload = await request.BuildSidecarPayloadAsync(
-                new TrainingYoloSidecarExportPayloadRequest(
-                    approved,
-                    outputDir,
-                    0.8,
-                    sidecarEvalSets.ImageHashes,
-                    sidecarEvalSets.HaltungKeys,
-                    request.SetProgressMax,
-                    request.SetProgressValue,
-                    request.SetStatusText,
-                    ct)).ConfigureAwait(false);
-
-            if (payload.SkipEvalHash + payload.SkipEvalCase + payload.SkipNoBox > 0)
-                request.Log($"  uebersprungen: {payload.SkipEvalHash} Eval-Hash, {payload.SkipEvalCase} Eval-Haltung, {payload.SkipNoBox} ohne echte Box");
-
-            if (payload.ExportRequest.Samples.Count == 0)
-            {
-                request.Log("YOLO-Export: nach Eval-/Box-Filter keine Samples uebrig.");
-                request.SetStatusText("YOLO-Export: keine exportierbaren Samples (Eval/Box-Filter).");
-                return;
-            }
-
-            if (payload.ExportRequest.Samples.Count > SidecarExportMaxSamplesPerRequest)
-            {
-                request.Log($"YOLO-Export: {payload.ExportRequest.Samples.Count} Samples ueberschreiten das Sidecar-Limit von {SidecarExportMaxSamplesPerRequest}. Lokaler Export wird verwendet...");
-                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
-                return;
-            }
-
-            request.SetStatusText($"YOLO-Export: Sende {payload.ExportRequest.Samples.Count} Samples an Sidecar...");
-            TrainingExportResponseDto response;
-            try
-            {
-                response = await client.ExportTrainingAsync(payload.ExportRequest, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                request.Log($"Sidecar-Export nicht moeglich ({ex.Message}). Lokaler Export wird verwendet...");
-                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
-                return;
-            }
-
-            await request.RunSidecarCompletionAsync(
-                TrainingYoloSidecarExportCompletionRequestFactory.CreateWithDefaults(
-                    approved,
-                    response,
-                    outputDir,
-                    request.PersistSamplesAsync,
-                    request.Log,
-                    request.SetStatusText)).ConfigureAwait(false);
+            var execution = result.Execution
+                            ?? throw new InvalidOperationException(
+                                "Der Export wurde ohne Ausfuehrungsergebnis abgeschlossen.");
+            request.SetProgressMax(result.Plan.Images.Count);
+            request.SetProgressValue(result.Plan.Images.Count);
+            var message =
+                $"YOLO-Export fertig: {execution.Result.TotalImages} Bilder, " +
+                $"{result.Plan.Classes.Count} feste Klassen -> {execution.Result.DatasetPath}";
+            request.Log(message);
+            request.Log($"  Plan: {result.Plan.PlanId}");
+            request.Log($"  Weg: {DescribeRoute(execution.Route)}");
+            request.Log($"  Markierte TrainingSamples: {result.Completion.MarkedTrainingSamples}");
+            request.SetStatusText(message);
         }
         catch (OperationCanceledException)
         {
@@ -225,26 +120,46 @@ public static class TrainingYoloExportWorkflow
         }
     }
 
-    private static Task RunLocalExportAsync(
+    private static void ApplyProgress(
         TrainingYoloExportWorkflowRequest request,
-        IReadOnlyList<TrainingSample> approved,
-        string outputDir,
-        CancellationToken ct)
+        TrainingYoloExportProgress progress)
     {
-        var localEvalSets = request.LoadEvalSets();
-        return request.RunLocalExportAsync(
-            TrainingYoloLocalExportRequestFactory.CreateWithDefaults(
-                approved,
-                outputDir,
-                localEvalSets.ImageHashes,
-                localEvalSets.HaltungKeys,
-                request.PersistSamplesAsync,
-                request.Log,
-                request.SetProgressMax,
-                request.SetProgressValue,
-                request.SetStatusText,
-                ct,
-                request.TeacherAnnotations,
-                request.VsaYoloClasses));
+        if (progress.Total is { } total)
+            request.SetProgressMax(total);
+        request.SetProgressValue(progress.Processed);
+        request.Log(progress.Message);
+        request.SetStatusText(progress.Message);
+    }
+
+    private static string DescribeRoute(TrainingExportExecutionRoute route) => route switch
+    {
+        TrainingExportExecutionRoute.Sidecar => "Sidecar",
+        TrainingExportExecutionRoute.LocalSidecarOffline => "lokal (Sidecar offline)",
+        TrainingExportExecutionRoute.LocalRequestTooLarge => "lokal (Plan zu gross fuer einen Request)",
+        TrainingExportExecutionRoute.LocalAfterTransportFailure => "lokal (Verbindung abgebrochen)",
+        _ => route.ToString()
+    };
+
+    private sealed class UiContextProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _report;
+        private readonly SynchronizationContext? _context;
+
+        public UiContextProgress(Action<T> report)
+        {
+            _report = report ?? throw new ArgumentNullException(nameof(report));
+            _context = SynchronizationContext.Current;
+        }
+
+        public void Report(T value)
+        {
+            if (_context is null || ReferenceEquals(_context, SynchronizationContext.Current))
+            {
+                _report(value);
+                return;
+            }
+
+            _context.Post(_ => _report(value), null);
+        }
     }
 }

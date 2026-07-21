@@ -31,6 +31,37 @@ public sealed class YoloClassVsaMapperTests
     }
 
     [Theory]
+    [InlineData("BAB_riss", "BAB")]
+    [InlineData("BAH_schadanschluss", "BAH")]
+    [InlineData("BBF_infiltration", "BBF")]
+    [InlineData("BBD_boden", "BBD")]
+    public void ToVsaMainCode_Mappt_class_map_v2_fuer_Schwellenwerte(
+        string className,
+        string expected)
+    {
+        Assert.Equal(expected, YoloClassVsaMapper.ToVsaMainCode(className));
+    }
+
+    [Fact]
+    public void ToPersistableVsaCode_speichert_niemals_nacktes_BBD()
+    {
+        Assert.Equal("BBDZ", YoloClassVsaMapper.ToPersistableVsaCode("BBD_boden"));
+        Assert.Equal("BBDZ", YoloClassVsaMapper.ToPersistableVsaCode("BBD"));
+        Assert.NotEqual("BBD", YoloClassVsaMapper.ToPersistableVsaCode("BBD_boden"));
+    }
+
+    [Theory]
+    [InlineData("BAB_riss", "BAB")]
+    [InlineData("BBF_infiltration", "BBF")]
+    [InlineData("SONST_schaden", null)]
+    public void ToPersistableVsaCode_loest_v2_Klassen_sicher_auf(
+        string className,
+        string? expected)
+    {
+        Assert.Equal(expected, YoloClassVsaMapper.ToPersistableVsaCode(className));
+    }
+
+    [Theory]
     [InlineData("BAB_crack", "BAB")]
     [InlineData("bab_crack", "BAB")]
     [InlineData("BCA_connection", "BCA")]

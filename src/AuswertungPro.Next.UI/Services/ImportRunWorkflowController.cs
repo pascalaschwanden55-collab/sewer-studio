@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
@@ -10,10 +11,12 @@ public sealed record ImportRunWorkflowRequest<TSource>(
     Func<TSource, Project, ImportRunContext, Result<ImportStats>> Import,
     bool DryRun = false,
     Func<TSource, Project, ImportRunContext, Task>? PostImportAsync = null,
-    bool SaveProjectAfterCommit = false);
+    bool SaveProjectAfterCommit = false,
+    Func<string?, IImportFileStagingSession?>? BeginFileStaging = null);
 
 public sealed record ImportRunWorkflowActions(
     Func<Project> GetProject,
+    Func<string?> GetProjectPath,
     Func<Project, Project> DeepCopyProject,
     Action<Project> ReplaceProject,
     Action<string> CreateRestorePoint,
@@ -23,7 +26,7 @@ public sealed record ImportRunWorkflowActions(
     Func<Project, IReadOnlyList<string>> ValidatePlausibility,
     Action<Project> DeduplicateAllPrimaryDamages,
     Func<Project, string, Task> RunAfterImportAsync,
-    Action SaveProject,
+    Func<bool> SaveProject,
     Action<string> SetStatus,
     Action<bool> SetCanCancel,
     Action<bool> SetIsImportInProgress,
@@ -39,7 +42,7 @@ public sealed record ImportRunWorkflowActions(
 
 public static class ImportRunWorkflowController
 {
-    public static async Task RunAsync<TSource>(
+    public static Task RunAsync<TSource>(
         ImportRunWorkflowRequest<TSource> request,
         ImportRunWorkflowActions actions,
         CancellationToken cancellationToken)
@@ -47,6 +50,25 @@ public static class ImportRunWorkflowController
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(actions);
 
+        var projectSnapshot = new ActiveProjectSnapshot(
+            actions.GetProject(),
+            NormalizeProjectPath(actions.GetProjectPath()));
+        var initialReportDirectory = actions.GetReportDir();
+        return RunCoreAsync(
+            request,
+            actions,
+            cancellationToken,
+            projectSnapshot,
+            initialReportDirectory);
+    }
+
+    private static async Task RunCoreAsync<TSource>(
+        ImportRunWorkflowRequest<TSource> request,
+        ImportRunWorkflowActions actions,
+        CancellationToken cancellationToken,
+        ActiveProjectSnapshot projectSnapshot,
+        string? initialReportDirectory)
+    {
         actions.SetCanCancel(true);
         actions.SetIsImportInProgress(true);
         actions.SetProgressPercent(0);
@@ -74,23 +96,50 @@ public static class ImportRunWorkflowController
                 actions.SetStatus($"{request.Label}: {p.CurrentFile}");
         });
 
-        var ctx = new ImportRunContext(cancellationToken, progress, runLog, request.DryRun, actions.CollectionLock);
+        IImportFileStagingSession? fileStaging = null;
+        var projectCommitted = false;
+        var projectSaved = false;
+        var followUpRunStarted = false;
+        var postImportIncomplete = false;
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
+
             if (!request.DryRun)
                 actions.CreateRestorePoint(request.Label);
 
+            fileStaging = request.DryRun
+                ? null
+                : request.BeginFileStaging?.Invoke(projectSnapshot.ProjectPath);
+            var ctx = new ImportRunContext(
+                cancellationToken,
+                progress,
+                runLog,
+                request.DryRun,
+                actions.CollectionLock,
+                fileStaging);
+
             // Vorschau UND echter Import arbeiten auf einer unabhaengigen Kopie.
             // Erst nach einem vollstaendig erfolgreichen Lauf wird die Live-Referenz getauscht.
-            var targetProject = actions.DeepCopyProject(actions.GetProject());
+            var targetProject = actions.DeepCopyProject(projectSnapshot.Project);
 
             var result = await Task.Run(() => RunImport(request, targetProject, ctx));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
 
             if (!result.Ok || result.Value is null)
             {
-                actions.SetSummaryText($"{request.Label} Import fehlgeschlagen - Projekt unveraendert: {result.ErrorMessage}");
-                actions.SetStatus($"{request.Label} Import fehlgeschlagen - Projekt unveraendert");
+                actions.SetSummaryText(
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: " +
+                    result.ErrorMessage);
+                actions.SetStatus(
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
                 return;
             }
 
@@ -106,10 +155,13 @@ public static class ImportRunWorkflowController
                 var doImport = actions.ShowPreview(preview, request.Label);
                 if (doImport)
                 {
-                    await RunAsync(
+                    followUpRunStarted = true;
+                    await RunCoreAsync(
                         request with { DryRun = false },
                         actions,
-                        cancellationToken);
+                        cancellationToken,
+                        projectSnapshot,
+                        initialReportDirectory);
                 }
 
                 return;
@@ -127,16 +179,34 @@ public static class ImportRunWorkflowController
                 }
                 catch (Exception ex)
                 {
+                    postImportIncomplete = true;
+                    var detail = $"Nacharbeiten unvollstaendig: {ex.Message}";
                     runLog.AddEntry(
                         request.Label,
                         "PostImport",
                         ImportLogStatus.Error,
-                        detail: $"PostImport-Fehler: {ex.Message}");
+                        detail: detail);
+                    actions.SetSummaryText(actions.GetSummaryText()
+                        + "\n  Hinweis: Nacharbeiten unvollstaendig - Importbericht pruefen.");
+                    actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
                 }
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
+
+            // Erst jetzt werden vorbereitete Kopien an ihren endgueltigen Orten sichtbar.
+            // Bis zur Live-Projektuebernahme kann Dispose sie noch sicher zuruecknehmen.
+            fileStaging?.Publish();
+
             actions.DeduplicateAllPrimaryDamages(targetProject);
             await actions.RunAfterImportAsync(targetProject, request.Label);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
 
             var plausibilityWarnings = actions.ValidatePlausibility(targetProject);
             if (plausibilityWarnings.Count > 0)
@@ -156,46 +226,181 @@ public static class ImportRunWorkflowController
                 }
             }
 
+            if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            actions.SetCanCancel(false);
+
             targetProject.Dirty = true;
             actions.ReplaceProject(targetProject);
+            projectCommitted = true;
+            fileStaging?.Accept();
 
             if (request.SaveProjectAfterCommit)
-                actions.SaveProject();
+            {
+                if (!TrySaveCommittedProject(request.Label, actions, runLog))
+                {
+                    ReportCommittedButNotSaved(request.Label, actions);
+                    return;
+                }
 
-            actions.SetStatus($"{request.Label} importiert");
+                projectSaved = true;
+            }
+
+            actions.SetStatus(postImportIncomplete
+                ? $"{request.Label} importiert mit Hinweisen"
+                : $"{request.Label} importiert");
             actions.SetProgressPercent(100);
         }
         catch (OperationCanceledException)
         {
             runLog.WasCancelled = true;
-            actions.SetSummaryText($"{request.Label} Import abgebrochen - Projekt unveraendert.");
-            actions.SetStatus($"{request.Label} Import abgebrochen - Projekt unveraendert");
+            actions.SetSummaryText(
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen.");
+            actions.SetStatus(
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen");
         }
         catch (Exception ex)
         {
-            actions.SetSummaryText($"{request.Label} Import fehlgeschlagen - Projekt unveraendert: {ex.Message}");
+            actions.SetSummaryText(projectCommitted
+                ? actions.GetSummaryText()
+                    + "\n  Hinweis: Import wurde uebernommen, aber der Abschluss ist fehlgeschlagen."
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: {ex.Message}");
             actions.SetDetailsText(ex.ToString());
-            actions.SetStatus($"{request.Label} Import fehlgeschlagen - Projekt unveraendert");
+            actions.SetStatus(projectCommitted
+                ? $"{request.Label} importiert mit Abschlussfehler"
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
         }
         finally
         {
+            try
+            {
+                fileStaging?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                var detail = projectCommitted
+                    ? $"Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: {ex.Message}"
+                    : $"Vorbereitete Importdateien konnten nicht vollstaendig zurueckgenommen werden: {ex.Message}";
+                runLog.AddEntry(
+                    request.Label,
+                    "Datei-Staging",
+                    ImportLogStatus.Error,
+                    detail: detail);
+                actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
+            }
+
             runLog.Complete();
             actions.SetCanCancel(false);
             actions.SetIsImportInProgress(false);
             actions.SetPhase("");
 
-            var reportDir = actions.GetReportDir();
-            if (reportDir is not null)
+            try
             {
-                try
+                var reportDir = projectSaved
+                    ? actions.GetReportDir()
+                    : initialReportDirectory;
+                if (reportDir is not null)
                 {
-                    actions.SetLastReportPath(actions.ExportReport(runLog, reportDir));
-                }
-                catch
-                {
-                    // Report-Fehler duerfen den Import nicht nachtraeglich brechen.
+                    var reportPath = actions.ExportReport(runLog, reportDir);
+                    if (!followUpRunStarted)
+                        actions.SetLastReportPath(reportPath);
                 }
             }
+            catch
+            {
+                // Report-Fehler duerfen den Import nicht nachtraeglich brechen.
+            }
+        }
+    }
+
+    private static bool TrySaveCommittedProject(
+        string label,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog)
+    {
+        try
+        {
+            if (actions.SaveProject())
+                return true;
+
+            runLog.AddEntry(
+                label,
+                "Speichern",
+                ImportLogStatus.Error,
+                detail: "Import wurde uebernommen, konnte aber nicht gespeichert werden.");
+        }
+        catch (Exception ex)
+        {
+            runLog.AddEntry(
+                label,
+                "Speichern",
+                ImportLogStatus.Error,
+                detail: $"Import wurde uebernommen, Speichern schlug fehl: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    private static void ReportCommittedButNotSaved(
+        string label,
+        ImportRunWorkflowActions actions)
+    {
+        actions.SetSummaryText(actions.GetSummaryText()
+            + "\n  Hinweis: Import wurde uebernommen, aber nicht gespeichert.");
+        actions.SetStatus($"{label} importiert, aber nicht gespeichert");
+        actions.SetProgressPercent(99);
+    }
+
+    private static bool EnsureProjectIsStillCurrent(
+        string label,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog,
+        ActiveProjectSnapshot projectSnapshot)
+    {
+        var projectIsUnchanged = ReferenceEquals(actions.GetProject(), projectSnapshot.Project);
+        var pathIsUnchanged = string.Equals(
+            NormalizeProjectPath(actions.GetProjectPath()),
+            projectSnapshot.ProjectPath,
+            StringComparison.OrdinalIgnoreCase);
+        if (projectIsUnchanged && pathIsUnchanged)
+            return true;
+
+        const string detail =
+            "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+            "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen.";
+        runLog.AddEntry(
+            label,
+            "Projektidentitaet",
+            ImportLogStatus.Error,
+            detail: detail);
+        actions.SetSummaryText(
+            $"{label} Import gestoppt: Projekt wurde gewechselt. " +
+            "Das Importergebnis wurde nicht uebernommen.");
+        actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
+        actions.SetStatus($"{label} Import gestoppt - Projekt wurde gewechselt");
+        return false;
+    }
+
+    private static string AppendParagraph(string currentText, string text)
+        => string.IsNullOrWhiteSpace(currentText)
+            ? text
+            : currentText + "\n\n" + text;
+
+    private static string? NormalizeProjectPath(string? projectPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectPath))
+            return null;
+
+        var trimmed = projectPath.Trim();
+        try
+        {
+            return Path.GetFullPath(trimmed);
+        }
+        catch
+        {
+            return trimmed;
         }
     }
 
@@ -226,4 +431,6 @@ public static class ImportRunWorkflowController
             return paths[0];
         return null;
     }
+
+    private sealed record ActiveProjectSnapshot(Project Project, string? ProjectPath);
 }

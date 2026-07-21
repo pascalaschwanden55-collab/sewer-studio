@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -25,8 +26,11 @@ public static class SelfTrainingLastMatchRateRefreshWorkflow
                 presentation,
                 request.Ui);
         }
-        catch
+        catch (Exception ex)
         {
+            // Ladefehler (defekte selftraining_history.json, IO) nicht still verschlucken —
+            // die Match-Rate-Anzeige bleibt sonst kommentarlos leer.
+            BestEffort.ReportWarning($"[SelfTraining] Match-Rate-Anzeige fehlgeschlagen: {ex.Message}");
         }
     }
 }

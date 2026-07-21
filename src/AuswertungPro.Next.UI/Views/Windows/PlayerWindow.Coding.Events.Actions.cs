@@ -61,7 +61,7 @@ public partial class PlayerWindow
             new CodingEventDeleteCommandActions(
                 ConfirmDelete: code => CodingEventActionDialogWorkflow.ConfirmDelete(
                     code,
-                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback)),
+                    runWithSuspendedOverlay: callback => _codingOverlayInputVisibilityController.Run(callback)),
                 Delete: codingEvent => CodingEventListActionWorkflow.Delete(
                     codingEvent,
                     _codingSessionRuntimeOwner.Service,

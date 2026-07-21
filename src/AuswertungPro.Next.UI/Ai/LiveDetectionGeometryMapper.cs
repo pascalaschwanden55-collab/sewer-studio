@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Controls;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -35,21 +36,12 @@ public static class LiveDetectionGeometryMapper
         double outerR,
         double startDeg,
         double sweepDeg)
+        => RingSectorGeometry.Build(cx, cy, innerR, outerR, startDeg, sweepDeg);
+
+    internal static double ClockHourToAngleDegrees(int hour)
     {
-        var startRad = DegToRad(startDeg);
-        var endRad = DegToRad(startDeg + sweepDeg);
-        var large = sweepDeg > 180;
-
-        var p1 = new Point(cx + Math.Cos(startRad) * outerR, cy + Math.Sin(startRad) * outerR);
-        var p2 = new Point(cx + Math.Cos(endRad) * outerR, cy + Math.Sin(endRad) * outerR);
-        var p3 = new Point(cx + Math.Cos(endRad) * innerR, cy + Math.Sin(endRad) * innerR);
-        var p4 = new Point(cx + Math.Cos(startRad) * innerR, cy + Math.Sin(startRad) * innerR);
-
-        var fig = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
-        fig.Segments.Add(new ArcSegment(p2, new Size(outerR, outerR), 0, large, SweepDirection.Clockwise, true));
-        fig.Segments.Add(new LineSegment(p3, true));
-        fig.Segments.Add(new ArcSegment(p4, new Size(innerR, innerR), 0, large, SweepDirection.Counterclockwise, true));
-        return new PathGeometry(new[] { fig });
+        var normalized = ((hour % 12) + 12) % 12;
+        return -90 + normalized * 30;
     }
 
     public static double DegToRad(double deg) => deg * Math.PI / 180.0;

@@ -8,7 +8,12 @@ public sealed record EvalSetBenchmarkCase(
     string ExpectedMainCode,
     string Category,
     double? Meter,
-    bool HasYoloLabel = false);
+    bool HasYoloLabel = false,
+    string? HoldingKey = null,
+    int? ExpectedSeverity = null,
+    string? EventId = null,
+    double? MeterStart = null,
+    double? MeterEnd = null);
 
 public sealed record EvalSetPrediction(
     string FrameFileName,

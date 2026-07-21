@@ -1,48 +1,135 @@
-using System;
+using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.DataPage;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-/// <summary>
-/// WPF-Vertrag: Fuer Collections mit EnableCollectionSynchronization muss JEDER
-/// Zugriff — auch vom UI-Thread — unter dem gemeinsamen Lock laufen. Verstoss
-/// fuehrt zum Crash "Index out of range" in ListCollectionView.ProcessCollectionChanged
-/// (3x im App-Log vom 02.07.2026 beim Schacht-Loeschen). Import-Services und
-/// VsaPageViewModel halten den Lock bereits; dieser Guard sichert die
-/// SchaechtePage-Mutationen dauerhaft ab.
-/// </summary>
 public sealed class SchaechteCollectionSyncGuardTests
 {
     [Fact]
-    public void SchaechtePage_RecordMutationen_LaufenUnterCollectionLock()
+    public void Controller_fuehrt_Add_Remove_und_Move_unter_gemeinsamem_Lock_aus()
     {
-        var root = FindRepositoryRoot();
-        var viewModelPath = Path.Combine(
-            root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SchaechtePageViewModel.cs");
-
-        var lines = File.ReadAllLines(viewModelPath);
-        var mutation = new Regex(@"Records\.(Add|Insert|RemoveAt|Remove|Move|Clear)\(");
-
-        var verstoesse = new System.Collections.Generic.List<string>();
-        for (var i = 0; i < lines.Length; i++)
+        var collectionLock = new object();
+        var records = new LockCheckingCollection(collectionLock)
         {
-            if (!mutation.IsMatch(lines[i]))
-                continue;
+            new SchachtRecord(),
+            new SchachtRecord()
+        };
+        var controller = new SchaechteRecordCollectionController(
+            () => records,
+            () => new[] { "Nr." },
+            collectionLock);
+        records.StartChecking();
 
-            // Innerhalb weniger Zeilen davor muss der gemeinsame Lock stehen.
-            var fensterStart = Math.Max(0, i - 8);
-            var abgesichert = Enumerable.Range(fensterStart, i - fensterStart)
-                .Any(j => lines[j].Contains("lock (_shell.CollectionLock)"));
+        var added = controller.Add();
+        Assert.True(controller.TryMoveUp(added));
+        Assert.True(controller.TryMoveDown(added));
+        Assert.True(controller.TryMoveToPosition(added, 1));
 
-            if (!abgesichert)
-                verstoesse.Add($"Zeile {i + 1}: {lines[i].Trim()}");
+        var renumberedRecords = 0;
+        foreach (var record in records)
+        {
+            record.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName != nameof(SchachtRecord.ModifiedAtUtc))
+                    return;
+
+                Assert.True(
+                    Monitor.IsEntered(collectionLock),
+                    "Schacht-Nummerierung wurde ohne CollectionLock ausgefuehrt.");
+                renumberedRecords++;
+            };
         }
 
-        Assert.True(verstoesse.Count == 0,
-            "Records-Mutationen ohne CollectionLock gefunden (WPF-Sync-Vertrag, Crash-Gefahr):\n"
-            + string.Join("\n", verstoesse));
+        controller.Renumber();
+        Assert.True(controller.TryRemove(added, out _));
+
+        Assert.Equal(1, records.CheckedInserts);
+        Assert.Equal(3, records.CheckedMoves);
+        Assert.Equal(1, records.CheckedRemovals);
+        Assert.Equal(3, renumberedRecords);
+    }
+
+    [Fact]
+    public void Direkte_Mutationen_in_allen_ViewModel_Partials_sind_gesperrt()
+    {
+        var pagesPath = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages");
+        var mutation = new Regex(
+            @"(?:Records|[A-Za-z_][A-Za-z0-9_]*\.SchaechteData)\." +
+            @"(Add|Insert|RemoveAt|Remove|Move|Clear)\(");
+        var violations = new List<string>();
+        var mutationCount = 0;
+
+        foreach (var path in Directory.GetFiles(pagesPath, "SchaechtePageViewModel*.cs"))
+        {
+            var lines = File.ReadAllLines(path);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                if (!mutation.IsMatch(lines[index]))
+                    continue;
+
+                mutationCount++;
+                var windowStart = Math.Max(0, index - 8);
+                var isLocked = Enumerable.Range(windowStart, index - windowStart)
+                    .Any(lineIndex => lines[lineIndex].Contains("lock (_shell.CollectionLock)"));
+                if (!isLocked)
+                    violations.Add($"{Path.GetFileName(path)}:{index + 1}: {lines[index].Trim()}");
+            }
+        }
+
+        Assert.True(mutationCount > 0, "Der ViewModel-Lock-Guard darf nicht leer-gruen werden.");
+        Assert.True(
+            violations.Count == 0,
+            "Direkte Schacht-Mutationen ohne CollectionLock gefunden:\n" + string.Join("\n", violations));
+    }
+
+    private sealed class LockCheckingCollection(object collectionLock)
+        : ObservableCollection<SchachtRecord>
+    {
+        private bool _check;
+
+        public int CheckedInserts { get; private set; }
+        public int CheckedMoves { get; private set; }
+        public int CheckedRemovals { get; private set; }
+
+        public void StartChecking() => _check = true;
+
+        protected override void InsertItem(int index, SchachtRecord item)
+        {
+            VerifyLock();
+            if (_check)
+                CheckedInserts++;
+            base.InsertItem(index, item);
+        }
+
+        protected override void MoveItem(int oldIndex, int newIndex)
+        {
+            VerifyLock();
+            if (_check)
+                CheckedMoves++;
+            base.MoveItem(oldIndex, newIndex);
+        }
+
+        protected override void RemoveItem(int index)
+        {
+            VerifyLock();
+            if (_check)
+                CheckedRemovals++;
+            base.RemoveItem(index);
+        }
+
+        private void VerifyLock()
+        {
+            if (_check)
+                Assert.True(Monitor.IsEntered(collectionLock), "Schacht-Sammlung wurde ohne CollectionLock mutiert.");
+        }
     }
 }

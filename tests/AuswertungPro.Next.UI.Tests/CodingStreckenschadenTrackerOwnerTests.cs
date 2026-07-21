@@ -24,4 +24,19 @@ public sealed class CodingStreckenschadenTrackerOwnerTests
         Assert.Equal(StreckenschadenTracker.SegmentActionType.Close, closeActions[0].Type);
         Assert.Equal(0, owner.OpenCount);
     }
+
+    [Fact]
+    public void Reset_discards_an_open_segment_without_emitting_a_close_action()
+    {
+        var owner = new CodingStreckenschadenTrackerOwner();
+        owner.Update(
+            [new StreckenschadenTracker.Observation("BBA", 3, 12.5)],
+            currentMeter: 12.5);
+
+        owner.Reset();
+        var closeActions = owner.CloseAll(currentMeter: 14.0);
+
+        Assert.Equal(0, owner.OpenCount);
+        Assert.Empty(closeActions);
+    }
 }

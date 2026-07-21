@@ -2,7 +2,7 @@
 
 **Status:** Accepted / in Umsetzung
 **Datum:** 2026-05-26
-**Aktualisiert:** 2026-05-27
+**Aktualisiert:** 2026-07-17
 **Ersetzt:** Implizite Mehrfach-Definitionen in C#-Klassen (siehe Befundtabelle)
 
 ---
@@ -26,7 +26,7 @@ Stichprobe `BBA`:
 | `project_vsa_2019_catalog.md` Memory | implizit Inkrustation (falsch) |
 | `VsaCodeResolver.cs` vor Paket 6 | inkrustation/anhaftung/sinter → `BBA` (falsch) |
 | `GuidedVerificationService.cs:232` | Wurzeleinwuchs (korrekt) |
-| `FewShotExampleBuilder.cs:79` | Wurzeleinwuchs (korrekt) |
+| `FewShotExampleBuilder.cs:79` (historisch, 2026-07-17 entfernt) | Wurzeleinwuchs (korrekt) |
 | `ObservationCatalogViewModel.cs:561` | Wurzeln (korrekt) |
 
 Das gleiche Muster fuer `BBB`, `BBC`, `BBD`, `BAB/BAC` (vertauscht in
@@ -52,11 +52,17 @@ ObservationCatalogViewModel) und Sonderfaelle `BAG`/`BAGA`/`BDB*`.
   (`TrainingSampleEligibility`).
 - `VsaCodeTreeCatalogAdapter` baut den UI-Codierbaum aus dem Manifest.
 
-**Stand 2026-05-27:** Die kritischen Konsumenten sind bereinigt oder
+**Stand 2026-05-27:** Die kritischen Konsumenten waren bereinigt oder
 gegen Tests verriegelt: Training-Filter, UI-Katalog, Guided Verification,
 Few-Shot-Kommentare, zentrale Text-zu-Code-Heuristik, Prompt-Rendering,
 PDF-Symbolmapping und Eingabemarker. Uebrig bleiben nur bewusste
 Grobklassen/Modellkompatibilitaets-Stellen wie YOLO-Klassen-IDs.
+
+**Aktueller Stand 2026-07-17:** Der damalige bildbasierte
+`FewShotExampleBuilder` samt Store und UI-Weg ist entfernt. Dieser Nebenweg schrieb
+Bilder, hatte aber keinen produktiven Prompt-Konsumenten. Aktives Few-Shot-Retrieval
+laeuft ueber `KnowledgeBase.db`; Protokollbeispiele laufen getrennt ueber
+`protocol_training.json`. Vorhandene Legacy-Dateien bleiben unveraendert sicherbar.
 
 ---
 
@@ -65,7 +71,7 @@ Grobklassen/Modellkompatibilitaets-Stellen wie YOLO-Klassen-IDs.
 | Datei | Stellen-Typ | Befund / Status |
 |---|---|---|
 | [GuidedVerificationService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Training/GuidedVerificationService.cs) | Code→Label | erledigt: Label kommen ueber `ICodeCatalogProvider`; kein eigener Switch mehr. |
-| [FewShotExampleBuilder.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Training/FewShotExampleBuilder.cs) | Trainings-Priority-Liste | erledigt: Liste enthaelt nur Prefixe; Bedeutungen werden nicht dort gepflegt. |
+| `FewShotExampleBuilder.cs` (historisch) | Trainings-Priority-Liste | 2026-07-17 entfernt; der bildbasierte Nebenweg hatte keinen produktiven KI-Konsumenten. |
 | [ObservationCatalogViewModel.cs](../src/AuswertungPro.Next.UI/ViewModels/Protocol/ObservationCatalogViewModel.cs) | UI-Codebaum | erledigt: Unterkategorie-Labels kommen aus dem Katalog. |
 | [ProtocolPdfExporter.cs](../src/AuswertungPro.Next.Infrastructure/Reports/ProtocolPdfExporter.cs) | Symbol-Klassifizierung | Paket 9 korrigiert: `BBA -> roots`, `BBB -> incrustation`, `BAJ -> default`. Symbolmapping bleibt bewusst Darstellungslogik. |
 | [EnhancedVisionAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/EnhancedVisionAnalysisService.cs) | Vision-Prompt | erledigt: Prompt wird aus dem Katalog gerendert, Fallback ist manifestkonform. |
@@ -95,17 +101,28 @@ Grobklassen/Modellkompatibilitaets-Stellen wie YOLO-Klassen-IDs.
    - `LiveDetectionMapper`, `VideoFullAnalysisService` und
      `MultiModelAnalysisService` nutzen die zentrale Heuristik.
    - `GuidedVerificationService` liest Labels aus dem Katalog.
-   - `FewShotExampleBuilder` pflegt keine Bedeutungs-Kommentare mehr.
+   - Der historische `FewShotExampleBuilder` pflegte zuletzt keine
+     Bedeutungs-Kommentare mehr und wurde am 2026-07-17 vollstaendig entfernt.
    - `ProtocolPdfExporter` nutzt manifestkonforme Symbol-Prefixe; das
      Symbolmapping bleibt bewusst Darstellungslogik, nicht Code-Wahrheit.
 
-4. **Training-Haerter:**
-   `StageAExporter` und `YoloDatasetExportService` validieren jeden
-   `sample.Code` gegen den aktiven Katalog. Trifft der Code nicht:
+4. **Training-Haerter (historische Ausgangsentscheidung):**
+   Der damalige `StageAExporter` und `YoloDatasetExportService` validierten jeden
+   `sample.Code` gegen den aktiven Katalog. Traf der Code nicht:
    - **`SkippedInvalidCatalogCode`** (neue Result-Zaehl-Spalte).
    - **`TrainingEligibilityReason = "code-not-in-catalog"`** im Sample.
 
    Wirkt zusaetzlich zur Stichtags-Regel.
+
+   **Aktueller Stand 2026-07-17:** Beide damaligen Datensatzschreiber sind entfernt.
+   Der `YoloDatasetExportService` war nicht registriert und umging Inventar,
+   Exportregister, feste Klassenkarte und Haltungs-Split. Die gleichnamige CLI ruft heute
+   `TrainingYoloExportRuntime.CreateLocal` und denselben
+   `TrainingYoloExportCoordinator` wie WPF auf. Katalogpruefung,
+   Inventar-Schutz, feste class_map-v2-IDs und Haltungs-Split liegen im
+   gemeinsamen Planweg; die CLI fuehrt keine eigene Code- oder Klassenlogik mehr.
+   Die unten stehende Paketbeschreibung bleibt als historische
+   Entstehungsentscheidung erhalten.
 
 5. **Tests verriegeln die Wahrheit.**
    Pro Konflikt-Code mindestens ein Test, der den Katalog-Eintrag und
@@ -158,7 +175,7 @@ Streng inkrementell, jedes Paket einzeln committed und testbar.
 | 1 | **Stichtags-Regel um Katalog-Validitaet erweitern** (Entscheidung 4) | niedrig | 1h | Erste Verteidigungslinie — verhindert dass weitere falsche Samples ins Training kommen, waehrend wir refaktorieren. |
 | 2 | **`ObservationCatalogViewModel.subLabels` entfernen** | niedrig | 1h | UI-Code, kein Pipeline-Risiko, klare Nachweisbarkeit (Label-Aenderungen sichtbar). |
 | 3 | **`GuidedVerificationService` switch ersetzen** | niedrig | 30min | Reine Lookup-Aenderung, hat Tests dahinter. |
-| 4 | **`FewShotExampleBuilder` Kommentare aus Katalog ziehen** | niedrig | 1h | Beeinflusst Trainings-Beispiele — nach Tests pruefen. |
+| 4 | **`FewShotExampleBuilder` Kommentare aus Katalog ziehen** (historisch erledigt; Builder 2026-07-17 entfernt) | niedrig | 1h | Der spaeter als wirkungslos nachgewiesene Bild-Nebenweg wurde samt UI entfernt; Legacy-Dateien bleiben sicherbar. |
 | 5 | **`ProtocolPdfExporter` Symbol-Klassifizierung an Katalog binden** | mittel | 2h | Visueller Impact, manueller Smoke-Test eines PDF-Exports noetig. |
 | 6 | **`VsaCodeResolver` Text→Code + Katalog-Validierung** | mittel | 2h | Aenderung kann Free-Text-Klassifikation veraendern — Pipeline-Smoke-Test noetig. |
 | 7 | **Vier Heuristik-Konsumenten** (`LiveDetectionMapper`, `VideoFullAnalysisService`, `MultiModelAnalysisService`) konsolidieren | mittel | 2-3h | Vorher Tests fuer Verhalten dokumentieren. |
@@ -246,7 +263,7 @@ des Repos liegen.
 
 ---
 
-## Naechster konkreter Schritt nach Approval dieser ADR
+## Historischer Umsetzungsauftrag (abgeschlossen und ersetzt)
 
 Codex-Auftrag fuer **Paket 1 (Katalog-Validitaet als Trainings-Filter):**
 
@@ -254,10 +271,13 @@ Codex-Auftrag fuer **Paket 1 (Katalog-Validitaet als Trainings-Filter):**
 > zusaetzlichen Check ergaenzen: `Evaluate(sample, ICodeCatalogProvider catalog)`
 > als neuer Overload, der pruefte: Datum >= 2022 UND
 > `catalog.TryGet(sample.Code, out var def) && def.IsSelectable`.
-> `StageAExporter` und `YoloDatasetExportService` nutzen diesen Overload
+> Der damalige `StageAExporter` und `YoloDatasetExportService` nutzen diesen Overload
 > via DI. Neuer Reason: `"code-not-in-catalog"`. Neuer Result-Zaehler:
 > `SkippedInvalidCatalogCode`. Tests fuer 3 Faelle: gueltiger Code,
 > ungueltiger Code, Observed-Extension. Solution-Build und alle 408 Tests
 > muessen gruen bleiben.
 
 Kein anderer Konfliktcode wird in diesem Paket angefasst.
+
+Dieser Auftrag dokumentiert die Entstehung der Katalogpruefung. Die beiden genannten
+Schreiber existieren heute nicht mehr; der aktuelle Weg ist der AP-0.3-Coordinator.

@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -40,16 +41,27 @@ public partial class TrainingStudioWindow : Window
         WindowStateManager.Track(this);
 
         _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
-        var workbench = TrainingStudioWindowDependencyFactory.Create(services);
-        _queueService = TrainingStudioWindowDependencyFactory.CreateQueueService(services);
+        var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(services);
+        _queueService = dependencies.QueueService;
         // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
         // der synchrone loadQueue-Delegate bleibt leer.
-        _vm = new TrainingStudioViewModel(workbench, () => Array.Empty<WorkbenchItem>(), Environment.UserName);
+        _vm = new TrainingStudioViewModel(
+            dependencies.Workbench,
+            () => Array.Empty<WorkbenchItem>(),
+            Environment.UserName,
+            ensureAiReady: dependencies.EnsureAiReady);
         DataContext = _vm;
 
         _vm.PropertyChanged += Vm_PropertyChanged;
         OverlayCanvas.SizeChanged += (_, _) => RedrawOverlay();
+        Loaded += TrainingStudioWindow_Loaded;
         Closed += (_, _) => _vm.PropertyChanged -= Vm_PropertyChanged;
+    }
+
+    private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= TrainingStudioWindow_Loaded;
+        await _vm.StartAiCommand.ExecuteAsync(null);
     }
 
     // ── Quellen: Fotos + Review-Warteschlange (Logik im WorkbenchQueueService) ──
@@ -80,7 +92,8 @@ public partial class TrainingStudioWindow : Window
         }
         catch (Exception ex)
         {
-            _vm.StatusText = $"Warteschlange konnte nicht geladen werden: {ex.Message}";
+            _vm.StatusText = "Warteschlange konnte nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Warteschlange laden");
         }
     }
 
@@ -121,7 +134,15 @@ public partial class TrainingStudioWindow : Window
         if (_vm.CurrentItem is null)
             return;
 
-        _dragStart = e.GetPosition(OverlayCanvas);
+        var imageArea = GetDisplayedImageRect();
+        var mousePosition = e.GetPosition(OverlayCanvas);
+        if (imageArea.IsEmpty || !imageArea.Contains(mousePosition))
+        {
+            _vm.StatusText = "Bitte die Box innerhalb des sichtbaren Bildes beginnen.";
+            return;
+        }
+
+        _dragStart = mousePosition;
         _dragging = true;
         _dragRect = new Rectangle
         {
@@ -140,7 +161,9 @@ public partial class TrainingStudioWindow : Window
         if (!_dragging || _dragRect is null)
             return;
 
-        var p = e.GetPosition(OverlayCanvas);
+        var p = TrainingStudioImageGeometryMapper.ClampToImage(
+            GetDisplayedImageRect(),
+            e.GetPosition(OverlayCanvas));
         Canvas.SetLeft(_dragRect, Math.Min(p.X, _dragStart.X));
         Canvas.SetTop(_dragRect, Math.Min(p.Y, _dragStart.Y));
         _dragRect.Width = Math.Abs(p.X - _dragStart.X);
@@ -173,31 +196,22 @@ public partial class TrainingStudioWindow : Window
     private Rect GetDisplayedImageRect()
     {
         if (FrameImage.Source is not BitmapSource src || FrameImage.ActualWidth <= 0 || FrameImage.ActualHeight <= 0)
-            return new Rect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight);
+            return Rect.Empty;
 
-        double cw = FrameImage.ActualWidth, ch = FrameImage.ActualHeight;
-        double scale = Math.Min(cw / src.PixelWidth, ch / src.PixelHeight);
-        double dw = src.PixelWidth * scale, dh = src.PixelHeight * scale;
-        return new Rect((cw - dw) / 2, (ch - dh) / 2, dw, dh);
+        var imageOrigin = FrameImage.TranslatePoint(new Point(0, 0), OverlayCanvas);
+        return TrainingStudioImageGeometryMapper.GetDisplayedImageRect(
+            FrameImage.RenderSize,
+            new Size(src.Width, src.Height),
+            imageOrigin);
     }
 
     private bool TryToNormalizedBox(Point a, Point b, out BoundingBox box)
     {
-        box = default;
-        var area = GetDisplayedImageRect();
-        if (area.Width <= 0 || area.Height <= 0)
-            return false;
-
-        double x1 = Math.Clamp((Math.Min(a.X, b.X) - area.X) / area.Width, 0, 1);
-        double y1 = Math.Clamp((Math.Min(a.Y, b.Y) - area.Y) / area.Height, 0, 1);
-        double x2 = Math.Clamp((Math.Max(a.X, b.X) - area.X) / area.Width, 0, 1);
-        double y2 = Math.Clamp((Math.Max(a.Y, b.Y) - area.Y) / area.Height, 0, 1);
-
-        double w = x2 - x1, h = y2 - y1;
-        if (w < 0.01 || h < 0.01)
-            return false;
-
-        return BoundingBox.TryCreate((x1 + x2) / 2, (y1 + y2) / 2, w, h, out box);
+        return TrainingStudioImageGeometryMapper.TryCreateNormalizedBox(
+            GetDisplayedImageRect(),
+            a,
+            b,
+            out box);
     }
 
     // ── Overlay-Rendering (Box + Maskenkontur) ───────────────────────────────
@@ -219,46 +233,33 @@ public partial class TrainingStudioWindow : Window
         if (area.Width <= 0 || area.Height <= 0)
             return;
 
-        // Gezogene Box.
+        // SAM-Maske zuerst zeichnen, damit die rote Auswahl immer oben sichtbar bleibt.
+        if (_vm.Segmentation is not null)
+        {
+            var result = TrainingStudioMaskOverlayRenderer.Render(
+                OverlayCanvas,
+                _vm.Segmentation,
+                area);
+            if (!result.Rendered && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+                _vm.StatusText = result.ErrorMessage;
+        }
+
+        // Gezogene Box immer als oberste Ebene.
         if (_vm.CurrentBox is { } b)
         {
+            var bounds = TrainingStudioImageGeometryMapper.ToCanvasRect(area, b);
             var rect = new Rectangle
             {
                 Stroke = Brushes.OrangeRed,
                 StrokeThickness = 2,
                 Fill = new SolidColorBrush(Color.FromArgb(30, 255, 69, 0)),
                 IsHitTestVisible = false,
-                Width = b.Width * area.Width,
-                Height = b.Height * area.Height,
+                Width = bounds.Width,
+                Height = bounds.Height,
             };
-            Canvas.SetLeft(rect, area.X + (b.XCenter - b.Width / 2) * area.Width);
-            Canvas.SetTop(rect, area.Y + (b.YCenter - b.Height / 2) * area.Height);
+            Canvas.SetLeft(rect, bounds.X);
+            Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
-        }
-
-        // SAM-Maskenkontur (gruene Linie), via bestehendem SamMaskRenderer.
-        if (_vm.Segmentation is { MaskRle: { Length: > 0 } rle } seg
-            && seg.MaskImageWidth > 0 && seg.MaskImageHeight > 0)
-        {
-            try
-            {
-                var mask = SamMaskRenderer.DecodeRle(rle, seg.MaskImageWidth, seg.MaskImageHeight);
-                var geom = SamMaskRenderer.ExtractContourGeometry(
-                    mask, seg.MaskImageWidth, seg.MaskImageHeight, area.Width, area.Height);
-                var path = new Path
-                {
-                    Data = geom,
-                    Stroke = new SolidColorBrush(Color.FromArgb(220, 0, 200, 0)),
-                    StrokeThickness = 2,
-                    IsHitTestVisible = false,
-                    RenderTransform = new TranslateTransform(area.X, area.Y),
-                };
-                OverlayCanvas.Children.Add(path);
-            }
-            catch
-            {
-                // Eine defekte Maske darf die Box-Anzeige nicht verhindern.
-            }
         }
     }
 }

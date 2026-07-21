@@ -24,6 +24,12 @@ public sealed class ExplorerRevealArchitectureTests
             "Views",
             "Pages",
             "SchaechtePage.xaml.cs");
+        var shaftFileActions = Read(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "DataPage",
+            "SchaechteFileActionController.cs");
         var facade = Read(
             root,
             "src",
@@ -35,8 +41,11 @@ public sealed class ExplorerRevealArchitectureTests
         Assert.Contains("ExplorerReveal = new ExplorerRevealLauncher()", provider);
         Assert.Contains("_explorerReveal.TryReveal", dataPage);
         Assert.DoesNotContain("ExplorerRevealService.TryReveal", dataPage);
-        Assert.Contains("Vm.ExplorerReveal.TryReveal", shaftPage);
+        Assert.Contains("viewModel.ExplorerReveal,", shaftPage);
+        Assert.Contains("_explorerReveal.TryReveal", shaftFileActions);
+        Assert.DoesNotContain("Vm.ExplorerReveal.TryReveal", shaftPage);
         Assert.DoesNotContain("ExplorerRevealService.TryReveal", shaftPage);
+        Assert.DoesNotContain("ExplorerRevealService.TryReveal", shaftFileActions);
         Assert.DoesNotContain("File.Exists", facade);
         Assert.DoesNotContain("Directory.Exists", facade);
         Assert.DoesNotContain("Process.Start", facade);

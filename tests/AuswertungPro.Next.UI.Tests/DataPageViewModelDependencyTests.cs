@@ -33,6 +33,7 @@ public sealed class DataPageViewModelDependencyTests
         Assert.Contains("_windows.ShowMediaSearch", source);
         Assert.Contains("_windows.ShowHydraulik", source);
         Assert.Contains("private readonly IHoldingRenameService _holdingRename;", source);
+        Assert.Contains("private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;", source);
         Assert.DoesNotContain("private readonly ServiceProvider _sp;", source);
         Assert.DoesNotContain("_sp.", source);
         Assert.DoesNotContain("_sp.Dialogs", source);
@@ -45,6 +46,7 @@ public sealed class DataPageViewModelDependencyTests
         Assert.DoesNotContain("_sp.Protocols", source);
         Assert.Contains("protocolRegeneration: services.ProtocolSingleRegeneration", source);
         Assert.Contains("_holdingRename = services.HoldingRename;", source);
+        Assert.Contains("_pdfTextLayerRewrite = services.PdfTextLayerRewrite;", source);
         Assert.DoesNotContain("ProtocolRegenerationService", source);
 
         var pageDirectory = RepoFile(
@@ -63,8 +65,18 @@ public sealed class DataPageViewModelDependencyTests
         Assert.DoesNotContain("Services.CodeCatalog", pageSources);
         Assert.Contains("private IDialogService Dialogs => Vm.Dialogs;", pageSources);
         Assert.Contains("private AppSettings Settings => Vm.Settings;", pageSources);
-        Assert.Contains("vm.HoldingRename.Rename(", pageSources);
+        Assert.Contains("DataPageHoldingRenameController.Apply(", pageSources);
+        Assert.Contains("vm.RemoveRecords(", pageSources);
         Assert.DoesNotContain("HoldingRenameService.Rename(", pageSources);
+        Assert.DoesNotContain("vm.Project.RemoveRecord(", pageSources);
+        Assert.DoesNotContain("AuswertungPro.Next.Infrastructure.HoldingFolderDistributor", pageSources);
+
+        var renameController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "DataPageHoldingRenameController.cs"));
+        Assert.Contains("IHoldingRenameService renameService", renameController);
+        Assert.Contains("IPdfTextLayerRewriter pdfTextLayerRewrite", renameController);
+        Assert.Contains("renameService.Rename(", renameController);
+        Assert.Contains("pdfTextLayerRewrite.RewriteIdentifierInPlace(", renameController);
 
         var provider = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "ServiceProvider.cs"));

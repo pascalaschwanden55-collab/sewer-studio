@@ -340,7 +340,7 @@ Konsolen-Tools, jeweils per `dotnet run --project tools/<Name> -- <args>`. Nur 9
 - `KbCodeCleanup` — normalisiert kaputte VSA-Codes in der Samples-Tabelle (nur UPDATE, kein DELETE; gleiche Logik wie der WinCan-Import-Fix).
 - `FachwissenIndexer` — indexiert Fachwissen-Dokumente in die KB.
 - `StammdatenExporter` — ruft den `StammdatenAggregator` (XTF+PDF+FDB) je Cadaster-Export auf und schreibt `haltungs_stammdaten.json`.
-- `StageAExporter` — exportiert Stage-A-Trainingsdaten.
+- `StageAExporter` — Kompatibilitaets-CLI fuer den zentralen AP-0.3-Exportplan; keine eigene Exportlogik.
 
 **VSA / Katalog / Kostensystem:**
 - `VsaClassificationRuleBuilder` — baut Kanal-/Schacht-Klassifizierungsregeln.
@@ -969,7 +969,7 @@ Alle Inferenz-Routes sind bewusst **`def` (sync), nicht `async`** — FastAPI fu
 
 **`POST /segment/sam`** (`routes/sam.py`) -> `SamResponse`: `sam_wrapper.segment(image_base64, bounding_boxes, pipe_diameter_mm)`.
 
-**`POST /training/export-yolo`** (`routes/training.py`) -> `TrainingExportResponse`: schreibt Samples als YOLO-Datensatz (`images/{train,val}`, `labels/{train,val}`, `data.yaml`) in eine **Sandbox** unter `training_export_root` (`_resolve_output_dir` verhindert Pfad-Escapes -> 400). Vorab-Validierung (Groesse -> 413, ungueltiges base64 -> 400) **bevor** Ordner angelegt werden; Bilder werden lazy einzeln dekodiert (kein RAM-Spike). Shuffle + `train_split` (Default 0.8).
+**`POST /training/export-yolo`** (`routes/training.py`) -> `TrainingExportResponse`: fuehrt nur den strikten C#-Plan mit Schema `2.0` aus. Plan-ID, Klassen, Split, Dateiname, Labels und die verbindlichen Hashes werden gegengeprueft; alte oder zusaetzliche Felder sind ungueltig. Bilder werden vor dem Schreiben dekodiert, auf Format und SHA-256 geprueft. Danach schreibt der Sidecar unter `.staging` und veroeffentlicht atomar nach `<training_export_root>/<plan_id>`, inklusive `classes.txt`, `data.yaml`, `manifest.json` und `_export_receipt.json`. Ein identischer fertiger Plan ist wiederholbar; ein abweichendes bestehendes Ziel liefert einen Konflikt. Der Sidecar waehlt weder `train_split` noch Klassen oder Zielordner selbst.
 
 ### Modell-Wrapper (`sidecar/sidecar/models/`)
 
@@ -1010,7 +1010,7 @@ Alle Inferenz-Routes sind bewusst **`def` (sync), nicht `async`** — FastAPI fu
 - **`DinoRequest`** `{image_base64, text_prompt?, box_threshold=0.25, text_threshold=0.20}` -> **`DinoResponse`** `{detections[{x1,y1,x2,y2,label,confidence,phrase}], inference_time_ms, degraded, error?, error_code?}`.
 - **`BoundingBox`** `{x1,y1,x2,y2,label="",confidence=1.0}` (SAM-Input).
 - **`SamRequest`** `{image_base64, bounding_boxes[BoundingBox] (max_length=256), pipe_diameter_mm?}` -> **`SamResponse`** `{masks[MaskResult], image_width, image_height, inference_time_ms, degraded, requested_boxes, skipped_boxes, low_score_boxes, error?, bend_shift, is_bend, vanish_x, vanish_y}`. `MaskResult` = `{label, confidence, bbox[4], mask_rle, mask_area_pixels, image_area_pixels, height_pixels, width_pixels, centroid_x, centroid_y}`.
-- **`TrainingSample`** `{image_base64, labels[{class_name,x_center,y_center,width,height}]}`, **`TrainingExportRequest`** `{samples[], output_dir="./training_export", train_split=0.8 (0.1..1)}`.
+- **`TrainingSample`** `{image_sha256,image_base64,split,target_file_name,labels[{class_id,x_center,y_center,width,height}]}`. **`TrainingExportRequest`** ist der strikte Planvertrag `2.0` mit `plan_id=plan_sha256`, Klassenkarten-/VSA-/Register-Hashes, fester Klassenliste, Base64-Manifest samt Hash und maximal 500 Samples. Es gibt kein `output_dir`, `train_split` oder `class_name` als eigene Sidecar-Entscheidung mehr.
 
 ### Telemetrie (`sidecar/sidecar/telemetry.py`)
 
@@ -1189,6 +1189,15 @@ Konkrete Pfade unter der Root:
 - `training_samples.json` (`GetTrainingSamplesPath`)
 - `training_settings.json`, `frames/` (Unterordner), `measures_learning.json`, `measures-model.zip`.
 
+Produktiv gibt es zwei Laufzeit-Kontextwege: `RetrievalService` liest aehnliche
+bestaetigte Faelle aus `KnowledgeBase.db`; freigegebene Protokolleintraege laufen
+getrennt ueber `ProtocolTrainingFileStore` und `protocol_training.json`. Beide Wege
+liefern Prompt-Beispiele und trainieren keine Qwen-Modellgewichte. Die frueheren
+Bilddateien `fewshot_examples.json` und `fewshot_images` koennen als Legacy-Bestand
+noch vorhanden sein und bleiben in alten Wissenssicherungen enthalten; es gibt dafuer
+keinen aktiven Store, Builder, UI-Knopf oder Prompt-Konsumenten mehr. Sie duerfen nicht
+wieder als Prompt- oder Trainingsquelle angeschlossen werden.
+
 Fallstrick: Beim Start läuft (nur wenn weder Override noch Env-Var gesetzt sind, einmalig) eine **Legacy-Migration** `TryMigrateFromAppData`, die Alt-Daten aus `%APPDATA%\AuswertungPro\...` in die neue Root kopiert (DB inkl. `-wal`/`-shm`, JSONs, Frames). Wird `SEWERSTUDIO_KNOWLEDGE_ROOT` gesetzt, findet **keine** Migration statt. Die Root wird gecacht (`GetRoot`); `InvalidateCache()` nach Root-Wechsel aufrufen. Im Produktivbetrieb zeigt die Env-Var auf das echte Gehirn (z.B. `C:\KI_BRAIN`).
 
 ### SQLite-Schema (`KnowledgeBaseContext`)
@@ -1354,8 +1363,27 @@ Reines CLI (`net10.0`, nur Application + Infrastructure, keine WPF — entkoppel
 
 ### Sauberer Trainingsdatensatz-Export (`StageAExporter`)
 
-Baut aus `training_samples.json` einen Stage-A-YOLO-Datensatz (`StageAExportOptions(SourceSamplesPath, EvalSetRoot, OutputRoot, DryRun, ValidationRatio=0.2, DegreeOfParallelism=0, RequireBoundingBox=true)`). Pro Sample `AnalyzeSample` mit fester Ablehnungsreihenfolge → `StageASampleDecision`:
-`NotApproved` (Status ≠ Approved) → **`EvalSet` via Haltung** (Vorrang vor Hash) → `TrainingIneligible` (Datum) → `InvalidCode` → `InvalidCatalogCode` → `WithoutBoundingBox` (wenn `RequireBoundingBox`) → `MissingOrCorrupt` (Datei fehlt/falsche Endung) → **`EvalSet` via Hash** (SHA-256) → `Accepted`. Danach Deduplizierung identischer Bilder per Hash, deterministischer **train/val-Split** (`ChooseSplit`: SHA-256 der SampleId, stabil), Klassenname = voller VSA-Code ohne Punkt-Suffix (`NormalizeClassName`). Schreibt `images/{train,val}`, `labels/{train,val}` (YOLO-Zeile `classId xc yc w h`, Box aus Sample oder Default 0.5/0.5/0.8/0.8), `data.yaml`, `clean_training_samples.json` und `stage_a_manifest.json` (inkl. aller Skip-Zähler, `eval_hashes_count`, `eval_hash_list_sha256`). Eval-Hashes werden — wie im Guard — bevorzugt aus `_manifest.json` gelesen. `StageAExportResult` liefert alle Zähler und Klassenstatistik. Dieser Datensatz ist die Eingabe für ein externes YOLO-Retraining (kein C#-Retrain-Orchestrator im HEAD).
+Die gleichnamige CLI ist nur noch ein Adapter vor `TrainingYoloExportRuntime.CreateLocal`.
+WPF nutzt `CreateHybrid`; beide Wege laufen durch denselben
+`TrainingYoloExportCoordinator`. Der aktuelle Live-Inventar-Snapshot liefert die
+einzige Sample-Wahrheit. Danach prueft der gemeinsame Weg das menschlich freigegebene
+`export_registry_v1.json`, die versiegelten Eval-/Abnahme-Sets und `class_map v2` samt
+Migration. Klassen-IDs, Haltungs-Split, Multi-Label-Zusammenfuehrung, Dateinamen und
+Ausschluesse stehen unveraenderlich im pfadfreien Plan.
+
+Ein echter Export schreibt atomar nach
+`<KnowledgeRoot>\training\datasets\<plan-id>`: `images/{train,val}`,
+`labels/{train,val}`, `classes.txt`, `data.yaml`, `manifest.json` und
+`_export_receipt.json`. Das fruehere `clean_training_samples.json`,
+`stage_a_manifest.json`, dynamische Klassen-IDs, Sample-Split und Ersatzboxen gibt es
+nicht mehr. `--dry-run`/`--plan-only` prueft bis zum fertigen Plan, speichert und
+mutiert aber nichts. `--val-ratio`, `--allow-dummy-bbox` sowie fremde Quell- oder
+Zielpfade werden abgelehnt. Erst nach bestaetigtem Export werden Eligibility und
+`ExportedUtc` gemeinsam einmal gespeichert.
+
+Der fruehere, nicht registrierte `YoloDatasetExportService` ist entfernt. Er hatte
+einen eigenen Zufalls-Split, dynamische Klassen und beliebige Zielordner. Damit gibt es
+keinen zweiten Dateischreiber mehr, der den gemeinsamen Schutzplan umgehen koennte.
 
 ### Befund-Matcher für ehrliche Evaluation (`BefundMatcher`)
 
@@ -1374,11 +1402,11 @@ Baut aus `training_samples.json` einen Stage-A-YOLO-Datensatz (`StageAExportOpti
 5. **KB-Indexierung** (`KnowledgeBaseManager.IndexSampleAsync`): nur indexwürdige UND nicht eval-kontaminierte Samples; Embedding via `nomic-embed-text`; atomar Sample+Embedding in SQLite. `KbIndexState` zurück in die JSON.
 6. **Retrieval** (`RetrievalService`): die KB liefert Few-Shot-Kontext für künftige Klassifikationen und den Weg-1-KB-Abgleich — der Loop schließt sich.
 7. **Evaluation** (`EvalSetBenchmark` + `BefundMatcher`): gegen das eingefrorene, hash-verifizierte Eval-Set (clean für Entscheidungen, hidden als Kontrolle).
-8. **Externes Modelltraining**: `StageAExporter` erzeugt den sauberen YOLO-Datensatz (Eval-Frames per Hash UND Haltung ausgeschlossen).
+8. **Externes Modelltraining**: `StageAExporter` startet als CLI denselben verbindlichen AP-0.3-Plan wie WPF; Eval-/Abnahme-Schutz, feste Klassen und Haltungs-Split sind zwingend.
 
 **Drei harte Invarianten, die nie verletzt werden dürfen:** (a) kein Eval-Frame (Hash oder Haltung) darf je in KB/Retrieval/Export gelangen; (b) ein Ollama-Ausfall darf eine bestehende KB nie löschen (50 %-Gate in `RebuildAsync`); (c) Trainingsdaten gehen nie verloren (atomare temp-Writes, rotierende Backups, Korruptions-Recovery in `TrainingSamplesStore`).
 
-Relevante Pfade: `src/AuswertungPro.Next.Infrastructure/Ai/KnowledgeBase/{KnowledgeBaseManager,KnowledgeBaseContext,EmbeddingService,RetrievalService,KnowledgeBasePaths}.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/Training/{SelfTrainingOrchestrator,SelfTrainingComparisonService,ReviewApprovalService,DelegatingKnowledgeBaseIndexer,TrainingSamplesStore}.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/CodingSessionService.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/PdfProtocolExtractor.cs`; `src/AuswertungPro.Next.Application/Ai/Training/{SelfTrainingAutoAcceptPolicy,KbCodeAgreement,EvalContaminationGuard,StageAExporter,TrainingSampleModels,TrainingCenterSettings,GroundTruthEntry,IKnowledgeBaseIndexer,IReviewApprovalService,ITrainingSampleStore}.cs`; `src/AuswertungPro.Next.Application/Ai/Evaluation/BefundMatcher.cs`; `src/AuswertungPro.Next.Application/Ai/KnowledgeBase/IRetrievalService.cs`; `tools/EvalSetBenchmark/Program.cs`; Eval-Set unter `C:\KI_BRAIN\eval_set` (`_manifest.json`, `_candidates.json`, `images/`, `labels/`, `subsets/`).
+Relevante Pfade: `src/AuswertungPro.Next.Infrastructure/Ai/KnowledgeBase/{KnowledgeBaseManager,KnowledgeBaseContext,EmbeddingService,RetrievalService,KnowledgeBasePaths}.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/Training/{SelfTrainingOrchestrator,SelfTrainingComparisonService,ReviewApprovalService,DelegatingKnowledgeBaseIndexer,TrainingSamplesStore}.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/Training/ExportPlans/{TrainingYoloExportRuntime,TrainingYoloExportCoordinator,TrainingExportPlanLocalExecutor}.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/CodingSessionService.cs`; `src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/PdfProtocolExtractor.cs`; `src/AuswertungPro.Next.Application/Ai/Training/{SelfTrainingAutoAcceptPolicy,KbCodeAgreement,EvalContaminationGuard,TrainingSampleModels,TrainingCenterSettings,GroundTruthEntry,IKnowledgeBaseIndexer,IReviewApprovalService,ITrainingSampleStore}.cs`; `src/AuswertungPro.Next.Application/Ai/Evaluation/BefundMatcher.cs`; `src/AuswertungPro.Next.Application/Ai/KnowledgeBase/IRetrievalService.cs`; `tools/StageAExporter/`; `tools/EvalSetBenchmark/Program.cs`; Eval-Set unter `C:\KI_BRAIN\eval_set` (`_manifest.json`, `_candidates.json`, `images/`, `labels/`, `subsets/`).
 
 ## A8 · WPF-UI-Architektur
 

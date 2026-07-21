@@ -132,34 +132,39 @@ public static class MeasurePricingEngine
 
     /// <summary>
     /// Setzt die Menge aller Anschluss-Positionen auf <paramref name="connections"/>.
-    /// Bei 0 oder negativ werden die Zeilen deaktiviert.
+    /// Positive manuelle Mengen bleiben erhalten; bei 0 oder negativ werden die Zeilen deaktiviert.
     /// </summary>
     public static void ApplyConnectionsToLines(IList<CostLine> lines, decimal connections)
     {
-        var disable = connections <= 0m;
-
         foreach (var line in lines)
         {
-            if (!CostCalculatorLogicService.IsConnectionLine(line.ItemKey, line.Text))
+            var update = ConnectionQuantityPolicy.Evaluate(
+                line.ItemKey,
+                line.Text,
+                line.Qty,
+                line.Selected,
+                connections);
+            if (!update.IsApplicable)
                 continue;
 
-            if (disable)
+            if (update.ShouldDisable)
             {
-                line.Qty = 0m;
+                line.Qty = ConnectionQuantityPolicy.ResolveSuggestedQuantity(
+                    update,
+                    line.IsQtyOverridden) ?? 0m;
                 line.IsQtyOverridden = false;
                 line.Selected = false;
                 line.TransferMarked = false;
                 continue;
             }
 
-            // Zeile reaktivieren, wenn sie durch "0 Anschluesse" abgeschaltet wurde.
-            if (!line.Selected && line.Qty == 0m)
+            if (update.ShouldReactivate)
                 line.Selected = true;
 
-            if (line.IsQtyOverridden)
-                continue;
-
-            line.Qty = connections;
+            if (ConnectionQuantityPolicy.ResolveSuggestedQuantity(
+                    update,
+                    line.IsQtyOverridden) is { } quantity)
+                line.Qty = quantity;
         }
     }
 

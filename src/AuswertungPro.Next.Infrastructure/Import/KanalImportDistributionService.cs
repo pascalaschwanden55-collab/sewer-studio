@@ -233,7 +233,10 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
 
     private static HaltungRecord CreateRecordFromDistributedFolder(Project project, string sanitizedFolderName)
     {
-        var record = new HaltungRecord();
+        // CreateNewRecord vergibt die fortlaufende NR (einheitlich zu WinCan/KINS/IBAK; frueher
+        // legte dieser Weg per new HaltungRecord ohne NR an). Der Namens-Duplikatschutz liegt hier
+        // beim Aufrufer (FindRecordBySanitizedHaltung), daher bewusst project.Data.Add statt AddRecord.
+        var record = project.CreateNewRecord();
         record.SetFieldValue(FieldKeys.HoldingName, sanitizedFolderName, FieldSource.Legacy, userEdited: false);
         project.Data.Add(record);
         project.ModifiedAtUtc = DateTime.UtcNow;

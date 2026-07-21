@@ -15,21 +15,24 @@ public partial class TrainingCenterViewModel
     [RelayCommand]
     private async Task ExportYoloAsync()
     {
+        if (_trainingYoloExport is null)
+        {
+            const string message = "YOLO-Export ist fuer dieses Fenster nicht eingerichtet.";
+            Log(message);
+            StatusText = message;
+            return;
+        }
+
         await TrainingYoloExportWorkflow.RunAsync(
-            TrainingYoloExportRequestFactory.CreateWithDefaults(
+            TrainingYoloExportRequestFactory.Create(
                 Samples,
-                _settings,
-                _codeCatalog,
+                _trainingYoloExport,
                 () => IsBusy,
-                () => PersistSamplesAsync(),
                 ResetGenerationCancellation,
                 value => IsBusy = value,
                 Log,
                 value => ProgressMax = value,
                 value => ProgressValue = value,
-                value => StatusText = value,
-                _teacherAnnotations,
-                _sidecarTelemetry,
-                _vsaYoloClasses)).ConfigureAwait(true);
+                value => StatusText = value)).ConfigureAwait(true);
     }
 }

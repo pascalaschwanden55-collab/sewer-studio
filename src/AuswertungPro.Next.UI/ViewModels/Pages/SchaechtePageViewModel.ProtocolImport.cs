@@ -2,64 +2,25 @@ using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SchaechtePageViewModel
 {
     private bool CanRefreshProtocol()
-        => Selected is not null && !string.IsNullOrWhiteSpace(Selected.GetFieldValue("PDF_Path"));
+        => SchachtProtocolRefreshController.CanExecute(Selected);
 
     private async Task RefreshProtocolAsync()
     {
-        var schacht = Selected;
-        if (schacht is null)
-            return;
-
-        var relPath = schacht.GetFieldValue("PDF_Path");
-        if (string.IsNullOrWhiteSpace(relPath))
-            return;
-
-        var projektOrdner = _shell.GetProjectFolder();
-        if (string.IsNullOrWhiteSpace(projektOrdner))
-        {
-            _dialogs.Info("Kein Projekt geoeffnet.", "Aktualisieren");
-            return;
-        }
-
-        if (!_dialogs.ConfirmWarn(
-                "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
-                "Aktualisieren"))
-            return;
-
-        var absPath = ProjectPathResolver.ResolveFilePathFromProjectFolder(relPath, projektOrdner);
-        if (absPath is null)
-        {
-            _dialogs.Warn("Die verknuepfte Protokoll-Datei wurde nicht gefunden.", "Aktualisieren");
-            return;
-        }
-
-        var ergebnis = await ReadProtocolAsync(absPath, "Aktualisieren");
-        if (ergebnis is null || !ProjectIsStillOpen(projektOrdner, "Aktualisieren"))
-            return;
-
-        if (!ergebnis.IstSchachtprotokoll || string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
-        {
-            _dialogs.Warn(
-                ResolveReadFailure(ergebnis, "Das verknuepfte PDF ist kein lesbares Schachtprotokoll."),
-                "Aktualisieren");
-            return;
-        }
-
-        _schachtProtocolImport.Apply(schacht, ergebnis, relPath);
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        _shell.TrySaveProject();
-        LastResult = $"Schacht {ergebnis.Schachtnummer} aktualisiert ({ergebnis.Schaeden.Count} Beobachtungen).";
+        _ = await _schachtProtocolRefreshController.ExecuteAsync(Selected);
     }
 
     private async Task ImportProtocolAsync()
     {
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
@@ -80,71 +41,23 @@ public sealed partial class SchaechtePageViewModel
         {
             var ordner = _dialogs.SelectFolder("Ordner mit Schachtprotokollen auswaehlen");
             if (!string.IsNullOrWhiteSpace(ordner))
-                await ImportProtocolFolderAsync(projektOrdner, ordner);
+                await ImportProtocolFolderAsync(projectContext, projektOrdner, ordner);
             return;
         }
 
         var pdfPfad = _dialogs.OpenFile("Schachtprotokoll auswaehlen", "PDF (*.pdf)|*.pdf");
         if (!string.IsNullOrWhiteSpace(pdfPfad))
-            await ImportSingleProtocolAsync(projektOrdner, pdfPfad);
+            await ImportSingleProtocolAsync(projectContext, projektOrdner, pdfPfad);
     }
 
-    private async Task ImportSingleProtocolAsync(string projektOrdner, string pdfPfad)
-    {
-        var ergebnis = await ReadProtocolAsync(pdfPfad, "Protokoll importieren");
-        if (ergebnis is null || !ProjectIsStillOpen(projektOrdner, "Protokoll importieren"))
-            return;
-
-        if (!ergebnis.IstSchachtprotokoll)
-        {
-            _dialogs.Warn(
-                ResolveReadFailure(ergebnis, "Das gewaehlte PDF ist kein Schachtprotokoll."),
-                "Protokoll importieren");
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(ergebnis.Schachtnummer))
-        {
-            _dialogs.Warn("Im Protokoll wurde keine Schachtnummer gefunden.", "Protokoll importieren");
-            return;
-        }
-
-        var ziel = ResolveProtocolTarget(ergebnis);
-        if (ziel is null)
-            return;
-
-        string relPath;
-        try
-        {
-            LastResult = $"Schacht {ergebnis.Schachtnummer}: PDF wird ins Projekt kopiert ...";
-            relPath = await Task.Run(() =>
-                _schachtProtocolImport.DistributePdf(projektOrdner, ergebnis.Schachtnummer, pdfPfad));
-        }
-        catch (Exception ex)
-        {
-            LastResult = "Protokoll konnte nicht kopiert werden.";
-            var userMessage = UserError.DescribeAndReport(ex, "Schachtprotokoll kopieren");
-            _dialogs.Warn($"Das PDF konnte nicht ins Projekt kopiert werden:\n{userMessage}", "Protokoll importieren");
-            return;
-        }
-
-        if (!ProjectIsStillOpen(projektOrdner, "Protokoll importieren"))
-            return;
-
-        _schachtProtocolImport.Apply(ziel, ergebnis, relPath);
-        if (!Records.Contains(ziel))
-        {
-            lock (_shell.CollectionLock)
-            {
-                Records.Add(ziel);
-            }
-        }
-        Selected = ziel;
-
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        _shell.TrySaveProject();
-        LastResult = $"Protokoll importiert: Schacht {ergebnis.Schachtnummer} ({ergebnis.Schaeden.Count} Beobachtungen).";
-    }
+    private Task ImportSingleProtocolAsync(
+        ProjectOperationContext projectContext,
+        string projektOrdner,
+        string pdfPfad)
+        => _schachtProtocolSingleImportController.ExecuteAsync(
+            projectContext,
+            projektOrdner,
+            pdfPfad);
 
     private async Task<SchachtProtocolParseResult?> ReadProtocolAsync(string pdfPath, string dialogTitle)
     {
@@ -162,33 +75,68 @@ public sealed partial class SchaechtePageViewModel
         }
     }
 
-    private SchachtRecord? ResolveProtocolTarget(SchachtProtocolParseResult ergebnis)
+    private bool ProjectIsStillOpen(
+        ProjectOperationContext expectedProject,
+        string dialogTitle,
+        ProjectOperationImpact impact)
     {
-        var vorhanden = _schachtProtocolImport.FindSchacht(_shell.Project, ergebnis.Schachtnummer);
-        if (vorhanden is null)
-            return new SchachtRecord();
-
-        var wahl = _dialogs.ConfirmCancel(
-            $"Schacht {ergebnis.Schachtnummer} ist bereits vorhanden.\n\n" +
-            "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
-            "Protokoll importieren");
-
-        return wahl switch
-        {
-            DialogConfirm.Yes => vorhanden,
-            DialogConfirm.No => new SchachtRecord(),
-            _ => null
-        };
-    }
-
-    private bool ProjectIsStillOpen(string expectedFolder, string dialogTitle)
-    {
-        if (string.Equals(_shell.GetProjectFolder(), expectedFolder, StringComparison.OrdinalIgnoreCase))
+        if (ActiveProjectGuard.IsCurrent(
+                expectedProject,
+                _shell.Project,
+                _settings.LastProjectPath))
             return true;
 
+        var filesWritten = (impact & ProjectOperationImpact.ProjectFilesWritten) != 0;
+        var dataChanged = (impact & ProjectOperationImpact.ProjectDataChanged) != 0;
+        if (filesWritten && dataChanged)
+        {
+            LastResult =
+                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten uebernommen, aber nicht gespeichert.";
+            _dialogs.Warn(
+                "Das Projekt wurde waehrend der Uebernahme gewechselt. " +
+                "Mindestens eine PDF-Datei wurde bereits in das zuvor gestartete Projekt kopiert. " +
+                "Die zugehoerigen Projektdaten wurden uebernommen, aber nicht gespeichert. " +
+                "Bitte pruefen Sie die kopierten Dateien; die ungespeicherten Projektdaten " +
+                "koennen nach dem Wechsel nicht automatisch uebernommen werden.",
+                dialogTitle);
+            return false;
+        }
+
+        if (dataChanged)
+        {
+            LastResult =
+                "Projekt wurde gewechselt: Aenderungen wurden uebernommen, aber nicht gespeichert.";
+            _dialogs.Warn(
+                "Das Projekt wurde waehrend der Uebernahme gewechselt. " +
+                "Die Aenderungen im zuvor gestarteten Projekt wurden nicht gespeichert.",
+                dialogTitle);
+            return false;
+        }
+
+        if (filesWritten)
+        {
+            LastResult =
+                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten wurden nicht uebernommen.";
+            _dialogs.Warn(
+                "Das Projekt wurde waehrend des Imports gewechselt. " +
+                "Mindestens eine PDF-Datei wurde bereits in das zuvor gestartete Projekt kopiert, " +
+                "aber nicht in dessen Projektdaten uebernommen. Bitte pruefen Sie die kopierten Dateien.",
+                dialogTitle);
+            return false;
+        }
+
         LastResult = "Vorgang abgebrochen: Projekt wurde gewechselt.";
-        _dialogs.Warn("Das Projekt wurde waehrend des Einlesens gewechselt. Es wurden keine Daten uebernommen.", dialogTitle);
+        _dialogs.Warn(
+            "Das Projekt wurde waehrend des Einlesens gewechselt. " +
+            "Es wurden keine Daten uebernommen.",
+            dialogTitle);
         return false;
+    }
+
+    private void ClearSelectedIfSame(SchachtRecord? expectedSelection)
+    {
+        if (ReferenceEquals(Selected, expectedSelection))
+            Selected = null;
     }
 
     private static string ResolveReadFailure(SchachtProtocolParseResult ergebnis, string fallback)

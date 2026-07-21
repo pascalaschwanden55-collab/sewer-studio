@@ -85,7 +85,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var codingExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var codingExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var playbackPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.cs");
         var playbackLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerController.cs");
@@ -95,7 +95,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var exitTeardownWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitTeardownWorkflow.cs");
         var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
 
-        Assert.True(File.Exists(codingExitPath), "Coding-Exit-Verdrahtung soll zentral im PlayerWindow-Aufbau liegen.");
+        Assert.True(File.Exists(codingExitPath), "Coding-Exit-Verdrahtung soll in einer lokalen Factory liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(ownerPath), "Live-AI-Timer-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
@@ -126,8 +126,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("StopTimers: resetButton => timers.Stop(resetButton)", live);
         Assert.Contains("actions.StartTimers()", toggleWorkflow);
         Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
-        Assert.Contains("HasCodingLiveAiTimers: _codingLiveAiTimerOwner.HasController", codingExit);
-        Assert.Contains("StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop", codingExit);
+        Assert.Contains("HasCodingLiveAiTimers: dependencies.AiStates.LiveTimerOwner.HasController", codingExit);
+        Assert.Contains("StopCodingLiveAiTimers: dependencies.AiStates.LiveTimerOwner.Stop", codingExit);
         Assert.Contains("actions.StopCodingLiveAiTimers(true)", exitTeardownWorkflow);
         Assert.Contains("_codingLiveAiTimerOwner.Controller", playbackLifecycle);
         Assert.Contains("_playerTimerController.StopPlaybackTimers", playbackLifecycle);
@@ -226,7 +226,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var lifecycleUiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
-        var lifecycleExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var lifecycleExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var playbackLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var wiringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Wiring.cs");
         var statusControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "LiveDetectionStatusControls.cs");
@@ -290,7 +290,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("private readonly ICodingPipelineHealthController _codingPipelineHealthController", state);
         Assert.Contains("new CodingPipelineHealthController", windowRoot);
         Assert.Contains("_codingPipelineHealthController.InitializeAsync()", lifecycleUi);
-        Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", lifecycleExit);
+        Assert.Contains("StopPipelineHealthMonitor: dependencies.PipelineHealthController.Stop", lifecycleExit);
         Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", playbackLifecycle);
         Assert.Contains("StopPipelineHealthMonitor: _codingPipelineHealthController.Stop", wiring);
         Assert.DoesNotContain("private async Task InitCodingAi", playerWindowPartials);

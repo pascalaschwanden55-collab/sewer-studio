@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.UI.ViewModels;
@@ -16,8 +17,16 @@ public sealed class TrainingStudioViewModelTests
         => new(frame, "case1", 1.0, 1.0, HaltungName: null, VideoPath: null, PipeDiameterMm: 300);
 
     private static TrainingStudioViewModel CreateVm(
-        FakeWorkbench wb, IReadOnlyList<WorkbenchItem>? items = null, Func<string, string?>? labelLookup = null)
-        => new(wb, () => items ?? new[] { Foto() }, "Pascal", labelLookup ?? (c => c));
+        FakeWorkbench wb,
+        IReadOnlyList<WorkbenchItem>? items = null,
+        Func<string, string?>? labelLookup = null,
+        Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? ensureAiReady = null)
+        => new(
+            wb,
+            () => items ?? new[] { Foto() },
+            "Pascal",
+            labelLookup ?? (c => c),
+            ensureAiReady);
 
     [Fact]
     public async Task BoxDrawn_fuellt_Maske_Vorschlag_und_SelectedCode_auf_Top()
@@ -71,6 +80,25 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task Manuell_geaenderter_Code_wird_auch_mit_Akzeptieren_als_Korrektur_zurueckgegeben()
+    {
+        var wb = new FakeWorkbench();
+        var items = new[] { Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg") };
+        var vm = CreateVm(wb, items);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        vm.SelectedCode = " bba ";
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        var decision = Assert.Single(wb.SavedDecisions);
+        Assert.True(decision.WasCorrected);
+        Assert.Equal("BBA", decision.VsaCode);
+        Assert.Contains("Lerndaten", vm.StatusText);
+        Assert.Equal(1, vm.CurrentIndex);
+    }
+
+    [Fact]
     public async Task Abweisung_zeigt_Meldung_und_bleibt_beim_Item()
     {
         var wb = new FakeWorkbench
@@ -101,7 +129,7 @@ public sealed class TrainingStudioViewModelTests
         vm.LoadQueueCommand.Execute(null);
 
         var first = vm.BoxDrawnCommand.ExecuteAsync(TestBox);   // haengt am Gate
-        Assert.Equal(1, wb.SegmentTokens.Count);
+        Assert.Single(wb.SegmentTokens);
 
         var second = vm.BoxDrawnCommand.ExecuteAsync(TestBox);  // eigenes CTS, bricht den ersten ab
         Assert.Equal(2, wb.SegmentTokens.Count);
@@ -110,6 +138,27 @@ public sealed class TrainingStudioViewModelTests
 
         wb.SegmentGate.SetResult();
         await Task.WhenAll(first, second);
+    }
+
+    [Fact]
+    public async Task Neue_Box_entfernt_die_alte_Maske_sofort()
+    {
+        var wb = new FakeWorkbench
+        {
+            SegmentGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        vm.Segmentation = wb.SegResult;
+        vm.Suggestion = wb.SugResult;
+
+        var drawing = vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.Null(vm.Segmentation);
+        Assert.Null(vm.Suggestion);
+
+        wb.SegmentGate.SetResult();
+        await drawing;
     }
 
     [Fact]
@@ -150,6 +199,35 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task Vorschlaege_und_Codefeld_zeigen_den_Katalog_Klartext()
+    {
+        var vm = CreateVm(
+            new FakeWorkbench(),
+            labelLookup: code => code switch
+            {
+                "BAB" => "Riss",
+                "BBA" => "Wurzeln/Bewuchs",
+                _ => null,
+            });
+        vm.LoadQueueCommand.Execute(null);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        var candidate = Assert.Single(vm.SuggestionCandidates);
+        Assert.Equal("BAB", candidate.VsaCode);
+        Assert.Equal("Riss", candidate.Klartext);
+        Assert.Equal("Riss", vm.SelectedCodeLabel);
+
+        vm.SelectedCode = "bba";
+        Assert.Equal("Wurzeln/Bewuchs", vm.SelectedCodeLabel);
+        Assert.StartsWith("Wurzeln/Bewuchs", vm.Beschreibung);
+
+        vm.Beschreibung = "Vom Menschen genauer beschriebener Wurzeleinwuchs";
+        vm.SelectedCode = "BAB";
+        Assert.Equal("Vom Menschen genauer beschriebener Wurzeleinwuchs", vm.Beschreibung);
+    }
+
+    [Fact]
     public async Task BoxDrawn_mit_unbrauchbarem_Frame_zeigt_QualityWarning()
     {
         var wb = new FakeWorkbench
@@ -176,7 +254,47 @@ public sealed class TrainingStudioViewModelTests
         // Darf NICHT werfen (sonst globaler App-Crash-Dialog).
         await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
 
-        Assert.Contains("Sidecar nicht erreichbar", vm.StatusText);
+        Assert.NotNull(vm.Segmentation);
+        Assert.StartsWith("Maske ist sichtbar.", vm.StatusText);
+        Assert.Contains("Programmlog", vm.StatusText);
+        Assert.DoesNotContain("Sidecar nicht erreichbar", vm.StatusText);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task BoxDrawn_bei_nicht_erreichbarem_Sidecar_erklaert_den_KI_Start()
+    {
+        var wb = new FakeWorkbench
+        {
+            SuggestThrows = new SidecarUnavailableException("localhost:8100 nicht erreichbar"),
+        };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.NotNull(vm.Segmentation);
+        Assert.Contains("KI starten", vm.StatusText);
+        Assert.DoesNotContain("localhost:8100", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task StartAi_verwendet_den_Startworkflow_und_zeigt_das_Ergebnis()
+    {
+        var called = false;
+        var vm = CreateVm(
+            new FakeWorkbench(),
+            ensureAiReady: (progress, _) =>
+            {
+                called = true;
+                progress.Report("Vision-KI startet...");
+                return Task.FromResult((true, "Vision-KI bereit. Foto laden und Box ziehen."));
+            });
+
+        await vm.StartAiCommand.ExecuteAsync(null);
+
+        Assert.True(called);
+        Assert.Equal("Vision-KI bereit. Foto laden und Box ziehen.", vm.StatusText);
         Assert.False(vm.IsBusy);
     }
 
@@ -191,7 +309,8 @@ public sealed class TrainingStudioViewModelTests
         // Darf NICHT werfen.
         await vm.AcceptCommand.ExecuteAsync(null);
 
-        Assert.Contains("Speichern fehlgeschlagen", vm.StatusText);
+        Assert.Contains("Programmlog", vm.StatusText);
+        Assert.DoesNotContain("Speichern fehlgeschlagen", vm.StatusText);
         Assert.False(vm.IsBusy);
     }
 

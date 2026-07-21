@@ -48,21 +48,8 @@ public static class ProtocolEntryInputNormalizer
         if (string.IsNullOrWhiteSpace(raw))
             return true;
 
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        return false;
+        value = ProtocolTimeParser.ParseMpegTime(raw);
+        return value.HasValue;
     }
 
     /// <summary>

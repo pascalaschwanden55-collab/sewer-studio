@@ -29,7 +29,21 @@ public static class YoloClassVsaMapper
             ["deposit"] = "BBC",        // Ablagerung
             ["infiltration"] = "BBF",   // Infiltration (eindringendes Wasser)
             ["connection"] = "BCA",     // Seitlicher Anschluss
+            ["BCA_anschluss"] = "BCA",
+            ["BAB_riss"] = "BAB",
+            ["BAC_bruch"] = "BAC",
+            ["BAA_verformung"] = "BAA",
+            ["BAF_oberflaeche"] = "BAF",
+            ["BAH_schadanschluss"] = "BAH",
+            ["BAI_dichtung"] = "BAI",
+            ["BAJ_verbindung"] = "BAJ",
+            ["BBA_wurzeln"] = "BBA",
+            ["BBB_anhaftung"] = "BBB",
+            ["BBC_ablagerung"] = "BBC",
+            ["BBD_boden"] = "BBD",
+            ["BBF_infiltration"] = "BBF",
             // "structural_other" bewusst NICHT gemappt → Default-Schwelle
+            // "SONST_schaden" ebenfalls nicht: fachliche Aufloesung erforderlich.
         };
 
     // Legacy-Namensschema "BAB_crack": fuehrender Token ist bereits ein VSA-Hauptcode
@@ -56,5 +70,18 @@ public static class YoloClassVsaMapper
             return firstToken;
 
         return null;
+    }
+
+    /// <summary>
+    /// Liefert einen speicherbaren VSA-Code. BBD besitzt keinen gueltigen Basiscode;
+    /// die allgemeine Detektorklasse wird deshalb auf den gueltigen Sammel-Untercode
+    /// BBDZ (andersartiges Bodenmaterial) aufgeloest.
+    /// </summary>
+    public static string? ToPersistableVsaCode(string? className)
+    {
+        var mainCode = ToVsaMainCode(className);
+        return string.Equals(mainCode, "BBD", StringComparison.OrdinalIgnoreCase)
+            ? "BBDZ"
+            : mainCode;
     }
 }

@@ -83,6 +83,14 @@ Write-Host "    SAM:   $samStatus" -ForegroundColor $(if ($samOk)  { "Green" } e
 # Set defaults
 if (-not $env:SEWER_SIDECAR_PORT) { $env:SEWER_SIDECAR_PORT = "8100" }
 $env:SEWER_SIDECAR_MODELS_DIR = $modelsDir
+if (-not $env:SEWER_SIDECAR_TRAINING_EXPORT_ROOT) {
+    $knowledgeRoot = if ($env:SEWERSTUDIO_KNOWLEDGE_ROOT) {
+        $env:SEWERSTUDIO_KNOWLEDGE_ROOT
+    } else {
+        "C:\KI_BRAIN"
+    }
+    $env:SEWER_SIDECAR_TRAINING_EXPORT_ROOT = Join-Path $knowledgeRoot "training\datasets"
+}
 if (-not $env:SEWER_SIDECAR_YOLO_MODEL_NAME) {
     $env:SEWER_SIDECAR_YOLO_MODEL_NAME = if ($yoloEngineOk -and $cudaOk) { "yolo26m.engine" } else { "yolo26m.pt" }
 }
@@ -103,6 +111,7 @@ if (-not $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO) {
 Write-Host ""
 Write-Host "  Starte auf http://$($env:SEWER_SIDECAR_HOST):$($env:SEWER_SIDECAR_PORT)" -ForegroundColor Green
 Write-Host "  YOLO Modell: $($env:SEWER_SIDECAR_YOLO_MODEL_NAME)" -ForegroundColor White
+Write-Host "  Trainings-Exporte: $($env:SEWER_SIDECAR_TRAINING_EXPORT_ROOT)" -ForegroundColor White
 Write-Host "  YOLO-cls Modell: $(if ($env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH) { $env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH } else { 'auto/fallback' })" -ForegroundColor White
 Write-Host "  Require custom YOLO: $($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO)" -ForegroundColor $(if ($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO -eq "1") { "Green" } else { "Yellow" })
 if ($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO -eq "1" -and -not $yoloOk) {

@@ -6,12 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
@@ -20,7 +18,6 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -87,18 +84,17 @@ public partial class TrainingCenterWindow : Window
         TrainingCenterImportService import,
         IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics,
         Func<InfraSelfImproving.ReviewQueueService> createReviewQueue,
-        Func<TrainingReviewSamSegmentationService> createReviewSam,
-        Func<FewShotExampleStore> createFewShotStore)
+        Func<TrainingReviewSamSegmentationService> createReviewSam)
         : this(
             services,
-            new TrainingCenterWindowDependencies(
+            TrainingCenterWindowDependencyFactory.Create(
+                services,
                 dialogs,
                 store,
                 import,
                 knowledgeBaseDiagnostics,
                 createReviewQueue,
-                createReviewSam,
-                createFewShotStore))
+                createReviewSam))
     {
     }
 
@@ -121,7 +117,7 @@ public partial class TrainingCenterWindow : Window
         _trainingServices = new TrainingCenterLazyServices(
             dependencies.CreateReviewQueue,
             dependencies.CreateReviewSam,
-            dependencies.CreateFewShotStore);
+            dependencies.ResolveReviewPipeDiameterMm);
 
         InitializeComponent();
         WindowStateManager.Track(this);
@@ -153,9 +149,8 @@ public partial class TrainingCenterWindow : Window
             teacherAnnotations: services?.TeacherAnnotations ?? TeacherAnnotationStore.Current,
             protocolTraining: services?.ProtocolTraining ?? ProtocolTrainingStore.Current,
             processOutputs: services?.ProcessOutputs ?? ProcessOutputReader.Current,
-            sidecarTelemetry: services?.SidecarTelemetry ?? SidecarTelemetryWriter.Current,
-            vsaYoloClasses: services?.VsaYoloClasses ?? VsaYoloClassMap.Current,
-            dialogs: _dialogs);
+            dialogs: _dialogs,
+            trainingYoloExport: services?.TrainingYoloExport);
 
         DataContext = Vm;
 
@@ -350,51 +345,47 @@ public partial class TrainingCenterWindow : Window
     private async void ReviewSegmentSam_Click(object sender, RoutedEventArgs e)
     {
         var card = Vm.SelectedReviewCard;
-        if (card is null)
-        {
-            Dialogs.Info("Bitte zuerst einen Review-Kandidaten waehlen.", "SAM");
-            return;
-        }
-
-        if (Vm.PendingBox is not { } box)
-        {
-            Dialogs.Info("Bitte zuerst eine Box um den Schaden ziehen.", "SAM");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(card.FramePath) || !File.Exists(card.FramePath))
-        {
-            Dialogs.Warn("Der Review-Frame ist nicht verfuegbar.", "SAM");
-            return;
-        }
-
         var ct = _lifetime.Token;
         try
         {
-            BtnReviewSegmentSam.IsEnabled = false;
-            ReviewSamStatusText.Text = "SAM läuft...";
-            SamMaskRenderer.ClearMasks(BoxCanvas);
-            Vm.PendingSamMask = null;
+            var result = await _trainingServices.GetReviewSamWorkflow().ExecuteAsync(
+                new TrainingReviewSamWorkflowRequest(
+                    card is null
+                        ? null
+                        : new TrainingReviewSamSelection(card.FramePath, card.ProtocolCode),
+                    Vm.PendingBox,
+                    OnStarted: () =>
+                    {
+                        BtnReviewSegmentSam.IsEnabled = false;
+                        ReviewSamStatusText.Text = "SAM läuft...";
+                        SamMaskRenderer.ClearMasks(BoxCanvas);
+                        Vm.PendingSamMask = null;
+                    },
+                    ct));
 
-            var result = await _trainingServices.GetReviewSam().SegmentFrameFileAsync(
-                card.FramePath,
-                box,
-                card.ProtocolCode,
-                ResolveReviewPipeDiameterMm(),
-                ct);
+            if (result.Outcome != TrainingReviewSamOutcome.Completed)
+            {
+                if (result.Outcome == TrainingReviewSamOutcome.MissingFrame)
+                    Dialogs.Warn(result.UserHint ?? "Der Review-Frame ist nicht verfuegbar.", "SAM");
+                else
+                    Dialogs.Info(result.UserHint ?? "SAM kann noch nicht gestartet werden.", "SAM");
+
+                return;
+            }
+
+            var segmentation = result.Segmentation
+                ?? throw new InvalidOperationException("SAM-Ergebnis fehlt trotz erfolgreichem Ablauf.");
 
             SamMaskRenderer.RenderMasks(
                 BoxCanvas,
-                result.Response,
-                result.QuantifiedMasks,
+                segmentation.Response,
+                segmentation.QuantifiedMasks,
                 BoxCanvas.ActualWidth,
                 BoxCanvas.ActualHeight,
                 _services?.LoggerFactory.CreateLogger("TrainingReviewSam"));
 
-            Vm.PendingSamMask = CreateTrainingSegmentationMask(result.Response);
-            ReviewSamStatusText.Text = result.Response.Masks.Count == 0
-                ? BuildSamStatus(result.Response)
-                : $"SAM: {result.Response.Masks.Count} Maske(n) - wird mit Akzeptieren gespeichert";
+            Vm.PendingSamMask = result.PendingMask;
+            ReviewSamStatusText.Text = result.StatusText;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -411,41 +402,6 @@ public partial class TrainingCenterWindow : Window
             if (!ct.IsCancellationRequested)
                 BtnReviewSegmentSam.IsEnabled = true;
         }
-    }
-
-    private static TrainingSegmentationMask? CreateTrainingSegmentationMask(SamResponse response)
-    {
-        var mask = response.Masks.FirstOrDefault(m => !string.IsNullOrWhiteSpace(m.MaskRle));
-        if (mask is null)
-            return null;
-
-        return new TrainingSegmentationMask(
-            mask.MaskRle,
-            response.ImageWidth,
-            response.ImageHeight,
-            mask.MaskAreaPixels,
-            mask.Confidence,
-            mask.Label);
-    }
-
-    private static string BuildSamStatus(SamResponse response)
-    {
-        if (!string.IsNullOrWhiteSpace(response.Error))
-            return $"SAM: keine Maske ({response.Error})";
-
-        if (response.SkippedBoxes > 0)
-            return $"SAM: keine Maske ({response.SkippedBoxes}/{response.RequestedBoxes} Box(en) uebersprungen)";
-
-        return "SAM: keine Maske";
-    }
-
-    private int? ResolveReviewPipeDiameterMm()
-    {
-        var pipelineCfg = _services is not null
-            ? _services.PipelineCfg
-            : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
-
-        return pipelineCfg.PipeDiameterMmOverride ?? 300;
     }
 
     private void BoxCanvas_MouseDown(object sender, MouseButtonEventArgs e)
@@ -630,8 +586,8 @@ public partial class TrainingCenterWindow : Window
     {
         try
         {
-            var snapshot = await _teacherGalleryService.LoadPendingAsync();
-            _allTeacherAnnotations = snapshot.PendingAnnotations.ToList();
+            var snapshot = await _teacherGalleryService.LoadAsync();
+            _allTeacherAnnotations = snapshot.Annotations.ToList();
 
             TeacherFilterCombo.Items.Clear();
             TeacherFilterCombo.Items.Add(new ComboBoxItem { Content = "Alle", IsSelected = true });
@@ -670,7 +626,6 @@ public partial class TrainingCenterWindow : Window
         // Selection zuruecksetzen
         _selectedTeacherAnnotation = null;
         TeacherDetailPanel.Visibility = Visibility.Collapsed;
-        BtnTeacherAddFewShot.IsEnabled = false;
         BtnTeacherDelete.IsEnabled = false;
     }
 
@@ -680,7 +635,6 @@ public partial class TrainingCenterWindow : Window
             return;
 
         _selectedTeacherAnnotation = annotation;
-        BtnTeacherAddFewShot.IsEnabled = true;
         BtnTeacherDelete.IsEnabled = true;
 
         // Detail-Ansicht fuellen
@@ -713,52 +667,6 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
-    private async void TeacherAddToFewShot_Click(object sender, RoutedEventArgs e)
-    {
-        if (_selectedTeacherAnnotation is null) return;
-
-        var imagePath = _selectedTeacherAnnotation.CroppedRegionPath;
-        if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
-            imagePath = _selectedTeacherAnnotation.FullFramePath;
-
-        if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
-        {
-            Dialogs.Warn("Kein Bild fuer diese Annotation verfuegbar.", "FewShot");
-            return;
-        }
-
-        try
-        {
-            var store = _trainingServices.CreateFewShotStore();
-            await store.LoadAsync();
-
-            var imageBytes = await File.ReadAllBytesAsync(imagePath);
-            var ext = System.IO.Path.GetExtension(imagePath).ToLowerInvariant();
-            var clockStr = _selectedTeacherAnnotation.ClockPosition.HasValue
-                ? $"{_selectedTeacherAnnotation.ClockPosition.Value:F0} Uhr"
-                : null;
-
-            await store.AddExampleAsync(
-                imageBytes, ext,
-                _selectedTeacherAnnotation.VsaCode,
-                _selectedTeacherAnnotation.Beschreibung,
-                clockStr,
-                _selectedTeacherAnnotation.MeterPosition,
-                null, null,
-                $"teacher:{_selectedTeacherAnnotation.AnnotationId}",
-                1.0);
-
-            Dialogs.Info(
-                $"Annotation '{_selectedTeacherAnnotation.VsaCode}' als FewShot-Beispiel hinzugefuegt (quality=1.0).",
-                "FewShot");
-        }
-        catch (Exception ex)
-        {
-            var userMessage = UserError.DescribeAndReport(ex, "FewShot-Lernen");
-            Dialogs.Error($"Fehler: {userMessage}", "FewShot");
-        }
-    }
-
     private async void TeacherDelete_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedTeacherAnnotation is null) return;
@@ -782,86 +690,4 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
-}
-
-/// <summary>Converter: non-null → true, null → false.</summary>
-public sealed class NotNullToBoolConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is not null;
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
-}
-
-/// <summary>
-/// Wandelt einen VSA-Code in "CODE — Klartext" um (Klartext aus dem Katalog via VsaCodeResolver).
-/// Ist der Wert kein bekannter Code (z.B. "nichts erkannt"), bleibt er unveraendert.
-/// </summary>
-public sealed class VsaCodeToTextConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is not string code || string.IsNullOrWhiteSpace(code))
-            return value;
-        var label = AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver.LookupLabel(code);
-        return string.IsNullOrWhiteSpace(label) ? code : $"{code} — {label}";
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => System.Windows.Data.Binding.DoNothing;
-}
-
-/// <summary>
-/// Laedt ein Bild aus dem Dateipfad in den Speicher, ohne die Datei zu sperren.
-/// Verhindert File-Locking und ermoeglicht Echtzeit-Updates waehrend Self-Training.
-/// </summary>
-public sealed class FileToImageConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is not string path || string.IsNullOrEmpty(path))
-            return null;
-
-        if (!System.IO.File.Exists(path))
-        {
-            BestEffort.ReportWarning($"[FileToImage] Datei nicht gefunden: {path}");
-            return null;
-        }
-
-        try
-        {
-            var bmp = new System.Windows.Media.Imaging.BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
-            bmp.DecodePixelWidth = ResolveDecodePixelWidth(parameter);
-            bmp.UriSource = new Uri(path, UriKind.Absolute);
-            bmp.EndInit();
-            bmp.Freeze();
-            return bmp;
-        }
-        catch (Exception ex)
-        {
-            BestEffort.ReportWarning($"[FileToImage] Fehler beim Laden: {path} → {ex.Message}");
-            return null;
-        }
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
-
-    private static int ResolveDecodePixelWidth(object? parameter)
-    {
-        if (parameter is int width && width > 0)
-            return width;
-
-        if (parameter is string text
-            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            && parsed > 0)
-        {
-            return parsed;
-        }
-
-        return 480;
-    }
 }

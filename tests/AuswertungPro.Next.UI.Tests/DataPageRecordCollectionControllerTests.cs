@@ -101,6 +101,99 @@ public sealed class DataPageRecordCollectionControllerTests
     }
 
     [Fact]
+    public void RemoveMany_ignoriert_leere_auswahl_ohne_rueckfrage_oder_autosave()
+    {
+        var project = ProjectWithRecords("A", "B");
+        var confirmCalls = 0;
+        var autosaves = 0;
+        var controller = CreateController(
+            project,
+            confirmDelete: (_, _) =>
+            {
+                confirmCalls++;
+                return true;
+            },
+            scheduleAutoSave: () => autosaves++);
+
+        controller.RemoveMany(Array.Empty<HaltungRecord>());
+
+        Assert.Equal(new[] { "A", "B" }, project.Data.Select(r => r.GetFieldValue("Haltungsname")).ToArray());
+        Assert.Equal(0, confirmCalls);
+        Assert.Equal(0, autosaves);
+    }
+
+    [Fact]
+    public void RemoveMany_bricht_ab_und_belaesst_auswahl_wenn_bestaetigung_verneint()
+    {
+        var project = ProjectWithRecords("A", "B", "C");
+        HaltungRecord? selected = project.Data[1];
+        var autosaves = 0;
+        var controller = CreateController(
+            project,
+            getSelected: () => selected,
+            setSelected: value => selected = value,
+            confirmDelete: (_, _) => false,
+            scheduleAutoSave: () => autosaves++);
+
+        controller.RemoveMany(new[] { project.Data[0], project.Data[2] });
+
+        Assert.Equal(new[] { "A", "B", "C" }, project.Data.Select(r => r.GetFieldValue("Haltungsname")).ToArray());
+        Assert.Same(project.Data[1], selected);
+        Assert.Equal(0, autosaves);
+    }
+
+    [Fact]
+    public void RemoveMany_loescht_alle_uebergebenen_datensaetze_waehlt_ersten_rest_und_speichert_einmal()
+    {
+        var project = ProjectWithRecords("A", "B", "C");
+        HaltungRecord? selected = project.Data[2];
+        string? confirmMessage = null;
+        string? confirmTitle = null;
+        var confirmCalls = 0;
+        var autosaves = 0;
+        var controller = CreateController(
+            project,
+            getSelected: () => selected,
+            setSelected: value => selected = value,
+            confirmDelete: (message, title) =>
+            {
+                confirmCalls++;
+                confirmMessage = message;
+                confirmTitle = title;
+                return true;
+            },
+            scheduleAutoSave: () => autosaves++);
+
+        controller.RemoveMany(new[] { project.Data[1], project.Data[2] });
+
+        Assert.Equal(new[] { "A" }, project.Data.Select(r => r.GetFieldValue("Haltungsname")).ToArray());
+        Assert.Same(project.Data[0], selected);
+        Assert.Equal(1, confirmCalls);
+        Assert.Equal("2 Haltung(en) wirklich loeschen?", confirmMessage);
+        Assert.Equal("Loeschen", confirmTitle);
+        Assert.Equal(1, autosaves);
+    }
+
+    [Fact]
+    public void RemoveMany_alle_datensaetze_setzt_auswahl_auf_null()
+    {
+        var project = ProjectWithRecords("A", "B");
+        HaltungRecord? selected = project.Data[0];
+        var autosaves = 0;
+        var controller = CreateController(
+            project,
+            getSelected: () => selected,
+            setSelected: value => selected = value,
+            scheduleAutoSave: () => autosaves++);
+
+        controller.RemoveMany(project.Data.ToArray());
+
+        Assert.Empty(project.Data);
+        Assert.Null(selected);
+        Assert.Equal(1, autosaves);
+    }
+
+    [Fact]
     public void MoveToPosition_markiert_dirty_und_meldet_reihenfolge_nur_bei_bewegung()
     {
         var project = ProjectWithRecords("A", "B", "C");

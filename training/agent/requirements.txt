@@ -1,0 +1,6 @@
+# Training-Ops-Agent — Abhaengigkeiten
+# Python >= 3.10, laeuft nativ unter Windows.
+claude-agent-sdk>=0.2
+
+# Optional fuer die Tests:
+# pytest>=8

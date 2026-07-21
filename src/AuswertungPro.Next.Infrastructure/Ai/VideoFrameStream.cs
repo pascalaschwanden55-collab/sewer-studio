@@ -69,10 +69,11 @@ public sealed class VideoFrameStream : IAsyncDisposable
         var process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
 
-        // Drain stderr asynchronously to prevent deadlock.
-        // ContinueWith swallows exceptions to avoid UnobservedTaskException.
+        // Drain stderr asynchronously to prevent deadlock. Die Continuation liest task.Exception
+        // explizit, damit ein Fehler beim stderr-Lesen als beobachtet gilt — der fruehere leere
+        // Rumpf liess ihn als UnobservedTaskException stehen (entgegen dem alten Kommentar).
         _ = process.StandardError.ReadToEndAsync(ct)
-            .ContinueWith(static _ => { }, TaskContinuationOptions.OnlyOnFaulted);
+            .ContinueWith(static t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
 
         return new VideoFrameStream(process, stepSeconds, duration);
     }
@@ -217,7 +218,9 @@ public sealed class VideoFrameStream : IAsyncDisposable
         {
             if (!_process.HasExited)
             {
-                _process.Kill();
+                // Ganzer Prozessbaum (wie ExternalProcessRunner.TryKill), damit kein ffmpeg-Kind
+                // als Zombie zurueckbleibt.
+                _process.Kill(entireProcessTree: true);
                 await _process.WaitForExitAsync().ConfigureAwait(false);
             }
         }

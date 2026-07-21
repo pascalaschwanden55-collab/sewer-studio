@@ -146,7 +146,13 @@ def segment(
     bounding_boxes: list[BoundingBox],
     pipe_diameter_mm: int | None = None,
 ) -> SamResponse:
-    """Run SAM segmentation for each bounding box."""
+    """Run SAM segmentation for each bounding box.
+
+    pipe_diameter_mm wird bewusst nur durchgereicht und hat derzeit KEINE Wirkung auf die
+    Maske: die mm-Quantifizierung liegt nach dem Thin-AI-Prinzip in C#. Das Feld bleibt im
+    Vertrag als Reserve fuer eine spaetere geometrische Auswertung im Sidecar.
+    """
+    _ = pipe_diameter_mm  # bewusst ungenutzt (siehe Docstring)
     device = _resolve_device()
     state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
     predictor = state.processor  # SAM2ImagePredictor
@@ -165,6 +171,7 @@ def segment(
     requested_boxes = len(bounding_boxes)
     skipped_boxes = 0
     low_score_boxes = 0
+    first_error: str | None = None
 
     # SAM2ImagePredictor ist stateful: set_image und predict muessen pro Request atomar bleiben.
     with _sam_predict_lock:
@@ -188,6 +195,10 @@ def segment(
                 )
             except Exception as exc:
                 logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+                # Ehrlichkeit: die Fehlerursache dem C#-Client sichtbar machen, damit ein
+                # Inferenzfehler nicht mit einer legitim verworfenen Box verwechselt wird.
+                if first_error is None:
+                    first_error = f"{type(exc).__name__}: {exc}"
                 skipped_boxes += 1
                 continue
 
@@ -243,6 +254,7 @@ def segment(
         skipped_boxes=skipped_boxes,
         low_score_boxes=low_score_boxes,
         degraded=skipped_boxes > 0,
+        error=first_error,
         bend_shift=round(bend.shift, 4) if bend is not None else 0.0,
         is_bend=bend.is_bend if bend is not None else False,
         vanish_x=round(bend.vanish_x, 4) if bend is not None else 0.5,

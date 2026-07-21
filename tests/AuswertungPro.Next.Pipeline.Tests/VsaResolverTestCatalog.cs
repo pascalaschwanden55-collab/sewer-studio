@@ -23,6 +23,7 @@ internal static class VsaResolverTestCatalog
             Code("BBA", "Wurzeln", requiresRange: true),
             Code("BBB", "Anhaftende Stoffe"),
             Code("BBC", "Ablagerungen"),
+            Code("BBDZ", "Andersartiges Bodenmaterial", requiresRange: true),
             Code("BCA", "Seitlicher Anschluss"),
             Code("BCC", "Bogen"),
             Code("BCD", "Rohranfang"),

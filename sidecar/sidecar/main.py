@@ -199,7 +199,9 @@ async def enforce_loopback_security(request: Request, call_next):
 
     provided = request.headers.get("X-Sidecar-Token") or ""
     # Konstante-Zeit-Vergleich gegen Timing-Angriffe; fehlender/falscher Token -> 401.
-    if not hmac.compare_digest(provided, token):
+    # Byte-Vergleich: ein non-ASCII-Header (Starlette dekodiert Header als Latin-1) wuerde
+    # hmac.compare_digest bei str mit TypeError zu einem 500 fuehren statt zu einem sauberen 401.
+    if not hmac.compare_digest(provided.encode("latin-1", "replace"), token.encode("utf-8")):
         return JSONResponse(
             {"detail": "Invalid or missing sidecar token."},
             status_code=401,

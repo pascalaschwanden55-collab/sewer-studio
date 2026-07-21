@@ -21,7 +21,7 @@ Zweck: lokale Tools sichtbar machen, damit keine versteckte Werkzeuglandschaft e
 | `tools/VideoLabelTool` | aktiv | Video-Scrub + Gold-Label-Erzeugung mit Frame/Box/Maske | Haltungs-Video, Befundzeit | Gold-Daten nach `C:\KI_BRAIN`, keine Rohvideos veraendern |
 | `training/vsa_classifier` | aktiv | YOLO/VSA-Klassifikator trainieren, evaluieren, Schwellwerte pruefen | saubere Datensaetze unter `C:\KI_BRAIN` | Runs/Reports extern; keine Modelle ins Repo |
 | `tools/ClassifierDatasetBuilder` | aktiv | eval-freien YOLO-cls-Datensatz bauen | `training_frames`, Eval-Set | Dataset extern; Report pruefen |
-| `tools/StageAExporter` | aktiv | Stage-A/YOLO-Export mit Eval-Schutz und echter BBox | Training samples | Export nur mit Guard |
+| `tools/StageAExporter` | aktiv | Kompatibilitaets-CLI fuer denselben AP-0.3-Plan wie WPF | kanonisches Inventar, freigegebenes Register und class_map v2 | Plan-only ohne Schreibzugriff oder lokaler Export nach `training\datasets\<plan-id>` |
 | `tools/EvalSetBenchmark` | aktiv | Qwen/Sidecar-Kontexte gegen Eval-Set messen | eingefrorenes Eval-Set | Report, kein Training |
 | `tools/EvalSetManifestHasher` | aktiv | Eval-Manifest mit Hashes/Counts aktualisieren | Eval-Set | `_manifest.json` |
 | `tools/EvalSetV2Builder` | aktiv | Menschlich geprueftes V2 mit Streuungs- und Leakage-Schutz einfrieren | Kandidaten-JSON, V1 nur lesend | `C:\KI_BRAIN\eval_set\v2` |

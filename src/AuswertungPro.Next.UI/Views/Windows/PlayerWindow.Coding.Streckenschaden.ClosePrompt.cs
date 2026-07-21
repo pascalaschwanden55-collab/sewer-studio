@@ -21,7 +21,7 @@ public partial class PlayerWindow
                 ConfirmClose: (openEvents, closeMeter) => CodingOpenStretchDamageDialogWorkflow.ConfirmClose(
                     openEvents,
                     closeMeter,
-                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback)),
+                    runWithSuspendedOverlay: callback => _codingOverlayInputVisibilityController.Run(callback)),
                 ApplyClose: (openEvents, closeMeter) => CodingOpenStretchDamageCloseApplier.Apply(
                     openEvents,
                     closeMeter,

@@ -235,7 +235,10 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
 
     private sealed class FixedClassMap : IVsaYoloClassMapStore
     {
-        public int GetClassId(string vsaCode) => 42;
+        public int GetClassId(string vsaCode)
+            => throw new InvalidOperationException("Der Live-Teacher-Weg muss GetOrAddClassId verwenden.");
+
+        public int GetOrAddClassId(string vsaCode) => 42;
 
         public Dictionary<string, int> GetFullMap() => new() { ["TEST"] = 42 };
 

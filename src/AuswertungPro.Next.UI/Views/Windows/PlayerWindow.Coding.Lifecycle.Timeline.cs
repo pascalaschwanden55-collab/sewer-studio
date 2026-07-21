@@ -11,37 +11,27 @@ public partial class PlayerWindow
             new CodingTimelineInitializationActions(
                 ConfigureTimeline: () =>
                 {
-                    var navigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
-                    {
-                        CodingTimelineCommandWorkflow.NavigateToMeter(
-                            new CodingTimelineNavigateRequest(
-                                _codingSessionRuntimeOwner.Service is not null,
-                                _codingSessionHost.IsRunningOrPaused,
-                                meter),
-                            new CodingTimelineNavigateActions(
-                                MoveToMeter: value => _codingSessionRuntimeOwner.Service!.MoveToMeter(value),
-                                MarkNavigationPending: _codingNavigationPendingState.MarkPending,
-                                SyncVideoToCodingMeter: SyncVideoToCodingMeter));
-                    });
-                    var markerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>
-                    {
-                        CodingTimelineCommandWorkflow.MarkerClicked(
-                            item,
-                            new CodingTimelineMarkerActions(
-                                JumpToDefect: selectedEvent =>
-                                {
-                                    _codingSessionHost.ExecuteJumpToDefect(selectedEvent);
-                                },
-                                SelectEvent: selectedEvent => _codingSidePanelControllers.EventsList.SelectEvent(selectedEvent)));
-                    });
+                    var commands = CodingTimelineCommandFactory.Create(
+                        new CodingTimelineCommandBindings(
+                            HasCodingSessionService: () => _codingSessionRuntimeOwner.Service is not null,
+                            IsRunningOrPaused: () => _codingSessionHost.IsRunningOrPaused,
+                            MoveToMeter: meter => _codingSessionRuntimeOwner.Service!.MoveToMeter(meter),
+                            MarkNavigationPending: _codingNavigationPendingState.MarkPending,
+                            SyncVideoToCodingMeter: SyncVideoToCodingMeter,
+                            JumpToDefect: selectedEvent =>
+                            {
+                                _codingSessionHost.ExecuteJumpToDefect(selectedEvent);
+                            },
+                            SelectEvent: selectedEvent =>
+                                _codingSidePanelControllers.EventsList.SelectEvent(selectedEvent)));
 
                     CodingTimelineControls.Configure(
                         PipeTimeline,
                         CodingTimelinePanel,
                         _codingSessionHost.EndMeter,
                         _codingSessionHost.Events,
-                        navigateToMeterCommand,
-                        markerClickedCommand);
+                        commands.NavigateToMeter,
+                        commands.MarkerClicked);
                 }));
     }
 }

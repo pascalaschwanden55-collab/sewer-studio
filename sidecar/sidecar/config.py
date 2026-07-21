@@ -39,8 +39,9 @@ class SidecarSettings(BaseSettings):
             "(localhost, 127.x.x.x oder ::1)."
         )
 
-    # Training export sandbox. output_dir in /training/export-yolo must stay inside this root.
-    training_export_root: str = "./training_export"
+    # Fester Sandbox-Root fuer plan-gesteuerte Trainings-Exporte. Muss mit
+    # <KnowledgeRoot>/training/datasets der Windows-App uebereinstimmen.
+    training_export_root: str = r"C:\KI_BRAIN\training\datasets"
     training_max_image_bytes: int = 25 * 1024 * 1024
     inference_max_image_bytes: int = 25 * 1024 * 1024
     max_image_pixels: int = 50_000_000

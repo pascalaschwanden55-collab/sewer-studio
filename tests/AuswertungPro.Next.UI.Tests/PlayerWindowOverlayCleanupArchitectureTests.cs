@@ -78,8 +78,12 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var aiEventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
-        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
-        var liveStopWiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
+        var liveStopWiringPath = Path.Combine(
+            uiRoot,
+            "Views",
+            "Windows",
+            "PlayerWindowLiveDetectionControllerSetFactory.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleanupController.cs");
         var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayLifecycleWorkflow.cs");

@@ -11,6 +11,9 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+// Setzt globale Umgebungsvariablen (SEWERSTUDIO_SIDECAR_TOKEN u. a.) — muss in dieselbe
+// nicht-parallele Gruppe wie die uebrigen env-setzenden Tests, sonst Race beim Backup/Restore.
+[Collection("EnvironmentVars")]
 public class VisionPipelineClientTests
 {
     [Fact]

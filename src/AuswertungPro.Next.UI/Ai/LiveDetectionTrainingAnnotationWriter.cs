@@ -140,7 +140,7 @@ public sealed class LiveDetectionTrainingAnnotationWriter : ILiveDetectionTraini
             frameBytes,
             boundingBox,
             selectedEntry.Code,
-            _exportPlanner.GetClassId(selectedEntry.Code),
+            _exportPlanner.GetOrAddClassId(selectedEntry.Code),
             $"mark_{annotationId}",
             annotationId,
             ct);

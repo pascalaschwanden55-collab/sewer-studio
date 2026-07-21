@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.Application.Reports;
 
 /// <summary>
@@ -8,10 +10,10 @@ namespace AuswertungPro.Next.Application.Reports;
 public static class MarkerColorClassifier
 {
     /// <summary>Konfidenz-Schwelle fuer Gruen (einschliesslich).</summary>
-    public const double ThresholdGreen = 0.85;
+    public const double ThresholdGreen = ConfidenceBandClassifier.HighThreshold;
 
     /// <summary>Konfidenz-Schwelle fuer Gelb (einschliesslich, unter Gruen).</summary>
-    public const double ThresholdYellow = 0.60;
+    public const double ThresholdYellow = ConfidenceBandClassifier.MediumThreshold;
 
     /// <summary>
     /// Klassifiziert einen Marker anhand von Konfidenz und Abgelehnt-Status in eine Farbzone.
@@ -26,16 +28,13 @@ public static class MarkerColorClassifier
         if (isRejected)
             return MarkerZone.Rejected;
 
-        if (confidence < 0)
-            return MarkerZone.Manual; // Kein KI-Kontext → manueller Eintrag
-
-        if (confidence >= ThresholdGreen)
-            return MarkerZone.Green;
-
-        if (confidence >= ThresholdYellow)
-            return MarkerZone.Yellow;
-
-        return MarkerZone.Red;
+        return ConfidenceBandClassifier.Classify(confidence) switch
+        {
+            ConfidenceBand.Missing => MarkerZone.Manual,
+            ConfidenceBand.High => MarkerZone.Green,
+            ConfidenceBand.Medium => MarkerZone.Yellow,
+            _ => MarkerZone.Red
+        };
     }
 }
 

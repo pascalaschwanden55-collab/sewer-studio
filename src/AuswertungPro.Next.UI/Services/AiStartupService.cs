@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 
@@ -148,7 +149,14 @@ public static class AiStartupService
             PreloadRequests: preloadRequests,
             SidecarScriptPath: script,
             PowerShellExe: psExe,
-            SettingsChanged: settingsChanged);
+            SettingsChanged: settingsChanged,
+            SidecarEnvironmentVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["SEWER_SIDECAR_TRAINING_EXPORT_ROOT"] = System.IO.Path.Combine(
+                    KnowledgeBasePaths.GetRoot(),
+                    "training",
+                    "datasets")
+            });
 
         var result = await AiStartupOrchestrator.StartAsync(input, launcher, progress, ct)
             .ConfigureAwait(false);

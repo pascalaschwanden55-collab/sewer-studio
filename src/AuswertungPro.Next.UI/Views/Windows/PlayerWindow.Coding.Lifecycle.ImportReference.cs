@@ -28,7 +28,7 @@ public partial class PlayerWindow
                 SetCodingCount: count => CodingImportReferenceControls.SetCount(RunCodingDefectCount, count),
                 BuildBaselineSignature: () => CodingEventsSignatureBuilder.Build(eventCollection!),
                 SetBaselineSignature: _codingBaselineSignatureState.Set,
-                ResetStretchTracker: _streckenschadenTracker.Reset));
+                ResetStretchTracker: _codingStreckenschadenTrackingController.Reset));
 
         WireCodingDragDrop();
     }

@@ -86,7 +86,6 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
             "PlayerWindow.Coding.Lifecycle.Ui.cs",
             "PlayerWindow.Coding.OverlayInput.cs",
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
-            "PlayerWindow.Coding.OverlayInput.Visibility.cs",
             "PlayerWindow.LiveDetection.Marking.cs",
             "PlayerWindow.xaml.cs"
         };

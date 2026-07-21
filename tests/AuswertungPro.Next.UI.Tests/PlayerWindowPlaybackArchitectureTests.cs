@@ -16,6 +16,18 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var navigationControllerPath = Path.Combine(uiRoot, "Player", "CodingNavigationController.cs");
         var confirmationControllerPath = Path.Combine(uiRoot, "Player", "CodingConfirmationController.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
+        var liveDetectionFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionControllerSetFactory.cs");
+        var markToolFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionMarkToolControllerFactory.cs");
+        var eingabemarkerFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
+        var codingConfirmationFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowCodingConfirmationControllerFactory.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var paths = new[]
@@ -30,6 +42,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
         Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen ueber einen Playback-Control-Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
+        Assert.True(File.Exists(liveDetectionFactoryPath));
+        Assert.True(File.Exists(markToolFactoryPath));
+        Assert.True(File.Exists(eingabemarkerFactoryPath));
+        Assert.True(File.Exists(codingConfirmationFactoryPath));
 
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
@@ -37,6 +53,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var navigationController = File.ReadAllText(navigationControllerPath);
         var confirmationController = File.ReadAllText(confirmationControllerPath);
         var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
+        var liveDetectionFactory = File.ReadAllText(liveDetectionFactoryPath);
+        var markToolFactory = File.ReadAllText(markToolFactoryPath);
+        var eingabemarkerFactory = File.ReadAllText(eingabemarkerFactoryPath);
+        var codingConfirmationFactory = File.ReadAllText(codingConfirmationFactoryPath);
 
         Assert.Contains("private PlayerPlaybackControlHost _playerPlaybackControlHost => _playerMediaHosts.PlaybackControlHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
@@ -44,7 +64,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
         Assert.Contains("PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause)", windowRoot);
         Assert.Contains("_actions.PausePlayback", navigationController);
-        Assert.Contains("SetPause: _playerPlaybackControlHost.SetPause", windowRoot);
+        Assert.Contains("SetPause: dependencies.PlaybackControlHost.SetPause", liveDetectionFactory);
+        Assert.Contains("SetPause: dependencies.PlaybackControlHost.SetPause", markToolFactory);
+        Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", eingabemarkerFactory);
+        Assert.Contains("dependencies.PlaybackControlHost.SetPause", eingabemarkerFactory);
+        Assert.Contains("SetPause: dependencies.PlaybackControlHost.SetPause", codingConfirmationFactory);
         Assert.Contains("SetPause: _bindings.SetPause", confirmationController);
 
         foreach (var fileName in paths)

@@ -4,7 +4,7 @@ using AuswertungPro.Next.Domain.Models;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System;
-using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.ProjectPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -77,16 +77,25 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
 
         SyncDropdownsFromProject();
 
-        EditSanierenOptionsCommand = new RelayCommand(EditSanierenOptions);
-        PreviewSanierenOptionsCommand = new RelayCommand(PreviewSanierenOptions);
-        ResetSanierenOptionsCommand = new RelayCommand(ResetSanierenOptions);
-        AddSanierenOptionCommand = new RelayCommand<object?>(AddSanierenOption);
-        RemoveSanierenOptionCommand = new RelayCommand<object?>(RemoveSanierenOption);
-        EditEigentuemerOptionsCommand = new RelayCommand(EditEigentuemerOptions);
-        PreviewEigentuemerOptionsCommand = new RelayCommand(PreviewEigentuemerOptions);
-        ResetEigentuemerOptionsCommand = new RelayCommand(ResetEigentuemerOptions);
-        AddEigentuemerOptionCommand = new RelayCommand<object?>(AddEigentuemerOption);
-        RemoveEigentuemerOptionCommand = new RelayCommand<object?>(RemoveEigentuemerOption);
+        var dropdownCommands = ProjectPageDropdownCommandFactory.Create(
+            SanierenOptions,
+            EigentuemerOptions,
+            _dropdownOptions.FixedEigentuemerOptions,
+            () => SanierenValue,
+            new DropdownOptionGroupActions(
+                OptionsEditorDialogService.Show,
+                _dialogs.Info,
+                SaveDropdownOptions));
+        EditSanierenOptionsCommand = dropdownCommands.Sanieren.Edit;
+        PreviewSanierenOptionsCommand = dropdownCommands.Sanieren.Preview;
+        ResetSanierenOptionsCommand = dropdownCommands.Sanieren.Reset;
+        AddSanierenOptionCommand = dropdownCommands.Sanieren.Add;
+        RemoveSanierenOptionCommand = dropdownCommands.Sanieren.Remove;
+        EditEigentuemerOptionsCommand = dropdownCommands.Eigentuemer.Edit;
+        PreviewEigentuemerOptionsCommand = dropdownCommands.Eigentuemer.Preview;
+        ResetEigentuemerOptionsCommand = dropdownCommands.Eigentuemer.Reset;
+        AddEigentuemerOptionCommand = dropdownCommands.Eigentuemer.Add;
+        RemoveEigentuemerOptionCommand = dropdownCommands.Eigentuemer.Remove;
 
         SaveAsCommand = _shell.SaveAsProjectCommand;
         AnlegenCommand = new RelayCommand(
@@ -155,88 +164,6 @@ public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
         Project.Metadata["Eigentuemer"] = value;
     }
 
-    private void EditSanierenOptions()
-    {
-        var vm = new OptionsEditorViewModel(SanierenOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
-            DropdownOptionList.AddIfMissing(SanierenOptions, SanierenValue);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewSanierenOptions()
-    {
-        var items = string.Join("\n", SanierenOptions);
-        _dialogs.Info(items, "Sanieren-Liste");
-    }
-
-    private void ResetSanierenOptions()
-    {
-        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
-        SaveDropdownOptions();
-    }
-
-    private void AddSanierenOption(object? value)
-        => AddOptionIfMissing(SanierenOptions, ExtractText(value));
-
-    private void RemoveSanierenOption(object? value)
-        => RemoveOptionFromList(SanierenOptions, ExtractText(value));
-
-    private void EditEigentuemerOptions()
-    {
-        var vm = new OptionsEditorViewModel(EigentuemerOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
-            EnforceEigentuemerOptionsExact();
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewEigentuemerOptions()
-    {
-        var items = string.Join("\n", EigentuemerOptions);
-        _dialogs.Info(items, "Eigentuemer-Liste");
-    }
-
-    private void ResetEigentuemerOptions()
-    {
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void AddEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void RemoveEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private static string ExtractText(object? value)
-        => DropdownOptionList.ExtractText(value);
-
-    private void AddOptionIfMissing(ObservableCollection<string> options, string value)
-    {
-        if (DropdownOptionList.AddIfMissing(options, value))
-            SaveDropdownOptions();
-    }
-
-    private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
-    {
-        if (DropdownOptionList.Remove(options, value))
-            SaveDropdownOptions();
-    }
     private void SaveDropdownOptions()
     {
         EnforceEigentuemerOptionsExact();

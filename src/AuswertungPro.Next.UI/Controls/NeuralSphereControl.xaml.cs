@@ -86,6 +86,10 @@ public partial class NeuralSphereControl : UserControl
 
         Loaded += (_, _) =>
         {
+            // Tick-Abo nach einem Unload/Reload-Zyklus wiederherstellen (Unloaded meldet es ab).
+            // Ohne dies liefe der Timer nach dem Wiedereinhaengen ins Leere -> Animation eingefroren.
+            _timer.Tick -= OnTick;
+            _timer.Tick += OnTick;
             EnsureVisuals();
             UpdateTimerState();
             RenderFrame();

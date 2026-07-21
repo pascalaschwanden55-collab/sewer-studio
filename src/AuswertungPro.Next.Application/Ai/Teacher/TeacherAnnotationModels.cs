@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.Application.Ai.Teacher;
 /// <summary>
 /// Lehrer-Annotation: Manuell markierter Bereich auf einem Video-Frame
 /// mit zugewiesenem VSA-Code. Append-only — kein Update, kein Delete.
-/// Dient als Gold-Standard fuer KI-Training (YOLO, Few-Shot, Retrieval).
+/// Dient als Gold-Standard fuer den geprueften Trainingsdatenbestand und YOLO-Export.
 /// </summary>
 public sealed class TeacherAnnotation
 {

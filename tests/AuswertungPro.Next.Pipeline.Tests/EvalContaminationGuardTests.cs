@@ -46,7 +46,7 @@ public sealed class EvalContaminationGuardTests
     }
 
     [Fact]
-    public void ComputeFileHash_MatchesStageAExporterFormat_LowercaseHex()
+    public void ComputeFileHash_verwendet_kleingeschriebenes_SHA256_Hexformat()
     {
         var root = Path.Combine(Path.GetTempPath(), "kb-eval-guard", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);

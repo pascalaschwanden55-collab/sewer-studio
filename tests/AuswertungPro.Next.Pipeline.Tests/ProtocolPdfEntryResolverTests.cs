@@ -309,6 +309,65 @@ public sealed class ProtocolPdfEntryResolverTests
     }
 
     [Fact]
+    public void ResolveEntriesForExport_liest_beide_Meterwerte_und_Zeit_aus_Rohtext()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            Raw = "Riss @ 1,25 m bis 2.50m bei 03:04"
+        });
+
+        var entry = Assert.Single(
+            ProtocolPdfEntryResolver.ResolveEntriesForExport(record, new ProtocolDocument()));
+
+        Assert.Equal(1.25, entry.MeterStart);
+        Assert.Equal(2.5, entry.MeterEnd);
+        Assert.Equal(new TimeSpan(0, 3, 4), entry.Zeit);
+        Assert.True(entry.IsStreckenschaden);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_bevorzugt_explizite_Meter_und_Mpeg_Zeit_vor_Fallbacks()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            MeterStart = 7,
+            MeterEnd = 8,
+            MPEG = "01:02",
+            Timestamp = new DateTime(2026, 7, 18, 3, 4, 0),
+            Raw = "Riss @ 1m bis 2m bei 05:06"
+        });
+
+        var entry = Assert.Single(
+            ProtocolPdfEntryResolver.ResolveEntriesForExport(record, new ProtocolDocument()));
+
+        Assert.Equal(7, entry.MeterStart);
+        Assert.Equal(8, entry.MeterEnd);
+        Assert.Equal(new TimeSpan(0, 1, 2), entry.Zeit);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_bevorzugt_Timestamp_vor_Rohtextzeit()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            MPEG = "ungueltig",
+            Timestamp = new DateTime(2026, 7, 18, 3, 4, 0),
+            Raw = "Riss bei 05:06"
+        });
+
+        var entry = Assert.Single(
+            ProtocolPdfEntryResolver.ResolveEntriesForExport(record, new ProtocolDocument()));
+
+        Assert.Equal(new TimeSpan(3, 4, 0), entry.Zeit);
+    }
+
+    [Fact]
     public void ResolveEntriesForExport_nutzt_schadenlage_nicht_als_meterende()
     {
         var record = new HaltungRecord();

@@ -51,12 +51,22 @@ public static class LiveFindingSummaryBuilder
     /// Format: "Uhrlage / Ausdehnung [Quant] - Bezeichnung"
     /// </summary>
     public static string BuildFindingLabel(LiveFrameFinding finding)
+        => BuildFindingLabel(finding, titleLimit: 20);
+
+    /// <summary>
+    /// Baut dasselbe Label mit einer ausdruecklichen Titellaenge, damit eingebettete
+    /// und abgedockte Anzeige ihre bisherigen Platzverhaeltnisse behalten.
+    /// </summary>
+    public static string BuildFindingLabel(LiveFrameFinding finding, int titleLimit)
     {
+        if (titleLimit < 1)
+            throw new ArgumentOutOfRangeException(nameof(titleLimit));
+
         var baseText = string.IsNullOrWhiteSpace(finding.VsaCodeHint)
             ? finding.Label
             : $"{finding.VsaCodeHint} {finding.Label}";
-        if (baseText.Length > 20)
-            baseText = baseText[..20] + "...";
+        if (baseText.Length > titleLimit)
+            baseText = baseText[..titleLimit] + "...";
 
         var clock = string.IsNullOrWhiteSpace(finding.PositionClock) ? "?" : finding.PositionClock;
         var extent = finding.ExtentPercent is > 0 ? $"{finding.ExtentPercent}%" : "n/a";

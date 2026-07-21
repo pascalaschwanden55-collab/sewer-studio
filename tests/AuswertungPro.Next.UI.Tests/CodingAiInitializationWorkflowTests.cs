@@ -327,7 +327,5 @@ public sealed class CodingAiInitializationWorkflowTests
         public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
             => throw new NotImplementedException();
 
-        public Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
-            => throw new NotImplementedException();
     }
 }

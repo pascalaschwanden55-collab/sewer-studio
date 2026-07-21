@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.UI.Controls;
 
 // Public: wird auch vom HaltungSchadensbandBuilder (Schadensband der Haltungsansicht) geliefert.
@@ -12,22 +14,20 @@ public enum MarkerColorKind
 
 internal static class MarkerColorClassifier
 {
-    public const double GreenThreshold = 0.85;
-    public const double YellowThreshold = 0.60;
+    public const double GreenThreshold = ConfidenceBandClassifier.HighThreshold;
+    public const double YellowThreshold = ConfidenceBandClassifier.MediumThreshold;
 
     public static MarkerColorKind Classify(bool isRejected, double confidence)
     {
         if (isRejected)
             return MarkerColorKind.Rejected;
 
-        if (confidence < 0)
-            return MarkerColorKind.Manual;
-
-        if (confidence >= GreenThreshold)
-            return MarkerColorKind.Green;
-
-        return confidence >= YellowThreshold
-            ? MarkerColorKind.Yellow
-            : MarkerColorKind.Red;
+        return ConfidenceBandClassifier.Classify(confidence) switch
+        {
+            ConfidenceBand.Missing => MarkerColorKind.Manual,
+            ConfidenceBand.High => MarkerColorKind.Green,
+            ConfidenceBand.Medium => MarkerColorKind.Yellow,
+            _ => MarkerColorKind.Red
+        };
     }
 }

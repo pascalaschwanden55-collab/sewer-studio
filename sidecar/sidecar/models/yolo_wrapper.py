@@ -409,10 +409,13 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
             **_response_telemetry(),
         )
 
-    t0 = time.perf_counter()
     # Ultralytics-Predict ist nicht thread-sicher; FastAPI fuehrt sync-Routen im
     # Threadpool aus -> parallele Requests serialisieren (Gesamtaudit P7, wie SAM).
+    # Wartezeit am Lock als queue_wait_ms messen; inference_time_ms bleibt reine Predict-Zeit.
+    t_queue = time.perf_counter()
     with _yolo_predict_lock:
+        queue_wait_ms = (time.perf_counter() - t_queue) * 1000
+        t0 = time.perf_counter()
         results = model.predict(
             source=np.array(img),
             conf=confidence_threshold,
@@ -457,7 +460,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         detections=detections,
         frame_class=frame_class,
         inference_time_ms=round(elapsed_ms, 1),
-        **_response_telemetry(),
+        **_response_telemetry(queue_wait_ms),
     )
 
 

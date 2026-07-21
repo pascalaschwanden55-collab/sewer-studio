@@ -10,11 +10,11 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Reine Pruef-Funktion gegen Eval-Set-Kontamination: verhindert, dass ein Bild aus dem
-/// eingefrorenen Eval-Set ueber den KB-/FewShot-Indexpfad in die Trainings-/Retrieval-Daten
+/// eingefrorenen Eval-Set ueber den KB-Indexpfad in die Trainings-/Retrieval-Daten
 /// gelangt (sonst messen Benchmarks keine Generalisierung mehr).
 ///
-/// Spiegelt die Hash-Logik des StageAExporter (SHA-256 als Hex, lowercase, inhaltsbasiert –
-/// NICHT dateinamenbasiert), damit derselbe Eval-Hash-Satz wiederverwendet werden kann.
+/// Gemeinsames Hashformat fuer geschuetzte Eval-/Abnahme-Sets (SHA-256 als Hex,
+/// lowercase und inhaltsbasiert). Dadurch kann derselbe Schutzsatz wiederverwendet werden.
 ///
 /// BEWUSST NICHT in KnowledgeBaseManager.IsIndexWorthy verdrahtet: das ist eine separate,
 /// fachliche Betriebsentscheidung (blockieren vs. nur warnen) und gehoert in einen eigenen
@@ -53,7 +53,7 @@ public static class EvalContaminationGuard
 
     /// <summary>
     /// Laedt die SHA-256-Hashes (lowercase) der Eval-Set-Bilder. Bevorzugt _manifest.json
-    /// (hashes.images/*.sha256, gleiche Quelle wie StageAExporter/eval-set-warden), faellt sonst
+    /// (hashes.images/*.sha256, gleiche Quelle wie Inventar/eval-set-warden), faellt sonst
     /// auf direkte Hash-Berechnung der images/-Dateien zurueck. Fehlender Pfad/Ordner oder defektes
     /// Manifest -> leerer Satz (Schutz inaktiv statt Crash; degradiert sicher auf fremden Maschinen).
     /// </summary>

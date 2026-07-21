@@ -86,17 +86,7 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
         if (wasserstand.HasValue && wasserstand.Value > 0) Wasserstand = wasserstand.Value;
 
         if (!string.IsNullOrWhiteSpace(material))
-        {
-            foreach (var mat in Materialien)
-            {
-                if (mat.Label.Contains(material, StringComparison.OrdinalIgnoreCase)
-                    || mat.Key.Equals(material, StringComparison.OrdinalIgnoreCase))
-                {
-                    SelectedMaterial = mat;
-                    break;
-                }
-            }
-        }
+            SelectedMaterial = HydraulikMaterialCatalog.ResolveRecordMaterial(material, SelectedMaterial)!;
     }
 
     partial void OnDnChanged(double value) => Recalculate();

@@ -27,6 +27,10 @@ public sealed class EvalSetBenchmarkTests : IDisposable
     "frame_path": "C:\\KI_BRAIN\\training_frames\\case_a_BDDC.png",
     "haltung_key": "H1",
     "meter": 12.3,
+    "expected_severity": 4,
+    "event_id": "event-1",
+    "meter_start": 12.0,
+    "meter_end": 12.8,
     "code_main": "BDDC",
     "code_full": "BDDC",
     "kategorie": "top5_code",
@@ -35,7 +39,7 @@ public sealed class EvalSetBenchmarkTests : IDisposable
   {
     "id": "b",
     "frame_path": "C:\\KI_BRAIN\\training_frames\\case_b_kein_schaden.png",
-    "haltung_key": "H2",
+    "holding_key": "H2",
     "meter": 0,
     "code_main": "leer",
     "code_full": "leer",
@@ -70,6 +74,11 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal("BDDC", cases[0].ExpectedMainCode);
         Assert.Equal("top5_code", cases[0].Category);
         Assert.Equal(12.3, cases[0].Meter);
+        Assert.Equal("H1", cases[0].HoldingKey);
+        Assert.Equal(4, cases[0].ExpectedSeverity);
+        Assert.Equal("event-1", cases[0].EventId);
+        Assert.Equal(12.0, cases[0].MeterStart);
+        Assert.Equal(12.8, cases[0].MeterEnd);
         Assert.True(cases[0].HasYoloLabel);
         Assert.True(File.Exists(cases[0].ImagePath));
 
@@ -77,6 +86,11 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal("LEER", cases[1].ExpectedFullCode);
         Assert.Equal("LEER", cases[1].ExpectedMainCode);
         Assert.Equal("negativ", cases[1].Category);
+        Assert.Equal("H2", cases[1].HoldingKey);
+        Assert.Null(cases[1].ExpectedSeverity);
+        Assert.Null(cases[1].EventId);
+        Assert.Null(cases[1].MeterStart);
+        Assert.Null(cases[1].MeterEnd);
         Assert.False(cases[1].HasYoloLabel);
     }
 

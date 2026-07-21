@@ -1,342 +1,217 @@
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Services;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class TrainingYoloExportWorkflowTests
 {
     [Fact]
-    public async Task RunAsync_nutzt_lokalen_export_wenn_sidecar_nicht_erreichbar_ist()
+    public async Task RunAsync_delegiert_genau_einen_Befehl_an_den_Koordinator()
     {
-        var state = new WorkflowState();
-        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        var frame = Path.Combine(root, "frame.jpg");
-        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
-        var approved = ApprovedSample(frame);
-        var localCalls = 0;
-
-        try
+        var plan = Plan(withImage: true);
+        var coordinator = new RecordingCoordinator((_, progress, _) =>
         {
-            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
-                state,
-                samples: [approved],
-                client: new FakeVisionPipelineClient { Health = null },
-                runLocalExportAsync: request =>
-                {
-                    localCalls++;
-                    Assert.Equal([approved], request.ApprovedSamples);
-                    Assert.Equal(@"D:\Yolo", request.OutputDir);
-                    return Task.CompletedTask;
-                }));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
-
-        Assert.Equal(1, localCalls);
-        Assert.Equal([true, false], state.BusyStates);
-        Assert.Contains("Sidecar nicht erreichbar", state.Logs[1]);
-        Assert.Contains("YOLO-Export: 1 Samples", state.Logs[0]);
-    }
-
-    [Fact]
-    public async Task RunAsync_loggt_tokenfehler_getrennt_von_offline_und_nutzt_lokalen_export()
-    {
-        var state = new WorkflowState();
-        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        var frame = Path.Combine(root, "frame.jpg");
-        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
-        var approved = ApprovedSample(frame);
-        var localCalls = 0;
-
-        try
-        {
-            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
-                state,
-                samples: [approved],
-                client: new FakeVisionPipelineClient
-                {
-                    DetailedHealth = new PipelineHealthCheckResult(
-                        IsReachable: true,
-                        IsAuthorized: false,
-                        StatusCode: 401,
-                        Health: null,
-                        Error: "Token ungueltig/fehlt")
-                },
-                runLocalExportAsync: _ =>
-                {
-                    localCalls++;
-                    return Task.CompletedTask;
-                }));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
-
-        Assert.Equal(1, localCalls);
-        Assert.Contains("Token/Auth", state.Logs[1]);
-        Assert.Contains("HTTP 401", state.Logs[1]);
-        Assert.DoesNotContain("Sidecar nicht erreichbar", state.Logs[1]);
-        Assert.Equal([true, false], state.BusyStates);
-    }
-
-    [Fact]
-    public async Task RunAsync_sendet_payload_an_sidecar_und_fuehrt_completion_aus()
-    {
-        var state = new WorkflowState();
-        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        var frame = Path.Combine(root, "frame.jpg");
-        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
-        var approved = ApprovedSample(frame);
-        var exported = 0;
-        var completed = 0;
-        var response = new TrainingExportResponseDto(
-            TotalSamples: 1,
-            TrainCount: 1,
-            ValCount: 0,
-            ClassesUsed: ["BAB"],
-            DataYamlPath: @"D:\Yolo\data.yaml");
-        var client = new FakeVisionPipelineClient
-        {
-            Health = new SidecarHealthResponse(
-                Status: "ok",
-                Version: "1.0",
-                Gpu: new GpuStatus("yolo", 1, 8)),
-            ExportResponse = response
-        };
-
-        try
-        {
-            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
-                state,
-                samples: [approved],
-                client: client,
-                buildPayloadAsync: request =>
-                {
-                    Assert.Equal([approved], request.ApprovedSamples);
-                    return Task.FromResult(new TrainingYoloSidecarExportPayloadResult(
-                        new TrainingExportRequestDto(
-                            [new TrainingExportSample("ZmFrZQ==", [new TrainingExportSampleLabel("BAB", 0.1, 0.2, 0.3, 0.4)])],
-                            @"D:\Yolo",
-                            0.8),
-                        SkipEvalHash: 1,
-                        SkipEvalCase: 2,
-                        SkipNoBox: 3));
-                },
-                runCompletionAsync: request =>
-                {
-                    completed++;
-                    Assert.Equal(response, request.Response);
-                    Assert.Equal([approved], request.ApprovedSamples);
-                    return Task.CompletedTask;
-                }));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
-
-        exported++;
-
-        Assert.Equal(1, client.ExportCalls);
-        Assert.Equal(1, completed);
-        Assert.Equal(1, exported);
-        Assert.Equal("YOLO-Export: Sende 1 Samples an Sidecar...", state.Statuses[^1]);
-        Assert.Contains(
-            state.Logs,
-            line => line.Contains("uebersprungen: 1 Eval-Hash, 2 Eval-Haltung, 3 ohne echte Box", StringComparison.Ordinal));
-        Assert.Equal([true, false], state.BusyStates);
-    }
-
-    [Fact]
-    public async Task RunAsync_nutzt_lokalen_export_wenn_sidecar_payload_mehr_als_500_samples_hat()
-    {
-        var state = new WorkflowState();
-        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        var frame = Path.Combine(root, "frame.jpg");
-        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
-        var approved = ApprovedSample(frame);
-        var client = new FakeVisionPipelineClient
-        {
-            Health = new SidecarHealthResponse(
-                Status: "ok",
-                Version: "1.0",
-                Gpu: new GpuStatus("yolo", 1, 8))
-        };
-        var localCalls = 0;
-
-        try
-        {
-            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
-                state,
-                samples: [approved],
-                client: client,
-                buildPayloadAsync: _ => Task.FromResult(new TrainingYoloSidecarExportPayloadResult(
-                    new TrainingExportRequestDto(
-                        Enumerable.Range(0, 501)
-                            .Select(_ => new TrainingExportSample(
-                                "ZmFrZQ==",
-                                [new TrainingExportSampleLabel("BAB", 0.1, 0.2, 0.3, 0.4)]))
-                            .ToList(),
-                        @"D:\Yolo",
-                        0.8),
-                    SkipEvalHash: 0,
-                    SkipEvalCase: 0,
-                    SkipNoBox: 0)),
-                runLocalExportAsync: _ =>
-                {
-                    localCalls++;
-                    return Task.CompletedTask;
-                }));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
-
-        Assert.Equal(0, client.ExportCalls);
-        Assert.Equal(1, localCalls);
-        Assert.Contains(state.Logs, line => line.Contains("Sidecar-Limit von 500", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task RunAsync_beendet_frueh_wenn_keine_approved_samples_vorhanden_sind()
-    {
-        var state = new WorkflowState();
-        var folderSelected = false;
+            progress?.Report(new TrainingYoloExportProgress(
+                TrainingYoloExportProgressStage.ExecutingPlan,
+                "Plan wird geschrieben.",
+                Total: 1));
+            return Task.FromResult(Completed(plan));
+        });
+        var sample = new TrainingSample { SampleId = "sample-1" };
+        var state = new UiState();
+        var now = new DateTimeOffset(2026, 7, 17, 12, 0, 0, TimeSpan.Zero);
 
         await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
+            coordinator,
             state,
-            samples: [],
-            selectOutputDirectory: () =>
-            {
-                folderSelected = true;
-                return @"D:\Yolo";
-            }));
+            [sample],
+            utcNow: () => now));
 
-        Assert.False(folderSelected);
-        Assert.Empty(state.BusyStates);
-        Assert.Equal("Keine Approved-Samples mit gueltigen Frames vorhanden.", state.Statuses.Single());
-        Assert.Equal("YOLO-Export: Keine exportierbaren Samples gefunden.", state.Logs.Single());
+        var command = Assert.IsType<TrainingYoloExportCommand>(coordinator.LastCommand);
+        Assert.Same(sample, Assert.Single(command.UpdateTargets!));
+        Assert.Equal(now, command.GeneratedUtc);
+        Assert.Equal([true, false], state.BusyValues);
+        Assert.Equal(1, state.ProgressMax);
+        Assert.Equal(1, state.ProgressValue);
+        Assert.Contains("YOLO-Export fertig", state.Status, StringComparison.Ordinal);
+        Assert.Contains(state.Logs, line => line.Contains("Weg: Sidecar", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_macht_nichts_wenn_bereits_ein_Lauf_aktiv_ist()
+    {
+        var coordinator = new RecordingCoordinator((_, _, _) =>
+            throw new InvalidOperationException("darf nicht laufen"));
+        var state = new UiState { IsBusy = true };
+
+        await TrainingYoloExportWorkflow.RunAsync(CreateRequest(coordinator, state));
+
+        Assert.Null(coordinator.LastCommand);
+        Assert.Empty(state.BusyValues);
+    }
+
+    [Fact]
+    public async Task RunAsync_meldet_einen_leeren_Plan_ohne_Scheinerfolg()
+    {
+        var coordinator = new RecordingCoordinator((_, _, _) => Task.FromResult(
+            new TrainingYoloExportResult(
+                TrainingYoloExportResultStatus.NoImages,
+                Plan(withImage: false),
+                null,
+                new TrainingExportCompletionResult(0, []))));
+        var state = new UiState();
+
+        await TrainingYoloExportWorkflow.RunAsync(CreateRequest(coordinator, state));
+
+        Assert.Contains("keine exportierbaren Bilder", state.Status, StringComparison.Ordinal);
+        Assert.Equal([true, false], state.BusyValues);
+    }
+
+    [Fact]
+    public async Task RunAsync_meldet_Abbruch_und_setzt_Busy_zurueck()
+    {
+        var coordinator = new RecordingCoordinator((_, _, _) =>
+            Task.FromException<TrainingYoloExportResult>(new OperationCanceledException()));
+        var state = new UiState();
+
+        await TrainingYoloExportWorkflow.RunAsync(CreateRequest(coordinator, state));
+
+        Assert.Equal("YOLO-Export abgebrochen.", state.Status);
+        Assert.Equal([true, false], state.BusyValues);
+    }
+
+    [Fact]
+    public async Task RunAsync_meldet_Fehler_und_setzt_Busy_zurueck()
+    {
+        var coordinator = new RecordingCoordinator((_, _, _) =>
+            Task.FromException<TrainingYoloExportResult>(new InvalidDataException("Register fehlt")));
+        var state = new UiState();
+
+        await TrainingYoloExportWorkflow.RunAsync(CreateRequest(coordinator, state));
+
+        Assert.Contains("Register fehlt", state.Status, StringComparison.Ordinal);
+        Assert.Equal([true, false], state.BusyValues);
+    }
+
+    [Fact]
+    public void RequestFactory_uebernimmt_den_injizierten_Koordinator_ohne_Fallback()
+    {
+        var coordinator = new RecordingCoordinator((_, _, _) => Task.FromResult(Completed(Plan(true))));
+        var dependencies = new TrainingYoloExportDependencies(coordinator);
+
+        var request = TrainingYoloExportRequestFactory.Create(
+            [],
+            dependencies,
+            () => false,
+            () => CancellationToken.None,
+            _ => { },
+            _ => { },
+            _ => { },
+            _ => { },
+            _ => { });
+
+        Assert.Same(coordinator, request.Coordinator);
     }
 
     private static TrainingYoloExportWorkflowRequest CreateRequest(
-        WorkflowState state,
-        IReadOnlyList<TrainingSample> samples,
-        FakeVisionPipelineClient? client = null,
-        Func<string?>? selectOutputDirectory = null,
-        Func<TrainingYoloSidecarExportPayloadRequest, Task<TrainingYoloSidecarExportPayloadResult>>? buildPayloadAsync = null,
-        Func<TrainingYoloSidecarExportCompletionRequest, Task>? runCompletionAsync = null,
-        Func<TrainingYoloLocalExportWorkflowRequest, Task>? runLocalExportAsync = null)
+        ITrainingYoloExportCoordinator coordinator,
+        UiState state,
+        IReadOnlyList<TrainingSample>? samples = null,
+        Func<DateTimeOffset>? utcNow = null)
         => new(
-            IsBusy: () => false,
-            Samples: samples,
-            IsTrainingExportEligible: _ => true,
-            PersistSamplesAsync: () => Task.CompletedTask,
-            SelectOutputDirectory: selectOutputDirectory ?? (() => @"D:\Yolo"),
+            IsBusy: () => state.IsBusy,
+            Samples: samples ?? [],
+            Coordinator: coordinator,
             ResetCancellation: () => CancellationToken.None,
-            CreateSidecarRuntime: () => new TrainingYoloSidecarRuntime(
-                PipelineConfig: new PipelineConfig(
-                    MultiModelEnabled: true,
-                    SidecarUrl: new Uri("http://localhost:8100"),
-                    SidecarToken: null,
-                    Mode: PipelineMode.Auto,
-                    YoloConfidence: 0.25,
-                    YoloClassConfidence: new Dictionary<string, double>(),
-                    DinoBoxThreshold: 0.25,
-                    DinoTextThreshold: 0.25,
-                    SidecarTimeoutSec: 30,
-                    PipeDiameterMmOverride: null),
-                Client: client ?? new FakeVisionPipelineClient()),
-            LoadEvalSets: () => new EvalContaminationSets(new HashSet<string>(), new HashSet<string>()),
-            BuildSidecarPayloadAsync: buildPayloadAsync ?? (request => Task.FromResult(new TrainingYoloSidecarExportPayloadResult(
-                new TrainingExportRequestDto(
-                    [new TrainingExportSample("ZmFrZQ==", [new TrainingExportSampleLabel("BAB", 0.1, 0.2, 0.3, 0.4)])],
-                    request.OutputDir,
-                    request.TrainSplit),
-                SkipEvalHash: 0,
-                SkipEvalCase: 0,
-                SkipNoBox: 0))),
-            RunSidecarCompletionAsync: runCompletionAsync ?? (_ => Task.CompletedTask),
-            RunLocalExportAsync: runLocalExportAsync ?? (_ => Task.CompletedTask),
-            SetBusy: state.BusyStates.Add,
+            UtcNow: utcNow ?? (() => DateTimeOffset.UtcNow),
+            SetBusy: value =>
+            {
+                state.IsBusy = value;
+                state.BusyValues.Add(value);
+            },
             Log: state.Logs.Add,
             SetProgressMax: value => state.ProgressMax = value,
             SetProgressValue: value => state.ProgressValue = value,
-            SetStatusText: state.Statuses.Add);
+            SetStatusText: value => state.Status = value);
 
-    private static TrainingSample ApprovedSample(string framePath)
-        => new()
-        {
-            SampleId = "sample-a",
-            CaseId = "haltung-a",
-            Status = TrainingSampleStatus.Approved,
-            FramePath = framePath,
-            Code = "BAB",
-            BboxXCenter = 0.1,
-            BboxYCenter = 0.2,
-            BboxWidth = 0.3,
-            BboxHeight = 0.4
-        };
-
-    private sealed class WorkflowState
+    private static TrainingYoloExportResult Completed(TrainingExportPlan plan)
     {
-        public List<bool> BusyStates { get; } = new();
-        public List<string> Logs { get; } = new();
-        public List<string> Statuses { get; } = new();
-        public int ProgressMax { get; set; }
-        public int ProgressValue { get; set; }
+        var result = new TrainingExportExecutionResult(
+            plan.PlanId,
+            plan.PlanId,
+            TrainingExportExecutionStatus.Created,
+            plan.Images.Count,
+            plan.Images.Count,
+            0,
+            plan.Classes.Count,
+            Path.Combine(@"C:\KI_BRAIN\training\datasets", plan.PlanId),
+            Path.Combine(@"C:\KI_BRAIN\training\datasets", plan.PlanId, "data.yaml"),
+            Path.Combine(@"C:\KI_BRAIN\training\datasets", plan.PlanId, "manifest.json"),
+            plan.Images.Select(image => image.ImageSha256).ToArray());
+        return new TrainingYoloExportResult(
+            TrainingYoloExportResultStatus.Completed,
+            plan,
+            new TrainingExportExecutionOutcome(TrainingExportExecutionRoute.Sidecar, result, "1.2.0"),
+            new TrainingExportCompletionResult(0, []));
     }
 
-    private sealed class FakeVisionPipelineClient : IVisionPipelineClient
+    private static TrainingExportPlan Plan(bool withImage)
     {
-        public SidecarHealthResponse? Health { get; set; } = new("ok", "1.0", null);
-        public PipelineHealthCheckResult? DetailedHealth { get; set; }
-        public TrainingExportResponseDto ExportResponse { get; set; } = new(1, 1, 0, ["BAB"], @"D:\Yolo\data.yaml");
-        public int ExportCalls { get; private set; }
+        var imageHash = new string('b', 64);
+        var images = withImage
+            ? new[]
+            {
+                new TrainingExportPlannedImage(
+                    imageHash,
+                    "H1",
+                    TrainingExportTarget.Train,
+                    $"img_{imageHash}.png",
+                    [])
+            }
+            : [];
+        return new TrainingExportPlan(
+            TrainingExportPlan.CurrentSchemaVersion,
+            new string('a', 64),
+            new DateTimeOffset(2026, 7, 17, 12, 0, 0, TimeSpan.Zero),
+            "inventory-run",
+            new Dictionary<string, string>(),
+            2,
+            new string('c', 64),
+            new string('d', 64),
+            [],
+            ["BAB_riss"],
+            withImage ? ["H1"] : [],
+            [],
+            new Dictionary<string, int> { ["BAB_riss"] = 0 },
+            images,
+            []);
+    }
 
-        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
-            => Task.FromResult(Health);
+    private sealed class RecordingCoordinator(
+        Func<TrainingYoloExportCommand, IProgress<TrainingYoloExportProgress>?, CancellationToken,
+            Task<TrainingYoloExportResult>> run) : ITrainingYoloExportCoordinator
+    {
+        public TrainingYoloExportCommand? LastCommand { get; private set; }
 
-        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
-            => Task.FromResult(DetailedHealth ?? new PipelineHealthCheckResult(
-                IsReachable: Health is not null,
-                IsAuthorized: true,
-                StatusCode: Health is null ? null : 200,
-                Health: Health,
-                Error: Health is null ? "offline" : null));
-
-        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
-            => throw new NotSupportedException();
-
-        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
-            => throw new NotSupportedException();
-
-        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
-            => throw new NotSupportedException();
-
-        public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
-            => throw new NotSupportedException();
-
-        public Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
+        public Task<TrainingYoloExportResult> RunAsync(
+            TrainingYoloExportCommand command,
+            IProgress<TrainingYoloExportProgress>? progress = null,
+            CancellationToken cancellationToken = default)
         {
-            ExportCalls++;
-            return Task.FromResult(ExportResponse);
+            LastCommand = command;
+            return run(command, progress, cancellationToken);
         }
+    }
+
+    private sealed class UiState
+    {
+        public bool IsBusy { get; set; }
+        public List<bool> BusyValues { get; } = [];
+        public List<string> Logs { get; } = [];
+        public int ProgressMax { get; set; }
+        public int ProgressValue { get; set; }
+        public string Status { get; set; } = "";
     }
 }

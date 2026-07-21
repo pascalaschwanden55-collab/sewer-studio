@@ -626,7 +626,7 @@ public sealed class DataPagePrintControllerTests
             mergeOriginals: mergeOriginals,
             mergeWithOriginals: mergeWithOriginals,
             regenerateOne: regenerateOne,
-            openPdf: openPdf,
+            openPdf: openPdf ?? (_ => true),
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles);
 

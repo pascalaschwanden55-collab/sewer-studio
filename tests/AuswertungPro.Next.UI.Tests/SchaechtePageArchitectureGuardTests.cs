@@ -12,13 +12,61 @@ public sealed class SchaechtePageArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
         var controllerPath = Path.Combine(uiRoot, "Services", "DropdownOptionGroupController.cs");
+        var factoryPath = Path.Combine(uiRoot, "Services", "SchaechteDropdownCommandFactory.cs");
 
         Assert.True(File.Exists(controllerPath), "Schaechte-Optionsgruppen sollen ausserhalb der ViewModel-Methoden orchestriert werden.");
+        Assert.True(File.Exists(factoryPath), "Schaechte-Dropdown-Gruppen und Commands sollen gemeinsam erzeugt werden.");
 
         var viewModel = File.ReadAllText(viewModelPath);
-        Assert.Contains("DropdownOptionGroupController", viewModel);
+        var factory = File.ReadAllText(factoryPath);
+        var compactViewModel = string.Concat(viewModel.Where(character => !char.IsWhiteSpace(character)));
+        Assert.Contains("SchaechteDropdownCommandFactory.Create", viewModel);
+        Assert.DoesNotContain("DropdownOptionGroupController", viewModel, StringComparison.Ordinal);
+        Assert.Contains("DropdownOptionGroupController", factory);
+        Assert.Contains("DropdownCommandFactory.Create", factory);
+        Assert.Contains(
+            "_dropdownCommands=SchaechteDropdownCommandFactory.Create(" +
+            "newSchaechteDropdownOptionCollections(" +
+            "SanierenOptions,EigentuemerOptions,PruefungsresultatOptions,ReferenzpruefungOptions)," +
+            "_dropdownOptions.FixedEigentuemerOptions," +
+            "newDropdownOptionGroupActions(" +
+            "OptionsEditorDialogService.Show,_dialogs.Info,SaveDropdownOptions));",
+            compactViewModel);
+
+        var commandGroups = new[]
+        {
+            (PropertyName: "Sanieren", GroupName: "Sanieren"),
+            (PropertyName: "Eigentuemer", GroupName: "Eigentuemer"),
+            (PropertyName: "Pruefungsresultat", GroupName: "Pruefungsresultat"),
+            (PropertyName: "Referenzpruefung", GroupName: "Referenzpruefung")
+        };
+
+        foreach (var (propertyName, groupName) in commandGroups)
+        {
+            foreach (var actionName in new[] { "Edit", "Preview", "Reset" })
+            {
+                Assert.Contains(
+                    $"publicIRelayCommand{actionName}{propertyName}OptionsCommand=>" +
+                    $"_dropdownCommands.{groupName}.{actionName};",
+                    compactViewModel);
+            }
+
+            foreach (var actionName in new[] { "Add", "Remove" })
+            {
+                Assert.Contains(
+                    $"publicIRelayCommand<object?>{actionName}{propertyName}OptionCommand=>" +
+                    $"_dropdownCommands.{groupName}.{actionName};",
+                    compactViewModel);
+            }
+        }
+
         AssertNoForbiddenTokens(
             viewModel,
+            "_sanierenDropdownOptions",
+            "_eigentuemerDropdownOptions",
+            "_pruefungsresultatDropdownOptions",
+            "_referenzpruefungDropdownOptions",
+            "private DropdownOptionGroupController CreateDropdownOptionGroup",
             "new OptionsEditorWindow",
             "new OptionsEditorViewModel");
 
@@ -102,9 +150,26 @@ public sealed class SchaechtePageArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var recordPartialPath = Path.Combine(
+            uiRoot,
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.RecordCollection.cs");
+        var recordControllerPath = Path.Combine(
+            uiRoot,
+            "DataPage",
+            "SchaechteRecordCollectionController.cs");
 
         var viewModel = File.ReadAllText(viewModelPath);
-        Assert.Contains("SchaechteFieldLogic.ResolveNrColumnName(Columns, Records)", viewModel);
+        Assert.True(File.Exists(recordPartialPath), recordPartialPath);
+        Assert.True(File.Exists(recordControllerPath), recordControllerPath);
+        var recordPartial = File.ReadAllText(recordPartialPath);
+        var recordController = File.ReadAllText(recordControllerPath);
+        Assert.Contains("SchaechteFieldLogic.ResolveNrColumnName(", recordController);
+        Assert.Contains("SchaechteRecordCollectionController", recordPartial);
+        Assert.DoesNotContain("Records.Add(", viewModel);
+        Assert.DoesNotContain("Records.RemoveAt(", viewModel);
+        Assert.DoesNotContain("Records.Move(", viewModel);
         Assert.Contains("SchaechteFieldLogic.MatchesSearch(record, SearchText ?? \"\")", viewModel);
         Assert.Contains("SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText ?? \"\")", viewModel);
         AssertNoForbiddenTokens(
@@ -140,11 +205,27 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("private bool ApplySchachtNumberChange(", page);
         Assert.Contains("SchaechteShaftRenameController.Apply(", page);
         Assert.Contains("Vm.ShaftRename", page);
+        Assert.Contains("Vm.PdfTextLayerRewrite", page);
         Assert.Contains("IShaftRenameService renameService", controller);
+        Assert.Contains("IPdfTextLayerRewriter pdfTextLayerRewrite", controller);
         Assert.Contains("renameService.Rename(", controller);
+        Assert.Contains("pdfTextLayerRewrite.RewriteIdentifierInPlace(", controller);
         Assert.DoesNotContain("ShaftRenameService.Rename(", controller);
+        Assert.DoesNotContain("AuswertungPro.Next.Infrastructure.HoldingFolderDistributor", controller);
         Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", controller);
         Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", controller);
+
+        var viewModel = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.cs"));
+        Assert.Contains("private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;", viewModel);
+        Assert.Contains("pdfTextLayerRewrite: services.PdfTextLayerRewrite", viewModel);
+        Assert.Contains("_pdfTextLayerRewrite = pdfTextLayerRewrite ?? throw", viewModel);
+        Assert.DoesNotContain("_pdfTextLayerRewrite = pdfTextLayerRewrite ?? PdfTextLayerRewriter.Current", viewModel);
 
         var provider = File.ReadAllText(Path.Combine(
             root,
@@ -153,6 +234,382 @@ public sealed class SchaechtePageArchitectureGuardTests
             "ServiceProvider.cs"));
         Assert.Contains("public IShaftRenameService ShaftRename { get; }", provider);
         Assert.Contains("ShaftRename = new ShaftRenameFileService();", provider);
+        Assert.Contains("public IPdfTextLayerRewriter PdfTextLayerRewrite { get; }", provider);
+    }
+
+    [Fact]
+    public void SchaechtePage_simple_field_edit_logic_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var pagePath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs");
+        var controllerPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "DataPage",
+            "SchaechteFieldEditController.cs");
+
+        Assert.True(File.Exists(controllerPath), controllerPath);
+        var page = File.ReadAllText(pagePath);
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.Contains("SchaechteFieldEditController.Apply(", page);
+        Assert.DoesNotContain("record.SetFieldValue(recordField", page);
+        Assert.Contains("record.SetFieldValue(fieldName, editedValue);", controller);
+        Assert.Contains("SchaechteColumnPolicy.ResolveOptionField(fieldName)", controller);
+        Assert.Contains("applyShaftNumberChange(record, oldShaftNumber, editedValue)", controller);
+    }
+
+    [Fact]
+    public void SchaechtePage_reuses_shared_grid_zoom_controller()
+    {
+        var page = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs"));
+
+        Assert.Contains("DataPageGridZoomController.Resolve(", page);
+        Assert.DoesNotContain("const double step = 0.05d;", page);
+        Assert.DoesNotContain("Math.Clamp(vm.GridZoom + delta, 0.5d, 2.0d)", page);
+    }
+
+    [Fact]
+    public void SchaechtePage_protocol_folder_summary_and_folder_rules_live_in_policy()
+    {
+        var viewModelPartial = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.ProtocolFolderImport.cs"));
+        var protocolEntryPartial = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.ProtocolImport.cs"));
+        var policyPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Services",
+            "SchachtProtocolFolderImportPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), policyPath);
+        var policy = File.ReadAllText(policyPath);
+        var compactViewModelPartial = string.Concat(
+            viewModelPartial.Where(character => !char.IsWhiteSpace(character)));
+        var compactProtocolEntryPartial = string.Concat(
+            protocolEntryPartial.Where(character => !char.IsWhiteSpace(character)));
+
+        Assert.Contains("SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(", viewModelPartial);
+        Assert.Contains("SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(", viewModelPartial);
+        Assert.Contains(
+            "SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(" +
+            "sourcePdfs.Count,preparedPdfs.Length,created,updated," +
+            "archivedOlderProtocols,skippedDirectories.Count,failures)",
+            compactViewModelPartial);
+        Assert.Contains(
+            "SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(" +
+            "pdfPath,destinationFolder,legacyDestinationFolder)",
+            compactViewModelPartial);
+        Assert.DoesNotContain("private static string BuildFolderImportSummary(", viewModelPartial);
+        Assert.DoesNotContain("private static string? ResolveCanonicalShaftFolder(", viewModelPartial);
+        Assert.DoesNotContain("private static bool PathsEqual(", viewModelPartial);
+        Assert.Contains("internal static string BuildFolderImportSummary(", policy);
+        Assert.Contains("internal static string? ResolveCanonicalShaftFolder(", policy);
+        Assert.Contains("failures.Take(8)", policy);
+        Assert.Contains("Path.TrimEndingDirectorySeparator", policy);
+        Assert.Contains("project: expectedProject", viewModelPartial);
+        Assert.DoesNotContain("project: _shell.Project", viewModelPartial);
+        Assert.Contains(
+            "ProjectOperationImpact.ProjectFilesWritten",
+            viewModelPartial);
+        Assert.Contains(
+            "var distributionImpact = !readsExistingDistribution && preparedPdfs.Length > 0",
+            viewModelPartial);
+        Assert.Contains(
+            "distributionImpact | ProjectOperationImpact.ProjectDataChanged",
+            viewModelPartial);
+        Assert.Contains(
+            "varprojectContext=newProjectOperationContext(" +
+            "_shell.Project,_settings.LastProjectPath);",
+            compactProtocolEntryPartial);
+        Assert.Contains(
+            "ImportProtocolFolderAsync(projectContext,projektOrdner,ordner)",
+            compactProtocolEntryPartial);
+        var projectGuards = new List<int>();
+        var guardSearchStart = 0;
+        while (true)
+        {
+            var guard = compactViewModelPartial.IndexOf(
+                "ProjectIsStillOpen(projectContext",
+                guardSearchStart,
+                StringComparison.Ordinal);
+            if (guard < 0)
+                break;
+            projectGuards.Add(guard);
+            guardSearchStart = guard + 1;
+        }
+
+        Assert.Equal(6, projectGuards.Count);
+        var confirmation = compactViewModelPartial.IndexOf(
+            "ConfirmWarn(",
+            projectGuards[0],
+            StringComparison.Ordinal);
+        var restorePoint = compactViewModelPartial.IndexOf(
+            "TryCreateImportRestorePoint",
+            StringComparison.Ordinal);
+        var distribute = compactViewModelPartial.IndexOf(
+            "DistributeShaftFiles",
+            StringComparison.Ordinal);
+        var parse = compactViewModelPartial.IndexOf(
+            "_schachtProtocolImport.Parse(pdfPath)",
+            StringComparison.Ordinal);
+        var apply = compactViewModelPartial.IndexOf(
+            "_schachtProtocolImport.Apply(target",
+            StringComparison.Ordinal);
+        var markDirty = compactViewModelPartial.IndexOf(
+            "expectedProject.Dirty=true",
+            StringComparison.Ordinal);
+        var select = compactViewModelPartial.IndexOf(
+            "Selected=lastTarget",
+            StringComparison.Ordinal);
+        var save = compactViewModelPartial.IndexOf(
+            "_shell.TrySaveProject()",
+            StringComparison.Ordinal);
+        Assert.True(
+            projectGuards[0] < confirmation
+            && confirmation < projectGuards[1]
+            && projectGuards[1] < restorePoint);
+        Assert.True(
+            restorePoint < distribute
+            && distribute < projectGuards[2]
+            && projectGuards[2] < parse
+            && parse < projectGuards[3]
+            && projectGuards[3] < apply
+            && apply < markDirty
+            && markDirty < projectGuards[4]
+            && projectGuards[4] < select
+            && select < projectGuards[5]
+            && projectGuards[5] < save);
+    }
+
+    [Fact]
+    public void SchaechtePage_stammdaten_result_application_lives_in_applier()
+    {
+        var viewModelPartial = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.Stammdaten.cs"));
+        var applierPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Services",
+            "SchachtStammdatenResultApplier.cs");
+
+        Assert.True(File.Exists(applierPath), applierPath);
+        var applier = File.ReadAllText(applierPath);
+        var compactViewModelPartial = string.Concat(
+            viewModelPartial.Where(character => !char.IsWhiteSpace(character)));
+
+        Assert.Contains("SchachtStammdatenResultApplier.Apply(", viewModelPartial);
+        Assert.Contains("beforeApply:", viewModelPartial);
+        Assert.Contains(
+            "SchachtStammdatenResultApplier.Apply(Records,result,beforeApply:()=>",
+            compactViewModelPartial);
+        Assert.Contains(
+            "varapplyResult=SchachtStammdatenResultApplier.Apply(" +
+            "Records,result,beforeApply:()=>{" +
+            "if(result.Ergaenzungen.Count>0)" +
+            "_shell.TryCreateImportRestorePoint(\"Schacht-PDF-Stammdaten\");});",
+            compactViewModelPartial);
+        Assert.Contains(
+            "if(result.Ergaenzungen.Count>0)_shell.TryCreateImportRestorePoint(" +
+            "\"Schacht-PDF-Stammdaten\")",
+            compactViewModelPartial);
+        Assert.Contains("_shell.TryCreateImportRestorePoint(\"Schacht-PDF-Stammdaten\")", viewModelPartial);
+        Assert.Contains("if (applyResult.ChangedShaftCount > 0)", viewModelPartial);
+        Assert.Contains(
+            "if(applyResult.ChangedShaftCount>0){_shell.MarkProjectDirty();" +
+            "if(!_shell.TrySaveProject())",
+            compactViewModelPartial);
+        Assert.Contains("_shell.MarkProjectDirty()", viewModelPartial);
+        Assert.Contains("_shell.TrySaveProject()", viewModelPartial);
+        Assert.Contains("_dialogs.Info(applyResult.DialogText", viewModelPartial);
+        Assert.Contains("LastResult=applyResult.Summary;", compactViewModelPartial);
+        Assert.Contains("StammdatenErgaenzungText=applyResult.Summary;", compactViewModelPartial);
+        Assert.Contains(
+            "_dialogs.Info(applyResult.DialogText,\"PDF-Stammdatenergaenzen\")",
+            compactViewModelPartial);
+        Assert.DoesNotContain("Records.ToDictionary", viewModelPartial);
+        Assert.DoesNotContain("private static bool SetIfMissing(", viewModelPartial);
+        Assert.DoesNotContain("result.Meldungen.Take(12)", viewModelPartial);
+        Assert.Contains("records.ToDictionary", applier);
+        Assert.Contains("beforeApply?.Invoke()", applier);
+        Assert.Contains("private static bool SetIfMissing(", applier);
+        Assert.Contains("result.Meldungen.Take(12)", applier);
+        Assert.DoesNotContain("_shell", applier);
+        Assert.DoesNotContain("_dialogs", applier);
+    }
+
+    [Fact]
+    public void SchaechtePage_linked_protocol_refresh_lives_in_controller()
+    {
+        var viewModelPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.cs");
+        var partialPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.ProtocolImport.cs");
+        var controllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Services",
+            "SchachtProtocolRefreshController.cs");
+        var projectGuardPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Services",
+            "ActiveProjectGuard.cs");
+
+        Assert.True(File.Exists(controllerPath), controllerPath);
+        Assert.True(File.Exists(projectGuardPath), projectGuardPath);
+        var viewModel = File.ReadAllText(viewModelPath);
+        var partial = File.ReadAllText(partialPath);
+        var controller = File.ReadAllText(controllerPath);
+        var projectGuard = File.ReadAllText(projectGuardPath);
+        var compactViewModel = string.Concat(viewModel.Where(character => !char.IsWhiteSpace(character)));
+        var compactPartial = string.Concat(partial.Where(character => !char.IsWhiteSpace(character)));
+
+        Assert.Contains("private readonly SchachtProtocolRefreshController", viewModel);
+        Assert.Contains("new SchachtProtocolRefreshActions(", viewModel);
+        Assert.Contains(
+            "_schachtProtocolRefreshController=newSchachtProtocolRefreshController(" +
+            "_dialogs,newSchachtProtocolRefreshActions(" +
+            "GetProjectFolder:_shell.GetProjectFolder," +
+            "CaptureProject:()=>newProjectOperationContext(" +
+            "_shell.Project,_settings.LastProjectPath)," +
+            "ResolveLinkedFile:ProjectPathResolver.ResolveFilePathFromProjectFolder," +
+            "ReadProtocolAsync:ReadProtocolAsync," +
+            "ProjectIsStillOpen:ProjectIsStillOpen," +
+            "Apply:_schachtProtocolImport.Apply," +
+            "SaveProject:_shell.TrySaveProject," +
+            "SetLastResult:value=>LastResult=value));",
+            compactViewModel);
+        Assert.Contains("SchachtProtocolRefreshController.CanExecute(Selected)", partial);
+        Assert.Contains(
+            "privateasyncTaskRefreshProtocolAsync(){" +
+            "_=await_schachtProtocolRefreshController.ExecuteAsync(Selected);}",
+            compactPartial);
+        Assert.Contains("_actions.Apply(selected, result, relativePath)", controller);
+        Assert.Contains("_ = _actions.SaveProject()", controller);
+        Assert.Contains("ActiveProjectGuard.IsCurrent(", partial);
+        Assert.Contains("ReferenceEquals(expected.Project, currentProject)", projectGuard);
+        Assert.Contains("_settings.LastProjectPath", partial);
+        Assert.DoesNotContain("ServiceProvider", controller, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows", controller, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SchaechtePage_single_protocol_import_lives_in_controller()
+    {
+        var viewModelPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.cs");
+        var partialPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "SchaechtePageViewModel.ProtocolImport.cs");
+        var controllerPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Services",
+            "SchachtProtocolSingleImportController.cs");
+
+        Assert.True(File.Exists(controllerPath), controllerPath);
+        var viewModel = File.ReadAllText(viewModelPath);
+        var partial = File.ReadAllText(partialPath);
+        var controller = File.ReadAllText(controllerPath);
+        var compactViewModel = string.Concat(viewModel.Where(character => !char.IsWhiteSpace(character)));
+        var compactPartial = string.Concat(partial.Where(character => !char.IsWhiteSpace(character)));
+        var compactController = string.Concat(controller.Where(character => !char.IsWhiteSpace(character)));
+
+        Assert.Contains("private readonly SchachtProtocolSingleImportController", viewModel);
+        Assert.Contains(
+            "_schachtProtocolSingleImportController=newSchachtProtocolSingleImportController(" +
+             "_dialogs,_schachtProtocolImport,newSchachtProtocolSingleImportActions(" +
+             "ReadProtocolAsync:ReadProtocolAsync," +
+             "ProjectIsStillOpen:ProjectIsStillOpen," +
+            "CollectionLock:_shell.CollectionLock," +
+            "SaveProject:_shell.TrySaveProject," +
+            "SetSelected:record=>Selected=record," +
+            "ClearSelectedIfSame:ClearSelectedIfSame," +
+            "SetLastResult:value=>LastResult=value));",
+            compactViewModel);
+        Assert.Contains(
+            "privateTaskImportSingleProtocolAsync(" +
+            "ProjectOperationContextprojectContext,stringprojektOrdner,stringpdfPfad)" +
+            "=>_schachtProtocolSingleImportController.ExecuteAsync(" +
+            "projectContext,projektOrdner,pdfPfad);",
+            compactPartial);
+        Assert.Contains("_protocolImport.FindSchacht(", controller);
+        Assert.Contains("_protocolImport.DistributePdf(", controller);
+        Assert.Contains("_protocolImport.Apply(target, result, distribution.RelativePath)", controller);
+        Assert.Contains("lock (_actions.CollectionLock)", controller);
+        Assert.Contains(
+            "distribution=awaitTask.Run(()=>DistributePdf(" +
+            "projectFolder,result.Schachtnummer,pdfPath));",
+            compactController);
+        Assert.Contains(
+            "_protocolImport.Apply(target,result,distribution.RelativePath);" +
+            "if(!project.SchaechteData.Contains(target)){" +
+            "lock(_actions.CollectionLock){" +
+            "project.SchaechteData.Add(target);}}" +
+            "project.ModifiedAtUtc=DateTime.UtcNow;" +
+            "project.Dirty=true;" +
+            "varcommittedImpact=fileImpact|ProjectOperationImpact.ProjectDataChanged;" +
+            "if(!_actions.ProjectIsStillOpen(" +
+            "projectContext,DialogTitle,committedImpact)){return;}" +
+            "_actions.SetSelected(target);" +
+            "if(!_actions.ProjectIsStillOpen(" +
+            "projectContext,DialogTitle,committedImpact)){" +
+            "_actions.ClearSelectedIfSame(target);return;}" +
+            "_=_actions.SaveProject();",
+            compactController);
+        Assert.Contains(
+            "if(ReferenceEquals(Selected,expectedSelection))Selected=null;",
+            compactPartial);
+        AssertNoForbiddenTokens(
+            partial,
+            "private SchachtRecord? ResolveProtocolTarget(",
+            "_schachtProtocolImport.DistributePdf(",
+            "Records.Contains(ziel)",
+            "Records.Add(ziel)",
+            "_schachtProtocolImport.Apply(ziel",
+            "Schacht {ergebnis.Schachtnummer} ist bereits vorhanden.");
+        Assert.DoesNotContain("ServiceProvider", controller, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows", controller, StringComparison.Ordinal);
     }
 
     [Fact]

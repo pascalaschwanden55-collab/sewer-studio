@@ -35,7 +35,8 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     // GPU (nvidia-smi fast path)
     private string? _nvidiaSmiPath;
-    private bool _gpuAvailable = true;
+    // volatile/Interlocked: aus Poll-Task geschrieben, vom UI-Timer-Thread gelesen.
+    private volatile bool _gpuAvailable = true;
     private int _gpuQuerySkip;
     private int _gpuFailCount;
 
@@ -43,7 +44,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private readonly LibreHardwareMonitorSensor _libreHardwareSensor;
 
     // WMI CPU temp fallback (via process)
-    private bool _wmiTempAvailable = true;
+    private volatile bool _wmiTempAvailable = true;
     private int _wmiTempSkip;
     private int _wmiTempFailCount;
 
@@ -513,7 +514,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     // ── CPU temp fallback via WMI/PerfCounter (wenn LHM fehlschlaegt) ───
 
     // Stage 1: PerfCounter (kein Admin noetig, Win10+)
-    private bool _perfCounterTempAvailable = true;
+    private volatile bool _perfCounterTempAvailable = true;
     private int _perfCounterTempFailCount;
 
     private void PollCpuTempFallback()
@@ -579,7 +580,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            if (++_perfCounterTempFailCount >= 3)
+            if (Interlocked.Increment(ref _perfCounterTempFailCount) >= 3)
             {
                 _perfCounterTempAvailable = false;
                 Log("PerfCounter CPU-Temp: nicht verfuegbar, versuche ACPI Fallback...");
@@ -588,7 +589,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         }
         catch
         {
-            if (++_perfCounterTempFailCount >= 3)
+            if (Interlocked.Increment(ref _perfCounterTempFailCount) >= 3)
             {
                 _perfCounterTempAvailable = false;
                 Log("PerfCounter CPU-Temp: fehlgeschlagen, versuche ACPI Fallback...");
@@ -632,7 +633,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            if (++_wmiTempFailCount >= 3)
+            if (Interlocked.Increment(ref _wmiTempFailCount) >= 3)
             {
                 _wmiTempAvailable = false;
                 Log("ACPI CPU-Temp: nicht verfuegbar auf diesem System");
@@ -641,7 +642,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         }
         catch
         {
-            if (++_wmiTempFailCount >= 3)
+            if (Interlocked.Increment(ref _wmiTempFailCount) >= 3)
             {
                 _wmiTempAvailable = false;
                 Log("ACPI CPU-Temp: PowerShell-Abfrage fehlgeschlagen");
@@ -798,7 +799,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             catch (Exception ex)
             {
                 // Only permanently disable after 5 consecutive failures
-                if (++_gpuFailCount >= 5)
+                if (Interlocked.Increment(ref _gpuFailCount) >= 5)
                 {
                     _gpuAvailable = false;
                     Log($"nvidia-smi: deaktiviert nach 5 Fehlern ({ex.Message})");

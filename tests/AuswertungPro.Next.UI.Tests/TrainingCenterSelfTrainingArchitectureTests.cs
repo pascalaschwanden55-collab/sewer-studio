@@ -1586,7 +1586,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("ResetCancellation: ResetGenerationCancellation", reconcileSource, StringComparison.Ordinal);
         Assert.Contains("var ct = request.ResetCancellation();", reconcileCommandSource, StringComparison.Ordinal);
         Assert.Contains("ResetGenerationCancellation", exportYoloSource, StringComparison.Ordinal);
-        Assert.Contains("var ct = request.ResetCancellation();", yoloWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("var cancellationToken = request.ResetCancellation();", yoloWorkflowSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             resetSource + resetTokenSource + cancelBatchSource + reconcileSource + exportYoloSource,
             "_genCts?.Cancel();",
@@ -1595,16 +1595,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_lokalen_yolo_export_an_workflow()
+    public void TrainingCenterWorkflow_ueberlaesst_Sidecar_und_lokalen_Weg_dem_ExecutionService()
     {
         var repoRoot = FindRepoRoot();
-        var workflowPath = Path.Combine(
+        var executionServicePath = Path.Combine(
             repoRoot,
             "src",
-            "AuswertungPro.Next.UI",
+            "AuswertungPro.Next.Infrastructure",
             "Ai",
             "Training",
-            "TrainingYoloLocalExportWorkflow.cs");
+            "ExportPlans",
+            "TrainingExportExecutionService.cs");
+        var executionServiceSource = File.ReadAllText(executionServicePath);
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1613,10 +1615,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(workflowPath), workflowPath);
-        Assert.Contains("TrainingYoloLocalExportWorkflow.RunAsync", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.True(File.Exists(executionServicePath), executionServicePath);
+        Assert.Contains("_localExecutor.ExecuteAsync", executionServiceSource, StringComparison.Ordinal);
+        Assert.Contains("LocalSidecarOffline", executionServiceSource, StringComparison.Ordinal);
+        Assert.Contains("LocalAfterTransportFailure", executionServiceSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
+            "TrainingExportPlanLocalExecutor",
+            "TrainingExportExecutionService",
+            "RunLocalExportAsync",
             "private async Task ExportYoloLocalAsync(",
             "TeacherAnnotationStore.LoadAsync()",
             "Directory.CreateDirectory(",
@@ -1629,16 +1636,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_sidecar_yolo_payload_an_workflow()
+    public void TrainingCenterWorkflow_baut_keinen_Sidecar_Payload_mehr_in_der_UI()
     {
         var repoRoot = FindRepoRoot();
-        var workflowPath = Path.Combine(
+        var executionServicePath = Path.Combine(
             repoRoot,
             "src",
-            "AuswertungPro.Next.UI",
+            "AuswertungPro.Next.Infrastructure",
             "Ai",
             "Training",
-            "TrainingYoloSidecarExportPayloadWorkflow.cs");
+            "ExportPlans",
+            "TrainingExportExecutionService.cs");
+        var executionServiceSource = File.ReadAllText(executionServicePath);
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1647,10 +1656,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(workflowPath), workflowPath);
-        Assert.Contains("TrainingYoloSidecarExportPayloadWorkflow.BuildAsync", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.True(File.Exists(executionServicePath), executionServicePath);
+        Assert.Contains("_sidecarRequestBuilder", executionServiceSource, StringComparison.Ordinal);
+        Assert.Contains("ExportPlannedTrainingAsync", executionServiceSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
+            "TrainingExportSidecarRequestBuilder",
+            "BuildSidecarRequestAsync",
+            "ExportPlannedTrainingAsync",
             "File.ReadAllBytesAsync(",
             "new List<TrainingExportSample>()",
             "new List<TrainingExportSampleLabel>",
@@ -1663,16 +1676,9 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_sidecar_yolo_runtime_an_factory()
+    public void TrainingCenterWorkflow_erzeugt_keinen_Sidecar_Client_oder_Infrastruktur_Dienst()
     {
         var repoRoot = FindRepoRoot();
-        var factoryPath = Path.Combine(
-            repoRoot,
-            "src",
-            "AuswertungPro.Next.UI",
-            "Ai",
-            "Training",
-            "TrainingYoloSidecarRuntimeFactory.cs");
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1681,26 +1687,29 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(factoryPath), factoryPath);
-        Assert.Contains("TrainingYoloSidecarRuntimeFactory.CreateWithDefaults", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("request.Coordinator.RunAsync", yoloExportWorkflowSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
+            "AuswertungPro.Next.Infrastructure",
+            "TrainingYoloSidecarRuntimeFactory",
             "new AppSettingsAiSettingsProvider()",
             "new VisionPipelineClient(",
             ".ToPipelineConfig()");
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_yolo_export_kandidatenauswahl_an_selector()
+    public void TrainingCenterWorkflow_ueberlaesst_Kandidatenauswahl_dem_Koordinator()
     {
         var repoRoot = FindRepoRoot();
-        var selectorPath = Path.Combine(
+        var coordinatorPath = Path.Combine(
             repoRoot,
             "src",
-            "AuswertungPro.Next.UI",
+            "AuswertungPro.Next.Infrastructure",
             "Ai",
             "Training",
-            "TrainingYoloExportCandidateSelector.cs");
+            "ExportPlans",
+            "TrainingYoloExportCoordinator.cs");
+        var coordinatorSource = File.ReadAllText(coordinatorPath);
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1709,10 +1718,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(selectorPath), selectorPath);
-        Assert.Contains("TrainingYoloExportCandidateSelector.SelectWithFileSystem(", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.True(File.Exists(coordinatorPath), coordinatorPath);
+        Assert.Contains("TrainingSampleEligibility.Evaluate", coordinatorSource, StringComparison.Ordinal);
+        Assert.Contains("File.Exists", coordinatorSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
+            "TrainingYoloExportCandidateSelector",
+            "TrainingSampleEligibility.Evaluate",
             "File.Exists(",
             "s.Status == TrainingSampleStatus.Approved",
             "!string.IsNullOrWhiteSpace(s.FramePath)",
@@ -1721,26 +1733,35 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_yolo_export_zielordner_dialog_an_selector()
+    public void TrainingCenterWorkflow_nutzt_festen_DatasetRoot_ohne_Zielordnerdialog()
     {
         var repoRoot = FindRepoRoot();
-        var selectorPath = Path.Combine(
+        var serviceProviderSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "ServiceProvider.cs"));
+        var compositionSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
-            "TrainingYoloExportTargetFolderSelector.cs");
+            "TrainingYoloExportComposition.cs"));
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Ai",
+            "Training",
+            "ExportPlans",
+            "TrainingYoloExportRuntime.cs"));
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
-            repoRoot,
-            "src",
-            "AuswertungPro.Next.UI",
-            "Ai",
-            "Training",
-            "TrainingYoloExportWorkflow.cs"));
+            repoRoot, "src", "AuswertungPro.Next.UI", "Ai", "Training", "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(selectorPath), selectorPath);
-        Assert.Contains("TrainingYoloExportTargetFolderSelector.SelectFolder", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingYoloExportComposition.Create(", serviceProviderSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingYoloExportRuntime.CreateHybrid(", compositionSource, StringComparison.Ordinal);
+        Assert.Contains("Path.Combine(root, \"training\", \"datasets\")", runtimeSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
             "using Microsoft.Win32;",
@@ -1750,16 +1771,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_sidecar_yolo_abschluss_an_workflow()
+    public void TrainingCenterWorkflow_delegiert_Abschluss_an_plan_gebundenen_Service()
     {
         var repoRoot = FindRepoRoot();
-        var workflowPath = Path.Combine(
+        var coordinatorPath = Path.Combine(
             repoRoot,
             "src",
-            "AuswertungPro.Next.UI",
+            "AuswertungPro.Next.Infrastructure",
             "Ai",
             "Training",
-            "TrainingYoloSidecarExportCompletionWorkflow.cs");
+            "ExportPlans",
+            "TrainingYoloExportCoordinator.cs");
+        var coordinatorSource = File.ReadAllText(coordinatorPath);
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1768,17 +1791,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "TrainingYoloExportWorkflow.cs"));
 
-        Assert.True(File.Exists(workflowPath), workflowPath);
-        Assert.Contains("TrainingYoloSidecarExportCompletionWorkflow.RunAsync", yoloExportWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingYoloSidecarExportCompletionRequestFactory.CreateWithDefaults(", yoloExportWorkflowSource, StringComparison.Ordinal);
+        Assert.True(File.Exists(coordinatorPath), coordinatorPath);
+        Assert.Contains("_completionService.Apply", coordinatorSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             yoloExportWorkflowSource,
+            "TrainingExportCompletionService",
+            "CompleteExport",
             "s.ExportedUtc = DateTime.UtcNow",
-            "response.TotalSamples",
-            "response.TrainCount",
             "response.ValCount",
             "response.ClassesUsed.Count",
-            "response.DataYamlPath",
             "string.Join(\", \", response.ClassesUsed)");
     }
 
@@ -1805,7 +1826,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
 
         Assert.True(File.Exists(workflowPath), workflowPath);
         Assert.Contains("TrainingYoloExportWorkflow.RunAsync(", exportYoloSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingYoloExportRequestFactory.CreateWithDefaults(", exportYoloSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingYoloExportRequestFactory.Create(", exportYoloSource, StringComparison.Ordinal);
         AssertNoForbiddenTokens(
             exportYoloSource,
             "TrainingYoloExportCandidateSelector.SelectWithFileSystem(",

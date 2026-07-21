@@ -38,6 +38,22 @@ public interface ISchachtProtocolImportService
     /// <summary>Schreibt Felder + Schaeden + PDF_Path auf den gegebenen Record (baut ihn komplett neu auf).</summary>
     void Apply(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld);
 
-    /// <summary>Kopiert die PDF nach Schaechte_Verteilt\&lt;Nr&gt;\ und gibt den relativen Projektpfad zurueck.</summary>
+    /// <summary>Kopiert die PDF ins Projekt und gibt den relativen Projektpfad zurueck.</summary>
     string DistributePdf(string projektOrdner, string schachtnummer, string pdfQuelle);
 }
+
+/// <summary>
+/// Optionale, additive Erweiterung fuer Importdienste, die neben dem bisherigen
+/// Pfad auch sicher melden koennen, ob eine neue Projektdatei angelegt wurde.
+/// </summary>
+public interface ISchachtProtocolDistributionResultService
+{
+    SchachtProtocolDistributionResult DistributePdfWithResult(
+        string projektOrdner,
+        string schachtnummer,
+        string pdfQuelle);
+}
+
+public sealed record SchachtProtocolDistributionResult(
+    string RelativePath,
+    bool FileCreated);

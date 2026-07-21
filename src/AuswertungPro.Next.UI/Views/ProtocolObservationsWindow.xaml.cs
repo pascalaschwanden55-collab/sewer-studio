@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -494,29 +495,10 @@ public partial class ProtocolObservationsWindow : Window
 
     private void ResortActiveEntries(ProtocolEntry? selectedEntry = null)
     {
-        var active = _doc.Current.Entries
-            .Where(e => !e.IsDeleted)
-            .Select((entry, index) => new
-            {
-                Entry = entry,
-                Index = index,
-                MeterStart = TryGetPrimaryOrderingMeter(entry),
-                MeterEnd = TryGetSecondaryOrderingMeter(entry)
-            })
-            .OrderBy(x => x.MeterStart.HasValue ? 0 : 1)
-            .ThenBy(x => x.MeterStart ?? double.MaxValue)
-            .ThenBy(x => x.MeterEnd.HasValue ? 0 : 1)
-            .ThenBy(x => x.MeterEnd ?? double.MaxValue)
-            .ThenBy(x => x.Entry.Code ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(x => x.Index)
-            .Select(x => x.Entry)
-            .ToList();
-
-        var deleted = _doc.Current.Entries.Where(e => e.IsDeleted).ToList();
+        var ordered = ProtocolEntryOrdering.Order(_doc.Current.Entries);
+        var active = ordered.Where(entry => !entry.IsDeleted).ToList();
         _doc.Current.Entries.Clear();
-        foreach (var entry in active)
-            _doc.Current.Entries.Add(entry);
-        foreach (var entry in deleted)
+        foreach (var entry in ordered)
             _doc.Current.Entries.Add(entry);
 
         _isRefreshingEntries = true;
@@ -538,37 +520,6 @@ public partial class ProtocolObservationsWindow : Window
         EntriesGrid.Items.Refresh();
     }
 
-    private static double? TryGetPrimaryOrderingMeter(ProtocolEntry entry)
-    {
-        var direct = entry.MeterStart ?? entry.MeterEnd;
-        if (direct.HasValue)
-            return direct;
-
-        if (entry.CodeMeta?.Parameters is null)
-            return null;
-
-        var keys = new[] { "vsa.distanz", "Distance" };
-        foreach (var key in keys)
-        {
-            if (!entry.CodeMeta.Parameters.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
-                continue;
-            var normalized = raw.Trim().Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-                return parsed;
-        }
-
-        return null;
-    }
-
-    private static double? TryGetSecondaryOrderingMeter(ProtocolEntry entry)
-    {
-        var direct = entry.MeterEnd ?? entry.MeterStart;
-        if (direct.HasValue && !double.IsNaN(direct.Value) && !double.IsInfinity(direct.Value))
-            return direct.Value;
-
-        return TryGetPrimaryOrderingMeter(entry);
-    }
-
     private IReadOnlyList<ProtocolEntry> BuildImportedEntries(HaltungRecord record)
     {
         var list = new List<ProtocolEntry>();
@@ -577,15 +528,15 @@ public partial class ProtocolObservationsWindow : Window
             var mStart = f.MeterStart ?? f.SchadenlageAnfang;
             var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
             if (mStart is null && !string.IsNullOrWhiteSpace(f.Raw))
-                mStart = TryParseMeterFromRaw(f.Raw);
+                mStart = ProtocolFindingRawParser.TryParseMeterFromRaw(f.Raw);
             if (mEnd is null && !string.IsNullOrWhiteSpace(f.Raw))
-                mEnd = TryParseSecondMeterFromRaw(f.Raw);
-            var time = ParseMpegTime(f.MPEG)
+                mEnd = ProtocolFindingRawParser.TryParseSecondMeterFromRaw(f.Raw);
+            var time = ProtocolTimeParser.ParseMpegTime(f.MPEG)
                        ?? (f.Timestamp is null ? null : f.Timestamp.Value.TimeOfDay);
             if (time is null && !string.IsNullOrWhiteSpace(f.Raw))
             {
-                var rawTime = TryParseTimeFromRaw(f.Raw);
-                time = ParseMpegTime(rawTime);
+                var rawTime = ProtocolFindingRawParser.TryParseTimeFromRaw(f.Raw);
+                time = ProtocolTimeParser.ParseMpegTime(rawTime);
                 if (string.IsNullOrWhiteSpace(f.MPEG) && !string.IsNullOrWhiteSpace(rawTime))
                     f.MPEG = rawTime;
             }
@@ -657,53 +608,5 @@ public partial class ProtocolObservationsWindow : Window
         }
 
         return list;
-    }
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
-    }
-
-    private static readonly System.Text.RegularExpressions.Regex RawMeterRegex =
-        new(@"@?\s*(\d+(?:[.,]\d+)?)\s*m(?!m)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    private static readonly System.Text.RegularExpressions.Regex RawTimeRegex =
-        new(@"\b(\d{1,2}:\d{2}(?::\d{2})?)\b", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    private static double? TryParseMeterFromRaw(string raw)
-    {
-        var match = RawMeterRegex.Match(raw);
-        if (!match.Success)
-            return null;
-
-        var text = match.Groups[1].Value.Replace(',', '.');
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
-    }
-
-    private static double? TryParseSecondMeterFromRaw(string raw)
-    {
-        var matches = RawMeterRegex.Matches(raw);
-        if (matches.Count < 2)
-            return null;
-
-        var text = matches[1].Groups[1].Value.Replace(',', '.');
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
-    }
-
-    private static string? TryParseTimeFromRaw(string raw)
-    {
-        var match = RawTimeRegex.Match(raw);
-        return match.Success ? match.Groups[1].Value : null;
     }
 }

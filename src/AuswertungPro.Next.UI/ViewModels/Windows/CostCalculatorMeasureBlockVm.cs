@@ -291,6 +291,8 @@ public sealed partial class MeasureBlockVm : ObservableObject
         var connections = ParseDecimal(ConnectionsText);
         if (connections is not null && IsConnectionLine(vm))
         {
+            // Historischer Sonderweg: Qty = 1 markiert eine neue Zeile bereits als manuell.
+            // Sie uebernimmt die Anschlusszahl trotzdem und behaelt dieses Override-Flag.
             if (connections.Value <= 0m)
             {
                 vm.SetSuggestedQty(0m);
@@ -412,34 +414,41 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (connections is null)
             return;
 
-        var disableConnectionWork = connections.Value <= 0m;
-
         foreach (var line in Lines)
-        {
-            if (!IsConnectionLine(line))
-                continue;
-
-            if (disableConnectionWork)
-            {
-                // Explicitly disabling connections should always clear related work items.
-                line.SetSuggestedQty(0m);
-                line.IsQtyOverridden = false;
-                line.Selected = false;
-                line.TransferMarked = false;
-                continue;
-            }
-
-            // Re-enable lines that were switched off by "0 Anschluesse".
-            if (!line.Selected && line.Qty == 0m)
-                line.Selected = true;
-
-            if (line.IsQtyOverridden)
-                continue;
-
-            line.SetSuggestedQty(connections.Value);
-        }
+            ApplyConnectionsToLine(line, connections.Value);
 
         UpdateTotal();
+    }
+
+    private static void ApplyConnectionsToLine(CostLineVm line, decimal connections)
+    {
+        var update = ConnectionQuantityPolicy.Evaluate(
+            line.ItemKey,
+            line.Text,
+            line.Qty,
+            line.Selected,
+            connections);
+        if (!update.IsApplicable)
+            return;
+
+        if (update.ShouldDisable)
+        {
+            line.SetSuggestedQty(ConnectionQuantityPolicy.ResolveSuggestedQuantity(
+                update,
+                line.IsQtyOverridden) ?? 0m);
+            line.IsQtyOverridden = false;
+            line.Selected = false;
+            line.TransferMarked = false;
+            return;
+        }
+
+        if (update.ShouldReactivate)
+            line.Selected = true;
+
+        if (ConnectionQuantityPolicy.ResolveSuggestedQuantity(
+                update,
+                line.IsQtyOverridden) is { } quantity)
+            line.SetSuggestedQty(quantity);
     }
 
     private void TryInitializeConnectionsFromLines()

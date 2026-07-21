@@ -30,6 +30,8 @@ public sealed class VsaCodeResolverTests
             Code("BBA", "Wurzeln", requiresRange: true),
             Code("BBB", "Anhaftende Stoffe"),
             Code("BBC", "Ablagerungen Sohle"),
+            Code("BBDZ", "Andersartiges Bodenmaterial"),
+            Code("BBF", "Infiltration"),
             Code("BDDC", "Wasserstand")
         }));
     }
@@ -109,6 +111,21 @@ public sealed class VsaCodeResolverTests
     {
         var result = VsaCodeResolver.InferCodeFromLabel(label);
         Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("BAB_riss", "BAB")]
+    [InlineData("BBF_infiltration", "BBF")]
+    [InlineData("BBD_boden", "BBDZ")]
+    [InlineData("SONST_schaden", null)]
+    public void InferCodeFromLabel_class_map_v2_speichert_nie_nacktes_BBD(
+        string label,
+        string? expected)
+    {
+        var result = VsaCodeResolver.InferCodeFromLabel(label);
+
+        Assert.Equal(expected, result);
+        Assert.NotEqual("BBD", result);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -149,6 +150,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
         var codingStatePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var statusInitializerPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionStatusInitializer.cs");
 
         Assert.False(File.Exists(statusPath), "LiveDetection-Status-UI soll kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(statusControllerPath), "LiveDetection-Status-UI soll im eigenen Controller liegen.");
@@ -163,6 +167,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.True(File.Exists(uiDispatchWorkflowPath), "Status-UI-Thread-Dispatch soll ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(statusInitializerPath), "Status- und Puls-Controller sollen ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var statusController = File.ReadAllText(statusControllerPath);
@@ -179,6 +184,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var uiDispatchWorkflow = File.Exists(uiDispatchWorkflowPath) ? File.ReadAllText(uiDispatchWorkflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
+        var statusInitializer = File.ReadAllText(statusInitializerPath);
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
         var playerWindowPartials = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
@@ -213,19 +221,19 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("actions.StartPulse()", codingAiStateWorkflow);
         Assert.Contains("actions.StopPulse()", codingAiStateWorkflow);
         Assert.Contains("PlayerUiDispatchWorkflow.Execute", statusController);
-        Assert.Contains("HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(Dispatcher)", windowRoot);
+        Assert.Contains("HasDispatcherAccess: () => PlayerDispatcherScheduler.HasAccess(dispatcher)", statusInitializer);
         Assert.Contains("InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", liveDetection);
-        Assert.Contains("DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", windowRoot);
+        Assert.Contains("DispatchToUi: action => PlayerDispatcherScheduler.Invoke(dispatcher, action)", statusInitializer);
         var dispatcherScheduler = File.ReadAllText(Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs"));
         Assert.Contains("public static void Invoke", dispatcherScheduler);
         Assert.Contains("public static bool HasAccess", dispatcherScheduler);
         Assert.Contains("public static bool HasShutdownStarted", dispatcherScheduler);
         Assert.Contains("actions.DispatchToUi(actions.Apply)", uiDispatchWorkflow);
         Assert.Contains("actions.Apply()", uiDispatchWorkflow);
-        Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", windowRoot);
-        Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", windowRoot);
-        Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", windowRoot);
-        Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", windowRoot);
+        Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", statusInitializer);
+        Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", statusInitializer);
+        Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", statusInitializer);
+        Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", statusInitializer);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionError", liveDetection);
         Assert.Contains("LiveDetectionErrorWorkflow.Execute", runCommandWorkflow);
         Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", runCommandWorkflow);
@@ -237,15 +245,67 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("public static void ShowDetectionStatus", controls);
         Assert.Contains("LiveDetectionDisplayPolicy.BuildDetectionStatusText", controls);
         Assert.Contains("LiveDetectionDisplayPolicy.BuildFindingSummaryText", controls);
-        Assert.Contains("LiveDetectionPulseControls.Start(CodingAiPulseRing)", windowRoot);
-        Assert.Contains("LiveDetectionPulseControls.Stop(CodingAiPulseRing)", windowRoot);
+        Assert.Contains("LiveDetectionPulseControls.Start(controls.PulseRing)", statusInitializer);
+        Assert.Contains("LiveDetectionPulseControls.Stop(controls.PulseRing)", statusInitializer);
         Assert.Contains("DoubleAnimation", pulseControls);
         Assert.Contains("public static void Start", pulseControls);
         Assert.Contains("public static void Stop", pulseControls);
         Assert.Contains("private readonly ILiveDetectionStatusController _liveDetectionStatusController", state);
         Assert.Contains("private readonly ILiveDetectionPulseController _liveDetectionPulseController", state);
-        Assert.Contains("new LiveDetectionStatusController", windowRoot);
-        Assert.Contains("new LiveDetectionPulseController", windowRoot);
+        Assert.Contains("new LiveDetectionStatusController", statusInitializer);
+        Assert.Contains("new LiveDetectionPulseController", statusInitializer);
+        Assert.Contains("StartPulse: pulse.Start", statusInitializer);
+        Assert.Contains("StopPulse: pulse.Stop", statusInitializer);
+        Assert.Contains("PlayerWindowLiveDetectionStatusInitializer.Create", windowRoot);
+        Assert.DoesNotContain("new LiveDetectionStatusController", windowRoot);
+        Assert.DoesNotContain("new LiveDetectionPulseController", windowRoot);
+        Assert.DoesNotContain("LiveDetectionStatusControls.ShowLiveDetectionBadge", windowRoot);
+        Assert.DoesNotContain("LiveDetectionPulseControls.Start", windowRoot);
+        Assert.Contains("newPlayerWindowLiveDetectionStatusControls(", compactWindowRoot);
+        var expectedControlBindings = new[]
+        {
+            "PulseRing:CodingAiPulseRing",
+            "Badge:AiStatusBadge",
+            "BadgeStatusText:AiStatusText",
+            "BadgeDot:AiStatusDot",
+            "YoloStatusBar:YoloStatusBar",
+            "YoloStatusText:TxtYoloStatus",
+            "YoloDot:YoloDot",
+            "YoloModelText:TxtYoloModel",
+            "CodingAiStatusText:TxtCodingAiStatus",
+            "CodingAiStageText:TxtCodingAiStage",
+            "CodingAiDot:CodingAiDot",
+            "DetectionStatusText:LiveDetectionStatusText",
+            "FindingSummaryPanel:FindingSummaryPanel",
+            "FindingSummaryText:FindingSummaryText"
+        };
+        foreach (var expectedControlBinding in expectedControlBindings)
+            Assert.Contains(expectedControlBinding, compactWindowRoot);
+        Assert.Contains("_codingAiPulseStateController,Dispatcher);", compactWindowRoot);
+        var pulseControllerSource = Regex.Match(
+            compactWindowRoot,
+            @"_liveDetectionPulseController=(?<source>[A-Za-z_]\w*)\.Pulse;");
+        var statusControllerSource = Regex.Match(
+            compactWindowRoot,
+            @"_liveDetectionStatusController=(?<source>[A-Za-z_]\w*)\.Status;");
+        Assert.True(pulseControllerSource.Success);
+        Assert.True(statusControllerSource.Success);
+        Assert.Equal(
+            pulseControllerSource.Groups["source"].Value,
+            statusControllerSource.Groups["source"].Value);
+        var initializeComponentIndex = compactWindowRoot.IndexOf(
+            "InitializeComponent();",
+            StringComparison.Ordinal);
+        var statusInitializerIndex = compactWindowRoot.IndexOf(
+            "PlayerWindowLiveDetectionStatusInitializer.Create(",
+            StringComparison.Ordinal);
+        var codingOverlayIndex = compactWindowRoot.IndexOf(
+            "_codingSchemaOverlayController=newCodingSchemaOverlayController(",
+            StringComparison.Ordinal);
+        Assert.True(
+            initializeComponentIndex >= 0
+            && initializeComponentIndex < statusInitializerIndex
+            && statusInitializerIndex < codingOverlayIndex);
         Assert.DoesNotContain("private void SetLiveDetectionBadge", playerWindowPartials);
         Assert.DoesNotContain("private void SetYoloStatus", playerWindowPartials);
         Assert.DoesNotContain("private void SetCodingAiState", playerWindowPartials);
@@ -266,6 +326,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var lifecycleControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionLifecycleController.cs");
         var stopControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionStopController.cs");
+        var controllerSetFactoryPath = Path.Combine(
+            windowsRoot,
+            "PlayerWindowLiveDetectionControllerSetFactory.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionClickWorkflow.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
@@ -291,6 +354,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.False(File.Exists(stopPath), "LiveDetection-Stop-Wiring soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(lifecycleControllerPath), "LiveDetection-Start/Stop-Wiring soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(stopControllerPath), "LiveDetection-Stop/Cleanup soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "LiveDetection-Controller sollen ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(clickWorkflowPath), "LiveDetection-Klick-Start/Stop-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
@@ -310,6 +374,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycleController = File.ReadAllText(lifecycleControllerPath);
         var stopController = File.ReadAllText(stopControllerPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var factory = File.ReadAllText(factoryPath);
         var clickWorkflow = File.Exists(clickWorkflowPath) ? File.ReadAllText(clickWorkflowPath) : "";
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
@@ -320,6 +385,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var liveController = File.Exists(liveControllerPath) ? File.ReadAllText(liveControllerPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
+        var compactWindowRoot = string.Concat(windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         Assert.Contains("private void LiveDetection_Click", liveDetection);
         Assert.Contains("_liveDetectionLifecycleController.HandleClickAsync()", liveDetection);
@@ -329,13 +395,47 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("LiveDetectionClickWorkflow.ExecuteAsync", lifecycleController);
         Assert.Contains("new LiveDetectionStartupActions", lifecycleController);
         Assert.Contains("new LiveDetectionControllerStartActions", lifecycleController);
-        Assert.Contains("new LiveDetectionLifecycleController", windowRoot);
-        Assert.Contains("new LiveDetectionStopController", windowRoot);
-        Assert.Contains("_liveDetectionStopController.Stop", windowRoot);
-        Assert.Contains("LiveDetectionStartupDisplayWorkflow.StartAsync", windowRoot);
-        Assert.Contains("LiveDetectionToggleControls.Uncheck", windowRoot);
-        Assert.Contains("_liveDetectionController.StartRuntime", windowRoot);
-        Assert.Contains("LiveDetectionStatusControls.ShowWaitingForFrame", windowRoot);
+        Assert.Contains("PlayerWindowLiveDetectionControllerSetFactory.Create", windowRoot);
+        Assert.DoesNotContain("new LiveDetectionLifecycleController", windowRoot);
+        Assert.DoesNotContain("new LiveDetectionStopController", windowRoot);
+        Assert.DoesNotContain("LiveDetectionStopControllerSources", windowRoot);
+        Assert.Contains("new LiveDetectionLifecycleController", controllerSetFactory);
+        Assert.Contains("new LiveDetectionStopController", controllerSetFactory);
+        Assert.Contains("internal sealed record PlayerWindowLiveDetectionControllerSet", controllerSetFactory);
+        Assert.Contains("return new PlayerWindowLiveDetectionControllerSet", controllerSetFactory);
+        Assert.Contains("LiveDetectionStartupDisplayWorkflow.StartAsync", controllerSetFactory);
+        Assert.Contains("LiveDetectionToggleControls.Uncheck", controllerSetFactory);
+        Assert.Contains("dependencies.RuntimeController.StartRuntime", controllerSetFactory);
+        Assert.Contains("LiveDetectionStatusControls.ShowWaitingForFrame", controllerSetFactory);
+        var stopControllerSource = Regex.Match(
+            compactWindowRoot,
+            @"_liveDetectionStopController=(?<source>[A-Za-z_]\w*)\.Stop;");
+        var lifecycleControllerSource = Regex.Match(
+            compactWindowRoot,
+            @"_liveDetectionLifecycleController=(?<source>[A-Za-z_]\w*)\.Lifecycle;");
+        Assert.True(stopControllerSource.Success);
+        Assert.True(lifecycleControllerSource.Success);
+        Assert.Equal(
+            stopControllerSource.Groups["source"].Value,
+            lifecycleControllerSource.Groups["source"].Value);
+        var expectedControllerBindings = new[]
+        {
+            "RuntimeController:_liveDetectionController",
+            "ShutdownState:_shutdownState",
+            "GetTotalEvents:()=>_codingSessionHost.EventCollection?.Count??0",
+            "PlaybackControlHost:_playerPlaybackControlHost",
+            "StatusController:_liveDetectionStatusController",
+            "DetectionCanvas:DetectionCanvas",
+            "DetectionOverlay:DetectionOverlayGrid",
+            "StatusBadge:AiStatusBadge",
+            "FindingSummaryPanel:FindingSummaryPanel",
+            "DetectionStatusText:LiveDetectionStatusText",
+            "LiveDetectionToggle:LiveDetectionButton",
+            "TimerTick:DetectionTimer_Tick",
+            "RunDetectionAsync().SafeFireAndForget(\"LiveDetection\")"
+        };
+        foreach (var expectedControllerBinding in expectedControllerBindings)
+            Assert.Contains(expectedControllerBinding, compactWindowRoot);
         Assert.DoesNotContain("HandleLiveDetectionClickAsync", playerWindowMethodNames);
         Assert.DoesNotContain("StartLiveDetectionAsync", playerWindowMethodNames);
         Assert.DoesNotContain("StartLiveDetectionRuntime", playerWindowMethodNames);
@@ -368,15 +468,15 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("public interface ILiveDetectionStopController", stopController);
         Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stopController);
         Assert.Contains("new LiveDetectionHideStatusTimerDisplayActions", stopController);
-        Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", windowRoot);
+        Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", controllerSetFactory);
         Assert.Contains("_codingSessionHost", windowRoot);
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("public static class LiveDetectionHideStatusTimerWorkflow", hideStatusTimerWorkflow);
         Assert.Contains("TimeSpan.FromSeconds(5)", hideStatusTimerWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", hideStatusTimerWorkflow);
         Assert.Contains("actions.HideDetectionStatus()", hideStatusTimerWorkflow);
-        Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", windowRoot);
-        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", windowRoot);
+        Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", controllerSetFactory);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", controllerSetFactory);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", liveController);
         Assert.Contains("_client = DisposableReferenceLifecycle.DisposeAndClear(_client)", liveController);

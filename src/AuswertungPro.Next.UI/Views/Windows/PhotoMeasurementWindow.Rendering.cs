@@ -1,9 +1,7 @@
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
@@ -571,51 +569,4 @@ public partial class PhotoMeasurementWindow
         OverlayCanvas.Children.Add(path);
     }
 
-    // ═══════════════════════════════════════════════
-    // Overlay ins Foto einbrennen (DPI-korrekt)
-    // ═══════════════════════════════════════════════
-
-    private string? BurnOverlayToPhoto()
-    {
-        if (PhotoImage.Source is not BitmapSource bmpSrc) return null;
-
-        var r = GetImageRenderedRect(PhotoImage);
-        if (r.Width <= 0 || r.Height <= 0) return null;
-
-        // In ORIGINALAUFLOESUNG rendern (nicht Display-Groesse)
-        int outW = bmpSrc.PixelWidth;
-        int outH = bmpSrc.PixelHeight;
-        if (outW <= 0 || outH <= 0) return null; // Bild hat keine gueltige Groesse
-
-        var rtb = new RenderTargetBitmap(outW, outH, 96, 96, PixelFormats.Pbgra32);
-
-        var dv = new DrawingVisual();
-        using (var dc = dv.RenderOpen())
-        {
-            // 1. Original-Foto in voller Aufloesung
-            dc.DrawImage(bmpSrc, new Rect(0, 0, outW, outH));
-
-            // 2. Canvas-Overlay hochskalieren: Display-Bereich → Originalaufloesung
-            double scaleX = outW / r.Width;
-            double scaleY = outH / r.Height;
-
-            // Nur den gerenderten Bildbereich des Canvas nehmen (Letterbox-Offset abziehen)
-            var vb = new VisualBrush(OverlayCanvas)
-            {
-                Viewbox = new Rect(r.X, r.Y, r.Width, r.Height),
-                ViewboxUnits = BrushMappingMode.Absolute,
-                Stretch = Stretch.Fill
-            };
-            dc.DrawRectangle(vb, null, new Rect(0, 0, outW, outH));
-        }
-        rtb.Render(dv);
-
-        // PNG speichern
-        var outPath = System.IO.Path.ChangeExtension(_photoPath, null) + "_overlay.png";
-        var enc = new PngBitmapEncoder();
-        enc.Frames.Add(BitmapFrame.Create(rtb));
-        using var fs = File.Create(outPath);
-        enc.Save(fs);
-        return outPath;
-    }
 }

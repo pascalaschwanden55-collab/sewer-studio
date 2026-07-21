@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -29,6 +30,94 @@ public sealed class StoredImportFileServiceInstanceTests : IDisposable
         Assert.Equal(
             [relativePath],
             StoredImportFileRegistry.Load(metadata, "PDF_StoredFiles"));
+    }
+
+    [Fact]
+    public void Store_nutzt_bei_neuer_Projektstruktur_den_echten_Projektordner()
+    {
+        var projectFilesDirectory = Path.Combine(_tempRoot, "Projektdateien");
+        Directory.CreateDirectory(projectFilesDirectory);
+        var projectPath = Path.Combine(projectFilesDirectory, "projekt.json");
+        File.WriteAllText(projectPath, "{}");
+        var sourceDirectory = Path.Combine(_tempRoot, "Quelle");
+        Directory.CreateDirectory(sourceDirectory);
+        var source = Path.Combine(sourceDirectory, "quelle.pdf");
+        File.WriteAllText(source, "PDF-Inhalt");
+        var metadata = new Dictionary<string, string>();
+        IStoredImportFileService service = new StoredImportFileService();
+
+        var result = service.Store(projectPath, metadata, "PDF", [source]);
+
+        var relativePath = Assert.Single(result.StoredRelativePaths);
+        Assert.Equal(Path.Combine("Imports", "PDF", "quelle.pdf"), relativePath);
+        Assert.True(File.Exists(Path.Combine(_tempRoot, relativePath)));
+        Assert.False(File.Exists(Path.Combine(projectFilesDirectory, relativePath)));
+        Assert.Equal(
+            [relativePath],
+            StoredImportFileRegistry.Load(metadata, "PDF_StoredFiles"));
+    }
+
+    [Fact]
+    public void Oeffentliche_AltFassade_delegiert_mit_freiem_Metadatenschluessel()
+    {
+        var explicitProjectDirectory = Path.Combine(_tempRoot, "Altprojekt", "Projektdateien");
+        Directory.CreateDirectory(explicitProjectDirectory);
+        var sourceDirectory = Path.Combine(_tempRoot, "Quelle");
+        Directory.CreateDirectory(sourceDirectory);
+        var source = Path.Combine(sourceDirectory, "quelle.pdf");
+        File.WriteAllText(source, "PDF-Inhalt");
+        var project = new Project();
+
+        var stored = ImportFileStoreService.StoreFiles(
+            project,
+            explicitProjectDirectory,
+            [source],
+            "PDF",
+            "Eigene_PDF_Liste");
+
+        var relativePath = Assert.Single(stored);
+        Assert.Equal(Path.Combine("Imports", "PDF", "quelle.pdf"), relativePath);
+        Assert.True(File.Exists(Path.Combine(explicitProjectDirectory, relativePath)));
+        Assert.Equal(
+            [relativePath],
+            StoredImportFileRegistry.Load(project.Metadata, "Eigene_PDF_Liste"));
+        Assert.False(project.Metadata.ContainsKey("PDF_StoredFiles"));
+    }
+
+    [Fact]
+    public void Oeffentliche_AltFassade_behaelt_ihre_bisherige_Signatur()
+    {
+        var method = typeof(ImportFileStoreService).GetMethod(
+            nameof(ImportFileStoreService.StoreFiles),
+            [
+                typeof(Project),
+                typeof(string),
+                typeof(string[]),
+                typeof(string),
+                typeof(string)
+            ]);
+
+        Assert.NotNull(method);
+        Assert.True(method!.IsPublic);
+        Assert.True(method.IsStatic);
+        Assert.Equal(typeof(List<string>), method.ReturnType);
+    }
+
+    [Fact]
+    public void Store_Vertrag_behaelt_seine_bisherige_Signatur()
+    {
+        var method = typeof(IStoredImportFileService).GetMethod(
+            nameof(IStoredImportFileService.Store),
+            [
+                typeof(string),
+                typeof(IDictionary<string, string>),
+                typeof(string),
+                typeof(IReadOnlyCollection<string>),
+                typeof(Func<DateTime>)
+            ]);
+
+        Assert.NotNull(method);
+        Assert.Equal(typeof(StoredImportFilesResult), method!.ReturnType);
     }
 
     [Fact]
@@ -80,6 +169,39 @@ public sealed class StoredImportFileServiceInstanceTests : IDisposable
         var relativePath = Assert.Single(result.StoredRelativePaths);
         Assert.Equal(Path.Combine("Imports", "PDF", "vorhanden.pdf"), relativePath);
         Assert.True(File.Exists(Path.Combine(_tempRoot, relativePath)));
+    }
+
+    [Fact]
+    public void Store_mit_Staging_registriert_geplanten_Pfad_aber_schreibt_erst_beim_Publish()
+    {
+        var projectFilesDirectory = Path.Combine(_tempRoot, "Projektdateien");
+        Directory.CreateDirectory(projectFilesDirectory);
+        var projectPath = Path.Combine(projectFilesDirectory, "projekt.json");
+        File.WriteAllText(projectPath, "{}");
+        var sourceDirectory = Path.Combine(_tempRoot, "Quelle");
+        Directory.CreateDirectory(sourceDirectory);
+        var source = Path.Combine(sourceDirectory, "quelle.pdf");
+        File.WriteAllText(source, "PDF-Inhalt");
+        var metadata = new Dictionary<string, string>();
+        IStoredImportFileService service = new StoredImportFileService();
+        using var staging = new ImportFileStagingService().Begin(projectPath)!;
+
+        var result = service.StoreStaged(
+            projectPath,
+            metadata,
+            "PDF",
+            [source],
+            staging);
+
+        var relativePath = Assert.Single(result.StoredRelativePaths);
+        var target = Path.Combine(_tempRoot, relativePath);
+        Assert.False(File.Exists(target));
+        Assert.Equal([relativePath], StoredImportFileRegistry.Load(metadata, "PDF_StoredFiles"));
+
+        staging.Publish();
+        staging.Accept();
+
+        Assert.Equal("PDF-Inhalt", File.ReadAllText(target));
     }
 
     [Theory]

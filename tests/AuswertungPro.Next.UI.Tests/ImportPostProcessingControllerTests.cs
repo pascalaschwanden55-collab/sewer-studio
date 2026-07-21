@@ -109,6 +109,7 @@ public sealed class ImportPostProcessingControllerTests
             Project: project,
             ProjectFolder: null,
             PdfImport: pdfImport,
+            MediaDistribution: new MediaDistributionServiceFake(),
             PdfToTextPath: null,
             FillMissingOnly: true,
             Context: null,
@@ -138,6 +139,12 @@ public sealed class ImportPostProcessingControllerTests
             Assert.True(fillMissingOnly);
             return import(pdfPath);
         }
+    }
+
+    private sealed class MediaDistributionServiceFake : IImportMediaDistributionService
+    {
+        public ImportMediaDistributionResult Distribute(ImportMediaDistributionRequest request)
+            => new(0, 0, 0, []);
     }
 
     private sealed class UiState

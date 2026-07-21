@@ -69,6 +69,22 @@ public sealed class AtomicTextFileWriterTests
         Assert.Empty(Directory.EnumerateFiles(temp.Path, "*.tmp"));
     }
 
+    [Fact]
+    public async Task WriteAllBytesAsync_WritesExactBytesAndKeepsBackup()
+    {
+        using var temp = new TempDir();
+        var path = Path.Combine(temp.Path, "report.json");
+        var oldBytes = new byte[] { 1, 2, 3 };
+        var newBytes = new byte[] { 0xEF, 0xBB, 0xBF, (byte)'{', (byte)'}' };
+
+        await AtomicTextFileWriter.WriteAllBytesAsync(path, oldBytes);
+        await AtomicTextFileWriter.WriteAllBytesAsync(path, newBytes);
+
+        Assert.Equal(newBytes, await File.ReadAllBytesAsync(path));
+        Assert.Equal(oldBytes, await File.ReadAllBytesAsync(path + ".bak"));
+        Assert.Empty(Directory.EnumerateFiles(temp.Path, "*.tmp"));
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

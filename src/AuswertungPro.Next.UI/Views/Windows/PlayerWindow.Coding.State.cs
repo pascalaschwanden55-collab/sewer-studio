@@ -10,9 +10,10 @@ public partial class PlayerWindow
     private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();
 
     private readonly CodingAiStateControllerSet _codingAiStates = new();
-    private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();
+    private readonly ICodingStreckenschadenTrackingController _codingStreckenschadenTrackingController;
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private readonly CodingPhotoCaptureServicesOwner _codingPhotoCaptureServicesOwner = new();
+    private readonly ICodingPhotoAttachmentController _codingPhotoAttachmentController;
     private readonly Ai.CodingTrainingPersistenceContext _codingTrainingPersistenceContext;
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
@@ -28,6 +29,8 @@ public partial class PlayerWindow
     private readonly CodingSchemaOverlayController _codingSchemaOverlayController;
     private readonly CodingManualCalibrationController _codingManualCalibrationController;
     private readonly CodingCalibrationPointerController _codingCalibrationPointerController;
+    private readonly ICodingOverlayInputVisibilityController _codingOverlayInputVisibilityController;
+    private readonly CodingEventListVisualController _codingEventListVisualController;
     private readonly CodingEventsRefreshController _codingEventsRefreshController;
     private readonly ICodingProtocolMatchController _codingProtocolMatchController;
     private readonly ICodingEingabemarkerInteractionController _codingEingabemarkerInteractionController;
@@ -47,8 +50,6 @@ public partial class PlayerWindow
     private CodingSchemaTypeStateController _codingSchemaTypeState => _codingSchemaStates.TypeState;
 
     private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState;
-
-    private CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState => _codingOverlayStates.InputVisibilityState;
 
     private CodingOverlayRenderStateController _codingOverlayRenderState => _codingOverlayStates.RenderState;
 

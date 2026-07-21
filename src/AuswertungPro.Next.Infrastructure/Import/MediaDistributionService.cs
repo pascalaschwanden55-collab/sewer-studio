@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Domain.Protocol;
@@ -13,7 +14,7 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// Kopiert beim Import aufgeloeste Mediendateien (Video, Fotos, PDFs) in die
 /// Projektordner-Struktur und ersetzt absolute Pfade durch relative.
 /// </summary>
-public sealed class MediaDistributionService
+public sealed class MediaDistributionService : IImportMediaDistributionService
 {
     public sealed record CopyProgress(int Processed, int Total, string? CurrentFile);
 
@@ -22,6 +23,30 @@ public sealed class MediaDistributionService
         int FilesSkipped,
         int Errors,
         IReadOnlyList<string> Messages);
+
+    public ImportMediaDistributionResult Distribute(ImportMediaDistributionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var progress = request.Progress is null
+            ? null
+            : new CopyProgressAdapter(request.Progress);
+        var result = DistributeImportedMediaCore(
+            request.ProjectFolder,
+            request.Project,
+            progress,
+            request.CancellationToken,
+            request.DryRun,
+            request.CollectionLock,
+            request.IncludeVideos,
+            request.IncludePdfs,
+            request.IncludeSchacht,
+            request.FileStaging);
+        return new ImportMediaDistributionResult(
+            result.FilesCopied,
+            result.FilesSkipped,
+            result.Errors,
+            result.Messages);
+    }
 
     /// <summary>
     /// Kopiert alle referenzierten Mediendateien in die Haltungs-Unterordner
@@ -37,7 +62,41 @@ public sealed class MediaDistributionService
         bool includeVideos = true,
         bool includePdfs = true,
         bool includeSchacht = true)
+        => DistributeImportedMediaCore(
+            projectFolder,
+            project,
+            progress,
+            ct,
+            dryRun,
+            collectionLock,
+            includeVideos,
+            includePdfs,
+            includeSchacht,
+            fileStaging: null);
+
+    private CopyResult DistributeImportedMediaCore(
+        string projectFolder,
+        Project project,
+        IProgress<CopyProgress>? progress,
+        CancellationToken ct,
+        bool dryRun,
+        object? collectionLock,
+        bool includeVideos,
+        bool includePdfs,
+        bool includeSchacht,
+        IImportFileStagingSession? fileStaging)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
+        ArgumentNullException.ThrowIfNull(project);
+        if (fileStaging is not null && !SamePath(fileStaging.ProjectRoot, projectFolder))
+            throw new InvalidOperationException("Datei-Staging und Medienziel gehoeren nicht zum selben Projekt.");
+
+        Func<string, string, string> copyFile = fileStaging is null
+            ? CopyFileUnique
+            : (source, targetDirectory) => fileStaging.StageCopy(
+                source,
+                targetDirectory,
+                cancellationToken: ct);
         var copied = 0;
         var skipped = 0;
         var errors = 0;
@@ -64,23 +123,23 @@ public sealed class MediaDistributionService
             // 1) Video (Link-Feld). Der manuelle Import setzt includeVideos=false,
             // damit Rohvideos erst im expliziten Verteil-Schritt ins Projekt kopiert werden.
             if (includeVideos)
-                CopyFieldFile(record, FieldKeys.Link, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFile(record, FieldKeys.Link, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
 
             // 2+3) PDF_Path / PDF_All. Der Ein-Knopf-Import setzt includePdfs=false, weil er das
             // eigene Protokoll (_E.pdf) generiert statt die Original-PDFs in die Haltung zu kopieren.
             if (includePdfs)
             {
-                CopyFieldFile(record, FieldKeys.PdfPath, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
-                CopyFieldFileList(record, FieldKeys.PdfAll, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFile(record, FieldKeys.PdfPath, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
+                CopyFieldFileList(record, FieldKeys.PdfAll, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
             }
 
             // 4) Protokoll-FotoPaths (Original, Current, History)
             if (record.Protocol != null)
-                CopyProtocolFotos(record.Protocol, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyProtocolFotos(record.Protocol, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
 
             // 5) VsaFindings FotoPath
             if (record.VsaFindings != null)
-                CopyVsaFindingFotos(record.VsaFindings, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyVsaFindingFotos(record.VsaFindings, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
 
             processed++;
             progress?.Report(new CopyProgress(processed, total, haltungsname));
@@ -101,7 +160,7 @@ public sealed class MediaDistributionService
                     continue;
                 var sanS = SanitizePathSegment(schachtNr);
                 var schachtRoot = ProjectStructure.SchachtVerteiltDir(projectFolder, sanS);
-                CopySchachtFieldFile(schacht, FieldKeys.Link, schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopySchachtFieldFile(schacht, FieldKeys.Link, schachtRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
             }
         }
 
@@ -112,7 +171,8 @@ public sealed class MediaDistributionService
 
     private static void CopyFieldFile(
         HaltungRecord record, string fieldName, string holdingRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
         var rawPath = record.GetFieldValue(fieldName)?.Trim();
         if (string.IsNullOrWhiteSpace(rawPath))
@@ -159,13 +219,16 @@ public sealed class MediaDistributionService
         {
             var subfolder = GetSubfolder(Path.GetExtension(rawPath));
             var destDir = Path.Combine(holdingRoot, subfolder);
-            if (!dryRun) Directory.CreateDirectory(destDir);
-            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
+            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
             if (!dryRun)
                 record.SetFieldValue(fieldName,
                     ProjectPathResolver.MakeRelative(destPath, projectFolder),
                     FieldSource.Legacy, userEdited: false);
             copied++;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -176,7 +239,8 @@ public sealed class MediaDistributionService
 
     private static void CopyFieldFileList(
         HaltungRecord record, string fieldName, string holdingRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
         var raw = record.GetFieldValue(fieldName)?.Trim();
         if (string.IsNullOrWhiteSpace(raw))
@@ -237,11 +301,14 @@ public sealed class MediaDistributionService
             {
                 var subfolder = GetSubfolder(Path.GetExtension(trimmed));
                 var destDir = Path.Combine(holdingRoot, subfolder);
-                if (!dryRun) Directory.CreateDirectory(destDir);
-                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(trimmed)) : CopyFileUnique(trimmed, destDir);
+                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(trimmed)) : copyFile(trimmed, destDir);
                 newPaths.Add(ProjectPathResolver.MakeRelative(destPath, projectFolder));
                 anyChanged = true;
                 copied++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -257,17 +324,19 @@ public sealed class MediaDistributionService
 
     private static void CopyProtocolFotos(
         ProtocolDocument protocol, string haltungSan, string holdingRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
-        CopyRevisionFotos(protocol.Original, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
-        CopyRevisionFotos(protocol.Current, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+        CopyRevisionFotos(protocol.Original, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
+        CopyRevisionFotos(protocol.Current, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
         foreach (var rev in protocol.History)
-            CopyRevisionFotos(rev, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            CopyRevisionFotos(rev, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, copyFile, dryRun);
     }
 
     private static void CopyRevisionFotos(
         ProtocolRevision revision, string haltungSan, string holdingRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
         foreach (var entry in revision.Entries)
         {
@@ -277,7 +346,7 @@ public sealed class MediaDistributionService
                 if (string.IsNullOrWhiteSpace(rawPath))
                     continue;
 
-                if (TryUseCentralHoldingPhoto(rawPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, out var centralRel))
+                if (TryUseCentralHoldingPhoto(rawPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, copyFile, out var centralRel))
                 {
                     if (!dryRun)
                         entry.FotoPaths[i] = centralRel!;
@@ -324,11 +393,14 @@ public sealed class MediaDistributionService
                 {
                     // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
                     var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
-                    if (!dryRun) Directory.CreateDirectory(destDir);
-                    var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
+                    var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
                     if (!dryRun)
                         entry.FotoPaths[i] = ProjectPathResolver.MakeRelative(destPath, projectFolder);
                     copied++;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -344,14 +416,15 @@ public sealed class MediaDistributionService
 
     private static void CopyVsaFindingFotos(
         List<VsaFinding> findings, string haltungSan, string holdingRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
         foreach (var finding in findings)
         {
             if (string.IsNullOrWhiteSpace(finding.FotoPath))
                 continue;
 
-            if (TryUseCentralHoldingPhoto(finding.FotoPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, out var centralRel))
+            if (TryUseCentralHoldingPhoto(finding.FotoPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, copyFile, out var centralRel))
             {
                 if (!dryRun)
                     finding.FotoPath = centralRel;
@@ -398,11 +471,14 @@ public sealed class MediaDistributionService
             {
                 // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
                 var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
-                if (!dryRun) Directory.CreateDirectory(destDir);
-                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(finding.FotoPath)) : CopyFileUnique(finding.FotoPath, destDir);
+                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(finding.FotoPath)) : copyFile(finding.FotoPath, destDir);
                 if (!dryRun)
                     finding.FotoPath = ProjectPathResolver.MakeRelative(destPath, projectFolder);
                 copied++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -420,6 +496,7 @@ public sealed class MediaDistributionService
         ref int copied,
         ref int errors,
         List<string> messages,
+        Func<string, string, string> copyFile,
         out string? relativePath)
     {
         relativePath = null;
@@ -442,15 +519,18 @@ public sealed class MediaDistributionService
         {
             if (source is not null
                 && !SamePath(source, preferred)
-                && new FileInfo(source).Length != new FileInfo(preferred).Length)
+                && !FileContentComparer.FilesEqual(source, preferred))
             {
                 try
                 {
-                    if (!dryRun) Directory.CreateDirectory(destDir);
-                    var copiedPath = dryRun ? Path.Combine(destDir, fileName) : CopyFileUnique(source, destDir);
+                    var copiedPath = dryRun ? Path.Combine(destDir, fileName) : copyFile(source, destDir);
                     relativePath = ProjectPathResolver.MakeRelative(copiedPath, projectFolder);
                     copied++;
                     return true;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -469,11 +549,14 @@ public sealed class MediaDistributionService
 
         try
         {
-            if (!dryRun) Directory.CreateDirectory(destDir);
-            var destPath = dryRun ? preferred : CopyFileUnique(source, destDir);
+            var destPath = dryRun ? preferred : copyFile(source, destDir);
             relativePath = ProjectPathResolver.MakeRelative(destPath, projectFolder);
             copied++;
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -545,7 +628,8 @@ public sealed class MediaDistributionService
     // Wie CopyFieldFile, aber fuer SchachtRecord (eigene SetFieldValue-Signatur ohne FieldSource).
     private static void CopySchachtFieldFile(
         SchachtRecord record, string fieldName, string schachtRoot, string projectFolder,
-        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+        ref int copied, ref int errors, List<string> messages,
+        Func<string, string, string> copyFile, bool dryRun = false)
     {
         var rawPath = record.GetFieldValue(fieldName)?.Trim();
         if (string.IsNullOrWhiteSpace(rawPath))
@@ -571,11 +655,14 @@ public sealed class MediaDistributionService
         {
             var subfolder = GetSubfolder(Path.GetExtension(rawPath));
             var destDir = Path.Combine(schachtRoot, subfolder);
-            if (!dryRun) Directory.CreateDirectory(destDir);
-            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
+            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
             if (!dryRun)
                 record.SetFieldValue(fieldName, ProjectPathResolver.MakeRelative(destPath, projectFolder));
             copied++;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -653,30 +740,46 @@ public sealed class MediaDistributionService
     }
 
     /// <summary>
-    /// Kopiert eine Datei in den Zielordner. Bei Namenskollision mit unterschiedlicher
-    /// Groesse wird ein Timestamp-Suffix angehaengt. Bei gleicher Groesse wird die
-    /// bestehende Datei wiederverwendet.
+    /// Kopiert eine Datei in den Zielordner. Nur wirklich gleicher Inhalt wird
+    /// wiederverwendet; eine Namenskollision erhaelt einen eindeutigen Suffix.
     /// </summary>
     private static string CopyFileUnique(string source, string destDir)
     {
+        Directory.CreateDirectory(destDir);
         var fileName = Path.GetFileName(source);
         var dest = Path.Combine(destDir, fileName);
 
         if (File.Exists(dest))
         {
-            var srcInfo = new FileInfo(source);
-            var destInfo = new FileInfo(dest);
-            if (srcInfo.Length == destInfo.Length)
-                return dest; // Gleiche Datei, wiederverwenden
+            if (FileContentComparer.FilesEqual(source, dest))
+                return dest;
 
-            // Unterschiedlicher Inhalt: Timestamp-Suffix
             var name = Path.GetFileNameWithoutExtension(fileName);
             var ext = Path.GetExtension(fileName);
-            dest = Path.Combine(destDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+            var stem = $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+            dest = Path.Combine(destDir, stem + ext);
+            var suffix = 2;
+            while (File.Exists(dest))
+            {
+                if (FileContentComparer.FilesEqual(source, dest))
+                    return dest;
+                dest = Path.Combine(destDir, $"{stem}_{suffix}{ext}");
+                suffix++;
+            }
         }
 
         File.Copy(source, dest, overwrite: false);
         return dest;
+    }
+
+    private sealed class CopyProgressAdapter(
+        IProgress<ImportMediaDistributionProgress> target) : IProgress<CopyProgress>
+    {
+        public void Report(CopyProgress value)
+            => target.Report(new ImportMediaDistributionProgress(
+                value.Processed,
+                value.Total,
+                value.CurrentFile));
     }
 
     /// <summary>

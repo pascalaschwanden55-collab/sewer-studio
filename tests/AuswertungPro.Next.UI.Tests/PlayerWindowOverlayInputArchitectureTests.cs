@@ -199,86 +199,106 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
     }
 
     [Fact]
-    public void PlayerWindow_overlay_input_visibility_lives_in_visibility_partial()
+    public void PlayerWindow_overlay_input_visibility_lives_in_dedicated_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var visibilityPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Visibility.cs");
         var playerStatePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var lifecycleExitPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var exitFactoryPath = Path.Combine(windowsRoot, "PlayerWindowCodingModeExitControllerFactory.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputVisibilityWorkflow.cs");
         var interactionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputInteractionWorkflow.cs");
         var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayInputVisibilityStateController.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayInputVisibilityController.cs");
 
-        Assert.True(File.Exists(visibilityPath), "Overlay-Suspend/Restore soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.False(File.Exists(visibilityPath), "Die Fensterlogik soll nicht wieder in ein Visibility-Partial zurueckwandern.");
         Assert.True(File.Exists(visibilityWorkflowPath), "Overlay-Suspend/Restore-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(interactionWorkflowPath), "Suspendierte Dialog-/Edit-Interaktionen sollen ihre Resume-Garantie ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(stateControllerPath), "Overlay-Suspend-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Fenster-Bindings und gemeinsamer Sichtbarkeitszustand brauchen einen eigenen Controller.");
 
-        var overlayInput = File.ReadAllText(overlayInputPath);
-        var visibility = File.ReadAllText(visibilityPath);
         var playerState = File.ReadAllText(playerStatePath);
         var lifecycleExit = File.ReadAllText(lifecycleExitPath);
+        var exitFactory = File.ReadAllText(exitFactoryPath);
         var wiring = File.ReadAllText(wiringPath);
         var visibilityWorkflow = File.Exists(visibilityWorkflowPath) ? File.ReadAllText(visibilityWorkflowPath) : "";
         var interactionWorkflow = File.Exists(interactionWorkflowPath) ? File.ReadAllText(interactionWorkflowPath) : "";
         var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
-        var codingPartialsWithoutVisibility = string.Join(
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var playerWindowPartials = string.Join(
             Environment.NewLine,
-            Directory.GetFiles(windowsRoot, "PlayerWindow.Coding*.cs")
-                .Where(path => !string.Equals(path, visibilityPath, StringComparison.OrdinalIgnoreCase))
+            Directory.GetFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(path => path, StringComparer.Ordinal)
                 .Select(File.ReadAllText));
 
+        Assert.Contains("private readonly ICodingOverlayInputVisibilityController _codingOverlayInputVisibilityController;", playerState);
+        Assert.Contains("new CodingOverlayInputVisibilityController(", lifecycleExit);
+        Assert.Contains("_codingOverlayStates.InputVisibilityState", lifecycleExit);
+        Assert.Contains("IsPopupOpen: () => CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup)", lifecycleExit);
+        Assert.Contains("HasCurrentOverlay: () => _codingSessionHost.CurrentOverlay is not null", lifecycleExit);
+        Assert.Contains("SuspendCanvas: () => CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)", lifecycleExit);
+        Assert.Contains("ResumeCanvas: () => CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas)", lifecycleExit);
+        Assert.Contains("OpenPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup)", lifecycleExit);
+        Assert.Contains("ClosePopup: () => CodingOverlayInputControls.ClosePopup(CodingOverlayPopup)", lifecycleExit);
+        Assert.Contains("EndDrag: _codingSchemaManager.EndDrag", lifecycleExit);
+        Assert.Contains("CancelDraw: () => _codingOverlayToolHost.CancelDraw()", lifecycleExit);
+        Assert.Contains("UpdateViewport: UpdateCodingOverlayViewport", lifecycleExit);
+        Assert.Contains("RedrawCanvas: RedrawCodingCanvas", lifecycleExit);
+        Assert.Contains("UpdateCursor: UpdateCodingOverlayCursor", lifecycleExit);
+        Assert.Equal(1, lifecycleExit.Split("new CodingOverlayInputVisibilityController(", StringSplitOptions.None).Length - 1);
+        foreach (var syncCaller in new[]
+                 {
+                     "PlayerWindow.xaml.cs",
+                     "PlayerWindow.Coding.Events.Actions.cs",
+                     "PlayerWindow.Coding.CodeExplorer.Dialog.cs",
+                     "PlayerWindow.Coding.Streckenschaden.ClosePrompt.cs"
+                 })
+        {
+            var source = File.ReadAllText(Path.Combine(windowsRoot, syncCaller));
+            Assert.Equal(
+                1,
+                source.Split(
+                    "_codingOverlayInputVisibilityController.Run(callback)",
+                    StringSplitOptions.None).Length - 1);
+        }
+
+        var asyncCaller = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs"));
+        Assert.Equal(
+            1,
+            asyncCaller.Split(
+                "RunWithSuspendedOverlayInputAsync: _codingOverlayInputVisibilityController.RunAsync",
+                StringSplitOptions.None).Length - 1);
+        Assert.Contains("_codingOverlayInputVisibilityController.HideForExternalWindow", wiring);
+        Assert.Contains("_codingOverlayInputVisibilityController.RestoreAfterExternalWindow", wiring);
+        Assert.Contains("dependencies.OverlayInputVisibilityController.ResetSuspendState", exitFactory);
         AssertNoForbiddenTokens(
-            overlayInput,
+            playerWindowPartials,
+            "CodingOverlayInputVisibilityWorkflow.Suspend",
+            "CodingOverlayInputVisibilityWorkflow.Resume",
+            "CodingOverlayInputVisibilityWorkflow.HideForExternalWindow",
+            "CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow",
+            "CodingOverlayInputInteractionWorkflow.Run",
             "private void SuspendCodingOverlayInput",
             "private void ResumeCodingOverlayInput",
             "private void HideCodingOverlayForExternalWindow",
-            "private void RestoreCodingOverlayAfterExternalWindow");
-        Assert.Contains("private void SuspendCodingOverlayInput", visibility);
-        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Suspend", visibility);
-        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Resume", visibility);
-        Assert.Contains("CodingOverlayInputVisibilityWorkflow.HideForExternalWindow", visibility);
-        Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", visibility);
-        Assert.Contains("_codingOverlayInputVisibilityState", visibility);
-        Assert.Contains("_codingOverlayInputVisibilityState", playerState + lifecycleExit + wiring);
-        AssertNoForbiddenTokens(
-            playerState,
+            "private void RestoreCodingOverlayAfterExternalWindow",
+            "_codingOverlayInputVisibilityState",
             "private int _codingOverlaySuspendDepth",
             "private bool _codingOverlayWasOpenBeforeSuspend",
             "private bool _codingOverlayWasOpenBeforeExternalHide",
             "private bool _deactivatedByExternalWindow");
-        AssertNoForbiddenTokens(
-            visibility,
-            "_codingOverlaySuspendDepth++",
-            "if (_codingOverlaySuspendDepth > 1)",
-            "_codingOverlayWasOpenBeforeExternalHide");
-        AssertNoForbiddenTokens(visibility + lifecycleExit + wiring, "_codingOverlaySuspendDepth");
-        AssertNoForbiddenTokens(visibility + lifecycleExit, "_codingOverlayWasOpenBeforeSuspend");
-        AssertNoForbiddenTokens(wiring, "_deactivatedByExternalWindow");
-        Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
-        Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
-        Assert.Contains("_codingSessionHost", visibility);
-        AssertNoForbiddenTokens(
-            visibility,
-            "CodingOverlayCanvas.Visibility = Visibility.Hidden",
-            "CodingOverlayCanvas.Visibility = Visibility.Visible",
-            "CodingOverlayCanvas.IsHitTestVisible = false",
-            "CodingOverlayCanvas.IsHitTestVisible = true");
-        Assert.Contains("CodingOverlayInputControls.IsPopupOpen", visibility);
-        Assert.Contains("CodingOverlayInputControls.OpenPopup", visibility);
-        Assert.Contains("CodingOverlayInputControls.ClosePopup", visibility);
-        AssertNoForbiddenTokens(visibility, "CodingOverlayPopup.IsOpen");
-        Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
-        Assert.Contains("CodingOverlayInputInteractionWorkflow.Run", visibility);
-        Assert.Contains("CodingOverlayInputInteractionWorkflow.RunAsync", visibility);
-        AssertNoForbiddenTokens(
-            codingPartialsWithoutVisibility,
-            "SuspendCodingOverlayInput();",
-            "ResumeCodingOverlayInput();");
+        Assert.Contains("public sealed class CodingOverlayInputVisibilityController", controller);
+        Assert.Contains("private readonly CodingOverlayInputVisibilityStateController _state", controller);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Suspend", controller);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Resume", controller);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.HideForExternalWindow", controller);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", controller);
+        Assert.Contains("CodingOverlayInputInteractionWorkflow.Run", controller);
+        Assert.Contains("CodingOverlayInputInteractionWorkflow.RunAsync", controller);
+        Assert.DoesNotContain("CodingOverlayInputControls", controller, StringComparison.Ordinal);
         Assert.Contains("request.SuspendDepth", visibilityWorkflow);
         Assert.Contains("actions.SuspendCanvas()", visibilityWorkflow);
         Assert.Contains("actions.ResumeCanvas()", visibilityWorkflow);
@@ -303,7 +323,6 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "PlayerWindow.Coding.cs",
             "PlayerWindow.Coding.AiEvents.cs",
             "PlayerWindow.Coding.OverlayInput.Viewport.cs",
-            "PlayerWindow.Coding.OverlayInput.Visibility.cs",
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",
             "PlayerWindow.Coding.OverlayInput.Schema.cs",
@@ -409,6 +428,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerSetFactoryPath = Path.Combine(
+            uiRoot,
+            "Views",
+            "Windows",
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
         var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerPreviewRenderer.cs");
@@ -420,6 +444,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         var interactionController = File.ReadAllText(interactionControllerPath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var policy = File.ReadAllText(policyPath);
         var canvasWorkflow = File.ReadAllText(canvasWorkflowPath);
         var renderer = File.ReadAllText(rendererPath);
@@ -430,9 +455,9 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection");
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", canvasWorkflow);
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", canvasWorkflow);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", windowRoot);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", windowRoot);
-        Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", windowRoot);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", controllerSetFactory);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", controllerSetFactory);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", controllerSetFactory);
         AssertNoForbiddenTokens(
             interactionController,
             "Math.Min(_eingabemarkerDragStart.X",
@@ -457,6 +482,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
         var inputControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInputController.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerSetFactoryPath = Path.Combine(
+            uiRoot,
+            "Views",
+            "Windows",
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
@@ -472,15 +502,19 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Mausentscheidungen sollen ausserhalb von PlayerWindow laufen.");
         Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(interactionControllerPath), "Die Eingabemarker-Interaktion soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "Die drei Eingabemarker-Controller sollen ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
 
         var interactionController = File.ReadAllText(interactionControllerPath);
         var inputController = File.ReadAllText(inputControllerPath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var coding = File.ReadAllText(codingPath);
         var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
         var focusControls = File.Exists(focusControlsPath) ? File.ReadAllText(focusControlsPath) : "";
         var inputWorkflow = File.Exists(inputWorkflowPath) ? File.ReadAllText(inputWorkflowPath) : "";
         var canvasWorkflow = File.Exists(canvasWorkflowPath) ? File.ReadAllText(canvasWorkflowPath) : "";
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         AssertNoForbiddenTokens(
             interactionController,
@@ -491,20 +525,20 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", interactionController);
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", interactionController);
         AssertNoForbiddenTokens(interactionController, "if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)");
-        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", windowRoot);
-        Assert.Contains("PlayerFocusControls.FocusElement", windowRoot);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", controllerSetFactory);
+        Assert.Contains("PlayerFocusControls.FocusElement", controllerSetFactory);
         AssertNoForbiddenTokens(
-            interactionController + windowRoot,
+            interactionController + controllerSetFactory + windowRoot,
             "Dispatcher.BeginInvoke",
             "new Action(() => TxtEingabemarker.Focus())",
             "TxtEingabemarker.Focus()",
             "System.Windows.Threading.DispatcherPriority.Input",
             "_eingabemarkerPreviewRect == null",
             "if (normalizedRect is null)");
-        Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", windowRoot);
-        Assert.Contains("CodingEingabemarkerPopupControls.Hide", windowRoot);
+        Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", controllerSetFactory);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", controllerSetFactory);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", coding);
-        Assert.Contains("CodingEingabemarkerPopupControls.ApplyQuickSelection", windowRoot);
+        Assert.Contains("CodingEingabemarkerPopupControls.ApplyQuickSelection", controllerSetFactory);
         Assert.Contains("CodingEingabemarkerPopupControls.ResolveSelectedText", coding);
         Assert.Contains("CodingEingabemarkerKeyInputWorkflow.Execute", inputController);
         Assert.Contains("CodingEingabemarkerSelectionInputWorkflow.Execute", inputController);
@@ -524,9 +558,50 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("private void CmbEingabemarker_KeyDown", coding);
         Assert.Contains("private void CmbEingabemarker_SelectionChanged", coding);
         AssertNoForbiddenTokens(coding, "private static string? ResolveEingabemarkerCodeHint");
-        Assert.Contains("PlayerVsaCodeHintResolver.ResolveKeyword", windowRoot);
+        Assert.Contains("PlayerVsaCodeHintResolver.ResolveKeyword", controllerSetFactory);
         Assert.Contains("_codingEingabemarkerSubmissionController", windowRoot);
-        Assert.Contains(".SubmitAsync(TxtEingabemarker.Text)", windowRoot);
+        Assert.Contains("submission.SubmitAsync(dependencies.Controls.InputText.Text)", controllerSetFactory);
+        Assert.Contains("PlayerWindowCodingEingabemarkerControllerSetFactory.Create", windowRoot);
+        Assert.DoesNotContain("new CodingEingabemarkerInteractionController", windowRoot);
+        Assert.DoesNotContain("new CodingEingabemarkerSubmissionController", windowRoot);
+        Assert.DoesNotContain("new CodingEingabemarkerInputController", windowRoot);
+        Assert.Contains(
+            "_codingEingabemarkerInteractionController=eingabemarkerControllers.Interaction",
+            compactWindowRoot);
+        Assert.Contains(
+            "_codingEingabemarkerSubmissionController=eingabemarkerControllers.Submission",
+            compactWindowRoot);
+        Assert.Contains(
+            "_codingEingabemarkerInputController=eingabemarkerControllers.Input",
+            compactWindowRoot);
+        Assert.Contains("ObserveTask:", controllerSetFactory);
+        Assert.Contains("task.SafeFireAndForget(operation)", controllerSetFactory);
+        var expectedFactoryBindings = new[]
+        {
+            "CodingOverlayPopup:CodingOverlayPopup",
+            "CodingOverlayCanvas:CodingOverlayCanvas",
+            "Toggle:BtnEingabemarker",
+            "InputPopup:EingabemarkerPopup",
+            "InputText:TxtEingabemarker",
+            "QuickSelection:CmbEingabemarker",
+            "PlaybackControlHost:_playerPlaybackControlHost",
+            "MarkToolController:_liveDetectionMarkToolController",
+            "StatusController:_liveDetectionStatusController",
+            "SessionHost:_codingSessionHost",
+            "SessionServiceOwner:_codingSessionRuntimeOwner",
+            "OsdMeterController:_codingOsdMeterController",
+            "TimelineHost:_playerTimelineHost",
+            "FindingContext:_codingFindingContext",
+            "TrainingPersistence:_codingTrainingPersistenceContext",
+            "Dispatcher:Dispatcher",
+            "UpdateCodingOverlayViewport:UpdateCodingOverlayViewport",
+            "CapturePhoto:CodingCaptureSnapshot",
+            "RefreshEvents:RefreshCodingEventsList",
+            "UpdateToolBadge:UpdateToolBadge",
+            "ClearDetectionOverlays:ClearDetectionOverlays"
+        };
+        foreach (var expectedFactoryBinding in expectedFactoryBindings)
+            Assert.Contains(expectedFactoryBinding, compactWindowRoot);
         Assert.Contains("public static void ShowInput", popupControls);
         Assert.Contains("public static void Hide", popupControls);
         Assert.Contains("public static bool IsVisible", popupControls);
@@ -551,6 +626,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var interactionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerInteractionController.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerSetFactoryPath = Path.Combine(
+            uiRoot,
+            "Views",
+            "Windows",
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerToggleWorkflow.cs");
 
@@ -559,16 +639,17 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         var interactionController = File.ReadAllText(interactionControllerPath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
         Assert.Contains("CodingEingabemarkerToggleWorkflow.Execute", interactionController);
         AssertNoForbiddenTokens(windowRoot, "if (BtnEingabemarker.IsChecked == true)");
-        Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", windowRoot);
-        Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", windowRoot);
-        Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", windowRoot);
+        Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", controllerSetFactory);
+        Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", controllerSetFactory);
+        Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", controllerSetFactory);
         AssertNoForbiddenTokens(
-            interactionController + windowRoot,
+            interactionController + controllerSetFactory + windowRoot,
             "CodingOverlayCanvas.IsHitTestVisible =",
             "CodingOverlayCanvas.Cursor =");
         Assert.Contains("request.IsChecked", toggleWorkflow);
@@ -610,6 +691,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
         var submissionControllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerSubmissionController.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var controllerSetFactoryPath = Path.Combine(
+            uiRoot,
+            "Views",
+            "Windows",
+            "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
         var directEventWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerDirectEventWorkflow.cs");
@@ -622,8 +708,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         var submissionController = File.ReadAllText(submissionControllerPath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var controllerSetFactory = File.ReadAllText(controllerSetFactoryPath);
         var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
         var directEventWorkflow = File.Exists(directEventWorkflowPath) ? File.ReadAllText(directEventWorkflowPath) : "";
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         AssertNoForbiddenTokens(
             windowRoot,
@@ -638,10 +727,13 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "CodingProtocolEntryPhotoPathAppender.AddIfPresent",
             "CodingEingabemarkerEventAppender.Apply");
         Assert.Contains("_codingEingabemarkerSubmissionController", windowRoot);
-        Assert.Contains(".SubmitAsync(TxtEingabemarker.Text)", windowRoot);
-        Assert.Contains("CodingEingabemarkerPopupControls.Hide", windowRoot);
+        Assert.Contains("submission.SubmitAsync(dependencies.Controls.InputText.Text)", controllerSetFactory);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", controllerSetFactory);
         AssertNoForbiddenTokens(windowRoot, "EingabemarkerPopup.Visibility = Visibility.Collapsed");
         Assert.Contains("RunCodingAnalysisAsync", windowRoot);
+        Assert.Contains(
+            "RunAiFallbackAsync:keyword=>RunCodingAnalysisAsync($\"Eingabemarker:{keyword}\",disableAnalyzeButton:true,keywordHint:keyword,codeHint:null)",
+            compactWindowRoot);
         AssertNoForbiddenTokens(
             submissionController,
             "if (string.IsNullOrEmpty(keyword))",

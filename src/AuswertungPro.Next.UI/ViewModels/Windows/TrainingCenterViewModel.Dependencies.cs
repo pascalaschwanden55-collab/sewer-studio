@@ -25,8 +25,7 @@ public partial class TrainingCenterViewModel
     private readonly ITeacherAnnotationStore _teacherAnnotations;
     private readonly IProtocolTrainingStore _protocolTraining;
     private readonly IProcessOutputReader _processOutputs;
-    private readonly ISidecarTelemetryWriter _sidecarTelemetry;
-    private readonly IVsaYoloClassMapStore _vsaYoloClasses;
+    private readonly TrainingYoloExportDependencies? _trainingYoloExport;
     private readonly IDialogService _dialogs;
 
     public TrainingCenterViewModel(
@@ -75,9 +74,7 @@ public partial class TrainingCenterViewModel
             TeacherAnnotationStore.Current,
             ProtocolTrainingStore.Current,
             ProcessOutputReader.Current,
-            SidecarTelemetryWriter.Current,
-            VsaYoloClassMap.Current,
-            dialogs)
+            dialogs: dialogs)
     {
     }
 
@@ -98,9 +95,8 @@ public partial class TrainingCenterViewModel
         ITeacherAnnotationStore teacherAnnotations,
         IProtocolTrainingStore protocolTraining,
         IProcessOutputReader processOutputs,
-        ISidecarTelemetryWriter? sidecarTelemetry = null,
-        IVsaYoloClassMapStore? vsaYoloClasses = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        TrainingYoloExportDependencies? trainingYoloExport = null)
     {
         _store = store;
         _import = import;
@@ -124,8 +120,7 @@ public partial class TrainingCenterViewModel
             ?? throw new ArgumentNullException(nameof(protocolTraining));
         _processOutputs = processOutputs
             ?? throw new ArgumentNullException(nameof(processOutputs));
-        _sidecarTelemetry = sidecarTelemetry ?? SidecarTelemetryWriter.Current;
-        _vsaYoloClasses = vsaYoloClasses ?? VsaYoloClassMap.Current;
+        _trainingYoloExport = trainingYoloExport;
         _dialogs = dialogs ?? DialogHost.Current;
         _kbDashboard = CreateKnowledgeBaseDashboard(kbDiagnostics);
     }

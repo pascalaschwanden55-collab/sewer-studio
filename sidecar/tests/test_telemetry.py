@@ -3,6 +3,25 @@ import json
 from fastapi.testclient import TestClient
 
 
+def test_telemetry_rotates_when_file_too_large(tmp_path, monkeypatch):
+    from sidecar import telemetry
+    from sidecar.config import settings
+
+    monkeypatch.setattr(settings, "telemetry_enabled", True, raising=False)
+    monkeypatch.setattr(settings, "telemetry_dir", str(tmp_path), raising=False)
+    monkeypatch.setattr(telemetry, "_MAX_TELEMETRY_BYTES", 200, raising=False)
+
+    path = tmp_path / "sidecar.jsonl"
+    for _ in range(50):
+        telemetry.write_event("test", {"payload": "x" * 30})
+
+    # Bei Ueberschreitung wurde nach sidecar.jsonl.1 rotiert; die aktive Datei waechst nicht
+    # unbegrenzt (ohne Rotation waeren 50 Zeilen deutlich groesser als Limit + eine Zeile).
+    assert path.exists()
+    assert (tmp_path / "sidecar.jsonl.1").exists()
+    assert path.stat().st_size < 500
+
+
 def test_detect_yolo_writes_telemetry_jsonl(tmp_path, monkeypatch):
     from sidecar.config import settings
     from sidecar.main import app

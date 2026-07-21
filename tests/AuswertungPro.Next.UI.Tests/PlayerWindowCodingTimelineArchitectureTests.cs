@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -41,6 +42,7 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
         var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineMarkerAccessors.cs");
         var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineControls.cs");
         var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineCommandWorkflow.cs");
+        var commandFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineCommandFactory.cs");
         var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineInitializationWorkflow.cs");
         var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
 
@@ -48,6 +50,7 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Timeline-Command-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandFactoryPath), "Timeline-Commands sollen ausserhalb der PlayerWindow-Partials erzeugt werden.");
         Assert.True(File.Exists(initializationWorkflowPath), "Timeline-Initialisierungs-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
@@ -56,16 +59,35 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
         var accessors = File.ReadAllText(accessorsPath);
         var controls = File.ReadAllText(controlsPath);
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var commandFactory = File.Exists(commandFactoryPath) ? File.ReadAllText(commandFactoryPath) : "";
         var initializationWorkflow = File.Exists(initializationWorkflowPath) ? File.ReadAllText(initializationWorkflowPath) : "";
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
+        var compactTimeline = Regex.Replace(timeline, @"\s+", " ");
 
         Assert.Contains("InitializeCodingTimeline: InitializeCodingTimeline", playerCoding);
         Assert.Contains("actions.InitializeCodingTimeline()", enterWorkflow);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
         Assert.Contains("CodingTimelineInitializationWorkflow.Execute", timeline);
-        Assert.Contains("CodingTimelineCommandWorkflow.NavigateToMeter", timeline);
-        Assert.Contains("CodingTimelineCommandWorkflow.MarkerClicked", timeline);
+        Assert.Contains("CodingTimelineCommandFactory.Create", timeline);
+        Assert.DoesNotContain("RelayCommand", timeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("CodingTimelineCommandWorkflow.NavigateToMeter", timeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("CodingTimelineCommandWorkflow.MarkerClicked", timeline, StringComparison.Ordinal);
+        Assert.Contains(
+            "_codingSessionHost.Events, commands.NavigateToMeter, commands.MarkerClicked);",
+            compactTimeline,
+            StringComparison.Ordinal);
+        Assert.Contains("SelectEvent: selectedEvent =>", timeline, StringComparison.Ordinal);
+        Assert.Contains(
+            "_codingSidePanelControllers.EventsList.SelectEvent(selectedEvent)",
+            timeline,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "SelectEvent: _codingSidePanelControllers.EventsList.SelectEvent",
+            timeline,
+            StringComparison.Ordinal);
+        Assert.Contains("CodingTimelineCommandWorkflow.NavigateToMeter", commandFactory);
+        Assert.Contains("CodingTimelineCommandWorkflow.MarkerClicked", commandFactory);
         Assert.Contains("throw new InvalidOperationException", initializationWorkflow);
         Assert.Contains("actions.ConfigureTimeline()", initializationWorkflow);
         Assert.Contains("actions.MoveToMeter(request.Meter)", commandWorkflow);

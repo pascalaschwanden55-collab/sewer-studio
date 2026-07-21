@@ -17,7 +17,7 @@ internal sealed record TrainingCenterWindowDependencies(
     IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics,
     Func<ReviewQueueService> CreateReviewQueue,
     Func<TrainingReviewSamSegmentationService> CreateReviewSam,
-    Func<FewShotExampleStore> CreateFewShotStore);
+    Func<int?> ResolveReviewPipeDiameterMm);
 
 /// <summary>
 /// Zentraler Aufbau fuer den normalen Programmweg und den parameterlosen WPF-/Designer-Rueckfall.
@@ -58,19 +58,47 @@ internal static class TrainingCenterWindowDependencyFactory
         TrainingCenterStore store,
         TrainingCenterImportService import,
         IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics)
-        => new(
+        => Create(
+            services,
             dialogs,
             store,
             import,
             knowledgeBaseDiagnostics,
             () => services?.TrainingReviewQueue ?? DefaultTrainingReviewQueue,
-            () => services?.CreateTrainingReviewSam() ?? CreateDefaultTrainingReviewSam(),
-            () => services?.CreateFewShotStore() ?? new FewShotExampleStore());
+            () => services?.CreateTrainingReviewSam() ?? CreateDefaultTrainingReviewSam());
+
+    internal static TrainingCenterWindowDependencies Create(
+        ServiceProvider? services,
+        IDialogService dialogs,
+        TrainingCenterStore store,
+        TrainingCenterImportService import,
+        IKnowledgeBaseDiagnosticsRunner knowledgeBaseDiagnostics,
+        Func<ReviewQueueService> createReviewQueue,
+        Func<TrainingReviewSamSegmentationService> createReviewSam)
+        => new(
+            dialogs,
+            store,
+            import,
+            knowledgeBaseDiagnostics,
+            createReviewQueue,
+            createReviewSam,
+            () => ResolveReviewPipeDiameterMm(services));
 
     private static TrainingReviewSamSegmentationService CreateDefaultTrainingReviewSam()
     {
         var pipelineConfig = new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
         return new TrainingReviewSamSegmentationService(
             new VisionPipelineTrainingReviewSamClient(pipelineConfig));
+    }
+
+    private static int? ResolveReviewPipeDiameterMm(ServiceProvider? services)
+    {
+        if (services is not null)
+            return services.PipelineCfg.PipeDiameterMmOverride;
+
+        return new AppSettingsAiSettingsProvider()
+            .Load()
+            .ToPipelineConfig()
+            .PipeDiameterMmOverride;
     }
 }

@@ -1,5 +1,4 @@
 using AuswertungPro.Next.UI.DataPage;
-using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 using System;
 using System.Collections.ObjectModel;
@@ -9,6 +8,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DataPageViewModel
 {
+    private DataPageDropdownOptionGroups? _optionGroups;
+
     public void EnsureOptionForField(string fieldName, string? value)
     {
         var text = (value ?? string.Empty).Trim();
@@ -33,9 +34,6 @@ public sealed partial class DataPageViewModel
             return;
         SaveDropdownOptions();
     }
-
-    private static bool AddOptionIfMissingCore(ObservableCollection<string> options, string? value)
-        => DropdownOptionList.AddIfMissing(options, value);
 
     /// <summary>
     /// Seeds measure template names from Offerten (MeasureTemplateStore) into the dropdown.
@@ -65,166 +63,93 @@ public sealed partial class DataPageViewModel
     }
 
     private void EditSanierenOptions()
-    {
-        var vm = new OptionsEditorViewModel(SanierenOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
+        => OptionGroups.Sanieren.Edit();
 
     private void PreviewSanierenOptions()
-    {
-        var items = string.Join("\n", SanierenOptions);
-        _dialogs.Info(items, "Sanieren-Liste");
-    }
+        => OptionGroups.Sanieren.Preview();
 
     private void ResetSanierenOptions()
-    {
-        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
-        SaveDropdownOptions();
-    }
+        => OptionGroups.Sanieren.Reset();
 
     private void AddSanierenOption(object? value)
-        => AddOptionIfMissing(SanierenOptions, ExtractText(value));
+        => OptionGroups.Sanieren.Add(value);
 
     private void RemoveSanierenOption(object? value)
-        => RemoveOptionFromList(SanierenOptions, ExtractText(value));
+        => OptionGroups.Sanieren.Remove(value);
 
     private void EditEigentuemerOptions()
-    {
-        var vm = new OptionsEditorViewModel(EigentuemerOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
+        => OptionGroups.Eigentuemer.Edit();
 
     private void PreviewEigentuemerOptions()
-    {
-        var items = string.Join("\n", EigentuemerOptions);
-        _dialogs.Info(items, "Eigentuemer-Liste");
-    }
+        => OptionGroups.Eigentuemer.Preview();
 
     private void ResetEigentuemerOptions()
-    {
-        DropdownOptionList.ReplaceWith(EigentuemerOptions, _dropdownOptions.FixedEigentuemerOptions);
-        SaveDropdownOptions();
-    }
+        => OptionGroups.Eigentuemer.Reset();
 
     private void AddEigentuemerOption(object? value)
-        => AddOptionIfMissing(EigentuemerOptions, ExtractText(value));
+        => OptionGroups.Eigentuemer.Add(value);
 
     private void RemoveEigentuemerOption(object? value)
-        => RemoveOptionFromList(EigentuemerOptions, ExtractText(value));
+        => OptionGroups.Eigentuemer.Remove(value);
 
     private void EditPruefungsresultatOptions()
-    {
-        var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(PruefungsresultatOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
+        => OptionGroups.Pruefungsresultat.Edit();
 
     private void PreviewPruefungsresultatOptions()
-    {
-        var items = string.Join("\n", PruefungsresultatOptions);
-        _dialogs.Info(items, "Pruefungsresultat-Liste");
-    }
+        => OptionGroups.Pruefungsresultat.Preview();
 
     private void ResetPruefungsresultatOptions()
-    {
-        DropdownOptionList.ReplaceWith(
-            PruefungsresultatOptions,
-            new[]
-            {
-                "Pruefung bestanden",
-                "Pruefung knapp nicht bestanden",
-                "Pruefung nicht bestanden (grob undicht)",
-                "Keine"
-            });
-        SaveDropdownOptions();
-    }
+        => OptionGroups.Pruefungsresultat.Reset();
 
     private void AddPruefungsresultatOption(object? value)
-        => AddOptionIfMissing(PruefungsresultatOptions, ExtractText(value));
+        => OptionGroups.Pruefungsresultat.Add(value);
 
     private void RemovePruefungsresultatOption(object? value)
-        => RemoveOptionFromList(PruefungsresultatOptions, ExtractText(value));
+        => OptionGroups.Pruefungsresultat.Remove(value);
 
     private void EditReferenzpruefungOptions()
-    {
-        var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
+        => OptionGroups.Referenzpruefung.Edit();
 
     private void PreviewReferenzpruefungOptions()
-    {
-        var items = string.Join("\n", ReferenzpruefungOptions);
-        _dialogs.Info(items, "Referenzpruefung-Liste");
-    }
+        => OptionGroups.Referenzpruefung.Preview();
 
     private void ResetReferenzpruefungOptions()
-    {
-        DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, new[] { "Ja", "Nein" });
-        SaveDropdownOptions();
-    }
+        => OptionGroups.Referenzpruefung.Reset();
 
     private void AddReferenzpruefungOption(object? value)
-        => AddOptionIfMissing(ReferenzpruefungOptions, ExtractText(value));
+        => OptionGroups.Referenzpruefung.Add(value);
 
     private void RemoveReferenzpruefungOption(object? value)
-        => RemoveOptionFromList(ReferenzpruefungOptions, ExtractText(value));
+        => OptionGroups.Referenzpruefung.Remove(value);
 
     private void EditEmpfohleneSanierungsmassnahmenOptions()
-    {
-        var vm = new OptionsEditorViewModel(EmpfohleneSanierungsmassnahmenOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(EmpfohleneSanierungsmassnahmenOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
+        => OptionGroups.EmpfohleneSanierungsmassnahmen.Edit();
 
     private void PreviewEmpfohleneSanierungsmassnahmenOptions()
-    {
-        var items = string.Join("\n", EmpfohleneSanierungsmassnahmenOptions);
-        _dialogs.Info(items, "Sanierungsmassnahmen-Liste");
-    }
+        => OptionGroups.EmpfohleneSanierungsmassnahmen.Preview();
 
     private void ResetEmpfohleneSanierungsmassnahmenOptions()
-    {
-        DropdownOptionList.ReplaceWith(EmpfohleneSanierungsmassnahmenOptions, new[] { "" });
-        SaveDropdownOptions();
-    }
+        => OptionGroups.EmpfohleneSanierungsmassnahmen.Reset();
 
     private void AddEmpfohleneSanierungsmassnahmenOption(object? value)
-        => AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, ExtractText(value));
+        => OptionGroups.EmpfohleneSanierungsmassnahmen.Add(value);
 
     private void RemoveEmpfohleneSanierungsmassnahmenOption(object? value)
-        => RemoveOptionFromList(EmpfohleneSanierungsmassnahmenOptions, ExtractText(value));
+        => OptionGroups.EmpfohleneSanierungsmassnahmen.Remove(value);
 
-    private static string ExtractText(object? value)
-        => DropdownOptionList.ExtractText(value);
-
-    private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
-    {
-        if (DropdownOptionList.Remove(options, value))
-            SaveDropdownOptions();
-    }
+    private DataPageDropdownOptionGroups OptionGroups
+        => _optionGroups ??= DataPageDropdownOptionGroupFactory.Create(
+            new DataPageDropdownOptionCollections(
+                SanierenOptions,
+                EigentuemerOptions,
+                PruefungsresultatOptions,
+                ReferenzpruefungOptions,
+                EmpfohleneSanierungsmassnahmenOptions),
+            _dropdownOptions.FixedEigentuemerOptions,
+            new DropdownOptionGroupActions(
+                OptionsEditorDialogService.Show,
+                _dialogs.Info,
+                SaveDropdownOptions));
 
     private void SaveDropdownOptions()
     {
@@ -238,18 +163,13 @@ public sealed partial class DataPageViewModel
     }
 
     private void SyncDropdownOptionsFromRecords()
-    {
-        foreach (var record in Records)
-        {
-            AddOptionIfMissingCore(SanierenOptions, record.GetFieldValue("Sanieren_JaNein"));
-            AddOptionIfMissingCore(PruefungsresultatOptions, record.GetFieldValue("Pruefungsresultat"));
-            AddOptionIfMissingCore(ReferenzpruefungOptions, record.GetFieldValue("Referenzpruefung"));
-
-            var recommended = ParseRecommendedTemplates(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-            foreach (var entry in recommended)
-                AddOptionIfMissingCore(EmpfohleneSanierungsmassnahmenOptions, entry);
-        }
-    }
+        => DataPageDropdownOptionSynchronizer.SyncFromRecords(
+            Records,
+            new DataPageDropdownOptionSets(
+                SanierenOptions,
+                PruefungsresultatOptions,
+                ReferenzpruefungOptions,
+                EmpfohleneSanierungsmassnahmenOptions));
 
     private void EnforceEigentuemerOptionsExact()
     {
@@ -257,14 +177,5 @@ public sealed partial class DataPageViewModel
     }
 
     private static IReadOnlyList<string> ParseRecommendedTemplates(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return Array.Empty<string>();
-
-        return raw.Split(new[] { '\r', '\n', ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(DataPageSanierungCostMapper.NormalizeRecommendationEntry)
-            .Where(x => x.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => DataPageDropdownOptionSynchronizer.ParseRecommendedTemplates(raw);
 }

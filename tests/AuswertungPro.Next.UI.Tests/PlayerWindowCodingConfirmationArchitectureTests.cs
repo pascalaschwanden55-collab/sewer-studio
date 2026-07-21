@@ -1,4 +1,6 @@
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -74,11 +76,18 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
         var decisionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
         var initializerPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerCodingConfirmationPanelInitializer.cs");
+        var controllerFactoryPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindowCodingConfirmationControllerFactory.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(controlsPath), "Coding-Bestaetigungspanel-Anzeige soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(ownerPath), "Coding-Bestaetigungspanel-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(initializerPath), "Coding-Bestaetigungspanel-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerFactoryPath), "Coding-Bestaetigungs-Controller sollen ausserhalb des PlayerWindow-Konstruktors zusammengesetzt werden.");
 
         Assert.False(File.Exists(confirmationPath), "Das alte Bestaetigungs-Partial muss entfernt bleiben.");
         var state = File.ReadAllText(statePath);
@@ -87,16 +96,88 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
         var controller = File.ReadAllText(controllerPath);
         var decisionController = File.ReadAllText(decisionControllerPath);
         var initializer = File.Exists(initializerPath) ? File.ReadAllText(initializerPath) : "";
+        var controllerFactory = File.ReadAllText(controllerFactoryPath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var compactControllerFactory = string.Concat(
+            controllerFactory.Where(character => !char.IsWhiteSpace(character)));
+        var compactWindowRoot = string.Concat(
+            windowRoot.Where(character => !char.IsWhiteSpace(character)));
 
         Assert.Contains("private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();", state);
         Assert.Contains("private readonly ICodingConfirmationController _codingConfirmationController", state);
         Assert.Contains("PlayerCodingConfirmationPanelInitializer.Initialize", windowRoot);
         Assert.Contains("new CodingConfirmationPanelControls(", initializer);
-        Assert.Contains("ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply", windowRoot);
-        Assert.Contains("HideConfirmationPanel: _codingConfirmationPanelControls.Hide", windowRoot);
+        Assert.Contains("ApplyConfirmationPanel: dependencies.ConfirmationPanel.Apply", controllerFactory);
+        Assert.Contains("HideConfirmationPanel: dependencies.ConfirmationPanel.Hide", controllerFactory);
         Assert.Contains("ApplyConfirmationPanel: _bindings.ApplyConfirmationPanel", controller);
         Assert.Contains("_actions.HideConfirmationPanel()", decisionController);
+        Assert.Contains(
+            "_codingConfirmationController=PlayerWindowCodingConfirmationControllerFactory.Create(",
+            compactWindowRoot);
+        Assert.DoesNotContain("newCodingConfirmationDecisionController(", compactWindowRoot);
+        Assert.DoesNotContain("newCodingConfirmationController(", compactWindowRoot);
+        Assert.Contains(
+            "newCodingConfirmationDecisionController(dependencies.PendingState,",
+            compactControllerFactory);
+        Assert.Contains(
+            "newCodingConfirmationController(dependencies.PendingState,",
+            compactControllerFactory);
+        var decisionSource = Regex.Match(
+            compactControllerFactory,
+            @"var(?<source>[A-Za-z_]\w*)=newCodingConfirmationDecisionController\(");
+        Assert.True(decisionSource.Success);
+        var decisionName = decisionSource.Groups["source"].Value;
+        Assert.Contains($"Accept:{decisionName}.Accept", compactControllerFactory);
+        Assert.Contains($"Edit:{decisionName}.Edit", compactControllerFactory);
+        Assert.Contains($"Reject:{decisionName}.Reject", compactControllerFactory);
+        Assert.Contains(".SafeFireAndForget(operation)", controllerFactory);
+        Assert.Contains("PlayerToggleButtonControls.IsChecked(dependencies.LiveAiToggle)", controllerFactory);
+        Assert.Contains(
+            "ResolveModelName: () => dependencies.AiRuntimeOwner.Controller.ModelName",
+            controllerFactory);
+        Assert.Contains("PlayerStatusColors.Success", controllerFactory);
+        var expectedDependencies = new[]
+        {
+            "PendingState:_codingPendingConfirmationState",
+            "SessionRuntimeOwner:_codingSessionRuntimeOwner",
+            "SessionHost:_codingSessionHost",
+            "TrainingPersistence:_codingTrainingPersistenceContext",
+            "RefreshEvents:RefreshCodingEventsList",
+            "ConfirmationPanel:_codingConfirmationPanelControls",
+            "EventsList:_codingSidePanelControllers.EventsList",
+            "CurrentStatusText:TxtCodingAiStatus",
+            "LiveAiToggle:BtnCodingLiveAi",
+            "AiRuntimeOwner:_codingAiRuntimeOwner",
+            "PlaybackControlHost:_playerPlaybackControlHost",
+            "StatusController:_liveDetectionStatusController"
+        };
+        foreach (var expectedDependency in expectedDependencies)
+            Assert.Contains(expectedDependency, compactWindowRoot);
+        var initializeComponentIndex = compactWindowRoot.IndexOf(
+            "InitializeComponent();",
+            StringComparison.Ordinal);
+        var statusFactoryIndex = compactWindowRoot.IndexOf(
+            "PlayerWindowLiveDetectionStatusInitializer.Create(",
+            StringComparison.Ordinal);
+        var sidePanelInitializerIndex = compactWindowRoot.IndexOf(
+            "InitializeCodingSidePanelControllers();",
+            StringComparison.Ordinal);
+        var panelInitializerIndex = compactWindowRoot.IndexOf(
+            "PlayerCodingConfirmationPanelInitializer.Initialize(",
+            StringComparison.Ordinal);
+        var trainingPersistenceIndex = compactWindowRoot.IndexOf(
+            "_codingTrainingPersistenceContext=CodingTrainingPersistenceContext.CreateDefault(",
+            StringComparison.Ordinal);
+        var confirmationFactoryIndex = compactWindowRoot.IndexOf(
+            "PlayerWindowCodingConfirmationControllerFactory.Create(",
+            StringComparison.Ordinal);
+        Assert.True(
+            initializeComponentIndex >= 0
+            && initializeComponentIndex < statusFactoryIndex
+            && statusFactoryIndex < sidePanelInitializerIndex
+            && sidePanelInitializerIndex < panelInitializerIndex
+            && panelInitializerIndex < trainingPersistenceIndex
+            && trainingPersistenceIndex < confirmationFactoryIndex);
         Assert.Contains("public sealed class CodingConfirmationPanelControls", controls);
         Assert.Contains("ConfirmAmpel.Fill", controls);
         Assert.Contains("CodingConfirmationPanel.Visibility = Visibility.Visible", controls);

@@ -30,8 +30,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         // Unterdrueckt den Vorschau-Neuaufbau, waehrend ApplyFilter die Liste neu befuellt
         // (sonst Flackern + Neuladen bei jedem Tastendruck im Suchfeld).
         private bool _suppressPreviewRebuild;
-        // Pfad des zuletzt geladenen Vorschau-Projekts: gleiche Auswahl -> nicht erneut laden.
-        private string? _previewedPath;
         private readonly ShellViewModel _shell;
         private readonly AppSettings _settings;
         private readonly DashboardRefreshNotifier _dashboardRefresh;
@@ -40,13 +38,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly IProjectOverviewCatalog _projectOverviewCatalog;
         private readonly IProjectDropPathResolver _projectDropPaths;
         private readonly DispatcherTimer _dashboardRefreshTimer;
-        private readonly DispatcherTimer _previewRefreshTimer;
+        private readonly OverviewPreviewLoadController _previewController;
         private readonly IProjectCostStoreRepository _haltungCostRepo;
         private readonly IProjectCostStoreRepository _schachtCostRepo;
         private Project? _subscribedProject;
-        private CancellationTokenSource? _previewCts;
-        private ProjectOverviewEntry? _pendingPreviewEntry;
-        private string? _previewLoadingPath;
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
@@ -189,8 +184,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
             _dashboardRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
-            _previewRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-            _previewRefreshTimer.Tick += PreviewRefreshTimerTick;
 
             NewCommand = new RelayCommand(NewProject);
             OpenCommand = new AsyncRelayCommand(OpenProjectAsync);
@@ -205,6 +198,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             NavigateDamageCommand = new RelayCommand<object?>(NavigateDamage);
             NavigateDnCommand = new RelayCommand<object?>(NavigateDn);
             ToggleProjectListCommand = new RelayCommand(ToggleProjectList);
+
+            var ownerDispatcher = _dashboardRefreshTimer.Dispatcher;
+            _previewController = new OverviewPreviewLoadController(
+                BuildPreviewCore,
+                action => TryPostToDispatcher(ownerDispatcher, action),
+                ApplyPreviewTransition);
 
             // ObservableProperty-Hooks benachrichtigen die Commands. Darum erst setzen,
             // nachdem alle Commands vollstaendig erzeugt wurden.
@@ -231,8 +230,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             UnsubscribeProject();
             _dashboardRefreshTimer.Stop();
             _dashboardRefreshTimer.Tick -= DashboardRefreshTimerTick;
-            CancelPreviewLoad();
-            _previewRefreshTimer.Tick -= PreviewRefreshTimerTick;
+            _previewController.Dispose();
         }
 
         private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -676,87 +674,65 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         if (_disposed)
             return;
 
-        if (ShowFullDashboard)
-        {
-            _previewedPath = null;
-            _pendingPreviewEntry = null;
-            CancelPreviewLoad();
-            SelectedPreview = null;
-            return;
-        }
-
-        if (entry is null)
-        {
-            _previewedPath = null;
-            _pendingPreviewEntry = null;
-            CancelPreviewLoad();
-            SelectedPreview = null;
-            return;
-        }
-
-        if (string.Equals(entry.Path, _previewedPath, StringComparison.OrdinalIgnoreCase) && SelectedPreview is not null)
-            return;
-        if (_previewRefreshTimer.IsEnabled &&
-            string.Equals(entry.Path, _pendingPreviewEntry?.Path, StringComparison.OrdinalIgnoreCase))
-            return;
-        if (IsPreviewLoading && string.Equals(entry.Path, _previewLoadingPath, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        _pendingPreviewEntry = entry;
-        _previewRefreshTimer.Stop();
-        _previewRefreshTimer.Start();
+        _previewController.Update(
+            entry is null ? null : OverviewPreviewRequest.From(entry),
+            ShowFullDashboard);
     }
 
-    private void PreviewRefreshTimerTick(object? sender, EventArgs e)
+    private void ApplyPreviewTransition(OverviewPreviewTransition transition)
     {
-        _previewRefreshTimer.Stop();
-        StartPreviewLoad(_pendingPreviewEntry);
-    }
-
-    private void StartPreviewLoad(ProjectOverviewEntry? entry)
-    {
-        if (_disposed || ShowFullDashboard || entry is null)
+        switch (transition.Kind)
         {
-            CancelPreviewLoad();
-            SelectedPreview = null;
-            return;
+            case OverviewPreviewTransitionKind.LoadingStarted:
+                IsPreviewLoading = true;
+                SelectedPreview = null;
+                break;
+            case OverviewPreviewTransitionKind.Loaded:
+                SelectedPreview = transition.Preview;
+                IsPreviewLoading = false;
+                break;
+            case OverviewPreviewTransitionKind.Cleared:
+                IsPreviewLoading = false;
+                SelectedPreview = null;
+                break;
+            case OverviewPreviewTransitionKind.LoadingStopped:
+                IsPreviewLoading = false;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(transition));
         }
-
-        _previewCts?.Cancel();
-        var cts = new CancellationTokenSource();
-        _previewCts = cts;
-        _previewLoadingPath = entry.Path;
-        IsPreviewLoading = true;
-        SelectedPreview = null;
-
-        var dispatcher = _previewRefreshTimer.Dispatcher;
-        _ = Task.Run(() => BuildPreviewCore(entry, cts.Token), cts.Token)
-            .ContinueWith(task =>
-            {
-                if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
-                {
-                    cts.Dispose();
-                    return;
-                }
-
-                dispatcher.BeginInvoke((Action)(() => CompletePreviewLoad(entry, cts, task)));
-            }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
 
-    private ProjectPreview BuildPreviewCore(ProjectOverviewEntry entry, CancellationToken ct)
+    private static bool TryPostToDispatcher(Dispatcher dispatcher, Action action)
+    {
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return false;
+
+        try
+        {
+            dispatcher.BeginInvoke(action);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private ProjectPreview BuildPreviewCore(OverviewPreviewRequest request, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
         try
         {
-            var res = _projects.Load(entry.Path);
+            var res = _projects.Load(request.Path);
             ct.ThrowIfCancellationRequested();
             if (res.Ok && res.Value is not null)
             {
-                var hCosts = LoadCostStore(_haltungCostRepo, entry.Path, out _);
-                var sCosts = LoadCostStore(_schachtCostRepo, entry.Path, out _);
+                var hCosts = LoadCostStore(_haltungCostRepo, request.Path, out _);
+                var sCosts = LoadCostStore(_schachtCostRepo, request.Path, out _);
                 ct.ThrowIfCancellationRequested();
-                return ProjectPreviewFactory.FromProject(res.Value, entry.Path, hCosts, sCosts);
+                return ProjectPreviewFactory.FromProject(res.Value, request.Path, hCosts, sCosts);
             }
         }
         catch (OperationCanceledException)
@@ -768,61 +744,19 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             // Faellt unten auf die Metadaten-Vorschau zurueck.
         }
 
-        return BuildFallbackPreview(entry);
+        return BuildFallbackPreview(request);
     }
 
-    private void CompletePreviewLoad(
-        ProjectOverviewEntry entry,
-        CancellationTokenSource cts,
-        Task<ProjectPreview> task)
-    {
-        try
-        {
-            if (!ReferenceEquals(_previewCts, cts))
-                return;
-            if (cts.IsCancellationRequested || ShowFullDashboard)
-                return;
-            if (!string.Equals(_pendingPreviewEntry?.Path, entry.Path, StringComparison.OrdinalIgnoreCase))
-                return;
-            if (!task.IsCompletedSuccessfully)
-                return;
-
-            _previewedPath = entry.Path;
-            SelectedPreview = task.Result;
-        }
-        finally
-        {
-            if (ReferenceEquals(_previewCts, cts))
-            {
-                _previewCts = null;
-                _previewLoadingPath = null;
-                IsPreviewLoading = false;
-            }
-
-            cts.Dispose();
-        }
-    }
-
-    private void CancelPreviewLoad()
-    {
-        _previewRefreshTimer.Stop();
-        var cts = _previewCts;
-        _previewCts = null;
-        _previewLoadingPath = null;
-        cts?.Cancel();
-        IsPreviewLoading = false;
-    }
-
-    private static ProjectPreview BuildFallbackPreview(ProjectOverviewEntry entry)
+    private static ProjectPreview BuildFallbackPreview(OverviewPreviewRequest request)
     {
         var emptyStatistics = DashboardStatisticsBuilder.Build(new Project(), null, null);
         return new ProjectPreview(
-            Name: entry.Name,
-            Description: entry.Description,
-            Path: entry.Path,
-            ModifiedAtUtc: entry.ModifiedAtUtc,
-            HoldingCount: entry.RecordCount,
-            SchachtCount: entry.SchachtCount,
+            Name: request.Name,
+            Description: request.Description,
+            Path: request.Path,
+            ModifiedAtUtc: request.ModifiedAtUtc,
+            HoldingCount: request.HoldingCount,
+            SchachtCount: request.ShaftCount,
             TotalLengthMeters: 0,
             TotalCost: 0m,
             Auftraggeber: string.Empty,

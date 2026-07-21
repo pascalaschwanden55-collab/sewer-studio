@@ -21,6 +21,20 @@ public sealed class PdfTextLayerRewriterDependencyTests
         Assert.Same(
             services.PdfTextLayerRewrite,
             services.GetService(typeof(IPdfTextLayerRewriter)));
+
+        var replacementField = typeof(PdfTextLayerRewriteService).GetField(
+            "_atomicPdfFileReplacer",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(replacementField);
+        Assert.Same(
+            services.PdfFileReplacement,
+            replacementField!.GetValue(services.PdfTextLayerRewrite));
+
+        var loggerField = typeof(PdfTextLayerRewriteService).GetField(
+            "_logger",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(loggerField);
+        Assert.NotNull(loggerField!.GetValue(services.PdfTextLayerRewrite));
     }
 
     [Fact]

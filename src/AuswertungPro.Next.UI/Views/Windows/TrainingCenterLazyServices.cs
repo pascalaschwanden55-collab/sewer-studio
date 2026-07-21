@@ -1,5 +1,5 @@
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -12,18 +12,20 @@ internal sealed class TrainingCenterLazyServices
 {
     private readonly Func<ReviewQueueService> _createReviewQueue;
     private readonly Func<TrainingReviewSamSegmentationService> _createReviewSam;
-    private readonly Func<FewShotExampleStore> _createFewShotStore;
+    private readonly Func<int?> _resolveReviewPipeDiameterMm;
     private ReviewQueueService? _reviewQueue;
     private TrainingReviewSamSegmentationService? _reviewSam;
+    private TrainingReviewSamWorkflow? _reviewSamWorkflow;
 
     public TrainingCenterLazyServices(
         Func<ReviewQueueService> createReviewQueue,
         Func<TrainingReviewSamSegmentationService> createReviewSam,
-        Func<FewShotExampleStore> createFewShotStore)
+        Func<int?> resolveReviewPipeDiameterMm)
     {
         _createReviewQueue = createReviewQueue ?? throw new ArgumentNullException(nameof(createReviewQueue));
         _createReviewSam = createReviewSam ?? throw new ArgumentNullException(nameof(createReviewSam));
-        _createFewShotStore = createFewShotStore ?? throw new ArgumentNullException(nameof(createFewShotStore));
+        _resolveReviewPipeDiameterMm = resolveReviewPipeDiameterMm
+            ?? throw new ArgumentNullException(nameof(resolveReviewPipeDiameterMm));
     }
 
     public ReviewQueueService GetReviewQueue()
@@ -32,6 +34,8 @@ internal sealed class TrainingCenterLazyServices
     public TrainingReviewSamSegmentationService GetReviewSam()
         => _reviewSam ??= _createReviewSam();
 
-    public FewShotExampleStore CreateFewShotStore()
-        => _createFewShotStore();
+    public TrainingReviewSamWorkflow GetReviewSamWorkflow()
+        => _reviewSamWorkflow ??= new TrainingReviewSamWorkflow(
+            GetReviewSam,
+            _resolveReviewPipeDiameterMm);
 }

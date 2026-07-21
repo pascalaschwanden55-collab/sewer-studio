@@ -17,8 +17,10 @@ public sealed partial class LegacyXtfImportService
     public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
     {
         var stats = new ImportStats();
+        var archiveSources = ctx?.DryRun != true;
 
-        TryMigrateLegacyArchive(stats);
+        if (archiveSources)
+            TryMigrateLegacyArchive(stats);
 
         var pathList = xtfPaths.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
         var fileIndex = 0;
@@ -42,7 +44,8 @@ public sealed partial class LegacyXtfImportService
 
                 // Rohdaten-Archiv ist nur ein Sicherheitsnetz. Ein Kopierfehler darf den
                 // fachlichen Import der Originaldatei nicht verhindern.
-                TryArchiveSource(path, stats);
+                if (archiveSources)
+                    TryArchiveSource(path, stats);
 
                 if (ext == ".mdb")
                 {

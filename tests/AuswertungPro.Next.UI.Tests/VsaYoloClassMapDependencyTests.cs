@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training.ClassMaps;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,27 @@ public sealed class VsaYoloClassMapDependencyTests
         Assert.Same(
             services.VsaYoloClasses,
             services.GetService(typeof(IVsaYoloClassMapStore)));
+        Assert.Same(
+            services.TrainingYoloClasses,
+            services.GetService(typeof(ITrainingYoloClassMapStore)));
+    }
+
+    [Fact]
+    public void ServiceProvider_laesst_class_map_v2_strikt_und_gebunden_einlesen()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new Application.Diagnostics.DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+
+        var snapshot = services.TrainingYoloClasses.ReadSnapshot();
+
+        Assert.Equal(YoloDetectClassMapV2.Version, snapshot.Version);
+        Assert.Equal(14, snapshot.Classes.Count);
+        Assert.Equal(13, snapshot.Classes["SONST_schaden"]);
+        Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("BAB"));
     }
 
     [Fact]
@@ -38,33 +60,7 @@ public sealed class VsaYoloClassMapDependencyTests
     }
 
     [Fact]
-    public async Task Lokaler_Yolo_Export_nutzt_die_uebergebene_Klassenkarte()
-    {
-        var classMap = new RecordingClassMap();
-        var request = TrainingYoloLocalExportRequestFactory.CreateWithDefaults(
-            approvedSamples: [],
-            outputDir: "output",
-            evalImageHashes: new HashSet<string>(),
-            evalHaltungKeys: new HashSet<string>(),
-            persistSamplesAsync: () => Task.CompletedTask,
-            log: _ => { },
-            setProgressMax: _ => { },
-            setProgressValue: _ => { },
-            setStatusText: _ => { },
-            cancellationToken: CancellationToken.None,
-            yoloClasses: classMap);
-
-        Assert.Equal(91, request.GetClassId("BAB"));
-        Assert.Equal(91, request.GetFullClassMap()["BAB"]);
-        await request.ExportClassesTxtAsync("classes.txt");
-
-        Assert.Equal(1, classMap.GetClassIdCalls);
-        Assert.Equal(1, classMap.GetFullMapCalls);
-        Assert.Equal("classes.txt", classMap.LastExportPath);
-    }
-
-    [Fact]
-    public void Player_und_Trainingscenter_reichen_die_registrierte_Klassenkarte_weiter()
+    public void Player_reicht_Teacher_Klassenkarte_weiter_und_Trainingscenter_nur_den_Exportkoordinator()
     {
         var root = TestRepoPaths.FindRepoRoot();
         var player = File.ReadAllText(Path.Combine(
@@ -75,8 +71,11 @@ public sealed class VsaYoloClassMapDependencyTests
             root, "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.YoloExport.cs"));
 
         Assert.Contains("VsaYoloClasses: _protocolContext.VsaYoloClasses", player);
-        Assert.Contains("vsaYoloClasses: services?.VsaYoloClasses", trainingWindow);
-        Assert.Contains("_vsaYoloClasses", yoloExport);
+        Assert.Contains("trainingYoloExport: services?.TrainingYoloExport", trainingWindow);
+        Assert.DoesNotContain("trainingYoloClasses:", trainingWindow);
+        Assert.Contains("TrainingYoloExportRequestFactory.Create(", yoloExport);
+        Assert.Contains("_trainingYoloExport", yoloExport);
+        Assert.DoesNotContain("_trainingYoloClasses", yoloExport);
     }
 
     private sealed class RecordingClassMap : IVsaYoloClassMapStore
@@ -90,6 +89,9 @@ public sealed class VsaYoloClassMapDependencyTests
             GetClassIdCalls++;
             return 91;
         }
+
+        public int GetOrAddClassId(string vsaCode)
+            => 91;
 
         public Dictionary<string, int> GetFullMap()
         {

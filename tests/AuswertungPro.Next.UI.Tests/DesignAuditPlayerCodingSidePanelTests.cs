@@ -30,17 +30,18 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_hides_coding_overlay_when_external_window_gets_focus()
     {
-        var coding = ReadCodingPartials();
         var window = ReadUiFile("Views", "Windows", "PlayerWindow.Wiring.cs");
+        var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
+        var controller = ReadUiFile("Player", "CodingOverlayInputVisibilityController.cs");
         var controls = ReadUiFile("Ai", "CodingOverlayInputControls.cs");
-        var suspendBody = coding;
-        var hideBody = coding;
 
-        Assert.Contains("HideCodingOverlayForExternalWindow", window);
-        Assert.Contains("CodingOverlayInputControls.ClosePopup(CodingOverlayPopup)", hideBody);
-        Assert.Contains("RestoreCodingOverlayAfterExternalWindow", window);
-        AssertNoForbiddenTokens(coding, "CodingOverlayPopup.IsOpen = false");
-        Assert.Contains("CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)", suspendBody);
+        Assert.Contains("_codingOverlayInputVisibilityController.HideForExternalWindow", window);
+        Assert.Contains("_codingOverlayInputVisibilityController.RestoreAfterExternalWindow", window);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.HideForExternalWindow", controller);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", controller);
+        Assert.Contains("ClosePopup: () => CodingOverlayInputControls.ClosePopup(CodingOverlayPopup)", windowRoot);
+        Assert.Contains("SuspendCanvas: () => CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)", windowRoot);
+        AssertNoForbiddenTokens(windowRoot, "CodingOverlayPopup.IsOpen = false");
         Assert.Contains("overlayCanvas.IsHitTestVisible = false", controls);
     }
 
@@ -300,12 +301,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_exit_coding_mode_passes_current_analyzed_frame_to_auto_rohrende()
     {
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
+        var factory = ReadUiFile("Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var workflow = ReadUiFile("Ai", "CodingModeExitFinalizationWorkflow.cs");
         var commandWorkflow = ReadUiFile("Ai", "CodingModeExitCommandWorkflow.cs");
         var exitController = ReadUiFile("Player", "CodingModeExitController.cs");
 
         Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitController);
-        Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", windowRoot);
+        Assert.Contains("DetectionController: _liveDetectionController", windowRoot);
+        Assert.Contains("dependencies.DetectionController.PendingConfirmationFrameBytes", factory);
+        Assert.Contains("dependencies.BoundaryContext.EnsureEnd", factory);
         Assert.Contains("actions.FinalizeExit()", commandWorkflow);
         Assert.Contains("request.AnalyzedFrameBytes", workflow);
         Assert.Contains("actions.EnsureRohrendeExists", workflow);
@@ -445,7 +449,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingTakePhotoCommandWorkflow.cs");
-        var photoBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var controller = ReadUiFile("Player", "CodingPhotoAttachmentController.cs");
+        var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
         var timeIndex = workflow.IndexOf("actions.GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
         var scopeIndex = workflow.IndexOf("actions.ApplyPhotoTimestamp", StringComparison.Ordinal);
@@ -455,16 +460,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(scopeIndex >= 0, "Befund- und Event-Zeit muessen vor dem Snapshot per Scope auf den Foto-Frame gesetzt werden.");
         Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
         Assert.True(scopeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
-        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", coding);
-        Assert.Contains("GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp", coding);
-        Assert.Contains("CodingEventPhotoTimestampScope.Apply", coding);
-        Assert.Contains("CaptureSnapshot: CodingCaptureSnapshot", coding);
+        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", controller);
+        Assert.Contains("GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp", windowRoot);
+        Assert.Contains("CodingEventPhotoTimestampScope.Apply", controller);
+        Assert.Contains("CaptureSnapshot: CodingCaptureSnapshot", windowRoot);
         Assert.Contains("restoreOriginalTime()", workflow);
         AssertNoForbiddenTokens(
-            coding,
+            coding + controller,
             "entry.Zeit = photoTime.Value",
             "codingEvent.VideoTimestamp = photoTime.Value");
-        Assert.Contains("CodingEventPhotoApplier.Apply", coding);
+        Assert.Contains("CodingEventPhotoApplier.Apply", controller);
     }
 
     [Fact]
@@ -496,6 +501,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingProtocolMatchCommandWorkflow.cs");
         var runBody = ReadUiFile("Player", "CodingProtocolMatchController.cs");
+        var listVisualController = ReadUiFile("Player", "CodingEventListVisualController.cs");
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", runBody);
@@ -516,7 +522,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("actions.UpdateSummary(routing)", workflow);
         Assert.Contains("actions.RefreshEvents()", workflow);
         Assert.Contains("actions.ScheduleHighlights()", workflow);
-        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", coding);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", listVisualController);
         Assert.Contains(
             "CodingProtocolMatchDisplayPolicy.BadgeText",
             ReadUiFile("Ai", "CodingProtocolMatchHighlightControls.cs"));

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -209,9 +208,11 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         InitializeColumns();
         ApplySearchFilter();
 
-        MeterStartText = FormatDouble(_entryVm.MeterStart);
-        MeterEndText = FormatDouble(_entryVm.MeterEnd);
-        ZeitText = _entryVm.Zeit is null ? string.Empty : FormatTime(_entryVm.Zeit.Value);
+        MeterStartText = ProtocolEntryInputNormalizer.FormatDouble(_entryVm.MeterStart);
+        MeterEndText = ProtocolEntryInputNormalizer.FormatDouble(_entryVm.MeterEnd);
+        ZeitText = _entryVm.Zeit is null
+            ? string.Empty
+            : ProtocolEntryInputNormalizer.FormatTime(_entryVm.Zeit.Value);
         MpegText = _entryVm.Mpeg ?? string.Empty;
         IsStreckenschaden = _entryVm.Model.IsStreckenschaden;
 
@@ -354,26 +355,30 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
             return false;
         }
 
-        if (!TryParseOptionalDouble(MeterStartText, out var meterStart))
+        if (!ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart))
         {
             ValidationMessage = "MeterStart ist ungueltig.";
             return false;
         }
 
-        if (!TryParseOptionalDouble(MeterEndText, out var meterEnd))
+        if (!ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd))
         {
             ValidationMessage = "MeterEnd ist ungueltig.";
             return false;
         }
 
-        if (!TryParseOptionalTimeSpan(ZeitText, out var zeit))
+        if (!ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(ZeitText, out var zeit))
         {
             ValidationMessage = "Zeit ist ungueltig.";
             return false;
         }
 
         // Fallback: Wenn keine m+/m- Eingabe vorhanden ist, VSA-Distanz als MeterStart verwenden.
-        if (!meterStart.HasValue && TryParseOptionalDouble(VsaDistanz ?? string.Empty, out var vsaDistanz) && vsaDistanz.HasValue)
+        if (!meterStart.HasValue
+            && ProtocolEntryInputNormalizer.TryParseOptionalDouble(
+                VsaDistanz ?? string.Empty,
+                out var vsaDistanz)
+            && vsaDistanz.HasValue)
         {
             meterStart = vsaDistanz;
             if (!meterEnd.HasValue)
@@ -575,43 +580,6 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         CodeDescription = SelectedCode.Description ?? string.Empty;
     }
 
-    private static bool TryParseOptionalDouble(string raw, out double? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var normalized = raw.Trim().Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            return false;
-
-        value = parsed;
-        return true;
-    }
-
-    private static bool TryParseOptionalTimeSpan(string raw, out TimeSpan? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        return false;
-    }
-
     private List<string>? ResolveImagePaths(IReadOnlyList<string> rawPaths)
     {
         if (rawPaths.Count == 0)
@@ -654,12 +622,6 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
 
         return text[..Math.Max(0, maxLength - 3)] + "...";
     }
-
-    private static string FormatDouble(double? value)
-        => value?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty;
-
-    private static string FormatTime(TimeSpan value)
-        => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
 
     private static string BuildDefaultDescription(
         AppProtocol.CodeDefinition def,

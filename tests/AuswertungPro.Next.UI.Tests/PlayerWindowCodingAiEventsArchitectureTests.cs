@@ -142,8 +142,7 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.Live.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs"),
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs"),
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs"),
-            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs")
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs")
         };
 
         foreach (var path in paths)
@@ -152,5 +151,13 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
             var text = File.ReadAllText(path);
             Assert.Contains("_codingSessionHost", text);
         }
+
+        var windowRoot = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"));
+        var stretchController = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Player", "CodingStreckenschadenTrackingController.cs"));
+        Assert.Contains("new CodingStreckenschadenTrackingController(", windowRoot);
+        Assert.Contains("_codingSessionHost,", windowRoot);
+        Assert.Contains("private readonly ICodingSessionHost _sessionHost;", stretchController);
     }
 }
