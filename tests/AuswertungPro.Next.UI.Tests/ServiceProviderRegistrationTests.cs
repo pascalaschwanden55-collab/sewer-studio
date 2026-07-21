@@ -52,7 +52,14 @@ public sealed class ServiceProviderRegistrationTests
 
         Assert.NotNull(field);
         var registrations = Assert.IsAssignableFrom<IReadOnlyDictionary<Type, object>>(field!.GetValue(services));
-        Assert.Equal(127, registrations.Count);
+        // Bewusster Tripwire: die Zahl zwingt bei jedem neuen/entfernten Dienst zu einer
+        // Entscheidung. Die Meldung nennt den Grund, statt nur eine nackte Zahl-Abweichung
+        // zu zeigen (frueherer Kritikpunkt: nichtssagend).
+        Assert.True(
+            registrations.Count == 127,
+            $"Erwartet 127 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
+            "bewusst anpassen.");
         Assert.Same(
             services.ProjectOverviewCatalog,
             registrations[typeof(IProjectOverviewCatalog)]);
@@ -101,8 +108,18 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.TrainingYoloExportCoordinator,
             services.TrainingYoloExport.Coordinator);
+        // Echte Invariante statt tautologischem GetService-Selbstvergleich: jeder registrierte
+        // Wert muss tatsaechlich eine Instanz seines Vertragstyps sein. Das faengt eine vertippte
+        // Zuordnung [typeof(IFoo)] = services.Bar ab, die der Compiler nicht bemerkt (der
+        // Dictionary-Wert ist object).
         Assert.All(registrations, registration =>
-            Assert.Same(registration.Value, services.GetService(registration.Key)));
+        {
+            Assert.NotNull(registration.Value);
+            Assert.True(
+                registration.Key.IsInstanceOfType(registration.Value),
+                $"Registrierung {registration.Key.Name} -> {registration.Value.GetType().Name} " +
+                "passt nicht zum Vertragstyp.");
+        });
     }
 
     private static ServiceProvider CreateServices(ILoggerFactory loggerFactory)
