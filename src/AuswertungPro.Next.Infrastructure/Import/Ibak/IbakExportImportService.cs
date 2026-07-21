@@ -94,7 +94,6 @@ public sealed class IbakExportImportService : IIbakImportService
                     // Schutz vorbei). Ein Duplikat wirft und wird vom aeusseren catch je Haltung gemeldet.
                     record = project.CreateNewRecord();
                     record.SetFieldValue("Haltungsname", key, FieldSource.Legacy, userEdited: false);
-                    ApplyHeaderFields(record, holding.Entries);
                     if (ctx is null)
                         project.AddRecord(record);
                     else
@@ -112,12 +111,16 @@ public sealed class IbakExportImportService : IIbakImportService
                     continue;
                 }
 
-                // Stammdaten (DN, Material, Haltungslänge) auch für bestehende Records aktualisieren
-                ApplyHeaderFields(record, holding.Entries);
+                // Stammdaten (DN, Material, Haltungslänge, Primaere_Schaeden) ueber die zentrale
+                // MergeEngine statt bedingungsloser Direktschreibung: hoeherwertige Quellen (XTF/PDF)
+                // und user-editierte Werte bleiben geschuetzt, Konflikte landen in project.Conflicts.
+                var source = new HaltungRecord();
+                ApplyHeaderFields(source, holding.Entries);
+                BuildPrimaryDamagesText(source, holding.Entries);
+                Common.LegacyStammdatenMerger.MergeLegacy(project, record, source, ctx);
 
                 ApplyPhotosToEntries(holding.Holding, holding.Entries, fileIndex, photoMap, messages);
                 ApplyProtocol(record, holding.Entries, protocolService);
-                BuildPrimaryDamagesText(record, holding.Entries);
                 UpdateFindings(record, holding.Entries);
                 LinkVideo(record, key, fileIndex);
                 LinkHoldingPdf(record, key, fileIndex);

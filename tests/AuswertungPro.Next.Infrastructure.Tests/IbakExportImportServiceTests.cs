@@ -80,6 +80,47 @@ public sealed class IbakExportImportServiceTests
     }
 
     [Fact]
+    public void ImportIbakExport_LaesstHoeherwertigenXtfWert_stehen_und_protokolliertKonflikt()
+    {
+        // Daten.txt liefert BCE @ 8.20m -> Haltungslaenge_m "8.2" (FieldSource.Legacy).
+        // Der bestehende Record traegt aber bereits "12.5" aus XTF (hoehere Prioritaet).
+        // U16-Fix: IBAK-Legacy ueberschreibt den hoeherwertigen XTF-Wert NICHT mehr still,
+        // sondern laesst ihn stehen und protokolliert den Konflikt in project.Conflicts.
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-xtf-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "Film"));
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(root, "Film", "Daten.txt"),
+            "100-200\n" +
+            "\t00:00:05    0.00 m  BCD     Rohranfang@!$ibak$!100-200$H\n" +
+            "\t00:01:47    8.20 m  BCE     Rohrende@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+
+        try
+        {
+            var project = new Project();
+            var existing = project.CreateNewRecord();
+            existing.SetFieldValue("Haltungsname", "100-200", FieldSource.Pdf, userEdited: false);
+            existing.SetFieldValue("Haltungslaenge_m", "12.5", FieldSource.Xtf, userEdited: false);
+            project.AddRecord(existing);
+
+            var result = new IbakExportImportService().ImportIbakExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            var record = Assert.Single(project.Data);
+            // XTF-Wert (Prio 80) bleibt gegen IBAK-Legacy (Prio 50) erhalten.
+            Assert.Equal("12.5", record.GetFieldValue("Haltungslaenge_m"));
+            // Der frueher stille Konflikt ist jetzt sichtbar protokolliert.
+            Assert.Contains(project.Conflicts, c =>
+                string.Equals(c["field"]?.ToString(), "Haltungslaenge_m", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void ImportIbakExport_NormalisiertSchachtSchachtHaltungUndFuehrtMitBestehendemRecordZusammen()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ibak-ss-{System.Guid.NewGuid():N}");
