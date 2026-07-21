@@ -26,7 +26,7 @@ public sealed record TrainingStudioSuggestionItem(
 /// Tastatur-Arbeitsfluss: Box ziehen → Maske + Vorschlag → Akzeptieren/Korrigieren → naechstes.
 /// Jeder Box-Lauf hat sein EIGENES CancellationTokenSource (kein geteilter Abbruch).
 /// </summary>
-public sealed partial class TrainingStudioViewModel : ObservableObject
+public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposable
 {
     private readonly IAnnotationWorkbenchService _workbench;
     private readonly Func<IReadOnlyList<WorkbenchItem>> _loadQueue;
@@ -49,6 +49,16 @@ public sealed partial class TrainingStudioViewModel : ObservableObject
         _confirmedByUser = confirmedByUser;
         _codeLabelLookup = codeLabelLookup ?? VsaCodeResolver.LookupLabel;
         _ensureAiReady = ensureAiReady;
+    }
+
+    // Gibt beim Fensterschliessen den Pruefplatz-Workbench (SAM-Service + Vision-Client mit
+    // eigenem HttpClient) und die laufende Box-Cancellation frei.
+    public void Dispose()
+    {
+        (_workbench as IDisposable)?.Dispose();
+        _boxCts?.Cancel();
+        _boxCts?.Dispose();
+        _boxCts = null;
     }
 
     [ObservableProperty]

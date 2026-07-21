@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// Erzeugt schwere Training-Center-Dienste erst bei der ersten Nutzung. Review-Queue und
 /// SAM-Dienst bleiben danach für die Lebensdauer des Fensters erhalten.
 /// </summary>
-internal sealed class TrainingCenterLazyServices
+internal sealed class TrainingCenterLazyServices : IDisposable
 {
     private readonly Func<ReviewQueueService> _createReviewQueue;
     private readonly Func<TrainingReviewSamSegmentationService> _createReviewSam;
@@ -38,4 +38,8 @@ internal sealed class TrainingCenterLazyServices
         => _reviewSamWorkflow ??= new TrainingReviewSamWorkflow(
             GetReviewSam,
             _resolveReviewPipeDiameterMm);
+
+    // Gibt den bedarfsgesteuert erzeugten SAM-Dienst (eigener HttpClient) beim
+    // Fensterschliessen frei. Wurde er nie erzeugt, ist Dispose ein No-op.
+    public void Dispose() => _reviewSam?.Dispose();
 }

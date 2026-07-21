@@ -55,7 +55,12 @@ public partial class TrainingStudioWindow : Window
         _vm.PropertyChanged += Vm_PropertyChanged;
         OverlayCanvas.SizeChanged += (_, _) => RedrawOverlay();
         Loaded += TrainingStudioWindow_Loaded;
-        Closed += (_, _) => _vm.PropertyChanged -= Vm_PropertyChanged;
+        Closed += (_, _) =>
+        {
+            _vm.PropertyChanged -= Vm_PropertyChanged;
+            // Gibt Workbench-SAM-Service + Vision-Client (eigener HttpClient) frei.
+            _vm.Dispose();
+        };
     }
 
     private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)

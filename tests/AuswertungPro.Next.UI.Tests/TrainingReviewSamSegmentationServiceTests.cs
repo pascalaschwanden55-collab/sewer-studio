@@ -83,14 +83,30 @@ public sealed class TrainingReviewSamSegmentationServiceTests
                 pipeDiameterMm: null));
     }
 
-    private sealed class FakeSamClient(SamResponse response) : ITrainingReviewSamClient
+    [Fact]
+    public void Dispose_gibt_den_unterliegenden_SamClient_frei()
+    {
+        // Der SAM-Service besitzt seinen Client (mit eigenem HttpClient) und gibt ihn beim
+        // Fensterschliessen frei (TrainingCenter via LazyServices, TrainingStudio via Workbench).
+        var fakeClient = new FakeSamClient(new SamResponse([], 0, 0, 0));
+        var service = new TrainingReviewSamSegmentationService(fakeClient);
+
+        service.Dispose();
+
+        Assert.True(fakeClient.Disposed);
+    }
+
+    private sealed class FakeSamClient(SamResponse response) : ITrainingReviewSamClient, IDisposable
     {
         public SamRequest? LastRequest { get; private set; }
+        public bool Disposed { get; private set; }
 
         public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
         {
             LastRequest = request;
             return Task.FromResult(response);
         }
+
+        public void Dispose() => Disposed = true;
     }
 }

@@ -12,7 +12,7 @@ public interface ITrainingReviewSamClient
     Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default);
 }
 
-public sealed class VisionPipelineTrainingReviewSamClient : ITrainingReviewSamClient
+public sealed class VisionPipelineTrainingReviewSamClient : ITrainingReviewSamClient, IDisposable
 {
     private readonly VisionPipelineClient _client;
 
@@ -21,15 +21,20 @@ public sealed class VisionPipelineTrainingReviewSamClient : ITrainingReviewSamCl
         ISidecarTelemetryWriter? sidecarTelemetry = null)
     {
         var timeout = TimeSpan.FromSeconds(Math.Max(30, pipelineConfig.SidecarTimeoutSec));
+        // Eigener HttpClient (ownedTimeout) statt manuellem new HttpClient — der VisionPipelineClient
+        // besitzt ihn dann (_ownsHttp) und gibt ihn beim Dispose frei.
         _client = new VisionPipelineClient(
             pipelineConfig.SidecarUrl,
-            new HttpClient { Timeout = timeout },
+            httpClient: null,
             pipelineConfig.SidecarToken,
-            sidecarTelemetry ?? SidecarTelemetryWriter.Current);
+            sidecarTelemetry ?? SidecarTelemetryWriter.Current,
+            ownedTimeout: timeout);
     }
 
     public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
         => _client.SegmentSamAsync(request, ct);
+
+    public void Dispose() => _client.Dispose();
 }
 
 public sealed record TrainingReviewSamResult(
@@ -46,7 +51,7 @@ public interface ITrainingReviewSamSegmentationService
         CancellationToken ct = default);
 }
 
-public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSegmentationService
+public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSegmentationService, IDisposable
 {
     private const int DefaultPipeDiameterMm = 300;
 
@@ -56,6 +61,9 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
     {
         _client = client;
     }
+
+    // Gibt den unterliegenden SAM-Client (eigener HttpClient) frei, falls er disposbar ist.
+    public void Dispose() => (_client as IDisposable)?.Dispose();
 
     public async Task<TrainingReviewSamResult> SegmentFrameFileAsync(
         string framePath,

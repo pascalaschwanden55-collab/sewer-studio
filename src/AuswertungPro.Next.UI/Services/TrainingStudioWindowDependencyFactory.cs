@@ -116,11 +116,14 @@ internal static class TrainingStudioWindowDependencyFactory
             ?? new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
         ISidecarTelemetryWriter telemetry = services?.SidecarTelemetry ?? SidecarTelemetryWriter.Current;
         var timeout = TimeSpan.FromSeconds(Math.Max(30, cfg.SidecarTimeoutSec));
+        // Eigener HttpClient (ownedTimeout) statt manuellem new HttpClient — nur so besitzt der
+        // VisionPipelineClient ihn (_ownsHttp) und gibt ihn beim Dispose des Workbench frei.
         return new VisionPipelineClient(
             cfg.SidecarUrl,
-            new HttpClient { Timeout = timeout },
+            httpClient: null,
             cfg.SidecarToken,
-            telemetry);
+            telemetry,
+            ownedTimeout: timeout);
     }
 
     private static TrainingReviewSamSegmentationService CreateDefaultReviewSam()

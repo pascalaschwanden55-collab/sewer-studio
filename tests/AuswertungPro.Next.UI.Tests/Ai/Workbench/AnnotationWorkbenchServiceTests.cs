@@ -319,6 +319,21 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.Empty(teacherStore.Appended);
     }
 
+    [Fact]
+    public void Dispose_gibt_SamService_und_PipelineClient_frei()
+    {
+        // Pruefplatz baut SAM-Service + Vision-Client pro Fenster mit eigenem HttpClient.
+        // Dispose (beim Fensterschliessen) muss beide freigeben.
+        var sam = new FakeSamSegmentationService();
+        var client = new FakePipelineClient();
+        var service = CreateService(sam: sam, client: client);
+
+        service.Dispose();
+
+        Assert.True(sam.Disposed);
+        Assert.True(client.Disposed);
+    }
+
     // ── Hilfen ─────────────────────────────────────────────────────────────
 
     private static SampleRecord Sample(string code)
@@ -351,13 +366,14 @@ public sealed class AnnotationWorkbenchServiceTests
 
     // ── Fakes ──────────────────────────────────────────────────────────────
 
-    private sealed class FakeSamSegmentationService : ITrainingReviewSamSegmentationService
+    private sealed class FakeSamSegmentationService : ITrainingReviewSamSegmentationService, IDisposable
     {
         public TrainingReviewSamResult Result { get; set; } =
             new(new SamResponse(Array.Empty<SamMaskResult>(), 0, 0, 0), Array.Empty<MaskQuantificationService.QuantifiedMask>());
         public string? LastFramePath { get; private set; }
         public string? LastCode { get; private set; }
         public int? LastPipeDiameterMm { get; private set; }
+        public bool Disposed { get; private set; }
 
         public Task<TrainingReviewSamResult> SegmentFrameFileAsync(
             string framePath, BoundingBox box, string code, int? pipeDiameterMm = null, CancellationToken ct = default)
@@ -367,10 +383,15 @@ public sealed class AnnotationWorkbenchServiceTests
             LastPipeDiameterMm = pipeDiameterMm;
             return Task.FromResult(Result);
         }
+
+        public void Dispose() => Disposed = true;
     }
 
-    private sealed class FakePipelineClient : IVisionPipelineClient
+    private sealed class FakePipelineClient : IVisionPipelineClient, IDisposable
     {
+        public bool Disposed { get; private set; }
+        public void Dispose() => Disposed = true;
+
         public YoloClassifyResponse ClassifyResult { get; set; } =
             new(Array.Empty<YoloClassifyPrediction>(), 0);
         public YoloClassifyRequest? LastClassifyRequest { get; private set; }

@@ -171,7 +171,12 @@ public partial class TrainingCenterWindow : Window
 
         Vm.PropertyChanged += OnVmPropertyChanged;
         Closing += TrainingCenterWindow_Closing;
-        Closed += (_, _) => Vm.PropertyChanged -= OnVmPropertyChanged;
+        Closed += (_, _) =>
+        {
+            Vm.PropertyChanged -= OnVmPropertyChanged;
+            // Gibt den bedarfsgesteuert erzeugten SAM-Dienst (eigener HttpClient) frei.
+            _trainingServices.Dispose();
+        };
     }
 
     private void TrainingCenterWindow_Closing(object? sender, CancelEventArgs e)

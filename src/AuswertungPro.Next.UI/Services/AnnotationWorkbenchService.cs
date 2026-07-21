@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.Services;
 /// (wie <see cref="TrainingReviewSamSegmentationService"/>), damit die Application-Schicht keine
 /// Infrastruktur bindet.
 /// </summary>
-public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService
+public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, IDisposable
 {
     private readonly ITrainingReviewSamSegmentationService _samService;
     private readonly IVisionPipelineClient _pipelineClient;
@@ -261,5 +261,14 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService
     {
         var present = warnings.Where(w => !string.IsNullOrWhiteSpace(w)).ToArray();
         return present.Length == 0 ? null : string.Join(" | ", present);
+    }
+
+    // Der Pruefplatz baut SAM-Service und Vision-Client pro Fenster frisch (eigener HttpClient).
+    // Dispose gibt sie frei, falls disposbar — Fakes/geteilte Clients (nicht IDisposable) bleiben
+    // unberuehrt (as IDisposable == null). Wird vom TrainingStudioViewModel beim Schliessen gerufen.
+    public void Dispose()
+    {
+        (_samService as IDisposable)?.Dispose();
+        (_pipelineClient as IDisposable)?.Dispose();
     }
 }
