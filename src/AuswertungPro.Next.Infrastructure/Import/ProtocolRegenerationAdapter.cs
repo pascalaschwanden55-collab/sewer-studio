@@ -86,7 +86,20 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
             projectFolder,
             options);
         var destination = Path.Combine(directory, $"{stamp}_{sanitizedHolding}_E.pdf");
-        File.WriteAllBytes(destination, pdf);
+        // Atomar schreiben: erst Temp im Zielordner (gleiches Volume -> File.Move ist atomar),
+        // dann verschieben. Ein Absturz mitten im direkten Schreiben hinterliess sonst ein halbes
+        // _E.pdf unter dem finalen Namen (und der naechste Lauf koennte es als "vorhanden" werten).
+        var tempPath = destination + $".{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllBytes(tempPath, pdf);
+            File.Move(tempPath, destination, overwrite: true);
+        }
+        catch
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* Temp-Rest ist unkritisch */ }
+            throw;
+        }
 
         record.SetFieldValue(
             FieldKeys.PdfEigen,

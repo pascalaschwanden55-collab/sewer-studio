@@ -18,7 +18,8 @@ public sealed class ExcelExportTests
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 
-        var outputPath = Path.Combine(Path.GetTempPath(), $"Haltungen_{Guid.NewGuid():N}.xlsx");
+        using var outputFile = new TempOutputFile();
+        var outputPath = outputFile.Path;
 
         var project = new Project();
         var rec = new HaltungRecord();
@@ -120,7 +121,8 @@ public sealed class ExcelExportTests
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 
-        var outputPath = Path.Combine(Path.GetTempPath(), $"Haltungen_{Guid.NewGuid():N}.xlsx");
+        using var outputFile = new TempOutputFile();
+        var outputPath = outputFile.Path;
 
         var project = new Project();
         var rec = new HaltungRecord();
@@ -180,4 +182,17 @@ public sealed class ExcelExportTests
         }
         return 11;
     }
+
+    /// <summary>Temp-.xlsx, die am Testende geloescht wird (kein Rueckstand in %TEMP%).</summary>
+    private sealed class TempOutputFile : IDisposable
+    {
+        public string Path { get; } =
+            System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"Haltungen_{Guid.NewGuid():N}.xlsx");
+
+        public void Dispose()
+        {
+            try { if (File.Exists(Path)) File.Delete(Path); } catch { /* Rest ist unkritisch */ }
+        }
+    }
+
 }
