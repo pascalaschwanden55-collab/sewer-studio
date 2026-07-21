@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from ..config import settings
+from ..cuda_errors import looks_like_cuda_failure, looks_like_oom
 from ..gpu_manager import gpu_manager, ModelSlot
 from ..schemas.detection import BoundingBox
 from ..schemas.segmentation import MaskResult, SamResponse
@@ -194,6 +195,11 @@ def segment(
                     multimask_output=False,
                 )
             except Exception as exc:
+                # OOM/CUDA-Fehler NICHT als uebersprungene Box verschlucken: re-raisen, damit der
+                # zentrale Handler VRAM freigibt (evict/empty_cache) und 503 fuer Retry/Backoff
+                # liefert — sonst bleibt der Sidecar im OOM-Zustand und alle Folge-Boxen scheitern.
+                if looks_like_oom(exc) or looks_like_cuda_failure(exc):
+                    raise
                 logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
                 # Ehrlichkeit: die Fehlerursache dem C#-Client sichtbar machen, damit ein
                 # Inferenzfehler nicht mit einer legitim verworfenen Box verwechselt wird.

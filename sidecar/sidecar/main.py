@@ -8,10 +8,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from .auth_token import resolve_or_create_token
 from .config import settings
+from .cuda_errors import looks_like_cuda_failure as _looks_like_cuda_failure
+from .cuda_errors import looks_like_oom as _looks_like_oom
 from .gpu_manager import gpu_manager
 from .routes import health, yolo, dino, sam, training, warmup
 
@@ -21,38 +24,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("sidecar")
-
-
-def _looks_like_oom(exc: BaseException) -> bool:
-    """Erkennt CUDA-Out-of-Memory ohne harten torch-Import."""
-    if "OutOfMemory" in type(exc).__name__:
-        return True
-    return "out of memory" in str(exc).lower()
-
-
-def _looks_like_cuda_failure(exc: BaseException) -> bool:
-    """Erkennt typische CUDA-/Treiberfehler ohne harten torch-Import."""
-    type_name = type(exc).__name__.lower()
-    message = str(exc).lower()
-    if "cuda" in type_name:
-        return True
-
-    markers = (
-        "cuda error",
-        "cuda runtime",
-        "cuda driver",
-        "cuda initialization",
-        "cuda-capable device",
-        "cuda gpus",
-        "cublas",
-        "cudnn",
-        "nvrtc",
-        "device-side assert",
-        "invalid device ordinal",
-        "unspecified launch failure",
-        "illegal memory access",
-    )
-    return any(marker in message for marker in markers)
 
 
 @asynccontextmanager
@@ -105,12 +76,15 @@ async def handle_unexpected(request: Request, exc: Exception):
         # der naechste Frame wieder VRAM hat — statt nur den Cache zu leeren. Reaktive
         # Durchsetzung des VRAM-Budgets ohne die bewusste "alle Modelle resident"-Strategie
         # im Normalbetrieb anzutasten.
-        gpu_manager.evict_lru()
-        gpu_manager.empty_cache()
+        # Aufraeumarbeit (Lock, GB-Modell freigeben, empty_cache synchronisiert mit der GPU) in
+        # den Threadpool verlagern, damit der Event-Loop und /health waehrend der OOM-Erholung
+        # nicht blockieren (dieselbe Regel wie die bewusst sync GPU-Routen, routes/yolo.py).
+        await run_in_threadpool(gpu_manager.evict_lru)
+        await run_in_threadpool(gpu_manager.empty_cache)
         return JSONResponse({"detail": "GPU out of memory"}, status_code=503)
 
     if _looks_like_cuda_failure(exc):
-        gpu_manager.empty_cache()
+        await run_in_threadpool(gpu_manager.empty_cache)
         return JSONResponse(
             {
                 "detail": "GPU/CUDA temporarily unavailable",

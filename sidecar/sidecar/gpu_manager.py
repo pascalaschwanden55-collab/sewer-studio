@@ -93,7 +93,8 @@ class GpuModelManager:
                 load_time_sec=elapsed,
                 last_used=time.monotonic(),
             )
-            self._slots[slot] = state
+            with self._global_lock:
+                self._slots[slot] = state
             logger.info(
                 "Loaded %s in %.1fs on %s (persistent)", slot.value, elapsed, device
             )
@@ -106,12 +107,17 @@ class GpuModelManager:
         if lock is None:
             return
         with lock:
-            state = self._slots.pop(slot, None)
+            with self._global_lock:
+                state = self._slots.pop(slot, None)
             if state is None:
                 return
             logger.info("Unloading %s from %s ...", slot.value, state.device)
-            del state.model
-            del state.processor
+            # Referenzen auf None setzen (nicht del): haelt ein anderer Thread die SlotState ueber
+            # den lockfreien Fast-Path noch, faellt der Zugriff auf einen definierten None-Wert statt
+            # auf ein geloeschtes Attribut. Das Modell wird per Refcount freigegeben, sobald die
+            # letzte Referenz faellt.
+            state.model = None
+            state.processor = None
         self._try_empty_cache()
         gc.collect()
 
@@ -138,8 +144,9 @@ class GpuModelManager:
         except Exception:
             logger.debug("CUDA VRAM status unavailable", exc_info=True)
 
+        snapshot = self._slots_snapshot()
         loaded = {}
-        for slot, state in self._slots.items():
+        for slot, state in snapshot:
             if state.model is not None:
                 loaded[slot.value] = {
                     "device": state.device,
@@ -147,7 +154,7 @@ class GpuModelManager:
                 }
 
         # Legacy compat: report first loaded model or "none"
-        loaded_names = [s.value for s in self._slots if self._slots[s].model is not None]
+        loaded_names = [s.value for s, st in snapshot if st.model is not None]
         current = loaded_names[0] if loaded_names else "none"
 
         return {
@@ -157,7 +164,7 @@ class GpuModelManager:
             "vram_budget_gb": VRAM_BUDGET_GB,
             "load_times_sec": {
                 s.value: round(st.load_time_sec, 2)
-                for s, st in self._slots.items()
+                for s, st in snapshot
                 if st.model is not None
             },
             "loaded_models": loaded,
@@ -176,6 +183,12 @@ class GpuModelManager:
                 self._locks[slot] = threading.Lock()
             return self._locks[slot]
 
+    def _slots_snapshot(self) -> list[tuple[ModelSlot, SlotState]]:
+        """Konsistente Kopie fuer lesende Iterationen — verhindert 'dictionary changed size
+        during iteration', wenn ein Threadpool-Thread parallel ein Modell laedt/entlaedt."""
+        with self._global_lock:
+            return list(self._slots.items())
+
     @staticmethod
     def _allocated_gb() -> float:
         try:
@@ -189,7 +202,7 @@ class GpuModelManager:
     def _warn_if_over_budget(self) -> None:
         alloc = self._allocated_gb()
         if alloc > VRAM_BUDGET_GB:
-            loaded = [s.value for s in self._slots if self._slots[s].model is not None]
+            loaded = [s.value for s, st in self._slots_snapshot() if st.model is not None]
             logger.warning(
                 "VRAM ueber Budget: %.1f GB > %.1f GB (geladen: %s). evict_lru()/unload() erwaegen.",
                 alloc, VRAM_BUDGET_GB, ", ".join(loaded),
@@ -197,7 +210,7 @@ class GpuModelManager:
 
     def evict_lru(self) -> Optional[ModelSlot]:
         """Entlaedt den am laengsten ungenutzten Slot (LRU). Gibt den Slot zurueck oder None."""
-        candidates = [(st.last_used, s) for s, st in self._slots.items() if st.model is not None]
+        candidates = [(st.last_used, s) for s, st in self._slots_snapshot() if st.model is not None]
         if not candidates:
             return None
         _, victim = min(candidates, key=lambda x: x[0])

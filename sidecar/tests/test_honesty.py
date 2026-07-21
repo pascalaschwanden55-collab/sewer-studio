@@ -79,6 +79,21 @@ def test_dino_degraded_false_on_clean_empty(client, monkeypatch):
     assert data["error"] is None
 
 
+def test_dino_oom_wird_als_503_statt_degraded(monkeypatch):
+    # Ein OOM-Fehler darf NICHT als degraded-200 verschluckt werden — er muss den zentralen
+    # Handler erreichen (VRAM-Erholung + 503), sonst bleibt der Sidecar im OOM-Zustand.
+    from sidecar.main import app
+    def _oom(**kw):
+        raise RuntimeError("CUDA out of memory")
+    _fake_dino(monkeypatch, _oom)
+
+    # raise_server_exceptions=False: Handler-Response (503) statt Re-Raise im Test.
+    resp = TestClient(app, raise_server_exceptions=False).post(
+        "/detect/dino", json={"image_base64": _img()})
+    assert resp.status_code == 503
+    assert "out of memory" in resp.json()["detail"].lower()
+
+
 # ── SAM ──────────────────────────────────────────────────────────────────────
 
 def _fake_sam(monkeypatch, predictor):
@@ -112,6 +127,27 @@ def test_sam_degraded_when_all_boxes_fail(client, monkeypatch):
     assert data["skipped_boxes"] == 2
     assert data["degraded"] is True
     assert data["masks"] == []
+
+
+def test_sam_oom_wird_als_503_statt_uebersprungen(monkeypatch):
+    # OOM in der Box-Schleife muss den zentralen Handler erreichen (503), statt die Box nur als
+    # uebersprungen zu zaehlen und den Sidecar im OOM-Zustand zu belassen.
+    from sidecar.main import app
+    class OomPredictor:
+        def set_image(self, arr):
+            pass
+
+        def predict(self, **kw):
+            raise RuntimeError("CUDA out of memory")
+
+    _fake_sam(monkeypatch, OomPredictor())
+    # raise_server_exceptions=False: Handler-Response (503) statt Re-Raise im Test.
+    resp = TestClient(app, raise_server_exceptions=False).post("/segment/sam", json={
+        "image_base64": _img(),
+        "bounding_boxes": [_box()],
+    })
+    assert resp.status_code == 503
+    assert "out of memory" in resp.json()["detail"].lower()
 
 
 def test_sam_not_degraded_on_clean_success(client, monkeypatch):

@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from ..config import settings
+from ..cuda_errors import looks_like_cuda_failure, looks_like_oom
 from ..gpu_manager import gpu_manager, ModelSlot
 from ..schemas.detection import DinoDetection, DinoResponse
 from .image_decode import decode_image_safe
@@ -147,6 +148,10 @@ def detect(
                 text_threshold=text_threshold,
             )
     except Exception as exc:
+        # OOM/CUDA-Fehler re-raisen, damit der zentrale Handler VRAM freigibt und 503 liefert;
+        # sonst bliebe der Sidecar im OOM-Zustand haengen (degraded-200 loest keine Erholung aus).
+        if looks_like_oom(exc) or looks_like_cuda_failure(exc):
+            raise
         # KEIN stilles "200 + leer": ein Inferenzfehler darf nicht wie "kein Befund"
         # aussehen. degraded=True + Fehlertext, voller Trace ins Log.
         logger.exception("DINO inference failed")
