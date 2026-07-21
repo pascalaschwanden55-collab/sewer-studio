@@ -145,7 +145,11 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                         .OrderByDescending(i => i.SortKey)
                         .FirstOrDefault();
 
-                    ApplySectionFields(record, section, inspection);
+                    // Stammdaten + Schaechte ueber die zentrale MergeEngine (Leer-Schutz, Import-
+                    // Prioritaet Legacy < Pdf < Xtf, Konfliktprotokoll) statt bedingungsloser
+                    // Direktschreibung — schuetzt hoeherwertige XTF/PDF-Werte vor stillem Ueberschreiben.
+                    var source = new HaltungRecord();
+                    ApplySectionFields(source, section, inspection);
 
                     // Schacht oben/unten aus den Knoten-Referenzen der Section aufloesen.
                     // Schacht_oben = Anfangsschacht der BEFAHRUNG. Im Normalfall (in Fliessrichtung)
@@ -157,10 +161,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     var untenRef = reverseDir ? section.FromNodeFk : section.ToNodeFk;
                     if (!string.IsNullOrWhiteSpace(obenRef)
                         && nodeKeyByPk.TryGetValue(obenRef!, out var schachtOben))
-                        ApplyField(record, "Schacht_oben", schachtOben);
+                        ApplyField(source, "Schacht_oben", schachtOben);
                     if (!string.IsNullOrWhiteSpace(untenRef)
                         && nodeKeyByPk.TryGetValue(untenRef!, out var schachtUnten))
-                        ApplyField(record, "Schacht_unten", schachtUnten);
+                        ApplyField(source, "Schacht_unten", schachtUnten);
+
+                    Common.LegacyStammdatenMerger.MergeLegacy(project, record, source, ctx);
 
                     if (inspection is null)
                     {
@@ -240,7 +246,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     ApplyProtocol(record, entries, protocolService);
                     UpdateFindings(record, entries);
                     LinkSectionPdf(record, section.Key, fileIndex);
-                    BuildPrimaryDamagesText(record, entries);
+
+                    // Primaere_Schaeden (abgeleiteter Zusammenfassungstext) ebenfalls ueber die
+                    // MergeEngine, damit ein hoeherwertiger Bestandswert nicht still ueberschrieben wird.
+                    var damageSource = new HaltungRecord();
+                    BuildPrimaryDamagesText(damageSource, entries);
+                    Common.LegacyStammdatenMerger.MergeLegacy(project, record, damageSource, ctx);
 
                     updated++;
                 }
@@ -391,16 +402,23 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             }
 
             found++;
-            var changed = false;
-            changed |= ApplyImportedField(target, "Datum_Jahr", imported.GetFieldValue("Datum_Jahr"));
-            changed |= ApplyImportedField(target, "Haltungslaenge_m", imported.GetFieldValue("Haltungslaenge_m"));
-            changed |= ApplyImportedField(target, "DN_mm", imported.GetFieldValue("DN_mm"));
-            changed |= ApplyImportedField(target, "Rohrmaterial", NormalizeMaterial(imported.GetFieldValue("Rohrmaterial")));
-            changed |= ApplyImportedField(target, "Inspektionsrichtung", imported.GetFieldValue("Inspektionsrichtung"));
-            changed |= ApplyImportedField(target, "Bemerkungen", imported.GetFieldValue("Bemerkungen"));
-            changed |= ApplyImportedField(target, "Nutzungsart", NormalizeUsage(imported.GetFieldValue("Nutzungsart")));
-            changed |= ApplyImportedField(target, "Primaere_Schaeden",
+
+            // Stammdaten des fertig aufgebauten MDB-Records ueber die MergeEngine mergen
+            // (Material/Usage weiterhin normalisiert): hoeherwertige XTF/PDF-Werte bleiben
+            // geschuetzt, Konflikte werden in project.Conflicts protokolliert.
+            var mdbSource = new HaltungRecord();
+            ApplyImportedField(mdbSource, "Datum_Jahr", imported.GetFieldValue("Datum_Jahr"));
+            ApplyImportedField(mdbSource, "Haltungslaenge_m", imported.GetFieldValue("Haltungslaenge_m"));
+            ApplyImportedField(mdbSource, "DN_mm", imported.GetFieldValue("DN_mm"));
+            ApplyImportedField(mdbSource, "Rohrmaterial", NormalizeMaterial(imported.GetFieldValue("Rohrmaterial")));
+            ApplyImportedField(mdbSource, "Inspektionsrichtung", imported.GetFieldValue("Inspektionsrichtung"));
+            ApplyImportedField(mdbSource, "Bemerkungen", imported.GetFieldValue("Bemerkungen"));
+            ApplyImportedField(mdbSource, "Nutzungsart", NormalizeUsage(imported.GetFieldValue("Nutzungsart")));
+            ApplyImportedField(mdbSource, "Primaere_Schaeden",
                 XtfPrimaryDamageFormatter.DeduplicateText(imported.GetFieldValue("Primaere_Schaeden")));
+
+            var mdbMerge = Common.LegacyStammdatenMerger.MergeLegacy(project, target, mdbSource, ctx);
+            var changed = mdbMerge.Updated > 0;
 
             var rawLink = imported.GetFieldValue("Link");
             if (!string.IsNullOrWhiteSpace(rawLink))

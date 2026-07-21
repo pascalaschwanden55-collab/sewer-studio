@@ -140,6 +140,42 @@ public sealed class WinCanDbImportSchachtTests
     }
 
     [Fact]
+    public void WinCanImport_LaesstHoeherwertigenXtfWert_stehen_und_protokolliertKonflikt()
+    {
+        // Die Mini-DB3 liefert Schacht_oben "S-865" (FieldSource.Legacy). Der bestehende Record
+        // traegt dort aber bereits einen hoeherwertigen XTF-Wert. U16-Fix: WinCan-Legacy (Prio 50)
+        // ueberschreibt den XTF-Wert (Prio 80) NICHT mehr still, sondern protokolliert den Konflikt.
+        var root = Path.Combine(Path.GetTempPath(), $"wincan-xtf-{Guid.NewGuid():N}");
+        var dbDir = Path.Combine(root, "DB");
+        Directory.CreateDirectory(dbDir);
+        var db3 = Path.Combine(dbDir, "projekt.db3");
+        try
+        {
+            ErzeugeMiniDb3(db3);
+
+            var project = new Project();
+            var existing = project.CreateNewRecord();
+            existing.SetFieldValue("Haltungsname", "06-001", FieldSource.Pdf, userEdited: false);
+            existing.SetFieldValue("Schacht_oben", "XTF-Schacht", FieldSource.Xtf, userEdited: false);
+            project.AddRecord(existing);
+
+            var result = new WinCanDbImportService().ImportWinCanExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            var rec = project.Data.First(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal("XTF-Schacht", rec.GetFieldValue("Schacht_oben"));
+            Assert.Contains(project.Conflicts, c =>
+                string.Equals(c["field"]?.ToString(), "Schacht_oben", StringComparison.Ordinal));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void WinCanImport_ImportiertBeobachtungUndFoto_AusDb3()
     {
         // Charakterisierung des Kernpfads SECTION -> SECINSP -> SECOBS -> SECOBSMM:
