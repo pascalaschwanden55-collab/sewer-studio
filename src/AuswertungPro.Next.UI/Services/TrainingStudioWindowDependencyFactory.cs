@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Ai.KnowledgeBase;   // IRetrievalService
 using AuswertungPro.Next.Application.Ai.Teacher;         // ITeacherAnnotationStore, IVsaYoloClassMapStore
 using AuswertungPro.Next.Application.Ai.Training;        // ITrainingSampleStore, IKnowledgeBaseIndexer
 using AuswertungPro.Next.Application.Ai.Workbench;       // IAnnotationWorkbenchService
+using AuswertungPro.Next.Infrastructure.Ai;              // OllamaClient, BcaFineCodeClassifier
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;     // VisionPipelineClient, SidecarTelemetryWriter
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;      // TeacherAnnotationStore, VsaYoloClassMap
 using AuswertungPro.Next.Infrastructure.Ai.Training;     // TrainingSamplesStore, DelegatingKnowledgeBaseIndexer
@@ -94,6 +95,22 @@ internal static class TrainingStudioWindowDependencyFactory
         // 6) VSA->YOLO-Klassenkarte (darf per GetOrAddClassId wachsen).
         IVsaYoloClassMapStore teacherClassMap = services?.VsaYoloClasses ?? VsaYoloClassMap.Current;
 
+        // 7) Feiner Anschluss-Code (BCA-Bauart) via eigenem Qwen-Client. Nur bei aktiven KI-Settings;
+        //    sonst null -> der Pruefplatz-Knopf bleibt wirkungslos. Der Client gehoert dem Classifier
+        //    (ownsClient) und wird ueber die Dispose-Kette des Workbench-Service freigegeben.
+        IBcaFineCodeClassifier? bcaClassifier = null;
+        var aiCfg = services?.AiSettings.Load();
+        if (aiCfg is { Enabled: true } && !string.IsNullOrWhiteSpace(aiCfg.VisionModel))
+        {
+            var ollama = new OllamaClient(
+                aiCfg.OllamaBaseUri,
+                http: null,
+                ownedTimeout: TimeSpan.FromSeconds(90),
+                keepAlive: aiCfg.OllamaKeepAlive,
+                numCtx: aiCfg.OllamaNumCtx);
+            bcaClassifier = new BcaFineCodeClassifier(ollama, aiCfg.VisionModel, ownsClient: true);
+        }
+
         return new AnnotationWorkbenchService(
             sam,
             pipeline,
@@ -103,7 +120,8 @@ internal static class TrainingStudioWindowDependencyFactory
             teacherStore,
             teacherClassMap,
             File.ReadAllBytes,
-            () => TrainingSamplesStore.EffectiveEvalSetRoot);
+            () => TrainingSamplesStore.EffectiveEvalSetRoot,
+            bcaClassifier: bcaClassifier);
     }
 
     /// <summary>Baut die Quellen (Fotos + Review-Warteschlange) fuer den Pruefplatz.</summary>
