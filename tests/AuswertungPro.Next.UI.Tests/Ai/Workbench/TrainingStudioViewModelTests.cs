@@ -338,6 +338,8 @@ public sealed class TrainingStudioViewModelTests
             new(new[] { new WorkbenchCodeCandidate("BAB", 0.9, "cls") }, FrameUsable: true, "ok", IsBend: false);
         public WorkbenchSaveResult SaveResult { get; set; } =
             new(true, null, "wb_1", "Indexed", "t_1");
+        public WorkbenchSuggestion BauartResult { get; set; } =
+            new(new[] { new WorkbenchCodeCandidate("BCAAA", 0.8, "bca") }, FrameUsable: true, "", IsBend: false);
 
         public List<WorkbenchDecision> SavedDecisions { get; } = new();
         public List<CancellationToken> SegmentTokens { get; } = new();
@@ -356,6 +358,9 @@ public sealed class TrainingStudioViewModelTests
 
         public Task<WorkbenchSuggestion> SuggestAsync(WorkbenchItem item, BoundingBox box, CancellationToken ct = default)
             => SuggestThrows is not null ? Task.FromException<WorkbenchSuggestion>(SuggestThrows) : Task.FromResult(SugResult);
+
+        public Task<WorkbenchSuggestion> SuggestBcaBauartAsync(WorkbenchItem item, CancellationToken ct = default)
+            => Task.FromResult(BauartResult);
 
         public Task<WorkbenchSaveResult> SaveAsync(WorkbenchItem item, BoundingBox box, WorkbenchSegmentation? segmentation, WorkbenchDecision decision, CancellationToken ct = default)
         {

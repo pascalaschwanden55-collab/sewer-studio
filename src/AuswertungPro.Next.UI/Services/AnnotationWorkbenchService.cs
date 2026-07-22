@@ -28,6 +28,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
     private readonly Func<string?> _resolveEvalSetRoot;
     private readonly Func<ITrainingAnnotationExportService>? _exportServiceFactory;
     private readonly Func<string, bool> _isCodeKnown;
+    private readonly IBcaFineCodeClassifier? _bcaClassifier;
 
     public AnnotationWorkbenchService(
         ITrainingReviewSamSegmentationService samService,
@@ -40,8 +41,10 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         Func<string, byte[]> readFileBytes,
         Func<string?> resolveEvalSetRoot,
         Func<ITrainingAnnotationExportService>? exportServiceFactory = null,
-        Func<string, bool>? isCodeKnown = null)
+        Func<string, bool>? isCodeKnown = null,
+        IBcaFineCodeClassifier? bcaClassifier = null)
     {
+        _bcaClassifier = bcaClassifier;
         _samService = samService;
         _pipelineClient = pipelineClient;
         _retrieval = retrieval;
@@ -127,6 +130,22 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
             .ToList();
 
         return new WorkbenchSuggestion(deduped, resp.Usable, resp.QualityReason, resp.IsBend);
+    }
+
+    public async Task<WorkbenchSuggestion> SuggestBcaBauartAsync(WorkbenchItem item, CancellationToken ct = default)
+    {
+        // Ohne verfuegbaren Qwen-Classifier bleibt der Knopf wirkungslos (kein Fehlerzustand).
+        if (_bcaClassifier is null)
+            return new WorkbenchSuggestion(Array.Empty<WorkbenchCodeCandidate>(), true, string.Empty, false);
+
+        var b64 = Convert.ToBase64String(_readFileBytes(item.FramePath));
+        var suggestion = await _bcaClassifier.SuggestAsync(b64, ct).ConfigureAwait(false);
+
+        // Feine Bauart-Codes als zusaetzliche Kandidaten mit klarer Herkunft "bca".
+        var candidates = suggestion.Candidates
+            .Select(c => new WorkbenchCodeCandidate(c.VsaCode, c.Confidence, "bca"))
+            .ToList();
+        return new WorkbenchSuggestion(candidates, true, string.Empty, false);
     }
 
     public async Task<WorkbenchSaveResult> SaveAsync(
@@ -270,5 +289,6 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
     {
         (_samService as IDisposable)?.Dispose();
         (_pipelineClient as IDisposable)?.Dispose();
+        (_bcaClassifier as IDisposable)?.Dispose();
     }
 }

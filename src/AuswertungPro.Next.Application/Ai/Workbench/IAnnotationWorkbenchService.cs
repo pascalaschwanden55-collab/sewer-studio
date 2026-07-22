@@ -16,6 +16,12 @@ public interface IAnnotationWorkbenchService
     /// <summary>Erzeugt den KI-Codevorschlag zur Box (cls-Klassifikator + aehnliche KB-Faelle).</summary>
     Task<WorkbenchSuggestion> SuggestAsync(WorkbenchItem item, BoundingBox box, CancellationToken ct = default);
 
+    /// <summary>
+    /// Fragt Qwen nach der feinen Anschluss-Bauart (nur sinnvoll, wenn ein Anschluss im Bild ist).
+    /// Kandidaten tragen Quelle "bca"; ohne verfuegbaren Classifier oder bei Unsicherheit leer.
+    /// </summary>
+    Task<WorkbenchSuggestion> SuggestBcaBauartAsync(WorkbenchItem item, CancellationToken ct = default);
+
     /// <summary>Speichert die menschliche Entscheidung: Eval-Schutz, TrainingSample, KB-Index, Teacher-Kandidat.</summary>
     Task<WorkbenchSaveResult> SaveAsync(WorkbenchItem item, BoundingBox box, WorkbenchSegmentation? segmentation, WorkbenchDecision decision, CancellationToken ct = default);
 }
