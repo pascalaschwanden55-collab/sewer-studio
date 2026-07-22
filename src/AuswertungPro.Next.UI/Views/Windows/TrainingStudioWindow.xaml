@@ -97,6 +97,10 @@
                             Padding="12,10" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="KI-Vorschlag" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <Button Content="Bauart bestimmen (Anschluss)"
+                                    Command="{Binding BestimmeBauartCommand}"
+                                    ToolTip="Fragt die KI nach der Anschluss-Bauart und ergaenzt die Vorschlaege. Nur bei Anschluessen sinnvoll."
+                                    HorizontalAlignment="Left" Margin="0,0,0,6"/>
                             <Border Background="{DynamicResource WarningBrush}" CornerRadius="4" Padding="8,4"
                                     Margin="0,0,0,6"
                                     Visibility="{Binding ShowQualityWarning, Converter={StaticResource BoolToVis}}">

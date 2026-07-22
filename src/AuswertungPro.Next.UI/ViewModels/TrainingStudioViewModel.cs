@@ -340,6 +340,41 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         }
     }
 
+    /// <summary>
+    /// Fragt die KI nach der feinen Anschluss-Bauart und mischt die Kandidaten (Quelle "bca")
+    /// in die Vorschlagsliste. Nur bei Anschluessen sinnvoll — der Nutzer loest ihn bewusst aus.
+    /// </summary>
+    [RelayCommand]
+    private async Task BestimmeBauartAsync()
+    {
+        var item = CurrentItem;
+        if (item is null) return;
+
+        using var cts = new CancellationTokenSource();
+        var bauart = await _workbench.SuggestBcaBauartAsync(item, cts.Token).ConfigureAwait(true);
+        if (bauart.Candidates.Count == 0)
+        {
+            StatusText = "Keine sichere Anschluss-Bauart erkannt.";
+            return;
+        }
+
+        // Bauart-Kandidaten in die bestehende Vorschlagsliste einmischen (Duplikate vermeiden).
+        var vorhanden = Suggestion?.Candidates
+            ?? (IReadOnlyList<WorkbenchCodeCandidate>)Array.Empty<WorkbenchCodeCandidate>();
+        var merged = vorhanden
+            .Concat(bauart.Candidates)
+            .GroupBy(c => c.VsaCode, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(c => c.Confidence).First())
+            .OrderByDescending(c => c.Confidence)
+            .ToList();
+        Suggestion = new WorkbenchSuggestion(
+            merged,
+            Suggestion?.FrameUsable ?? true,
+            Suggestion?.QualityReason ?? string.Empty,
+            Suggestion?.IsBend ?? false);
+        StatusText = "Anschluss-Bauart vorgeschlagen.";
+    }
+
     /// <summary>Setzt die Schadensstufe (1..5) aus dem Button-Parameter; sonst keine Aenderung.</summary>
     [RelayCommand]
     private void SetSeverity(string? level)

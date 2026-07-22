@@ -45,6 +45,19 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task BestimmeBauart_fuegt_Bauart_Kandidaten_zur_Vorschlagsliste()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);   // CurrentItem + grober Vorschlag (BAB)
+
+        await vm.BestimmeBauartCommand.ExecuteAsync(null);
+
+        Assert.Contains(vm.SuggestionCandidates, c => c.VsaCode == "BCAAA" && c.Quelle == "bca");
+    }
+
+    [Fact]
     public async Task Accept_speichert_ohne_Korrektur_und_geht_zum_naechsten_Item()
     {
         var wb = new FakeWorkbench();
