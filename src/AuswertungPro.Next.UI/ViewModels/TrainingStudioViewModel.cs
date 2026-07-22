@@ -390,8 +390,10 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         }
         catch (Exception ex)
         {
-            // Fehler nie verschlucken (async-Command) — sichtbar in die Statuszeile.
-            StatusText = $"Bauart-Bestimmung fehlgeschlagen: {ex.Message}";
+            // Fehler nie verschlucken (async-Command), aber keine rohe Exception zeigen:
+            // benutzerfreundlich beschreiben, volle Ursache nur protokollieren (UserError).
+            StatusText = "Bauart-Bestimmung fehlgeschlagen: "
+                + UserError.DescribeAndReport(ex, "Anschluss-Bauart bestimmen");
         }
         finally
         {
