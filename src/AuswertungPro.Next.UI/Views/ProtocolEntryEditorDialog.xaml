@@ -54,11 +54,16 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Code" />
-        <TextBox x:Name="CodeTextBox"
-                 Grid.Row="0"
-                 Grid.Column="1"
-                 Margin="0,0,8,8"
-                 VerticalAlignment="Center" />
+        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,8">
+            <TextBox x:Name="CodeTextBox"
+                     VerticalAlignment="Center" />
+            <!-- Klartext des eingegebenen Codes, aktualisiert live beim Tippen/Auswaehlen -->
+            <TextBlock Text="{Binding ElementName=CodeTextBox, Path=Text, Converter={StaticResource VsaCodeToLabel}}"
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="11"
+                       Margin="2,3,0,0"
+                       TextWrapping="Wrap" />
+        </StackPanel>
         <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
             <Button x:Name="CatalogButton"
                     Content="Code auswählen..."

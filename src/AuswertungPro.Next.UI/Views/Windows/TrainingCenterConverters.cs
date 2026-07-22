@@ -35,6 +35,27 @@ public sealed class VsaCodeToTextConverter : IValueConverter
 }
 
 /// <summary>
+/// Wandelt einen VSA-Code in NUR den Klartext (ohne Code-Praefix), z.B. "BCAEA" → "Seitlicher Anschluss".
+/// Fuer eine eigene "Bedeutung"-Spalte neben einer bestehenden Code-Spalte: der Code steht dort schon,
+/// hier soll nur die Bedeutung stehen.
+/// Ist der Wert kein bekannter Code (leer/null/unbekannt), bleibt die Zelle leer.
+/// </summary>
+public sealed class VsaCodeToLabelConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not string code || string.IsNullOrWhiteSpace(code))
+            return string.Empty;
+
+        var label = Infrastructure.Ai.VsaCodeResolver.LookupLabel(code);
+        return string.IsNullOrWhiteSpace(label) ? string.Empty : label;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>
 /// Laedt ein Bild aus dem Dateipfad in den Speicher, ohne die Datei zu sperren.
 /// Verhindert File-Locking und ermoeglicht Echtzeit-Updates waehrend Self-Training.
 /// </summary>

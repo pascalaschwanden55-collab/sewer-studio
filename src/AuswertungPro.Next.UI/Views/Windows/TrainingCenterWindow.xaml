@@ -14,7 +14,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:NotNullToBoolConverter x:Key="NotNullToBool"/>
         <local:FileToImageConverter x:Key="FileToImage"/>
-        <local:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
+        <!-- VsaCodeToText/VsaCodeToLabel jetzt zentral in App.xaml -->
     </Window.Resources>
     <Grid Margin="12" Background="Transparent">
         <Grid.RowDefinitions>
@@ -212,6 +212,7 @@
                                   IsReadOnly="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="0.6*" ElementStyle="{StaticResource MonoCellStyle}"/>
+                                <DataGridTextColumn Header="Bedeutung" Binding="{Binding Code, Converter={StaticResource VsaCodeToLabel}}" Width="1*"/>
                                 <DataGridTextColumn Header="m Start" Binding="{Binding MeterStart, StringFormat=F2}" Width="0.5*" ElementStyle="{StaticResource MonoCellStyle}"/>
                                 <DataGridTextColumn Header="m End" Binding="{Binding MeterEnd, StringFormat=F2}" Width="0.5*" ElementStyle="{StaticResource MonoCellStyle}"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="0.6*"/>
@@ -239,7 +240,7 @@
                                 <StackPanel Grid.Row="1" Margin="0,8,0,0">
                                     <TextBlock>
                                         <Run Text="Code: "/>
-                                        <Run Text="{Binding SelectedSample.Code}"/>
+                                        <Run Text="{Binding SelectedSample.Code, Converter={StaticResource VsaCodeToText}}"/>
                                     </TextBlock>
                                     <TextBlock Margin="0,4,0,0">
                                         <Run Text="Beschreibung: "/>
@@ -407,7 +408,7 @@
                             <!-- Aktueller Eintrag -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                                    <Run Text="Code: "/><Run Text="{Binding CurrentEntryCode, Mode=OneWay}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
+                                    <Run Text="Code: "/><Run Text="{Binding CurrentEntryCode, Mode=OneWay, Converter={StaticResource VsaCodeToText}}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
                                     <Run Text="  |  Meter: "/><Run Text="{Binding CurrentEntryMeter, Mode=OneWay, StringFormat=F1}" Foreground="{DynamicResource TextBrush}"/>
                                     <Run Text=" m"/>
                                 </TextBlock>
@@ -555,7 +556,7 @@
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="{Binding Index}" Foreground="{DynamicResource MutedBrush}" FontSize="10" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding VsaCode}" Foreground="{DynamicResource TextBrush}"
+                                                        <TextBlock Grid.Column="1" Text="{Binding VsaCode, Converter={StaticResource VsaCodeToText}}" Foreground="{DynamicResource TextBrush}"
                                                                    FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="2" Text="{Binding Meter, StringFormat=F1}" Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    FontSize="10" VerticalAlignment="Center"/>
@@ -605,7 +606,8 @@
                                                         <ColumnDefinition Width="30"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="{Binding Code}" Foreground="{DynamicResource TextBrush}" FontSize="10"
-                                                               FontFamily="Consolas" VerticalAlignment="Center"/>
+                                                               FontFamily="Consolas" VerticalAlignment="Center"
+                                                               ToolTip="{Binding Code, Converter={StaticResource VsaCodeToText}}"/>
                                                     <!-- Gestapelter Mini-Balken -->
                                                     <Grid Grid.Column="1" Height="10" Margin="4,0">
                                                         <Grid.ColumnDefinitions>
@@ -719,7 +721,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding SelfTrainingVsaCode}"
+                                                <TextBlock Text="{Binding SelfTrainingVsaCode, Converter={StaticResource VsaCodeToText}}"
                                                            FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                                                            FontSize="13"/>
                                                 <TextBlock Text="{Binding SelfTrainingMeter, StringFormat={}{0:F1}m}"
@@ -1006,7 +1008,7 @@
                                                 <Image Source="{Binding CroppedRegionPath, Converter={StaticResource FileToImage}}"
                                                        Width="120" Height="90" Stretch="Uniform"
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"
+                                                <TextBlock Text="{Binding VsaCode, Converter={StaticResource VsaCodeToText}}" FontWeight="Bold"
                                                            FontSize="13" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                                 <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                                            HorizontalAlignment="Center">

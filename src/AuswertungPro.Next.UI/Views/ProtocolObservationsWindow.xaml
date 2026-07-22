@@ -121,6 +121,7 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Bedeutung" Binding="{Binding Code, Converter={StaticResource VsaCodeToLabel}}" Width="160"/>
                     <DataGridTextColumn Header="m+" Binding="{Binding MeterStart, StringFormat=F2}" Width="90" ElementStyle="{StaticResource MonoCellStyle}"/>
                     <DataGridTextColumn Header="m-" Binding="{Binding MeterEnd, StringFormat=F2}" Width="90" ElementStyle="{StaticResource MonoCellStyle}"/>
                     <DataGridCheckBoxColumn Header="Strecke" Binding="{Binding IsStreckenschaden}" Width="80"/>

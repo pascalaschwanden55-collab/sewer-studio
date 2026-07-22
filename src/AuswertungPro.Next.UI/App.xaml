@@ -3,11 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary xmlns:vm="clr-namespace:AuswertungPro.Next.UI.ViewModels.Pages"
-                    xmlns:views="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
+                    xmlns:views="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+                    xmlns:conv="clr-namespace:AuswertungPro.Next.UI.Views.Windows">
             <ResourceDictionary.MergedDictionaries>
                  <ResourceDictionary Source="Theme/ThemeLight.xaml" />
                 <ResourceDictionary Source="Theme/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- VSA-Code → Klartext, app-weit: "VsaCodeToText" = "CODE — Bedeutung" (inline),
+                 "VsaCodeToLabel" = nur die Bedeutung (fuer eigene Bedeutung-Spalten). -->
+            <conv:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
+            <conv:VsaCodeToLabelConverter x:Key="VsaCodeToLabel"/>
 
             <!-- MVVM: ViewModel -> View -->
             <DataTemplate DataType="{x:Type vm:ProjectPageViewModel}">
