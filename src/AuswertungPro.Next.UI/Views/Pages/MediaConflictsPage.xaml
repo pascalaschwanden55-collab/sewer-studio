@@ -167,7 +167,16 @@
                                    TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <Grid>
+                    <controls:StatusHost State="{Binding ConflictsState}"
+                                         EmptyIcon="&#xE8A5;"
+                                         EmptyTitle="Keine offenen Medienkonflikte"
+                                         EmptyMessage="Der letzte Scan hat keine fehlenden oder mehrdeutigen Medienzuordnungen gefunden."
+                                         EmptyActionText="Aktualisieren"
+                                         EmptyActionCommand="{Binding RefreshCommand}"
+                                         ErrorTitle="Projektordner nicht verfügbar"
+                                         ErrorMessage="{Binding ConflictsError}"
+                                         RetryText="Aktualisieren"
+                                         RetryCommand="{Binding RefreshCommand}">
                         <DataGrid x:Name="ConflictsGrid"
                                   ItemsSource="{Binding Conflicts}"
                                   SelectedItem="{Binding SelectedConflict}"
@@ -186,25 +195,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <controls:EmptyStateControl Icon="&#xE8A5;"
-                                                    Title="Keine offenen Medienkonflikte"
-                                                    Message="Der letzte Scan hat keine fehlenden oder mehrdeutigen Medienzuordnungen gefunden."
-                                                    ActionText="Aktualisieren"
-                                                    ActionCommand="{Binding RefreshCommand}"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center">
-                            <controls:EmptyStateControl.Style>
-                                <Style TargetType="controls:EmptyStateControl">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasItems, ElementName=ConflictsGrid}" Value="False">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </controls:EmptyStateControl.Style>
-                        </controls:EmptyStateControl>
-                    </Grid>
+                    </controls:StatusHost>
                 </DockPanel>
             </Border>
 

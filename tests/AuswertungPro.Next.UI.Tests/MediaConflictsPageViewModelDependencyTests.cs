@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -41,6 +42,33 @@ public sealed class MediaConflictsPageViewModelDependencyTests
         Assert.Empty(vm.Conflicts);
         Assert.Equal(0, vm.OpenConflictCount);
         Assert.Equal("Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.", vm.SummaryText);
+    }
+
+    [Fact]
+    public void Ohne_Projektordner_zeigt_der_StatusHost_den_Fehlerzustand()
+    {
+        var vm = CreateViewModel(new Project(), getProjectFolder: () => null, playVideo: _ => { });
+
+        Assert.Equal(StatusHostState.Error, vm.ConflictsState);
+        Assert.Equal("Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.", vm.ConflictsError);
+    }
+
+    [Fact]
+    public void Leerer_Projektordner_ohne_Konflikte_zeigt_den_Leerzustand()
+    {
+        var dir = Directory.CreateTempSubdirectory("mediaconflicts_empty_");
+        try
+        {
+            var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+
+            Assert.Empty(vm.Conflicts);
+            Assert.Equal(StatusHostState.Empty, vm.ConflictsState);
+            Assert.Equal("", vm.ConflictsError);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
     }
 
     [Fact]

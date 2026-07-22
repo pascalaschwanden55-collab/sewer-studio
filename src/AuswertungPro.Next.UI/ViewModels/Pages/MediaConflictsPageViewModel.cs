@@ -6,6 +6,7 @@ using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -119,6 +120,11 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     [ObservableProperty] private int _missingConflictCount;
     [ObservableProperty] private int _ambiguousConflictCount;
 
+    // Steuert den StatusHost der Seite: Inhalt (Tabelle), Leer (kein Konflikt) oder Fehler
+    // (Projektordner fehlt). Wird zentral in UpdateSummary bzw. im Fehlerzweig von Refresh gesetzt.
+    [ObservableProperty] private StatusHostState _conflictsState = StatusHostState.Empty;
+    [ObservableProperty] private string _conflictsError = "";
+
     public ObservableCollection<MediaConflictRowViewModel> Conflicts { get; } = new();
 
     public IRelayCommand RefreshCommand { get; }
@@ -210,6 +216,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             SummaryText = "Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.";
             LearnedMappingCount = _service.GetMappingCount(project);
             LastResult = "";
+            ConflictsError = SummaryText;
+            ConflictsState = StatusHostState.Error;
             return;
         }
 
@@ -412,6 +420,10 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         AmbiguousConflictCount = Conflicts.Count(x => x.Conflict.Type == MediaConflictCenterService.ConflictType.Ambiguous);
         OpenConflictCount = Conflicts.Count;
         SummaryText = $"{OpenConflictCount} offene Konflikte | Fehlend: {MissingConflictCount} | Mehrdeutig: {AmbiguousConflictCount} | Gelernte Mappings: {LearnedMappingCount}";
+
+        // Zentrale Ableitung des Anzeigezustands (nach Refresh-Erfolg und nach jedem Aufloesen).
+        ConflictsError = "";
+        ConflictsState = Conflicts.Count > 0 ? StatusHostState.Content : StatusHostState.Empty;
     }
 
     private void TryPlayVideo(string path)
