@@ -100,6 +100,25 @@ public sealed class BcaFineCodeClassifierTests
         Assert.Contains("BCAEA", StaticHandler.LastRequestJson);
     }
 
+    [Fact]
+    public void Dispose_ist_wurffrei_und_idempotent_bei_fremdem_und_eigenem_Client()
+    {
+        // Fremder (geteilter) Client: Default ownsClient=false -> Dispose laesst ihn unberuehrt.
+        var (shared, sharedHttp) = FakeQwen("""
+            { "code": "unsicher", "confidence": 0.0, "is_uncertain": true }
+            """);
+        using var _ = sharedHttp;
+        var fremd = new BcaFineCodeClassifier(shared, "qwen-test");
+        fremd.Dispose();
+        fremd.Dispose();   // idempotent, kein Wurf
+
+        // Eigener Client (ownsClient=true): Dispose gibt ihn frei, ohne zu werfen.
+        var eigen = new BcaFineCodeClassifier(
+            new OllamaClient(new Uri("http://localhost:11434")), "qwen-test", ownsClient: true);
+        eigen.Dispose();
+        eigen.Dispose();   // idempotent, kein Wurf
+    }
+
     private sealed class StaticHandler(string structuredContent) : HttpMessageHandler
     {
         public static string LastRequestJson { get; private set; } = "";

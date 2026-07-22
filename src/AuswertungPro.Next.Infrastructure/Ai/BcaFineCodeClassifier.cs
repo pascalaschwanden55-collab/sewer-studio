@@ -14,7 +14,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 /// Zeitueberschreitung, "unsicher" oder unbekanntem Code werden leere Kandidaten geliefert.
 /// Muster wie <see cref="EnhancedVisionAnalysisService"/>.
 /// </summary>
-public sealed class BcaFineCodeClassifier : IBcaFineCodeClassifier
+public sealed class BcaFineCodeClassifier : IBcaFineCodeClassifier, IDisposable
 {
     // Die 16 gueltigen BCA-Feincodes (Bauart A-G,Z je offen/verschlossen) plus "unsicher".
     private static readonly IReadOnlySet<string> ValidCodes = new HashSet<string>(StringComparer.Ordinal)
@@ -56,11 +56,29 @@ public sealed class BcaFineCodeClassifier : IBcaFineCodeClassifier
 
     private readonly OllamaClient _client;
     private readonly string _model;
+    private readonly bool _ownsClient;
 
     public BcaFineCodeClassifier(OllamaClient client, string model)
+        : this(client, model, ownsClient: false)
+    {
+    }
+
+    /// <summary>
+    /// Mit <paramref name="ownsClient"/> = true gibt <see cref="Dispose"/> den Qwen-Client frei
+    /// (Pruefplatz-Verdrahtung baut einen eigenen). Bei false (Default) bleibt ein geteilter
+    /// Client unberuehrt.
+    /// </summary>
+    public BcaFineCodeClassifier(OllamaClient client, string model, bool ownsClient)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _model = model ?? throw new ArgumentNullException(nameof(model));
+        _ownsClient = ownsClient;
+    }
+
+    public void Dispose()
+    {
+        if (_ownsClient)
+            _client.Dispose();
     }
 
     public async Task<BcaFineCodeSuggestion> SuggestAsync(
