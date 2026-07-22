@@ -144,3 +144,7 @@ sidecar/models/active.json
 
 # Offline-Basemap-Kacheln (8+ GB, lokal generiert vom Kachel-Downloader - nie ins Repo)
 basemap_tiles/
+
+# Amtsblatt-Monitor: lokaler Laufzeitzustand + Temp-Ausgaben (nicht ins Repo)
+Amtsblatt-Monitor/state.json
+Amtsblatt-Monitor/tmp/
