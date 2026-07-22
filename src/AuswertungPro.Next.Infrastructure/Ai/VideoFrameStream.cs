@@ -82,10 +82,27 @@ public sealed class VideoFrameStream : IAsyncDisposable
     /// Reads frames from the ffmpeg stdout stream. Each yielded FrameData contains
     /// the timestamp and PNG bytes for one frame.
     /// </summary>
-    public async IAsyncEnumerable<FrameData> ReadFramesAsync(
+    /// <remarks>
+    /// Ein ffmpeg-Haenger (mehrere Frame-Timeouts in Folge) endet NICHT mehr still wie ein
+    /// sauberes EOF, sondern wirft <see cref="VideoFrameStreamTimeoutException"/>. Sonst konnte
+    /// der Aufrufer einen Haenger nach Frame 50 von 500 nicht von einem vollstaendig gelesenen
+    /// Video unterscheiden (stiller Teilerfolg). (Deepscan U3)
+    /// </remarks>
+    public IAsyncEnumerable<FrameData> ReadFramesAsync(CancellationToken ct)
+        => ReadFramesCoreAsync(
+            _process.StandardOutput.BaseStream, _stepSeconds, FrameTimeout, MaxConsecutiveTimeouts, ct);
+
+    /// <summary>
+    /// Reine, prozessunabhaengige Frame-Leselogik auf einem beliebigen Byte-Strom. Als eigener
+    /// Einstieg testbar (injizierbarer Strom + kurzer Timeout), ohne einen echten ffmpeg-Prozess.
+    /// </summary>
+    internal static async IAsyncEnumerable<FrameData> ReadFramesCoreAsync(
+        Stream source,
+        double stepSeconds,
+        TimeSpan frameTimeout,
+        int maxConsecutiveTimeouts,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        var stdout = _process.StandardOutput.BaseStream;
         var buffer = new byte[ReadBufferSize];
         var accumulator = new MemoryStream();
         int frameIndex = 0;
@@ -97,17 +114,20 @@ public sealed class VideoFrameStream : IAsyncDisposable
             try
             {
                 using var readCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                readCts.CancelAfter(FrameTimeout);
-                bytesRead = await stdout.ReadAsync(buffer, 0, buffer.Length, readCts.Token)
+                readCts.CancelAfter(frameTimeout);
+                bytesRead = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), readCts.Token)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
                 consecutiveTimeouts++;
-                if (consecutiveTimeouts >= MaxConsecutiveTimeouts)
-                    break; // ffmpeg likely hung — abort
+                if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                    // ffmpeg haengt: als Fehler kennzeichnen, NICHT als normales Ende (U3).
+                    throw new VideoFrameStreamTimeoutException(
+                        $"ffmpeg lieferte {maxConsecutiveTimeouts}x keine Frame-Daten innerhalb von " +
+                        $"je {frameTimeout.TotalSeconds:F0}s — die Frame-Extraktion gilt als haengend.");
 
-                // Frame timeout — skip and continue reading
+                // Einzelner Frame-Timeout — Rest verwerfen und weiterlesen.
                 if (accumulator.Length > 0)
                 {
                     frameIndex++;
@@ -117,7 +137,7 @@ public sealed class VideoFrameStream : IAsyncDisposable
             }
 
             if (bytesRead == 0)
-                break; // EOF — ffmpeg finished
+                yield break; // EOF — ffmpeg finished (sauberes Ende)
 
             consecutiveTimeouts = 0;
             accumulator.Write(buffer, 0, bytesRead);
@@ -125,7 +145,7 @@ public sealed class VideoFrameStream : IAsyncDisposable
             // Try to extract complete PNG images from the accumulator
             while (TryExtractPng(accumulator, out var pngBytes))
             {
-                var timestamp = frameIndex * _stepSeconds;
+                var timestamp = frameIndex * stepSeconds;
                 frameIndex++;
                 yield return new FrameData(timestamp, pngBytes);
             }
@@ -236,3 +256,15 @@ public sealed class VideoFrameStream : IAsyncDisposable
 /// A single extracted video frame with its timestamp and PNG data.
 /// </summary>
 public readonly record struct FrameData(double TimestampSeconds, byte[] PngBytes);
+
+/// <summary>
+/// Wird geworfen, wenn die ffmpeg-Frame-Extraktion haengt (mehrere Frame-Timeouts in Folge).
+/// Bewusst eine eigene Klasse, damit die Analyse-Wege sie gezielt fangen und den Lauf als
+/// fehlgeschlagen statt still als Teilerfolg behandeln koennen (Deepscan U3). Erbt NICHT von
+/// <see cref="InvalidOperationException"/>, damit sie nicht mit anderen Health-Check-Wuerfen
+/// verwechselt wird.
+/// </summary>
+public sealed class VideoFrameStreamTimeoutException : Exception
+{
+    public VideoFrameStreamTimeoutException(string message) : base(message) { }
+}

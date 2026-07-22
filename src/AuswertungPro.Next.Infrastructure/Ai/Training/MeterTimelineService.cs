@@ -64,10 +64,18 @@ public sealed class MeterTimelineService
         await using var stream = VideoFrameStream.Open(
             ffmpeg, videoPath, stepSeconds, videoDurationSeconds, ct);
 
-        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            frames.Add((idx++, frame));
+            await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+            {
+                ct.ThrowIfCancellationRequested();
+                frames.Add((idx++, frame));
+            }
+        }
+        catch (VideoFrameStreamTimeoutException)
+        {
+            // U3: ffmpeg-Haenger — die Meter-Timeline ist ein Hilfssignal; mit den bis hier
+            // gelesenen Frames weiterarbeiten statt den Aufrufer mit einem Wurf abzubrechen.
         }
 
         var results = new ConcurrentDictionary<int, (double Time, double? Meter)>();

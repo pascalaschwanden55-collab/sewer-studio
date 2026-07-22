@@ -151,6 +151,11 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         VideoAnalysisResult videoResult;
 
+        // U3: Ein ffmpeg-Haenger bei der Frame-Extraktion wirft jetzt VideoFrameStreamTimeoutException
+        // statt still zu enden. Gezielt fangen -> ehrlicher Fehlschlag statt stiller Teilerfolg, und
+        // der Wurf fliegt nicht ungefangen aus RunAsync (Schutz vor Abbruch eines ganzen Batchlaufs).
+        try
+        {
         if (useMultiModel)
         {
             // â”€â”€ Multi-Model Path: YOLO -> DINO -> SAM -> Qwen â”€â”€
@@ -199,6 +204,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             videoResult = await videoService.AnalyzeAsync(
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
+        }
+        }
+        catch (VideoFrameStreamTimeoutException ex)
+        {
+            _logger.LogWarning("Videoanalyse abgebrochen (ffmpeg-Haenger): {Reason}", ex.Message);
+            return PipelineResult.Failed(
+                $"Video-Frame-Extraktion haengt (ffmpeg): {ex.Message}");
         }
 
         if (!videoResult.IsSuccess)

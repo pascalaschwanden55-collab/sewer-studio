@@ -65,16 +65,26 @@ public sealed class QuickScanService : IQuickScanService
         await using var stream = VideoFrameStream.Open(
             _ffmpegPath, videoPath, FrameStepSeconds, duration, ct, scaleWidth: ScaleWidth);
 
-        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+            {
+                ct.ThrowIfCancellationRequested();
 
-            var segment = await AnalyzeFrameAsync(frame, ct).ConfigureAwait(false);
-            segments.Add(segment);
-            done++;
+                var segment = await AnalyzeFrameAsync(frame, ct).ConfigureAwait(false);
+                segments.Add(segment);
+                done++;
 
-            progress?.Report(new QuickScanProgress(done, totalFrames,
-                $"Frame {done}/{totalFrames}", segment));
+                progress?.Report(new QuickScanProgress(done, totalFrames,
+                    $"Frame {done}/{totalFrames}", segment));
+            }
+        }
+        catch (VideoFrameStreamTimeoutException)
+        {
+            // U3: ffmpeg-Haenger — den Teilscan ehrlich als unvollstaendig kennzeichnen
+            // (Fehlertext gesetzt) statt ihn wie einen vollstaendigen Scan aussehen zu lassen.
+            return new QuickScanResult(segments, duration, done,
+                "Frame-Extraktion haengt (ffmpeg) — Schnellscan unvollstaendig.");
         }
 
         return new QuickScanResult(segments, duration, done, null);
