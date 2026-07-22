@@ -56,6 +56,10 @@
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
 
+    <!-- Subtle-Hintergruende fuer Erfolg-/Fehler-Abzeichen (Badges) — dunkel abgestimmt -->
+    <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FF14432A"/>
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FF4A1A1A"/>
+
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
     <Color x:Key="ColorSecondaryAccentHover">#FF67E8F9</Color>
