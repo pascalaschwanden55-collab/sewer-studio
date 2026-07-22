@@ -348,31 +348,55 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     private async Task BestimmeBauartAsync()
     {
         var item = CurrentItem;
-        if (item is null) return;
-
-        using var cts = new CancellationTokenSource();
-        var bauart = await _workbench.SuggestBcaBauartAsync(item, cts.Token).ConfigureAwait(true);
-        if (bauart.Candidates.Count == 0)
+        if (item is null)
         {
-            StatusText = "Keine sichere Anschluss-Bauart erkannt.";
+            StatusText = "Zuerst ein Bild laden und eine Box ziehen.";
+            return;
+        }
+        if (!_workbench.BcaBauartVerfuegbar)
+        {
+            StatusText = "Bauart-Bestimmung nicht verfuegbar — KI (Qwen/Ollama) nicht gestartet oder deaktiviert.";
             return;
         }
 
-        // Bauart-Kandidaten in die bestehende Vorschlagsliste einmischen (Duplikate vermeiden).
-        var vorhanden = Suggestion?.Candidates
-            ?? (IReadOnlyList<WorkbenchCodeCandidate>)Array.Empty<WorkbenchCodeCandidate>();
-        var merged = vorhanden
-            .Concat(bauart.Candidates)
-            .GroupBy(c => c.VsaCode, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.OrderByDescending(c => c.Confidence).First())
-            .OrderByDescending(c => c.Confidence)
-            .ToList();
-        Suggestion = new WorkbenchSuggestion(
-            merged,
-            Suggestion?.FrameUsable ?? true,
-            Suggestion?.QualityReason ?? string.Empty,
-            Suggestion?.IsBend ?? false);
-        StatusText = "Anschluss-Bauart vorgeschlagen.";
+        // Sichtbares Feedback: Busy-Anzeige + Statuszeile, damit der Knopf nie "still" wirkt.
+        IsBusy = true;
+        StatusText = "Anschluss-Bauart wird bestimmt — die KI wird gefragt …";
+        try
+        {
+            using var cts = new CancellationTokenSource();
+            var bauart = await _workbench.SuggestBcaBauartAsync(item, cts.Token).ConfigureAwait(true);
+            if (bauart.Candidates.Count == 0)
+            {
+                StatusText = "Keine sichere Anschluss-Bauart erkannt (ist ein Anschluss im Bild?).";
+                return;
+            }
+
+            // Bauart-Kandidaten in die bestehende Vorschlagsliste einmischen (Duplikate vermeiden).
+            var vorhanden = Suggestion?.Candidates
+                ?? (IReadOnlyList<WorkbenchCodeCandidate>)Array.Empty<WorkbenchCodeCandidate>();
+            var merged = vorhanden
+                .Concat(bauart.Candidates)
+                .GroupBy(c => c.VsaCode, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(c => c.Confidence).First())
+                .OrderByDescending(c => c.Confidence)
+                .ToList();
+            Suggestion = new WorkbenchSuggestion(
+                merged,
+                Suggestion?.FrameUsable ?? true,
+                Suggestion?.QualityReason ?? string.Empty,
+                Suggestion?.IsBend ?? false);
+            StatusText = $"Anschluss-Bauart vorgeschlagen: {bauart.Candidates[0].VsaCode}.";
+        }
+        catch (Exception ex)
+        {
+            // Fehler nie verschlucken (async-Command) — sichtbar in die Statuszeile.
+            StatusText = $"Bauart-Bestimmung fehlgeschlagen: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     /// <summary>Setzt die Schadensstufe (1..5) aus dem Button-Parameter; sonst keine Aenderung.</summary>

@@ -132,6 +132,8 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         return new WorkbenchSuggestion(deduped, resp.Usable, resp.QualityReason, resp.IsBend);
     }
 
+    public bool BcaBauartVerfuegbar => _bcaClassifier is not null;
+
     public async Task<WorkbenchSuggestion> SuggestBcaBauartAsync(WorkbenchItem item, CancellationToken ct = default)
     {
         // Ohne verfuegbaren Qwen-Classifier bleibt der Knopf wirkungslos (kein Fehlerzustand).

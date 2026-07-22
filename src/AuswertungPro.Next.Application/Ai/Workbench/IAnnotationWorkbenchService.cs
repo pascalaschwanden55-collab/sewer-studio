@@ -17,6 +17,12 @@ public interface IAnnotationWorkbenchService
     Task<WorkbenchSuggestion> SuggestAsync(WorkbenchItem item, BoundingBox box, CancellationToken ct = default);
 
     /// <summary>
+    /// True, wenn die feine Anschluss-Bauart-Bestimmung verfuegbar ist (Qwen-Classifier verdrahtet).
+    /// Ohne aktive KI-Einstellungen false — dann bleibt der Pruefplatz-Knopf ohne Wirkung.
+    /// </summary>
+    bool BcaBauartVerfuegbar { get; }
+
+    /// <summary>
     /// Fragt Qwen nach der feinen Anschluss-Bauart (nur sinnvoll, wenn ein Anschluss im Bild ist).
     /// Kandidaten tragen Quelle "bca"; ohne verfuegbaren Classifier oder bei Unsicherheit leer.
     /// </summary>

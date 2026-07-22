@@ -58,6 +58,20 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task BestimmeBauart_ohne_verfuegbare_KI_meldet_klaren_Hinweis()
+    {
+        var wb = new FakeWorkbench { BauartVerfuegbar = false };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.BestimmeBauartCommand.ExecuteAsync(null);
+
+        Assert.Contains("nicht verfuegbar", vm.StatusText);
+        Assert.DoesNotContain(vm.SuggestionCandidates, c => c.Quelle == "bca");
+    }
+
+    [Fact]
     public async Task Accept_speichert_ohne_Korrektur_und_geht_zum_naechsten_Item()
     {
         var wb = new FakeWorkbench();
@@ -353,6 +367,8 @@ public sealed class TrainingStudioViewModelTests
             new(true, null, "wb_1", "Indexed", "t_1");
         public WorkbenchSuggestion BauartResult { get; set; } =
             new(new[] { new WorkbenchCodeCandidate("BCAAA", 0.8, "bca") }, FrameUsable: true, "", IsBend: false);
+        public bool BauartVerfuegbar { get; set; } = true;
+        public bool BcaBauartVerfuegbar => BauartVerfuegbar;
 
         public List<WorkbenchDecision> SavedDecisions { get; } = new();
         public List<CancellationToken> SegmentTokens { get; } = new();
