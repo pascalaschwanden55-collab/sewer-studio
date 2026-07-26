@@ -56,13 +56,22 @@ internal sealed class ImportProjectPhotoAssignmentController
             _service.AssignFromFolder(projectFolder, sourceFolder, project));
         actions.SetProgress(string.Empty);
 
-        _ = actions.SaveProject();
+        var saved = ProjectSaveAttempt.Try(
+            actions.SaveProject,
+            "Fotozuordnung speichern",
+            out var saveError);
 
         var summary = "Fotos zugeordnet:"
             + $"\n  {result.HoldingsMatched} Haltungen mit Fotos"
             + $"\n  {result.PhotosAssigned} Fotos an Beobachtungen gehaengt"
             + $"\n  {result.PhotosCopied} ins Projekt kopiert"
             + $"\n  {result.UnmatchedFiles} nicht zuordenbar (z.B. GUID-benannt -> braucht DB-Import)";
+        if (!saved)
+        {
+            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError);
+        }
+
         actions.AppendSummary("\n" + summary);
         if (result.Messages.Count > 0)
         {
@@ -70,6 +79,9 @@ internal sealed class ImportProjectPhotoAssignmentController
                 "\n\nFoto-Zuordnung:\n" + string.Join("\n", result.Messages.Take(50)));
         }
 
-        _dialogs.Info(summary, "Fotos zuordnen");
+        if (saved)
+            _dialogs.Info(summary, "Fotos zuordnen");
+        else
+            _dialogs.Warn(summary, "Fotos zuordnen");
     }
 }

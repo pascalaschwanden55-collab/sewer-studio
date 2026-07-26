@@ -11,10 +11,10 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
     {
         var photosPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
         var capturePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
-        var captureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSnapshotFileCaptureService.cs");
-        var captureServicesPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoCaptureServices.cs");
+        var captureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSnapshotFileCaptureService.cs");
+        var captureServicesPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoCaptureServices.cs");
         var captureServicesOwnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPhotoCaptureServicesOwner.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSnapshotTargetPolicy.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSnapshotTargetPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture und Warten muss ausserhalb von PlayerWindow liegen.");
@@ -62,8 +62,8 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
     public void PlayerWindow_frame_extraction_lives_in_service()
     {
         var capturePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
-        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingFrameExtractionService.cs");
-        var captureServicesPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoCaptureServices.cs");
+        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingFrameExtractionService.cs");
+        var captureServicesPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoCaptureServices.cs");
 
         Assert.True(File.Exists(servicePath), "ffmpeg-Frame-Extraktion soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(captureServicesPath), "Frame-Extraction-Service-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -90,14 +90,14 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
     public void PlayerWindow_photo_display_paths_live_in_policy()
     {
         var photosPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Photos.Viewer.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoDisplayPathPolicy.cs");
-        var loaderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerImageSourceLoader.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerCommandWorkflow.cs");
-        var displayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerDisplayWorkflow.cs");
-        var viewerWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerWorkflowService.cs");
-        var viewerWorkflowFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerWorkflowServiceFactory.cs");
-        var viewerServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerWindowService.cs");
-        var viewerServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoViewerWindowServiceFactory.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoDisplayPathPolicy.cs");
+        var loaderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerImageSourceLoader.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerCommandWorkflow.cs");
+        var displayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerDisplayWorkflow.cs");
+        var viewerWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerWorkflowService.cs");
+        var viewerWorkflowFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerWorkflowServiceFactory.cs");
+        var viewerServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerWindowService.cs");
+        var viewerServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoViewerWindowServiceFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loaderPath), "Fotoanzeige-Bildquellen sollen ausserhalb der PlayerWindow-Partials geladen werden.");
@@ -165,13 +165,13 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var windowStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPhotoAttachmentController.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPhotoSlotPolicy.cs");
-        var applierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventPhotoApplier.cs");
-        var timestampScopePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventPhotoTimestampScope.cs");
-        var pathAppenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolEntryPhotoPathAppender.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTakePhotoCommandWorkflow.cs");
-        var attachmentWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalyzedFramePhotoAttachmentWorkflow.cs");
-        var framePhotoAttacherPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalyzedFramePhotoAttacher.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPhotoSlotPolicy.cs");
+        var applierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventPhotoApplier.cs");
+        var timestampScopePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventPhotoTimestampScope.cs");
+        var pathAppenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolEntryPhotoPathAppender.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTakePhotoCommandWorkflow.cs");
+        var attachmentWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalyzedFramePhotoAttachmentWorkflow.cs");
+        var framePhotoAttacherPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalyzedFramePhotoAttacher.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");

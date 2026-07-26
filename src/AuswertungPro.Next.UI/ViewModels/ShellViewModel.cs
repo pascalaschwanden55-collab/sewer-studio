@@ -606,6 +606,36 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
         }
 
+        // Vor jeder Uebernahme pruefen: Ein vorhandener, aber unlesbarer Marker ist
+        // kein "kein Import". In diesem Fall bleibt das aktuell offene Projekt aktiv.
+        string? importRecoveryMessage = null;
+        var importRecoveryRoot = ProjectFileLocator.ProjectRootFromFile(path);
+        if (!string.IsNullOrWhiteSpace(importRecoveryRoot))
+        {
+            var importRecovery = _sp.ImportTransactionRecovery.RecoverIfNeeded(
+                importRecoveryRoot,
+                loaded.LastCommittedImportTxId);
+            if (importRecovery.Outcome
+                == AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.Blocked)
+            {
+                var message = importRecovery.Message
+                    ?? "Die Import-Wiederherstellung konnte nicht sicher geprueft werden.";
+                _sp.Dialogs.Error(
+                    message
+                    + "\n\nDas Projekt wurde nicht geoeffnet und nicht veraendert.",
+                    "Import-Wiederherstellung gesperrt");
+                SetStatus(message);
+                return false;
+            }
+
+            if (importRecovery.Outcome
+                    != AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.None
+                && !string.IsNullOrWhiteSpace(importRecovery.Message))
+            {
+                importRecoveryMessage = importRecovery.Message;
+            }
+        }
+
         // Jedes erfolgreiche Oeffnen pflegt die Merkliste (setzt auch LastProjectPath) —
         // egal ob Dialog, Drag&Drop oder "Letztes Projekt fortsetzen". Sonst bleiben
         // Projekte fuer die Projektuebersicht unsichtbar.
@@ -616,27 +646,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         ReplaceProject(loaded);
 
-        // Absturzsichere Import-Transaktion: Wurde ein Import durch einen Prozess-Absturz
-        // unterbrochen, wird er beim Laden zurueckgenommen bzw. aufgeraeumt (Alles-oder-nichts).
-        var importRecoveryRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(path);
-        if (!string.IsNullOrWhiteSpace(importRecoveryRoot))
-        {
-            var importRecovery = _sp.ImportTransactionRecovery.RecoverIfNeeded(
-                importRecoveryRoot, loaded.LastCommittedImportTxId);
-            if (importRecovery.Outcome != AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.None
-                && !string.IsNullOrWhiteSpace(importRecovery.Message))
-            {
-                SetStatus(importRecovery.Message);
-            }
-        }
-
         if (Project.Dirty && !TrySaveProject())
         {
-            SetStatus($"Geladen mit ungespeicherter Reparatur: {Path.GetFileName(path)}");
+            SetStatus(importRecoveryMessage is null
+                ? $"Geladen mit ungespeicherter Reparatur: {Path.GetFileName(path)}"
+                : importRecoveryMessage + " Die reparierte Projektdatei ist noch nicht gespeichert.");
             return true;
         }
 
-        SetStatus($"Geladen: {Path.GetFileName(path)}");
+        SetStatus(importRecoveryMessage ?? $"Geladen: {Path.GetFileName(path)}");
         return true;
     }
 

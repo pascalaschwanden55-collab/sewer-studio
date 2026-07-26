@@ -11,9 +11,9 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingDefectStatusDisplayPolicy.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDetailControls.cs");
-        var selectionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectSelectionWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingDefectStatusDisplayPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectDetailControls.cs");
+        var selectionWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectSelectionWorkflow.cs");
 
         var detail = File.ReadAllText(detailPath);
         var policy = File.ReadAllText(policyPath);
@@ -56,8 +56,8 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
         var previewPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Preview.cs");
-        var previewServicePath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewService.cs");
-        var previewWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewWorkflow.cs");
+        var previewServicePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineEvidencePreviewService.cs");
+        var previewWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.True(File.Exists(previewPath), "Inline-Defekt-Bildvorschau soll in einem eigenen EventDetails-Partial liegen.");
         Assert.True(File.Exists(previewServicePath), "Inline-Defekt-Bildvorschau soll Datei- und Bitmap-Logik auslagern.");
@@ -90,7 +90,7 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
             "ImgInlineEvidencePreview.Visibility = state.ImageVisible",
             "TxtInlineEvidencePreviewStatus.Text = state.StatusText",
             "TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible");
-        Assert.Contains("public void ApplyPreview", File.ReadAllText(Path.Combine(uiRoot, "Ai", "CodingInlineDefectDetailControls.cs")));
+        Assert.Contains("public void ApplyPreview", File.ReadAllText(Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectDetailControls.cs")));
         AssertNoForbiddenTokens(
             preview,
             "CodingDefectPreviewService.BuildPreviewImagePath",
@@ -105,7 +105,7 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
-        var helperPath = Path.Combine(uiRoot, "Ai", "CodingEventListItemSelectionHelper.cs");
+        var helperPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEventListItemSelectionHelper.cs");
 
         Assert.True(File.Exists(helperPath), "Eventlisten-Rechtsklick-Auswahl soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -135,7 +135,7 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var oldListItemsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs");
         var visualControllerPath = Path.Combine(uiRoot, "Player", "CodingEventListVisualController.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListItemColorizeWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEventListItemColorizeWorkflow.cs");
 
         Assert.True(File.Exists(visualControllerPath), "Event-ListBox-Einfaerbung soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(workflowPath), "Event-ListBox-Einfaerbungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -199,12 +199,12 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var accessorsPath = Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingInlineDefectController.cs");
-        var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
-        var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDecisionWorkflow.cs");
-        var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectAcceptCommandWorkflow.cs");
-        var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectEditCommandWorkflow.cs");
-        var rejectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectRejectCommandWorkflow.cs");
+        var deleteApplierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEventDeleteApplier.cs");
+        var editApplierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEventEditApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectDecisionWorkflow.cs");
+        var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectAcceptCommandWorkflow.cs");
+        var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectEditCommandWorkflow.cs");
+        var rejectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineDefectRejectCommandWorkflow.cs");
 
         Assert.False(File.Exists(actionsPath), "Inline-Defekt-Aktionen dürfen nicht wieder als PlayerWindow-Partial erscheinen.");
         Assert.True(File.Exists(controllerPath), "Inline-Defekt-Aktionen brauchen einen eigenen Controller.");
@@ -239,8 +239,9 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         Assert.Contains("CodingInlineDefectRejectCommandWorkflow.Execute", controller);
         Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", controller);
         Assert.Contains("private readonly ICodingInlineDefectController _codingInlineDefectController", state);
-        Assert.Contains("_codingInlineDefectController.Accept()", accessors);
-        Assert.Contains("_codingInlineDefectController.Edit()", accessors);
+        Assert.Contains("_codingInlineDefectController", accessors);
+        Assert.Contains(".AcceptAsync()", accessors);
+        Assert.Contains(".EditAsync()", accessors);
         Assert.Contains("_codingInlineDefectController.Reject()", accessors);
         Assert.Contains("_codingSessionHost", windowRoot);
         AssertNoForbiddenTokens(

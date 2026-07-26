@@ -7,6 +7,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,9 @@ namespace AuswertungPro.Next.UI.Player;
 
 public sealed class PlayerWindowDependencies
 {
+    private static readonly ITrainingFrameStore CompatibilityTrainingFrames =
+        new TrainingFrameFileStore();
+
     private readonly ServiceProvider? _serviceProvider;
 
     private PlayerWindowDependencies(ServiceProvider? serviceProvider)
@@ -41,6 +45,8 @@ public sealed class PlayerWindowDependencies
         => _serviceProvider?.VsaYoloClasses ?? VsaYoloClassMap.Current;
     public ITrainingSampleStore TrainingSamples
         => _serviceProvider?.TrainingSamples ?? TrainingSamplesStore.Current;
+    public ITrainingFrameStore TrainingFrames
+        => _serviceProvider?.TrainingFrames ?? CompatibilityTrainingFrames;
     public IDialogService Dialogs
         => _serviceProvider?.Dialogs ?? DialogHost.Current;
     public ICodeUsageTracker CodeUsage

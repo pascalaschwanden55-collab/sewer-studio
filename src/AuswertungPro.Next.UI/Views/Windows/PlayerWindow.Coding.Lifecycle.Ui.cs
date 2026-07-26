@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 

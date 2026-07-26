@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -108,7 +109,7 @@ public sealed class CodingSelectedCodeEventWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingManualEventAppender).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingSelectedCodeEventWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingSelectedCodeEventWorkflow");
 
     private static MethodInfo? FindCreateMethod()
         => WorkflowType?.GetMethod(

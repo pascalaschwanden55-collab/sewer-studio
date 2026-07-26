@@ -8,6 +8,8 @@ using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Ai.Evidence;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;

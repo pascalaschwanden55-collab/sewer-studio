@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -15,13 +17,16 @@ public partial class PlayerWindow
         => _codingApplyController.Apply(showOverlay: true);
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
-        => _codingConfirmationController.Accept();
+        => _codingConfirmationController.Accept().SafeFireAndForget("CodingConfirmAccept");
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
         => _codingConfirmationController.Edit();
 
     private void ConfirmReject_Click(object sender, RoutedEventArgs e)
-        => _codingConfirmationController.Reject();
+        => _codingConfirmationController.Reject().SafeFireAndForget("CodingConfirmReject");
+
+    private void ConfirmSaveRetry_Click(object sender, RoutedEventArgs e)
+        => _codingConfirmationController.RetrySave().SafeFireAndForget("CodingConfirmSaveRetry");
 
     private void Eingabemarker_Click(object sender, RoutedEventArgs e)
         => _codingEingabemarkerInteractionController.Toggle(

@@ -142,7 +142,7 @@
                                     </ComboBox.Style>
                                 </ComboBox>
                                 <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                         Background="#FFF6A8">
+                                         Background="{DynamicResource VsaInputHighlightBrush}">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -178,7 +178,7 @@
                                             </Style>
                                         </TextBox.Style>
                                     </TextBox>
-                                    <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4" Margin="0,0,0,6">
+                                    <Border Background="{DynamicResource VsaInputHighlightBrush}" BorderBrush="{DynamicResource VsaInputHighlightBorderBrush}" BorderThickness="1" Padding="4" Margin="0,0,0,6">
                                         <controls:ClockPickerControl Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
                                     </Border>
                                 </StackPanel>
@@ -216,14 +216,14 @@
                             <TextBlock Text="Distanz (m)" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaDistanzTextBox"
                                      Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
                             <TextBlock Text="Uhrzeit (Video)" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaVideoTextBox"
                                      Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <!-- Uhrzeit von/bis Dropdowns -->
@@ -245,7 +245,7 @@
 
                         <!-- Bereichs-Uhr (eine Uhr fuer Von und Bis) -->
                         <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1"
+                                Background="{DynamicResource VsaInputHighlightBrush}" BorderBrush="{DynamicResource VsaInputHighlightBorderBrush}" BorderThickness="1"
                                 Padding="4" Margin="0,0,0,8"
                                 HorizontalAlignment="Center">
                             <controls:ClockRangePickerControl
@@ -258,21 +258,21 @@
                             <TextBlock Text="Quantifizierung 1" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaQ1TextBox"
                                      Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
                             <TextBlock Text="Quantifizierung 2" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaQ2TextBox"
                                      Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,8">
                             <TextBlock Text="Strecke" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaStreckeTextBox"
                                      Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
@@ -286,7 +286,7 @@
                             <TextBlock Text="Ansicht" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaAnsichtTextBox"
                                      Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
@@ -300,7 +300,7 @@
                                 <TextBox x:Name="VsaSchachtbereichTextBox"
                                          Width="90"
                                          Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
-                                         Background="#FFF6A8"/>
+                                         Background="{DynamicResource VsaInputHighlightBrush}"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -308,7 +308,7 @@
                             <TextBlock Text="Diverses" TextWrapping="Wrap"/>
                             <TextBox x:Name="VsaAnmerkungTextBox"
                                      Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#FFF6A8"/>
+                                     Background="{DynamicResource VsaInputHighlightBrush}"/>
                         </StackPanel>
                     </Grid>
                 </GroupBox>

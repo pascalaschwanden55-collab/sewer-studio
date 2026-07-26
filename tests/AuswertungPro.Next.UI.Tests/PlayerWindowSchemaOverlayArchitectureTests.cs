@@ -15,11 +15,11 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
-        var createWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayCreateWorkflow.cs");
-        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayActivationWorkflow.cs");
-        var updateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayUpdateWorkflow.cs");
-        var clearWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayClearWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayInputWorkflow.cs");
+        var createWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayCreateWorkflow.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayActivationWorkflow.cs");
+        var updateWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayUpdateWorkflow.cs");
+        var clearWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayClearWorkflow.cs");
         var ownerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayManagerOwner.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
@@ -135,7 +135,7 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayMouseWheelWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSchemaOverlayMouseWheelWorkflow.cs");
 
         var schema = File.ReadAllText(schemaPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";

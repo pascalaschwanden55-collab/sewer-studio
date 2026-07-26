@@ -2,6 +2,7 @@ using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using UiServiceProvider = AuswertungPro.Next.UI.ServiceProvider;
 
 namespace AuswertungPro.Next.UI.Tests;

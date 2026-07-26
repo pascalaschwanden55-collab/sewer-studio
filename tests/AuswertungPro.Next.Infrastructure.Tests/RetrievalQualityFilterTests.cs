@@ -18,7 +18,7 @@ public sealed class RetrievalQualityFilterTests
     // Cosine zu Query=[1,0,0]: [1,0,0]->1.0  [1,1,0]->0.7071  [1,2,0]->0.4472
     private static (string, float[], SampleRecord?) Cand(string id, float[] vec, string quality)
         => (id, vec, new SampleRecord(
-            id, "case", "BAB", "Riss", 0, 0, quality,
+            id, "case", "BAB", "Riss deutlich sichtbar", 0, 0, quality,
             HumanConfirmed: true));
 
     private static IReadOnlyList<RetrievalResult> Rank(
@@ -201,6 +201,28 @@ public sealed class RetrievalQualityFilterTests
 
         var result = Rank(
             [("not-gold", new[] { 1f, 0f, 0f }, sample)],
+            topK: 5,
+            RetrievalQualityPolicy.Default,
+            out _);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void PlaceholderDescription_IsNeverReturned()
+    {
+        var sample = new SampleRecord(
+            "placeholder",
+            "case",
+            "BAB",
+            "Riss laengs — Lage und Ausmass ergaenzen",
+            0,
+            0,
+            "Green",
+            HumanConfirmed: true);
+
+        var result = Rank(
+            [("placeholder", new[] { 1f, 0f, 0f }, sample)],
             topK: 5,
             RetrievalQualityPolicy.Default,
             out _);

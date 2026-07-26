@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 

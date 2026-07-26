@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -62,5 +63,59 @@ public sealed class PipelineHealthUiStateFactoryTests
         Assert.Equal("DINO: laedt bei Bedarf", state.Details.Dino);
         Assert.Equal("SAM: laedt bei Bedarf", state.Details.Sam);
         Assert.Equal("Modus: KI aus", state.Details.Mode);
+    }
+
+    [Fact]
+    public void Create_shows_unqualified_yolo_but_keeps_dino_sam_analysis_enabled()
+    {
+        var status = new PipelineHealthStatus(
+            PipelineHealthLevel.Degraded,
+            MultiModelActive: true,
+            SidecarReachable: true,
+            TokenValid: true,
+            SidecarHealthy: true,
+            QwenAvailable: true,
+            YoloLoaded: true,
+            DinoLoaded: true,
+            SamLoaded: true,
+            Summary: "KI eingeschraenkt (DINO + SAM)",
+            Detail: "BBox-Kollaps. Ergebnisse pruefen.",
+            DetectorQualified: false,
+            DetectorQualificationReason: "BBox-Kollaps");
+
+        var state = PipelineHealthUiStateFactory.Create(status);
+
+        Assert.Equal(Color.FromRgb(0xF5, 0x9E, 0x0B), state.Color);
+        Assert.True(state.AnalysisEnabled);
+        Assert.Equal("YOLO: nicht qualifiziert", state.Details.Yolo);
+        Assert.Equal("DINO: geladen", state.Details.Dino);
+        Assert.Equal("SAM: geladen", state.Details.Sam);
+        Assert.Equal("Modus: Multi-Model (DINO + SAM)", state.Details.Mode);
+    }
+
+    [Fact]
+    public void Create_shows_missing_qualification_as_degraded_not_green()
+    {
+        var status = new PipelineHealthStatus(
+            PipelineHealthLevel.Degraded,
+            MultiModelActive: true,
+            SidecarReachable: true,
+            TokenValid: true,
+            SidecarHealthy: true,
+            QwenAvailable: true,
+            YoloLoaded: false,
+            DinoLoaded: true,
+            SamLoaded: true,
+            Summary: "KI eingeschraenkt (DINO + SAM)",
+            Detail: "Qualifikationsstatus fehlt. Ergebnis pruefen.",
+            DetectorQualified: null,
+            DetectorQualificationReason: "Qualifikationsstatus fehlt");
+
+        var state = PipelineHealthUiStateFactory.Create(status);
+
+        Assert.Equal(Color.FromRgb(0xF5, 0x9E, 0x0B), state.Color);
+        Assert.True(state.AnalysisEnabled);
+        Assert.Equal("YOLO: Qualifikation fehlt", state.Details.Yolo);
+        Assert.Equal("Modus: Multi-Model (DINO + SAM)", state.Details.Mode);
     }
 }

@@ -11,13 +11,13 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         var importPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var importActionsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ImportActions.cs");
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceTransfer.cs");
-        var resetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionEventResetter.cs");
-        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchStateResetter.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceInitializationWorkflow.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
-        var dropControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceDropController.cs");
-        var confirmationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceConfirmationController.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceTransfer.cs");
+        var resetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSessionEventResetter.cs");
+        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchStateResetter.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceInitializationWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceControls.cs");
+        var dropControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceDropController.cs");
+        var confirmationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceConfirmationController.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resetterPath), "Session-Event-Reset muss ausserhalb der PlayerWindow-Partials liegen.");

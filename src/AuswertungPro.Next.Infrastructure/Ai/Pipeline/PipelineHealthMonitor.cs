@@ -69,9 +69,14 @@ public sealed class PipelineHealthMonitor : IPipelineHealthMonitor
         else
         {
             var r = await _client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
+            // Fehlender Klassifikator ("degraded" nur deswegen) ist eine Warnung, kein
+            // Blocker: die Ampel bleibt Full, DINO/SAM bleiben harte Anforderungen.
             bool healthy = r.Error is null
-                           && r.Health is { Status: "ok" } health
-                           && health.HasRequiredModels;
+                           && r.Health is { } health
+                           && health.HasRequiredModels
+                           && (string.Equals(health.Status, "ok", StringComparison.OrdinalIgnoreCase)
+                               || health.ClassifierMissing
+                               || health.DetectorQualification is { Qualified: false });
             var loaded = r.Health?.Gpu?.LoadedModels;
             bool Has(string k) => loaded != null
                 && loaded.Keys.Any(x => string.Equals(x, k, StringComparison.OrdinalIgnoreCase));
@@ -83,7 +88,9 @@ public sealed class PipelineHealthMonitor : IPipelineHealthMonitor
                 QwenAvailable: qwen,
                 YoloLoaded: Has("yolo"),
                 DinoLoaded: Has("dino"),
-                SamLoaded: Has("sam"));
+                SamLoaded: Has("sam"),
+                DetectorQualified: r.Health?.DetectorQualification?.Qualified,
+                DetectorQualificationReason: r.Health?.DetectorQualification?.Reason);
         }
 
         var status = PipelineHealthEvaluator.Evaluate(inputs);

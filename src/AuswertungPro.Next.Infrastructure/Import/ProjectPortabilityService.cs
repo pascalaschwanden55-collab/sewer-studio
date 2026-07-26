@@ -186,6 +186,10 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         Func<string, bool> typeMatch, string? copyExternalInto, bool dryRun)
     {
         raw = raw.Trim();
+        // S2-3: UNC-Pfade koennen nicht portabel gemacht werden; jeder Zugriff wuerde
+        // SMB-Authentifizierung an fremde Hosts ausloesen -> als unaufloesbar melden.
+        if (MediaFileAllowlist.IsUnc(raw))
+            return (raw, Act.Unresolved);
         if (raw.Length == 0)
             return (raw, Act.Kept);
 
@@ -225,6 +229,10 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                     return (ProjectPathResolver.MakeRelative(match, projectFolder), Act.Relinked);
             }
         }
+
+        // S2-1: Externe Fremd-Dateien nur als bekannte Medientypen ins Projekt kopieren.
+        if (copyExternalInto != null && Path.IsPathRooted(raw) && !MediaFileAllowlist.IsMediaFile(raw))
+            return (raw, Act.Unresolved);
 
         // 4) Foto-Sonderfall: absolut + extern existiert -> in den Haltungsordner kopieren.
         if (copyExternalInto != null && Path.IsPathRooted(raw) && File.Exists(raw)

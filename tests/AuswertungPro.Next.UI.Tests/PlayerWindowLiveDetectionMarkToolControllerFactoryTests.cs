@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -394,5 +395,14 @@ public sealed class PlayerWindowLiveDetectionMarkToolControllerFactoryTests
 
         public Task MergeAndSaveAsync(List<TrainingSample> samples)
             => Task.CompletedTask;
+
+        public Task<bool> RemoveBySampleIdAsync(string sampleId)
+            => Task.FromResult(false);
+
+        public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default)
+            => Task.FromResult(true);
+
+        public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample)
+            => Task.FromResult(false);
     }
 }

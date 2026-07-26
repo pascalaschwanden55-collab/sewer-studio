@@ -389,7 +389,10 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     progress: null,
                     ct: ct,
                     dryRun: false,
-                    collectionLock: new object(),
+                    // CollectionLock aus dem Lauf-Kontext: die Verteilung mutiert die
+                    // UI-gebundenen Collections und darf nicht mit einem frischen,
+                    // wirkungslosen Lock-Objekt laufen.
+                    collectionLock: ctx?.CollectionLock ?? new object(),
                     includeVideos: false,
                     includePdfs: false,
                     includeSchacht: false);

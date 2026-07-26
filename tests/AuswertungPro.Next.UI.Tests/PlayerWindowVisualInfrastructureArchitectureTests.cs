@@ -17,8 +17,8 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var toolsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Tools.cs");
         var controlsPath = Path.Combine(windowsRoot, "PlayerClipboardControls.cs");
         var servicePath = Path.Combine(uiRoot, "Services", "WindowClipboardCaptureService.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingScreenshotCommandWorkflow.cs");
-        var toastWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingScreenshotToastWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingScreenshotCommandWorkflow.cs");
+        var toastWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingScreenshotToastWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Screenshot-Clipboard-Aufruf soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(servicePath), "Win32-Screenshot-Capture muss in einem UI-Service gekapselt bleiben.");

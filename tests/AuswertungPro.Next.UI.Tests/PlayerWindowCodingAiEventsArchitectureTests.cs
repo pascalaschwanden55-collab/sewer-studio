@@ -10,11 +10,11 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
     {
         var aiEventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
         var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.Live.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingEventWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingEventCommandWorkflow.cs");
-        var overlayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentOverlayRenderWorkflow.cs");
-        var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingSessionAppender.cs");
-        var confirmationTrackerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveFindingConfirmationTracker.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveFindingEventWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveFindingEventCommandWorkflow.cs");
+        var overlayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCurrentOverlayRenderWorkflow.cs");
+        var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveFindingSessionAppender.cs");
+        var confirmationTrackerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveFindingConfirmationTracker.cs");
         var addDecisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
@@ -65,16 +65,16 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
     public void PlayerWindow_coding_ai_finding_filtering_lives_in_context()
     {
         var aiEventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
-        var resultWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiResultWorkflow.cs");
+        var resultWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiResultWorkflow.cs");
         var filteringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.Filtering.cs");
-        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingFindingContext.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingFindingContext.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var meterPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingResultMeterReadingPolicy.cs");
-        var osdStateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterStateWorkflow.cs");
-        var warmupPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingWarmupResultBufferPolicy.cs");
+        var meterPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingResultMeterReadingPolicy.cs");
+        var osdStateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdMeterStateWorkflow.cs");
+        var warmupPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingWarmupResultBufferPolicy.cs");
         var frameReadinessControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingFrameReadinessController.cs");
-        var overlaySelectorPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingNewFindingOverlaySelector.cs");
+        var overlaySelectorPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingNewFindingOverlaySelector.cs");
         var findingsControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "CodingFindingsListControls.cs");
 
         Assert.False(File.Exists(filteringPath), "KI-Finding-Kontext soll kein PlayerWindow-Partial mehr sein.");
@@ -119,7 +119,7 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings", findingsControls);
         Assert.Contains("_codingFindingContext.FilterValid", aiEvents);
         Assert.Contains("_codingFindingContext.IsKnown", aiEvents);
-        Assert.Contains("private readonly Ai.CodingFindingContext _codingFindingContext", state);
+        Assert.Contains("private readonly Ai.Coding.CodingFindingContext _codingFindingContext", state);
         Assert.Contains("_codingFindingContext = CodingFindingContext.CreateDefault", windowRoot);
         Assert.Contains("CodingFindingFilterPolicy.FilterValid", context);
         Assert.Contains("CodingFindingCodeResolver.Resolve", context);

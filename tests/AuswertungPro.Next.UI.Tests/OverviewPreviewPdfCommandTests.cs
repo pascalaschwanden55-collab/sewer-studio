@@ -57,6 +57,43 @@ public sealed class OverviewPreviewPdfCommandTests
         Assert.EndsWith(".pdf", name, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Beschaedigte_kostendatei_zeigt_fehler_und_sperrt_preview_pdf()
+    {
+        using var temp = new TempDir();
+        var projectPath = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        var costsPath = Path.Combine(temp.Path, "Projektdateien", "costs", "costs.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(costsPath)!);
+        File.WriteAllText(costsPath, "{ kaputte kostendaten");
+
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings
+            {
+                EnableRestorePoints = false,
+                LastProjectPath = projectPath
+            },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        var output = Path.Combine(temp.Path, "darf-nicht-entstehen.pdf");
+        var dialogs = new DialogFake(output);
+        services.Dialogs = dialogs;
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.Project.Name = "Projekt mit kaputten Kosten";
+        shell.Project.Data.Add(Holding("H1"));
+        shell.MarkProjectReady();
+        shell.EnterWorkspaceOn("Uebersicht");
+        var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+
+        Assert.Equal("Kostendaten nicht lesbar", vm.DashboardCostText);
+        Assert.False(vm.PrintPreviewPdfCommand.CanExecute(null));
+        Assert.Empty(dialogs.SaveFileCalls);
+        Assert.False(File.Exists(output));
+    }
+
     private static HaltungRecord Holding(string name)
     {
         var record = new HaltungRecord();
@@ -70,6 +107,7 @@ public sealed class OverviewPreviewPdfCommandTests
     {
         public List<(string Title, string Filter, string? DefaultExt, string? DefaultFileName)> SaveFileCalls { get; } = new();
         public (string Message, string Title)? LastInfo { get; private set; }
+        public (string Message, string Title)? LastError { get; private set; }
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
 
@@ -83,7 +121,7 @@ public sealed class OverviewPreviewPdfCommandTests
         public string? SelectFolder(string title, string? initialPath = null) => null;
         public void Info(string message, string title = "Hinweis") => LastInfo = (message, title);
         public void Warn(string message, string title = "Warnung") { }
-        public void Error(string message, string title = "Fehler") => throw new InvalidOperationException(message);
+        public void Error(string message, string title = "Fehler") => LastError = (message, title);
         public bool Confirm(string message, string title = "Bestaetigung") => false;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.No;

@@ -5,6 +5,7 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;

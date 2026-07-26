@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -89,7 +90,9 @@ public sealed class CodingConfirmationPanelControlsTests
             Code = new TextBlock(),
             Confidence = new TextBlock(),
             Description = new TextBlock(),
-            Detail = new TextBlock()
+            Detail = new TextBlock(),
+            SaveErrorPanel = new StackPanel { Visibility = Visibility.Collapsed },
+            SaveErrorText = new TextBlock()
         };
 
         harness.Instance = Activator.CreateInstance(type, [
@@ -98,7 +101,9 @@ public sealed class CodingConfirmationPanelControlsTests
             harness.Code,
             harness.Confidence,
             harness.Description,
-            harness.Detail
+            harness.Detail,
+            harness.SaveErrorPanel,
+            harness.SaveErrorText
         ])!;
 
         return harness;
@@ -109,7 +114,7 @@ public sealed class CodingConfirmationPanelControlsTests
 
     private static Type? ControlsType
         => typeof(CodingConfirmationDisplayPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingConfirmationPanelControls");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingConfirmationPanelControls");
 
     private static MethodInfo? FindApplyMethod()
         => ControlsType?.GetMethod(
@@ -139,6 +144,8 @@ public sealed class CodingConfirmationPanelControlsTests
         public TextBlock Confidence { get; set; } = null!;
         public TextBlock Description { get; set; } = null!;
         public TextBlock Detail { get; set; } = null!;
+        public StackPanel SaveErrorPanel { get; set; } = null!;
+        public TextBlock SaveErrorText { get; set; } = null!;
     }
 
     private static void RunOnStaThread(Action action)

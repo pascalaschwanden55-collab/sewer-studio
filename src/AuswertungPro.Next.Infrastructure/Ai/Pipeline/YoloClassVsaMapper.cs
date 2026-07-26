@@ -42,6 +42,7 @@ public static class YoloClassVsaMapper
             ["BBC_ablagerung"] = "BBC",
             ["BBD_boden"] = "BBD",
             ["BBF_infiltration"] = "BBF",
+            ["BCC_bogen"] = "BCC",
             // "structural_other" bewusst NICHT gemappt → Default-Schwelle
             // "SONST_schaden" ebenfalls nicht: fachliche Aufloesung erforderlich.
         };

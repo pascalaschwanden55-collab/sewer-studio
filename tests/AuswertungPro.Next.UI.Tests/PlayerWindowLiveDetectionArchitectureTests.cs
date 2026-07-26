@@ -16,8 +16,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "VisionModelSelectionPolicy.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRuntimeFactory.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Live", "VisionModelSelectionPolicy.cs");
 
         Assert.True(File.Exists(factoryPath), "LiveDetection-Modellauswahl-Wiring soll in der Runtime-Factory liegen.");
         Assert.True(File.Exists(policyPath), "Live-KI-Modellauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -35,9 +35,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionResultWorkflow.cs");
-        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionResultWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRunCommandWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionConfirmationPolicy.cs");
 
         Assert.True(File.Exists(workflowPath), "LiveDetection-Ergebnisentscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll das Ergebnisworkflow aufrufen.");
@@ -60,11 +60,11 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
-        var dispatchWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerDispatchWorkflow.cs");
-        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
-        var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTickStartWorkflow.cs");
-        var inferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionInferenceWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionTimerPolicy.cs");
+        var dispatchWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionTimerDispatchWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRunCommandWorkflow.cs");
+        var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionTickStartWorkflow.cs");
+        var inferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionInferenceWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dispatchWorkflowPath), "LiveDetection-Timer-Dispatch muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -111,7 +111,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerLiveDetectionStopPlayback.cs");
         var stopControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionStopController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStopUiWorkflow.cs");
 
         Assert.True(File.Exists(helperPath), "LiveDetection-Stop-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(stopControllerPath), "LiveDetection-Stop soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -140,12 +140,12 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
         var pulseControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionPulseController.cs");
-        var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionErrorWorkflow.cs");
-        var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
-        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
-        var pulseWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionPulseWorkflow.cs");
+        var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionErrorWorkflow.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionSnapshotWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRunCommandWorkflow.cs");
+        var pulseWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionPulseWorkflow.cs");
         var pulseStatePath = Path.Combine(uiRoot, "Player", "LiveDetectionPulseStateController.cs");
-        var codingAiStateWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCodingAiStateWorkflow.cs");
+        var codingAiStateWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionCodingAiStateWorkflow.cs");
         var uiDispatchWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiDispatchWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
@@ -329,13 +329,13 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var controllerSetFactoryPath = Path.Combine(
             windowsRoot,
             "PlayerWindowLiveDetectionControllerSetFactory.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
-        var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionClickWorkflow.cs");
-        var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
-        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupDisplayWorkflow.cs");
-        var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
-        var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
-        var hideStatusTimerWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionHideStatusTimerWorkflow.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRuntimeFactory.cs");
+        var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionClickWorkflow.cs");
+        var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStartupWorkflow.cs");
+        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStartupDisplayWorkflow.cs");
+        var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionRuntimeStartWorkflow.cs");
+        var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStopUiWorkflow.cs");
+        var hideStatusTimerWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionHideStatusTimerWorkflow.cs");
         var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
@@ -488,9 +488,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var servicePath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogService.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogServiceFactory.cs");
-        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupDisplayWorkflow.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionDialogService.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionDialogServiceFactory.cs");
+        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStartupDisplayWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "LiveDetection-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");

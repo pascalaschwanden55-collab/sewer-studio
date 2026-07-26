@@ -1,6 +1,7 @@
 using System.Reflection;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -75,7 +76,7 @@ public sealed class CodingOsdMeterStateWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingOsdBadgeDisplayPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingOsdMeterStateWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingOsdMeterStateWorkflow");
 
     private static MethodInfo? FindFromReadResultMethod()
         => WorkflowType?.GetMethod(

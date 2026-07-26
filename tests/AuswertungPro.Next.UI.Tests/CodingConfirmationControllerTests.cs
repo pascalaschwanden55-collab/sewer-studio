@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -39,16 +40,16 @@ public sealed class CodingConfirmationControllerTests
     }
 
     [Fact]
-    public void Decision_methods_delegate_to_the_existing_decision_controller()
+    public async Task Decision_methods_delegate_to_the_existing_decision_controller()
     {
         var calls = new List<string>();
         var controller = new CodingConfirmationController(
             new CodingPendingConfirmationStateController(),
             Bindings(calls));
 
-        var accepted = controller.Accept();
+        var accepted = await controller.Accept();
         var edited = controller.Edit();
-        var rejected = controller.Reject();
+        var rejected = await controller.Reject();
 
         Assert.True(accepted.Applied);
         Assert.True(edited.Selected);
@@ -69,8 +70,8 @@ public sealed class CodingConfirmationControllerTests
             Accept: () =>
             {
                 calls.Add("accept");
-                return new CodingConfirmationDecisionCommandResult(
-                    CodingConfirmationDecisionCommandOutcome.Applied);
+                return Task.FromResult(new CodingConfirmationDecisionCommandResult(
+                    CodingConfirmationDecisionCommandOutcome.Applied));
             },
             Edit: () =>
             {
@@ -81,8 +82,14 @@ public sealed class CodingConfirmationControllerTests
             Reject: () =>
             {
                 calls.Add("reject");
-                return new CodingConfirmationDecisionCommandResult(
-                    CodingConfirmationDecisionCommandOutcome.Applied);
+                return Task.FromResult(new CodingConfirmationDecisionCommandResult(
+                    CodingConfirmationDecisionCommandOutcome.Applied));
+            },
+            RetrySave: () =>
+            {
+                calls.Add("retry");
+                return Task.FromResult(new CodingConfirmationDecisionCommandResult(
+                    CodingConfirmationDecisionCommandOutcome.Applied));
             });
 
     private static QualityGateResult Gate()

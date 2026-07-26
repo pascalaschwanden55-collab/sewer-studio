@@ -17,7 +17,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var cleanerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCanvasCleaner.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupController.cs");
         var surfacePath = Path.Combine(uiRoot, "Player", "IOverlaySurface.cs");
-        var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayLifecycleWorkflow.cs");
+        var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAiOverlayLifecycleWorkflow.cs");
         var autoHideTimerOwnerPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayAutoHideTimerOwner.cs");
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
@@ -86,7 +86,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
             "PlayerWindowLiveDetectionControllerSetFactory.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleanupController.cs");
-        var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayLifecycleWorkflow.cs");
+        var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAiOverlayLifecycleWorkflow.cs");
 
         Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Detection-Overlay-Cleanup soll ueber einen Player-Controller laufen.");

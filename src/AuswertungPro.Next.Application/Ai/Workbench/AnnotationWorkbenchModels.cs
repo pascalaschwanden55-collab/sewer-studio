@@ -13,14 +13,20 @@ public sealed record WorkbenchItem(
     double MeterEnd,
     string? HaltungName,              // wenn bekannt: schliesst die QuarantineOrigin-Luecke
     string? VideoPath,
-    int? PipeDiameterMm);
+    int? PipeDiameterMm,
+    string? ExistingSampleId = null,  // gesetzt, wenn ein unvollstaendiges Goldsample repariert wird
+    string? ExistingCode = null,
+    string? ExistingBeschreibung = null,
+    string? SuggestedMainCode = null); // unverbindlicher Ordnerhinweis aus dem Gold-Eingang
 
-/// <summary>Codevorschlag der KI zu einer gezogenen Box.</summary>
+/// <summary>Codevorschlag der KI zum aktuell geprueften Foto.</summary>
 public sealed record WorkbenchSuggestion(
     IReadOnlyList<WorkbenchCodeCandidate> Candidates,   // absteigend nach Confidence
     bool FrameUsable,                 // false = Quality-Gate des Sidecars (unscharf/dunkel)
     string QualityReason,
-    bool IsBend);                     // Bogen-Veto-Signal
+    bool IsBend,                      // Bogen-Veto-Signal
+    bool ModelAvailable = true,       // false = benoetigter KI-Dienst oder Modell nicht verfuegbar
+    string UnavailableReason = "");
 
 /// <summary>Ein einzelner Codekandidat mit Herkunft.</summary>
 /// <param name="Quelle">"cls" = YOLO-Klassifikator, "kb" = aehnlicher gepruefter KB-Fall.</param>

@@ -164,6 +164,13 @@ public sealed class DataPageSanierungViewModelFactoryTests
         public string? LastUserOverrideLoadError => null;
 
         public CostCatalog LoadMerged(string? projectPath) => new();
+
+        public CostCatalog LoadMerged(string? projectPath, out string? loadError)
+        {
+            loadError = null;
+            return new();
+        }
+
         public CostCatalog LoadDefault(string? projectPath) => new();
         public CostCatalog LoadUserOverrides() => new();
 

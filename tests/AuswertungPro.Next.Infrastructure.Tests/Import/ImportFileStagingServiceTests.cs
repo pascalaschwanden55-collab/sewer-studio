@@ -6,6 +6,24 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 public sealed class ImportFileStagingServiceTests
 {
     [Fact]
+    public void Begin_meldet_den_eigenen_Guid_Arbeitsordner_neben_der_Projektdatei()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+
+        using var session = Begin(projectPath);
+
+        Assert.Equal(
+            temp.StagingRoot,
+            System.IO.Path.GetDirectoryName(session.StagingRoot),
+            ignoreCase: true);
+        Assert.True(Guid.TryParseExact(
+            System.IO.Path.GetFileName(session.StagingRoot),
+            "N",
+            out _));
+    }
+
+    [Fact]
     public void StageCopy_bereitet_nur_vor_und_Accept_behaelt_die_veroeffentlichte_Datei()
     {
         using var temp = new TempDirectory();
@@ -28,6 +46,26 @@ public sealed class ImportFileStagingServiceTests
 
         Assert.Equal("inhalt", File.ReadAllText(target));
         Assert.False(Directory.Exists(temp.StagingRoot));
+    }
+
+    [Fact]
+    public void StageCopy_meldet_das_geplante_Rollback_Ziel_bereits_vor_Publish()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/protokoll.pdf", "inhalt");
+        var targetDirectory = Path.Combine(temp.ProjectRoot, "Imports", "PDF");
+
+        using var session = Begin(projectPath);
+        var target = session.StageCopy(source, targetDirectory);
+
+        var prepared = Assert.Single(session.PreparedFiles);
+        Assert.Equal(
+            Path.GetRelativePath(temp.ProjectRoot, target),
+            prepared.RelativePath,
+            ignoreCase: true);
+        Assert.NotEmpty(prepared.Sha256);
+        Assert.Empty(session.PublishedFiles);
     }
 
     [Fact]

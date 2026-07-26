@@ -27,7 +27,12 @@ public enum TrainingYoloExportProgressStage
     Completing,
     Completed,
     Planned,
-    NoImages
+    NoImages,
+    /// <summary>
+    /// Hinweisstufe: Das Pilot-Freigaberegister ist aktiv und vollstaendige
+    /// Goldsamples ohne Registereintrag wurden nicht exportiert.
+    /// </summary>
+    RegistryGateNotice
 }
 
 /// <summary>
@@ -48,12 +53,16 @@ public enum TrainingYoloExportResultStatus
 
 /// <summary>
 /// Gesamtergebnis eines Exportbefehls. Bei einem leeren Plan bleibt Execution null.
+/// RegistryGateSkippedSampleIds listet vollstaendige Goldsamples, die nur deshalb
+/// nicht exportiert wurden, weil sie im aktiven Freigaberegister fehlen. Null,
+/// wenn das Register leer ist (dann gilt kein Gate) oder nichts zurueckblieb.
 /// </summary>
 public sealed record TrainingYoloExportResult(
     TrainingYoloExportResultStatus Status,
     TrainingExportPlan Plan,
     TrainingExportExecutionOutcome? Execution,
-    TrainingExportCompletionResult Completion);
+    TrainingExportCompletionResult Completion,
+    IReadOnlyList<string>? RegistryGateSkippedSampleIds = null);
 
 /// <summary>
 /// Steuert Auswahl, Live-Inventar, Plan, Ausfuehrung und Abschlussmarkierung.

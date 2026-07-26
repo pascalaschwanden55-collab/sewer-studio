@@ -38,8 +38,14 @@ public static class CodingEventToSampleMapper
             ? MapDecision(decision.Value)
             : TrainingSampleStatus.New;
         var isAiSuggestion = ev.AiContext is not null;
+        var isPersonalAcceptance =
+            (decision is CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit)
+            && !string.IsNullOrWhiteSpace(confirmedByUser)
+            && confirmedAtUtc.HasValue;
 
-        var sourceType = ev.Entry.Source switch
+        var sourceType = isPersonalAcceptance
+            ? SourceTypeNames.ManualCoding
+            : ev.Entry.Source switch
         {
             ProtocolEntrySource.Manual => SourceTypeNames.ManualCoding,
             ProtocolEntrySource.Imported => SourceTypeNames.ImportedProtocol,
@@ -52,12 +58,15 @@ public static class CodingEventToSampleMapper
         var meterEnd = Math.Round(ev.Entry.MeterEnd ?? ev.MeterAtCapture, 1);
         var eligibility = TrainingSampleEligibility.Evaluate(inspectionDate);
 
-        return new TrainingSample
+        var sample = new TrainingSample
         {
             SampleId = ev.EventId.ToString("N")[..12],
             CaseId = caseId,
             Code = ev.Entry.Code,
-            Beschreibung = ev.Entry.Beschreibung,
+            Beschreibung = BuildKnowledgeDescription(
+                ev.Entry.Code,
+                ev.Entry.Beschreibung,
+                isPersonalAcceptance),
             MeterStart = meterStart,
             MeterEnd = meterEnd,
             IsStreckenschaden = ev.Entry.IsStreckenschaden,
@@ -67,9 +76,13 @@ public static class CodingEventToSampleMapper
             Status = status,
             SourceType = sourceType,
             KiCode = isAiSuggestion ? ev.AiContext!.SuggestedCode : null,
-            MatchLevel = isAiSuggestion
-                ? DetermineMatchLevel(ev.AiContext!)
-                : null,
+            MatchLevel = isPersonalAcceptance
+                ? decision == CodingUserDecision.AcceptedWithEdit
+                    ? MatchLevelNames.ReviewCorrected
+                    : MatchLevelNames.ReviewApproved
+                : isAiSuggestion
+                    ? DetermineMatchLevel(ev.AiContext!)
+                    : null,
             Notes = ev.AiContext?.Reason ?? ev.ReviewContext?.Reason ?? string.Empty,
             InspectionDate = inspectionDate,
             TrainingEligible = eligibility.IsEligible,
@@ -86,17 +99,68 @@ public static class CodingEventToSampleMapper
                 CodingUserDecision.Rejected => false,
                 _ => (bool?)null
             },
-            Corrected = isAiSuggestion ? ev.AiContext!.Decision switch
+            Corrected = decision switch
             {
                 CodingUserDecision.AcceptedWithEdit => true,
                 CodingUserDecision.Accepted or CodingUserDecision.Rejected => false,
                 _ => (bool?)null
-            } : null,
+            },
             ConfirmedByUser = confirmedByUser,
             ConfirmedAtUtc = confirmedAtUtc,
             QualityGateLevel = ev.AiContext?.QualityGateLevel,
             CentralDecision = AiDecisionAuditCloner.Clone(ev.AiContext?.CentralDecision)
         };
+
+        // Strenge Formatpruefung VOR Uebernahme: eine formal defekte SAM-Maske (defekte
+        // Tokens, falsche Laufsumme, Leermaske) wird NICHT gespeichert. Das Sample bleibt
+        // sichtbar unvollstaendig und landet zur Nachruestung in 'Unvollstaendige
+        // Goldframes' — gewollt, statt eine faule Maske in KB/Training zu tragen.
+        if (SamMaskFormatValidator.IsValid(
+                ev.AiContext?.SamMaskRle,
+                ev.AiContext?.SamMaskImageWidth,
+                ev.AiContext?.SamMaskImageHeight,
+                out _))
+        {
+            sample.SamMaskRle = ev.AiContext!.SamMaskRle;
+            sample.SamMaskImageWidth = ev.AiContext!.SamMaskImageWidth;
+            sample.SamMaskImageHeight = ev.AiContext!.SamMaskImageHeight;
+            sample.SamMaskConfidence = ev.AiContext?.Evidence?.SamMaskStability;
+            sample.SamMaskLabel = ev.Entry.Code;
+        }
+
+        // Mehrfachobjekt: sobald alle vier BBox-Felder vorhanden sind, gehoert die Box zur
+        // Objekt-Identitaet (Signatur mit b:-Teil) — zwei Befunde mit gleichem Code/Meter,
+        // aber verschiedenen Boxen sind verschiedene Objekte. Ohne Box bleibt das oben
+        // gesetzte 4-Teiler-Format (Legacy-kompatibel).
+        if (sample.HasBbox)
+        {
+            sample.Signature = TrainingSample.BuildCanonicalSignature(
+                caseId,
+                ev.Entry.Code,
+                meterStart,
+                meterEnd,
+                sample.BboxXCenter,
+                sample.BboxYCenter,
+                sample.BboxWidth,
+                sample.BboxHeight);
+        }
+
+        return sample;
+    }
+
+    private static string BuildKnowledgeDescription(
+        string? code,
+        string? description,
+        bool isPersonalAcceptance)
+    {
+        var text = description?.Trim() ?? string.Empty;
+        if (!isPersonalAcceptance || text.Length >= 10)
+            return text;
+
+        var normalizedCode = code?.Trim() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(text)
+            ? $"{normalizedCode} - {text}"
+            : $"{normalizedCode} - persoenlich bestaetigt";
     }
 
     private static double? ExtractBboxField(OverlayGeometry? overlay, bool bboxCenter, bool isX)

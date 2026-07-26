@@ -65,7 +65,7 @@ public sealed class VideoAnalysisPipelineWindowLiveFrameOverlayArchitectureTests
     [Fact]
     public void Player_Ringfallback_verwendet_gemeinsamen_Ring_ohne_BBox_Logik_zu_verlieren()
     {
-        var renderer = ReadUi("Ai", "LiveDetectionOverlayRenderer.cs");
+        var renderer = ReadUi("Ai", "Live", "LiveDetectionOverlayRenderer.cs");
 
         Assert.Contains("LiveFrameRingOverlayRenderer.Draw(", renderer);
         Assert.Contains("LiveFrameRingOverlayRenderer.DrawFinding(", renderer);

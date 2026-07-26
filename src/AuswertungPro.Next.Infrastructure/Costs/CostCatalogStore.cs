@@ -16,6 +16,7 @@ public sealed record CostCatalogNpkDuplicateWarning(
 public sealed class CostCatalogStore : ICostCatalogStore
 {
     private readonly string? _userOverridePath;
+    private string? _lastMergedLoadError;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -30,10 +31,31 @@ public sealed class CostCatalogStore : ICostCatalogStore
     public string? LastUserOverrideLoadError { get; private set; }
 
     public CostCatalog LoadMerged(string? projectPath)
+        => LoadMerged(projectPath, out _);
+
+    /// <summary>
+    /// Wie LoadMerged, meldet aber beschaedigte/unlesbare Katalogdateien ueber loadError
+    /// (fehlende Dateien sind kein Fehler). Bisher ging ein defekter Default-Katalog still
+    /// in einen leeren Katalog ueber — Berichte wirkten vollstaendig, hatten aber keine
+    /// Katalogpreise/NPK-Zuordnung mehr. Gleiches Muster wie IProjectCostStoreRepository.Load.
+    /// </summary>
+    public CostCatalog LoadMerged(string? projectPath, out string? loadError)
     {
-        var defaults = LoadDefault(projectPath);
+        var defaults = ReadCatalog(ResolvePath(projectPath, "cost_catalog.json"), out var defaultError);
         var overrides = LoadUserOverrides();
+        loadError = CombineLoadErrors(defaultError, LastUserOverrideLoadError);
+        _lastMergedLoadError = loadError;
         return Merge(defaults, overrides);
+    }
+
+    private static string? CombineLoadErrors(string? defaultError, string? userOverrideError)
+    {
+        var userText = string.IsNullOrWhiteSpace(userOverrideError)
+            ? null
+            : $"Benutzer-Katalog (Overrides): {userOverrideError}";
+        if (string.IsNullOrWhiteSpace(defaultError))
+            return userText;
+        return userText is null ? defaultError : $"{defaultError}\n{userText}";
     }
 
     public CostCatalog LoadDefault(string? projectPath)
@@ -52,6 +74,18 @@ public sealed class CostCatalogStore : ICostCatalogStore
     public bool SaveUserOverrides(CostCatalog catalog, out string error)
     {
         error = "";
+        if (catalog is null)
+        {
+            error = "Kostenkatalog fehlt; Speichern ist gesperrt.";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_lastMergedLoadError))
+        {
+            error = $"Katalogdatei konnte nicht geladen werden; Speichern ist gesperrt: {_lastMergedLoadError}";
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(LastUserOverrideLoadError))
         {
             error = $"User-Override konnte nicht geladen werden; Speichern ist gesperrt: {LastUserOverrideLoadError}";
@@ -60,7 +94,15 @@ public sealed class CostCatalogStore : ICostCatalogStore
 
         try
         {
+            ValidateCatalogStructure(catalog);
             var path = ResolveUserOverridePath();
+            _ = ReadCatalog(path, out var existingLoadError, rememberUserOverrideError: true);
+            if (!string.IsNullOrWhiteSpace(existingLoadError))
+            {
+                error = $"Vorhandener User-Override konnte nicht geladen werden; Speichern ist gesperrt: {existingLoadError}";
+                return false;
+            }
+
             var dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrWhiteSpace(dir))
                 Directory.CreateDirectory(dir);
@@ -86,7 +128,32 @@ public sealed class CostCatalogStore : ICostCatalogStore
     /// </summary>
     public bool SaveUserOverrides(CostCatalog catalog, string? projectPath, out string error)
     {
-        var toSave = BuildUserOverridesForSave(catalog, LoadDefault(projectPath));
+        if (catalog is null)
+        {
+            error = "Kostenkatalog fehlt; Speichern ist gesperrt.";
+            return false;
+        }
+
+        try
+        {
+            ValidateCatalogStructure(catalog);
+        }
+        catch (Exception ex)
+        {
+            error = $"Kostenkatalog ist ungueltig; Speichern ist gesperrt: {ex.Message}";
+            return false;
+        }
+
+        var defaults = ReadCatalog(
+            ResolvePath(projectPath, "cost_catalog.json"),
+            out var defaultLoadError);
+        if (!string.IsNullOrWhiteSpace(defaultLoadError))
+        {
+            error = $"Speichern ist gesperrt, weil der Default-Katalog nicht sauber geladen werden konnte: {defaultLoadError}";
+            return false;
+        }
+
+        var toSave = BuildUserOverridesForSave(catalog, defaults);
         return SaveUserOverrides(toSave, out error);
     }
 
@@ -130,8 +197,23 @@ public sealed class CostCatalogStore : ICostCatalogStore
         try
         {
             var path = ResolveUserOverridePath();
-            if (File.Exists(path))
+            var probe = CostStoreFileProbe.Probe(path);
+            if (probe.State == CostStorePathState.Invalid)
+            {
+                error = probe.Error ?? "User-Override ist nicht sicher zugreifbar.";
+                return false;
+            }
+
+            if (probe.State == CostStorePathState.File)
                 File.Delete(path);
+
+            if (CostStoreFileProbe.Probe(path).State != CostStorePathState.Missing)
+            {
+                error = "User-Override konnte nicht sicher entfernt werden.";
+                return false;
+            }
+
+            LastUserOverrideLoadError = null;
             return true;
         }
         catch (Exception ex)
@@ -200,7 +282,7 @@ public sealed class CostCatalogStore : ICostCatalogStore
             if (!string.IsNullOrWhiteSpace(dir))
             {
                 var projectPathCandidate = Path.Combine(dir, "Config", fileName);
-                if (File.Exists(projectPathCandidate))
+                if (CostStoreFileProbe.ShouldUseProjectCandidate(projectPathCandidate))
                     return projectPathCandidate;
             }
         }
@@ -242,18 +324,27 @@ public sealed class CostCatalogStore : ICostCatalogStore
     }
 
     private CostCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)
+        => ReadCatalog(path, out _, rememberUserOverrideError);
+
+    private CostCatalog ReadCatalog(string path, out string? loadError, bool rememberUserOverrideError = false)
     {
         try
         {
-            if (!File.Exists(path))
+            loadError = null;
+            var probe = CostStoreFileProbe.Probe(path);
+            if (probe.State == CostStorePathState.Missing)
                 return new CostCatalog();
+            if (probe.State != CostStorePathState.File)
+                throw new IOException(probe.Error ?? "Katalogdatei ist nicht sicher lesbar.");
 
             var json = File.ReadAllText(path);
-            var model = JsonSerializer.Deserialize<CostCatalog>(json, JsonOptions) ?? new CostCatalog();
+            var model = JsonSerializer.Deserialize<CostCatalog>(json, JsonOptions)
+                        ?? throw new JsonException("Der Kostenkatalog darf nicht null sein.");
             return Normalize(model);
         }
         catch (Exception ex)
         {
+            loadError = $"{Path.GetFileName(path)} ist beschaedigt oder nicht lesbar: {ex.Message}";
             if (rememberUserOverrideError)
                 LastUserOverrideLoadError = ex.Message;
             return new CostCatalog();
@@ -262,6 +353,7 @@ public sealed class CostCatalogStore : ICostCatalogStore
 
     private static CostCatalog Normalize(CostCatalog model)
     {
+        ValidateCatalogStructure(model);
         var normalized = new CostCatalog
         {
             Version = model.Version > 0 ? model.Version : 1,
@@ -270,10 +362,8 @@ public sealed class CostCatalogStore : ICostCatalogStore
             Items = new List<CostCatalogItem>()
         };
 
-        foreach (var item in model.Items ?? new List<CostCatalogItem>())
+        foreach (var item in model.Items)
         {
-            item.DnPrices ??= new List<DnPrice>();
-            item.Aliases ??= new List<string>();
             item.Key ??= "";
             item.Name ??= "";
             item.Unit ??= "";
@@ -285,6 +375,30 @@ public sealed class CostCatalogStore : ICostCatalogStore
         }
 
         return normalized;
+    }
+
+    private static void ValidateCatalogStructure(CostCatalog model)
+    {
+        if (model.Items is null)
+            throw new InvalidDataException("Das Feld 'items' darf nicht null sein.");
+
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < model.Items.Count; index++)
+        {
+            var item = model.Items[index]
+                       ?? throw new InvalidDataException($"Kostenposition {index + 1} darf nicht null sein.");
+            var key = NormalizeKey(item.Key, item.Name);
+            if (string.IsNullOrWhiteSpace(key))
+                throw new InvalidDataException($"Kostenposition {index + 1} hat weder Schluessel noch Name.");
+            if (!keys.Add(key))
+                throw new InvalidDataException($"Der normalisierte Kosten-Schluessel '{key}' ist doppelt.");
+            if (item.DnPrices is null)
+                throw new InvalidDataException($"DN-Preise der Kostenposition '{key}' duerfen nicht null sein.");
+            if (item.DnPrices.Any(price => price is null))
+                throw new InvalidDataException($"DN-Preise der Kostenposition '{key}' enthalten einen leeren Eintrag.");
+            if (item.Aliases is null)
+                throw new InvalidDataException($"Aliase der Kostenposition '{key}' duerfen nicht null sein.");
+        }
     }
 
     private static CostCatalog Merge(CostCatalog defaults, CostCatalog overrides)

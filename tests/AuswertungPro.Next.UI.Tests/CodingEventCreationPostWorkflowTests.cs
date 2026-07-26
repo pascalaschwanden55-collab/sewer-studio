@@ -2,6 +2,7 @@ using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -115,15 +116,15 @@ public sealed class CodingEventCreationPostWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingManualEventAppender).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingEventCreationPostWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingEventCreationPostWorkflow");
 
     private static Type? ActionsType
         => typeof(CodingManualEventAppender).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingEventCreationPostActions");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingEventCreationPostActions");
 
     private static Type? OptionsType
         => typeof(CodingManualEventAppender).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingEventCreationPostOptions");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingEventCreationPostOptions");
 
     private static MethodInfo? FindApplyMethod()
         => WorkflowType?.GetMethod("Apply", BindingFlags.Public | BindingFlags.Static);

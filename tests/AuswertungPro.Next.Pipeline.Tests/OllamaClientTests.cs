@@ -37,14 +37,14 @@ public sealed class OllamaClientTests
     }
 
     [Fact]
-    public void Constructor_SharedClientThatAlreadySent_DoesNotThrow()
+    public async Task Constructor_SharedClientThatAlreadySent_DoesNotThrow()
     {
         // Bildet den Videoanalyse-Pfad nach: ein geteilter HttpClient hat vor dem Ollama-Aufruf
         // bereits eine Anfrage gesendet (Sidecar-Health-Check). Vor dem Fix warf hier das
         // BaseAddress-Setzen im Konstruktor InvalidOperationException und die Batch-Analyse brach ab.
         var handler = new CaptureOllamaHandler("{\"ok\":true}");
         using var http = new HttpClient(handler);
-        using (http.GetAsync("http://127.0.0.1:8000/health").GetAwaiter().GetResult()) { }
+        using (await http.GetAsync("http://127.0.0.1:8000/health")) { }
 
         var ex = Record.Exception(() => new OllamaClient(new Uri("http://localhost:11434"), http));
 
@@ -57,7 +57,7 @@ public sealed class OllamaClientTests
         var handler = new CaptureOllamaHandler("antwort");
         using var http = new HttpClient(handler);
         // Client zuerst als "gestartet" markieren (wie der vorausgehende Sidecar-Health-Check).
-        using (http.GetAsync("http://127.0.0.1:8000/health").GetAwaiter().GetResult()) { }
+        using (await http.GetAsync("http://127.0.0.1:8000/health")) { }
         using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
 
         await client.ChatAsync(

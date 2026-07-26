@@ -1,0 +1,51 @@
+namespace AuswertungPro.Next.UI.Ai.Coding;
+
+public enum CodingMoveByCommandOutcome
+{
+    Skipped,
+    Moved,
+    Failed
+}
+
+public sealed record CodingMoveByCommandRequest(
+    bool HasCodingViewModel,
+    string TraceName);
+
+public sealed record CodingMoveByCommandActions(
+    Func<bool> PrepareMoveByCommand,
+    Func<Task<double?>> ReadOsdMeterAsync,
+    Action<string> TraceError);
+
+public sealed record CodingMoveByCommandResult(
+    CodingMoveByCommandOutcome Outcome);
+
+public static class CodingMoveByCommandWorkflow
+{
+    public static async Task<CodingMoveByCommandResult> ExecuteAsync(
+        CodingMoveByCommandRequest request,
+        CodingMoveByCommandActions actions)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(actions);
+
+        if (!request.HasCodingViewModel)
+            return Result(CodingMoveByCommandOutcome.Skipped);
+
+        try
+        {
+            if (!actions.PrepareMoveByCommand())
+                return Result(CodingMoveByCommandOutcome.Skipped);
+
+            await actions.ReadOsdMeterAsync();
+            return Result(CodingMoveByCommandOutcome.Moved);
+        }
+        catch (Exception ex)
+        {
+            actions.TraceError($"[PlayerWindow] {request.TraceName} error: {ex.Message}");
+            return Result(CodingMoveByCommandOutcome.Failed);
+        }
+    }
+
+    private static CodingMoveByCommandResult Result(CodingMoveByCommandOutcome outcome)
+        => new(outcome);
+}

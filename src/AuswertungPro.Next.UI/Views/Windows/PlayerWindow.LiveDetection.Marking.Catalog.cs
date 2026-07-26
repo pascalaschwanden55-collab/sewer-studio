@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

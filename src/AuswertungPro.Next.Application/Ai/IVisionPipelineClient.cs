@@ -12,6 +12,11 @@ public interface IVisionPipelineClient
     Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default);
     Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default);
     Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default);
+    Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+        YoloRequest request,
+        CancellationToken ct = default)
+        => Task.FromException<BccTestYoloResponse>(
+            new NotSupportedException("Dieser Vision-Client unterstützt den getrennten BCC-Modelltest nicht."));
     Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default);
     Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default);
     Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default);

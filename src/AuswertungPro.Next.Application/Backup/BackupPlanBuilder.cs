@@ -13,7 +13,8 @@ public sealed record BackupSource(
     string SourceRoot,
     string TargetRelativeRoot,
     Func<string, bool>? IsDirExcluded = null,
-    Func<string, bool>? IsFileExcluded = null);
+    Func<string, bool>? IsFileExcluded = null,
+    bool Required = true);
 
 /// <summary>Eine einzelne Datei: Quellpfad → Ziel-Relativpfad (z. B. Desktop-Skripte).</summary>
 public sealed record BackupSingleFile(string SourcePath, string TargetRelativePath);
@@ -71,12 +72,15 @@ public static class BackupPlanBuilder
                 {
                     new BackupSource(sources.LocalSewerStudioDir,
                         Path.Combine("Einstellungen", "Local_SewerStudio"),
-                        BackupExclusionRules.IsLocalSewerStudioDirExcluded),
+                        BackupExclusionRules.IsLocalSewerStudioDirExcluded,
+                        Required: false),
                     new BackupSource(sources.RoamingSewerStudioDir,
-                        Path.Combine("Einstellungen", "Roaming_SewerStudio")),
+                        Path.Combine("Einstellungen", "Roaming_SewerStudio"),
+                        Required: false),
                     new BackupSource(sources.RoamingAuswertungProDir,
                         Path.Combine("Einstellungen", "Roaming_AuswertungPro"),
-                        BackupExclusionRules.IsRoamingAuswertungProDirExcluded),
+                        BackupExclusionRules.IsRoamingAuswertungProDirExcluded,
+                        Required: false),
                 }),
 
             new(
@@ -85,9 +89,11 @@ public static class BackupPlanBuilder
                 new[]
                 {
                     new BackupSource(Path.Combine(sources.LocalSewerStudioDir, "logs"),
-                        Path.Combine("Logs", "logs")),
+                        Path.Combine("Logs", "logs"),
+                        Required: false),
                     new BackupSource(Path.Combine(sources.LocalSewerStudioDir, "Telemetry"),
-                        Path.Combine("Logs", "Telemetry")),
+                        Path.Combine("Logs", "Telemetry"),
+                        Required: false),
                 }),
 
             new(

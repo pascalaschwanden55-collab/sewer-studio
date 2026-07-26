@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -131,7 +132,7 @@ public sealed class CodingConfirmationDecisionWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingEventDecisionPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingConfirmationDecisionWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingConfirmationDecisionWorkflow");
 
     private static MethodInfo? FindAcceptMethod()
         => WorkflowType?.GetMethod(

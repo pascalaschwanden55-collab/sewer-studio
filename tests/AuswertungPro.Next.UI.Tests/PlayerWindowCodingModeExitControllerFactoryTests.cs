@@ -9,6 +9,8 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;

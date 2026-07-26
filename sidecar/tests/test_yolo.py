@@ -10,11 +10,13 @@ from fastapi.testclient import TestClient
 
 def _custom_yolo_weights_present() -> bool:
     """True, wenn echte Sewer-Gewichte lokal liegen. Reiner Pfad-Check, KEIN Modell-Load."""
+    # Nur der Modul-Import darf fehlschlagen (Sidecar nicht importierbar -> hermetisch skippen).
+    # Fehler IN get_runtime_status werden bewusst NICHT geschluckt, sonst skipt der Test still.
     try:
-        from sidecar.models.yolo_wrapper import get_yolo_info
-        return bool(get_yolo_info().get("custom_weights_present"))
-    except Exception:
+        from sidecar.models.yolo_wrapper import get_runtime_status
+    except ImportError:
         return False
+    return bool(get_runtime_status().get("custom_weights_present"))
 
 
 # /detect/yolo laedt bei fehlenden Eigengewichten (require_custom_yolo=False) yolo11m.pt

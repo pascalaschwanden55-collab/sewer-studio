@@ -105,6 +105,19 @@ public sealed class TrainingPreviewFrameExtractorTests
             SampleId = sampleId;
             return Task.FromResult<string?>(result);
         }
+
+        public Task<string?> StoreExistingAsync(
+            string sourcePath,
+            string? framesDir = null,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<string?> StoreBytesAsync(
+            byte[] imageBytes,
+            string extension,
+            string? framesDir = null,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class ThrowingTrainingFrameStore : ITrainingFrameStore
@@ -116,6 +129,19 @@ public sealed class TrainingPreviewFrameExtractorTests
             string videoPath,
             double timeSeconds,
             string sampleId,
+            string? framesDir = null,
+            CancellationToken ct = default) =>
+            throw new IOException("Testfehler");
+
+        public Task<string?> StoreExistingAsync(
+            string sourcePath,
+            string? framesDir = null,
+            CancellationToken ct = default) =>
+            throw new IOException("Testfehler");
+
+        public Task<string?> StoreBytesAsync(
+            byte[] imageBytes,
+            string extension,
             string? framesDir = null,
             CancellationToken ct = default) =>
             throw new IOException("Testfehler");

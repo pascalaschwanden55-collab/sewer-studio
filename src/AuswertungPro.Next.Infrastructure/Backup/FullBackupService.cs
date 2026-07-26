@@ -126,6 +126,7 @@ public sealed class FullBackupService : IFullBackupService
             var markerError = _targetMarkerGuard.ValidateAndCreateMarker(backupRoot);
             if (markerError is not null)
                 return Failure(markerError, backupRoot, started.Elapsed);
+            BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
 
             _walCheckpoint?.Invoke();
 
@@ -189,15 +190,30 @@ public sealed class FullBackupService : IFullBackupService
                 }
             }
 
+            ThrowIfMirrorErrors(
+                stats,
+                "Die Vollsicherung konnte nicht alle Quellen sicher lesen. " +
+                "Der bisherige Spiegelstand wurde nicht bereinigt.");
+
             progressState.Report(progress, "Extras", "umgebung.txt", force: true);
             await WriteGeneratedExtrasAsync(backupRoot, sources, ct).ConfigureAwait(false);
 
             ct.ThrowIfCancellationRequested();
+            EnsureTargetStillTrusted(backupRoot);
             mirror.RemoveOrphans(backupRoot, expectedTargets, stats);
+            ThrowIfMirrorErrors(
+                stats,
+                "Die Vollsicherung konnte den Zielstand nicht vollstaendig bereinigen.");
+
+            EnsureTargetStillTrusted(backupRoot);
             var versionStaende = RotateVersionStaende(backupRoot, stats);
+            ThrowIfMirrorErrors(
+                stats,
+                "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
 
             var skipped = stats.Errors.Take(200).ToArray();
             var hashProgressThrottle = Stopwatch.StartNew();
+            BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
             var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(
                     backupRoot,
                     file =>
@@ -221,8 +237,11 @@ public sealed class FullBackupService : IFullBackupService
                 sources, plan, sizeReport, stats, skipped, versionStaende,
                 requiredFreeBytes, confirmedAvailableBytes, manifestFiles);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
+            var manifestPath = BackupTargetPathGuard.ResolveRelativePath(
+                backupRoot,
+                "manifest.json");
             await AtomicTextFileWriter.WriteAllTextAsync(
-                Path.Combine(backupRoot, "manifest.json"),
+                manifestPath,
                 manifestJson,
                 ct).ConfigureAwait(false);
 
@@ -251,6 +270,25 @@ public sealed class FullBackupService : IFullBackupService
         {
             return Failure(ex.Message, backupRoot, started.Elapsed);
         }
+    }
+
+    private void EnsureTargetStillTrusted(string backupRoot)
+    {
+        var markerError = _targetMarkerGuard.ValidateAndCreateMarker(backupRoot);
+        if (!string.IsNullOrWhiteSpace(markerError))
+            throw new InvalidDataException(markerError);
+
+        BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
+    }
+
+    private static void ThrowIfMirrorErrors(
+        DirectoryMirror.MirrorStats stats,
+        string message)
+    {
+        if (stats.Errors.Count == 0)
+            return;
+
+        throw new IOException($"{message} Fehler: {stats.Errors[0]}");
     }
 
     private FullBackupSizeReport Analyze(
@@ -372,18 +410,28 @@ public sealed class FullBackupService : IFullBackupService
 
     private async Task WriteGeneratedExtrasAsync(string backupRoot, FullBackupSources sources, CancellationToken ct)
     {
-        var extrasDir = Path.Combine(backupRoot, "Extras");
+        var extrasDir = BackupTargetPathGuard.ResolveRelativePath(backupRoot, "Extras");
         Directory.CreateDirectory(extrasDir);
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, extrasDir);
 
+        var restorePath = BackupTargetPathGuard.ResolveRelativePath(
+            backupRoot,
+            Path.Combine("Extras", "RESTORE-ANLEITUNG.txt"));
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, restorePath);
         await File.WriteAllTextAsync(
-            Path.Combine(extrasDir, "RESTORE-ANLEITUNG.txt"),
+            restorePath,
             RestoreAnleitungText.Build(sources),
             Encoding.UTF8,
             ct).ConfigureAwait(false);
 
+        var environmentText = await BuildUmgebungTextAsync(sources, ct).ConfigureAwait(false);
+        var environmentPath = BackupTargetPathGuard.ResolveRelativePath(
+            backupRoot,
+            Path.Combine("Extras", "umgebung.txt"));
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, environmentPath);
         await File.WriteAllTextAsync(
-            Path.Combine(extrasDir, "umgebung.txt"),
-            await BuildUmgebungTextAsync(sources, ct).ConfigureAwait(false),
+            environmentPath,
+            environmentText,
             Encoding.UTF8,
             ct).ConfigureAwait(false);
     }
@@ -484,9 +532,12 @@ public sealed class FullBackupService : IFullBackupService
     /// </summary>
     private static int RotateVersionStaende(string backupRoot, DirectoryMirror.MirrorStats stats)
     {
-        var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
+        var versionsRoot = BackupTargetPathGuard.ResolveRelativePath(
+            backupRoot,
+            BackupVersionRetention.VersionsFolderName);
         if (!Directory.Exists(versionsRoot))
             return 0;
+        BackupTargetPathGuard.EnsureTreeIsSafe(versionsRoot);
 
         var namen = Directory.EnumerateDirectories(versionsRoot)
             .Select(Path.GetFileName)
@@ -502,6 +553,9 @@ public sealed class FullBackupService : IFullBackupService
 
             try
             {
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, standDir);
+                BackupTargetPathGuard.EnsureTreeIsSafe(standDir);
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, standDir);
                 Directory.Delete(standDir, recursive: true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

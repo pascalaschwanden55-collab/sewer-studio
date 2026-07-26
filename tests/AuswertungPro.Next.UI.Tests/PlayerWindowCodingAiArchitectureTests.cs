@@ -12,11 +12,11 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var monitoringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPipelineHealthController.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeFactory.cs");
-        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiInitializationWorkflow.cs");
-        var creationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeCreationWorkflow.cs");
-        var healthMonitorCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
-        var multiModelEnsureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiMultiModelEnsureWorkflow.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiRuntimeFactory.cs");
+        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiInitializationWorkflow.cs");
+        var creationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiRuntimeCreationWorkflow.cs");
+        var healthMonitorCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiHealthMonitorCreationWorkflow.cs");
+        var multiModelEnsureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAiMultiModelEnsureWorkflow.cs");
         var settingsLoaderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
@@ -59,8 +59,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerController.cs");
-        var displayPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
-        var settingsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerSettings.cs");
+        var displayPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiButtonDisplayPolicy.cs");
+        var settingsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTimerSettings.cs");
 
         Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Nutzung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -92,8 +92,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var ownerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerControllerOwner.cs");
         var timerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerWindowTimerController.cs");
         var timerStopperPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerWindowTimerStopper.cs");
-        var exitTeardownWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitTeardownWorkflow.cs");
-        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
+        var exitTeardownWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeExitTeardownWorkflow.cs");
+        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiToggleWorkflow.cs");
 
         Assert.True(File.Exists(codingExitPath), "Coding-Exit-Verdrahtung soll in einer lokalen Factory liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
@@ -146,8 +146,8 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     public void PlayerWindow_live_ai_timer_gate_uses_policy()
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTickPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerTickWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTickPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Live-AI-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Live-AI-Timer-Gate-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -168,9 +168,9 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     {
         var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
         var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
-        var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationResumeWorkflow.cs");
-        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+        var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationResumeWorkflow.cs");
+        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiToggleWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiButtonDisplayPolicy.cs");
         var confirmationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
 
         Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -198,7 +198,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
-        var tickWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerTickWorkflow.cs");
+        var tickWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(livePath), "Coding-Live-AI-Button- und Timer-Wiring soll in ein eigenes Partial.");
         Assert.True(File.Exists(tickWorkflowPath), "Coding-Live-AI-Tick-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -230,10 +230,10 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var playbackLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var wiringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Wiring.cs");
         var statusControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "LiveDetectionStatusControls.cs");
-        var analyzeButtonControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalyzeButtonControls.cs");
+        var analyzeButtonControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalyzeButtonControls.cs");
         var codingAiControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingAiController.cs");
-        var healthChangeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthChangeWorkflow.cs");
-        var healthApplyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthApplyWorkflow.cs");
+        var healthChangeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPipelineHealthChangeWorkflow.cs");
+        var healthApplyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPipelineHealthApplyWorkflow.cs");
 
         Assert.False(File.Exists(healthPath), "Pipeline-Health-Initialisierung soll kein PlayerWindow-Partial mehr sein.");
         Assert.False(File.Exists(monitoringPath), "Pipeline-Health-Ueberwachung soll kein PlayerWindow-Partial mehr sein.");
@@ -306,17 +306,17 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
         var helpersPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
-        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalysisContext.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var preflightWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisPreflightWorkflow.cs");
-        var singleModelWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSingleModelAnalysisWorkflow.cs");
-        var multiModelCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
-        var multiModelRuntimeGateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelRuntimeGateWorkflow.cs");
-        var multiModelStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
-        var multiModelInferenceWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelInferenceWorkflow.cs");
-        var endMeterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEndMeterResolveWorkflow.cs");
-        var segmentedFindingsWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
+        var preflightWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalysisPreflightWorkflow.cs");
+        var singleModelWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSingleModelAnalysisWorkflow.cs");
+        var multiModelCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisCommandWorkflow.cs");
+        var multiModelRuntimeGateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelRuntimeGateWorkflow.cs");
+        var multiModelStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var multiModelInferenceWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelInferenceWorkflow.cs");
+        var endMeterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEndMeterResolveWorkflow.cs");
+        var segmentedFindingsWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.False(File.Exists(helpersPath), "Gemeinsame Coding-AI-Adapter sollen kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(contextPath), "Gemeinsame Coding-AI-Adapter sollen ausserhalb von PlayerWindow liegen.");
@@ -358,7 +358,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("_codingAnalysisContext.IsAfterTerminalBoundary", ai);
         Assert.Contains("_codingAnalysisContext.CaptureSnapshotAsync", ai);
         Assert.Contains("_codingAnalysisContext.BuildSegmentedFindings", multiModel);
-        Assert.Contains("private readonly Ai.CodingAnalysisContext _codingAnalysisContext", state);
+        Assert.Contains("private readonly Ai.Coding.CodingAnalysisContext _codingAnalysisContext", state);
         Assert.Contains("_codingAnalysisContext = CodingAnalysisContext.CreateDefault", windowRoot);
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", context);
         Assert.Contains("CodingFindingProximityPolicy.IsTooFarAhead", context);
@@ -401,11 +401,11 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     public void PlayerWindow_coding_osd_reading_lives_in_reading_partial()
     {
         var osdPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
-        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
+        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalysisContext.cs");
         var readingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
-        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSnapshotCaptureFactory.cs");
-        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterReadWorkflow.cs");
-        var snapshotWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterSnapshotWorkflow.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSnapshotCaptureFactory.cs");
+        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdMeterReadWorkflow.cs");
+        var snapshotWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdMeterSnapshotWorkflow.cs");
         var osdControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingOsdMeterController.cs");
         var disposableLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "DisposableReferenceLifecycle.cs");
 
@@ -458,11 +458,11 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var lifecycleUiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var lifecycleExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var protocolTrainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdBadgeDisplayPolicy.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdBadgeControls.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterStateWorkflow.cs");
-        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterReadWorkflow.cs");
-        var statusWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionOsdMeterStatusWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdBadgeDisplayPolicy.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdBadgeControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdMeterStateWorkflow.cs");
+        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingOsdMeterReadWorkflow.cs");
+        var statusWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Live", "LiveDetectionOsdMeterStatusWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "OSD-Badge-Control-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");

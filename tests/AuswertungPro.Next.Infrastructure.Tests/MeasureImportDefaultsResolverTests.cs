@@ -39,6 +39,24 @@ public sealed class MeasureImportDefaultsResolverTests
         Assert.Equal(45.30m, defaults.LengthMeters);
     }
 
+    [Theory]
+    [InlineData("45.678", "45.678")]
+    [InlineData("45,678", "45.678")]
+    [InlineData("1'300.50", "1300.50")]
+    public void Resolve_Length_akzeptiert_praezise_und_gruppierte_Messwerte(
+        string raw,
+        string expected)
+    {
+        var record = MakeRecord(new Dictionary<string, string>
+        {
+            ["Haltungslaenge_m"] = raw
+        });
+
+        var defaults = MeasureImportDefaultsResolver.Resolve(record);
+
+        Assert.Equal(decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture), defaults.LengthMeters);
+    }
+
     [Fact]
     public void Resolve_MissingDn_ReturnsNullDn()
     {
@@ -65,6 +83,24 @@ public sealed class MeasureImportDefaultsResolverTests
 
         Assert.Equal(150, defaults.Dn);
         Assert.Null(defaults.LengthMeters);
+        Assert.False(defaults.LengthIsInvalid);
+    }
+
+    [Theory]
+    [InlineData("45'30")]
+    [InlineData("0")]
+    [InlineData("-2.5")]
+    public void Resolve_NonEmptyInvalidLength_IsReported(string raw)
+    {
+        var record = MakeRecord(new Dictionary<string, string>
+        {
+            ["Haltungslaenge_m"] = raw
+        });
+
+        var defaults = MeasureImportDefaultsResolver.Resolve(record);
+
+        Assert.Null(defaults.LengthMeters);
+        Assert.True(defaults.LengthIsInvalid);
     }
 
     [Fact]

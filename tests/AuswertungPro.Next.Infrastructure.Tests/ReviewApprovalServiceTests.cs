@@ -60,6 +60,28 @@ public sealed class ReviewApprovalServiceTests
             return Task.CompletedTask;
         }
 
+        public Task<bool> RemoveBySampleIdAsync(string sampleId)
+            => Task.FromResult(_samples.RemoveAll(x => x.SampleId == sampleId) > 0);
+
+        public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default)
+        {
+            if (!string.IsNullOrEmpty(sample.Signature)
+                && _samples.Any(x => x.Signature == sample.Signature))
+                return Task.FromResult(false);
+            _samples.Add(sample);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample)
+        {
+            var idx = _samples.FindIndex(x => x.SampleId == sample.SampleId);
+            if (idx < 0)
+                return Task.FromResult(false);
+            _samples.RemoveAt(idx);
+            _samples.Add(sample);
+            return Task.FromResult(true);
+        }
+
         public TrainingSample? Find(string sampleId) =>
             _samples.FirstOrDefault(x => x.SampleId == sampleId);
 

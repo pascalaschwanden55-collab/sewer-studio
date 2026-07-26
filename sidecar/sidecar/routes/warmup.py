@@ -14,7 +14,7 @@ from fastapi import APIRouter
 
 from ..config import settings
 from ..gpu_manager import gpu_manager, ModelSlot
-from ..models import yolo_wrapper, dino_wrapper, sam_wrapper
+from ..models import detector_qualification, yolo_wrapper, dino_wrapper, sam_wrapper
 
 router = APIRouter()
 logger = logging.getLogger("sidecar")
@@ -50,9 +50,36 @@ def warmup() -> dict:
     dummy = _dummy_image_b64()
 
     results: dict[str, str] = {}
+    details: dict[str, dict] = {}
 
-    # YOLO ueber den echten Pfad (inkl. TensorRT-Engine).
-    results["yolo"] = _warm_one("YOLO", lambda: yolo_wrapper.detect(dummy, 0.25))
+    # Das Standard-YOLO nur laden, wenn genau das aktive Artefakt qualifiziert ist.
+    # Fehlender/kaputter Marker bleibt dadurch auch beim Warmup fail-closed.
+    detector = detector_qualification.evaluate_active_detector()
+    if detector.get("qualified") is True:
+        results["yolo"] = _warm_one(
+            "YOLO", lambda: yolo_wrapper.detect(dummy, 0.25)
+        )
+        details["yolo"] = {
+            "status": "loaded" if results["yolo"] == "ok" else "error",
+            "reason_code": None,
+            "qualification_status": detector.get("status"),
+            "reason": None,
+        }
+    else:
+        qualification_status = detector.get("status") or "qualification_unknown"
+        reason = detector.get("reason") or "Detektor ist nicht qualifiziert."
+        results["yolo"] = "uebersprungen"
+        details["yolo"] = {
+            "status": "skipped",
+            "reason_code": "detector_not_qualified",
+            "qualification_status": qualification_status,
+            "reason": reason,
+        }
+        logger.warning(
+            "Warmup YOLO uebersprungen: %s (%s)",
+            reason,
+            qualification_status,
+        )
 
     # Whole-Frame-Klassifikator separat laden; er haengt nicht am YOLO-Detection-Slot.
     def _load_classifier():
@@ -81,6 +108,7 @@ def warmup() -> dict:
 
     return {
         "warmup": results,
+        "warmup_details": details,
         "loaded": loaded,
         "elapsed_sec": round(elapsed, 1),
         "status": gpu_manager.get_status(),

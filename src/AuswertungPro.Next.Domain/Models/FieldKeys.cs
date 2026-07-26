@@ -12,6 +12,7 @@ public static class FieldKeys
     public const string NominalDiameterMm = "DN_mm";
     public const string UsageType = "Nutzungsart";
     public const string HoldingLengthMeters = "Haltungslaenge_m";
+    public const string PrimaryDamages = "Primaere_Schaeden";
     public const string ConditionClass = "Zustandsklasse";
     public const string RenovationDecision = "Sanieren_JaNein";
     public const string RecommendedRehabilitationMeasures = "Empfohlene_Sanierungsmassnahmen";

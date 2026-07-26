@@ -207,12 +207,12 @@ public sealed record StageAExporterCliOptions(
         => Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
 
     private static string ResolvePackagedClassMapPath()
-        => Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v2.json");
+        => Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v3.json");
 
     private static string ResolvePackagedClassMigrationPath()
         => Path.Combine(
             AppContext.BaseDirectory,
             "Data",
             "Training",
-            "detect_class_migration_v2.candidate.json");
+            "detect_class_migration_v3.candidate.json");
 }

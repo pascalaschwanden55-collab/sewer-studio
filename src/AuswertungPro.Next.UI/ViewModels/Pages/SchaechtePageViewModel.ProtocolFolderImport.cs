@@ -208,6 +208,7 @@ public sealed partial class SchaechtePageViewModel
         }
 
         var hasChanges = created + updated > 0;
+        var saveSucceeded = true;
         if (hasChanges)
         {
             expectedProject.ModifiedAtUtc = DateTime.UtcNow;
@@ -236,7 +237,7 @@ public sealed partial class SchaechtePageViewModel
                 return;
             }
 
-            _shell.TrySaveProject();
+            saveSucceeded = _shell.TrySaveProject();
         }
 
         var summary = SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(
@@ -247,10 +248,20 @@ public sealed partial class SchaechtePageViewModel
             archivedOlderProtocols,
             skippedDirectories.Count,
             failures);
-        LastResult = $"Ordnerimport: {created} neu, {updated} aktualisiert, {failures.Count} Fehler.";
-        _shell.SetStatus($"Ordnerimport abgeschlossen: {created} neu, {updated} aktualisiert, {failures.Count} Fehler");
+        if (!saveSucceeded)
+        {
+            summary +=
+                "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern.";
+        }
 
-        if (failures.Count > 0)
+        LastResult = !saveSucceeded
+            ? $"Ordnerimport uebernommen, aber nicht gespeichert: {created} neu, {updated} aktualisiert."
+            : $"Ordnerimport: {created} neu, {updated} aktualisiert, {failures.Count} Fehler.";
+        _shell.SetStatus(!saveSucceeded
+            ? "Ordnerimport uebernommen, aber nicht gespeichert"
+            : $"Ordnerimport abgeschlossen: {created} neu, {updated} aktualisiert, {failures.Count} Fehler");
+
+        if (failures.Count > 0 || !saveSucceeded)
             _dialogs.Warn(summary, "Ordnerimport abgeschlossen");
         else
             _dialogs.Info(summary, "Ordnerimport abgeschlossen");

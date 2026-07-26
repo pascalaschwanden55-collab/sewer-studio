@@ -13,8 +13,8 @@ public sealed class PlayerWindowCodingToolSelectionArchitectureTests
         var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingToolSelectionPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingToolSelectionWorkflow.cs");
         var activeToolStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingActiveToolNameStateController.cs");
 
         Assert.True(File.Exists(toolsPath), "Tool- und Cursor-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");

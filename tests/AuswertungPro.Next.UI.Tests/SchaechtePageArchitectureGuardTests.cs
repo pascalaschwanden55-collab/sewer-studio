@@ -518,7 +518,10 @@ public sealed class SchaechtePageArchitectureGuardTests
             "_=await_schachtProtocolRefreshController.ExecuteAsync(Selected);}",
             compactPartial);
         Assert.Contains("_actions.Apply(selected, result, relativePath)", controller);
-        Assert.Contains("_ = _actions.SaveProject()", controller);
+        Assert.Contains("if (!ProjectSaveAttempt.Try(", controller);
+        Assert.Contains("_actions.SaveProject,", controller);
+        Assert.Contains("ProjectSaveAttempt.ErrorDetails(saveError)", controller);
+        Assert.Contains("SchachtProtocolRefreshOutcome.UpdatedButNotSaved", controller);
         Assert.Contains("ActiveProjectGuard.IsCurrent(", partial);
         Assert.Contains("ReferenceEquals(expected.Project, currentProject)", projectGuard);
         Assert.Contains("_settings.LastProjectPath", partial);
@@ -595,8 +598,13 @@ public sealed class SchaechtePageArchitectureGuardTests
             "if(!_actions.ProjectIsStillOpen(" +
             "projectContext,DialogTitle,committedImpact)){" +
             "_actions.ClearSelectedIfSame(target);return;}" +
-            "_=_actions.SaveProject();",
+            "varsaved=ProjectSaveAttempt.Try(" +
+            "_actions.SaveProject," +
+            "\"ImportiertesSchachtprotokollspeichern\"," +
+            "outvarsaveError);",
             compactController);
+        Assert.Contains("uebernommen, aber nicht gespeichert", controller);
+        Assert.Contains("ProjectSaveAttempt.ErrorDetails(saveError)", controller);
         Assert.Contains(
             "if(ReferenceEquals(Selected,expectedSelection))Selected=null;",
             compactPartial);

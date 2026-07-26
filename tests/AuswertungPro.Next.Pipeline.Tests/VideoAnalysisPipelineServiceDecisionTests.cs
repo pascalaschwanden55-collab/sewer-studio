@@ -60,7 +60,14 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
         var handler = new CountingHandler(_ =>
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("""{"status":"ok","version":"1.2.0","gpu":null}""")
+                Content = new StringContent("""
+                {
+                  "status":"ok",
+                  "version":"1.2.0",
+                  "gpu":null,
+                  "detector_qualification":{"qualified":true,"reason":null}
+                }
+                """)
             });
         var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
 
@@ -68,6 +75,58 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
 
         Assert.True(decision.UseMultiModel);
         Assert.Null(decision.FallbackReason);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task ShouldUseMultiModelAsync_MissingQualification_uses_DinoSam_with_review_warning()
+    {
+        var handler = new CountingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                {
+                  "status":"ok",
+                  "version":"1.2.0",
+                  "gpu":null,
+                  "models_present":{"dino":true,"sam":true}
+                }
+                """)
+            });
+        var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
+
+        var decision = await service.ShouldUseMultiModelAsync(CancellationToken.None);
+
+        Assert.True(decision.UseMultiModel);
+        Assert.Contains("Qualifikationsstatus", decision.FallbackReason);
+        Assert.Contains("DINO/SAM", decision.FallbackReason);
+        Assert.Contains("manuell", decision.FallbackReason);
+    }
+
+    [Fact]
+    public async Task ShouldUseMultiModelAsync_UnqualifiedDetector_keeps_DinoSam_with_warning()
+    {
+        var handler = new CountingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                {
+                  "status":"degraded",
+                  "version":"1.2.0",
+                  "gpu":null,
+                  "models_present":{"dino":true,"sam":true},
+                  "detector_qualification":{"qualified":false,"reason":"BBox-Kollaps"}
+                }
+                """)
+            });
+        var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
+
+        var decision = await service.ShouldUseMultiModelAsync(CancellationToken.None);
+
+        Assert.True(decision.UseMultiModel);
+        Assert.Contains("DINO/SAM", decision.FallbackReason);
+        Assert.Contains("manuell", decision.FallbackReason);
+        Assert.DoesNotContain("Ollama-Only", decision.FallbackReason);
         Assert.Equal(1, handler.RequestCount);
     }
 

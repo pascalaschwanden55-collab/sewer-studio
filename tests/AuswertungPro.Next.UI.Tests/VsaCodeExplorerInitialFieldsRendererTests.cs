@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Vsa;
 
 namespace AuswertungPro.Next.UI.Tests;
 

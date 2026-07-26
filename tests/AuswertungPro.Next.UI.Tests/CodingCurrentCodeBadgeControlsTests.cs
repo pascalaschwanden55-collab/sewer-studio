@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -44,7 +45,7 @@ public sealed class CodingCurrentCodeBadgeControlsTests
 
     private static MethodInfo? FindApplyMethod()
         => typeof(CodingCurrentCodeBadgePolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingCurrentCodeBadgeControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingCurrentCodeBadgeControls")
             ?.GetMethod(
                 "Apply",
                 BindingFlags.Public | BindingFlags.Static,

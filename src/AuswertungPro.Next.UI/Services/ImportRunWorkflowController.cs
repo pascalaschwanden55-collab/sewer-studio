@@ -143,7 +143,7 @@ public static class ImportRunWorkflowController
                     TxId: importTxId,
                     StartedUtc: DateTime.UtcNow,
                     Label: request.Label,
-                    StagingRoot: Path.Combine(fileStaging.ProjectRoot, ".import-staging"),
+                    StagingRoot: fileStaging.StagingRoot,
                     PublishedTargets: published,
                     RestorePointPath: null));
             }
@@ -226,7 +226,8 @@ public static class ImportRunWorkflowController
             // Bis zur Live-Projektuebernahme kann Dispose sie noch sicher zuruecknehmen.
             // Marker vor der Veroeffentlichung (Transaktion laeuft), danach mit den tatsaechlich
             // veroeffentlichten Zielen (fuer das Recovery-Rollback).
-            WriteTransactionMarker(Array.Empty<PublishedFileInfo>());
+            WriteTransactionMarker(
+                fileStaging?.PreparedFiles ?? Array.Empty<PublishedFileInfo>());
             fileStaging?.Publish();
             WriteTransactionMarker(fileStaging?.PublishedFiles ?? Array.Empty<PublishedFileInfo>());
 
@@ -309,22 +310,14 @@ public static class ImportRunWorkflowController
         }
         finally
         {
-            // Marker loeschen: bei Erfolg ist committed, bei normalem Abbruch/Fehler hat
-            // Staging.Dispose zurueckgerollt — in beiden Faellen ist der Zustand konsistent.
-            // Nur wenn dieser finally durch einen Prozess-Absturz nie laeuft, bleibt der Marker
-            // stehen und triggert beim naechsten Laden das Recovery.
-            if (fileStaging is not null && actions.Journal is not null)
-            {
-                try { actions.Journal.Clear(fileStaging.ProjectRoot); }
-                catch { /* Marker-Rest ist unkritisch; Recovery ist idempotent. */ }
-            }
-
+            var stagingCleanupSucceeded = true;
             try
             {
                 fileStaging?.Dispose();
             }
             catch (Exception ex)
             {
+                stagingCleanupSucceeded = false;
                 var detail = projectCommitted
                     ? $"Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: {ex.Message}"
                     : $"Vorbereitete Importdateien konnten nicht vollstaendig zurueckgenommen werden: {ex.Message}";
@@ -334,6 +327,27 @@ public static class ImportRunWorkflowController
                     ImportLogStatus.Error,
                     detail: detail);
                 actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
+            }
+
+            // Den Marker erst nach erfolgreichem Datei-Aufraeumen entfernen. Bei einem
+            // Speicherfehler bleibt er absichtlich liegen: Das Live-Projekt darf noch
+            // manuell gespeichert werden; nach einem Neustart beweist die TxId im
+            // projekt.json, ob die Dateien behalten oder zurueckgerollt werden muessen.
+            var transactionIsDurable = !projectCommitted || projectSaved;
+            if (fileStaging is not null
+                && actions.Journal is not null
+                && stagingCleanupSucceeded
+                && transactionIsDurable)
+            {
+                try
+                {
+                    actions.Journal.Clear(fileStaging.ProjectRoot);
+                }
+                catch
+                {
+                    // Ein Marker-Rest ist sicher: Recovery ist idempotent und prueft
+                    // die gespeicherte TxId, bevor Dateien angefasst werden.
+                }
             }
 
             runLog.Complete();

@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -166,7 +167,7 @@ public sealed class CodingInlineDefectDecisionWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingEventDeleteApplier).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingInlineDefectDecisionWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingInlineDefectDecisionWorkflow");
 
     private static MethodInfo? FindAcceptMethod()
         => WorkflowType?.GetMethod(

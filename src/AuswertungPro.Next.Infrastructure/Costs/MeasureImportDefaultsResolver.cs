@@ -1,5 +1,5 @@
 using System;
-using System.Globalization;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Vsa;
 
@@ -18,7 +18,8 @@ public static class MeasureImportDefaultsResolver
     public sealed record ImportDefaults(
         int? Dn,
         decimal? LengthMeters,
-        int Connections);
+        int Connections,
+        bool LengthIsInvalid = false);
 
     /// <summary>
     /// Liest DN, Laenge und Anschlussanzahl aus dem Haltungsdatensatz.
@@ -35,14 +36,23 @@ public static class MeasureImportDefaultsResolver
         // Laenge kulturunabhaengig parsen
         decimal? lengthM = null;
         var lengthValue = haltungRecord.GetFieldValue(FieldKeys.HoldingLengthMeters);
-        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(
-                lengthValue.Trim().Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedLength))
-            lengthM = parsedLength;
+        var lengthIsInvalid = false;
+        if (!string.IsNullOrWhiteSpace(lengthValue))
+        {
+            if (FachzahlParser.TryParseMeasurement(lengthValue, out var parsedLength)
+                && parsedLength > 0m)
+            {
+                lengthM = parsedLength;
+            }
+            else
+            {
+                lengthIsInvalid = true;
+            }
+        }
 
         // Anschlussanzahl aus Schadenscodierung oder explizitem Feld ableiten
         var connections = ConnectionCountEstimator.EstimateFromRecord(haltungRecord) ?? 0;
 
-        return new ImportDefaults(dn, lengthM, connections);
+        return new ImportDefaults(dn, lengthM, connections, lengthIsInvalid);
     }
 }

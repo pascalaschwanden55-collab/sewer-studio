@@ -119,7 +119,22 @@ internal sealed class SchachtProtocolRefreshController
             return SchachtProtocolRefreshOutcome.UpdatedButNotSaved;
         }
 
-        _ = _actions.SaveProject();
+        if (!ProjectSaveAttempt.Try(
+                _actions.SaveProject,
+                "Aktualisiertes Schachtprotokoll speichern",
+                out var saveError))
+        {
+            var notSaved =
+                $"Schacht {result.Schachtnummer} uebernommen, aber nicht gespeichert " +
+                $"({result.Schaeden.Count} Beobachtungen).";
+            _actions.SetLastResult(notSaved);
+            _dialogs.Warn(
+                notSaved + "\n\nBitte das Projekt erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError),
+                DialogTitle);
+            return SchachtProtocolRefreshOutcome.UpdatedButNotSaved;
+        }
+
         _actions.SetLastResult(
             $"Schacht {result.Schachtnummer} aktualisiert ({result.Schaeden.Count} Beobachtungen).");
         return SchachtProtocolRefreshOutcome.Updated;

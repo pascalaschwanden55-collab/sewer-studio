@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
@@ -209,8 +210,12 @@ public static class CostCalculatorLogicService
             return value;
 
         var numericPrefix = new string(text
-            .TakeWhile(ch => char.IsDigit(ch) || ch is '+' or '-' or '.' or ',')
+            .TakeWhile(ch =>
+                char.IsDigit(ch)
+                || char.IsWhiteSpace(ch)
+                || ch is '+' or '-' or '.' or ',' or '\'' or '\u2019')
             .ToArray());
+        numericPrefix = numericPrefix.TrimEnd();
         if (numericPrefix.Length > 0 && TryParseDecimal(numericPrefix, out value))
             return value;
 
@@ -287,22 +292,7 @@ public static class CostCalculatorLogicService
     }
 
     private static bool TryParseDecimal(string raw, out decimal value)
-    {
-        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.CurrentCulture, out value))
-            return true;
-
-        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
-            return true;
-
-        var normalized = raw.Contains(',')
-            ? raw.Replace(',', '.')
-            : raw.Replace('.', ',');
-
-        if (!string.Equals(normalized, raw, StringComparison.Ordinal) &&
-            decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
-            return true;
-
-        value = 0;
-        return false;
-    }
+        // Laengen/Mengen duerfen fachlich drei Dezimalstellen haben; Gruppierung und
+        // Kultur bleiben trotzdem zentral und eindeutig geregelt.
+        => FachzahlParser.TryParseMeasurement(raw, out value);
 }

@@ -57,12 +57,21 @@ public sealed class KnowledgeBaseDeindexTests : IDisposable
         CaseId         = "H-01",
         Code           = "BAB",
         Beschreibung   = "Laengsriss im Scheitel sichtbar",
+        FramePath      = typeof(KnowledgeBaseDeindexTests).Assembly.Location,
         MeterStart     = 5.0,
         MeterEnd       = 5.0,
         InspectionDate = new DateTime(2024, 6, 1),
         TrainingEligible = true,
         Status = TrainingSampleStatus.Approved,
-        HumanConfirmed = true
+        HumanConfirmed = true,
+        Corrected = false,
+        ConfirmedByUser = Environment.UserName,
+        ConfirmedAtUtc = new DateTime(2026, 7, 25, 8, 0, 0, DateTimeKind.Utc),
+        SourceType = SourceTypeNames.ManualCoding,
+        MatchLevel = MatchLevelNames.ReviewApproved,
+        // IsIndexWorthy verlangt seit der Gold-Wahrheits-Haertung Box + SAM-Maske.
+        BboxXCenter = 0.5, BboxYCenter = 0.5, BboxWidth = 0.2, BboxHeight = 0.2,
+        SamMaskRle = "0,4050,1,3949", SamMaskImageWidth = 100, SamMaskImageHeight = 80
     };
 
     // ── Test ──────────────────────────────────────────────────────────────────

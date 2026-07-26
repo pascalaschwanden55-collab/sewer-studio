@@ -63,7 +63,7 @@ public sealed class BackupTargetGuardTests : IDisposable
     }
 
     [Fact]
-    public void ValidateAndCreateMarker_MitMarker_IstOkTrotzInhalt()
+    public void ValidateAndCreateMarker_BeliebigerMarkerinhalt_wird_abgelehnt()
     {
         var backupRoot = Path.Combine(_root, "existing");
         Directory.CreateDirectory(backupRoot);
@@ -71,6 +71,21 @@ public sealed class BackupTargetGuardTests : IDisposable
         File.WriteAllText(Path.Combine(backupRoot, "old.txt"), "alt");
 
         var error = BackupTargetGuard.ValidateAndCreateMarker(backupRoot);
+
+        Assert.NotNull(error);
+        Assert.Contains("ungueltig", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("alt", File.ReadAllText(Path.Combine(backupRoot, "old.txt")));
+    }
+
+    [Fact]
+    public void ValidateAndCreateMarker_Mit_echtem_Marker_IstOkTrotzInhalt()
+    {
+        var backupRoot = Path.Combine(_root, "existing-valid");
+        var guard = new BackupTargetMarkerGuardService();
+        Assert.Null(guard.ValidateAndCreateMarker(backupRoot));
+        File.WriteAllText(Path.Combine(backupRoot, "old.txt"), "alt");
+
+        var error = guard.ValidateAndCreateMarker(backupRoot);
 
         Assert.Null(error);
     }

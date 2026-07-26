@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -22,7 +23,8 @@ public sealed class CodingTrainingSamplesOwner
     public static CodingTrainingSamplesOwner CreateDefault(
         Func<ICodingSessionService?> sessionProvider,
         AppSettings? settings,
-        ITrainingSampleStore? trainingSamples = null)
+        ITrainingSampleStore? trainingSamples = null,
+        ITrainingFrameStore? trainingFrames = null)
     {
         ArgumentNullException.ThrowIfNull(sessionProvider);
 
@@ -30,6 +32,7 @@ public sealed class CodingTrainingSamplesOwner
             () => CodingTrainingSamplePersistenceCoordinator.CreateDefault(
                 sessionProvider,
                 settings,
-                trainingSamples));
+                trainingSamples,
+                trainingFrames));
     }
 }

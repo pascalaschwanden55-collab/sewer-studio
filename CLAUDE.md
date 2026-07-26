@@ -28,9 +28,12 @@
 - Laptop-Mode / Workstation-Mode Hardware-Abstraktion erhalten
 - VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig
 - QualityGate Green/Yellow/Red muss immer durchlaufen
+- Neue Workflow-/Orchestrierungsklassen (Request/Actions/Result) nach
+  `src/AuswertungPro.Next.Application/UseCases/` statt nach `UI/Ai/`; der UI/Ai-Bestand
+  ist per `UiAiFreezeArchitectureTests` eingefroren (Referenzbeispiel: `CodingModeBackgroundServicesWorkflow`).
 
 ### Checkliste bei jedem neuen Service / Tool (vor dem Commit pruefen)
-1. **Interface + eigener Service:** Neue Logik als eigener Service mit Interface, nicht in bestehende Klassen quetschen.
+1. **Interface + eigener Service:** Neue Logik als eigener Service mit Interface, nicht in bestehende Klassen quetschen. Neue Workflow-/Orchestrierungsklassen (Request/Actions/Result-Muster) gehoeren nach `src/AuswertungPro.Next.Application/UseCases/`, nicht nach `UI/Ai/` (eingefroren per `UiAiFreezeArchitectureTests`).
 2. **Schichten trennen:** Geschaeftslogik in C# (nicht in UI-Code, nicht im Sidecar). UI ruft ViewModel/Service, nie direkt Infrastruktur.
 3. **Registrierung:** Service im `ServiceProvider` (DI) eingetragen, kein `new` verstreut im Code.
 4. **Fokussierter Test:** Mindestens ein Test fuer die Kernlogik (Parser/Pipeline/ViewModel/QualityGate). Keine riskante Logik ohne Test.
@@ -51,15 +54,70 @@
 - Einen produktiven `KbDeduplicationService` gibt es aktuell nicht. Similarity-Checks im
   Trainings-/Review-Kontext nicht mit dem Retrieval-Ranking verwechseln.
 - Automatische 8B->32B-Laufzeit-Eskalation: nicht als implementiert annehmen.
-- Negativ-/Hintergrundbilder im gemeinsamen Detect-Plan sind noch nicht angeschlossen.
-  Der Sidecar-Vertrag kann leere Labeldateien schreiben, der C#-Planner nimmt derzeit
-  nur gepruefte Box-Annotationen auf. Das wird erst beim Aufbau des Negativ-Pools erweitert.
+- Das aktive Detect-Altmodell (yolo26m, 2026-04-11) ist seit 2026-07-25 als NICHT
+  qualifiziert markiert (`sidecar/models/model_qualification.json`, BBox-Kollaps,
+  alter Trainingsdatensatz fehlt). `/health` meldet den Sidecar als `degraded` samt
+  `detector_qualification`. Nur ein ausdrueckliches `qualified=true` gibt das
+  Standardmodell frei. Bei false, fehlendem Feld oder Lesefehler sperrt das Training
+  Studio den Fototest; Standard-Endpunkt und Warmup laden/verwenden YOLO nicht.
+  Die Freigabedatei bindet PT, TensorRT-Engine und ONNX jeweils an Dateiname und
+  SHA-256; Abweichungen sperren fail-closed. Gewichte bleiben unveraendert erhalten;
+  das getrennte BCC-Testmodell ist davon unberuehrt.
+- `training/scripts/model_collapse_check.py` ist das schreibfreie Kollaps-Pruefwerkzeug:
+  Box-Statistik (Paar-IoU, Streuung), IoU gegen Gold-Boxen, Aktivierungen auf dem
+  Negativ-Pool, optional mAP via `--dataset`. Ein echter Geometrie-Kollaps ergibt
+  `FAIL` (Exit 1); Inferenzfehler, zu wenig Bilder/Treffer oder unter 20 %
+  Detektionsrate ergeben `INCONCLUSIVE` (Exit 2), niemals einen falschen PASS.
+  `PASS` heisst nur „kein BBox-Kollaps", keine Qualitaetsfreigabe. Pruefbestand unabhaengig
+  (`--images-dir`, Default eval_set/images), einheitliche Aufloesung (`--imgsz` 1280),
+  Bericht unter `<KnowledgeRoot>/training/reports`. Der Altmodell-Kollaps ist belegt;
+  ein Kandidat bleibt ohne den ganzen Release-Weg immer `not_deployed`.
+- Batch-Video und Player-Einzelframe verwenden YOLO nur bei ausdruecklichem
+  `qualified=true`. Bei false, fehlendem Feld oder Health-Lesefehler wird YOLO weder
+  als Frame-Filter noch als Confidence-Beweis verwendet. DINO/SAM laufen ohne
+  YOLO-Gate weiter; Health-Ampel und Ergebnis bleiben `Degraded`/orange und verlangen
+  eine manuelle Pruefung. Der Ollama-only-Pfad traegt die Kennzeichnung nicht.
+- `training/scripts/gold_stock_audit.py` prueft den Goldbestand schreibfrei
+  (persoenliche Freigabe, lesbares Bild, randgueltige Box, echte Maskenpixel in der
+  Hand-Box, Katalogcode, Bildhash und komplette Eval-Haltung). Haltungsnummern werden
+  normalisiert; identische Bildbytes verbinden betroffene Haltungen zu einer
+  gemeinsamen Split-Gruppe. Ein Pilot braucht >= 30 Samples sowie Train und Val/Test.
+  Platzhalter-Beschreibungen sind fuer das reine BBox-Training zulaessig und werden
+  nur als `kb_text_offen` markiert — KB-Index und Qwen-Retrieval sperren sie.
+  Stand des schreibfreien Berichts vom 2026-07-25 (nach Bereinigung): 218 Eintraege,
+  24 Drafts (14 alte Entwuerfe + 10 Bildduplikate, als Draft markiert und in `Notes`
+  dokumentiert), 194 verwendbar, 0 Duplikatgruppen, 186 offene KB-Texte. Die
+  Haltungsidentitaet aller 194 wurde per Bild-SHA-256-Match gegen die Quelldateien
+  in `D:\Trainingsfotos` rekonstruiert (eindeutig, 0 Mehrdeutigkeiten); `CaseId` und
+  `Signature` tragen jetzt die echte Haltungsnummer, die alte Pseudo-CaseId steht in
+  `Notes`. Der Split ist damit release-faehig: 128/52/14 aus 69 Haltungsgruppen.
+  BCC=59 und BCA=42 sind auswertbare Piloten (>= 30, Train und Val/Test), weiterhin
+  keine Modellfreigabe. Backups: `training_samples.json.bak_vor_haltung_*`,
+  `KnowledgeBase.backup_vor_haltung_*.db`.
+- SAM-Video-Regel (Goldgewinnung): SAM 2.1 kann Masken durch Videos propagieren,
+  darf aber nur als Pruefwerkzeug fuer den Menschen dienen, nicht als automatische
+  Goldfabrik. Propagierte Nachbarframes sind stark voneinander abhaengige
+  Vorschlaege; sie werden einzeln ausgewaehlt und menschlich bestaetigt, bevor sie
+  Gold werden. Kein automatischer Gold-Export aus Video-Propagation.
+- Negativ-/Hintergrundbilder sind seit 2026-07-25 im gemeinsamen Detect-Plan angeschlossen:
+  Die Export-Registry traegt optional `negative_images` (Pfad + SHA-256, menschlich kuratiert,
+  Default-Pool `<KnowledgeRoot>/training/negatives/bcc_pilot` via
+  `prepare_bcc_pilot.py --negatives-dir`). Der Plan prueft Hashes und Eval-Schutz auch fuer
+  Negative, verteilt sie deterministisch (ca. 20 % val) und schreibt leere Labeldateien
+  (`IsNegative`-Flag, serialisiert nur bei `true` — Plaene ohne Negative bleiben bytegleich).
+  `train_bcc_pilot.py` akzeptiert leere Labeldateien als Negative (Positive ohne Labeldatei
+  stoppen weiter), trainiert mit `flipud=0.0, fliplr=0.0` (Uhrlage!) und leichter
+  HSV-Augmentierung (`hsv_h=0.01, hsv_s=0.3, hsv_v=0.3`) sowie `--patience` Default 10.
 
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
 dotnet test AuswertungPro.sln
 ```
+
+`AuswertungPro.sln` enthaelt die vier produktiven Projekte, die vier Testprojekte
+und alle 41 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
+verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brechen.
 
 ## Wichtige Klassen
 - `VideoAnalysisPipelineService`  → waehlt Multi-Model- oder Fallback-Pfad fuer Videoanalyse
@@ -84,13 +142,24 @@ dotnet test AuswertungPro.sln
 - `PipelineProgressMapper` → laufbezogene Fortschritts-, ETA- und Live-Frame-Abbildung; liefert dem Fenster nur Render-/Weiterleitungs-Hinweise
 - `PipelineResultPresenter` → zustandslose Abschlussabbildung fuer Statistik, Telemetrie und hoechstens 250 sichtbare Befunde
 
+- `ManualGoldTrainingPolicy`      -> erlaubt fuer neues Training nur persoenlich manuell codierte, bestaetigte Goldsamples mit vorhandenem Bild, BBox und SAM-Segmentierung
+- `CodingTrainingSamplePersistenceCoordinator` -> uebernimmt persoenliche Annahmen/Korrekturen aus dem Player-Codiermodus nach `gold_frames`, Trainingsliste und KB
+- `PersonalGoldProgressCalculator` -> berechnet den Live-Goldstand je Hauptcode (Ziel 30-50), ohne Daten zu veraendern
+- `IPersonalGoldAlbumService`/`PersonalGoldAlbumService` -> liefert das rein lesende Fotoalbum der persoenlichen Handlabels nach Hauptcode
+- `IPersonalGoldInboxService`/`PersonalGoldInboxFileService` -> verwaltet den vorbereitenden Bildeingang unter `training/gold_inbox`
+- `PersonalGoldFrameMigrationService` -> kopiert Altbestand inhaltsadressiert in `gold_frames` und stellt JSON/SQLite gemeinsam um
+- `PersonalGoldMigrationCommitter` -> haelt Umschalten, Nachpruefung und Ruecksetzung von JSON/SQLite getrennt von der Auswahl
+- `tools/PersonalGoldMigration`   -> wiederholbares Migrations-/Pruefwerkzeug; schreibt Inventar und Pruefspur unter `<KnowledgeRoot>/training`
+- `PersonalGoldBrainSeparationService` -> duenne Fassade fuer Gold-only-Arbeitsstand und atomare Umschaltung; Input/Pfade, Workspace, Commit-Journal und Recovery liegen in getrennten internen Diensten
+- `PersonalGoldArchiveRecoveryService` -> duenne Fassade zum Nachholen bestaetigter `ManualCoding`-Faelle; Journal, Pfadpruefung, Vorherkopien und Rollback liegen in getrennten internen Diensten
+- `tools/GoldBrainSeparation`     -> sicherer Pruef-/Ausfuehrungsweg fuer Altarchiv, Gold-only-Datenbank und neuen Elements-Spiegel
 - `TrainingDataInventoryService`  -> rein lesendes Inventar fuer Teacher-/Trainingsquellen, Pfade und Eval-Schutz je Eval-Set
 - `TrainingInventoryReportValidator` -> strenger Vertrag fuer Schema 2.2, Triage, Pfade, Quellen und Zusammenfassung
 - `tools/TrainingDataInventory`   -> AP-0.1-Werkzeug; Bericht plus SHA-256 unter `<KnowledgeRoot>/training/reports`
-- `ITrainingYoloClassMapStore`    -> rein lesender, unveraenderlicher class_map-v2-Snapshot fuer den lokalen Detect-Export
-- `TrainingYoloClassMapFileStore` -> prueft feste 14 Klassen, echten VSA-Manifest-Hash, Quell-Hashfelder, Zeilenzahlen, Quellenreihenfolge und menschlich freigegebene Migration
+- `ITrainingYoloClassMapStore`    -> rein lesender, unveraenderlicher class_map-Snapshot (aktiv v3, v2 eingefroren lesbar) fuer den lokalen Detect-Export
+- `TrainingYoloClassMapFileStore` -> prueft feste Klassenzahl je Version (v2 = 14, v3 = 15 inkl. BCC_bogen), echten VSA-Manifest-Hash, Quell-Hashfelder, Zeilenzahlen, Quellenreihenfolge und menschlich freigegebene Migration
 - `VsaYoloClassMapFileStore`      -> Teacher-Karte; `GetClassId` liest strikt, nur `GetOrAddClassId` darf bewusst erweitern
-- `TrainingExportPlanInputBuilder` -> baut aus einem Live-Inventar-Snapshot den einzigen Planner-Input
+- `TrainingExportPlanInputBuilder` -> baut den Planner-Input nur aus freigegebenen persoenlichen Gold-TrainingSamples; Teacher-Daten bleiben Inventar
 - `TrainingExportPlanService`      -> legt Split, Klassen-IDs, Dateinamen, Ausschluesse und SHA-Zusammenfuehrung fest
 - `TrainingExportPlanLocalExecutor` -> atomarer lokaler Ausfuehrer desselben Plans
 - `TrainingExportSidecarRequestBuilder` -> verpackt den Plan fuer den strikten Sidecar-v2-Vertrag
@@ -99,16 +168,41 @@ dotnet test AuswertungPro.sln
 - `TrainingYoloExportCoordinator` -> steuert Auswahl, Inventar, Plan, Ausfuehrung und Abschluss ausserhalb der UI
 - `TrainingYoloExportComposition` -> baut das Export-Subsystem einmalig zusammen; der zentrale ServiceProvider delegiert nur
 - `FullBackupComposition`         -> baut Marker, SQLite-Schnappschuss, Manifestpruefung und Vollsicherung einmalig zusammen; die UI liefert nur die aktuelle Quellenfunktion
+- `KnowledgeRealtimeMirrorService` -> gleicht den gesamten KnowledgeRoot beim Start ab und spiegelt danach jede Dateiaenderung auf den Datentraeger `Elements` nach `Brain`
+- `HoldingRenameFileService`       -> benennt eine Haltung samt Projekt-Verteilordnern und gespeicherten Medienpfaden um; externe Kundenordner sind ausgeschlossen
+- `HoldingFolderRenameTransaction` -> benennt Dateien und Unterordner rekursiv, erkennt abweichende datumsbasierte Alt-Dateinamen und kann jeden ausgefuehrten Schritt zurueckrollen
 - `StoredImportFileService`       -> kopiert Importquellen, loest Namenskollisionen und schreibt die Pfadlisten zentral
 - `StoredImportFilePathResolver`  -> liest gespeicherte XTF-/PDF-Listen zentral und loest moderne sowie bestehende Projektpfade sicher auf
 - `ImportFileStagingService`      -> bereitet projektbezogene Importkopien geprueft vor und nimmt sie bis zur Projektuebernahme zurueck
 - `MediaDistributionService`      -> verteilt Medien hinter `IImportMediaDistributionService`; die UI erzeugt ihn nicht selbst
-- `ServiceProviderRegistrationMap` -> ordnet die bereits gebauten Dienste ihren 126 Vertragstypen zu und erzeugt selbst nichts
+- `ServiceProviderRegistrationMap` -> ordnet die bereits gebauten Dienste ihren 130 Vertragstypen zu und erzeugt selbst nichts
 
 Der Vollsicherungsaufbau liegt in Infrastructure. `ServiceProvider.FullBackup.cs`
 reicht die bisherigen oeffentlichen Dienste unveraendert weiter. Der zentrale
 `ServiceProvider` darf `BackupTargetGuard.UseMarkerGuard` nicht aufrufen; der passende
 Marker wird direkt an `FullBackupService` uebergeben.
+
+`KnowledgeRealtimeMirrorService` startet durch `App` nach dem Aufbau des
+`ServiceProvider`. Er gleicht den gesamten aktiven `KnowledgeRoot` zuerst
+inkrementell mit `<Datentraeger Elements>\Brain` ab und verarbeitet danach
+Dateiaenderungen in einem Ein-Sekunden-Takt. Der Laufwerksbuchstabe wird ueber die
+Datentraegerbezeichnung `Elements` ermittelt. SQLite-Dateien werden als gepruefte
+Online-Schnappschuesse geschrieben; WAL/SHM-Dateien werden nicht als halbfertige
+Datenbankkopien uebernommen. Ein eigener Zielmarker, Pfadgrenzen und
+Verknuepfungsschutz sichern jede Loeschung ab. Ist die Platte nicht angeschlossen,
+bleibt die Quelle unveraendert und der Abgleich wird nach dem Wiederanschliessen
+automatisch vollstaendig nachgeholt.
+
+`BackupSourcePathGuard` und `BackupTargetPathGuard` pruefen Quelle und Ziel vor
+jedem kritischen Dateizugriff erneut. Ein unlesbarer oder verknuepfter Pflichtpfad
+bricht Spiegelung/Vollsicherung ab, bevor veraltete Zieldateien entfernt oder
+Versionen rotiert werden. Einstellungs-, Log- und Desktop-Skriptquellen duerfen
+fehlen; Programm- und Projektkomponenten sind nur dann leer, wenn fuer sie keine
+Wurzel konfiguriert wurde. Bestehende Spiegeldateien bleiben bei optionalen
+Fehlstellen erhalten. `KnowledgeRoot` und jede tatsaechlich konfigurierte
+Projektquelle bleiben Pflicht. `DirectoryMirror`, `BackupTargetMarkerGuardService`
+und `KnowledgeMirrorMarker` bilden die zentralen Datei-, Zielbesitz- und
+Spiegelbesitz-Grenzen.
 
 `StoredImportFileService` plant neue Importkopien fuer beide Projektdatei-Strukturen
 unter `<Projekt>\Imports\<Art>`. Im manuellen Import schreibt er zunaechst ueber die
@@ -133,23 +227,73 @@ normalisierten Projektpfad und Berichtsordner. Nach jedem asynchronen Abschnitt 
 er Projektidentitaet und Abbruch erneut; bei einem Wechsel wird die Arbeitskopie nicht
 uebernommen. PDF-/XTF-Quellkopien und die Medienverteilung verwenden dabei dieselbe
 `IImportFileStagingSession`. Sie schreibt gepruefte Kopien zuerst neben der Projektdatei
-unter `.import-staging`, veroeffentlicht sie erst nach den Nacharbeiten und nimmt nur die
-vom Lauf neu angelegten Dateien zurueck, solange das Live-Projekt noch nicht getauscht ist.
+unter `.import-staging/<Lauf-GUID>`, veroeffentlicht sie erst nach den Nacharbeiten und
+nimmt nur die vom Lauf neu angelegten Dateien zurueck, solange das Live-Projekt noch
+nicht getauscht ist. Vor dem ersten Datei-Move schreibt der Lauf alle vorbereiteten
+Rollback-Ziele samt SHA-256 atomar in `.import-transaction.json`; nach `Publish` wird
+der Marker mit dem tatsaechlichen Ist-Stand erneuert.
 Bereits vorhandene oder wiederverwendete Dateien werden nie geloescht. Unvollstaendige
 Nacharbeiten und fehlgeschlagenes Speichern bleiben als
 eigene Zustaende sichtbar; nach Vorschau plus Echtlauf zeigt der letzte Bericht auf den
 Echtlauf. Eine XTF-Vorschau darf weder Quellen ins Rohdatenarchiv kopieren noch das
 alte Rohdatenarchiv migrieren; beides geschieht nur beim echten Import.
 
-Noch offen ist die absturzsichere Gesamttransaktion mit dauerhaftem Journal und
-vorbereitetem `projekt.json`-Stand. Ein normaler Fehler, Abbruch oder Projektwechsel wird
-jetzt zurueckgenommen; ein Prozess- oder Stromabsturz waehrend der Sitzung kann weiterhin
-einen Arbeitsordner oder verwaiste neue Dateien hinterlassen. Auch das additive
-XTF-Rohdatenarchiv und der
-Ein-Knopf-Import laufen noch ausserhalb dieser Sitzung. Diese Grenzen spaeter in einem
-eigenen Infrastructure-Transaktionsdienst loesen, nicht im ViewModel verstecken.
+Beim Projektladen vergleicht `ImportTransactionRecoveryService` die Marker-TxId mit
+`Project.LastCommittedImportTxId` aus dem atomar gespeicherten `projekt.json`.
+Gleiche TxId bedeutet: Dateien behalten und nur den eigenen Arbeitsordner aufraeumen.
+Ohne Commit-Beweis werden ausschliesslich die im Marker genannten, unveraenderten
+Dateien SHA-geprueft zurueckgenommen. Unlesbare Marker, Hashabweichungen, unklare
+Dateiarten, Verknuepfungen oder Aufraeumfehler sperren das Projektoeffnen; der Marker
+bleibt zur Pruefung erhalten. Auch bei einem normalen Speicherfehler bleibt er stehen.
+Ein spaeterer erfolgreicher Save persistiert die Commit-TxId; entfernt wird der Marker
+erst durch den anschliessenden eindeutigen Recovery-Lauf.
+
+Noch ausserhalb dieser Transaktion liegen das additive XTF-Rohdatenarchiv und die
+Dateioperationen des Ein-Knopf-Imports. Sie koennen bei einem spaeten Projektkonflikt
+nicht automatisch zurueckgenommen werden. Diese Restgrenze spaeter in Infrastructure
+loesen, nicht im ViewModel verstecken.
+Der Ein-Knopf-Import arbeitet datenseitig inzwischen wie der manuelle Lauf auf einer
+Arbeitskopie: Die Live-Referenz wird erst bei Erfolg getauscht; Projektinstanz, Pfad
+und inhaltliche Projektsignatur werden vor der Uebernahme erneut geprueft. Ein
+fehlgeschlagener Projekt-Save wird laut gemeldet statt als „Import abgeschlossen".
+Seine Dateioperationen (Archiv, Medienverteilung) laufen weiterhin direkt, also
+ausserhalb der Staging-Sitzung.
 Der manuelle PDF-Stapellauf bleibt bewusst getrennt vom fehlertoleranten PDF-Scan des
 `ImportPostProcessingController`, weil beide verschiedene Fehlerregeln haben.
+
+Geldrelevante Kosten-, Mengen- und Laengentexte in Kostenrechner, Matrix und Export
+laufen zentral ueber `FachzahlParser` und nie ueber `CurrentCulture`: Punkt oder Komma
+als Dezimaltrenner sowie korrekt gruppierte Schweizer Apostroph-/Leerzeichenwerte
+werden auf de-DE, de-CH und en-US identisch behandelt; mehrdeutige Werte werden
+abgelehnt. `CostCatalogStore` und
+`MeasureTemplateStore` und `PositionTemplateStore` melden beschaedigte Default- oder
+Override-Dateien mit
+`loadError`. Kostenrechner, Haltungs-/Schachtmatrix und Builder sperren dann
+Neuberechnung, Speichern und Geld-Exporte, statt mit leerem Katalog plausible
+Nullwerte zu erzeugen. Fehlende, nichtpositive oder ungueltige Haltungslaengen
+blockieren laengenbasierte Positionen im Kostenrechner und in der Matrix;
+nichtpositive Schachtmengen blockieren Berechnung und Speichern ebenfalls.
+Ausgewaehlte Kostenrechner-Zeilen mit negativer Menge oder negativem Preis werden
+weder summiert noch gespeichert, uebernommen oder exportiert. NPK-Codes werden in
+CSV und Excel als Text ausgegeben, damit etwa `612.110` nicht zu `612.11` gekuerzt
+wird.
+Die drei Stammdaten-Stores lehnen `null`-Strukturen, doppelte normalisierte
+Kosten-/Vorlagen-Identitaeten und negative Mengen ab. Vor jedem Save wird auch eine
+vorhandene Override-Datei neu gelesen; ein frisch erzeugter Store darf deshalb keine
+beschaedigte Datei ueberschreiben, selbst wenn vorher kein Load aufgerufen wurde.
+`CostStoreFileProbe` unterscheidet fehlende Dateien von Ordnern, Verknuepfungen und
+unlesbaren Pfaden. `ProjectCostStoreRepository` verwendet diese Pruefung fuer
+`costs.json`, `schacht_costs.json` und `schacht_empfehlungen.json`, liest ein
+vorhandenes Ziel unmittelbar vor jedem Save erneut und ueberschreibt bei einem
+Lesefehler nichts. Der Schacht-Massnahmendialog oeffnet in diesem Zustand nicht.
+
+`PdfPrimaryDamageFindingBuilder` wandelt die aus PDF-Tabellen gelesenen Zeilen aus
+`Primaere_Schaeden` in strukturierte `VsaFinding`-Eintraege um. Passende A-/B-
+Streckenmarker mit gleicher Nummer und gleichem VSA-Code werden zu einem Bereich
+verbunden. `PdfPrimaryDamageStructureSynchronizer` legt daraus bei fehlenden
+Strukturdaten auch das Protokoll an. Bereits vorhandene Findings oder manuelle
+Protokolle werden nicht ersetzt. Dadurch kann ein erneuter PDF-Import auch bestehende
+Text-only-Haltungen sicher nachziehen.
 
 Beim Teacher-Store ist die JSON-Karte verbindlich und `classes.txt` nur abgeleitet.
 Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`
@@ -157,9 +301,10 @@ wiederhergestellt oder eine neu angelegte Kopie entfernt.
 
 Die versionierten Vorlagen liegen unter `training/class_maps/` und werden beim Build
 nach `Data/Training/` kopiert. `detect_class_migration_v2.candidate.json` enthaelt
-124 vollstaendige Alt-Zuordnungen, steht aber bis zur fachlichen Abnahme absichtlich
-auf `pending`. Unbekannte oder offene Klassen werden vor jeder lokalen Exportausgabe
-hart gestoppt; es gibt keine stille neue ID und keinen automatischen SONST-Rueckfall.
+124 vollstaendige Alt-Zuordnungen. Davon sind nur die 10 BCC-Zeilen fuer den
+persoenlich freigegebenen Bogen-Pilot auf `approved`; 114 Zeilen bleiben `pending`.
+Unbekannte oder offene Klassen werden vor jeder lokalen Exportausgabe hart gestoppt;
+es gibt keine stille neue ID und keinen automatischen SONST-Rueckfall.
 Die Migrationsdatei prueft alle vier Herkunfts-Hashfelder auf SHA-256-Format, die
 deklarierte Zeilenzahl und die feste Aufloesungsreihenfolge. Nur der VSA-Hash wird
 beim Lesen gegen die echte Datei neu berechnet; die anderen drei bleiben Auditwerte
@@ -183,16 +328,23 @@ TrainingCenter
 
 Wichtige Regeln:
 
-- AP-0.1-`Disposition` ist die einzige Quarantaene-Wahrheit fuer Teacher-Daten.
-  Im geprueften Bestand vom 16.07.2026 sind 205 Teacher-Eintraege
-  `trainValCandidate`; 288 Herkunft, 30 Geometrie, 10 Eval-Sperren und 171 Archive
-  werden nicht exportiert. Die fruehere Rohzahl 245 ist keine Exportfreigabe.
+- Fuer neues Training sind ausschliesslich persoenlich manuell codierte und
+  bestaetigte `TrainingSample`-Eintraege zulaessig. `ConfirmedByUser` muss exakt
+  mit `ApprovedBy` der Export-Registry uebereinstimmen; BBox und SAM-Segmentierung
+  sind Pflicht. Teacher-, Auto-, Fremdbestaetigungen und unvollstaendige Handlabels
+  bleiben im Inventar, werden aber nicht in train/val exportiert.
 - `TrainingExportRegistryFileStore` liest
   `<KnowledgeRoot>\training\export_registry_v1.json` strikt. Status `candidate`,
   unbekannte Felder, fehlende Schutz-Sets oder abweichende Manifest-Hashes stoppen.
+  Das optionale Feld `approved_sample_ids` begrenzt einen menschlich freigegebenen
+  Pilot auf exakt diese TrainingSample-IDs. Ist es leer, bleibt das bisherige
+  Verhalten mit allen geeigneten Goldsamples erhalten.
 - Der Plan ist pfadfrei und enthaelt feste Klassen, Haltungs-Splits, Ausschluesse,
   Quell-Hashes und stabile `img_<sha256>.<endung>`-Namen. Gleiche Bild-SHAs werden
   einmal geschrieben; unterschiedliche Labels werden zusammengefuehrt.
+  Beim Runden auf sechs YOLO-Nachkommastellen werden randbuendige BBox-Groessen
+  erforderlichenfalls minimal nach innen begrenzt, damit eine vorher gueltige Box
+  nicht durch reine Rundung ausserhalb des Bildes liegt.
 - Sidecar und lokaler Ausfuehrer schreiben zuerst unter `.staging` und
   veroeffentlichen atomar nach `<KnowledgeRoot>\training\datasets\<plan_id>`.
   Bestehende unvollstaendige oder abweichende Ziele werden nie repariert oder ersetzt.
@@ -223,9 +375,10 @@ Wichtige Regeln:
   keine Dienste erzeugen. `ServiceProvider.cs` enthaelt dadurch nur noch Aufbau und
   den abschliessenden Aufruf der Map.
 
-Produktiv bleibt der Export derzeit bewusst gesperrt, bis
-`detect_class_migration_v2.candidate.json` fachlich freigegeben ist und ein menschlich
-freigegebenes `export_registry_v1.json` existiert. Diese Sperren nie automatisch umgehen.
+Produktiv bleibt der allgemeine Export bewusst gesperrt, solange seine
+Migrationszeilen nicht fachlich freigegeben sind. Der getrennte BCC-Bogen-Pilot ist
+mit `BCC_bogen` und fester ID 14 freigegeben; sein Register darf nur die einzeln
+persoenlich bestaetigten Goldsample-IDs enthalten. Diese Sperren nie automatisch umgehen.
 
 `tools/StageAExporter` ist jetzt eine reine Kompatibilitaets-CLI vor derselben Runtime
 und demselben Coordinator wie WPF. Sie besitzt keine eigene Klassen-, Split-, Label-
@@ -239,6 +392,27 @@ Der fruehere `YoloDatasetExportService` ist entfernt. Er war nicht registriert u
 duplizierte Klassenbildung, Bild-Split und Dateischreiben ohne den vollstaendigen
 Eval-/Registerschutz. Keinen zweiten YOLO-Datensatzschreiber neben dem gemeinsamen
 Coordinator und seinen beiden plan-gesteuerten Ausfuehrern einfuehren.
+
+`training/scripts/prepare_bcc_pilot.py` erzeugt nach einer schreibfreien Vorpruefung
+das enge BCC-Register und den Auditbeleg. `training/scripts/train_bcc_pilot.py`
+akzeptiert danach nur einen vollstaendig gehashten Export unter
+`<KnowledgeRoot>\training\datasets`, trainiert vom unveraenderten
+`sidecar/models/yolo26m/yolo26m.pt` und schreibt ausschliesslich einen nicht
+aktivierten Kandidaten unter `training\models\candidates`. Es startet nie bei
+erreichbarem Sidecar oder weniger als 28000 MB freiem VRAM und ersetzt keine
+produktiven Gewichte. Der kleine BCC-Pilot verwendet die auf dieser Hardware
+gemessene Batch-Groesse 3; `patience=0` fuehrt die verlangten Epochen vollstaendig
+aus. Von Ultralytics erzeugte `train.cache`/`val.cache` werden nach jedem Lauf
+entfernt, damit der plan-gesteuerte Datensatz unveraendert bleibt.
+
+Der nicht aktivierte BCC-Kandidat kann ausschliesslich im Training Studio als
+reiner Fototest verwendet werden. `TrainingPreviewDetectionService` ruft dafuer
+den getrennten Sidecar-Endpunkt `POST /detect/yolo/bcc-test` auf. Der Sidecar
+waehlt den Kandidaten selbst unter `<KnowledgeRoot>\training\models\candidates`,
+akzeptiert nur `not_deployed`, Pilot `BCC_bogen`, mindestens 30 Bilder, die
+freigegebene 15er-Klassenkarte und eine passende SHA-256. Er laedt ihn in den
+eigenen GPU-Slot `YOLO_TEST`; das aktive Standardmodell im Slot `YOLO` wird weder
+ersetzt noch entladen. Der Client darf keinen Modellpfad liefern.
 
 ## SAM-Review im Training Center
 
@@ -258,6 +432,185 @@ startet nur den ViewModel-Befehl und enthaelt keine Prozesslogik. Segmentierung 
 Code-Vorschlag laufen parallel. Wenn nur einer der beiden Aufrufe scheitert, behaelt das
 ViewModel das bereits abgeschlossene Teilergebnis sichtbar.
 
+Das Fenster bietet fuer den reinen Fototest `Aktives Standardmodell` und
+`BCC-Testmodell (nicht aktiv)` an. Automatische Treffer erscheinen nur als blaue
+Vorschau-Boxen mit Code und Klartext. Sie werden nie in `CurrentBox`, die SAM-Maske
+oder einen Goldsample uebernommen. Nur die rote, vom Menschen gezogene Box kann
+ueber Akzeptieren/Korrigieren gespeichert werden.
+Das aktive Standardmodell darf nur bei ausdruecklichem `qualified=true` laufen.
+Fehlende oder unlesbare Qualifikation sperrt den Fototest ebenfalls. Der await im
+ViewModel bleibt auf dem WPF-UI-Kontext; danach gesetzte Anzeige-Eigenschaften duerfen
+nicht mit `ConfigureAwait(false)` vom UI-Thread abgekoppelt werden.
+
+Die Schaltflaeche `Foto allgemein mit KI pruefen` ist davon getrennt. Sie ruft ueber
+`AnnotationWorkbenchService.SuggestPhotoAsync` den zentralen `IProtocolAiService`
+mit dem ganzen Foto und dem aktiven VSA-Codekatalog auf. Der kataloggepruefte
+Qwen-/KB-Vorschlag wird nur angezeigt und muss bewusst angeklickt werden. Rote
+Hand-Box, SAM-Maske, bestehender Code und Beschreibung bleiben unveraendert; der
+Aufruf schreibt weder Goldsamples noch KB-Daten. Der schnelle Vorschlag beim
+Box-Ziehen bleibt der getrennte YOLO-Classifier-Weg. Nicht geladene Modelle und
+unbekannte Klassen werden sichtbar abgewiesen statt als VSA-Code ausgegeben.
+`AiInput.RequireImage` erzwingt fuer diesen Weg ein wirklich lesbares Foto; ein
+reiner Text-/KB-Vorschlag ohne Bild ist verboten. Wechselt der Nutzer waehrend des
+Aufrufs das Bild, wird das spaete Ergebnis verworfen.
+
+Eine persoenlich uebernommene Auswahl aus dem VSA-Codierfenster ist dagegen eine
+bewusste Handcodierung. `WorkbenchCodeSelectionMapper` uebernimmt deshalb neben
+Code, Uhrlage und Stufe auch `ProtocolEntry.Beschreibung`.
+`TrainingStudioViewModel.ApplyCodeSelection` ersetzt damit nur ein leeres Feld oder
+den automatischen Platzhalter durch eine fertige Katalogbeschreibung mit Code;
+selbst geschriebener Text bleibt erhalten. KI-Vorschlaege und direkt eingetippte
+Codes erhalten weiterhin keine automatische Goldfreigabe. Rote Hand-Box, gueltige
+SAM-Maske und persoenliches Akzeptieren bleiben fuer Gold immer Pflicht.
+
+Das Training Studio zeigt den durch `PersonalGoldProgressCalculator` berechneten
+Goldstand je Hauptcode mit Ziel 30-50 an und aktualisiert ihn nach jedem erfolgreichen
+Speichern. Die Warteschlange `Unvollstaendige Goldframes` laedt nur persoenlich
+bestaetigte Handlabels ohne Box oder SAM-Segmentierung. Beim Nachlabeln wird das
+bestehende Sample anhand seiner ID ergaenzt; es entsteht kein doppelter Datensatz.
+
+Die Schaltflaeche `Goldalbum` oeffnet `PersonalGoldAlbumWindow`. Das Fenster liest
+ueber `IPersonalGoldAlbumService` ausschliesslich persoenlich bestaetigte Handlabels,
+gruppiert sie nach Hauptcode und zeigt Bild, Code, Beschreibung, Datei- und
+Geometriestatus. Es ist rein lesend und veraendert weder Bilder noch Trainingsdaten.
+
+Neue Bilder koennen unter `<KnowledgeRoot>\training\gold_inbox` vorbereitet werden.
+`PersonalGoldInboxFileService` legt die Hauptcode-Unterordner mit Code und Klartext,
+zum Beispiel `BAB - Riss` und `BCA - Seitlicher Anschluss`, sowie
+`_OHNE_ZUORDNUNG` sowie `_ERLEDIGT` an. Es liest nur JPG/JPEG/PNG aus der Wurzel
+und der ersten Ordnerebene; alte reine Codeordner wie `BAB` bleiben lesbar,
+`_ERLEDIGT` wird uebersprungen,
+und folgt keinen Datei- oder Ordnerverknuepfungen. `Gold-Eingang oeffnen` zeigt den
+Ordner, `Eingang laden` uebergibt den Stapel an den vorhandenen Pruefplatz. Der
+Ordnername ist nur ein sichtbarer Hauptcode-Hinweis und wird nie automatisch als
+finaler VSA-Code akzeptiert. Eingangsdateien bleiben unveraendert. Erst Codieren,
+BBox, SAM-Segmentierung und persoenliches Akzeptieren erzeugen das Goldsample und
+die inhaltsadressierte Kopie unter
+`gold_frames\<Hauptcode - Klartext>\gold_<sha256>.<endung>`.
+
+Goldstand, Goldalbum und Ordnerhinweis zeigen Hauptcodes ebenfalls mit Klartext.
+Der nicht als Basiscode vorhandene BBD-Anker wird dabei fachlich als
+`BBD - Eindringender Boden` bezeichnet und nicht mit der allgemeinen BB-Gruppe.
+
+Beim Bestaetigen legt `AnnotationWorkbenchService` das unveraenderte Bild zuerst
+inhaltsadressiert unter
+`<KnowledgeRoot>\gold_frames\<Hauptcode - Klartext>\gold_<sha256>.<endung>` ab.
+Der endgueltig gespeicherte Code bestimmt den Ordner; das gilt auch nach einer
+persoenlichen Korrektur eines KI-Vorschlags.
+Das Kundenoriginal bleibt unberuehrt. Scheitert die sichere Goldkopie, wird
+nichts gespeichert. `TrainingFrameFileStore` prueft bestehende und neue Bildbytes;
+eine beschaedigte alte Zieldatei wird nicht als Treffer akzeptiert, sondern durch
+eine gepruefte atomare Kopie ersetzt.
+
+Der Speicherweg trennt seit 2026-07-25 streng zwischen Entwurf und Gold
+(„Gold-Wahrheit"). Vor dem Schreiben lehnt `GoldBeschreibungGuard`
+Platzhalter-Texte („Ausmass ergaenzen") ab, und `SamMaskValidator`
+(Infrastructure, neben `SamMaskDecoder`) prueft die Maske: nicht `Degraded`,
+RLE strikt dekodierbar (Laufsumme = Breite x Hoehe), mindestens ein gesetztes
+Pixel und mindestens ein echter Maskenpixel-Mittelpunkt innerhalb der Hand-Box.
+Gerade und ungerade RLE-Tokenzahlen sind erlaubt, weil der echte Sidecar-Encoder
+keinen kuenstlichen Abschlussrun anhaengt; Startwert und Runs bleiben streng.
+Nur mit gueltiger Maske entsteht ein
+Goldsample (`Status = Approved`, Gruen) mit KB-Index und Teacher-Eintrag; die
+Teacher-Annotation traegt dabei `SourceSampleId` als Fremdschluessel. Ohne
+gueltige Maske wird nur ein Entwurf (`TrainingSampleStatus.Draft`, Gelb, kein
+KB-/Teacher-Eintrag) gespeichert, der in der Warteschlange „Unvollstaendige
+Goldframes" zur Reparatur erscheint; das Nachlabeln mit Maske fuehrt ueber
+denselben Weg zum Goldsample. Zusaetzlich verlangt
+`KnowledgeBaseManager.IsIndexWorthy` die vollstaendige persoenliche
+`ManualGoldTrainingPolicy`, Box, Maske und einen fertigen Text. Platzhalter duerfen
+fuer historischen reinen YOLO-BBox-Export weiterverwendet werden, gelangen aber
+weder beim Neuindexieren noch aus vorhandenen KB-Zeilen ins Qwen-Retrieval.
+Damit werden Entwuerfe, fremde/alte Auto-Freigaben und unfertige Texte auch bei
+Nachhol-/Rebuild-Laeufen gesperrt. Das Akzeptieren ist waehrend
+eines laufenden SAM-Laufs sowie bei bereits laufendem Speichern gesperrt
+(ViewModel-Flags).
+
+Die Sample-Identitaet ist die `SampleId`: `MergeOrUpdateAsync` matcht zuerst
+per Id, erst danach per Signatur (Alt-Aufrufer). Eine Codekorrektur an einem
+Bestandssample ersetzt den Eintrag atomar ueber
+`ITrainingSampleStore.ReplaceBySampleIdAsync` (ein Sperrvorgang, ein Schreiben)
+und bereinigt den alten Stand: KB-Deindex ist produktiv verdrahtet
+(`TrainingKnowledgeBaseSampleDeindexer`, kein No-op), alte Teacher-Eintraege
+werden per `SourceSampleId` entfernt (Mehrdeutigkeit im Altbestand → Warnung
+statt Loeschen). `MergeAndSaveAsync` dedupliziert per Signatur als Sperre
+gegen versehentliches Doppel-Akzeptieren; der Neuanlage-Pfad nutzt
+`TryAddNewAsync`, das eine uebersprungene Dublette sichtbar abweist statt
+still fortzufahren (fruehere KB-Waisen entstanden genau so).
+
+Mehrfachobjekte werden seit 2026-07-25 unterstuetzt: Neue Samples bauen ihre
+Signatur mit Box als `caseId|code|meter|meter|b:x,y,w,h` (normalisiert, 3
+Dezimalstellen). Zwei Schaeden mit gleichem Code am selben Meter, aber
+verschiedenen Boxen, werden dadurch als zwei eigenstaendige Objekte mit
+eigener SampleId, KB- und Teacher-Eintrag gespeichert; ein erneutes
+Akzeptieren desselben Objekts (gleiche Box) wird weiterhin entdoppelt.
+Altbestand mit 4-teiliger Signatur (ohne Box) bleibt gueltig.
+Der Player-Codiermodus prueft Masken mit demselben strengen Format
+(`SamMaskFormatValidator` in Application; `SamMaskValidator` in Infrastructure
+delegiert dorthin und ergaenzt Degraded/Dekodierung/Box-Schnitt); ungueltige
+Masken werden nicht uebernommen, das Sample bleibt sichtbar unvollstaendig.
+
+Persoenliche Entscheidungen im Player-Codiermodus verwenden denselben Goldspeicher.
+`CodingEventToSampleMapper` markiert nur `Accepted` oder `AcceptedWithEdit` mit
+gesetztem Benutzer und Bestaetigungszeitpunkt als `ManualCoding` sowie
+`ReviewApproved`/`ReviewCorrected`. `CodingTrainingSamplePersistenceCoordinator`
+prueft zuerst den Eval-Schutz, kopiert vorhandene Fotos oder den bestaetigten
+Player-Frame inhaltsadressiert in den Klartext-Hauptcode-Unterordner von
+`gold_frames` und speichert danach
+`training_samples.json` und den KB-Status. BBox und vorhandene SAM-RLE-Daten werden
+aus dem Coding-Ereignis uebernommen. Fehlt Bild, Box oder SAM, bleibt der Eintrag
+sichtbar unvollstaendig und darf nicht in den Trainings-Export.
+Auch die Stapelspeicherung liefert ein echtes Ergebnis zurueck. Ein Fehler wird im
+Player als rotes Overlay „Training nicht gespeichert" angezeigt und nicht mehr nur
+im Hintergrundprotokoll versteckt.
+Auch `CodingSessionService` indexiert aus diesem Weg nur strikt persoenlich
+bestaetigte Goldsamples mit vorhandenem Goldbild. Der allgemeine Session-Abschluss
+darf weder fremde Freigaben aufnehmen noch persoenliche Gold-Metadaten ueberschreiben.
+
+`tools/PersonalGoldMigration` uebernimmt bestehende persoenliche Handlabels
+wiederholbar in dieselben Klartext-Hauptcode-Unterordner. Vor dem Umschalten werden alle Quelldateien
+geprueft; SQLite und `training_samples.json` werden bei einem Fehler zurueckgesetzt.
+Nach erfolgreicher Umstellung wird auch das Gold-Gehirn-Dateimanifest erneuert.
+Die nachvollziehbare Verteilung liegt unter
+`<KnowledgeRoot>\training\gold_standard\main_code_inventory_v1.json`, die Pruefspuren
+unter `<KnowledgeRoot>\training\gold_migrations`. Wissens-ZIP-Sicherungen enthalten
+`gold_frames` rekursiv; Kundenoriginale werden nie veraendert.
+
+`tools/GoldBrainSeparation` trennt einen vorhandenen Mischbestand einmalig vom neuen
+Gold-Gehirn. Ohne `--execute` wird nur geprueft. Im Ausfuehrungsmodus baut
+`PersonalGoldBrainSeparationService` zuerst einen vollstaendigen Arbeitsstand auf,
+prueft JSON, Frames und SQLite feldgenau und benennt erst dann die Ordner auf demselben
+Datentraeger atomar um. Alte absolute Goldbildpfade unter der bisherigen Wissenswurzel
+werden dabei sicher auf das Lokalarchiv abgebildet; externe Bildpfade bleiben
+unveraendert. Ueberlappende Wissens-, Archiv-, Spiegel-, Staging- oder
+Legacy-Protokollpfade sperren den Lauf vor dem Commit.
+Vor der ersten Umbenennung wird neben der Wissenswurzel das atomare Journal
+`<KnowledgeRoot>.gold-brain-separation.commit.json` geschrieben. Ein spaeterer
+Ausfuehrungslauf setzt einen unterbrochenen Commit nur anhand kanonisch gebundener
+Pfade, Besitzmarker und gepruefter Vorherzustaende auf den Ausgangsstand zurueck;
+ein Dry-Run meldet das
+offene Journal nur und veraendert nichts. Die Fassade bleibt klein: Input-/
+Pfadpruefung, Arbeitsstand, Journal, Commit und Recovery liegen in getrennten
+internen Diensten. Der komplette lokale Altstand bleibt als
+`<KnowledgeRoot>_ALT_<Zeitstempel>` erhalten; der bisherige Elements-Spiegel liegt
+unter `<Elements>\Brain_Archiv\KI_BRAIN_ALT_<Zeitstempel>`. Das neue aktive Gehirn
+enthaelt nur persoenlich bestaetigte Handlabels und deren Embeddings. Teacher- und
+Protokoll-Kontext starten leer. Der Pruefbeleg und ein Dateimanifest liegen unter
+`<KnowledgeRoot>\training\gold_standard`. Altarchive tragen einen Schutzmarker und
+duerfen nicht wieder als aktive Wissenswurzel angeschlossen werden.
+Nach dem Umschalten prueft `PersonalGoldArchiveRecoveryService`, ob persoenlich
+bestaetigte `ManualCoding`-Faelle nur noch in der archivierten SQLite-KB stehen.
+Nur solche Faelle mit vorhandenem Bild und Embedding werden inhaltsadressiert
+nachgeholt. Alte `TeacherAnnotation`- und `VideoTimestamp`-Zeilen werden dadurch
+nicht zu Hand-Gold umgedeutet. Vor der ersten Mutation liegt das atomare Journal
+`<KnowledgeRoot>.gold-archive-recovery.transaction.json` samt geprueften
+Vorherkopien fuer SQLite, Trainings-JSON, Inventar, Beleg und Manifest vor. Ein
+Neustart setzt diese Dateien und neu angelegte Frames idempotent zurueck. Fremde
+Audit-Artefakte, Hashabweichungen, unsichere Pfade oder Junctions werden niemals
+geloescht, sondern sperren die automatische Recovery zur manuellen Pruefung. Das
+Journal wird erst nach dem vollstaendigen neuen Manifest entfernt. Der Nachholbeleg
+`gold_brain_archive_recovery_v1.json` dokumentiert IDs und neue Goldpfade.
+
 Die Maus-/Bildabbildung des Pruefplatzes liegt im reinen
 `TrainingStudioImageGeometryMapper`. Er beruecksichtigt die tatsaechliche Lage des
 `Image` im Overlay, freie Raender durch `Uniform`-Darstellung und begrenzt das Ziehen
@@ -270,7 +623,8 @@ Vorschlag sofort; eine alte Maske darf nie zusammen mit einer neuen Box erschein
 - Produktiv gibt es zwei Laufzeit-Kontextwege. Beide liefern Prompt-Beispiele und
   trainieren keine Qwen-Modellgewichte.
 - Aehnliche bestaetigte Faelle kommen aus `KnowledgeBase.db` ueber `RetrievalService`.
-- Freigegebene Protokolleintraege kommen getrennt aus `protocol_training.json`
+- Freigegebene Protokolleintraege kommen getrennt aus
+  `<KnowledgeRoot>\protocol_training.json`
   ueber `ProtocolTrainingFileStore`.
 - Der fruehere bildbasierte `FewShotExampleStore` samt Builder und der Schaltflaeche
   `Zu FewShot` ist entfernt: Er schrieb Bilder, wurde aber von keinem KI-Prompt gelesen.

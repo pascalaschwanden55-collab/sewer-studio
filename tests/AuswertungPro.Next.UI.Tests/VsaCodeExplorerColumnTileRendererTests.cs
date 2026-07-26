@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Vsa;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;

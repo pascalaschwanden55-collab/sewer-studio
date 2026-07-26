@@ -12,9 +12,9 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentCodeUpdateWorkflow.cs");
-        var meterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDisplayMeterResolveWorkflow.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentCodeBadgeControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCurrentCodeUpdateWorkflow.cs");
+        var meterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingDisplayMeterResolveWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCurrentCodeBadgeControls.cs");
 
         Assert.True(File.Exists(workflowPath), "Current-Code-Badge-Entscheidung soll ausserhalb der PlayerWindow-Partials laufen.");
         Assert.True(File.Exists(meterResolveWorkflowPath), "Current-Code-Display-Meter-Gate soll ausserhalb der PlayerWindow-Partials laufen.");
@@ -47,12 +47,12 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
     public void PlayerWindow_coding_navigation_lives_in_navigation_partial()
     {
         var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
-        var videoControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingVideoNavigationController.cs");
+        var videoControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingVideoNavigationController.cs");
         var navigationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
-        var moveCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMoveByCommandWorkflow.cs");
-        var videoSyncWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingVideoSyncCommandWorkflow.cs");
-        var uiUpdateCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateCommandWorkflow.cs");
-        var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateWorkflow.cs");
+        var moveCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMoveByCommandWorkflow.cs");
+        var videoSyncWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingVideoSyncCommandWorkflow.cs");
+        var uiUpdateCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUiUpdateCommandWorkflow.cs");
+        var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionHost.cs");
         var sessionOwnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionViewModelOwner.cs");
         var sessionRuntimeFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionRuntimeFactory.cs");

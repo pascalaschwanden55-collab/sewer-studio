@@ -56,7 +56,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var bufferPath = Path.Combine(uiRoot, "Ai", "DetectionConfirmationBuffer.cs");
+        var bufferPath = Path.Combine(uiRoot, "Ai", "Live", "DetectionConfirmationBuffer.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
 
         Assert.True(File.Exists(bufferPath), "Geteilter Detection-Pending-Zustand soll in einem eigenen Buffer liegen.");
@@ -87,8 +87,8 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
-        var analysisCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisCommandWorkflow.cs");
-        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
+        var analysisCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAnalysisCommandWorkflow.cs");
+        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingModeExitTeardownWorkflow.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -176,7 +176,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var sessionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var factoryPath = Path.Combine(uiRoot, "Services", "CodingSessionStateFactory.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingSessionStateCreationWorkflow.cs");
 
         Assert.True(File.Exists(factoryPath), "Codier-Session-State-Aufbau soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(workflowPath), "Codier-Session-State-Erzeugungsreihenfolge soll ausserhalb von PlayerWindow liegen.");

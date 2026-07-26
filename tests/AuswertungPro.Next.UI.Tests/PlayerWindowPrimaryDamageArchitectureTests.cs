@@ -11,10 +11,10 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
-        var synchronizerPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizer.cs");
-        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizerFactory.cs");
-        var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSyncWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageTextBuilder.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSynchronizer.cs");
+        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSynchronizerFactory.cs");
+        var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncWorkflow.cs");
 
         Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Synchronisierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Synchronisierung muss ueber Factory verdrahtet werden.");
@@ -39,11 +39,11 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
-        var synchronizerPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizer.cs");
-        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizerFactory.cs");
-        var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSyncWorkflow.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSyncCommandWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageTextBuilder.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSynchronizer.cs");
+        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSynchronizerFactory.cs");
+        var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncCommandWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Primaere-Schaeden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Feldschreiben muss ausserhalb der PlayerWindow-Partials liegen.");

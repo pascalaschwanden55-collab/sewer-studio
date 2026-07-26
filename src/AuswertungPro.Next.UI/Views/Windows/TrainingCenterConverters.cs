@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Windows.Data;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -28,6 +29,29 @@ public sealed class VsaCodeToTextConverter : IValueConverter
 
         var label = Infrastructure.Ai.VsaCodeResolver.LookupLabel(code);
         return string.IsNullOrWhiteSpace(label) ? code : $"{code} — {label}";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>
+/// Wandelt einen Goldstandard-Hauptcode in "BAB — Riss" um.
+/// Behandelt auch den VSA-Praefixanker BBD fachlich korrekt.
+/// </summary>
+public sealed class PersonalGoldMainCodeToTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not string mainCode || string.IsNullOrWhiteSpace(mainCode))
+            return value;
+        var trimmed = mainCode.Trim();
+        if (trimmed.Length != 3 || !trimmed.All(char.IsLetter))
+            return value;
+
+        return PersonalGoldMainCodeCatalog.FormatDisplayName(
+            trimmed,
+            Infrastructure.Ai.VsaCodeResolver.LookupLabel);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -96,6 +120,14 @@ public sealed class FileToImageConverter : IValueConverter
 
     private static int ResolveDecodePixelWidth(object? parameter)
     {
+        if (parameter is string mode
+            && string.Equals(mode, "Original", StringComparison.OrdinalIgnoreCase))
+        {
+            // BitmapImage verwendet bei 0 die echten Bildpixel. Das braucht der
+            // Modelltest, weil YOLO seine Boxen ebenfalls in Originalpixeln liefert.
+            return 0;
+        }
+
         if (parameter is int width && width > 0)
             return width;
 

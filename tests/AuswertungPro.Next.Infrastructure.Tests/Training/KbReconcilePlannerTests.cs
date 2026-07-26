@@ -82,6 +82,19 @@ public sealed class KbReconcilePlannerTests
     }
 
     [Fact]
+    public void SelectPending_Draft_IsSkipped_EvenWithPendingState()
+    {
+        // Workbench-Entwuerfe (Status=Draft, KbIndexState=Pending) duerfen vom Nachhol-Lauf
+        // NICHT nachgeholt werden — sie werden erst nach der Masken-Reparatur zu Gold.
+        var samples = new List<TrainingSample>
+        {
+            Make("entwurf", TrainingSampleStatus.Draft, KbIndexState.Pending),
+        };
+
+        Assert.Empty(KbReconcilePlanner.SelectPending(samples));
+    }
+
+    [Fact]
     public void SelectPending_NullInput_ReturnsEmpty()
     {
         Assert.Empty(KbReconcilePlanner.SelectPending(null!));

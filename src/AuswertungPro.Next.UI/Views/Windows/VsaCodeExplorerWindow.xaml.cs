@@ -11,6 +11,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
+using AuswertungPro.Next.UI.Ai.Vsa;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using Anim = AuswertungPro.Next.UI.Controls.Animations;

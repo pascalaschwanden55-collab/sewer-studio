@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -33,7 +34,7 @@ public sealed class ProtocolTrainingStoreTests
                 },
                 "H-001");
 
-            var path = Path.Combine(AppDataPathResolver.Resolve(), "data", "protocol_training.json");
+            var path = Path.Combine(KnowledgeBasePaths.GetRoot(), "protocol_training.json");
 
             Assert.True(File.Exists(path));
             Assert.True(File.Exists(path + ".bak"));
@@ -66,7 +67,7 @@ public sealed class ProtocolTrainingStoreTests
     {
         WithTempAppData(() =>
         {
-            var path = Path.Combine(AppDataPathResolver.Resolve(), "data", "protocol_training.json");
+            var path = Path.Combine(KnowledgeBasePaths.GetRoot(), "protocol_training.json");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, JsonSerializer.Serialize(new
             {
@@ -89,7 +90,7 @@ public sealed class ProtocolTrainingStoreTests
     {
         WithTempAppData(() =>
         {
-            var path = Path.Combine(AppDataPathResolver.Resolve(), "data", "protocol_training.json");
+            var path = Path.Combine(KnowledgeBasePaths.GetRoot(), "protocol_training.json");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, "{ keine gueltige JSON-Datei");
 
@@ -101,17 +102,22 @@ public sealed class ProtocolTrainingStoreTests
 
     private static void WithTempAppData(Action body)
     {
-        var previous = Environment.GetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar);
+        var previousAppData = Environment.GetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar);
+        var previousKnowledge = Environment.GetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName);
         var temp = Path.Combine(Path.GetTempPath(), "sewer-protocol-training-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         Environment.SetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar, temp);
+        Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, temp);
+        KnowledgeBasePaths.InvalidateCache();
         try
         {
             body();
         }
         finally
         {
-            Environment.SetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar, previous);
+            Environment.SetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar, previousAppData);
+            Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, previousKnowledge);
+            KnowledgeBasePaths.InvalidateCache();
             try { Directory.Delete(temp, recursive: true); } catch { }
         }
     }

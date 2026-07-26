@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;

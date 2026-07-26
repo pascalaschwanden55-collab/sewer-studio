@@ -10,7 +10,11 @@ public sealed record SidecarHealthResponse(
     [property: JsonPropertyName("version")] string Version,
     [property: JsonPropertyName("gpu")] GpuStatus? Gpu,
     [property: JsonPropertyName("models_present")] SidecarModelsPresent? ModelsPresent = null,
-    [property: JsonPropertyName("process_id")] int? ProcessId = null
+    [property: JsonPropertyName("process_id")] int? ProcessId = null,
+    [property: JsonPropertyName("classifier")] SidecarClassifierStatus? Classifier = null,
+    // Qualifikationsstand des aktiven Detektors (additiv; null bei aelterem Sidecar
+    // ohne das Feld). Verbraucher duerfen nur ein ausdrueckliches true freigeben.
+    [property: JsonPropertyName("detector_qualification")] SidecarDetectorQualification? DetectorQualification = null
 )
 {
     [JsonIgnore]
@@ -32,7 +36,26 @@ public sealed record SidecarHealthResponse(
 
     [JsonIgnore]
     public string MissingRequiredModelsText => string.Join(", ", MissingRequiredModels);
+
+    /// <summary>
+    /// True nur, wenn der Sidecar explizit "classifier.loaded=false" meldet.
+    /// Fehlt das Feld (aelterer Sidecar ohne classifier im Health-Response), gilt der
+    /// Klassifikator als unbekannt - nicht als fehlend (fail-open fuer Alt-Sidecars).
+    /// </summary>
+    [JsonIgnore]
+    public bool ClassifierMissing => Classifier is { Loaded: false };
 }
+
+/// <summary>
+/// Status des VSA-Klassifikators aus dem /health-Feld "classifier".
+/// Geladen: name/source/sha256_12/imgsz/preprocessing; nicht geladen: nur loaded=false
+/// (+ active_json_present/override_configured, hier nicht abgebildet).
+/// </summary>
+public sealed record SidecarClassifierStatus(
+    [property: JsonPropertyName("loaded")] bool Loaded,
+    [property: JsonPropertyName("name")] string? Name = null,
+    [property: JsonPropertyName("source")] string? Source = null
+);
 
 public sealed record SidecarModelsPresent(
     [property: JsonPropertyName("dino")] bool Dino,
@@ -78,7 +101,28 @@ public sealed record YoloResponse(
     [property: JsonPropertyName("queue_wait_ms")] double QueueWaitMs = 0,
     [property: JsonPropertyName("vram_allocated_gb")] double? VramAllocatedGb = null,
     [property: JsonPropertyName("vram_total_gb")] double? VramTotalGb = null,
-    [property: JsonPropertyName("gpu_utilization_percent")] double? GpuUtilizationPercent = null
+    [property: JsonPropertyName("gpu_utilization_percent")] double? GpuUtilizationPercent = null,
+    [property: JsonPropertyName("detector_qualified")] bool? DetectorQualified = null,
+    [property: JsonPropertyName("detector_qualification_status")] string DetectorQualificationStatus = "not_checked",
+    [property: JsonPropertyName("detector_qualification_reason")] string? DetectorQualificationReason = null,
+    [property: JsonPropertyName("detector_artifact_sha256")] string? DetectorArtifactSha256 = null
+);
+
+/// <summary>
+/// Antwort des getrennten, nicht produktiven BCC-Trainingskandidaten.
+/// <see cref="Available"/> ist false, wenn kein sicher validierter Kandidat bereitsteht.
+/// </summary>
+public sealed record BccTestYoloResponse(
+    [property: JsonPropertyName("available")] bool Available,
+    [property: JsonPropertyName("error")] string? Error,
+    [property: JsonPropertyName("is_relevant")] bool IsRelevant,
+    [property: JsonPropertyName("detections")] IReadOnlyList<YoloDetectionDto> Detections,
+    [property: JsonPropertyName("frame_class")] string FrameClass,
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    [property: JsonPropertyName("candidate_id")] string CandidateId,
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
+    [property: JsonPropertyName("model_name")] string ModelName,
+    [property: JsonPropertyName("device")] string Device
 );
 
 // ── YOLO Classify ─────────────────────────────────────────────────────────
@@ -199,6 +243,12 @@ public sealed record SamResponse(
     [property: JsonPropertyName("is_bend")] bool IsBend = false,
     [property: JsonPropertyName("vanish_x")] double VanishX = 0.5,
     [property: JsonPropertyName("vanish_y")] double VanishY = 0.5
+);
+
+/// <summary>Qualifikationsstand des aktiven Detektors aus der Sidecar-Statusdatei.</summary>
+public sealed record SidecarDetectorQualification(
+    [property: JsonPropertyName("qualified")] bool Qualified,
+    [property: JsonPropertyName("reason")] string? Reason
 );
 
 // ── Training Export ─────────────────────────────────────────────────────────

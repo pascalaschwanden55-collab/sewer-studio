@@ -14,10 +14,10 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var applyControllerPath = Path.Combine(uiRoot, "Player", "CodingApplyController.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
-        var previewWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
-        var codingProjectPersistencePath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceService.cs");
-        var codingProjectPersistenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceWorkflow.cs");
-        var codingProjectPersistenceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceServiceFactory.cs");
+        var previewWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolPreviewWorkflowServiceFactory.cs");
+        var codingProjectPersistencePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProjectPersistenceService.cs");
+        var codingProjectPersistenceWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProjectPersistenceWorkflow.cs");
+        var codingProjectPersistenceFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProjectPersistenceServiceFactory.cs");
         var servicePath = Path.Combine(uiRoot, "Player", "PlayerShellProjectService.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerShellProjectServiceFactory.cs");
         var shellPath = Path.Combine(uiRoot, "ViewModels", "ShellViewModel.cs");

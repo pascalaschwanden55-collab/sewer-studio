@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.ViewModels.Windows;
@@ -185,7 +186,9 @@ public partial class PlayerWindow : Window
             TxtConfirmCode,
             TxtConfirmConfidence,
             TxtConfirmDescription,
-            TxtConfirmDetail);
+            TxtConfirmDetail,
+            ConfirmSaveErrorPanel,
+            TxtConfirmSaveError);
         PlayerWindowStateControls.Track(this);
 
         _playbackContext = PlayerWindowPlaybackContext.From(videoInfo, initialOverlayText, damageOverlay);
@@ -245,7 +248,12 @@ public partial class PlayerWindow : Window
             () => _liveDetectionController.PendingConfirmationFrameBytes,
             () => _codingSessionHost.HaltungName ?? "unknown",
             () => _protocolContext.HaltungRecord?.GetFieldValue("Datum_Jahr"),
-            CaptureCurrentFrameAsync, _protocolContext.TrainingSamples);
+            CaptureCurrentFrameAsync,
+            _protocolContext.TrainingSamples,
+            _protocolContext.TrainingFrames,
+            reportBatchFailure: error => ShowOverlay(
+                $"Training nicht gespeichert: {error}",
+                TimeSpan.FromSeconds(5)));
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
@@ -387,7 +395,14 @@ public partial class PlayerWindow : Window
                 UpdateInlineDefectDetail: UpdateInlineDefectDetail,
                 HideInlineDefectDetail: HideInlineDefectDetail,
                 RefreshEvents: RefreshCodingEventsList,
-                FadeOutAiOverlayAfterAction: FadeOutAiOverlayAfterAction));
+                FadeOutAiOverlayAfterAction: FadeOutAiOverlayAfterAction,
+                PersistAcceptedTrainingSampleAsync:
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync,
+                PersistEditedTrainingSampleAsync:
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync,
+                ShowPersistenceError: error => ShowOverlay(
+                    $"Training nicht gespeichert: {error}",
+                    TimeSpan.FromSeconds(5))));
         _codingProtocolMatchController = new CodingProtocolMatchController(
             new CodingProtocolMatchControllerBindings(
                 ResolveSelectedImportEvent: () => LstImportEvents.SelectedItem,
@@ -526,9 +541,6 @@ public partial class PlayerWindow : Window
 
 
 }
-
-
-
 
 
 

@@ -2,6 +2,7 @@ using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -24,5 +25,10 @@ public sealed class CodingConfirmationPanelControlsOwner
     public void Hide()
     {
         Controls.Hide();
+    }
+
+    public void ShowPersistenceError(string? error)
+    {
+        Controls.ShowPersistenceError(error);
     }
 }

@@ -72,6 +72,35 @@ public sealed class FileImportTransactionJournalTests
     }
 
     [Fact]
+    public void Read_unterscheidet_fehlenden_von_beschaedigtem_Marker()
+    {
+        using var dir = new TempDir();
+        var journal = new FileImportTransactionJournal();
+
+        var missing = journal.Read(dir.Path);
+        File.WriteAllText(Path.Combine(dir.Path, ".import-transaction.json"), "{ kein gueltiges json");
+        var failed = journal.Read(dir.Path);
+
+        Assert.Equal(ImportTransactionJournalReadOutcome.Missing, missing.Outcome);
+        Assert.Null(missing.Marker);
+        Assert.Equal(ImportTransactionJournalReadOutcome.Failed, failed.Outcome);
+        Assert.Null(failed.Marker);
+        Assert.False(string.IsNullOrWhiteSpace(failed.ErrorMessage));
+    }
+
+    [Fact]
+    public void Read_lehnt_strukturell_unvollstaendigen_Marker_ab()
+    {
+        using var dir = new TempDir();
+        File.WriteAllText(Path.Combine(dir.Path, ".import-transaction.json"), "{}");
+
+        var result = new FileImportTransactionJournal().Read(dir.Path);
+
+        Assert.Equal(ImportTransactionJournalReadOutcome.Failed, result.Outcome);
+        Assert.Null(result.Marker);
+    }
+
+    [Fact]
     public void Clear_ohne_Marker_wirft_nicht()
     {
         using var dir = new TempDir();

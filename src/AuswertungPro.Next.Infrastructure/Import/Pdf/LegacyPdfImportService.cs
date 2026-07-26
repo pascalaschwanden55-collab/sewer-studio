@@ -211,6 +211,7 @@ public sealed class LegacyPdfImportService
                     }
 
                     var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf, fillMissingOnly, ctx);
+                    PdfPrimaryDamageStructureSynchronizer.Sync(target);
 
                     // Original-PDF verknuepfen
                     var existingPdfPath = target.GetFieldValue("PDF_Path")?.Trim();

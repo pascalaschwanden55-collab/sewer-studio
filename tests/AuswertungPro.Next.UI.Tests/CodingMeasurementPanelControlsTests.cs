@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -70,7 +71,7 @@ public sealed class CodingMeasurementPanelControlsTests
 
     private static MethodInfo? FindApplyMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingMeasurementPanelControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingMeasurementPanelControls")
             ?.GetMethod(
                 "Apply",
                 BindingFlags.Public | BindingFlags.Static,

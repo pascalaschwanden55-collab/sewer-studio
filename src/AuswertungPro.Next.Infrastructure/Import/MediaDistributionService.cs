@@ -209,9 +209,23 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return;
         }
 
+        // UNC vor File.Exists ablehnen: der Zugriff wuerde SMB-Authentifizierung ausloesen (S2-3).
+        if (MediaFileAllowlist.IsUnc(rawPath))
+        {
+            messages.Add($"{fieldName}: UNC-Pfad wird nicht uebernommen: {rawPath}");
+            return;
+        }
+
         if (!File.Exists(rawPath))
         {
             messages.Add($"{fieldName}: Datei nicht gefunden: {rawPath}");
+            return;
+        }
+
+        // Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren (S2-1: Exfiltration beliebiger Dateien).
+        if (!MediaFileAllowlist.IsImportableMediaOrPdf(rawPath))
+        {
+            messages.Add($"{fieldName}: Dateityp nicht erlaubt, wird nicht kopiert: {rawPath}");
             return;
         }
 
@@ -290,10 +304,26 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
+            // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
+            if (MediaFileAllowlist.IsUnc(trimmed))
+            {
+                newPaths.Add(trimmed);
+                messages.Add($"{fieldName}: UNC-Pfad wird nicht uebernommen: {trimmed}");
+                continue;
+            }
+
             if (!File.Exists(trimmed))
             {
                 newPaths.Add(trimmed);
                 messages.Add($"{fieldName}: Datei nicht gefunden: {trimmed}");
+                continue;
+            }
+
+            // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
+            if (!MediaFileAllowlist.IsImportableMediaOrPdf(trimmed))
+            {
+                newPaths.Add(trimmed);
+                messages.Add($"{fieldName}: Dateityp nicht erlaubt, wird nicht kopiert: {trimmed}");
                 continue;
             }
 
@@ -383,9 +413,23 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue;
                 }
 
+                // UNC vor File.Exists ablehnen (S2-3).
+                if (MediaFileAllowlist.IsUnc(rawPath))
+                {
+                    messages.Add($"Foto UNC-Pfad wird nicht uebernommen: {rawPath}");
+                    continue;
+                }
+
                 if (!File.Exists(rawPath))
                 {
                     messages.Add($"Foto nicht gefunden: {rawPath}");
+                    continue;
+                }
+
+                // S2-1: Nur bekannte Medientypen ins Projekt kopieren.
+                if (!MediaFileAllowlist.IsMediaFile(rawPath))
+                {
+                    messages.Add($"Foto Dateityp nicht erlaubt, wird nicht kopiert: {rawPath}");
                     continue;
                 }
 
@@ -461,9 +505,23 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
+            // UNC vor File.Exists ablehnen (S2-3).
+            if (MediaFileAllowlist.IsUnc(finding.FotoPath))
+            {
+                messages.Add($"VsaFinding Foto UNC-Pfad wird nicht uebernommen: {finding.FotoPath}");
+                continue;
+            }
+
             if (!File.Exists(finding.FotoPath))
             {
                 messages.Add($"VsaFinding Foto nicht gefunden: {finding.FotoPath}");
+                continue;
+            }
+
+            // S2-1: Nur bekannte Medientypen ins Projekt kopieren.
+            if (!MediaFileAllowlist.IsMediaFile(finding.FotoPath))
+            {
+                messages.Add($"VsaFinding Foto Dateityp nicht erlaubt, wird nicht kopiert: {finding.FotoPath}");
                 continue;
             }
 
@@ -501,6 +559,10 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
     {
         relativePath = null;
         if (string.IsNullOrWhiteSpace(rawPath) || string.IsNullOrWhiteSpace(haltungSan))
+            return false;
+
+        // UNC-Quellen niemals anfassen (S2-3: SMB-Authentifizierung an fremde Hosts).
+        if (MediaFileAllowlist.IsUnc(rawPath))
             return false;
 
         var normalized = rawPath.Replace('/', Path.DirectorySeparatorChar);
@@ -645,9 +707,23 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return;
         }
 
+        // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
+        if (MediaFileAllowlist.IsUnc(rawPath))
+        {
+            messages.Add($"Schacht {fieldName}: UNC-Pfad wird nicht uebernommen: {rawPath}");
+            return;
+        }
+
         if (!File.Exists(rawPath))
         {
             messages.Add($"Schacht {fieldName}: Datei nicht gefunden: {rawPath}");
+            return;
+        }
+
+        // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
+        if (!MediaFileAllowlist.IsImportableMediaOrPdf(rawPath))
+        {
+            messages.Add($"Schacht {fieldName}: Dateityp nicht erlaubt, wird nicht kopiert: {rawPath}");
             return;
         }
 

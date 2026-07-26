@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Player;

@@ -102,7 +102,17 @@ public static class TrainingYoloExportWorkflow
             request.Log($"  Plan: {result.Plan.PlanId}");
             request.Log($"  Weg: {DescribeRoute(execution.Route)}");
             request.Log($"  Markierte TrainingSamples: {result.Completion.MarkedTrainingSamples}");
-            request.SetStatusText(message);
+            var statusMessage = message;
+            if (result.RegistryGateSkippedSampleIds is { Count: > 0 } registryGateSkipped)
+            {
+                request.Log(
+                    $"  Hinweis: {registryGateSkipped.Count} vollstaendige Goldsamples nicht im " +
+                    $"Freigaberegister - nicht exportiert: {string.Join(", ", registryGateSkipped)}");
+                statusMessage =
+                    $"{message} | Hinweis: {registryGateSkipped.Count} Goldsamples nicht im Freigaberegister.";
+            }
+
+            request.SetStatusText(statusMessage);
         }
         catch (OperationCanceledException)
         {

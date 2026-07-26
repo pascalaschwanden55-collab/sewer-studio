@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -50,6 +51,11 @@ public partial class PlayerWindow
                 ShowSuccess: () => ShowOverlay(
                     "Ins KI-Brain uebernommen.",
                     TimeSpan.FromSeconds(2)),
-                RefreshProtocolMatch: () => _codingProtocolMatchController.RunMatch()));
+                RefreshProtocolMatch: () => _codingProtocolMatchController.RunMatch(),
+                PersistTrainingSampleWithResultAsync:
+                    _codingTrainingPersistenceContext.PersistSingleEventAsync,
+                ShowPersistenceError: error => ShowOverlay(
+                    $"Nicht ins KI-Brain uebernommen: {error}",
+                    TimeSpan.FromSeconds(5))));
     }
 }

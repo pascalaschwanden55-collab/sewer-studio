@@ -323,7 +323,19 @@ public sealed class DataPagePrintController
         var hydraulikAvailable = hydraulikAvailability.IsAvailable;
 
         var projectFolder = _getProjectFolder() ?? "";
-        var holdingCost = _findHoldingCost(holdingLabel.Trim());
+        HoldingCost? holdingCost;
+        try
+        {
+            holdingCost = _findHoldingCost(holdingLabel.Trim());
+        }
+        catch (Exception ex)
+        {
+            // Beschaedigte Kostendaten: Bericht sichtbar abbrechen statt still ein
+            // plausibel aussehendes Dossier ohne Kosten zu erzeugen (Audit K3-Muster).
+            var userMessage = UserError.DescribeAndReport(ex, "Dossier-Kostendaten laden");
+            _dialogs.Error($"Dossier konnte nicht erstellt werden:\n{userMessage}", "Dossier");
+            return;
+        }
         var kostenField = record.GetFieldValue("Kosten");
         var kostenAvailable = holdingCost?.Measures is { Count: > 0 }
             || !string.IsNullOrWhiteSpace(kostenField)
@@ -553,7 +565,11 @@ public sealed class DataPagePrintController
         if (string.IsNullOrWhiteSpace(projectPath))
             return null;
 
-        var store = _projectCosts.Load(projectPath);
+        // Beschaedigte/unlesbare costs.json nicht still als "keine Kosten" behandeln:
+        // der Druckweg bricht mit diesem Fehler sichtbar ab (Audit K3-Muster).
+        var store = _projectCosts.Load(projectPath, out var loadError);
+        if (!string.IsNullOrWhiteSpace(loadError))
+            throw new UserFacingException($"Kostendaten konnten nicht geladen werden:\n{loadError}");
         return store.ByHolding.TryGetValue(holdingLabel.Trim(), out var cost) ? cost : null;
     }
 

@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -158,7 +159,7 @@ public sealed class CodingModeChromeControlsTests
 
     private static MethodInfo? FindShowCodingSurfaceMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingModeChromeControls")
             ?.GetMethod(
                 "ShowCodingSurface",
                 BindingFlags.Public | BindingFlags.Static,
@@ -176,7 +177,7 @@ public sealed class CodingModeChromeControlsTests
 
     private static MethodInfo? FindHideCodingSurfaceMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingModeChromeControls")
             ?.GetMethod(
                 "HideCodingSurface",
                 BindingFlags.Public | BindingFlags.Static,
@@ -196,7 +197,7 @@ public sealed class CodingModeChromeControlsTests
 
     private static MethodInfo? FindLiveDetectionEntryMethod(string name, params Type[] parameterTypes)
         => typeof(CodingOverlayMeasurementFormatter).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingModeChromeControls")
             ?.GetMethod(
                 name,
                 BindingFlags.Public | BindingFlags.Static,

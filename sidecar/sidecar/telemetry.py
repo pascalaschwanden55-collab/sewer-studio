@@ -95,6 +95,10 @@ def write_yolo_detection(
         "confidence_threshold": confidence_threshold,
         "frame_class": response.frame_class,
         "is_relevant": response.is_relevant,
+        "detector_qualified": response.detector_qualified,
+        "detector_qualification_status": response.detector_qualification_status,
+        "detector_qualification_reason": response.detector_qualification_reason,
+        "detector_artifact_sha256": response.detector_artifact_sha256,
     })
 
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using AuswertungPro.Next.UI.Ai.Coding;
 using Microsoft.Extensions.Logging;
 
 using AuswertungPro.Next.Application.Diagnostics;
@@ -145,6 +146,7 @@ namespace AuswertungPro.Next.UI
         public IVideoStartErrorLogWriter VideoStartErrorLogs { get; }
         public IKnowledgeBaseHealthInspector KnowledgeBaseHealth { get; }
         public IKnowledgeBackupService KnowledgeBackup { get; }
+        public IKnowledgeRealtimeMirrorService KnowledgeRealtimeMirror { get; }
         public FullBackupOperationState FullBackupOperation { get; } = new();
         public ProgramCleanupService ProgramCleanup { get; } = new();
         public ICodexArtifactCleanupService CodexArtifactCleanup { get; } = new CodexArtifactCleanupService();
@@ -267,6 +269,8 @@ namespace AuswertungPro.Next.UI
         public ITeacherAnnotationStore TeacherAnnotations { get; }
         public IAiOptimizationSessionStore AiOptimizationSessions { get; }
         public ITrainingSampleStore TrainingSamples { get; }
+        public IPersonalGoldAlbumService PersonalGoldAlbum { get; }
+        public IPersonalGoldInboxService PersonalGoldInbox { get; }
         public ITrainingFrameStore TrainingFrames { get; }
         public ITrainingPreviewFrameExtractor TrainingPreviewFrames { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
@@ -389,6 +393,10 @@ namespace AuswertungPro.Next.UI
             // abweichend konfigurierten Eval-Root filtern (Schutz vor Eval-Kontamination).
             TrainingSamplesStore.ConfigureEvalProtection(settings.EvalSetRoot);
             TrainingSamples = trainingSamples;
+            PersonalGoldAlbum = new PersonalGoldAlbumService(TrainingSamples);
+            PersonalGoldInbox = new PersonalGoldInboxFileService(
+                KnowledgeRoot,
+                VsaCodeResolver.LookupLabel);
             TrainingFrames = new TrainingFrameFileStore();
             TrainingPreviewFrames = new TrainingPreviewFrameExtractionService(TrainingFrames);
             CodingFramePhotos = new CodingFramePhotoFileStore();
@@ -524,6 +532,9 @@ namespace AuswertungPro.Next.UI
                 OllamaListAsync,
                 GitCommit);
             KnowledgeBackup = new KnowledgeBackupTransferService();
+            KnowledgeRealtimeMirror = new KnowledgeRealtimeMirrorService(
+                KnowledgeRoot,
+                loggerFactory.CreateLogger<KnowledgeRealtimeMirrorService>());
 
 
 
@@ -539,8 +550,8 @@ namespace AuswertungPro.Next.UI
                 ? catalogPaths.KekManifestPath
                 : Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
             TrainingYoloClasses = new TrainingYoloClassMapFileStore(
-                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v2.json"),
-                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_migration_v2.candidate.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v3.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_migration_v3.candidate.json"),
                 vsaManifestPath);
             CodeCatalog = CreateCodeCatalog(
                 settings,

@@ -12,11 +12,11 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
-        var runnerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolGreenMatchTrainingRunner.cs");
-        var confirmWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
-        var snapshotStorePath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingSnapshotStore.cs");
-        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
+        var resolverPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolTrainingCandidateResolver.cs");
+        var runnerPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolGreenMatchTrainingRunner.cs");
+        var confirmWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
+        var snapshotStorePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolTrainingSnapshotStore.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
         Assert.True(File.Exists(runnerPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials abgearbeitet werden.");
@@ -59,9 +59,9 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
-        var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
-        var appenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventCollectionAppender.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingExistingProtocolEntriesWorkflow.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolEventMapper.cs");
+        var appenderPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolEventCollectionAppender.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingExistingProtocolEntriesWorkflow.cs");
 
         Assert.True(File.Exists(mapperPath), "ProtocolEntry-zu-CodingEvent-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(appenderPath), "Eintragen gemappter Protokoll-Events muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -97,9 +97,9 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var importPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
-        var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
-        var importWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingExistingProtocolImportEventsWorkflow.cs");
-        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolEventMapper.cs");
+        var importWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingExistingProtocolImportEventsWorkflow.cs");
+        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(importWorkflowPath), "Import-Referenz-Mapping und Count-Update sollen ausserhalb von PlayerWindow orchestriert werden.");

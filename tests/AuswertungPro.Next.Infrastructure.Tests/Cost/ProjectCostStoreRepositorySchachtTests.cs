@@ -54,6 +54,26 @@ public sealed class ProjectCostStoreRepositorySchachtTests : IDisposable
         Assert.Empty(store.ByHolding);
     }
 
+    [Theory]
+    [InlineData("costs.json")]
+    [InlineData("schacht_costs.json")]
+    [InlineData("schacht_empfehlungen.json")]
+    public void Save_ueberschreibt_keine_beschaedigte_vorhandene_Datei(string fileName)
+    {
+        var costsDirectory = Path.Combine(_dir, "costs");
+        Directory.CreateDirectory(costsDirectory);
+        var path = Path.Combine(costsDirectory, fileName);
+        const string corruptContent = "{ kaputt und unbedingt behalten";
+        File.WriteAllText(path, corruptContent);
+        var repository = new ProjectCostStoreRepository(fileName);
+
+        var saved = repository.Save(ProjectPath, StoreWith("H-NEU"), out var error);
+
+        Assert.False(saved);
+        Assert.Contains("gesperrt", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(corruptContent, File.ReadAllText(path));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir))

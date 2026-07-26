@@ -299,7 +299,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
     public void LiveDetectionRuntimeFactory_does_not_own_model_selection_string_heuristic()
     {
         var offenders = FindFileTokenOffenders(
-            RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionRuntimeFactory.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Live", "LiveDetectionRuntimeFactory.cs"),
             "m.Contains(\"vl\"");
 
         Assert.True(

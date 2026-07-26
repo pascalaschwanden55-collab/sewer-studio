@@ -25,6 +25,8 @@ public sealed class PlayerCodingConfirmationPanelInitializerTests
             var confidence = new TextBlock();
             var description = new TextBlock();
             var detail = new TextBlock();
+            var saveErrorPanel = new StackPanel { Visibility = Visibility.Collapsed };
+            var saveErrorText = new TextBlock();
 
             PlayerCodingConfirmationPanelInitializer.Initialize(
                 owner,
@@ -33,7 +35,9 @@ public sealed class PlayerCodingConfirmationPanelInitializerTests
                 code,
                 confidence,
                 description,
-                detail);
+                detail,
+                saveErrorPanel,
+                saveErrorText);
 
             var codingEvent = new CodingEvent
             {

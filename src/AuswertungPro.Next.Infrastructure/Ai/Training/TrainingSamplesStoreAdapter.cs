@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 
@@ -37,4 +38,16 @@ public sealed class TrainingSamplesStoreAdapter : ITrainingSampleStore
     /// <inheritdoc />
     public Task MergeAndSaveAsync(List<TrainingSample> samples) =>
         _store.MergeAndSaveAsync(samples);
+
+    /// <inheritdoc />
+    public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default) =>
+        _store.TryAddNewAsync(sample, ct);
+
+    /// <inheritdoc />
+    public Task<bool> RemoveBySampleIdAsync(string sampleId) =>
+        _store.RemoveBySampleIdAsync(sampleId);
+
+    /// <inheritdoc />
+    public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample) =>
+        _store.ReplaceBySampleIdAsync(sample);
 }

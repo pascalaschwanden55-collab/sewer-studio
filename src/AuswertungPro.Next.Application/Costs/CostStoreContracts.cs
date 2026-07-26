@@ -17,6 +17,18 @@ public interface ICostCatalogStore
     string? LastUserOverrideLoadError { get; }
 
     CostCatalog LoadMerged(string? projectPath);
+    /// <summary>
+    /// Wie <see cref="LoadMerged(string?)"/>, meldet aber beschaedigte/unlesbare Katalogdateien
+    /// (Default UND User-Overrides) ueber <paramref name="loadError"/>. null = alles sauber;
+    /// fehlende Dateien sind kein Fehler. Gleiches Muster wie
+    /// <see cref="IProjectCostStoreRepository.Load(string?, out string?)"/>.
+    /// </summary>
+    CostCatalog LoadMerged(string? projectPath, out string? loadError)
+    {
+        var catalog = LoadMerged(projectPath);
+        loadError = LastUserOverrideLoadError;
+        return catalog;
+    }
     CostCatalog LoadDefault(string? projectPath);
     CostCatalog LoadUserOverrides();
     bool SaveUserOverrides(CostCatalog catalog, out string error);
@@ -38,6 +50,16 @@ public interface IMeasureTemplateStore
     string? LastUserOverrideLoadError { get; }
 
     MeasureTemplateCatalog LoadMerged(string? projectPath);
+    /// <summary>
+    /// Meldet beschaedigte oder unlesbare Default-/Override-Dateien. Die
+    /// Standardimplementierung erhaelt bestehende Test- und Drittimplementierungen.
+    /// </summary>
+    MeasureTemplateCatalog LoadMerged(string? projectPath, out string? loadError)
+    {
+        var catalog = LoadMerged(projectPath);
+        loadError = LastUserOverrideLoadError;
+        return catalog;
+    }
     MeasureTemplateCatalog LoadDefault(string? projectPath);
     MeasureTemplateCatalog LoadUserOverrides();
     bool SaveUserOverrides(MeasureTemplateCatalog catalog, out string error);
@@ -53,7 +75,19 @@ public interface IPositionTemplateStore
     string? LastUserOverrideLoadError { get; }
 
     PositionTemplateCatalog Load(string? projectPath);
+    PositionTemplateCatalog Load(string? projectPath, out string? loadError)
+    {
+        var catalog = Load(projectPath);
+        loadError = null;
+        return catalog;
+    }
     PositionTemplateCatalog LoadMerged(string? projectPath);
+    PositionTemplateCatalog LoadMerged(string? projectPath, out string? loadError)
+    {
+        var catalog = LoadMerged(projectPath);
+        loadError = LastUserOverrideLoadError;
+        return catalog;
+    }
     bool SaveUserOverride(PositionTemplateCatalog catalog, out string? error);
 }
 

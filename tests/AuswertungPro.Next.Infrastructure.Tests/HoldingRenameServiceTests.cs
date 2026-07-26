@@ -132,6 +132,99 @@ public sealed class HoldingRenameServiceTests
     }
 
     [Fact]
+    public void Rename_AbweichendeNummerImDateinamen_UndUnterordner_WerdenVollstaendigAngepasst()
+    {
+        // Reales Fehlerbild aus GEP_Wassen_2026:
+        // Der Verteilordner folgte bereits einem zwischenzeitlich korrigierten Datenwert,
+        // Video/PDF trugen aber noch die urspruenglich aus dem Protokoll erkannte Haltung.
+        var oldH = "07.1075657-1089398";
+        var fileHolding = "07.1075657-189398";
+        var newH = "07.1075687-1089398";
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-mismatch-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        var oldFolder = Path.Combine(root, "Haltungen_Verteilt", oldH);
+        var nestedFolder = Path.Combine(oldFolder, $"Anlagen_{fileHolding}");
+        Directory.CreateDirectory(nestedFolder);
+
+        var video = Path.Combine(oldFolder, $"20260625_{fileHolding}.mp4");
+        var pdf = Path.Combine(nestedFolder, $"20260625_{fileHolding}_E.pdf");
+        File.WriteAllText(video, "video");
+        File.WriteAllText(pdf, "pdf");
+
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Manual, userEdited: true);
+            record.SetFieldValue(
+                "Link",
+                Path.Combine("Haltungen_Verteilt", oldH, Path.GetFileName(video)),
+                FieldSource.Manual,
+                userEdited: false);
+            record.SetFieldValue(
+                "PDF_Path",
+                pdf,
+                FieldSource.Manual,
+                userEdited: false);
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.True(result.Success, result.ErrorMessage);
+            var newFolder = Path.Combine(root, "Haltungen_Verteilt", newH);
+            var newNestedFolder = Path.Combine(newFolder, $"Anlagen_{newH}");
+            Assert.True(File.Exists(Path.Combine(newFolder, $"20260625_{newH}.mp4")));
+            Assert.True(File.Exists(Path.Combine(newNestedFolder, $"20260625_{newH}_E.pdf")));
+            Assert.False(Directory.Exists(oldFolder));
+            Assert.DoesNotContain(fileHolding, record.GetFieldValue("Link"), StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(fileHolding, record.GetFieldValue("PDF_Path"), StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(newH, record.GetFieldValue("Link"), StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(newH, record.GetFieldValue("PDF_Path"), StringComparison.OrdinalIgnoreCase);
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Rename_ExternerKundenordner_WirdNichtUmbenanntOderUmverlinkt()
+    {
+        var oldH = "06-001";
+        var newH = "06-999";
+        var projectRoot = Path.Combine(Path.GetTempPath(), $"holdrename-project-{Guid.NewGuid():N}");
+        var externalRoot = Path.Combine(Path.GetTempPath(), $"holdrename-customer-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(projectRoot, "Projektdateien", "projekt.json");
+        var externalFolder = Path.Combine(externalRoot, oldH);
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        Directory.CreateDirectory(externalFolder);
+        File.WriteAllText(projFile, "{}");
+
+        var externalVideo = Path.Combine(externalFolder, $"20260625_{oldH}.mp4");
+        File.WriteAllText(externalVideo, "customer-original");
+
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Manual, userEdited: true);
+            record.SetFieldValue("Link", externalVideo, FieldSource.Manual, userEdited: false);
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.False(result.FolderRenamed);
+            Assert.Equal(0, result.PathFieldsUpdated);
+            Assert.True(Directory.Exists(externalFolder));
+            Assert.True(File.Exists(externalVideo));
+            Assert.Equal(externalVideo, record.GetFieldValue("Link"));
+        }
+        finally
+        {
+            try { Directory.Delete(projectRoot, recursive: true); } catch { }
+            try { Directory.Delete(externalRoot, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Rename_BenenntAuchDenFotosOrdner_UndDessenDateienUm()
     {
         // Fotos liegen in einem SEPARATEN Ordner (Fotos\Haltungen\<H>\), nicht ueber den Link

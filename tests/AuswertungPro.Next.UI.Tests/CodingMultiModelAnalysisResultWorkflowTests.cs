@@ -2,6 +2,7 @@ using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -57,6 +58,40 @@ public sealed class CodingMultiModelAnalysisResultWorkflowTests
 
         Assert.Equal(["state:Kein Schaden erkannt|YOLO 12ms | 0 Detektionen|False", "clear-masks"], calls);
         Assert.Equal(CodingMultiModelAnalysisResultWorkflowOutcome.NoDamage, result.Outcome);
+    }
+
+    [Fact]
+    public void Execute_does_not_show_green_no_damage_for_unqualified_detector()
+    {
+        var calls = new List<string>();
+
+        var result = CodingMultiModelAnalysisResultWorkflow.Execute(
+            new CodingMultiModelAnalysisResultWorkflowRequest(
+                Result: new SingleFrameResult(
+                    IsRelevant: true,
+                    DinoDetections: [],
+                    SamResponse: null,
+                    QuantifiedMasks: [],
+                    YoloTimeMs: 0,
+                    DinoTimeMs: 34,
+                    SamTimeMs: 0,
+                    Error: null,
+                    Degraded: true,
+                    DegradedReason: "YOLO nicht qualifiziert; DINO/SAM manuell pruefen.",
+                    DetectorQualified: false),
+                ActivityText: "Analysiere"),
+            Actions(
+                setAiState: (status, color, detail, pulse) =>
+                {
+                    calls.Add($"state:{status}|{detail}|{pulse}");
+                    Assert.Equal(PlayerStatusColors.Warning, color);
+                },
+                clearMasks: () => calls.Add("clear-masks"),
+                buildSegmentedFindings: _ => throw new InvalidOperationException("No segmentation should run.")));
+
+        Assert.Equal(CodingMultiModelAnalysisResultWorkflowOutcome.ReviewRequired, result.Outcome);
+        Assert.Contains("manuell pruefen", calls[0]);
+        Assert.Equal("clear-masks", calls[1]);
     }
 
     [Fact]

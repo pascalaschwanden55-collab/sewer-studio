@@ -1,6 +1,6 @@
 using System;
-using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Costs;
@@ -116,18 +116,20 @@ public static class TablePauschaleCostHelper
 
     public static decimal ParseTableNetCost(string? value)
     {
-        var text = (value ?? "").Trim();
-        if (text.Length == 0)
-            return 0m;
+        // Zentraler kulturunabhaengiger Parser: "45.30" bleibt auf jeder Windows-Kultur
+        // 45.30 (frueher las die CurrentCulture unter de-DE still 4530 — Faktor-100-Falle).
+        return TryParseTableNetCost(value, out var parsed) ? parsed : 0m;
+    }
 
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out var current))
-            return current;
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant))
-            return invariant;
-
-        var normalized = text.Replace(',', '.');
-        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : 0m;
+    /// <summary>
+    /// Leere Tabellenkosten bedeuten "nicht erfasst" und sind deshalb ein gueltiger
+    /// Nullwert. Eine nichtleere, unlesbare Eingabe wird dagegen sichtbar als false
+    /// gemeldet, damit Geld-Ausgaben sie nicht still zu CHF 0 umdeuten.
+    /// </summary>
+    public static bool TryParseTableNetCost(string? value, out decimal parsed)
+    {
+        parsed = 0m;
+        return string.IsNullOrWhiteSpace(value)
+            || FachzahlParser.TryParseDecimal(value, out parsed);
     }
 }

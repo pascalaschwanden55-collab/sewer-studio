@@ -13,10 +13,10 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
         var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
-        var deleteApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDeleteApplier.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationDecisionWorkflow.cs");
-        var decisionCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationDecisionCommandWorkflow.cs");
-        var editCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationEditCommandWorkflow.cs");
+        var deleteApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventDeleteApplier.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationDecisionWorkflow.cs");
+        var decisionCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationDecisionCommandWorkflow.cs");
+        var editCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationEditCommandWorkflow.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
         var decisionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
 
@@ -71,7 +71,7 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
     {
         var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationPanelControls.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationPanelControls.cs");
         var ownerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationPanelControlsOwner.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
         var decisionControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
@@ -130,7 +130,11 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
         Assert.Contains($"Accept:{decisionName}.Accept", compactControllerFactory);
         Assert.Contains($"Edit:{decisionName}.Edit", compactControllerFactory);
         Assert.Contains($"Reject:{decisionName}.Reject", compactControllerFactory);
-        Assert.Contains(".SafeFireAndForget(operation)", controllerFactory);
+        Assert.Contains($"RetrySave:{decisionName}.RetrySave", compactControllerFactory);
+        // Goldsave wird im Decision-Controller await-et: Erfolgsstatus erst nach erfolgreichem
+        // Speichern, bei Fehler bleibt das Panel offen und zeigt den Fehler mit Retry.
+        Assert.Contains("PersistSingleEventAsync(codingEvent)", controllerFactory);
+        Assert.Contains("ShowPersistenceError:", controllerFactory);
         Assert.Contains("PlayerToggleButtonControls.IsChecked(dependencies.LiveAiToggle)", controllerFactory);
         Assert.Contains(
             "ResolveModelName: () => dependencies.AiRuntimeOwner.Controller.ModelName",
@@ -191,9 +195,9 @@ public sealed class PlayerWindowCodingConfirmationArchitectureTests
     public void PlayerWindow_confirmation_playback_uses_player_helper()
     {
         var helperPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerConfirmationPlayback.cs");
-        var pauseWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationPauseWorkflow.cs");
-        var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationResumeWorkflow.cs");
-        var displayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionConfirmationDisplayWorkflow.cs");
+        var pauseWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationPauseWorkflow.cs");
+        var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingConfirmationResumeWorkflow.cs");
+        var displayWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Live", "LiveDetectionConfirmationDisplayWorkflow.cs");
         var codingConfirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationController.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingConfirmationDecisionController.cs");
 

@@ -54,9 +54,12 @@ internal sealed class SchachtMassnahmenDialogController
 
         if (loadError is not null)
         {
-            _dialogs.Warn(
-                $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\nDu kannst neu erfassen; Speichern legt die Datei neu an.",
+            _dialogs.Error(
+                $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\n" +
+                "Bearbeiten und Speichern sind gesperrt, damit die vorhandene Datei nicht " +
+                "ueberschrieben wird. Bitte die Datei pruefen und danach erneut oeffnen.",
                 "Sanierungsmassnahmen");
+            return;
         }
 
         HoldingCost? bestehend = null;

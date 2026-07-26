@@ -62,6 +62,62 @@ public sealed class MeasureTemplateEditorViewModelTests
     }
 
     [Fact]
+    public void SaveTemplateCommand_speichert_ungueltige_Menge_nicht_als_eins()
+    {
+        using var temp = new TempDirectory();
+        var templatePath = Path.Combine(temp.Path, "measure_templates.user.json");
+        var dialogs = new DialogFake();
+        var store = new MeasureTemplateStore(templatePath);
+        var viewModel = CreateViewModel(temp.Path, store, dialogs);
+        viewModel.NewTemplateCommand.Execute(null);
+        viewModel.TemplateId = "MENGE_UNGUELTIG";
+        viewModel.TemplateName = "Ungueltige Menge";
+        viewModel.AddLineCommand.Execute(new CatalogItemRow(new CostCatalogItem
+        {
+            Key = "ROBOTER_ST",
+            Name = "Roboterposition",
+            Unit = "St",
+            Active = true
+        }));
+        viewModel.CurrentLines[0].Qty = "zwei";
+
+        viewModel.SaveTemplateCommand.Execute(null);
+
+        Assert.False(File.Exists(templatePath));
+        Assert.Contains("Menge", dialogs.LastError, StringComparison.Ordinal);
+        Assert.Null(dialogs.LastInfo);
+    }
+
+    [Fact]
+    public void Corrupt_default_template_is_reported_and_blocks_template_save()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = Path.Combine(temp.Path, "projekt.json");
+        var defaultPath = Path.Combine(temp.Path, "Config", "measure_templates.json");
+        var overridePath = Path.Combine(temp.Path, "measure_templates.user.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(defaultPath)!);
+        File.WriteAllText(defaultPath, "{ kaputter Default");
+        var dialogs = new DialogFake();
+        var store = new MeasureTemplateStore(overridePath);
+        var viewModel = new MeasureTemplateEditorViewModel(
+            projectPath,
+            store,
+            new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")),
+            dialogs,
+            Path.Combine(temp.Path, "legacy", "measure_templates.json"),
+            overridePath);
+        viewModel.NewTemplateCommand.Execute(null);
+        viewModel.TemplateId = "NICHT_SPEICHERN";
+        viewModel.TemplateName = "Nicht speichern";
+
+        viewModel.SaveTemplateCommand.Execute(null);
+
+        Assert.False(File.Exists(overridePath));
+        Assert.Contains("measure_templates.json", dialogs.LastError, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(dialogs.LastInfo);
+    }
+
+    [Fact]
     public void Constructor_migrates_newer_legacy_templates_replaces_existing_id_and_saves()
     {
         using var temp = new TempDirectory();

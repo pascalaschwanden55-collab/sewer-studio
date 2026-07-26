@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -107,7 +108,7 @@ public sealed class CodingCalibrationControlsTests
 
     private static MethodInfo? FindMethod(string name, params Type[] parameterTypes)
         => typeof(CodingCalibrationTogglePolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingCalibrationControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingCalibrationControls")
             ?.GetMethod(
                 name,
                 BindingFlags.Public | BindingFlags.Static,

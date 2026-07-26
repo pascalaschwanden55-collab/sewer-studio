@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 
 namespace AuswertungPro.Next.UI.Tests;
 

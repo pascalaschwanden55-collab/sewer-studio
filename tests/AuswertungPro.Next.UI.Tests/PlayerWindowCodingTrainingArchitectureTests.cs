@@ -9,12 +9,12 @@ public sealed class PlayerWindowCodingTrainingArchitectureTests
     public void PlayerWindow_training_sample_persistence_lives_in_coordinator()
     {
         var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
-        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTrainingPersistenceContext.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTrainingPersistenceContext.cs");
         var codingStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var playerRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var ownerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingTrainingSamplesOwner.cs");
-        var coordinatorPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTrainingSamplePersistenceCoordinator.cs");
-        var batchWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTrainingBatchPersistenceWorkflow.cs");
+        var coordinatorPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTrainingSamplePersistenceCoordinator.cs");
+        var batchWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTrainingBatchPersistenceWorkflow.cs");
 
         Assert.False(File.Exists(persistencePath), "Training-Speicheradapter sollen kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(contextPath), "Training-Speicheradapter sollen ausserhalb von PlayerWindow liegen.");
@@ -35,7 +35,7 @@ public sealed class PlayerWindowCodingTrainingArchitectureTests
 
         Assert.Contains("CodingTrainingSamplesOwner.CreateDefault", context);
         Assert.Contains("owner.Coordinator.PersistSingleEventAsync", context);
-        Assert.Contains("private readonly Ai.CodingTrainingPersistenceContext _codingTrainingPersistenceContext", codingState);
+        Assert.Contains("private readonly Ai.Coding.CodingTrainingPersistenceContext _codingTrainingPersistenceContext", codingState);
         Assert.Contains("_codingTrainingPersistenceContext = CodingTrainingPersistenceContext.CreateDefault", playerRoot);
         Assert.Contains("public sealed class CodingTrainingSamplesOwner", owner);
         Assert.Contains("CodingTrainingSamplePersistenceCoordinator.CreateDefault", owner);

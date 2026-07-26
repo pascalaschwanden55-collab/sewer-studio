@@ -238,7 +238,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 GetProjectFolder: _shell.GetProjectFolder,
                 GetProject: () => _shell.Project,
                 CollectionLock: _shell.CollectionLock,
-                SaveProject: () => _shell.SaveCommand.Execute(null)));
+                SaveProject: _shell.TrySaveProject));
 
     private Task ImportXtfAsync()
         => RunManualImportAsync(_manualWorkflowController.ImportXtfAsync);
@@ -310,11 +310,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
             new Services.ImportOneClickProjectActions(
                 GetProjectFolder: _shell.GetProjectFolder,
                 GetProject: () => _shell.Project,
+                DeepCopyProject: _projects.DeepCopy,
+                ReplaceProject: _shell.ReplaceProject,
                 CollectionLock: _shell.CollectionLock,
                 SaveProject: _shell.TrySaveProject,
                 SetProgress: value => ImportProgress = value,
                 AppendSummary: value => SummaryText += value,
-                AppendDetails: value => DetailsText += value));
+                AppendDetails: value => DetailsText += value,
+                ComputeSignature: _contentSignature.Compute));
 
     private Task RunVsaAfterImport(Project project, string sourceLabel)
         => _vsaEvaluationController.ExecuteAsync(

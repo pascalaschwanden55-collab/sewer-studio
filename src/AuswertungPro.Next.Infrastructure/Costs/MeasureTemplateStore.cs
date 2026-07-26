@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 public sealed class MeasureTemplateStore : IMeasureTemplateStore
 {
     private readonly string? _userOverridePath;
+    private string? _lastMergedLoadError;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -24,10 +25,27 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
     public string? LastUserOverrideLoadError { get; private set; }
 
     public MeasureTemplateCatalog LoadMerged(string? projectPath)
+        => LoadMerged(projectPath, out _);
+
+    public MeasureTemplateCatalog LoadMerged(string? projectPath, out string? loadError)
     {
-        var defaults = LoadDefault(projectPath);
+        var defaults = ReadCatalog(
+            ResolvePath(projectPath, "measure_templates.json"),
+            out var defaultError);
         var overrides = LoadUserOverrides();
+        loadError = CombineLoadErrors(defaultError, LastUserOverrideLoadError);
+        _lastMergedLoadError = loadError;
         return Merge(defaults, overrides);
+    }
+
+    private static string? CombineLoadErrors(string? defaultError, string? userOverrideError)
+    {
+        var userText = string.IsNullOrWhiteSpace(userOverrideError)
+            ? null
+            : $"Benutzer-Vorlagen (Overrides): {userOverrideError}";
+        if (string.IsNullOrWhiteSpace(defaultError))
+            return userText;
+        return userText is null ? defaultError : $"{defaultError}\n{userText}";
     }
 
     public MeasureTemplateCatalog LoadDefault(string? projectPath)
@@ -46,6 +64,18 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
     public bool SaveUserOverrides(MeasureTemplateCatalog catalog, out string error)
     {
         error = "";
+        if (catalog is null)
+        {
+            error = "Massnahmenvorlagen fehlen; Speichern ist gesperrt.";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_lastMergedLoadError))
+        {
+            error = $"Vorlagendatei konnte nicht geladen werden; Speichern ist gesperrt: {_lastMergedLoadError}";
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(LastUserOverrideLoadError))
         {
             error = $"User-Override konnte nicht geladen werden; Speichern ist gesperrt: {LastUserOverrideLoadError}";
@@ -55,6 +85,14 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
         try
         {
             var path = ResolveUserOverridePath();
+            ValidateCatalogStructure(catalog);
+            _ = ReadCatalog(path, out var existingLoadError, rememberUserOverrideError: true);
+            if (!string.IsNullOrWhiteSpace(existingLoadError))
+            {
+                error = $"Vorhandener User-Override konnte nicht geladen werden; Speichern ist gesperrt: {existingLoadError}";
+                return false;
+            }
+
             var dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrWhiteSpace(dir))
                 Directory.CreateDirectory(dir);
@@ -76,8 +114,23 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
         try
         {
             var path = ResolveUserOverridePath();
-            if (File.Exists(path))
+            var probe = CostStoreFileProbe.Probe(path);
+            if (probe.State == CostStorePathState.Invalid)
+            {
+                error = probe.Error ?? "User-Override ist nicht sicher zugreifbar.";
+                return false;
+            }
+
+            if (probe.State == CostStorePathState.File)
                 File.Delete(path);
+
+            if (CostStoreFileProbe.Probe(path).State != CostStorePathState.Missing)
+            {
+                error = "User-Override konnte nicht sicher entfernt werden.";
+                return false;
+            }
+
+            LastUserOverrideLoadError = null;
             return true;
         }
         catch (Exception ex)
@@ -155,7 +208,7 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
             if (!string.IsNullOrWhiteSpace(dir))
             {
                 var projectPathCandidate = Path.Combine(dir, "Config", fileName);
-                if (File.Exists(projectPathCandidate))
+                if (CostStoreFileProbe.ShouldUseProjectCandidate(projectPathCandidate))
                     return projectPathCandidate;
             }
         }
@@ -173,18 +226,30 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
     }
 
     private MeasureTemplateCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)
+        => ReadCatalog(path, out _, rememberUserOverrideError);
+
+    private MeasureTemplateCatalog ReadCatalog(
+        string path,
+        out string? loadError,
+        bool rememberUserOverrideError = false)
     {
         try
         {
-            if (!File.Exists(path))
+            loadError = null;
+            var probe = CostStoreFileProbe.Probe(path);
+            if (probe.State == CostStorePathState.Missing)
                 return new MeasureTemplateCatalog();
+            if (probe.State != CostStorePathState.File)
+                throw new IOException(probe.Error ?? "Vorlagendatei ist nicht sicher lesbar.");
 
             var json = File.ReadAllText(path);
-            var model = JsonSerializer.Deserialize<MeasureTemplateCatalog>(json, JsonOptions) ?? new MeasureTemplateCatalog();
+            var model = JsonSerializer.Deserialize<MeasureTemplateCatalog>(json, JsonOptions)
+                        ?? throw new JsonException("Der Vorlagenkatalog darf nicht null sein.");
             return Normalize(model);
         }
         catch (Exception ex)
         {
+            loadError = $"{Path.GetFileName(path)} ist beschaedigt oder nicht lesbar: {ex.Message}";
             if (rememberUserOverrideError)
                 LastUserOverrideLoadError = ex.Message;
             return new MeasureTemplateCatalog();
@@ -193,21 +258,61 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
 
     private static MeasureTemplateCatalog Normalize(MeasureTemplateCatalog model)
     {
+        ValidateCatalogStructure(model);
         var normalized = new MeasureTemplateCatalog
         {
             Version = model.Version > 0 ? model.Version : 1,
             Measures = new List<MeasureTemplate>()
         };
 
-        foreach (var template in model.Measures ?? new List<MeasureTemplate>())
+        foreach (var template in model.Measures)
         {
             template.Id ??= "";
             template.Name ??= "";
-            template.Lines ??= new List<MeasureLineTemplate>();
+            foreach (var line in template.Lines)
+            {
+                line.Group ??= "";
+                line.ItemKey ??= "";
+            }
             normalized.Measures.Add(template);
         }
 
         return normalized;
+    }
+
+    private static void ValidateCatalogStructure(MeasureTemplateCatalog model)
+    {
+        if (model.Measures is null)
+            throw new InvalidDataException("Das Feld 'measures' darf nicht null sein.");
+
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var templateIndex = 0; templateIndex < model.Measures.Count; templateIndex++)
+        {
+            var template = model.Measures[templateIndex]
+                           ?? throw new InvalidDataException(
+                               $"Massnahmenvorlage {templateIndex + 1} darf nicht null sein.");
+            var id = NormalizeId(template.Id, template.Name);
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidDataException(
+                    $"Massnahmenvorlage {templateIndex + 1} hat weder ID noch Name.");
+            if (!ids.Add(id))
+                throw new InvalidDataException($"Die normalisierte Vorlagen-ID '{id}' ist doppelt.");
+            if (template.Lines is null)
+                throw new InvalidDataException($"Positionen der Vorlage '{id}' duerfen nicht null sein.");
+
+            for (var lineIndex = 0; lineIndex < template.Lines.Count; lineIndex++)
+            {
+                var line = template.Lines[lineIndex]
+                           ?? throw new InvalidDataException(
+                               $"Position {lineIndex + 1} der Vorlage '{id}' darf nicht null sein.");
+                if (string.IsNullOrWhiteSpace(line.ItemKey))
+                    throw new InvalidDataException(
+                        $"Position {lineIndex + 1} der Vorlage '{id}' hat keinen Katalog-Schluessel.");
+                if (line.DefaultQty < 0)
+                    throw new InvalidDataException(
+                        $"Position {lineIndex + 1} der Vorlage '{id}' hat eine negative Menge.");
+            }
+        }
     }
 
     private static MeasureTemplateCatalog Merge(MeasureTemplateCatalog defaults, MeasureTemplateCatalog overrides)

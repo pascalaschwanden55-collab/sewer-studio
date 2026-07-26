@@ -41,8 +41,16 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
             return new ProjectCostStore();
 
         var path = ResolveStorePath(dir);
-        if (!File.Exists(path))
+        var probe = CostStoreFileProbe.Probe(path);
+        if (probe.State == CostStorePathState.Missing)
             return new ProjectCostStore();
+        if (probe.State == CostStorePathState.Invalid)
+        {
+            loadError =
+                $"{_fileName} konnte nicht sicher gelesen werden: " +
+                (probe.Error ?? "Dateipfad ist ungueltig.");
+            return new ProjectCostStore();
+        }
 
         try
         {
@@ -65,6 +73,12 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
     public bool Save(string? projectPath, ProjectCostStore store, out string? error)
     {
         error = null;
+        if (store?.ByHolding is null)
+        {
+            error = "Kostendaten fehlen oder sind ungueltig; Speichern ist gesperrt.";
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             error = "Projektpfad fehlt.";
@@ -81,8 +95,29 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
         try
         {
             var folder = Path.Combine(dir, "costs");
-            Directory.CreateDirectory(folder);
             var path = ResolveStorePath(dir);
+            var probe = CostStoreFileProbe.Probe(path);
+            if (probe.State == CostStorePathState.Invalid)
+            {
+                error =
+                    $"Speichern ist gesperrt: {_fileName} ist nicht sicher zugreifbar: " +
+                    (probe.Error ?? "Dateipfad ist ungueltig.");
+                return false;
+            }
+
+            if (probe.State == CostStorePathState.File)
+            {
+                _ = Load(projectPath, out var existingLoadError);
+                if (!string.IsNullOrWhiteSpace(existingLoadError))
+                {
+                    error =
+                        $"Speichern ist gesperrt: vorhandene {_fileName} konnte nicht " +
+                        $"sicher geladen werden: {existingLoadError}";
+                    return false;
+                }
+            }
+
+            Directory.CreateDirectory(folder);
             var json = JsonSerializer.Serialize(store, JsonOptions);
             AtomicJsonFileWriter.WriteAllText(path, json);
             return true;

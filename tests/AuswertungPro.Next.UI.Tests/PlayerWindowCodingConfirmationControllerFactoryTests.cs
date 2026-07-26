@@ -10,6 +10,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -32,7 +33,7 @@ public sealed class PlayerWindowCodingConfirmationControllerFactoryTests
                 {
                     calls.Add("persist");
                     persistedEvent = codingEvent;
-                    return Task.CompletedTask;
+                    return Task.FromResult(CodingTrainingSamplePersistenceResult.Ok);
                 },
                 (_, _) => Task.CompletedTask,
                 () => true,
@@ -46,6 +47,8 @@ public sealed class PlayerWindowCodingConfirmationControllerFactoryTests
                     new TextBlock(),
                     new TextBlock(),
                     new TextBlock(),
+                    new TextBlock(),
+                    new StackPanel(),
                     new TextBlock()));
             var eventsList = new ListBox();
             var currentStatusText = new TextBlock { Text = "alter Status" };
@@ -107,7 +110,7 @@ public sealed class PlayerWindowCodingConfirmationControllerFactoryTests
             Assert.Equal("spaeter Status", statusController.CodingStates[0].Status);
             Assert.Contains("pause:True", calls);
 
-            var result = controller.Reject();
+            var result = controller.Reject().GetAwaiter().GetResult();
 
             Assert.True(result.Applied);
             Assert.Same(codingEvent, persistedEvent);

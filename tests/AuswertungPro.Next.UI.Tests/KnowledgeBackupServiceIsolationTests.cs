@@ -45,6 +45,29 @@ public sealed class KnowledgeBackupServiceIsolationTests
     }
 
     [Fact]
+    public async Task ExportAsync_sichert_den_kanonischen_Goldordner_rekursiv()
+    {
+        using var temp = new TempDirectory();
+        var locations = temp.CreateLocations();
+        var goldDir = Directory.CreateDirectory(
+            Path.Combine(locations.KnowledgeRoot, "gold_frames", "unterordner")).FullName;
+        await File.WriteAllBytesAsync(Path.Combine(goldDir, "gold_abc.png"), [1, 2, 3]);
+        var zipPath = Path.Combine(temp.Path, "wissen.zip");
+        var service = new KnowledgeBackupTransferService(
+            locations,
+            flushPendingSettings: () => { },
+            flushSqliteWal: _ => { });
+
+        var result = await service.ExportAsync(zipPath);
+
+        Assert.True(result.Success, result.Error);
+        using var archive = ZipFile.OpenRead(zipPath);
+        Assert.Contains(
+            archive.Entries,
+            entry => entry.FullName == "knowledge/gold_frames/unterordner/gold_abc.png");
+    }
+
+    [Fact]
     public async Task ImportAsync_schreibt_nur_in_die_uebergebenen_Testpfade()
     {
         using var temp = new TempDirectory();

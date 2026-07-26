@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Backup;
+using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
 using InfraBackup = AuswertungPro.Next.Infrastructure.Ai.Backup;
 using BackupResult = AuswertungPro.Next.UI.Services.KnowledgeBackupService.BackupResult;
@@ -22,11 +23,18 @@ internal static class KnowledgeBackupEngine
 {
     private const int ManifestVersion = BackupManifestVersionPolicy.CurrentVersion;
 
+    /// <summary>
+    /// ZIP-Eintragsname der laufenden Wissensdatenbank. Sie wird als gepruefter
+    /// SQLite-Online-Snapshot gesichert; ihre WAL-/SHM-Begleiter wandern nicht mit.
+    /// </summary>
+    internal const string KnowledgeDatabaseEntryName = "knowledge/KnowledgeBase.db";
+
     internal static async Task<BackupResult> ExportAsync(
         string zipPath,
         KnowledgeBackupLocations locations,
         Action flushPendingSettings,
         Action<IProgress<string>?> flushSqliteWal,
+        ISqliteSnapshotCopier sqliteSnapshots,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
@@ -52,15 +60,37 @@ internal static class KnowledgeBackupEngine
                     if (!File.Exists(source))
                         continue;
 
+                    if (IsKnowledgeDatabaseCompanionEntry(entryName))
+                    {
+                        // Der Snapshot ist eigenstaendig; WAL-/SHM-Reste der
+                        // laufenden Datenbank gehoeren nicht ins Archiv.
+                        continue;
+                    }
+
                     progress?.Report($"Exportiere: {Path.GetFileName(source)}");
-                    var entry = zip.CreateEntry(entryName, CompressionLevel.Fastest);
-                    await using var destination = entry.Open();
-                    await using var sourceStream = new FileStream(
-                        source,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite);
-                    await sourceStream.CopyToAsync(destination, ct).ConfigureAwait(false);
+                    if (string.Equals(entryName, KnowledgeDatabaseEntryName, StringComparison.Ordinal))
+                    {
+                        await WriteVerifiedSqliteSnapshotAsync(
+                                zip,
+                                sqliteSnapshots,
+                                source,
+                                entryName,
+                                destinationDirectory,
+                                ct)
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        var entry = zip.CreateEntry(entryName, CompressionLevel.Fastest);
+                        await using var destination = entry.Open();
+                        await using var sourceStream = new FileStream(
+                            source,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.ReadWrite);
+                        await sourceStream.CopyToAsync(destination, ct).ConfigureAwait(false);
+                    }
+
                     fileCount++;
                 }
 
@@ -114,6 +144,54 @@ internal static class KnowledgeBackupEngine
         }
     }
 
+    private static bool IsKnowledgeDatabaseCompanionEntry(string entryName)
+        => string.Equals(entryName, KnowledgeDatabaseEntryName + "-wal", StringComparison.Ordinal)
+           || string.Equals(entryName, KnowledgeDatabaseEntryName + "-shm", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Schreibt die laufende Wissensdatenbank als geprueften Online-Snapshot
+    /// (SQLite-Backup-API, derselbe Mechanismus wie im Echtzeit-Spiegel) statt
+    /// als Rohkopie ins Archiv. Der gepruefte Stand besteht die Inhaltspruefung
+    /// bereits im SqliteSnapshotCopyService.
+    /// </summary>
+    private static async Task WriteVerifiedSqliteSnapshotAsync(
+        ZipArchive zip,
+        ISqliteSnapshotCopier sqliteSnapshots,
+        string databasePath,
+        string entryName,
+        string destinationDirectory,
+        CancellationToken ct)
+    {
+        var snapshotPath = Path.Combine(
+            destinationDirectory,
+            $".{Path.GetFileName(entryName)}.{Guid.NewGuid():N}.snapshot");
+        try
+        {
+            await sqliteSnapshots
+                .CreateVerifiedSnapshotAsync(databasePath, snapshotPath, null, ct)
+                .ConfigureAwait(false);
+
+            var entry = zip.CreateEntry(entryName, CompressionLevel.Fastest);
+            await using var destination = entry.Open();
+            await using var snapshotStream = new FileStream(
+                snapshotPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+            await snapshotStream.CopyToAsync(destination, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            BestEffort.Try(
+                () =>
+                {
+                    if (File.Exists(snapshotPath))
+                        File.Delete(snapshotPath);
+                },
+                $"Knowledge-Export: SQLite-Snapshot {snapshotPath} loeschen");
+        }
+    }
+
     internal static async Task<BackupResult> ImportAsync(
         string zipPath,
         KnowledgeBackupLocations locations,
@@ -154,6 +232,10 @@ internal static class KnowledgeBackupEngine
                     backupDirectory,
                     backedUpFiles,
                     newlyCreatedFiles);
+                PrepareSqliteSnapshotCompanionRemoval(
+                    filesToImport,
+                    backupDirectory,
+                    backedUpFiles);
 
                 var fileCount = 0;
                 long totalBytes = 0;
@@ -216,7 +298,11 @@ internal static class KnowledgeBackupEngine
         }
         catch (Exception ex)
         {
-            BestEffort.ReportWarning($"[KnowledgeBackup] WAL-Checkpoint fehlgeschlagen: {ex.Message}");
+            // Ohne sauberen Checkpoint ist kein konsistenter Stand garantiert.
+            // Der Export wird deshalb abgebrochen statt ein unsicheres Archiv zu erzeugen.
+            throw new UserFacingException(
+                "SQLite WAL-Checkpoint fehlgeschlagen; der Export wurde abgebrochen. " +
+                $"Technischer Hinweis: {ex.Message}");
         }
     }
 
@@ -319,6 +405,57 @@ internal static class KnowledgeBackupEngine
             Directory.CreateDirectory(directory);
         File.Copy(targetPath, backupPath, overwrite: true);
         backedUpFiles.Add((targetPath, backupPath));
+    }
+
+    /// <summary>
+    /// Neue Archive enthalten die Wissensdatenbank als eigenstaendigen Snapshot
+    /// ohne WAL-/SHM-Begleiter. Veraltete lokale Begleiter wuerden beim naechsten
+    /// Start gegen die wiederhergestellte Datei laufen und werden deshalb
+    /// rollback-sicher entfernt. Archive des alten Formats importieren ihre
+    /// Begleitdateien weiterhin direkt.
+    /// </summary>
+    private static void PrepareSqliteSnapshotCompanionRemoval(
+        IReadOnlyList<(ZipArchiveEntry Entry, string TargetPath)> files,
+        string backupDirectory,
+        ICollection<(string Original, string Backup)> backedUpFiles)
+    {
+        string? databaseTargetPath = null;
+        var importsWalCompanion = false;
+        foreach (var (entry, targetPath) in files)
+        {
+            if (string.Equals(
+                    entry.FullName,
+                    KnowledgeDatabaseEntryName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                databaseTargetPath = targetPath;
+            }
+            else if (string.Equals(
+                         entry.FullName,
+                         KnowledgeDatabaseEntryName + "-wal",
+                         StringComparison.OrdinalIgnoreCase))
+            {
+                importsWalCompanion = true;
+            }
+        }
+
+        if (databaseTargetPath is null || importsWalCompanion)
+            return;
+
+        foreach (var suffix in new[] { "-wal", "-shm" })
+        {
+            var companionPath = databaseTargetPath + suffix;
+            if (!File.Exists(companionPath))
+                continue;
+
+            var backupPath = Path.Combine(backupDirectory, GetRelativeBackupPath(companionPath));
+            var directory = Path.GetDirectoryName(backupPath);
+            if (directory is not null)
+                Directory.CreateDirectory(directory);
+            File.Copy(companionPath, backupPath, overwrite: true);
+            backedUpFiles.Add((companionPath, backupPath));
+            File.Delete(companionPath);
+        }
     }
 
     private static void RollBack(

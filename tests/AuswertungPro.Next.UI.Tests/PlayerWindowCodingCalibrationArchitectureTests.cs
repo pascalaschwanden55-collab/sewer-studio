@@ -8,9 +8,9 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
     [Fact]
     public void PlayerWindow_segmented_finding_calibration_lives_in_policy()
     {
-        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisContext.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipeProximityCalibrationPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
+        var analysisContextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalysisContext.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPipeProximityCalibrationPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "SegmentedFinding-Build soll die Kalibrierableitung ausserhalb der PlayerWindow-Partials orchestrieren.");
@@ -33,8 +33,8 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
     public void PlayerWindow_auto_calibration_workflow_lives_outside_window()
     {
         var autoCalibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AutoCalibration.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAutoCalibrationWorkflow.cs");
-        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAutoCalibrationFrameService.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAutoCalibrationWorkflow.cs");
+        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAutoCalibrationFrameService.cs");
 
         Assert.True(File.Exists(workflowPath), "AutoCalibration-Ablaufentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(servicePath), "AutoCalibration-Framebytes sollen ausserhalb der PlayerWindow-Partials in ein Bitmap geladen werden.");
@@ -64,13 +64,13 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
     {
         var overlayInputPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualCalibrationPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualCalibrationWorkflow.cs");
-        var applyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualCalibrationApplyWorkflow.cs");
-        var previewPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationPreviewPolicy.cs");
-        var togglePolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationTogglePolicy.cs");
-        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationToggleWorkflow.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationControls.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingManualCalibrationPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingManualCalibrationWorkflow.cs");
+        var applyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingManualCalibrationApplyWorkflow.cs");
+        var previewPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCalibrationPreviewPolicy.cs");
+        var togglePolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCalibrationTogglePolicy.cs");
+        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCalibrationToggleWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCalibrationControls.cs");
         var stateControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationStateController.cs");
         var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingManualCalibrationController.cs");
         var pointerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationPointerController.cs");
@@ -167,7 +167,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
     {
         var overlayInputPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
-        var pointerWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCalibrationPointerWorkflow.cs");
+        var pointerWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCalibrationPointerWorkflow.cs");
         var pointerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingCalibrationPointerController.cs");
         var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingManualCalibrationController.cs");
 

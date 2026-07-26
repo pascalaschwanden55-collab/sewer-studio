@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
@@ -33,7 +33,8 @@ public sealed class PipelineTelemetry
             Sam: ComputePhase(active, f => f.SamMs),
             Qwen: ComputePhase(active, f => f.QwenMs),
             Total: ComputePhase(active, f => f.TotalMs),
-            WallClockMs: _wallClock.ElapsedMilliseconds);
+            WallClockMs: _wallClock.ElapsedMilliseconds,
+            FailedFrames: _frames.Count(f => f.Failed));
     }
 
     private static PhaseStat ComputePhase(

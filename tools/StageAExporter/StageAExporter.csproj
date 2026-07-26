@@ -20,6 +20,14 @@
           Link="Data\Training\detect_class_migration_v2.candidate.json"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\training\class_maps\detect_class_map_v3.json"
+          Link="Data\Training\detect_class_map_v3.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\training\class_maps\detect_class_migration_v3.candidate.json"
+          Link="Data\Training\detect_class_migration_v3.candidate.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\src\AuswertungPro.Next.UI\Data\vsa_kek_2020_catalog_manifest.json"
           Link="Data\vsa_kek_2020_catalog_manifest.json"
           CopyToOutputDirectory="PreserveNewest"

@@ -8,6 +8,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -157,7 +158,7 @@ public sealed class CodingEventsRefreshWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingStatisticsPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingEventsRefreshWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingEventsRefreshWorkflow");
 
     private static MethodInfo? FindRefreshListAndStatisticsMethod()
         => WorkflowType?.GetMethod(

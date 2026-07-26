@@ -51,6 +51,13 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private List<DruckcenterRowVm> _allRows = new();
     private ProjectCostStore _costStore = new();
+    // != null wenn costs.json beim letzten Laden nicht lesbar war: Liste/Exporte duerfen
+    // nicht still ohne Kostendaten laufen (Audit K3-Muster, wie Sanierungs-Matrix).
+    private string? _costStoreLoadError;
+    // Nichtleere, aber unlesbare Tabellenkosten duerfen nicht als CHF 0 erscheinen.
+    private string? _tableCostParseError;
+    // != null wenn der Kostenkatalog (Default oder User-Overrides) nicht lesbar war.
+    private string? _catalogLoadError;
     private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private ObservableCollection<HaltungRecord>? _attachedData;
     private bool _suspendFilterRefresh;
@@ -420,10 +427,13 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
             ClearLastExport();
 
-        _costStore = _costRepo.Load(projectPath);
+        _costStore = _costRepo.Load(projectPath, out var costLoadError);
+        ReportCostStoreLoadError(costLoadError);
 
-        var catalog = _catalogStore.LoadMerged(projectPath);
+        var catalog = _catalogStore.LoadMerged(projectPath, out var catalogLoadError);
+        ReportCatalogLoadError(catalogLoadError);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
+        ReportTableCostParseError(FindTableCostParseError());
 
         _suspendFilterRefresh = true;
         try
@@ -437,6 +447,153 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         ApplyFilters();
+    }
+
+    /// <summary>
+    /// Beschaedigte Kostendaten sichtbar melden statt still mit leerem Store weiterzurechnen.
+    /// Der Dialog kommt nur beim ERSTEN Auftreten eines Fehlers — RefreshData laeuft auch
+    /// ueber den Auto-Refresh bei Feld-Aenderungen und wuerde sonst bei jeder Eingabe aufpoppen.
+    /// Status/LastResult zeigen den Fehler dauerhaft, bis die Datei wieder sauber laedt.
+    /// </summary>
+    private void ReportCostStoreLoadError(string? loadError)
+    {
+        if (string.IsNullOrWhiteSpace(loadError))
+        {
+            _costStoreLoadError = null;
+            return;
+        }
+
+        LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
+        _shell.SetStatus("Kostendaten beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+
+        if (!string.Equals(_costStoreLoadError, loadError, StringComparison.Ordinal))
+        {
+            _dialogs.Error(
+                $"Kostendaten konnten nicht geladen werden:\n{loadError}\n\n" +
+                "Die Liste wird ohne Kosten angezeigt und Exporte sind gesperrt, damit keine " +
+                "plausibel aussehenden Berichte ohne Kostendaten entstehen.\n" +
+                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Druckcenter");
+        }
+
+        _costStoreLoadError = loadError;
+    }
+
+    /// <summary>
+    /// Katalog-Ladefehler sichtbar melden. Kosten- und NPK-Ausgaben bleiben danach gesperrt,
+    /// weil ein leerer Ersatzkatalog plausible, aber falsche Ergebnisse erzeugen wuerde.
+    /// </summary>
+    private void ReportCatalogLoadError(string? loadError)
+    {
+        if (string.IsNullOrWhiteSpace(loadError))
+        {
+            _catalogLoadError = null;
+            return;
+        }
+
+        LastResult = $"Kostenkatalog konnte nicht geladen werden: {loadError}";
+        _shell.SetStatus("Kostenkatalog beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+
+        if (!string.Equals(_catalogLoadError, loadError, StringComparison.Ordinal))
+        {
+            _dialogs.Error(
+                $"Der Kostenkatalog konnte nicht geladen werden:\n{loadError}\n\n" +
+                "Exporte und Neuberechnungen sind gesperrt, damit keine falschen " +
+                "MwSt-/NPK-Angaben entstehen. Bitte die Katalogdatei pruefen und danach 'Aktualisieren'.",
+                "Druckcenter");
+        }
+
+        _catalogLoadError = loadError;
+    }
+
+    private string? FindTableCostParseError()
+    {
+        var invalidHoldings = _shell.Project.Data
+            .Where(record =>
+            {
+                var raw = record.GetFieldValue(FieldKeys.Cost);
+                return !string.IsNullOrWhiteSpace(raw)
+                       && !TablePauschaleCostHelper.TryParseTableNetCost(raw, out _);
+            })
+            .Select(record =>
+            {
+                var holding = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
+                return string.IsNullOrWhiteSpace(holding) ? "(ohne Haltungsname)" : holding;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        return invalidHoldings.Count == 0
+            ? null
+            : $"Tabellenkosten sind nicht lesbar bei: {string.Join(", ", invalidHoldings)}";
+    }
+
+    private void ReportTableCostParseError(string? parseError)
+    {
+        if (string.IsNullOrWhiteSpace(parseError))
+        {
+            _tableCostParseError = null;
+            return;
+        }
+
+        LastResult = parseError;
+        _shell.SetStatus("Tabellenkosten ungueltig - Druckcenter-Exporte gesperrt.");
+
+        if (!string.Equals(_tableCostParseError, parseError, StringComparison.Ordinal))
+        {
+            _dialogs.Error(
+                $"{parseError}\n\n" +
+                "Nichtleere ungueltige Kosten werden nicht als CHF 0 behandelt. " +
+                "Bitte die Kostenfelder korrigieren und danach 'Aktualisieren'.",
+                "Druckcenter");
+        }
+
+        _tableCostParseError = parseError;
+    }
+
+    /// <summary>
+    /// Export-Blockade bei beschaedigten Kostendaten: ohne sie saehe jeder Export plausibel
+    /// aus, waere aber ohne Kosten. Gibt true zurueck, wenn exportiert werden darf.
+    /// </summary>
+    private bool EnsureCostsReadyForExport()
+    {
+        if (_costStoreLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Export abgebrochen - die gespeicherten Kostendaten sind nicht lesbar:\n{_costStoreLoadError}\n\n" +
+                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Druckcenter");
+            return false;
+        }
+
+        if (_catalogLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Export abgebrochen - der Kostenkatalog ist nicht lesbar:\n{_catalogLoadError}\n\n" +
+                "Bitte cost_catalog.json bzw. die User-Overrides pruefen und danach 'Aktualisieren'.",
+                "Druckcenter");
+            return false;
+        }
+
+        if (_tableCostParseError is not null)
+        {
+            _dialogs.Error(
+                $"Export abgebrochen - {_tableCostParseError}\n\n" +
+                "Bitte die Tabellenkosten korrigieren und danach 'Aktualisieren'.",
+                "Druckcenter");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryLoadCatalogForExport(out CostCatalog catalog)
+    {
+        var projectPath = _settings.LastProjectPath ?? "";
+        catalog = _catalogStore.LoadMerged(projectPath, out var loadError);
+        ReportCatalogLoadError(loadError);
+        return EnsureCostsReadyForExport();
     }
 
     private bool OfferRecomputeCostsForCurrentCatalog(IReadOnlyList<DruckcenterRowVm> filteredRows)
@@ -474,7 +631,15 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        var catalog = _catalogStore.LoadMerged(projectPath);
+        var catalog = _catalogStore.LoadMerged(projectPath, out var catalogLoadError);
+        if (!string.IsNullOrWhiteSpace(catalogLoadError))
+        {
+            ReportCatalogLoadError(catalogLoadError);
+            _dialogs.Error(
+                $"Kosten konnten nicht neu berechnet werden, weil der Kostenkatalog nicht sauber geladen werden konnte:\n{catalogLoadError}",
+                "Druckcenter");
+            return false;
+        }
         var vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         var changedHoldings = CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(
             store,
@@ -774,84 +939,4 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private static string Money(decimal value) => ChfFormat.Money(value);
 
-    private static string BuildVatMismatchHint(IReadOnlyList<CostSummaryEntry> entries, decimal currentVatRate)
-    {
-        var oldRates = entries
-            .Select(e => e.Cost.MwstRate)
-            .Where(rate => rate > 0m && rate != currentVatRate)
-            .Distinct()
-            .OrderBy(rate => rate)
-            .Select(FormatVatRate)
-            .ToList();
-        if (oldRates.Count == 0)
-            return "";
-
-        return "Hinweis: Diese Ausgabe enthaelt gespeicherte MwSt-Saetze "
-            + string.Join(", ", oldRates)
-            + $"; aktueller Katalogsatz ist {FormatVatRate(currentVatRate)}. "
-            + "Kosten neu berechnen, wenn der aktuelle Satz gelten soll.";
-    }
-
-    private static IReadOnlyList<decimal> FindMismatchedVatRates(IEnumerable<DruckcenterRowVm> rows, decimal currentVatRate)
-        => rows
-            .Select(row => row.StoredCost?.MwstRate ?? 0m)
-            .Where(rate => rate > 0m && rate != currentVatRate)
-            .Distinct()
-            .OrderBy(rate => rate)
-            .ToList();
-
-    private static string BuildVatRecomputePrompt(IReadOnlyList<decimal> oldRates, decimal currentVatRate)
-        => "Die gefilterte Ausgabe enthaelt gespeicherte Kosten mit altem MwSt-Satz "
-           + string.Join(", ", oldRates.Select(FormatVatRate))
-           + $".\nAktueller Katalogsatz ist {FormatVatRate(currentVatRate)}.\n\n"
-           + "Ja = alle gespeicherten Sanierungskosten jetzt mit aktuellem Katalog/MwSt neu berechnen\n"
-           + "Nein = Ausgabe mit gespeicherten Saetzen fortsetzen\n"
-           + "Abbrechen = Export abbrechen\n\n"
-           + "Manuelle Preis-Overrides bleiben unangetastet.";
-
-    private static string FormatVatRate(decimal rate)
-        => $"{rate * 100m:0.0}%";
-
-    private static string BuildReferenceBlock(IReadOnlyDictionary<string, string> metadata)
-    {
-        var lines = new List<string>();
-        AddReferenceLine(lines, "Ihre Referenz", metadata, "Referenz", "IhreReferenz", "AuftraggeberReferenz");
-        AddReferenceLine(lines, "Unsere Referenz", metadata, "Bearbeiter", "UnsereReferenz");
-        AddReferenceLine(lines, "Auftrag-Nr.", metadata, "AuftragNr");
-        return string.Join("\n", lines);
-    }
-
-    private static void AddReferenceLine(
-        List<string> lines,
-        string label,
-        IReadOnlyDictionary<string, string> metadata,
-        params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (!metadata.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
-                continue;
-
-            lines.Add($"{label}: {value.Trim()}");
-            return;
-        }
-    }
-
-    private static bool IsSanierenYes(string value)
-    {
-        var normalized = value.Trim();
-        return normalized.Equals("ja", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("1", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsSanierenNo(string value)
-    {
-        var normalized = value.Trim();
-        return normalized.Equals("nein", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("no", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("false", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals("0", StringComparison.OrdinalIgnoreCase);
-    }
 }

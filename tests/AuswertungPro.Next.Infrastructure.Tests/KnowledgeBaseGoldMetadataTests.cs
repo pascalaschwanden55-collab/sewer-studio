@@ -51,14 +51,20 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
                 CaseId         = "H-01",
                 Code           = "BAB",
                 Beschreibung   = "Laengsriss deutlich sichtbar an Sohle",
+                FramePath      = typeof(KnowledgeBaseGoldMetadataTests).Assembly.Location,
                 MeterStart     = 10.0,
                 MeterEnd       = 10.0,
                 QualityGateLevel = "Green",
                 Status         = TrainingSampleStatus.Approved,
                 HumanConfirmed = true,
                 Corrected      = true,
-                ConfirmedByUser = "pascal",
-                ConfirmedAtUtc = confirmedAt
+                ConfirmedByUser = Environment.UserName,
+                ConfirmedAtUtc = confirmedAt,
+                SourceType = SourceTypeNames.ManualCoding,
+                MatchLevel = MatchLevelNames.ReviewCorrected,
+                // IsIndexWorthy verlangt seit der Gold-Wahrheits-Haertung Box + SAM-Maske.
+                BboxXCenter = 0.5, BboxYCenter = 0.5, BboxWidth = 0.2, BboxHeight = 0.2,
+                SamMaskRle = "0,4050,1,3949", SamMaskImageWidth = 100, SamMaskImageHeight = 80
             };
 
             Assert.True(KnowledgeBaseManager.IsIndexWorthy(sample));
@@ -80,7 +86,7 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
 
             // ConfirmedByUser (TEXT)
             Assert.False(reader.IsDBNull(2), "ConfirmedByUser ist NULL");
-            Assert.Equal("pascal", reader.GetString(2));
+            Assert.Equal(Environment.UserName, reader.GetString(2));
 
             // ConfirmedAtUtc (TEXT, ISO 8601 "O" Format)
             Assert.False(reader.IsDBNull(3), "ConfirmedAtUtc ist NULL");
@@ -151,8 +157,17 @@ public sealed class KnowledgeBaseGoldMetadataTests : IDisposable
                 CaseId = "H-01",
                 Code = "BAB",
                 Beschreibung = "Bestaetigter Laengsriss im Scheitel sichtbar",
+                FramePath = typeof(KnowledgeBaseGoldMetadataTests).Assembly.Location,
                 Status = TrainingSampleStatus.Approved,
-                HumanConfirmed = true
+                HumanConfirmed = true,
+                Corrected = false,
+                ConfirmedByUser = Environment.UserName,
+                ConfirmedAtUtc = new DateTime(2026, 7, 25, 8, 0, 0, DateTimeKind.Utc),
+                SourceType = SourceTypeNames.ManualCoding,
+                MatchLevel = MatchLevelNames.ReviewApproved,
+                // IsIndexWorthy verlangt seit der Gold-Wahrheits-Haertung Box + SAM-Maske.
+                BboxXCenter = 0.5, BboxYCenter = 0.5, BboxWidth = 0.2, BboxHeight = 0.2,
+                SamMaskRle = "0,4050,1,3949", SamMaskImageWidth = 100, SamMaskImageHeight = 80
             };
             var unconfirmed = new TrainingSample
             {

@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 
 namespace AuswertungPro.Next.UI.Tests;
 

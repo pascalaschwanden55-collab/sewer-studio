@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -28,7 +29,7 @@ public sealed class CodingAnalyzeButtonControlsTests
 
     private static MethodInfo? FindSetEnabledMethod()
         => typeof(CodingModeChromeControls).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingAnalyzeButtonControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingAnalyzeButtonControls")
             ?.GetMethod(
                 "SetEnabled",
                 BindingFlags.Public | BindingFlags.Static,

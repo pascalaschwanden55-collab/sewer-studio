@@ -20,12 +20,33 @@ public sealed class EvalContaminationSetProviderTests
     }
 
     [Fact]
-    public void Load_returns_empty_sets_for_missing_root()
+    public void Load_missing_configured_root_fails_loud()
     {
-        var sets = EvalContaminationSetProvider.Load(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+        Assert.Throws<DirectoryNotFoundException>(
+            () => EvalContaminationSetProvider.Load(missing));
+    }
+
+    [Fact]
+    public void Load_empty_root_explicitly_disables_protection()
+    {
+        var sets = EvalContaminationSetProvider.Load(string.Empty);
 
         Assert.Empty(sets.ImageHashes);
         Assert.Empty(sets.HaltungKeys);
+    }
+
+    [Fact]
+    public void Load_corrupt_manifest_fails_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(Path.Combine(temp.Root, "_manifest.json"), "{ kaputt");
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("_manifest.json", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class TempEvalSet : IDisposable

@@ -2,6 +2,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 

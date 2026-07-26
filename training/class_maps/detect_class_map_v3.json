@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "vsa_manifest_hash": "6732ff859cc9ed919f08d045b81f6b8a82e15105cc9a29213e91cc5f64b0bd38",
+  "classes": {
+    "BCA_anschluss": 0,
+    "BAB_riss": 1,
+    "BAC_bruch": 2,
+    "BAA_verformung": 3,
+    "BAF_oberflaeche": 4,
+    "BAH_schadanschluss": 5,
+    "BAI_dichtung": 6,
+    "BAJ_verbindung": 7,
+    "BBA_wurzeln": 8,
+    "BBB_anhaftung": 9,
+    "BBC_ablagerung": 10,
+    "BBD_boden": 11,
+    "BBF_infiltration": 12,
+    "SONST_schaden": 13,
+    "BCC_bogen": 14
+  }
+}

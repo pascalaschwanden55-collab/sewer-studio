@@ -13,7 +13,7 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var navigationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMeterTimelineControls.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMeterTimelineControls.cs");
 
         Assert.True(File.Exists(controlsPath), "Meteranzeige und Timeline-Playhead sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -39,12 +39,12 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
     {
         var playerCodingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var timelinePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
-        var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineMarkerAccessors.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineControls.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineCommandWorkflow.cs");
-        var commandFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineCommandFactory.cs");
-        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineInitializationWorkflow.cs");
-        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
+        var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTimelineMarkerAccessors.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTimelineControls.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTimelineCommandWorkflow.cs");
+        var commandFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTimelineCommandFactory.cs");
+        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTimelineInitializationWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");

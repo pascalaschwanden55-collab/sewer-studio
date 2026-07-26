@@ -441,6 +441,39 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task DetectBccTestYoloAsync_uses_dedicated_candidate_endpoint()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "is_relevant": true,
+            "detections": [
+                { "x1": 10, "y1": 20, "x2": 110, "y2": 120, "class_name": "BCC_bogen", "confidence": 0.91 }
+            ],
+            "frame_class": "damage",
+            "inference_time_ms": 15.5,
+            "candidate_id": "bcc_bogen_full40",
+            "candidate_sha256": "abc123",
+            "model_name": "best.pt",
+            "device": "cpu"
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        var response = await client.DetectBccTestYoloAsync(new YoloRequest("abc", 0.25));
+
+        Assert.True(response.Available);
+        Assert.Equal("bcc_bogen_full40", response.CandidateId);
+        Assert.Equal("BCC_bogen", Assert.Single(response.Detections).ClassName);
+        Assert.Equal("/detect/yolo/bcc-test", handler.LastRequestPath);
+        Assert.Equal("bcc-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
     public void MultiModelFrameResult_CanBeConstructed()
     {
         var result = new MultiModelFrameResult(
@@ -464,11 +497,13 @@ public class VisionPipelineClientTests
     private sealed class CaptureHandler(string json) : HttpMessageHandler
     {
         public string? LastSidecarToken { get; private set; }
+        public string? LastRequestPath { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            LastRequestPath = request.RequestUri?.AbsolutePath;
             LastSidecarToken = request.Headers.TryGetValues("X-Sidecar-Token", out var values)
                 ? values.SingleOrDefault()
                 : null;

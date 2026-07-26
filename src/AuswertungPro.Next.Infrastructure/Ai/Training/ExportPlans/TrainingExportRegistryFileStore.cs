@@ -33,6 +33,7 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
             var document = JsonSerializer.Deserialize<TrainingExportRegistryFileDocument>(bytes, JsonOptions)
                            ?? throw new JsonException("Das Exportregister ist leer.");
             var registryHash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+            var approvedSampleIds = NormalizeApprovedSampleIds(document.ApprovedSampleIds);
             var holdingRoles = new Dictionary<string, TrainingExportHoldingRole>(
                 document.HoldingRoles,
                 StringComparer.OrdinalIgnoreCase);
@@ -75,7 +76,11 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
                 document.ApprovedBy?.Trim(),
                 document.ApprovedUtc?.ToUniversalTime(),
                 holdingRoles,
-                protectedSets);
+                protectedSets)
+            {
+                ApprovedSampleIds = approvedSampleIds,
+                NegativeImages = NormalizeNegativeImages(document.NegativeImages)
+            };
             ValidateShape(snapshot);
             return new TrainingExportRegistryBundle(snapshot, protectedPaths);
         }
@@ -115,6 +120,56 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
             throw new TrainingExportPlanException(
                 "Ein freigegebenes Exportregister braucht Person und Freigabezeitpunkt.");
         }
+    }
+
+    private static IReadOnlySet<string> NormalizeApprovedSampleIds(
+        IReadOnlyList<string>? approvedSampleIds)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sampleId in approvedSampleIds ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(sampleId))
+                throw new TrainingExportPlanException("Das Exportregister enthaelt eine leere Sample-ID.");
+            if (!result.Add(sampleId.Trim()))
+            {
+                throw new TrainingExportPlanException(
+                    $"Sample-ID '{sampleId.Trim()}' steht mehrfach im Exportregister.");
+            }
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<TrainingExportNegativeImage> NormalizeNegativeImages(
+        IReadOnlyList<TrainingExportNegativeImageFileDocument>? negatives)
+    {
+        // Optionale Erweiterung: Alt-Registrys ohne 'negative_images' bleiben gueltig.
+        if (negatives is null || negatives.Count == 0)
+            return [];
+
+        var result = new List<TrainingExportNegativeImage>(negatives.Count);
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in negatives)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Path))
+                throw new TrainingExportPlanException("Ein Negativbild im Exportregister hat keinen Pfad.");
+            RequireSha256(entry.Sha256, $"Negativ-Hash von '{entry.Path}'");
+            var path = Path.IsPathFullyQualified(entry.Path)
+                ? Path.GetFullPath(entry.Path)
+                : Path.GetFullPath(entry.Path, _knowledgeRoot);
+            if (!seenPaths.Add(path))
+                throw new TrainingExportPlanException($"Negativbild-Pfad '{entry.Path}' steht mehrfach im Exportregister.");
+            var sha256 = entry.Sha256.Trim().ToLowerInvariant();
+            if (!seenHashes.Add(sha256))
+                throw new TrainingExportPlanException($"Negativbild-Hash '{sha256}' steht mehrfach im Exportregister.");
+
+            result.Add(new TrainingExportNegativeImage(path, sha256, entry.Split));
+        }
+
+        return result
+            .OrderBy(item => item.Sha256, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static byte[] ReadStableBytes(string path)
@@ -190,6 +245,9 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
 
         public DateTimeOffset? ApprovedUtc { get; init; }
 
+        public IReadOnlyList<string> ApprovedSampleIds { get; init; }
+            = Array.Empty<string>();
+
         [JsonRequired]
         public IReadOnlyDictionary<string, TrainingExportHoldingRole> HoldingRoles { get; init; }
             = new Dictionary<string, TrainingExportHoldingRole>();
@@ -197,6 +255,21 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
         [JsonRequired]
         public IReadOnlyList<TrainingExportProtectedSetFileDocument> ProtectedSets { get; init; }
             = Array.Empty<TrainingExportProtectedSetFileDocument>();
+
+        /// <summary>Optionale, menschlich kuratierte Negativbilder (additiv; fehlt bei Alt-Registrys).</summary>
+        public IReadOnlyList<TrainingExportNegativeImageFileDocument>? NegativeImages { get; init; }
+    }
+
+    private sealed class TrainingExportNegativeImageFileDocument
+    {
+        [JsonRequired]
+        public required string Path { get; init; }
+
+        [JsonRequired]
+        public required string Sha256 { get; init; }
+
+        /// <summary>Optionaler Split-Hinweis (train/validation); null = Planer entscheidet deterministisch.</summary>
+        public TrainingExportTarget? Split { get; init; }
     }
 
     private sealed class TrainingExportProtectedSetFileDocument

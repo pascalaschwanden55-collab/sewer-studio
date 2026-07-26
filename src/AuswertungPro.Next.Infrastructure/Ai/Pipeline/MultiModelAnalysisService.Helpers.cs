@@ -15,6 +15,16 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 // 1000-Zeilen-Deckel, damit der Frame-Loop Raum fuer neue Logik behaelt.
 public sealed partial class MultiModelAnalysisService
 {
+    public double FrameStepSeconds { get; set; } = 3.0;
+    public int DedupWindowFrames { get; set; } = 3;
+
+    // Aeusserer Per-Frame-Qwen-Cap = Standard 120s (#9). Der effektiv wirksame Cap
+    // bleibt der innere FrameTimeout in EnhancedVisionAnalysisService.
+    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(120);
+
+    /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
+    public bool UseClsPrefilter { get; set; } = true;
+
     private static string NormalizePath(string path)
     {
         path = path.Trim();
@@ -73,5 +83,60 @@ public sealed partial class MultiModelAnalysisService
 
         if (!trace.DegradedReason.Contains(reason, StringComparison.OrdinalIgnoreCase))
             trace.DegradedReason += $";{reason}";
+    }
+
+    /// <summary>
+    /// Liest die Detektor-Qualifikation aus der Sidecar-Gesundheit.
+    /// Null bei Fehler oder altem Sidecar bleibt bewusst "nicht freigegeben".
+    /// </summary>
+    private async Task<SidecarDetectorQualification?> ReadDetectorQualificationAsync(CancellationToken ct)
+    {
+        try
+        {
+            var health = await _client.HealthCheckAsync(ct).ConfigureAwait(false);
+            return health?.DetectorQualification;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Modell-Tag fuer den Trace: Name + Kurz-Hash aus der Sidecar-Response.</summary>
+    private static string? ClassifierModelTag(YoloClassifyResponse? cls)
+    {
+        if (cls is null || string.IsNullOrEmpty(cls.ModelName))
+            return null;
+        var sha = cls.ModelSha256;
+        return string.IsNullOrEmpty(sha) ? cls.ModelName : $"{cls.ModelName}@{sha[..Math.Min(12, sha.Length)]}";
+    }
+
+    /// <summary>
+    /// Convert a MultiModelFrameResult to EnhancedFrameAnalysis
+    /// (for compatibility with the existing pipeline).
+    /// </summary>
+    public static EnhancedFrameAnalysis ToEnhancedAnalysis(
+        MultiModelFrameResult result,
+        int pipeDiameterMm)
+        => MultiModelFrameAnalysisMapper.Map(result, pipeDiameterMm);
+
+    /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
+    private Task WriteTraceAsync(PipelineFrameTrace trace)
+        => PipelineTraceWriteGuard.WriteAsync(
+            _pipelineTraceWriter,
+            PipelineTraceEntryMapper.Map(trace));
+
+    public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
+
+    private double EstimateMeter(double t, double duration, ref double lastMeter)
+    {
+        // Lineare Schaetzung basierend auf geschaetzter Haltungslaenge (wird durch Qwen OSD korrigiert)
+        var estimated = t / Math.Max(duration, 1.0) * EstimatedReachLengthM;
+        lastMeter = Math.Max(lastMeter, estimated);
+        return Math.Round(lastMeter, 2);
     }
 }

@@ -101,6 +101,11 @@ public sealed class RetrievalService(
             // vorhandene Samples zaehlen nur nach menschlicher Bestaetigung als KB-Beleg.
             if (sample.HumanConfirmed != true)
                 continue;
+            // Bestehende Alt-Eintraege mit Platzhalter- oder unbrauchbar kurzem Text
+            // bleiben fuer Sicherung/Audit erhalten, duerfen aber nicht als Qwen-
+            // Few-Shot-Beispiel ausgeliefert werden.
+            if (!GoldDescriptionPolicy.IsKnowledgeTextReady(sample.Beschreibung))
+                continue;
             if (vector is null || vector.Length != queryVec.Length)
             {
                 dimensionMismatchCount++;

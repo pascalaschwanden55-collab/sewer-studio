@@ -14,8 +14,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
-        var formatterPath = Path.Combine(uiRoot, "Ai", "CodingOverlayMeasurementFormatter.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeasurementPanelControls.cs");
+        var formatterPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayMeasurementFormatter.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingMeasurementPanelControls.cs");
 
         var overlay = File.ReadAllText(overlayPath);
         var formatter = File.ReadAllText(formatterPath);
@@ -40,7 +40,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var toolsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOverlayCursorPolicy.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayCursorPolicy.cs");
 
         Assert.True(File.Exists(toolsPath), "Overlay-Cursor-Wiring soll im Tool-Partial liegen.");
         Assert.True(File.Exists(policyPath), "Overlay-Cursor-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -88,7 +88,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var multiPointPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.MultiPoint.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiPointOverlayDrawWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingMultiPointOverlayDrawWorkflow.cs");
 
         Assert.True(File.Exists(multiPointPath), "Multi-Point-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
         Assert.True(File.Exists(workflowPath), "Multi-Point-Overlay-Zeichenablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -130,7 +130,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputMouseWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputMouseWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "Allgemeiner OverlayInput-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
@@ -163,7 +163,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var standardPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Standard.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStandardOverlayDrawWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStandardOverlayDrawWorkflow.cs");
 
         Assert.True(File.Exists(standardPath), "Standard-2-Punkt-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
         Assert.True(File.Exists(workflowPath), "Standard-Overlay-Zeichenablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -209,8 +209,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var lifecycleExitPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var exitFactoryPath = Path.Combine(windowsRoot, "PlayerWindowCodingModeExitControllerFactory.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
-        var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputVisibilityWorkflow.cs");
-        var interactionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputInteractionWorkflow.cs");
+        var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputVisibilityWorkflow.cs");
+        var interactionWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputInteractionWorkflow.cs");
         var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayInputVisibilityStateController.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayInputVisibilityController.cs");
 
@@ -317,7 +317,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputControls.cs");
         var relevantPartials = new[]
         {
             "PlayerWindow.Coding.cs",
@@ -433,8 +433,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "Views",
             "Windows",
             "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
-        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerGeometryPolicy.cs");
+        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerCanvasInputWorkflow.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerPreviewRenderer.cs");
 
         Assert.True(File.Exists(policyPath), "Eingabemarker-Rechteckgeometrie muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -491,8 +491,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var focusControlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerFocusControls.cs");
-        var inputWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerInputWorkflow.cs");
-        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
+        var inputWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerInputWorkflow.cs");
+        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerCanvasInputWorkflow.cs");
 
         Assert.False(File.Exists(inputPath), "Eingabemarker-Eingabe soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(inputControllerPath), "Eingabemarker-Eingabe soll in einem eigenen Controller liegen.");
@@ -631,8 +631,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "Views",
             "Windows",
             "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
-        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerToggleWorkflow.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputControls.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerToggleWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll ueber den OverlayInput-Control-Adapter laufen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Eingabemarker-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -668,7 +668,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputControls.cs");
 
         var joinedPartials = string.Join(
             Environment.NewLine,
@@ -697,8 +697,8 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
             "Windows",
             "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
-        var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
-        var directEventWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerDirectEventWorkflow.cs");
+        var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerSubmissionWorkflow.cs");
+        var directEventWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerDirectEventWorkflow.cs");
 
         Assert.False(File.Exists(submissionPath), "Eingabemarker-Übernahme soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(submissionControllerPath), "Eingabemarker-Übernahme soll in einem eigenen Controller liegen.");

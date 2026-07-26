@@ -333,6 +333,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
         try
         {
+            if (!TryLoadCostsForHoldingExport(out var costStore))
+                return;
+
             // Ein gemeinsamer Zielordner, fester Dateiname; ohne Zielordner den Dialog wie bisher.
             var outPath = ResolveConfiguredExcelPath("Haltungen")
                 ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
@@ -347,11 +350,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             // Gesperrte costs.json (loadError) -> NICHT syncen, um keinen leeren Stand zu schreiben.
             var projectPath = _settings.LastProjectPath ?? "";
             if (!string.IsNullOrWhiteSpace(projectPath))
-            {
-                var store = _projectCosts.Load(projectPath, out var syncLoadError);
-                if (syncLoadError is null)
-                    _costFieldSync.Sync(_shell.Project, store);
-            }
+                _costFieldSync.Sync(_shell.Project, costStore);
 
             var res = await Task.Run(() =>
                 _excelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
@@ -373,6 +372,27 @@ public sealed partial class ExportPageViewModel : ObservableObject
         {
             IsPageBusy = false;
         }
+    }
+
+    private bool TryLoadCostsForHoldingExport(out ProjectCostStore store)
+    {
+        store = new ProjectCostStore();
+        var projectPath = _settings.LastProjectPath ?? "";
+        if (string.IsNullOrWhiteSpace(projectPath))
+            return true;
+
+        store = _projectCosts.Load(projectPath, out var loadError);
+        if (string.IsNullOrWhiteSpace(loadError))
+            return true;
+
+        LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
+        _shell.SetStatus("Haltungs-Export gesperrt: Kostendaten nicht lesbar");
+        _toasts.Error("Kostendaten sind nicht lesbar. Der Haltungs-Export wurde abgebrochen.");
+        _dialogs.Error(
+            $"Der Haltungs-Export wurde abgebrochen, weil die Kostendaten nicht lesbar sind:\n{loadError}\n\n" +
+            "Bitte costs.json pruefen und den Export danach erneut starten.",
+            "Haltungs-Export");
+        return false;
     }
 
     private async Task ExportSchaechteAsync()

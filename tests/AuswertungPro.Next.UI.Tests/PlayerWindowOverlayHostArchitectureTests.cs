@@ -12,7 +12,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "CodingOverlayToolHost.cs");
-        var analysisContextPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisContext.cs");
+        var analysisContextPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAnalysisContext.cs");
         var playerRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var schemaControllerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayController.cs");
         var manualCalibrationControllerPath = Path.Combine(uiRoot, "Player", "CodingManualCalibrationController.cs");

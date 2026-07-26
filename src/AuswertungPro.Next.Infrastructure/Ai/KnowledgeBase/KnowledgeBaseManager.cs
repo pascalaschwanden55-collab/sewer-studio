@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -425,15 +426,28 @@ public sealed class KnowledgeBaseManager(
 
     /// <summary>
     /// Prueft ob ein Sample die Mindestqualitaet fuer KB-Indexierung erfuellt.
-    /// Leere Beschreibungen, unbekannte VSA-Codes und zu kurze Texte werden abgelehnt.
+    /// Leere, zu kurze oder noch nicht ausgefuellte Beschreibungen sowie
+    /// unbekannte VSA-Codes werden abgelehnt.
     /// </summary>
     public static bool IsIndexWorthy(TrainingSample sample)
     {
-        // Positive Freigabe-KB: nur explizit bestaetigtes Gold. Status allein reicht
-        // nicht, weil alte/automatische Pfade Approved ohne menschliche Pruefung setzen konnten.
-        if (sample.Status != TrainingSampleStatus.Approved || sample.HumanConfirmed != true)
+        // Positive Freigabe-KB: exakt dieselbe persoenliche Hand-Gold-Regel wie der
+        // Trainingsexport. Status/HumanConfirmed allein sind kein Herkunftsnachweis.
+        if (!ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, Environment.UserName))
             return false;
-        if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Length < 10)
+        // Ein KB-Eintrag ohne sein belegendes Originalbild ist nicht nachvollziehbar
+        // und darf deshalb auch bei ansonsten gueltigen Metadaten nicht entstehen.
+        if (string.IsNullOrWhiteSpace(sample.FramePath) || !File.Exists(sample.FramePath))
+            return false;
+        // Defense-in-depth (Gold-Wahrheit): ohne Hand-Box und gepruefte SAM-Maske ist ein
+        // Fund kein vollstaendiges Goldsample — schuetzt auch Alt-Entwuerfe, die vor dem
+        // Draft-Status entstanden sind. Workbench-Entwuerfe tragen zudem Status=Draft und
+        // scheitern bereits an der Status-Pruefung oben.
+        if (!ManualGoldTrainingPolicy.HasValidGoldGeometry(sample))
+            return false;
+        // Der YOLO-Geometrieexport darf bestehende Platzhaltertexte ignorieren.
+        // Die Retrieval-KB lernt dagegen den Text selbst und muss sie deshalb sperren.
+        if (!GoldDescriptionPolicy.IsKnowledgeTextReady(sample.Beschreibung))
             return false;
         if (string.IsNullOrWhiteSpace(sample.Code))
             return false;

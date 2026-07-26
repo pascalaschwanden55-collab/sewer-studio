@@ -33,7 +33,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var window = ReadUiFile("Views", "Windows", "PlayerWindow.Wiring.cs");
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
         var controller = ReadUiFile("Player", "CodingOverlayInputVisibilityController.cs");
-        var controls = ReadUiFile("Ai", "CodingOverlayInputControls.cs");
+        var controls = ReadUiFile("Ai", "Coding", "CodingOverlayInputControls.cs");
 
         Assert.Contains("_codingOverlayInputVisibilityController.HideForExternalWindow", window);
         Assert.Contains("_codingOverlayInputVisibilityController.RestoreAfterExternalWindow", window);
@@ -49,8 +49,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_uses_same_overlay_policy_for_rendering_and_events()
     {
         var coding = ReadCodingPartials();
-        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
-        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var summary = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisResultWorkflow.cs");
 
         Assert.Contains("CodingMultiModelAnalysisResultWorkflow.Execute", coding);
         Assert.Contains("CodingMultiModelFindingSummary.Build(segmented, result)", resultWorkflow);
@@ -66,9 +66,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_renders_ahead_segment_masks_without_coding_them()
     {
         var coding = ReadCodingPartials();
-        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
-        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
-        var renderWorkflow = ReadUiFile("Ai", "CodingMultiModelResultsRenderWorkflow.cs");
+        var summary = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var renderWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelResultsRenderWorkflow.cs");
         var showBody = coding;
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", coding);
@@ -82,8 +82,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_status_mentions_background_masks_suppressed()
     {
-        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
-        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var summary = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisResultWorkflow.cs");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", summary);
         Assert.Contains("findingSummary.TimingText", resultWorkflow);
@@ -95,8 +95,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
         var coding = ReadCodingPartials();
-        var previewService = ReadUiFile("Ai", "CodingInlineEvidencePreviewService.cs");
-        var previewWorkflow = ReadUiFile("Ai", "CodingInlineEvidencePreviewWorkflow.cs");
+        var previewService = ReadUiFile("Ai", "Coding", "CodingInlineEvidencePreviewService.cs");
+        var previewWorkflow = ReadUiFile("Ai", "Coding", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.Contains("x:Name=\"ImgInlineEvidencePreview\"", sidePanel);
         Assert.Contains("x:Name=\"TxtInlineEvidencePreviewStatus\"", sidePanel);
@@ -111,8 +111,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var detailBody = coding;
-        var policy = ReadUiFile("Ai", "CodingDefectStatusDisplayPolicy.cs");
-        var controls = ReadUiFile("Ai", "CodingInlineDefectDetailControls.cs");
+        var policy = ReadUiFile("Ai", "Coding", "CodingDefectStatusDisplayPolicy.cs");
+        var controls = ReadUiFile("Ai", "Coding", "CodingInlineDefectDetailControls.cs");
 
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev)", detailBody);
         Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.Apply(state)", detailBody);
@@ -127,11 +127,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var photoBody = coding;
-        var policy = ReadUiFile("Ai", "CodingPhotoDisplayPathPolicy.cs");
-        var loader = ReadUiFile("Ai", "CodingPhotoViewerImageSourceLoader.cs");
-        var displayWorkflow = ReadUiFile("Ai", "CodingPhotoViewerDisplayWorkflow.cs");
-        var viewerWorkflowFactory = ReadUiFile("Ai", "CodingPhotoViewerWorkflowServiceFactory.cs");
-        var viewerService = ReadUiFile("Ai", "CodingPhotoViewerWindowService.cs");
+        var policy = ReadUiFile("Ai", "Coding", "CodingPhotoDisplayPathPolicy.cs");
+        var loader = ReadUiFile("Ai", "Coding", "CodingPhotoViewerImageSourceLoader.cs");
+        var displayWorkflow = ReadUiFile("Ai", "Coding", "CodingPhotoViewerDisplayWorkflow.cs");
+        var viewerWorkflowFactory = ReadUiFile("Ai", "Coding", "CodingPhotoViewerWorkflowServiceFactory.cs");
+        var viewerService = ReadUiFile("Ai", "Coding", "CodingPhotoViewerWindowService.cs");
 
         AssertNoForbiddenTokens(photoBody, "CodingPhotoViewerWorkflowServiceFactory.Create");
         Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", displayWorkflow);
@@ -148,9 +148,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_stops_ai_analysis_before_snapshot_after_rohrende()
     {
-        var analysisContext = ReadUiFile("Ai", "CodingAnalysisContext.cs");
-        var preflightWorkflow = ReadUiFile("Ai", "CodingAnalysisPreflightWorkflow.cs");
-        var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
+        var analysisContext = ReadUiFile("Ai", "Coding", "CodingAnalysisContext.cs");
+        var preflightWorkflow = ReadUiFile("Ai", "Coding", "CodingAnalysisPreflightWorkflow.cs");
+        var singleModelWorkflow = ReadUiFile("Ai", "Coding", "CodingSingleModelAnalysisWorkflow.cs");
         var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.cs");
 
         var preflightIndex = runBody.IndexOf("CodingAnalysisPreflightWorkflow.Execute", StringComparison.Ordinal);
@@ -172,7 +172,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var policy = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs"));
-        var workflow = ReadUiFile("Ai", "CodingMultiModelFindingEventWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
         var addBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
 
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", policy);
@@ -194,7 +194,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var captureBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
-        var persistBody = ReadUiFile("Ai", "CodingTrainingPersistenceContext.cs")
+        var persistBody = ReadUiFile("Ai", "Coding", "CodingTrainingPersistenceContext.cs")
                           + ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
         AssertNoForbiddenTokens(
@@ -212,7 +212,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_coding_analysis_keeps_analyzed_frame_for_gold_snapshot()
     {
         var coding = ReadCodingPartials();
-        var startWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var startWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisStartWorkflow.cs");
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
 
         Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModelBody);
@@ -232,10 +232,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var qwenBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.Live.cs");
-        var qwenWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventWorkflow.cs");
-        var qwenAppender = ReadUiFile("Ai", "CodingLiveFindingSessionAppender.cs");
+        var qwenWorkflow = ReadUiFile("Ai", "Coding", "CodingLiveFindingEventWorkflow.cs");
+        var qwenAppender = ReadUiFile("Ai", "Coding", "CodingLiveFindingSessionAppender.cs");
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var multiModelWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventWorkflow.cs");
+        var multiModelWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
 
         Assert.Contains("CodingLiveFindingEventWorkflow.Execute", qwenBody);
         Assert.Contains("CodingLiveFindingSessionAppender.Append", qwenWorkflow);
@@ -258,7 +258,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var boundaryBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
-        var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
+        var boundaryCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", boundaryBody);
         Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
@@ -272,9 +272,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
         var structuralBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
-        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
-        var structuralCommandWorkflow = ReadUiFile("Ai", "CodingStructuralClassifierCommandWorkflow.cs");
-        var structuralWorkflow = ReadUiFile("Ai", "CodingStructuralClassifierResultWorkflow.cs");
+        var resultWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var structuralCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingStructuralClassifierCommandWorkflow.cs");
+        var structuralWorkflow = ReadUiFile("Ai", "Coding", "CodingStructuralClassifierResultWorkflow.cs");
 
         var boundaryIndex = multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
         var structuralIndex = multiModelBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
@@ -302,8 +302,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
         var factory = ReadUiFile("Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
-        var workflow = ReadUiFile("Ai", "CodingModeExitFinalizationWorkflow.cs");
-        var commandWorkflow = ReadUiFile("Ai", "CodingModeExitCommandWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingModeExitFinalizationWorkflow.cs");
+        var commandWorkflow = ReadUiFile("Ai", "Coding", "CodingModeExitCommandWorkflow.cs");
         var exitController = ReadUiFile("Player", "CodingModeExitController.cs");
 
         Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitController);
@@ -320,7 +320,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var osdController = ReadUiFile("Player", "CodingOsdMeterController.cs");
-        var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
+        var inferenceWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelInferenceWorkflow.cs");
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
         var resolveBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Osd.cs");
 
@@ -350,11 +350,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var multiModelCommandWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
+        var multiModelCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs");
         var qwenBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.Live.cs");
-        var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
+        var qwenCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingLiveFindingEventCommandWorkflow.cs");
         var boundaryBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
-        var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
+        var boundaryCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
@@ -376,10 +376,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_reads_osd_meter_from_analyzed_frame_before_multimodel_detection()
     {
         var coding = ReadCodingPartials();
-        var osdService = ReadUiFile("Ai", "CodingOsdMeterService.cs");
-        var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
-        var startWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
-        var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
+        var osdService = ReadUiFile("Ai", "Coding", "CodingOsdMeterService.cs");
+        var singleModelWorkflow = ReadUiFile("Ai", "Coding", "CodingSingleModelAnalysisWorkflow.cs");
+        var startWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var inferenceWorkflow = ReadUiFile("Ai", "Coding", "CodingMultiModelInferenceWorkflow.cs");
         var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
         var readerBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
         var helperBody = readerBody;
@@ -407,8 +407,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_auto_boundary_events_attach_passed_frame_before_add_event()
     {
         var coding = ReadCodingPartials();
-        var workflow = ReadUiFile("Ai", "CodingBoundaryEventWorkflow.cs");
-        var boundariesBody = ReadUiFile("Ai", "CodingBoundaryContext.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingBoundaryEventWorkflow.cs");
+        var boundariesBody = ReadUiFile("Ai", "Coding", "CodingBoundaryContext.cs");
         var startAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes)", StringComparison.Ordinal);
         var startAddIndex = workflow.IndexOf("CodingBoundaryEventAppender.Apply", startAttachIndex, StringComparison.Ordinal);
         var endAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes)", StringComparison.Ordinal);
@@ -424,7 +424,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_event_seek_allows_zero_timestamp()
     {
         var coding = ReadCodingPartials();
-        var workflow = ReadUiFile("Ai", "CodingEventSeekCommandWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingEventSeekCommandWorkflow.cs");
         var seekBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Events.Actions.cs");
 
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", seekBody);
@@ -436,7 +436,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_import_seek_allows_zero_timestamp()
     {
         var coding = ReadCodingPartials();
-        var workflow = ReadUiFile("Ai", "CodingImportEventSeekCommandWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingImportEventSeekCommandWorkflow.cs");
         var seekBody = ReadUiFile("Player", "CodingProtocolMatchController.cs");
 
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
@@ -448,7 +448,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_manual_photo_aligns_event_time_to_current_frame_before_snapshot()
     {
         var coding = ReadCodingPartials();
-        var workflow = ReadUiFile("Ai", "CodingTakePhotoCommandWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingTakePhotoCommandWorkflow.cs");
         var controller = ReadUiFile("Player", "CodingPhotoAttachmentController.cs");
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
 
@@ -499,7 +499,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_runs_coding_protocol_match_from_import_and_ki_events()
     {
         var coding = ReadCodingPartials();
-        var workflow = ReadUiFile("Ai", "CodingProtocolMatchCommandWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingProtocolMatchCommandWorkflow.cs");
         var runBody = ReadUiFile("Player", "CodingProtocolMatchController.cs");
         var listVisualController = ReadUiFile("Player", "CodingEventListVisualController.cs");
         var windowRoot = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
@@ -525,7 +525,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingProtocolMatchHighlightControls.Apply", listVisualController);
         Assert.Contains(
             "CodingProtocolMatchDisplayPolicy.BadgeText",
-            ReadUiFile("Ai", "CodingProtocolMatchHighlightControls.cs"));
+            ReadUiFile("Ai", "Coding", "CodingProtocolMatchHighlightControls.cs"));
     }
 
     [Fact]
@@ -535,12 +535,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var importConfirmBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var greenBody = importConfirmBody;
         var coreBody = importConfirmBody;
-        var acceptGreenCommandWorkflow = ReadUiFile("Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
-        var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
-        var importTrainingResultWorkflow = ReadUiFile("Ai", "CodingImportTrainingResultWorkflow.cs");
-        var confirmationWorkflow = ReadUiFile("Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
-        var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
-        var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
+        var acceptGreenCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingAcceptGreenMatchesCommandWorkflow.cs");
+        var importConfirmCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingImportConfirmCommandWorkflow.cs");
+        var importTrainingResultWorkflow = ReadUiFile("Ai", "Coding", "CodingImportTrainingResultWorkflow.cs");
+        var confirmationWorkflow = ReadUiFile("Ai", "Coding", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
+        var workflow = ReadUiFile("Ai", "Coding", "CodingProtocolImportTrainingWorkflowService.cs");
+        var workflowFactory = ReadUiFile("Ai", "Coding", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", importConfirmBody);
         AssertNoForbiddenTokens(

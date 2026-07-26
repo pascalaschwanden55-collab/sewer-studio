@@ -1,6 +1,8 @@
 using System.Windows.Controls;
 using System.Windows.Documents;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -57,8 +59,12 @@ public partial class PlayerWindow
                 CodingEventCloseStretch: CodingEventCloseStretch_Click,
                 CodingEventSeek: CodingEventSeek_Click,
                 CodingEventDelete: CodingEventDelete_Click,
-                CodingAcceptDefect: (_, _) => _codingInlineDefectController.Accept(),
-                CodingEditDefect: (_, _) => _codingInlineDefectController.Edit(),
+                CodingAcceptDefect: (_, _) => _codingInlineDefectController
+                    .AcceptAsync()
+                    .SafeFireAndForget("TrainingSaveAcceptInline"),
+                CodingEditDefect: (_, _) => _codingInlineDefectController
+                    .EditAsync()
+                    .SafeFireAndForget("TrainingSaveEditInline"),
                 CodingRejectDefect: (_, _) => _codingInlineDefectController.Reject(),
                 ImportEventsDoubleClick: (_, _) => _codingProtocolMatchController.SeekSelectedImportEvent(),
                 ImportConfirm: ImportConfirm_Click,

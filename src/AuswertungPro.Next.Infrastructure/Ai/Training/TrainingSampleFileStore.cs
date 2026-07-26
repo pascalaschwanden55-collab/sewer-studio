@@ -86,10 +86,28 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
     }
 
-    public async Task MergeAndSaveAsync(List<TrainingSample> samples)
+    public Task MergeAndSaveAsync(List<TrainingSample> samples)
+        => MergeAndSaveCoreAsync(samples, reportSample: null, CancellationToken.None);
+
+    /// <inheritdoc cref="ITrainingSampleStore.TryAddNewAsync"/>
+    public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        return MergeAndSaveCoreAsync(new List<TrainingSample> { sample }, reportSample: sample, ct);
+    }
+
+    /// <summary>
+    /// Signatur-Dedup-Anhang unter dem Datei-Lock (gemeinsame Logik fuer MergeAndSaveAsync
+    /// und TryAddNewAsync). Mit <paramref name="reportSample"/> wird rueckgemeldet, ob genau
+    /// dieses Sample angehaengt wurde; ohne Meldung (MergeAndSaveAsync) immer true.
+    /// </summary>
+    private async Task<bool> MergeAndSaveCoreAsync(
+        List<TrainingSample> samples,
+        TrainingSample? reportSample,
+        CancellationToken ct)
     {
         var fileLock = FileLock;
-        await fileLock.WaitAsync().ConfigureAwait(false);
+        await fileLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var incoming = FilterEvalContamination(samples);
@@ -99,17 +117,21 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                 .Select(sample => sample.Signature)
                 .ToHashSet(StringComparer.Ordinal);
 
+            var reportAdded = false;
             foreach (var sample in incoming)
             {
                 if (!string.IsNullOrEmpty(sample.Signature) && signatures.Contains(sample.Signature))
                     continue;
 
                 existing.Add(sample);
+                if (ReferenceEquals(sample, reportSample))
+                    reportAdded = true;
                 if (!string.IsNullOrEmpty(sample.Signature))
                     signatures.Add(sample.Signature);
             }
 
             await SaveInternalAsync(existing).ConfigureAwait(false);
+            return reportSample is null || reportAdded;
         }
         finally
         {
@@ -134,8 +156,22 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
 
             foreach (var sample in incoming)
             {
-                if (!string.IsNullOrEmpty(sample.Signature)
-                    && signatureIndex.TryGetValue(sample.Signature, out var index))
+                // Primaer per stabiler SampleId matchen: eine Codekorrektur aendert die
+                // Signatur (enthaelt den Code) — ein Update mit gleicher Id muss trotzdem
+                // denselben Datensatz treffen (kein Dublett).
+                var index = existing.FindIndex(
+                    candidate => string.Equals(candidate.SampleId, sample.SampleId, StringComparison.Ordinal));
+
+                // Fallback per Signatur fuer Alt-Aufrufer ohne stabile Id-Zuordnung
+                // (bisheriges Verhalten, unveraendert).
+                if (index < 0
+                    && !string.IsNullOrEmpty(sample.Signature)
+                    && signatureIndex.TryGetValue(sample.Signature, out var signatureMatch))
+                {
+                    index = signatureMatch;
+                }
+
+                if (index >= 0)
                 {
                     TrainingSampleMerge.ApplyUpdatableFields(existing[index], sample);
                     continue;
@@ -147,6 +183,70 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             }
 
             await SaveInternalAsync(existing).ConfigureAwait(false);
+        }
+        finally
+        {
+            fileLock.Release();
+        }
+    }
+
+    /// <inheritdoc cref="ITrainingSampleStore.RemoveBySampleIdAsync"/>
+    public async Task<bool> RemoveBySampleIdAsync(string sampleId)
+    {
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            // Ungefiltert laden (LoadInternalAsync): der Eval-Filter darf hier keinen
+            // fremden Bestand verwerfen — entfernt wird gezielt per SampleId.
+            var existing = await LoadInternalAsync().ConfigureAwait(false);
+            var removed = existing.RemoveAll(
+                sample => string.Equals(sample.SampleId, sampleId, StringComparison.Ordinal));
+            if (removed == 0)
+                return false;
+
+            await SaveInternalAsync(existing).ConfigureAwait(false);
+            return true;
+        }
+        finally
+        {
+            fileLock.Release();
+        }
+    }
+
+    /// <inheritdoc cref="ITrainingSampleStore.ReplaceBySampleIdAsync"/>
+    public async Task<bool> ReplaceBySampleIdAsync(TrainingSample sample)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        var fileLock = FileLock;
+        await fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            // Ungefiltert laden: entfernt/ersetzt wird gezielt per SampleId, der Eval-Filter
+            // darf keinen fremden Bestand verwerfen. EIN Lock fuer Loeschen + Anhaengen +
+            // Speichern — zwischen den Schritten kann kein anderer Schreiber dazwischenkommen.
+            var existing = await LoadInternalAsync().ConfigureAwait(false);
+            var index = existing.FindIndex(
+                candidate => string.Equals(candidate.SampleId, sample.SampleId, StringComparison.Ordinal));
+            if (index < 0)
+                return false;   // unbekannte Id: NICHTS schreiben (Aufrufer behandelt)
+
+            var signatureOwner = existing.Find(candidate =>
+                !string.Equals(candidate.SampleId, sample.SampleId, StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(sample.Signature)
+                && string.Equals(candidate.Signature, sample.Signature, StringComparison.Ordinal));
+            if (signatureOwner is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Die Signatur des Samples '{sample.SampleId}' gehoert bereits zu " +
+                    $"Sample '{signatureOwner.SampleId}'. Der bestehende Gold-Datenbestand " +
+                    "wurde nicht veraendert.");
+            }
+
+            existing.RemoveAt(index);
+            existing.Add(sample);
+            await SaveInternalAsync(existing).ConfigureAwait(false);
+            return true;
         }
         finally
         {

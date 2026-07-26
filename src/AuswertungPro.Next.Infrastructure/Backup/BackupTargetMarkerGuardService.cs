@@ -7,15 +7,27 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 /// </summary>
 public sealed class BackupTargetMarkerGuardService : IBackupTargetMarkerGuard
 {
+    internal const string MarkerContent =
+        "SewerStudio-Datensicherung. Diese Datei markiert den Spiegel-Ordner \u2014 nicht loeschen.";
+
     public string? ValidateAndCreateMarker(string backupRoot)
     {
         var root = Path.GetFullPath(backupRoot);
-        var markerPath = Path.Combine(root, BackupPlanBuilder.MarkerFileName);
+        BackupTargetPathGuard.EnsureRootIsSafe(root);
+        var markerPath = BackupTargetPathGuard.ResolveRelativePath(
+            root,
+            BackupPlanBuilder.MarkerFileName);
 
         if (Directory.Exists(root))
         {
             if (File.Exists(markerPath))
-                return null;
+            {
+                BackupTargetPathGuard.EnsurePathIsSafe(root, markerPath);
+                var content = File.ReadAllText(markerPath);
+                return string.Equals(content, MarkerContent, StringComparison.Ordinal)
+                    ? null
+                    : "Die Sicherungs-Marker-Datei ist ungueltig. Aus Sicherheitsgruenden wurde nichts veraendert.";
+            }
 
             if (Directory.EnumerateFileSystemEntries(root).Any())
             {
@@ -27,10 +39,14 @@ public sealed class BackupTargetMarkerGuardService : IBackupTargetMarkerGuard
 
         try
         {
+            BackupTargetPathGuard.EnsureRootIsSafe(root);
             Directory.CreateDirectory(root);
+            BackupTargetPathGuard.EnsureRootIsSafe(root);
+            BackupTargetPathGuard.EnsurePathIsSafe(root, markerPath);
             File.WriteAllText(
                 markerPath,
-                "SewerStudio-Datensicherung. Diese Datei markiert den Spiegel-Ordner \u2014 nicht loeschen.");
+                MarkerContent);
+            BackupTargetPathGuard.EnsurePathIsSafe(root, markerPath);
             File.SetAttributes(markerPath, FileAttributes.Hidden);
             return null;
         }

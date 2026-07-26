@@ -1,6 +1,8 @@
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -8,13 +10,13 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingConfirmationDecisionControllerTests
 {
     [Fact]
-    public void Accept_persists_closes_and_resumes()
+    public async Task Accept_persists_closes_and_resumes()
     {
         var calls = new List<string>();
         var pendingState = PendingState(out var codingEvent);
         var controller = CreateController(pendingState, [codingEvent], calls);
 
-        var result = controller.Accept();
+        var result = await controller.Accept();
 
         Assert.True(result.Applied);
         Assert.Equal(CodingUserDecision.Accepted, codingEvent.AiContext!.Decision);
@@ -40,21 +42,21 @@ public sealed class CodingConfirmationDecisionControllerTests
     }
 
     [Fact]
-    public void Reject_persists_removes_refreshes_closes_and_resumes()
+    public async Task Reject_persists_removes_refreshes_closes_and_resumes()
     {
         var calls = new List<string>();
         var pendingState = PendingState(out var codingEvent);
         var codingEvents = new List<CodingEvent> { codingEvent };
         var controller = CreateController(pendingState, codingEvents, calls);
 
-        var result = controller.Reject();
+        var result = await controller.Reject();
 
         Assert.True(result.Applied);
         Assert.Equal(CodingUserDecision.Rejected, codingEvent.AiContext!.Decision);
         Assert.Empty(codingEvents);
         Assert.False(pendingState.HasPendingConfirmation);
         Assert.Equal(
-            ["persist:TrainingSaveReject", "refresh", "hide", "pause:False", "status"],
+            ["refresh", "persist:TrainingSaveReject", "hide", "pause:False", "status"],
             calls);
     }
 
@@ -67,9 +69,14 @@ public sealed class CodingConfirmationDecisionControllerTests
             new CodingConfirmationDecisionControllerActions(
                 ResolveCodingSessionService: () => null,
                 ResolveCodingEvents: () => codingEvents,
-                PersistTrainingSample: (_, operation) => calls.Add($"persist:{operation}"),
+                PersistTrainingSample: (_, operation) =>
+                {
+                    calls.Add($"persist:{operation}");
+                    return Task.FromResult(CodingTrainingSamplePersistenceResult.Ok);
+                },
                 RefreshCodingEvents: () => calls.Add("refresh"),
                 HideConfirmationPanel: () => calls.Add("hide"),
+                ShowPersistenceError: _ => calls.Add("error"),
                 SelectEvent: _ => calls.Add("select"),
                 IsLiveAiEnabled: () => true,
                 ResolveModelName: () => "qwen",

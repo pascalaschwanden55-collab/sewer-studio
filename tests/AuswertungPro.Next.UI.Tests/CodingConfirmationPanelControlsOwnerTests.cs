@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -46,7 +47,9 @@ public sealed class CodingConfirmationPanelControlsOwnerTests
             Code = new TextBlock(),
             Confidence = new TextBlock(),
             Description = new TextBlock(),
-            Detail = new TextBlock()
+            Detail = new TextBlock(),
+            SaveErrorPanel = new StackPanel { Visibility = Visibility.Collapsed },
+            SaveErrorText = new TextBlock()
         };
         harness.Controls = new CodingConfirmationPanelControls(
             harness.Panel,
@@ -54,7 +57,9 @@ public sealed class CodingConfirmationPanelControlsOwnerTests
             harness.Code,
             harness.Confidence,
             harness.Description,
-            harness.Detail);
+            harness.Detail,
+            harness.SaveErrorPanel,
+            harness.SaveErrorText);
         return harness;
     }
 
@@ -67,6 +72,8 @@ public sealed class CodingConfirmationPanelControlsOwnerTests
         public TextBlock Confidence { get; set; } = null!;
         public TextBlock Description { get; set; } = null!;
         public TextBlock Detail { get; set; } = null!;
+        public StackPanel SaveErrorPanel { get; set; } = null!;
+        public TextBlock SaveErrorText { get; set; } = null!;
     }
 
     private static void RunOnStaThread(Action action)

@@ -24,6 +24,9 @@ unter anderem:
   schnelle Grossumbauten.
 - Keine God-Classes erweitern. Neue Fachlogik in kleine Services/Controller legen;
   UI-Code bleibt dünn.
+- Neue Workflow-/Orchestrierungsklassen (Request/Actions/Result-Muster) gehören nach
+  `src/AuswertungPro.Next.Application/UseCases/`, nicht nach `UI/Ai/` — der Bestand
+  dort ist per `UiAiFreezeArchitectureTests` eingefroren.
 - Öffentliche Fassaden und gespeicherte Datenformate bei Umbauten erhalten.
 - Kundenoriginale nie verändern. Dateioperationen absichern und Fehler pro Datei
   protokollieren, damit ein Defekt nicht den ganzen Import abbricht.

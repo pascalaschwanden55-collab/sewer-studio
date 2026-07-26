@@ -41,6 +41,42 @@ public sealed class DeterministicOllamaRequestTests
     }
 
     [Fact]
+    public async Task OllamaProtocolAiService_mit_erforderlichem_Foto_bricht_bei_fehlender_Datei_ab()
+    {
+        using var http = new HttpClient(new CaptureOllamaHandler(AiSuggestionJson()))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        var service = new OllamaProtocolAiService(
+            enabled: true,
+            config: new(
+                new Uri("http://localhost:11434"),
+                "qwen-vision",
+                "qwen-text",
+                "nomic-embed-text",
+                TimeSpan.FromSeconds(30),
+                NumCtx: 8192),
+            ffmpegPath: null,
+            http: http);
+        var missingPhoto = Path.Combine(
+            Path.GetTempPath(),
+            $"sewerstudio-missing-photo-{Guid.NewGuid():N}.jpg");
+
+        var error = await Assert.ThrowsAsync<IOException>(() =>
+            service.SuggestAsync(new AiInput(
+                ProjectFolderAbs: Environment.CurrentDirectory,
+                HaltungId: "H-1",
+                Meter: 1.2,
+                ExistingCode: null,
+                ExistingText: null,
+                AllowedCodes: ["BAA"],
+                ImagePathsAbs: [missingPhoto],
+                RequireImage: true)));
+
+        Assert.Contains("Foto", error.Message);
+    }
+
+    [Fact]
     public async Task FullProtocolGenerationService_uses_deterministic_options_for_text_mapping()
     {
         using var http = new HttpClient(new CaptureOllamaHandler(AiSuggestionJson()))

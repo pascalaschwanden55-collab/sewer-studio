@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -31,6 +32,25 @@ public sealed class CodingImportReferenceConfirmationControllerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_Persistenzfehler_zeigt_Fehler_aber_keinen_Erfolg()
+    {
+        var calls = new List<string>();
+        var controller = new CodingImportReferenceConfirmationController();
+
+        var result = await controller.ExecuteAsync(
+            Event("BCA"),
+            Actions(
+                calls,
+                persistWithResult: _ => Task.FromResult(
+                    CodingTrainingSamplePersistenceResult.Failed("JSON gesperrt"))));
+
+        Assert.Equal(CodingImportReferenceConfirmationOutcome.PersistenceFailed, result);
+        Assert.Equal(["error:JSON gesperrt"], calls);
+        Assert.DoesNotContain("success", calls);
+        Assert.DoesNotContain("refresh-match", calls);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_BestaetigtSpeichertUndAktualisiertInDieserReihenfolge()
     {
         var calls = new List<string>();
@@ -48,7 +68,9 @@ public sealed class CodingImportReferenceConfirmationControllerTests
     private static CodingEvent Event(string code)
         => new() { Entry = new ProtocolEntry { Code = code } };
 
-    private static CodingImportReferenceConfirmationActions Actions(List<string> calls)
+    private static CodingImportReferenceConfirmationActions Actions(
+        List<string> calls,
+        Func<CodingEvent, Task<CodingTrainingSamplePersistenceResult>>? persistWithResult = null)
         => new(
             ShowMissingCode: () => calls.Add("missing-code"),
             PersistTrainingSampleAsync: codingEvent =>
@@ -57,5 +79,7 @@ public sealed class CodingImportReferenceConfirmationControllerTests
                 return Task.CompletedTask;
             },
             ShowSuccess: () => calls.Add("success"),
-            RefreshProtocolMatch: () => calls.Add("refresh-match"));
+            RefreshProtocolMatch: () => calls.Add("refresh-match"),
+            PersistTrainingSampleWithResultAsync: persistWithResult,
+            ShowPersistenceError: error => calls.Add($"error:{error}"));
 }

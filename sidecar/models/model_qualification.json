@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "detector": {
+    "qualified": false,
+    "reason": "Altmodell 2026-04-11: BBox-Kollaps bei verschiedenen Bildern (nahezu identische Box), alter Trainingsdatensatz fehlt — als Qualitaetsnachweis nicht geeignet.",
+    "marked_utc": "2026-07-25T18:13:37Z",
+    "artifacts": [
+      {
+        "file_name": "yolo26m.pt",
+        "sha256": "4782fd9ed9487713b84883dcfa954cb30c9457b9d10b6c00441290b3ff31bc59",
+        "backend": "pytorch"
+      },
+      {
+        "file_name": "yolo26m.engine",
+        "sha256": "0490cda7a99ce73c3f187eb8d207806b1a8864ecec7d0f3c7af6b494642c88dc",
+        "backend": "tensorrt"
+      },
+      {
+        "file_name": "yolo26m.onnx",
+        "sha256": "e753085cc03c227464e8d8fa1c21eb87dac3ebc88a014f72de2d0da715538904",
+        "backend": "onnx"
+      }
+    ]
+  }
+}

@@ -121,6 +121,37 @@ public sealed class TrainingSampleMergeTests
     }
 
     [Fact]
+    public void ApplyUpdatableFields_persoenliches_Gold_ersetzt_alten_Bildpfad()
+    {
+        var target = new TrainingSample
+        {
+            SampleId = "s1",
+            Code = "BCA",
+            Beschreibung = "alter KI-Stand",
+            FramePath = @"C:\Kundenfoto\original.png"
+        };
+        var source = new TrainingSample
+        {
+            SampleId = "s1",
+            Code = "BCA",
+            Beschreibung = "BCA - Anschluss",
+            FramePath = @"C:\KI_BRAIN\gold_frames\gold_hash.png",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            MatchLevel = MatchLevelNames.ReviewApproved,
+            HumanConfirmed = true,
+            Corrected = false,
+            ConfirmedByUser = "Besitzer",
+            ConfirmedAtUtc = new DateTime(2026, 7, 23, 8, 0, 0, DateTimeKind.Utc)
+        };
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.Equal(source.FramePath, target.FramePath);
+        Assert.Equal(source.Beschreibung, target.Beschreibung);
+    }
+
+    [Fact]
     public void ApplyUpdatableFields_uebernimmt_Freigabeentscheidung_als_Tiefkopie()
     {
         var target = new TrainingSample { SampleId = "s1" };

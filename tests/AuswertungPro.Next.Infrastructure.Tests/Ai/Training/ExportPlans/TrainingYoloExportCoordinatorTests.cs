@@ -94,9 +94,10 @@ public sealed class TrainingYoloExportCoordinatorTests
         {
             var sequence = new List<string>();
             var sample = WithCode(EligibleSample("sample-invalid", framePath), "ZZZ");
+            var valid = EligibleSample("sample-valid", framePath);
             var store = new FakeSampleStore(() => sequence.Add("persist"));
             var input = new FakePlanInputBuilder(() => sequence.Add("input"));
-            var bundle = Bundle(TrainingExportSourceType.TeacherAnnotation, "teacher-a");
+            var bundle = Bundle(TrainingExportSourceType.TrainingSample, valid.SampleId);
             var coordinator = CreateCoordinator(
                 store,
                 bundle,
@@ -106,15 +107,15 @@ public sealed class TrainingYoloExportCoordinatorTests
                     () => sequence.Add("completion")),
                 sequence,
                 input,
-                [sample]);
+                [sample, valid]);
 
-            await coordinator.RunAsync(Command([sample], Timestamp()));
+            await coordinator.RunAsync(Command([sample, valid], Timestamp()));
 
             Assert.False(sample.TrainingEligible);
             Assert.Equal(TrainingSampleEligibility.InvalidCatalogCodeReason, sample.TrainingEligibilityReason);
             Assert.Equal(1, store.MergeCalls);
             Assert.Equal(0, store.SaveCalls);
-            Assert.Empty(input.ApprovedSampleIds!);
+            Assert.Equal(["sample-valid"], input.ApprovedSampleIds);
             Assert.Equal(
                 ["registry", "inventory", "class-map", "input", "plan", "execution", "completion", "persist"],
                 sequence);
@@ -123,26 +124,6 @@ public sealed class TrainingYoloExportCoordinatorTests
         {
             File.Delete(framePath);
         }
-    }
-
-    [Fact]
-    public async Task RunAsync_exportiert_Teacher_Plan_auch_ohne_TrainingSamples()
-    {
-        var bundle = Bundle(TrainingExportSourceType.TeacherAnnotation, "teacher-a");
-        var store = new FakeSampleStore();
-        var execution = new FakeExecutionService(bundle);
-        var coordinator = CreateCoordinator(
-            store,
-            bundle,
-            execution,
-            new FakeCompletionService(new TrainingExportCompletionService()));
-
-        var result = await coordinator.RunAsync(Command([], Timestamp()));
-
-        Assert.Equal(TrainingYoloExportResultStatus.Completed, result.Status);
-        Assert.Equal(1, execution.Calls);
-        Assert.Equal(0, result.Completion.MarkedTrainingSamples);
-        Assert.Equal(0, store.MergeCalls);
     }
 
     [Fact]
@@ -218,15 +199,103 @@ public sealed class TrainingYoloExportCoordinatorTests
     }
 
     [Fact]
+    public async Task RunAsync_schliesst_nicht_manuelles_Sample_aus()
+    {
+        var framePath = CreateFrameFile();
+        try
+        {
+            var sample = EligibleSample("sample-auto", framePath);
+            sample.SourceType = SourceTypeNames.BatchImport;
+            var input = new FakePlanInputBuilder(() => { });
+            var bundle = Bundle(imageCount: 0);
+            var coordinator = CreateCoordinator(
+                new FakeSampleStore(),
+                bundle,
+                new FakeExecutionService(bundle),
+                new FakeCompletionService(new TrainingExportCompletionService()),
+                inputBuilder: input,
+                inventorySamples: [sample]);
+
+            await coordinator.RunAsync(Command([sample], Timestamp()));
+
+            Assert.Empty(input.ApprovedSampleIds!);
+        }
+        finally
+        {
+            File.Delete(framePath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_schliesst_fremd_bestaetigtes_Sample_aus()
+    {
+        var framePath = CreateFrameFile();
+        try
+        {
+            var sample = EligibleSample("sample-fremd", framePath);
+            sample.ConfirmedByUser = "Andere Person";
+            var input = new FakePlanInputBuilder(() => { });
+            var bundle = Bundle(imageCount: 0);
+            var coordinator = CreateCoordinator(
+                new FakeSampleStore(),
+                bundle,
+                new FakeExecutionService(bundle),
+                new FakeCompletionService(new TrainingExportCompletionService()),
+                inputBuilder: input,
+                inventorySamples: [sample]);
+
+            await coordinator.RunAsync(Command([sample], Timestamp()));
+
+            Assert.Empty(input.ApprovedSampleIds!);
+        }
+        finally
+        {
+            File.Delete(framePath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_Pilotregister_begrenzt_den_Live_Snapshot_auf_freigegebene_Samples()
+    {
+        var framePath = CreateFrameFile();
+        try
+        {
+            var selected = EligibleSample("sample-pilot", framePath);
+            var notSelected = EligibleSample("sample-ausserhalb", framePath);
+            var input = new FakePlanInputBuilder(() => { });
+            var bundle = Bundle(imageCount: 0);
+            var coordinator = CreateCoordinator(
+                new FakeSampleStore(),
+                bundle,
+                new FakeExecutionService(bundle),
+                new FakeCompletionService(new TrainingExportCompletionService()),
+                inputBuilder: input,
+                inventorySamples: [selected, notSelected],
+            registrySampleIds: new HashSet<string>(
+                ["sample-pilot"],
+                StringComparer.OrdinalIgnoreCase));
+
+            await coordinator.RunAsync(Command([selected, notSelected], Timestamp()));
+
+            Assert.Equal(["sample-pilot"], input.ApprovedSampleIds);
+        }
+        finally
+        {
+            File.Delete(framePath);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_Ausfuehrungsfehler_veraendert_und_speichert_keine_Samples()
     {
         var framePath = CreateFrameFile();
         try
         {
             var sample = WithCode(EligibleSample("sample-invalid", framePath), "ZZZ");
+            var valid = EligibleSample("sample-valid", framePath);
             sample.TrainingEligible = true;
             sample.TrainingEligibilityReason = "vorher";
-            var bundle = Bundle(TrainingExportSourceType.TeacherAnnotation, "teacher-a");
+            var bundle = Bundle(TrainingExportSourceType.TrainingSample, valid.SampleId);
             var store = new FakeSampleStore();
             var completion = new FakeCompletionService(new TrainingExportCompletionService());
             var coordinator = CreateCoordinator(
@@ -236,10 +305,10 @@ public sealed class TrainingYoloExportCoordinatorTests
                     bundle,
                     error: new InvalidOperationException("Export abgebrochen")),
                 completion,
-                inventorySamples: [sample]);
+                inventorySamples: [sample, valid]);
 
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => coordinator.RunAsync(Command([sample], Timestamp())));
+                () => coordinator.RunAsync(Command([sample, valid], Timestamp())));
 
             Assert.True(sample.TrainingEligible);
             Assert.Equal("vorher", sample.TrainingEligibilityReason);
@@ -260,7 +329,8 @@ public sealed class TrainingYoloExportCoordinatorTests
         FakeCompletionService completion,
         List<string>? sequence = null,
         FakePlanInputBuilder? inputBuilder = null,
-        IReadOnlyList<TrainingSample>? inventorySamples = null)
+        IReadOnlyList<TrainingSample>? inventorySamples = null,
+        IReadOnlySet<string>? registrySampleIds = null)
     {
         var events = sequence ?? [];
         return new TrainingYoloExportCoordinator(
@@ -268,7 +338,9 @@ public sealed class TrainingYoloExportCoordinatorTests
             Path.Combine(Path.GetTempPath(), "SewerStudioTests", "eval"),
             store,
             new FakeCodeCatalog(["BAB"]),
-            new FakeRegistryStore(() => events.Add("registry")),
+            new FakeRegistryStore(
+                () => events.Add("registry"),
+                RegistryBundle(registrySampleIds)),
             new FakeInventoryService(
                 () => events.Add("inventory"),
                 inventorySamples ?? []),
@@ -307,10 +379,19 @@ public sealed class TrainingYoloExportCoordinatorTests
             Code = "BAB",
             InspectionDate = new DateTime(2026, 7, 1),
             TrainingEligible = true,
+            SourceType = SourceTypeNames.ManualCoding,
+            HumanConfirmed = true,
+            Corrected = false,
+            ConfirmedByUser = "Test User",
+            ConfirmedAtUtc = Timestamp().UtcDateTime,
+            MatchLevel = MatchLevelNames.ReviewApproved,
             BboxXCenter = 0.5,
             BboxYCenter = 0.5,
             BboxWidth = 0.2,
-            BboxHeight = 0.1
+            BboxHeight = 0.1,
+            SamMaskRle = "0,4050,1,3949",
+            SamMaskImageWidth = 100,
+            SamMaskImageHeight = 80
         };
 
     private static TrainingSample WithCode(TrainingSample sample, string code)
@@ -320,8 +401,8 @@ public sealed class TrainingYoloExportCoordinatorTests
     }
 
     private static TrainingExportPlanBundle Bundle(
-        TrainingExportSourceType sourceType = TrainingExportSourceType.TeacherAnnotation,
-        string sourceId = "teacher-a",
+        TrainingExportSourceType sourceType = TrainingExportSourceType.TrainingSample,
+        string sourceId = "sample-a",
         int imageCount = 1)
     {
         var classes = YoloDetectClassMapV2.Classes
@@ -390,7 +471,8 @@ public sealed class TrainingYoloExportCoordinatorTests
             @"C:\dataset\manifest.json",
             plan.Images.Select(image => image.ImageSha256).ToArray());
 
-    private static TrainingExportRegistryBundle RegistryBundle()
+    private static TrainingExportRegistryBundle RegistryBundle(
+        IReadOnlySet<string>? approvedSampleIds = null)
         => new(
             new TrainingExportRegistrySnapshot(
                 TrainingExportRegistrySnapshot.CurrentSchemaVersion,
@@ -405,7 +487,11 @@ public sealed class TrainingYoloExportCoordinatorTests
                 [new TrainingExportProtectedSetReference(
                     "dev-val-v1",
                     TrainingExportProtectedSetRole.DevelopmentValidation,
-                    new string('b', 64))]),
+                    new string('b', 64))])
+            {
+                ApprovedSampleIds = approvedSampleIds
+                                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            },
             new Dictionary<string, string>
             {
                 ["dev-val-v1"] = Path.Combine(Path.GetTempPath(), "SewerStudioTests", "eval")
@@ -485,6 +571,12 @@ public sealed class TrainingYoloExportCoordinatorTests
         }
 
         public Task MergeAndSaveAsync(List<TrainingSample> samples) => Task.CompletedTask;
+
+        public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default) => Task.FromResult(true);
+
+        public Task<bool> RemoveBySampleIdAsync(string sampleId) => Task.FromResult(false);
+
+        public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample) => Task.FromResult(false);
     }
 
     private sealed class FakeCodeCatalog(IReadOnlyList<string> validCodes) : ICodeCatalogProvider
@@ -506,12 +598,14 @@ public sealed class TrainingYoloExportCoordinatorTests
         public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null) => [];
     }
 
-    private sealed class FakeRegistryStore(Action onRead) : ITrainingExportRegistryStore
+    private sealed class FakeRegistryStore(
+        Action onRead,
+        TrainingExportRegistryBundle? bundle = null) : ITrainingExportRegistryStore
     {
         public TrainingExportRegistryBundle ReadBundle()
         {
             onRead();
-            return RegistryBundle();
+            return bundle ?? RegistryBundle();
         }
     }
 

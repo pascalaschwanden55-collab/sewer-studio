@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
+using System.IO;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -79,6 +80,7 @@ internal static class DataPageHoldingRenameController
             {
                 var resolved = ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
                 if (!string.IsNullOrWhiteSpace(resolved)
+                    && IsProjectHoldingPdf(resolved, projectPath)
                     && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 {
                     paths.Add(resolved);
@@ -87,5 +89,37 @@ internal static class DataPageHoldingRenameController
         }
 
         return paths.ToList();
+    }
+
+    private static bool IsProjectHoldingPdf(string path, string? projectPath)
+    {
+        var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectPath);
+        if (string.IsNullOrWhiteSpace(projectRoot))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            foreach (var rootName in new[] { "Haltungen_Verteilt", "Haltungen" })
+            {
+                var holdingRoot = NormalizeDirectory(Path.Combine(projectRoot, rootName));
+                if (fullPath.StartsWith(holdingRoot, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static string NormalizeDirectory(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        return fullPath.EndsWith(Path.DirectorySeparatorChar)
+            ? fullPath
+            : fullPath + Path.DirectorySeparatorChar;
     }
 }

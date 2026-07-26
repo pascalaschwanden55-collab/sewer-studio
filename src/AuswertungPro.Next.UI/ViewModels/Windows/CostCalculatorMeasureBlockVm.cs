@@ -111,6 +111,14 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
     public MeasureCost ToModel()
     {
+        var invalidLine = Lines.FirstOrDefault(
+            line => line.Selected && (line.Qty < 0m || line.UnitPrice < 0m));
+        if (invalidLine is not null)
+        {
+            throw new InvalidOperationException(
+                $"Die ausgewaehlte Kostenposition '{invalidLine.Text}' enthaelt eine negative Menge oder einen negativen Preis.");
+        }
+
         var lines = Lines.Select(l => new CostLine
         {
             Group = l.Group,
@@ -126,7 +134,10 @@ public sealed partial class MeasureBlockVm : ObservableObject
             PriceHint = l.PriceHint
         }).ToList();
 
-        var total = lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
+        var meterLinesHaveValidLength = SelectedMeterLinesHavePositiveLength();
+        var total = lines
+            .Where(l => l.Selected && (meterLinesHaveValidLength || !IsMeterUnit(l.Unit)))
+            .Sum(l => l.Qty * l.UnitPrice);
 
         return new MeasureCost
         {
@@ -359,9 +370,16 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
     private void UpdateTotal()
     {
-        Total = Lines.Sum(l => l.LineTotal);
+        var meterLinesHaveValidLength = SelectedMeterLinesHavePositiveLength();
+        Total = Lines
+            .Where(l => l.Selected && (meterLinesHaveValidLength || !IsMeterUnit(l.Unit)))
+            .Sum(l => l.LineTotal);
         BlockChanged?.Invoke();
     }
+
+    private bool SelectedMeterLinesHavePositiveLength()
+        => !Lines.Any(l => l.Selected && IsMeterUnit(l.Unit))
+           || ParseDecimal(LengthText) is > 0m;
 
     private void UpdatePriceHint()
     {
@@ -392,8 +410,11 @@ public sealed partial class MeasureBlockVm : ObservableObject
     private void ApplyLengthToLines()
     {
         var length = ParseDecimal(LengthText);
-        if (length is null)
+        if (length is null or <= 0m)
+        {
+            UpdateTotal();
             return;
+        }
 
         foreach (var line in Lines)
         {

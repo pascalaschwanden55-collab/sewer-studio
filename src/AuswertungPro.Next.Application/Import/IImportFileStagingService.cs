@@ -20,6 +20,21 @@ public interface IImportFileStagingSession : IDisposable
     string ProjectRoot { get; }
 
     /// <summary>
+    /// Laufbezogener Arbeitsordner neben der aktiven Projektdatei. Die produktive
+    /// Implementierung liefert den eigenen GUID-Unterordner; der Standard wahrt die
+    /// Kompatibilitaet alter Implementierungen.
+    /// </summary>
+    string StagingRoot => System.IO.Path.Combine(ProjectRoot, ".import-staging");
+
+    /// <summary>
+    /// Vor <see cref="Publish"/> feststehende Ziele neu vorbereiteter Dateien.
+    /// Sie werden als Write-ahead-Liste im Transaktionsmarker gespeichert, damit
+    /// auch ein Prozessabbruch mitten in <see cref="Publish"/> ruecksetzbar bleibt.
+    /// Alte Implementierungen fallen kompatibel auf <see cref="PublishedFiles"/> zurueck.
+    /// </summary>
+    IReadOnlyList<PublishedFileInfo> PreparedFiles => PublishedFiles;
+
+    /// <summary>
     /// Die von <see cref="Publish"/> an ihre endgueltigen Ziele bewegten Dateien
     /// (Pfad relativ zum <see cref="ProjectRoot"/> + Inhalts-Hash). Vor Publish leer.
     /// Grundlage fuer den Transaktions-Marker und das Recovery-Rollback.

@@ -37,6 +37,22 @@ public sealed class SanierungsMatrixRowViewModelTests
         Assert.Equal(1, changes);
     }
 
+    [Theory]
+    [InlineData("42,678", "42.678")]
+    [InlineData("1'300.50", "1300.50")]
+    public void Auswahl_einer_Laengenmassnahme_liest_praezise_und_gruppierte_Werte(
+        string raw,
+        string expected)
+    {
+        var row = Row(raw, _ => { });
+
+        row.SelectedMeasure = Option(manualQuantity: false);
+
+        Assert.Equal(
+            decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture),
+            row.Menge);
+    }
+
     [Fact]
     public void Auswahl_einer_Stueckmassnahme_startet_mit_eins_und_bleibt_editierbar()
     {

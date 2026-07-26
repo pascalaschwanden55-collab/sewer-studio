@@ -136,6 +136,16 @@ namespace AuswertungPro.Next.UI
                     settingsQuarantine,
                     settingsMigration,
                     katasterXtfPaths);
+                try
+                {
+                    services.KnowledgeRealtimeMirror.Start();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Der KI-Spiegel konnte beim Programmstart nicht aktiviert werden. SewerStudio startet ohne Spiegelung weiter.");
+                }
                 var splashReadyTask = splash.SignalReadyAsync();
 
                 // Global exception handling (after services initialized, but before first window).
@@ -254,6 +264,7 @@ namespace AuswertungPro.Next.UI
             _services?.AiStartedProcesses.StopAllStartedProcesses();
             try
             {
+                _services?.KnowledgeRealtimeMirror.Dispose();
                 _qgisBridgeServer?.Dispose();
                 _liveControlServer?.Dispose();
                 AppSettings.FlushPendingSave();

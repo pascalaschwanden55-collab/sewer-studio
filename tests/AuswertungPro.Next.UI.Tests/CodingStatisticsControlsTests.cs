@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;

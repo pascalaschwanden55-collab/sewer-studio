@@ -43,6 +43,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
     private string? _storeLoadError;
+    private string? _catalogLoadError;
+    private string? _templateLoadError;
     private readonly decimal _vatRate;
     private readonly CostConsistencyCheckService _consistencyChecker = new();
     private System.Windows.Threading.DispatcherTimer? _checkDebounceTimer;
@@ -161,11 +163,11 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         _dialogs = dialogs ?? new DialogService();
         _offerPdfExport = pdfExport;
 
-        var catalog = _catalogStore.LoadMerged(projectPath);
+        var catalog = _catalogStore.LoadMerged(projectPath, out _catalogLoadError);
         _catalogItems = catalog.Items.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
         _vatRate = catalog.VatRate > 0 ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
 
-        var templates = _templateStore.LoadMerged(projectPath);
+        var templates = _templateStore.LoadMerged(projectPath, out _templateLoadError);
         _templateItems = templates.Measures.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
         _measureSelection.ReplaceMeasureOrder(templates.Measures.Select(t => t.Id));
         Measures = new ObservableCollection<MeasureTemplateListItem>(
@@ -176,6 +178,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         if (_storeLoadError is not null)
             _dialogs.Warn(
                 $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit vorhandene Kosten nicht ueberschrieben werden.",
+                "Kosten");
+        var calculationLoadError = BuildCalculationLoadError();
+        if (calculationLoadError is not null)
+            _dialogs.Error(
+                $"{calculationLoadError}\n\n" +
+                "Berechnung, Uebernahme, Export und Speichern sind gesperrt, damit keine leeren Ersatzdaten verwendet werden.",
                 "Kosten");
         InitializeOwnerLookup(projectRecords, haltungRecord);
 
@@ -265,6 +273,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void Save()
     {
+        if (!EnsureCalculationInputsReady("Speichern"))
+            return;
+
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
             _dialogs.Info("Projekt bitte speichern, um Kosten abzulegen.", "Kosten");
@@ -317,6 +328,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void ApplyTotal()
     {
+        if (!EnsureCalculationInputsReady("Uebernahme"))
+            return;
+
         if (_applyTotal is null)
         {
             _dialogs.Info("Kosten/Massnahmen koennen hier nicht in die Zeile uebernommen werden.", "Kosten/Massnahmen");
@@ -328,6 +342,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private async Task ExportPdfAsync(Window? owner)
     {
+        if (!EnsureCalculationInputsReady("PDF-Export"))
+            return;
+
         if (SelectedMeasures.Count == 0)
         {
             _dialogs.Info("Bitte zuerst Massnahmen hinzufuegen.", "PDF-Export");
@@ -513,6 +530,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         if (measure is null)
             return;
 
+        if (_templateLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Vorlage kann nicht gespeichert werden, weil die Massnahmenvorlagen nicht sauber geladen wurden:\n{_templateLoadError}",
+                "Vorlage");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(measure.MeasureId))
         {
             _dialogs.Warn("Vorlagen-ID fehlt.", "Vorlage");
@@ -579,7 +604,17 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void RefreshMeasures()
     {
-        var templates = _templateStore.LoadMerged(_projectPath);
+        var templates = _templateStore.LoadMerged(_projectPath, out var loadError);
+        if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            _templateLoadError = loadError;
+            _dialogs.Error(
+                $"Massnahmenvorlagen konnten nicht neu geladen werden:\n{loadError}",
+                "Kosten");
+            return;
+        }
+
+        _templateLoadError = null;
         _templateItems.Clear();
         var orderIds = new List<string?>();
         foreach (var template in templates.Measures)
@@ -598,7 +633,17 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void ReloadCatalog()
     {
-        var catalog = _catalogStore.LoadMerged(_projectPath);
+        var catalog = _catalogStore.LoadMerged(_projectPath, out var loadError);
+        if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            _catalogLoadError = loadError;
+            _dialogs.Error(
+                $"Kostenkatalog konnte nicht neu geladen werden:\n{loadError}",
+                "Kosten");
+            return;
+        }
+
+        _catalogLoadError = null;
         _catalogItems.Clear();
         foreach (var item in catalog.Items)
             _catalogItems[item.Key] = item;
@@ -611,5 +656,89 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             block.RefreshCatalog(_catalogItems);
             block.ApplyCatalogPrices();
         }
+    }
+
+    private string? BuildCalculationLoadError()
+    {
+        var errors = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+            errors.Add($"Kostenkatalog konnte nicht geladen werden: {_catalogLoadError}");
+        if (!string.IsNullOrWhiteSpace(_templateLoadError))
+            errors.Add($"Massnahmenvorlagen konnten nicht geladen werden: {_templateLoadError}");
+        return errors.Count == 0 ? null : string.Join("\n", errors);
+    }
+
+    private bool EnsureCalculationInputsReady(string action)
+    {
+        var loadError = BuildCalculationLoadError();
+        if (loadError is not null)
+        {
+            _dialogs.Error(
+                $"{action} gesperrt: {loadError}\n\n" +
+                "Bitte Kostenkatalog/Massnahmenvorlagen pruefen und das Fenster neu oeffnen.",
+                "Kosten");
+            return false;
+        }
+
+        foreach (var measure in SelectedMeasures)
+        {
+            var hasLengthText = !string.IsNullOrWhiteSpace(measure.LengthText);
+            var length = 0m;
+            var lengthIsValid = hasLengthText
+                && FachzahlParser.TryParseMeasurement(measure.LengthText, out length);
+            if (hasLengthText && !lengthIsValid)
+            {
+                _dialogs.Error(
+                    $"{action} gesperrt: Die Laenge bei '{measure.MeasureName}' ist nicht lesbar " +
+                    $"(\"{measure.LengthText}\"). Bitte den Wert korrigieren.",
+                    "Kosten");
+                return false;
+            }
+
+            var hasSelectedMeterLine = measure.Lines.Any(
+                line => line.Selected && IsMeterUnit(line.Unit));
+            if (hasSelectedMeterLine && (!lengthIsValid || length <= 0m))
+            {
+                _dialogs.Error(
+                    $"{action} gesperrt: Ausgewaehlte Meterpositionen bei '{measure.MeasureName}' " +
+                    "brauchen eine Laenge groesser als 0 m. Bitte den Wert korrigieren.",
+                    "Kosten");
+                return false;
+            }
+
+            var negativeQuantityLine = measure.Lines.FirstOrDefault(
+                line => line.Selected && line.Qty < 0m);
+            if (negativeQuantityLine is not null)
+            {
+                _dialogs.Error(
+                    $"{action} gesperrt: Die ausgewaehlte Position '{negativeQuantityLine.Text}' " +
+                    "hat eine negative Menge. Bitte den Wert korrigieren.",
+                    "Kosten");
+                return false;
+            }
+
+            var negativePriceLine = measure.Lines.FirstOrDefault(
+                line => line.Selected && line.UnitPrice < 0m);
+            if (negativePriceLine is not null)
+            {
+                _dialogs.Error(
+                    $"{action} gesperrt: Die ausgewaehlte Position '{negativePriceLine.Text}' " +
+                    "hat einen negativen Preis. Bitte den Wert korrigieren.",
+                    "Kosten");
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(measure.ConnectionsText)
+                && !FachzahlParser.TryParseMeasurement(measure.ConnectionsText, out _))
+            {
+                _dialogs.Error(
+                    $"{action} gesperrt: Die Anschlussmenge bei '{measure.MeasureName}' ist nicht lesbar " +
+                    $"(\"{measure.ConnectionsText}\"). Bitte den Wert korrigieren.",
+                    "Kosten");
+                return false;
+            }
+        }
+
+        return true;
     }
 }

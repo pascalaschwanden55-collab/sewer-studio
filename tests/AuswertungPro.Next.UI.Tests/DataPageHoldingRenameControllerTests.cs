@@ -128,7 +128,9 @@ public sealed class DataPageHoldingRenameControllerTests
     {
         var root = Directory.CreateTempSubdirectory("holding-rename-");
         var projectPath = Path.Combine(root.FullName, "projekt.json");
-        var includedPdf = Path.Combine(root.FullName, "included.pdf");
+        var includedDirectory = Path.Combine(root.FullName, "Haltungen_Verteilt", "B-2");
+        Directory.CreateDirectory(includedDirectory);
+        var includedPdf = Path.Combine(includedDirectory, "included.pdf");
         var ignoredPdf = Path.Combine(root.FullName, "ignored.pdf");
         File.WriteAllText(includedPdf, "Test");
         File.WriteAllText(ignoredPdf, "Test");
@@ -139,8 +141,16 @@ public sealed class DataPageHoldingRenameControllerTests
         {
             OnRename = current =>
             {
-                current.SetFieldValue(FieldKeys.PdfPath, "included.pdf;included.pdf", FieldSource.Manual, userEdited: false);
-                current.SetFieldValue(FieldKeys.PdfAll, "included.pdf", FieldSource.Manual, userEdited: false);
+                current.SetFieldValue(
+                    FieldKeys.PdfPath,
+                    "Haltungen_Verteilt/B-2/included.pdf;Haltungen_Verteilt/B-2/included.pdf",
+                    FieldSource.Manual,
+                    userEdited: false);
+                current.SetFieldValue(
+                    FieldKeys.PdfAll,
+                    "Haltungen_Verteilt/B-2/included.pdf",
+                    FieldSource.Manual,
+                    userEdited: false);
                 current.SetFieldValue(FieldKeys.PdfEigen, "ignored.pdf", FieldSource.Manual, userEdited: false);
                 current.SetFieldValue(FieldKeys.Link, "ignored.pdf", FieldSource.Manual, userEdited: false);
             }
@@ -177,6 +187,46 @@ public sealed class DataPageHoldingRenameControllerTests
         finally
         {
             root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ExternesKundenPdf_WirdBeimUmbenennenNichtVeraendert()
+    {
+        var projectRoot = Directory.CreateTempSubdirectory("holding-rename-project-");
+        var externalRoot = Directory.CreateTempSubdirectory("holding-rename-external-");
+        var projectPath = Path.Combine(projectRoot.FullName, "projekt.json");
+        var externalPdf = Path.Combine(externalRoot.FullName, "20260625_A-1.pdf");
+        File.WriteAllText(projectPath, "{}");
+        File.WriteAllText(externalPdf, "Kundenoriginal");
+
+        var record = Record("A-1");
+        record.SetFieldValue(FieldKeys.PdfPath, externalPdf, FieldSource.Manual, userEdited: false);
+        var project = ProjectWith(record);
+        var rename = new RecordingHoldingRenameService();
+        var rewriter = new RecordingPdfTextLayerRewriter();
+
+        try
+        {
+            var success = DataPageHoldingRenameController.Apply(
+                rename,
+                rewriter,
+                record,
+                "A-1",
+                "B-2",
+                projectPath,
+                project,
+                (_, _) => throw new InvalidOperationException("Keine Warnung erwartet."),
+                (_, _) => throw new InvalidOperationException("Kein Fehler erwartet."));
+
+            Assert.True(success);
+            Assert.Equal(0, rewriter.BatchCalls);
+            Assert.Equal("Kundenoriginal", File.ReadAllText(externalPdf));
+        }
+        finally
+        {
+            projectRoot.Delete(recursive: true);
+            externalRoot.Delete(recursive: true);
         }
     }
 

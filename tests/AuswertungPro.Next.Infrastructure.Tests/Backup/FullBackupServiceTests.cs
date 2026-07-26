@@ -7,9 +7,23 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
 public sealed class FullBackupServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "sewerstudio-full-backup-" + Guid.NewGuid());
+    private readonly List<string> _createdLinks = new();
 
     public void Dispose()
     {
+        foreach (var link in _createdLinks.OrderByDescending(path => path.Length))
+        {
+            try
+            {
+                if (Directory.Exists(link))
+                    Directory.Delete(link);
+            }
+            catch
+            {
+                // Nur Testaufraeumen.
+            }
+        }
+
         if (Directory.Exists(_root))
             Directory.Delete(_root, recursive: true);
     }
@@ -416,6 +430,73 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.EndsWith(BackupPlanBuilder.TargetFolderName, guard.LastBackupRoot);
     }
 
+    [JunctionFact]
+    public async Task RunAsync_Extras_Junction_schreibt_keine_Datei_nach_aussen()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target-junction");
+        var backupRoot = Path.Combine(targetParent, BackupPlanBuilder.TargetFolderName);
+        var foreign = Path.Combine(_root, "fremd");
+        Directory.CreateDirectory(foreign);
+        Assert.Null(new BackupTargetMarkerGuardService().ValidateAndCreateMarker(backupRoot));
+        CreateDirectoryLinkOrSkip(Path.Combine(backupRoot, "Extras"), foreign);
+        var service = new FullBackupService(() => sources);
+
+        var result = await service.RunAsync(targetParent);
+
+        Assert.False(result.Success);
+        Assert.Contains("Verknuepfung", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(foreign));
+    }
+
+    [Fact]
+    public async Task RunAsync_unlesbare_oder_fehlende_Quelle_bereinigt_den_Altstand_nicht()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target-source-failure");
+        var service = new FullBackupService(() => sources);
+        var first = await service.RunAsync(targetParent);
+        Assert.True(first.Success, first.Error);
+
+        var backupFile = Path.Combine(
+            targetParent,
+            BackupPlanBuilder.TargetFolderName,
+            "KI_BRAIN",
+            "gold.json");
+        Assert.True(File.Exists(backupFile));
+        Directory.Delete(sources.KnowledgeRoot, recursive: true);
+
+        var second = await service.RunAsync(targetParent);
+
+        Assert.False(second.Success);
+        Assert.Contains("Quellordner", second.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(backupFile));
+        Assert.Equal("gold", File.ReadAllText(backupFile));
+    }
+
+    [Fact]
+    public async Task RunAsync_prueft_den_Marker_unmittelbar_vor_der_Bereinigung_erneut()
+    {
+        var sources = CreateSourceTree();
+        var targetParent = Path.Combine(_root, "target-marker-recheck");
+        var guard = new SequencedTargetMarkerGuard(
+            null,
+            "Marker wurde waehrend der Sicherung veraendert.");
+        var service = new FullBackupService(
+            () => sources,
+            walCheckpoint: null,
+            ollamaListe: null,
+            availableBytes: null,
+            gitCommitResolver: null,
+            targetMarkerGuard: guard);
+
+        var result = await service.RunAsync(targetParent);
+
+        Assert.False(result.Success);
+        Assert.Contains("Marker wurde", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, guard.Calls);
+    }
+
     private FullBackupSources CreateSourceTree()
     {
         var repo = Path.Combine(_root, "repo");
@@ -470,6 +551,12 @@ public sealed class FullBackupServiceTests : IDisposable
         File.WriteAllText(path, content);
     }
 
+    private void CreateDirectoryLinkOrSkip(string link, string target)
+    {
+        JunctionTestSupport.CreateDirectoryLink(link, target);
+        _createdLinks.Add(link);
+    }
+
     private sealed class RecordingTargetMarkerGuard(string? error) : IBackupTargetMarkerGuard
     {
         public string? LastBackupRoot { get; private set; }
@@ -478,6 +565,21 @@ public sealed class FullBackupServiceTests : IDisposable
         {
             LastBackupRoot = backupRoot;
             return error;
+        }
+    }
+
+    private sealed class SequencedTargetMarkerGuard(params string?[] results) : IBackupTargetMarkerGuard
+    {
+        private int _index;
+
+        public int Calls { get; private set; }
+
+        public string? ValidateAndCreateMarker(string backupRoot)
+        {
+            Calls++;
+            var index = Math.Min(_index, results.Length - 1);
+            _index++;
+            return results[index];
         }
     }
 }

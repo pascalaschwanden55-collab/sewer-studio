@@ -15,7 +15,8 @@ public sealed record AiInput(
     string? VideoPathAbs = null,
     TimeSpan? Zeit = null,
     IReadOnlyList<string>? ImagePathsAbs = null,
-    string? XtfSnippet = null
+    string? XtfSnippet = null,
+    bool RequireImage = false
 );
 
 public sealed record AiSuggestion(

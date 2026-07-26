@@ -87,6 +87,28 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task MirrorSourceAsync_Fehlende_optionale_Quelle_ist_kein_Fehler_und_behaelt_Altstand()
+    {
+        var source = Path.Combine(_root, "optionale_logs");
+        var backupRoot = Path.Combine(_root, "backup-optional");
+        var mirrored = Path.Combine(backupRoot, "Logs", "alt.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(mirrored)!);
+        File.WriteAllText(mirrored, "bestehend");
+        var stats = new DirectoryMirror.MirrorStats();
+        var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await new DirectoryMirror(null).MirrorSourceAsync(
+            new BackupSource(source, "Logs", Required: false),
+            backupRoot,
+            expected,
+            stats);
+
+        Assert.Empty(stats.Errors);
+        Assert.Contains(Path.Combine("Logs", "alt.log"), expected);
+        Assert.True(File.Exists(mirrored));
+    }
+
+    [Fact]
     public async Task MirrorSourceAsync_Groessenaenderung_KopiertNeu()
     {
         var source = Path.Combine(_root, "source");

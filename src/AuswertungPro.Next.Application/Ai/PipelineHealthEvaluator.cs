@@ -21,12 +21,29 @@ public static class PipelineHealthEvaluator
                 i.SidecarReachable, i.TokenValid, i.SidecarHealthy, i.QwenAvailable,
                 i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
                 "Kuenstliche Intelligenz deaktiviert",
-                "KI ist in den Einstellungen aus.");
+                "KI ist in den Einstellungen aus.",
+                i.DetectorQualified,
+                i.DetectorQualificationReason);
 
         bool sidecarUsable = i.SidecarReachable && i.SidecarHealthy && i.TokenValid;
 
         if (sidecarUsable)
         {
+            if (i.DetectorQualified != true)
+            {
+                var reason = string.IsNullOrWhiteSpace(i.DetectorQualificationReason)
+                    ? "Der Qualifikationsstatus des aktiven YOLO-Modells fehlt oder ist unlesbar."
+                    : i.DetectorQualificationReason;
+                return new PipelineHealthStatus(
+                    PipelineHealthLevel.Degraded, true,
+                    true, true, true, i.QwenAvailable,
+                    i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
+                    "KI eingeschraenkt (DINO + SAM)",
+                    $"{reason} YOLO wird nicht als Filter oder Beweis verwendet; Ergebnisse muessen geprueft werden.",
+                    i.DetectorQualified,
+                    i.DetectorQualificationReason);
+            }
+
             bool allLoaded = i.YoloLoaded && i.DinoLoaded && i.SamLoaded;
             var detail = allLoaded
                 ? "YOLO + DINO + SAM aktiv."
@@ -35,7 +52,9 @@ public static class PipelineHealthEvaluator
                 PipelineHealthLevel.Full, true,
                 true, true, true, i.QwenAvailable,
                 i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-                "KI bereit (Multi-Model)", detail);
+                "KI bereit (Multi-Model)", detail,
+                i.DetectorQualified,
+                i.DetectorQualificationReason);
         }
 
         // Sidecar nicht nutzbar -> Grund bestimmen.
@@ -49,12 +68,16 @@ public static class PipelineHealthEvaluator
                 PipelineHealthLevel.Degraded, false,
                 i.SidecarReachable, i.TokenValid, i.SidecarHealthy, true,
                 i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-                "KI bereit (Qwen)", grund);
+                "KI bereit (Qwen)", grund,
+                i.DetectorQualified,
+                i.DetectorQualificationReason);
 
         return new PipelineHealthStatus(
             PipelineHealthLevel.Down, false,
             i.SidecarReachable, i.TokenValid, i.SidecarHealthy, false,
             i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-            "KI nicht verfuegbar", grund);
+            "KI nicht verfuegbar", grund,
+            i.DetectorQualified,
+            i.DetectorQualificationReason);
     }
 }

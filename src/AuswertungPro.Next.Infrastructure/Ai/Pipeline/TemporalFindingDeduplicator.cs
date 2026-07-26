@@ -21,6 +21,16 @@ internal sealed class TemporalDedupOptions
     /// ueber die Masken-Uhrlagen (Pilot 2026-06-10: 12x BDD statt 1) — dort false.
     /// </summary>
     public bool ClockInKey { get; init; } = true;
+
+    /// <summary>
+    /// BBox-IoU-Mindestwert, ab dem zwei gleichcodierte Befunde im selben Frame als
+    /// derselbe Schaden gelten und verschmolzen werden (F12). Liegt die Ueberlappung
+    /// darunter, bleiben beide eigenstaendig — zwei reale getrennte Schaeden gleichen
+    /// Codes/Uhrlage im selben Bild verschmelzen dann nicht mehr. Konservativer
+    /// Default 0.3. Befunde ohne BBox verschmelzen weiterhin wie bisher
+    /// (Bestandsschutz); 0 deaktiviert die raeumliche Trennung komplett.
+    /// </summary>
+    public double SameFrameMergeMinIoU { get; init; } = 0.3;
 }
 
 internal sealed class TemporalFindingDeduplicator
@@ -48,12 +58,33 @@ internal sealed class TemporalFindingDeduplicator
         foreach (var finding in current)
         {
             var key = BuildFindingKey(finding);
-            // Bei Schluessel-Kollision im selben Frame gewinnt der dominante Befund
-            // (groesste Ausdehnung) — er traegt die repraesentative Quantifizierung.
-            if (!currentMap.TryGetValue(key, out var existing)
-                || (finding.ExtentPercent ?? 0) > (existing.ExtentPercent ?? 0))
+            var candidateKey = key;
+            var disambiguation = 0;
+
+            while (true)
             {
-                currentMap[key] = finding;
+                if (!currentMap.TryGetValue(candidateKey, out var existing))
+                {
+                    currentMap[candidateKey] = finding;
+                    break;
+                }
+
+                // F12: Raeumlich getrennte Befunde gleichen Schluessels (beide mit BBox,
+                // IoU unter Schwelle) werden NICHT verschmolzen — sie sind getrennte
+                // Schaeden im selben Bild und bekommen einen eigenen Schluessel. Die
+                // zeitliche Fortschreibung laeuft ueber diesen Schluessel unveraendert mit.
+                if (AreSpatiallySeparate(existing, finding))
+                {
+                    candidateKey = $"{key}#{++disambiguation}";
+                    continue;
+                }
+
+                // Bei Schluessel-Kollision im selben Frame (Ueberlappung oder fehlende
+                // Geometrie) gewinnt der dominante Befund (groesste Ausdehnung) — er
+                // traegt die repraesentative Quantifizierung. Bisheriges Verhalten.
+                if ((finding.ExtentPercent ?? 0) > (existing.ExtentPercent ?? 0))
+                    currentMap[candidateKey] = finding;
+                break;
             }
         }
 
@@ -183,6 +214,50 @@ internal sealed class TemporalFindingDeduplicator
                 : finding.Label.Trim());
         var clock = _options.ClockInKey ? VsaCodeResolver.NormalizeClock(finding.PositionClock) : null;
         return string.IsNullOrWhiteSpace(clock) ? label : $"{label}|{clock}";
+    }
+
+    /// <summary>
+    /// F12: true, wenn beide Befunde eine brauchbare BBox tragen und deren IoU UNTER der
+    /// konfigurierten Schwelle liegt — dann handelt es sich um zwei raeumlich getrennte
+    /// Schaeden, die nicht verschmolzen werden duerfen. Ohne Geometrie: false, d. h. das
+    /// bisherige Verschmelzen bleibt (Bestandsschutz).
+    /// </summary>
+    private bool AreSpatiallySeparate(EnhancedFinding a, EnhancedFinding b)
+    {
+        if (_options.SameFrameMergeMinIoU <= 0)
+            return false;
+        if (!TryGetBBox(a, out var boxA) || !TryGetBBox(b, out var boxB))
+            return false;
+        return ComputeIoU(boxA, boxB) < _options.SameFrameMergeMinIoU;
+    }
+
+    private static bool TryGetBBox(
+        EnhancedFinding finding,
+        out (double X1, double Y1, double X2, double Y2) bbox)
+    {
+        bbox = default;
+        if (finding.BboxX1 is not { } x1 || finding.BboxY1 is not { } y1
+            || finding.BboxX2 is not { } x2 || finding.BboxY2 is not { } y2)
+            return false;
+        if (x2 <= x1 || y2 <= y1)
+            return false; // degenerierte Box — keine brauchbare Geometrie
+        bbox = (x1, y1, x2, y2);
+        return true;
+    }
+
+    /// <summary>Intersection-over-Union zweier normalisierter BBoxen [x1,y1,x2,y2].</summary>
+    internal static double ComputeIoU(
+        (double X1, double Y1, double X2, double Y2) a,
+        (double X1, double Y1, double X2, double Y2) b)
+    {
+        var interW = Math.Min(a.X2, b.X2) - Math.Max(a.X1, b.X1);
+        var interH = Math.Min(a.Y2, b.Y2) - Math.Max(a.Y1, b.Y1);
+        if (interW <= 0 || interH <= 0)
+            return 0.0;
+
+        var intersection = interW * interH;
+        var union = (a.X2 - a.X1) * (a.Y2 - a.Y1) + (b.X2 - b.X1) * (b.Y2 - b.Y1) - intersection;
+        return union <= 0 ? 0.0 : intersection / union;
     }
 
     private static string NormalizeFindingLabel(string label)

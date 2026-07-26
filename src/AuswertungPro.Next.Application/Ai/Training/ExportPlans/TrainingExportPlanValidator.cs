@@ -58,6 +58,23 @@ public static class TrainingExportPlanValidator
             var expectedHoldings = image.Target == TrainingExportTarget.Train
                 ? trainHoldings
                 : validationHoldings;
+            if (image.IsNegative)
+            {
+                // Negativ-/Hintergrundbilder: fester Pool-Schluessel statt realer Haltung,
+                // bewusst LEERE Labelliste (YOLO-Negativ). Split- und Label-Pruefung der
+                // Positivbilder gilt fuer sie nicht.
+                if (!string.Equals(
+                        image.HoldingKey,
+                        TrainingExportNegativePool.HoldingKey,
+                        StringComparison.Ordinal))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Negativbild {image.ImageSha256} traegt nicht den Negativ-Pool-Schluessel.");
+                }
+                if (image.Labels.Count != 0)
+                    throw new TrainingExportPlanException($"Negativbild {image.ImageSha256} darf keine Labels tragen.");
+                continue;
+            }
             if (!expectedHoldings.Contains(image.HoldingKey))
                 throw new TrainingExportPlanException($"Split von Bild {image.ImageSha256} passt nicht zur Haltung.");
             if (image.Labels.Count == 0)

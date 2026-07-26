@@ -8,11 +8,16 @@ using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;   // IRetrievalService
 using AuswertungPro.Next.Application.Ai.Teacher;         // ITeacherAnnotationStore, IVsaYoloClassMapStore
 using AuswertungPro.Next.Application.Ai.Training;        // ITrainingSampleStore, IKnowledgeBaseIndexer
+using AuswertungPro.Next.Application.Ai.Training.Preview;
 using AuswertungPro.Next.Application.Ai.Workbench;       // IAnnotationWorkbenchService
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai;              // OllamaClient, BcaFineCodeClassifier
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;       // ToOllamaConfig
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;     // VisionPipelineClient, SidecarTelemetryWriter
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;      // TeacherAnnotationStore, VsaYoloClassMap
 using AuswertungPro.Next.Infrastructure.Ai.Training;     // TrainingSamplesStore, DelegatingKnowledgeBaseIndexer
+using AuswertungPro.Next.Infrastructure.Ai.Training.Preview;
 using AuswertungPro.Next.UI.Ai.Training;                 // TrainingKnowledgeBaseIndexWorkflow
 
 namespace AuswertungPro.Next.UI.Services;
@@ -27,16 +32,37 @@ internal static class TrainingStudioWindowDependencyFactory
 {
     internal sealed record Dependencies(
         IAnnotationWorkbenchService Workbench,
+        ITrainingPreviewDetectionService PreviewDetection,
         WorkbenchQueueService QueueService,
+        IPersonalGoldAlbumService GoldAlbum,
+        IPersonalGoldInboxService GoldInbox,
+        IFolderOpenService? FolderOpen,
+        Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>> LoadGoldProgress,
         Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? EnsureAiReady);
 
     internal static Dependencies CreateDependencies(ServiceProvider? services)
     {
         var pipeline = CreatePipelineClient(services);
         var workbench = Create(services, pipeline);
+        var previewDetection = new TrainingPreviewDetectionService(pipeline);
         var queue = CreateQueueService(services);
+        var goldAlbum = services?.PersonalGoldAlbum
+            ?? new PersonalGoldAlbumService(TrainingSamplesStore.Current);
+        var goldInbox = services?.PersonalGoldInbox
+            ?? new PersonalGoldInboxFileService(KnowledgeBasePaths.GetRoot());
+        var goldProgress = CreateGoldProgressLoader(services);
         if (services is null)
-            return new Dependencies(workbench, queue, EnsureAiReady: null);
+        {
+            return new Dependencies(
+                workbench,
+                previewDetection,
+                queue,
+                goldAlbum,
+                goldInbox,
+                FolderOpen: null,
+                goldProgress,
+                EnsureAiReady: null);
+        }
 
         var readiness = new TrainingStudioAiReadinessWorkflow(
             pipeline.CheckHealthDetailedAsync,
@@ -56,7 +82,12 @@ internal static class TrainingStudioWindowDependencyFactory
 
         return new Dependencies(
             workbench,
+            previewDetection,
             queue,
+            goldAlbum,
+            goldInbox,
+            services.FolderOpen,
+            goldProgress,
             async (progress, ct) =>
             {
                 var result = await readiness.EnsureReadyAsync(progress, ct);
@@ -80,14 +111,11 @@ internal static class TrainingStudioWindowDependencyFactory
 
         // 3) Sample-Store.
         ITrainingSampleStore sampleStore = services?.TrainingSamples ?? TrainingSamplesStore.Current;
+        ITrainingFrameStore frameStore = services?.TrainingFrames ?? FrameStore.Current;
 
-        // 4) KB-Indexer: Adapter um den zentralen Index-Workflow (inkl. Eval-Schutz).
-        //    Deindex ist ein No-op — der Pruefplatz ruft nur IndexAsync.
-        HttpClient? kbHttp = null;
-        IKnowledgeBaseIndexer kbIndexer = new DelegatingKnowledgeBaseIndexer(
-            (samples, ct) => TrainingKnowledgeBaseIndexWorkflow.RunWithDefaultsAsync(
-                samples, ct, () => kbHttp, v => kbHttp = v, services?.Settings, _ => { }),
-            _ => { });
+        // 4) KB-Indexer: Adapter um den zentralen Index-Workflow (inkl. Eval-Schutz) mit
+        //    echtem Deindex (Codekorrektur-Ersetzen entfernt den alten KB-Eintrag).
+        IKnowledgeBaseIndexer kbIndexer = CreateKbIndexer(services);
 
         // 5) Teacher-Store.
         ITeacherAnnotationStore teacherStore = services?.TeacherAnnotations ?? TeacherAnnotationStore.Current;
@@ -116,17 +144,62 @@ internal static class TrainingStudioWindowDependencyFactory
             pipeline,
             retrieval,
             sampleStore,
+            frameStore,
+            () => Path.Combine(
+                services?.KnowledgeRoot ?? KnowledgeBasePaths.GetRoot(),
+                "gold_frames"),
             kbIndexer,
             teacherStore,
             teacherClassMap,
             File.ReadAllBytes,
             () => TrainingSamplesStore.EffectiveEvalSetRoot,
-            bcaClassifier: bcaClassifier);
+            bcaClassifier: bcaClassifier,
+            protocolAi: services?.ProtocolAi,
+            resolveAllowedCodes: services is null
+                ? null
+                : () => services.CodeCatalog.AllowedCodes());
+    }
+
+    /// <summary>
+    /// KB-Indexer fuer den Pruefplatz: Index ueber den zentralen Workflow (Eval-Schutz,
+    /// IsIndexWorthy), Deindex ueber denselben KB-Weg (loescht Samples + Embeddings
+    /// transaktional via <see cref="TrainingKnowledgeBaseSampleDeindexer"/>). Beide Wege
+    /// teilen einen gecachten HttpClient. Deindex-Fehler fliessen zum Aufrufer und werden
+    /// dort als sichtbare Warnung gemeldet (nie still).
+    /// </summary>
+    internal static IKnowledgeBaseIndexer CreateKbIndexer(ServiceProvider? services)
+    {
+        HttpClient? kbHttp = null;
+        return new DelegatingKnowledgeBaseIndexer(
+            (samples, ct) => TrainingKnowledgeBaseIndexWorkflow.RunWithDefaultsAsync(
+                samples, ct, () => kbHttp, v => kbHttp = v, services?.Settings, _ => { }),
+            sampleId =>
+            {
+                var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
+                kbHttp ??= new HttpClient { Timeout = ollamaConfig.RequestTimeout };
+                TrainingKnowledgeBaseSampleDeindexer.DeindexWithDefaultInfrastructure(
+                    kbHttp, ollamaConfig, sampleId);
+            });
     }
 
     /// <summary>Baut die Quellen (Fotos + Review-Warteschlange) fuer den Pruefplatz.</summary>
     internal static WorkbenchQueueService CreateQueueService(ServiceProvider? services)
         => new(services?.TrainingSamples ?? TrainingSamplesStore.Current);
+
+    private static Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>> CreateGoldProgressLoader(
+        ServiceProvider? services)
+    {
+        var sampleStore = services?.TrainingSamples ?? TrainingSamplesStore.Current;
+        return async cancellationToken =>
+        {
+            var samples = await sampleStore.LoadAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return PersonalGoldProgressCalculator.Calculate(
+                samples,
+                Environment.UserName,
+                PersonalGoldMainCodeCatalog.RequiredCodes);
+        };
+    }
 
     private static IVisionPipelineClient CreatePipelineClient(ServiceProvider? services)
     {

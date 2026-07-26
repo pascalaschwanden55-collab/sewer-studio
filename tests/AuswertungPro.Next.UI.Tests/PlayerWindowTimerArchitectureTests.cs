@@ -157,7 +157,7 @@ public sealed class PlayerWindowTimerArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var timerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Osd.Timer.cs");
         var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdTimerPolicy.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOsdTimerPolicy.cs");
 
         Assert.True(File.Exists(timerPath), "OSD-Timer-Wiring soll in einem eigenen OSD-Partial liegen.");
         Assert.True(File.Exists(osdControllerPath), "OSD-Timerzustand soll im CodingOsdMeterController liegen.");

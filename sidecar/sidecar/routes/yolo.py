@@ -6,10 +6,10 @@ import logging
 import numpy as np
 from fastapi import APIRouter
 from ..schemas.detection import (
-    YoloRequest, YoloResponse,
+    YoloRequest, YoloResponse, BccTestYoloResponse,
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
 )
-from ..models import yolo_wrapper
+from ..models import bcc_test_wrapper, detector_qualification, yolo_wrapper
 from ..models.bend_geometry import analyze_bend
 from ..config import settings
 from ..telemetry import write_event, write_yolo_detection
@@ -24,16 +24,70 @@ router = APIRouter()
 @router.post("/detect/yolo", response_model=YoloResponse)
 def detect_yolo(req: YoloRequest) -> YoloResponse:
     started = time.perf_counter()
-    response = yolo_wrapper.detect(
-        image_base64=req.image_base64,
-        confidence_threshold=req.confidence_threshold,
-    )
+    qualification = detector_qualification.evaluate_active_detector()
+    artifact = qualification["artifact"]
+    if not qualification["qualified"]:
+        # Eingabe weiterhin validieren, aber das gesperrte Modell weder laden noch
+        # ausfuehren. is_relevant=True laesst den sicheren DINO/SAM-Pfad weiterlaufen.
+        yolo_wrapper.decode_image(req.image_base64)
+        runtime = yolo_wrapper.get_runtime_status()
+        response = YoloResponse(
+            is_relevant=True,
+            detections=[],
+            frame_class="detector_unqualified",
+            inference_time_ms=0.0,
+            model_name=artifact.get("file_name") or settings.yolo_model_name,
+            model_backend=artifact.get("backend"),
+            device=runtime.get("device"),
+            detector_qualified=False,
+            detector_qualification_status=qualification["status"],
+            detector_qualification_reason=qualification["reason"],
+            detector_artifact_sha256=artifact.get("sha256"),
+        )
+    else:
+        response = yolo_wrapper.detect(
+            image_base64=req.image_base64,
+            confidence_threshold=req.confidence_threshold,
+        ).model_copy(
+            update={
+                "detector_qualified": True,
+                "detector_qualification_status": qualification["status"],
+                "detector_qualification_reason": qualification["reason"],
+                "detector_artifact_sha256": artifact.get("sha256"),
+            }
+        )
     elapsed_ms = (time.perf_counter() - started) * 1000
     write_yolo_detection(
         response,
         confidence_threshold=req.confidence_threshold,
         roundtrip_ms=elapsed_ms,
     )
+    return response
+
+
+@router.post("/detect/yolo/bcc-test", response_model=BccTestYoloResponse)
+def detect_yolo_bcc_test(req: YoloRequest) -> BccTestYoloResponse:
+    """Prueft ein Foto mit dem besten validierten, nicht aktiven BCC-Kandidaten."""
+
+    started = time.perf_counter()
+    try:
+        response = bcc_test_wrapper.detect(
+            image_base64=req.image_base64,
+            confidence_threshold=req.confidence_threshold,
+        )
+    except bcc_test_wrapper.BccTestCandidateError as exc:
+        logger.warning("BCC-Testmodell nicht verfuegbar: %s", exc)
+        response = BccTestYoloResponse(available=False, error=str(exc))
+
+    write_event("bcc_test_detection", {
+        "roundtrip_ms": round((time.perf_counter() - started) * 1000, 1),
+        "available": response.available,
+        "detection_count": len(response.detections),
+        "candidate_id": response.candidate_id or None,
+        "candidate_sha256": response.candidate_sha256 or None,
+        "device": response.device or None,
+        "confidence_threshold": req.confidence_threshold,
+    })
     return response
 
 

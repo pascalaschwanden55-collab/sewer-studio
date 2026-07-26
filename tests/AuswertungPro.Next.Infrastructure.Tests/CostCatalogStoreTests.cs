@@ -23,6 +23,24 @@ public sealed class CostCatalogStoreTests
     }
 
     [Fact]
+    public void SaveUserOverrides_IsBlocked_WhenProjectDefaultCouldNotBeLoaded()
+    {
+        using var temp = new TempDir();
+        var projectPath = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        var catalogPath = Path.Combine(temp.Path, "Projektdateien", "Config", "cost_catalog.json");
+        var overridePath = Path.Combine(temp.Path, "cost_catalog.user.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(catalogPath)!);
+        File.WriteAllText(catalogPath, "{ kaputt");
+        var store = new CostCatalogStore(overridePath);
+
+        var ok = store.SaveUserOverrides(new CostCatalog(), projectPath, out var error);
+
+        Assert.False(ok);
+        Assert.Contains("cost_catalog.json", error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(overridePath));
+    }
+
+    [Fact]
     public void PreserveNpkMetadata_FillsFromDefault_WhenOverrideEmpty()
     {
         // Alter Preis-Override ohne NPK-Metadaten (vor der NPK-Erweiterung gespeichert).

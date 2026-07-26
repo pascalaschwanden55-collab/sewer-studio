@@ -3,15 +3,17 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Player;
 
 public interface ICodingConfirmationController
 {
     void PauseAndAsk(CodingEvent codingEvent, QualityGateResult gateResult);
-    CodingConfirmationDecisionCommandResult Accept();
+    Task<CodingConfirmationDecisionCommandResult> Accept();
     CodingConfirmationEditCommandWorkflowResult Edit();
-    CodingConfirmationDecisionCommandResult Reject();
+    Task<CodingConfirmationDecisionCommandResult> Reject();
+    Task<CodingConfirmationDecisionCommandResult> RetrySave();
 }
 
 public sealed record CodingConfirmationControllerBindings(
@@ -20,9 +22,10 @@ public sealed record CodingConfirmationControllerBindings(
     Action<bool> SetPause,
     Func<CodingEvent, QualityGateResult, Color> ApplyConfirmationPanel,
     Action<string, Color, string> ShowStatus,
-    Func<CodingConfirmationDecisionCommandResult> Accept,
+    Func<Task<CodingConfirmationDecisionCommandResult>> Accept,
     Func<CodingConfirmationEditCommandWorkflowResult> Edit,
-    Func<CodingConfirmationDecisionCommandResult> Reject);
+    Func<Task<CodingConfirmationDecisionCommandResult>> Reject,
+    Func<Task<CodingConfirmationDecisionCommandResult>> RetrySave);
 
 public sealed class CodingConfirmationController : ICodingConfirmationController
 {
@@ -43,6 +46,7 @@ public sealed class CodingConfirmationController : ICodingConfirmationController
         ArgumentNullException.ThrowIfNull(bindings.Accept);
         ArgumentNullException.ThrowIfNull(bindings.Edit);
         ArgumentNullException.ThrowIfNull(bindings.Reject);
+        ArgumentNullException.ThrowIfNull(bindings.RetrySave);
 
         _pendingState = pendingState;
         _bindings = bindings;
@@ -61,12 +65,15 @@ public sealed class CodingConfirmationController : ICodingConfirmationController
                 ApplyConfirmationPanel: _bindings.ApplyConfirmationPanel,
                 ShowStatus: _bindings.ShowStatus));
 
-    public CodingConfirmationDecisionCommandResult Accept()
+    public Task<CodingConfirmationDecisionCommandResult> Accept()
         => _bindings.Accept();
 
     public CodingConfirmationEditCommandWorkflowResult Edit()
         => _bindings.Edit();
 
-    public CodingConfirmationDecisionCommandResult Reject()
+    public Task<CodingConfirmationDecisionCommandResult> Reject()
         => _bindings.Reject();
+
+    public Task<CodingConfirmationDecisionCommandResult> RetrySave()
+        => _bindings.RetrySave();
 }

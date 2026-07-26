@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -84,6 +84,13 @@ public sealed class VideoFullAnalysisService
         ILogger? logger = null)
         => new(new EnhancedVisionAnalysisService(client, visionModel, codeCatalog), ffmpegPath, logger: logger);
 
+    // ── Test-Seams (intern) ─────────────────────────────────────────────────
+    // Der Frame-Loop haengt produktiv am statischen VideoFrameStream.Open + echter
+    // Vision und war so nicht faketestbar (vgl. VideoFullAnalysisServiceTests). Diese
+    // Overrides werden nur von Tests gesetzt; produktiv bleiben sie null.
+    internal Func<string, double, CancellationToken, IVideoFrameSource>? FrameSourceFactory { get; set; }
+    internal Func<string, CancellationToken, Task<EnhancedFrameAnalysis>>? VisionAnalyzeOverride { get; set; }
+
     public static VideoFullAnalysisService Create(
         IPipelineTraceWriter pipelineTraceWriter,
         OllamaClient client,
@@ -141,11 +148,15 @@ public sealed class VideoFullAnalysisService
         progress?.Report(new VideoAnalysisProgress(0, totalFrames, "Analyse gestartet..."));
 
         var telemetry = new PipelineTelemetry();
+        // F4: An der KI-Analyse gescheiterte Frames mitzaehlen und nach Grund aggregieren
+        // (z. B. "Timeout" vs. "Modellfehler") — bisher gingen sie still als Erfolg durch.
+        var failedFrames = 0;
+        var failureReasons = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        await using var frameStream = VideoFrameStream.Open(
-            _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
+        await using var frameSource = FrameSourceFactory?.Invoke(videoPath, duration, ct)
+            ?? VideoFrameStream.Open(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
 
-        await foreach (var frame in frameStream.ReadFramesAsync(ct).ConfigureAwait(false))
+        await foreach (var frame in frameSource.ReadFramesAsync(ct).ConfigureAwait(false))
         {
             ct.ThrowIfCancellationRequested();
             var frameSw = System.Diagnostics.Stopwatch.StartNew();
@@ -183,8 +194,10 @@ public sealed class VideoFullAnalysisService
 
                 using var visionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 visionCts.CancelAfter(VisionFrameTimeout);
-                analysis = await _vision.AnalyzeAsync(
-                    Convert.ToBase64String(frameBytes), visionCts.Token).ConfigureAwait(false);
+                var frameBase64 = Convert.ToBase64String(frameBytes);
+                analysis = VisionAnalyzeOverride is not null
+                    ? await VisionAnalyzeOverride(frameBase64, visionCts.Token).ConfigureAwait(false)
+                    : await _vision.AnalyzeAsync(frameBase64, visionCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
@@ -192,7 +205,9 @@ public sealed class VideoFullAnalysisService
                     runId, frameIndex, totalFrames, VisionFrameTimeout.TotalSeconds);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
+                failedFrames++;
+                RecordFailure("Timeout", failureReasons);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true, Failed: true));
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
@@ -202,11 +217,31 @@ public sealed class VideoFullAnalysisService
                 _logger.LogError(ex, "runId={RunId} Frame {Frame}/{Total}: Fehler bei KI-Analyse", runId, frameIndex, totalFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Fehler: {ex.Message}"));
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
+                failedFrames++;
+                RecordFailure("Modellfehler", failureReasons);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true, Failed: true));
                 detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
             var qwenMs = visionSw.ElapsedMilliseconds;
+
+            // F4: Timeout/Modellfehler der Frame-Analyse auswerten. Bisher wurde Outcome/Error
+            // ignoriert und der Frame still mit 0 Befunden als Erfolg verbucht (Skipped: false).
+            if (analysis.Outcome is AnalysisOutcome.Timeout or AnalysisOutcome.ModelUnavailable
+                || !string.IsNullOrWhiteSpace(analysis.Error))
+            {
+                var failureKind = analysis.Outcome == AnalysisOutcome.Timeout ? "Timeout" : "Modellfehler";
+                failedFrames++;
+                RecordFailure(failureKind, failureReasons);
+                _logger.LogWarning(
+                    "runId={RunId} Frame {Frame}/{Total}: KI-Analyse fehlgeschlagen ({Outcome}): {Error}",
+                    runId, frameIndex, totalFrames, analysis.Outcome, analysis.Error ?? "-");
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} - KI-Analyse fehlgeschlagen ({failureKind})"));
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, qwenMs, frameSw.ElapsedMilliseconds, Skipped: true, Failed: true));
+                detections.AddRange(deduplicator.AdvanceAll());
+                continue;
+            }
 
             telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
@@ -249,11 +284,46 @@ public sealed class VideoFullAnalysisService
 
         detections.AddRange(deduplicator.Flush());
 
+        // F5: Vollstaendigkeit der ffmpeg-Extraktion auswerten — ein Teilvideo darf nicht
+        // mehr still als Erfolg durchgehen. Completion ist null, wenn der Stream nicht
+        // sauber zu Ende enumeriert wurde (Haenger/Abbruch werfen vorher bereits).
+        var partialCompletion = frameSource.Completion is { IsComplete: false } incomplete
+            ? incomplete
+            : null;
+        if (partialCompletion is not null)
+        {
+            _logger.LogWarning(
+                "Video-Vollanalyse runId={RunId}: Video nur teilweise extrahiert — {Reason}",
+                runId, partialCompletion.Reason);
+        }
+
+        // F4/F5: Ausfaelle und Teilvideo als Degraded melden statt als sauberen Lauf.
+        var degraded = failedFrames > 0 || partialCompletion is not null;
+        string? degradedReason = null;
+        if (degraded)
+        {
+            var issues = new List<string>();
+            if (failedFrames > 0)
+            {
+                issues.Add(
+                    $"{failedFrames} von {frameIndex} Frames fehlgeschlagen ({SummarizeFailureReasons(failureReasons)})");
+            }
+            if (partialCompletion is not null)
+            {
+                issues.Add(
+                    $"Video nur teilweise analysiert (Frames {partialCompletion.FramesRead}/{partialCompletion.ExpectedFrames}, " +
+                    $"ffmpeg-Exit {FormatExitCode(partialCompletion.ExitCode)})");
+            }
+            degradedReason = "Analyse unvollstaendig: " + string.Join("; ", issues) + ".";
+        }
+
         _logger.LogInformation(
-            "Video-Vollanalyse runId={RunId} fertig: {Count} Befunde aus {Frames} analysierten Frames",
-            runId, detections.Count, frameIndex);
+            "Video-Vollanalyse runId={RunId} fertig: {Count} Befunde aus {Frames} analysierten Frames, {Failed} Frames fehlgeschlagen",
+            runId, detections.Count, frameIndex, failedFrames);
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
-            $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
+            degraded
+                ? $"{degradedReason} {detections.Count} Schaeden erkannt."
+                : $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
 
         var summary = telemetry.GetSummary();
         await PipelineTraceWriteGuard
@@ -261,8 +331,21 @@ public sealed class VideoFullAnalysisService
             .ConfigureAwait(false);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
-            detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
+            detections.OrderBy(d => d.MeterStart).ToList(), null, summary,
+            Degraded: degraded,
+            DegradedReason: degradedReason);
     }
+
+    // ── Ausfall-Aggregation (F4) ────────────────────────────────────────────
+
+    private static void RecordFailure(string reason, Dictionary<string, int> failureReasons)
+        => failureReasons[reason] = failureReasons.TryGetValue(reason, out var count) ? count + 1 : 1;
+
+    private static string SummarizeFailureReasons(Dictionary<string, int> failureReasons)
+        => string.Join(", ", failureReasons.Select(p => $"{p.Key}: {p.Value}"));
+
+    private static string FormatExitCode(int? exitCode)
+        => exitCode?.ToString() ?? "unbekannt";
 
     // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

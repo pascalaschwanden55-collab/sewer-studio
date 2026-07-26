@@ -311,6 +311,14 @@ public sealed class SingleFrameMultiModelServiceTests
 
             var json = path switch
             {
+                "/health" => """
+                {
+                    "status": "ok",
+                    "version": "1.2.0",
+                    "gpu": null,
+                    "detector_qualification": { "qualified": true, "reason": null }
+                }
+                """,
                 "/classify/yolo" => $$"""
                 {
                     "predictions": [
@@ -330,7 +338,8 @@ public sealed class SingleFrameMultiModelServiceTests
                     "is_relevant": false,
                     "detections": [],
                     "frame_class": "irrelevant",
-                    "inference_time_ms": 4
+                    "inference_time_ms": 4,
+                    "detector_qualified": true
                 }
                 """,
                 "/detect/dino" => """
@@ -358,13 +367,22 @@ public sealed class SingleFrameMultiModelServiceTests
             var path = request.RequestUri?.AbsolutePath ?? "";
             var json = path switch
             {
+                "/health" => """
+                {
+                    "status": "ok",
+                    "version": "1.2.0",
+                    "gpu": null,
+                    "detector_qualification": { "qualified": true, "reason": null }
+                }
+                """,
                 "/classify/yolo" => classifierJson,
                 "/detect/yolo" => """
                 {
                     "is_relevant": false,
                     "detections": [],
                     "frame_class": "irrelevant",
-                    "inference_time_ms": 4
+                    "inference_time_ms": 4,
+                    "detector_qualified": true
                 }
                 """,
                 "/detect/dino" => """
@@ -422,6 +440,110 @@ public sealed class SingleFrameMultiModelServiceTests
         public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
             => Task.FromResult(new YoloClassifyResponse(
                 Array.Empty<YoloClassifyPrediction>(), 1, Usable: true, QualityReason: "ok", ClassifierLoaded: true));
+    }
+
+    [Fact]
+    public async Task Unqualifizierter_Detektor_wird_uebersprungen_Dino_und_Sam_laufen_weiter()
+    {
+        var client = new DetectorQualificationClient(
+            new SidecarDetectorQualification(false, "BBox-Kollaps"));
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 25,
+            reachLengthM: 50);
+
+        Assert.True(result.IsRelevant);
+        Assert.True(result.HasDetections);
+        Assert.True(result.HasMasks);
+        Assert.True(result.Degraded);
+        Assert.Equal(false, result.DetectorQualified);
+        Assert.Null(result.YoloMaxConfidence);
+        Assert.Equal(0, client.YoloCalls);
+        Assert.Equal(1, client.DinoCalls);
+        Assert.Equal(1, client.SamCalls);
+        Assert.Contains("manuell pruefen", result.DegradedReason);
+    }
+
+    [Fact]
+    public async Task Fehlende_Detektorqualifikation_wird_ebenfalls_fail_closed_behandelt()
+    {
+        var client = new DetectorQualificationClient(qualification: null);
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 25,
+            reachLengthM: 50);
+
+        Assert.True(result.Degraded);
+        Assert.Null(result.DetectorQualified);
+        Assert.Contains("Qualifikationsstatus", result.DetectorQualificationReason);
+        Assert.Equal(0, client.YoloCalls);
+        Assert.Equal(1, client.DinoCalls);
+        Assert.Equal(1, client.SamCalls);
+    }
+
+    private sealed class DetectorQualificationClient(
+        SidecarDetectorQualification? qualification) : IVisionPipelineClient
+    {
+        public int YoloCalls { get; private set; }
+        public int DinoCalls { get; private set; }
+        public int SamCalls { get; private set; }
+
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(new SidecarHealthResponse(
+                Status: "degraded",
+                Version: "test",
+                Gpu: null,
+                DetectorQualification: qualification));
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+            => Task.FromResult(new PipelineHealthCheckResult(true, true, 200, null, null));
+
+        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+        {
+            YoloCalls++;
+            return Task.FromException<YoloResponse>(
+                new InvalidOperationException("Unqualifiziertes YOLO darf nicht aufgerufen werden."));
+        }
+
+        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+        {
+            DinoCalls++;
+            return Task.FromResult(new DinoResponse(
+                [new DinoDetectionDto(10, 10, 30, 30, "crack", 0.8, "crack")],
+                1));
+        }
+
+        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
+        {
+            SamCalls++;
+            return Task.FromResult(new SamResponse(
+                [
+                    new SamMaskResult(
+                        "crack", 0.8, [10, 10, 30, 30], string.Empty,
+                        400, 640 * 480, 20, 20, 20, 20)
+                ],
+                640,
+                480,
+                1));
+        }
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(
+            YoloClassifyRequest request,
+            CancellationToken ct = default)
+            => Task.FromResult(new YoloClassifyResponse(
+                Array.Empty<YoloClassifyPrediction>(),
+                1,
+                Usable: true,
+                QualityReason: "ok",
+                ClassifierLoaded: true));
     }
 
 }

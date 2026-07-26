@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.UseCases;
 
 namespace AuswertungPro.Next.UI.Tests;
 

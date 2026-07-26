@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Controls;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -42,7 +43,7 @@ public sealed class CodingMeterTimelineControlsTests
 
     private static MethodInfo? FindApplyMethod()
         => typeof(CodingCurrentCodeBadgePolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingMeterTimelineControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingMeterTimelineControls")
             ?.GetMethod(
                 "Apply",
                 BindingFlags.Public | BindingFlags.Static,
@@ -52,7 +53,7 @@ public sealed class CodingMeterTimelineControlsTests
 
     private static MethodInfo? FindSetTextMethod()
         => typeof(CodingCurrentCodeBadgePolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingMeterTimelineControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingMeterTimelineControls")
             ?.GetMethod(
                 "SetText",
                 BindingFlags.Public | BindingFlags.Static,

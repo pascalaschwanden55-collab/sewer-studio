@@ -32,6 +32,23 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
     public string ProjectRoot => _paths.ProjectRoot;
 
+    public string StagingRoot => _stagingDirectory;
+
+    public IReadOnlyList<PublishedFileInfo> PreparedFiles
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _stagedFiles
+                    .Select(f => new PublishedFileInfo(
+                        Path.GetRelativePath(ProjectRoot, f.TargetPath),
+                        f.Sha256))
+                    .ToList();
+            }
+        }
+    }
+
     public IReadOnlyList<PublishedFileInfo> PublishedFiles
     {
         get

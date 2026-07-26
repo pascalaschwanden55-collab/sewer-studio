@@ -130,6 +130,27 @@ public sealed class HoldingMeasureFactoryTests
         Assert.Null(cost);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("45'30")]
+    [InlineData("0")]
+    [InlineData("-2.5")]
+    public void Build_MissingOrInvalidLength_ReturnsNullInsteadOfDefaultMeterCost(string raw)
+    {
+        var (templates, catalog) = Setup();
+        var record = Record("H_INVALID", "250", raw);
+
+        var cost = HoldingMeasureFactory.Build(
+            "H_INVALID",
+            record,
+            "SCHLAUCHLINER_NADELFILZ",
+            templates,
+            catalog,
+            0.081m);
+
+        Assert.Null(cost);
+    }
+
     [Fact]
     public void Build_ExtraOption_ActivatesLine_WithLengthForMeterUnit()
     {

@@ -1,14 +1,18 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Player;
 
 public interface ICodingInlineDefectController
 {
     CodingInlineDefectAcceptCommandWorkflowResult Accept();
+    Task<CodingInlineDefectAcceptCommandWorkflowResult> AcceptAsync();
     CodingInlineDefectEditCommandWorkflowResult Edit();
+    Task<CodingInlineDefectEditCommandWorkflowResult> EditAsync();
     CodingInlineDefectRejectCommandWorkflowResult Reject();
 }
 
@@ -29,7 +33,10 @@ public sealed record CodingInlineDefectControllerBindings(
     Action<CodingEvent> UpdateInlineDefectDetail,
     Action HideInlineDefectDetail,
     Action RefreshEvents,
-    Action FadeOutAiOverlayAfterAction);
+    Action FadeOutAiOverlayAfterAction,
+    Func<CodingEvent, Task<CodingTrainingSamplePersistenceResult>>? PersistAcceptedTrainingSampleAsync = null,
+    Func<CodingEvent, Task<CodingTrainingSamplePersistenceResult>>? PersistEditedTrainingSampleAsync = null,
+    Action<string>? ShowPersistenceError = null);
 
 public sealed class CodingInlineDefectController : ICodingInlineDefectController
 {
@@ -70,6 +77,34 @@ public sealed class CodingInlineDefectController : ICodingInlineDefectController
                 RefreshEvents: _bindings.RefreshEvents,
                 FadeOutAiOverlayAfterAction: _bindings.FadeOutAiOverlayAfterAction));
 
+    public async Task<CodingInlineDefectAcceptCommandWorkflowResult> AcceptAsync()
+    {
+        _bindings.ExecuteAcceptDefect();
+
+        var selectedDefect = _bindings.ResolveSelectedDefect();
+        if (selectedDefect is null)
+        {
+            return new CodingInlineDefectAcceptCommandWorkflowResult(
+                CodingInlineDefectAcceptCommandWorkflowOutcome.NotAccepted);
+        }
+
+        var persistence = await PersistAcceptedAsync(selectedDefect);
+        if (!persistence.Success)
+        {
+            var error = persistence.Error ?? "Training konnte nicht gespeichert werden.";
+            _bindings.ShowPersistenceError?.Invoke(error);
+            return new CodingInlineDefectAcceptCommandWorkflowResult(
+                CodingInlineDefectAcceptCommandWorkflowOutcome.PersistenceFailed,
+                error);
+        }
+
+        _bindings.UpdateInlineDefectDetail(selectedDefect);
+        _bindings.RefreshEvents();
+        _bindings.FadeOutAiOverlayAfterAction();
+        return new CodingInlineDefectAcceptCommandWorkflowResult(
+            CodingInlineDefectAcceptCommandWorkflowOutcome.Accepted);
+    }
+
     public CodingInlineDefectEditCommandWorkflowResult Edit()
         => CodingInlineDefectEditCommandWorkflow.Execute(
             new CodingInlineDefectEditCommandRequest(
@@ -83,6 +118,49 @@ public sealed class CodingInlineDefectController : ICodingInlineDefectController
                 CompleteEdit: CompleteEdit,
                 RefreshEvents: _bindings.RefreshEvents,
                 UpdateInlineDefectDetail: _bindings.UpdateInlineDefectDetail));
+
+    public async Task<CodingInlineDefectEditCommandWorkflowResult> EditAsync()
+    {
+        if (!_bindings.HasCodingViewModel())
+        {
+            return new CodingInlineDefectEditCommandWorkflowResult(
+                CodingInlineDefectEditCommandWorkflowOutcome.NoViewModel);
+        }
+
+        var selected = _bindings.ResolveSelectedDefect() ?? _bindings.ResolveSelectedListEvent();
+        if (selected is null)
+        {
+            return new CodingInlineDefectEditCommandWorkflowResult(
+                CodingInlineDefectEditCommandWorkflowOutcome.NoSelection);
+        }
+
+        _bindings.SelectDefect(selected);
+        _bindings.PausePlayback();
+        if (!_bindings.TryEdit(selected))
+        {
+            return new CodingInlineDefectEditCommandWorkflowResult(
+                CodingInlineDefectEditCommandWorkflowOutcome.EditCancelled);
+        }
+
+        var persistence = await CodingInlineDefectDecisionWorkflow.CompleteEditAsync(
+            selected,
+            _bindings.ResolveCodingSessionService(),
+            _bindings.ExecuteEditDefect,
+            PersistEditedAsync);
+        if (!persistence.Success)
+        {
+            var error = persistence.Error ?? "Training konnte nicht gespeichert werden.";
+            _bindings.ShowPersistenceError?.Invoke(error);
+            return new CodingInlineDefectEditCommandWorkflowResult(
+                CodingInlineDefectEditCommandWorkflowOutcome.PersistenceFailed,
+                error);
+        }
+
+        _bindings.RefreshEvents();
+        _bindings.UpdateInlineDefectDetail(selected);
+        return new CodingInlineDefectEditCommandWorkflowResult(
+            CodingInlineDefectEditCommandWorkflowOutcome.Edited);
+    }
 
     public CodingInlineDefectRejectCommandWorkflowResult Reject()
         => CodingInlineDefectRejectCommandWorkflow.Execute(
@@ -103,4 +181,24 @@ public sealed class CodingInlineDefectController : ICodingInlineDefectController
             _bindings.ResolveCodingSessionService(),
             _bindings.ExecuteEditDefect,
             _bindings.PersistEditedTrainingSample);
+
+    private async Task<CodingTrainingSamplePersistenceResult> PersistAcceptedAsync(
+        CodingEvent codingEvent)
+    {
+        if (_bindings.PersistAcceptedTrainingSampleAsync is not null)
+            return await _bindings.PersistAcceptedTrainingSampleAsync(codingEvent).ConfigureAwait(false);
+
+        _bindings.PersistAcceptedTrainingSample(codingEvent);
+        return CodingTrainingSamplePersistenceResult.Ok;
+    }
+
+    private async Task<CodingTrainingSamplePersistenceResult> PersistEditedAsync(
+        CodingEvent codingEvent)
+    {
+        if (_bindings.PersistEditedTrainingSampleAsync is not null)
+            return await _bindings.PersistEditedTrainingSampleAsync(codingEvent).ConfigureAwait(false);
+
+        _bindings.PersistEditedTrainingSample(codingEvent);
+        return CodingTrainingSamplePersistenceResult.Ok;
+    }
 }

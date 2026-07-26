@@ -5,6 +5,7 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Controls;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -50,7 +51,7 @@ public sealed class CodingTimelineControlsTests
 
     private static MethodInfo? FindConfigureMethod()
         => typeof(CodingTimelineMarkerAccessors).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingTimelineControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingTimelineControls")
             ?.GetMethod(
                 "Configure",
                 BindingFlags.Public | BindingFlags.Static,

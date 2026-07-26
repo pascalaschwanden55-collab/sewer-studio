@@ -155,7 +155,12 @@ public static class AiStartupService
                 ["SEWER_SIDECAR_TRAINING_EXPORT_ROOT"] = System.IO.Path.Combine(
                     KnowledgeBasePaths.GetRoot(),
                     "training",
-                    "datasets")
+                    "datasets"),
+                ["SEWER_SIDECAR_TRAINING_MODEL_CANDIDATES_ROOT"] = System.IO.Path.Combine(
+                    KnowledgeBasePaths.GetRoot(),
+                    "training",
+                    "models",
+                    "candidates")
             });
 
         var result = await AiStartupOrchestrator.StartAsync(input, launcher, progress, ct)

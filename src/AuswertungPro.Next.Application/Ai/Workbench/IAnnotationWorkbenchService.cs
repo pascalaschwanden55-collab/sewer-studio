@@ -13,7 +13,16 @@ public interface IAnnotationWorkbenchService
     /// <summary>Segmentiert die normierte Box per SAM. Liefert Maske(n) + Quantifizierung.</summary>
     Task<WorkbenchSegmentation> SegmentAsync(WorkbenchItem item, BoundingBox box, string codeHint, CancellationToken ct = default);
 
-    /// <summary>Erzeugt den KI-Codevorschlag zur Box (cls-Klassifikator + aehnliche KB-Faelle).</summary>
+    /// <summary>
+    /// Erzeugt einen allgemeinen KI-Codevorschlag zum vollstaendigen Foto
+    /// (zentrale Protokoll-KI mit VSA-Katalog und aehnlichen KB-Faellen).
+    /// </summary>
+    Task<WorkbenchSuggestion> SuggestPhotoAsync(WorkbenchItem item, CancellationToken ct = default);
+
+    /// <summary>
+    /// Kompatibilitaetsweg fuer den bestehenden Box-Ablauf. Der Klassifikator wertet
+    /// weiterhin das vollstaendige Foto aus; die Box wird nur von SAM verwendet.
+    /// </summary>
     Task<WorkbenchSuggestion> SuggestAsync(WorkbenchItem item, BoundingBox box, CancellationToken ct = default);
 
     /// <summary>

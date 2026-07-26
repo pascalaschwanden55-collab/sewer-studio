@@ -9,12 +9,12 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
     public void PlayerWindow_boundary_presence_lives_in_policy()
     {
         var boundariesPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
-        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryContext.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryContext.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var playerRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventCommandWorkflow.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventWorkflow.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryPresencePolicy.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryEventCommandWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryEventWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryPresencePolicy.cs");
 
         Assert.False(File.Exists(boundariesPath), "Boundary-Adapter sollen kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(contextPath), "Boundary-Adapter sollen ausserhalb von PlayerWindow liegen.");
@@ -42,7 +42,7 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
         Assert.Contains("request.ViewEvents == null", commandWorkflow);
         Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", workflow);
         Assert.Contains("CodingBoundaryPresencePolicy.ExistsInView", workflow);
-        Assert.Contains("private readonly Ai.CodingBoundaryContext _codingBoundaryContext", state);
+        Assert.Contains("private readonly Ai.Coding.CodingBoundaryContext _codingBoundaryContext", state);
         Assert.Contains("_codingBoundaryContext = new CodingBoundaryContext", playerRoot);
         Assert.Contains("_codingSessionHost", playerRoot);
         Assert.DoesNotContain("EnsureRohranfangExistsAsync", playerWindowPartials);
@@ -54,10 +54,10 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
     public void PlayerWindow_boundary_import_reference_lives_in_policy()
     {
         var boundariesPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
-        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryContext.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventCommandWorkflow.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryEventWorkflow.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryImportReferencePolicy.cs");
+        var contextPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryContext.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryEventCommandWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryEventWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryImportReferencePolicy.cs");
 
         Assert.False(File.Exists(boundariesPath), "Boundary-Adapter sollen kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(contextPath), "Boundary-Adapter sollen ausserhalb von PlayerWindow liegen.");

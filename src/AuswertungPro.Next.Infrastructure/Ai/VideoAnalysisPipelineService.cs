@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -125,7 +125,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         // Unerwarteten Fallback klar sichtbar machen (sonst sieht Ollama-Only wie Normalbetrieb aus).
         if (fallbackReason is not null)
         {
-            _logger.LogWarning("Videoanalyse-Pipeline Fallback: {Reason}", fallbackReason);
+            _logger.LogWarning("Videoanalyse-Pipeline Warnung: {Reason}", fallbackReason);
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 0,
                 "WARNUNG: " + fallbackReason, FramesDone: 0, FramesTotal: 0));
         }
@@ -226,6 +226,18 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
+        // Qualifikations-Hinweis (Phase 1): die Analyse laeuft bewusst weiter, ist aber als
+        // NICHT qualitaetsgesichert gekennzeichnet — die Statusleiste zeigt das ehrlich an.
+        if (videoResult.DetectorQualified == false)
+        {
+            _logger.LogWarning(
+                "Videoanalyse ohne qualitaetsgesicherten Detektor: {Reason}",
+                videoResult.DetectorQualificationReason ?? "Altmodell nicht qualifiziert.");
+            progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
+                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen weiter; Ergebnis manuell pruefen.",
+                FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
+        }
+
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
             $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
@@ -259,12 +271,25 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!genResult.IsSuccess)
             return PipelineResult.Failed($"Code-Mapping fehlgeschlagen: {genResult.Error}");
 
+        var resultWarnings = genResult.Warnings.ToList();
+        if (videoResult.Degraded)
+        {
+            resultWarnings.Add(
+                "Manuelle Pruefung erforderlich: "
+                + (videoResult.DegradedReason ?? "Die Videoanalyse war eingeschraenkt."));
+        }
+
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
             $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} EintrÃ¤ge gemappt.",
             ItemsDone: genResult.MappedEntries.Count,
             ItemsTotal: genResult.MappedEntries.Count));
 
-        progress?.Report(new PipelineProgress(PipelinePhase.Done, 100, "Fertig."));
+        progress?.Report(new PipelineProgress(
+            PipelinePhase.Done,
+            100,
+            videoResult.Degraded
+                ? "Fertig – Ergebnis ist eingeschraenkt und muss manuell geprueft werden."
+                : "Fertig."));
 
         return new PipelineResult(
             Document: genResult.Document,
@@ -276,7 +301,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 DetectionsRaw: videoResult.Detections.Count,
                 EntriesGenerated: genResult.Document?.Current?.Entries?.Count ?? 0,
                 EntriesWithHighConfidence: genResult.MappedEntries.Count(e => e.Confidence >= 0.75)),
-            Warnings: genResult.Warnings,
+            Warnings: resultWarnings,
             Error: null,
             Telemetry: videoResult.Telemetry);
     }
@@ -317,6 +342,21 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                     $"{notReadyReason} - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
             }
 
+            // Klassifikator fehlt -> Warnung statt Blocker: Multi-Model laeuft weiter,
+            // aber ohne VSA-Klassifikator-Codes (Sidecar meldet dann "degraded").
+            if (healthCheck.Health?.Classifier is { Loaded: false })
+                return (true, pipelineCfg,
+                    "Sidecar-Klassifikator nicht geladen (Gewichte fehlen) - Analyse ohne Klassifikator-Codes.");
+
+            var detectorQualification = healthCheck.Health?.DetectorQualification;
+            if (detectorQualification?.Qualified != true)
+                return (true, pipelineCfg,
+                    "YOLO-Detektor nicht qualifiziert"
+                    + (string.IsNullOrWhiteSpace(detectorQualification?.Reason)
+                        ? ": Qualifikationsstatus fehlt oder ist unlesbar"
+                        : $": {detectorQualification?.Reason}")
+                    + " - DINO/SAM laufen ohne YOLO-Filter; Ergebnis muss manuell geprueft werden.");
+
             return (true, pipelineCfg, null);
         }
         catch (InvalidOperationException) { throw; }
@@ -344,6 +384,16 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!health.HasRequiredModels)
             return $"Sidecar unvollstaendig: {health.MissingRequiredModelsText}-Gewichte fehlen";
 
+        // Fehlender Klassifikator ist kein Blocker: die Warnung gibt der Aufrufer aus,
+        // hier darf das "degraded" des Sidecars nicht als hartes Nicht-bereit zaehlen.
+        if (health.ClassifierMissing)
+            return null;
+
+        // Ein unqualifizierter Detektor macht den Sidecar ehrlich "degraded", aber
+        // DINO und SAM bleiben nutzbar. Deshalb nicht auf Ollama-only zurueckfallen.
+        if (health.DetectorQualification?.Qualified != true)
+            return null;
+
         return string.Equals(health.Status, "ok", StringComparison.OrdinalIgnoreCase)
             ? null
             : $"Sidecar meldet Status '{health.Status}'";
@@ -358,4 +408,3 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 }
 
 // â”€â”€ Request / Result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-

@@ -15,16 +15,16 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var protocolPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolRevisionUpdater.cs");
-        var updateBuilderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyProtocolUpdateBuilder.cs");
-        var emptyGuardPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyEmptyProtocolGuard.cs");
-        var applyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyChangesWorkflow.cs");
-        var closeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUnappliedChangesCloseWorkflow.cs");
-        var emptyDialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyEmptyProtocolDialogWorkflow.cs");
-        var closeDialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUnappliedChangesCloseDialogWorkflow.cs");
-        var closePolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUnappliedChangesClosePolicy.cs");
-        var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyDialogService.cs");
-        var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingApplyDialogServiceFactory.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolRevisionUpdater.cs");
+        var updateBuilderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyProtocolUpdateBuilder.cs");
+        var emptyGuardPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyEmptyProtocolGuard.cs");
+        var applyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyChangesWorkflow.cs");
+        var closeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUnappliedChangesCloseWorkflow.cs");
+        var emptyDialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyEmptyProtocolDialogWorkflow.cs");
+        var closeDialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUnappliedChangesCloseDialogWorkflow.cs");
+        var closePolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUnappliedChangesClosePolicy.cs");
+        var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyDialogService.cs");
+        var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyDialogServiceFactory.cs");
 
         Assert.False(File.Exists(applyPath), "Der uebernommene Codierungsablauf darf nicht wieder als PlayerWindow-Partial erscheinen.");
         Assert.True(File.Exists(controllerPath), "Uebernehmen und Schliessschutz brauchen einen eigenen Controller.");

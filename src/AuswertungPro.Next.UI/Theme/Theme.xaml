@@ -94,6 +94,10 @@
     <!-- WinCan-Erbe: warme Eingabefeld-Toenung (Wiedererkennung ohne Billig-Gelb). -->
     <SolidColorBrush x:Key="InputWarmBrush" Color="#FF3A3526"/>
     <SolidColorBrush x:Key="InputWarmBorderBrush" Color="#FF6B5D33"/>
+    <!-- VSA-Eingabefelder (Distanz, Uhrzeit, Quantifizierung ...): warme Hervorhebung
+         wie in WinCan. Dunkler Warmton analog InputWarmBrush, damit Text lesbar bleibt. -->
+    <SolidColorBrush x:Key="VsaInputHighlightBrush" Color="#FF3A3526"/>
+    <SolidColorBrush x:Key="VsaInputHighlightBorderBrush" Color="#FF6B5D33"/>
     <!-- VSA-Hauptgruppen (BA/BB/BC/BD...): eigene Hues, bewusst KEINE Ampelfarben. -->
     <SolidColorBrush x:Key="CodeGroupStrukturBrush" Color="#FF8B7CF6"/>
     <SolidColorBrush x:Key="CodeGroupStrukturSubtleBrush" Color="#FF2E2A4D"/>

@@ -11,8 +11,8 @@ public sealed class PlayerWindowInlineEvidenceArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var previewPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Preview.cs");
-        var servicePath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewService.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewWorkflow.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineEvidencePreviewService.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Inline-Beweisbild-Vorschau soll Datei- und Bitmap-Logik ausserhalb der PlayerWindow-Partials halten.");
         Assert.True(File.Exists(workflowPath), "Inline-Beweisbild-Vorschau-Fehlerbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");

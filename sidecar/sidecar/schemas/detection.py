@@ -33,6 +33,25 @@ class YoloResponse(BaseModel):
     vram_allocated_gb: float | None = None
     vram_total_gb: float | None = None
     gpu_utilization_percent: float | None = None
+    detector_qualified: bool | None = None
+    detector_qualification_status: str = "not_checked"
+    detector_qualification_reason: str | None = None
+    detector_artifact_sha256: str | None = None
+
+
+class BccTestYoloResponse(BaseModel):
+    """Nur-lesende Antwort des getrennten BCC-Trainingskandidaten."""
+
+    available: bool = False
+    error: str | None = None
+    is_relevant: bool = False
+    detections: list[YoloDetection] = []
+    frame_class: str = "unknown"
+    inference_time_ms: float = 0.0
+    candidate_id: str = ""
+    candidate_sha256: str = ""
+    model_name: str = ""
+    device: str = ""
 
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────

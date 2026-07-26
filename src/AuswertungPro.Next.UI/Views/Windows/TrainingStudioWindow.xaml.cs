@@ -26,6 +26,9 @@ public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
     private readonly WorkbenchQueueService _queueService;
+    private readonly IPersonalGoldAlbumService _goldAlbumService;
+    private readonly IPersonalGoldInboxService _goldInboxService;
+    private readonly IFolderOpenService? _folderOpen;
     private readonly ServiceProvider? _services;
 
     private Point _dragStart;
@@ -43,13 +46,18 @@ public partial class TrainingStudioWindow : Window
         _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
         var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(services);
         _queueService = dependencies.QueueService;
+        _goldAlbumService = dependencies.GoldAlbum;
+        _goldInboxService = dependencies.GoldInbox;
+        _folderOpen = dependencies.FolderOpen;
         // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
         // der synchrone loadQueue-Delegate bleibt leer.
         _vm = new TrainingStudioViewModel(
             dependencies.Workbench,
             () => Array.Empty<WorkbenchItem>(),
             Environment.UserName,
-            ensureAiReady: dependencies.EnsureAiReady);
+            ensureAiReady: dependencies.EnsureAiReady,
+            loadGoldProgress: dependencies.LoadGoldProgress,
+            previewDetection: dependencies.PreviewDetection);
         DataContext = _vm;
 
         _vm.PropertyChanged += Vm_PropertyChanged;
@@ -66,6 +74,7 @@ public partial class TrainingStudioWindow : Window
     private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= TrainingStudioWindow_Loaded;
+        await _vm.RefreshGoldProgressCommand.ExecuteAsync(null);
         await _vm.StartAiCommand.ExecuteAsync(null);
     }
 
@@ -86,6 +95,52 @@ public partial class TrainingStudioWindow : Window
         _vm.LoadItems(items);
     }
 
+    private void OpenGoldInbox_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = _goldInboxService.EnsureFolders();
+            if (_folderOpen is null)
+            {
+                _vm.StatusText = $"Gold-Eingang: {path}";
+                return;
+            }
+
+            var result = _folderOpen.EnsureAndOpen(path);
+            _vm.StatusText = result.Success
+                ? $"Gold-Eingang geöffnet: {path}"
+                : $"Gold-Eingang konnte nicht geöffnet werden: {result.Error}";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "Gold-Eingang konnte nicht vorbereitet werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Gold-Eingang öffnen");
+        }
+    }
+
+    private async void LoadGoldInbox_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var snapshot = await _goldInboxService.LoadAsync();
+            var items = WorkbenchQueueService.BuildGoldInboxItems(
+                snapshot.Images,
+                _vm.PipeDiameterMm);
+            _vm.LoadItems(items);
+            var issueText = snapshot.Issues.Count == 0
+                ? string.Empty
+                : $" · {snapshot.Issues.Count} Hinweise";
+            _vm.StatusText = items.Count == 0
+                ? $"Gold-Eingang ist leer: {snapshot.RootPath}{issueText}"
+                : $"{items.Count} Bilder aus dem Gold-Eingang geladen{issueText}.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "Gold-Eingang konnte nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Gold-Eingang laden");
+        }
+    }
+
     private async void LoadReviewQueue_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -100,6 +155,35 @@ public partial class TrainingStudioWindow : Window
             _vm.StatusText = "Warteschlange konnte nicht geladen werden: "
                 + UserError.DescribeAndReport(ex, "Training-Studio Warteschlange laden");
         }
+    }
+
+    private async void LoadIncompleteGoldQueue_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var items = await _queueService.LoadIncompletePersonalGoldQueueAsync(Environment.UserName);
+            _vm.LoadItems(items);
+            if (items.Count == 0)
+                _vm.StatusText = "Keine unvollständigen persönlichen Goldframes gefunden.";
+            else
+                _vm.StatusText = $"{items.Count} unvollständige Goldframes geladen.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "Unvollständige Goldframes konnten nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Gold-Warteschlange");
+        }
+    }
+
+    private void OpenGoldAlbum_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new PersonalGoldAlbumWindow(
+            _goldAlbumService,
+            Environment.UserName)
+        {
+            Owner = this
+        };
+        window.Show();
     }
 
     // ── VSA-Codierfenster (dasselbe wie im Codiermodus) ──────────────────────
@@ -129,7 +213,11 @@ public partial class TrainingStudioWindow : Window
             return;
 
         var selection = WorkbenchCodeSelectionMapper.FromProtocolEntry(result.SelectedEntry);
-        _vm.ApplyCodeSelection(selection.Code, selection.ClockPosition, selection.Severity);
+        _vm.ApplyCodeSelection(
+            selection.Code,
+            selection.ClockPosition,
+            selection.Severity,
+            selection.Beschreibung);
     }
 
     // ── Box-Zeichnen (reine Geometrie-Erfassung) ─────────────────────────────
@@ -225,6 +313,7 @@ public partial class TrainingStudioWindow : Window
     {
         if (e.PropertyName is nameof(TrainingStudioViewModel.CurrentBox)
             or nameof(TrainingStudioViewModel.Segmentation)
+            or nameof(TrainingStudioViewModel.PreviewDetections)
             or nameof(TrainingStudioViewModel.CurrentImagePath))
         {
             RedrawOverlay();
@@ -249,6 +338,10 @@ public partial class TrainingStudioWindow : Window
                 _vm.StatusText = result.ErrorMessage;
         }
 
+        // Automatische Modelltreffer bleiben blau und getrennt von der roten Hand-Box.
+        if (FrameImage.Source is BitmapSource source)
+            DrawPreviewDetections(area, source);
+
         // Gezogene Box immer als oberste Ebene.
         if (_vm.CurrentBox is { } b)
         {
@@ -265,6 +358,58 @@ public partial class TrainingStudioWindow : Window
             Canvas.SetLeft(rect, bounds.X);
             Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
+        }
+    }
+
+    private void DrawPreviewDetections(Rect area, BitmapSource source)
+    {
+        if (source.PixelWidth <= 0 || source.PixelHeight <= 0)
+            return;
+
+        foreach (var detection in _vm.PreviewDetections)
+        {
+            var x1 = Math.Clamp(detection.X1 / source.PixelWidth, 0, 1);
+            var y1 = Math.Clamp(detection.Y1 / source.PixelHeight, 0, 1);
+            var x2 = Math.Clamp(detection.X2 / source.PixelWidth, 0, 1);
+            var y2 = Math.Clamp(detection.Y2 / source.PixelHeight, 0, 1);
+            var left = area.X + Math.Min(x1, x2) * area.Width;
+            var top = area.Y + Math.Min(y1, y2) * area.Height;
+            var width = Math.Abs(x2 - x1) * area.Width;
+            var height = Math.Abs(y2 - y1) * area.Height;
+            if (width < 1 || height < 1)
+                continue;
+
+            var rectangle = new Rectangle
+            {
+                Stroke = Brushes.DeepSkyBlue,
+                StrokeThickness = 2,
+                StrokeDashArray = new DoubleCollection { 5, 3 },
+                Fill = new SolidColorBrush(Color.FromArgb(20, 0, 191, 255)),
+                IsHitTestVisible = false,
+                Width = width,
+                Height = height,
+            };
+            Canvas.SetLeft(rectangle, left);
+            Canvas.SetTop(rectangle, top);
+            OverlayCanvas.Children.Add(rectangle);
+
+            var label = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(215, 0, 105, 148)),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(4, 2, 4, 2),
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = $"{detection.DisplayText} {detection.Confidence:P0}",
+                    Foreground = Brushes.White,
+                    FontSize = 11,
+                    FontWeight = FontWeights.SemiBold,
+                },
+            };
+            Canvas.SetLeft(label, left);
+            Canvas.SetTop(label, Math.Max(area.Y, top - 22));
+            OverlayCanvas.Children.Add(label);
         }
     }
 }

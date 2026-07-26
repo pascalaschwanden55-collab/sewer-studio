@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ClassMaps;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
@@ -10,7 +9,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
 
 /// <summary>
 /// Baut den Planner-Input ausschliesslich aus einem konsistenten AP-0.1-Live-Snapshot.
-/// Fuer Teacher-Daten bleibt dessen Disposition die einzige Quarantaene-Wahrheit.
+/// Als Trainingsquelle werden ausschliesslich zuvor persoenlich freigegebene
+/// TrainingSamples uebernommen. Teacher-Daten bleiben Teil des Inventars,
+/// werden aber nicht in den Trainingsplan aufgenommen.
 /// </summary>
 public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBuilder
 {
@@ -30,13 +31,16 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
         ValidateInventoryGate(inventory);
         ValidateProtectedSets(inventory.Protection, registry.ProtectedSets);
         var sourceHashes = ReadCurrentSourceHashes(inventory.Report);
-        var candidates = new List<TrainingExportPlanCandidate>(
-            inventory.TeacherAnnotations.Count + approvedTrainingSampleIds.Count);
-        AddTeacherCandidates(inventory, candidates);
+        var candidates = new List<TrainingExportPlanCandidate>(approvedTrainingSampleIds.Count);
         await AddTrainingSampleCandidatesAsync(
                 inventory,
                 approvedTrainingSampleIds,
                 candidates,
+                cancellationToken)
+            .ConfigureAwait(false);
+        var negativeImages = await BuildVerifiedNegativeImagesAsync(
+                registry,
+                inventory,
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -49,7 +53,46 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
             EvaluationProtectionComplete: inventory.Protection.Status.Complete,
             ProtectedImageHashes: inventory.Protection.ImageHashes,
             ProtectedHoldingKeys: inventory.Protection.HoldingKeys,
-            GeneratedUtc: generatedUtc);
+            GeneratedUtc: generatedUtc)
+        {
+            NegativeImages = negativeImages
+        };
+    }
+
+    /// <summary>
+    /// Verifiziert die kuratierten Negativbilder gegen den Live-Bestand: Datei muss
+    /// unveraendert zum Register-Hash sein, und ein Eval-/Abnahme-Bild darf NIE ins
+    /// Training — Kontamination ist ein harter Stopp (kein stiller Ausschluss).
+    /// </summary>
+    private static async Task<IReadOnlyList<TrainingExportNegativeImage>> BuildVerifiedNegativeImagesAsync(
+        TrainingExportRegistrySnapshot registry,
+        TrainingDataInventoryRuntimeSnapshot inventory,
+        CancellationToken cancellationToken)
+    {
+        if (registry.NegativeImages.Count == 0)
+            return [];
+
+        var result = new List<TrainingExportNegativeImage>(registry.NegativeImages.Count);
+        foreach (var negative in registry.NegativeImages)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var actualSha256 = await ComputeStableSha256Async(negative.Path, cancellationToken)
+                .ConfigureAwait(false);
+            if (!actualSha256.Equals(negative.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild wurde seit der Register-Freigabe veraendert: {negative.Path}");
+            }
+            if (inventory.Protection.ImageHashes.Contains(actualSha256))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild gehoert zum eingefrorenen Eval-/Abnahme-Set: {negative.Path}");
+            }
+
+            result.Add(negative with { Sha256 = actualSha256 });
+        }
+
+        return result;
     }
 
     private static void ValidateInventoryGate(TrainingDataInventoryRuntimeSnapshot inventory)
@@ -107,41 +150,6 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
                 throw new TrainingExportPlanException($"Doppelte oder ungueltige Inventarquelle '{source.Path}'.");
         }
         return result;
-    }
-
-    private static void AddTeacherCandidates(
-        TrainingDataInventoryRuntimeSnapshot inventory,
-        ICollection<TrainingExportPlanCandidate> candidates)
-    {
-        var records = inventory.Report.TeacherRecords.ToDictionary(
-            record => record.RecordKey,
-            StringComparer.OrdinalIgnoreCase);
-        for (var index = 0; index < inventory.TeacherAnnotations.Count; index++)
-        {
-            var annotation = inventory.TeacherAnnotations[index];
-            var sourceId = string.IsNullOrWhiteSpace(annotation.AnnotationId)
-                ? $"teacher-{index:D6}"
-                : annotation.AnnotationId.Trim();
-            if (!records.TryGetValue(sourceId, out var record))
-            {
-                throw new TrainingExportPlanException(
-                    $"Teacher-Quelle '{sourceId}' fehlt im zugehoerigen AP-0.1-Bericht.");
-            }
-
-            var framePath = record.FullFrame.ExistingPath
-                            ?? record.FullFrame.StoredPath
-                            ?? string.Empty;
-            candidates.Add(new TrainingExportPlanCandidate(
-                new TrainingExportSourceRef(TrainingExportSourceType.TeacherAnnotation, sourceId),
-                framePath,
-                record.FullFrame.Sha256,
-                TryGetExtension(framePath),
-                annotation.HaltungName,
-                annotation.VsaCode,
-                TrainingYoloClassSourceKinds.TeacherVsaCode,
-                ToBox(annotation),
-                record.Disposition));
-        }
     }
 
     private static async Task AddTrainingSampleCandidatesAsync(
@@ -212,14 +220,6 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
         if (box?.IsValid != true)
             return TrainingInventoryDisposition.QuarantineGeometry;
         return TrainingInventoryDisposition.TrainValCandidate;
-    }
-
-    private static TrainingExportBoundingBox? ToBox(TeacherAnnotation annotation)
-    {
-        var box = annotation.BoundingBox;
-        return box is null
-            ? null
-            : new TrainingExportBoundingBox(box.XCenter, box.YCenter, box.Width, box.Height);
     }
 
     private static TrainingExportBoundingBox? ToBox(TrainingSample sample)

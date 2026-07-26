@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 

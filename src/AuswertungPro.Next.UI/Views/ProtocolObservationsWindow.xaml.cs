@@ -11,6 +11,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
@@ -242,7 +243,7 @@ public partial class ProtocolObservationsWindow : Window
             };
             if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
             {
-                AuswertungPro.Next.UI.Ai.CodingProtocolEntryCopier.CopyEditableValues(dlg.SelectedEntry, entry);
+                AuswertungPro.Next.UI.Ai.Coding.CodingProtocolEntryCopier.CopyEditableValues(dlg.SelectedEntry, entry);
                 return true;
             }
             return false;

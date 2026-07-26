@@ -68,6 +68,23 @@ public sealed class SingleFrameMultiModelService
 
         var b64 = Convert.ToBase64String(pngBytes);
         double yoloMs = 0, dinoMs = 0, samMs = 0, classifierMs = 0;
+        var detectorQualification = await ReadDetectorQualificationAsync(ct);
+        bool? effectiveDetectorQualified = detectorQualification?.Qualified;
+        var detectorApproved = effectiveDetectorQualified == true;
+        var detectorQualificationReason = detectorApproved
+            ? null
+            : detectorQualification is null
+                ? "Qualifikationsstatus fehlt oder konnte nicht gelesen werden"
+                : string.IsNullOrWhiteSpace(detectorQualification.Reason)
+                    ? "Detektor wurde nicht freigegeben"
+                    : detectorQualification.Reason;
+        var detectorReviewReason = !detectorApproved
+            ? "YOLO-Detektor nicht qualifiziert"
+              + (string.IsNullOrWhiteSpace(detectorQualificationReason)
+                  ? string.Empty
+                  : $": {detectorQualificationReason}")
+              + ". DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell pruefen."
+            : null;
 
         try
         {
@@ -117,7 +134,11 @@ public sealed class SingleFrameMultiModelService
                             ClassifierCode: boundaryDecision.Code,
                             ClassifierConfidence: boundaryDecision.Confidence,
                             ClassifierSource: boundaryDecision.Source,
-                            ClassifierTimeMs: classifierMs);
+                            ClassifierTimeMs: classifierMs,
+                            Degraded: !detectorApproved,
+                            DegradedReason: detectorReviewReason,
+                            DetectorQualified: effectiveDetectorQualified,
+                            DetectorQualificationReason: detectorQualificationReason);
                     }
                 }
             }
@@ -127,29 +148,49 @@ public sealed class SingleFrameMultiModelService
                 // bleibt der bisherige YOLO->DINO->SAM-Pfad unveraendert.
             }
 
-            // 1. YOLO Pre-Screening
-            var yoloReq = new YoloRequest(b64, _yoloConfidence);
-            var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
-            yoloMs = yoloResp.InferenceTimeMs;
-            // D2-A: echte YOLO-Confidence (hoechste Box) ans QualityGate weiterreichen,
-            // statt sie zu verwerfen. So zeigen klar erkannte Befunde wieder hohe Confidence.
-            double? yoloMax = yoloResp.Detections.Count > 0
-                ? yoloResp.Detections.Max(d => d.Confidence)
-                : (double?)null;
-
-            if (!yoloResp.IsRelevant && !IsClassifierOnlyStructuralCode(classifierDecision?.Code))
+            // 1. YOLO Pre-Screening. Ein ausdruecklich unqualifiziertes Modell wird
+            // weder aufgerufen noch als Filter/Confidence-Beweis verwendet.
+            double? yoloMax = null;
+            if (detectorApproved)
             {
-                return new SingleFrameResult(
-                    IsRelevant: false,
-                    DinoDetections: Array.Empty<DinoDetectionDto>(),
-                    SamResponse: null,
-                    QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
-                    YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
-                Error: null, YoloMaxConfidence: yoloMax,
-                ClassifierCode: classifierDecision?.Code,
-                ClassifierConfidence: classifierDecision?.Confidence,
-                ClassifierSource: classifierDecision?.Source,
-                ClassifierTimeMs: classifierMs);
+                var yoloReq = new YoloRequest(b64, _yoloConfidence);
+                var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
+                yoloMs = yoloResp.InferenceTimeMs;
+                if (yoloResp.DetectorQualified != true)
+                {
+                    effectiveDetectorQualified = yoloResp.DetectorQualified;
+                    detectorApproved = false;
+                    detectorQualificationReason =
+                        yoloResp.DetectorQualificationReason
+                        ?? "YOLO-Antwort ohne positive Detektorqualifikation";
+                    detectorReviewReason =
+                        $"YOLO-Detektor nicht qualifiziert: {detectorQualificationReason}. "
+                        + "DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell pruefen.";
+                }
+                else
+                {
+                    // D2-A: echte YOLO-Confidence (hoechste Box) ans QualityGate weiterreichen.
+                    yoloMax = yoloResp.Detections.Count > 0
+                        ? yoloResp.Detections.Max(d => d.Confidence)
+                        : null;
+
+                    if (!yoloResp.IsRelevant && !IsClassifierOnlyStructuralCode(classifierDecision?.Code))
+                    {
+                        return new SingleFrameResult(
+                            IsRelevant: false,
+                            DinoDetections: Array.Empty<DinoDetectionDto>(),
+                            SamResponse: null,
+                            QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
+                            YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
+                            Error: null, YoloMaxConfidence: yoloMax,
+                            ClassifierCode: classifierDecision?.Code,
+                            ClassifierConfidence: classifierDecision?.Confidence,
+                            ClassifierSource: classifierDecision?.Source,
+                            ClassifierTimeMs: classifierMs,
+                            DetectorQualified: effectiveDetectorQualified,
+                            DetectorQualificationReason: detectorQualificationReason);
+                    }
+                }
             }
 
             // 2. DINO Open-Vocabulary Detection
@@ -161,6 +202,11 @@ public sealed class SingleFrameMultiModelService
             {
                 // Leere DINO-Detektionen bei degraded=true sind KEIN "kein Schaden", sondern ein
                 // Modellfehler — sonst erscheint ein DINO-Ausfall im Codiermodus als gruenes Rohr.
+                var dinoDegradedReason = dinoResp.Degraded
+                    ? $"DINO nicht verfuegbar: {dinoResp.Error}"
+                    : null;
+                var emptyDinoDegradedReason =
+                    CombineReasons(detectorReviewReason, dinoDegradedReason);
                 return new SingleFrameResult(
                     IsRelevant: true,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -172,8 +218,10 @@ public sealed class SingleFrameMultiModelService
                     ClassifierConfidence: classifierDecision?.Confidence,
                     ClassifierSource: classifierDecision?.Source,
                     ClassifierTimeMs: classifierMs,
-                    Degraded: dinoResp.Degraded,
-                    DegradedReason: dinoResp.Degraded ? $"DINO nicht verfuegbar: {dinoResp.Error}" : null);
+                    Degraded: emptyDinoDegradedReason is not null,
+                    DegradedReason: emptyDinoDegradedReason,
+                    DetectorQualified: effectiveDetectorQualified,
+                    DetectorQualificationReason: detectorQualificationReason);
             }
 
             // 3. SAM Segmentation (DINO-Boxes als Input)
@@ -194,7 +242,10 @@ public sealed class SingleFrameMultiModelService
                 quantified.Add(q);
             }
 
-            var degraded = dinoResp.Degraded || samResp.Degraded;
+            var degradedReason = CombineReasons(
+                detectorReviewReason,
+                dinoResp.Degraded ? $"DINO: {dinoResp.Error}" : null,
+                samResp.Degraded ? $"SAM: {samResp.Error}" : null);
             return new SingleFrameResult(
                 IsRelevant: true,
                 DinoDetections: dinoResp.Detections,
@@ -206,20 +257,40 @@ public sealed class SingleFrameMultiModelService
                 ClassifierConfidence: classifierDecision?.Confidence,
                 ClassifierSource: classifierDecision?.Source,
                 ClassifierTimeMs: classifierMs,
-                Degraded: degraded,
-                DegradedReason: degraded
-                    ? string.Join("; ", new[]
-                        {
-                            dinoResp.Degraded ? $"DINO: {dinoResp.Error}" : null,
-                            samResp.Degraded ? $"SAM: {samResp.Error}" : null,
-                        }.Where(x => x is not null))
-                    : null);
+                Degraded: degradedReason is not null,
+                DegradedReason: degradedReason,
+                DetectorQualified: effectiveDetectorQualified,
+                DetectorQualificationReason: detectorQualificationReason);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return SingleFrameResult.Empty($"Multi-Model Fehler: {ex.Message}");
         }
+    }
+
+    private async Task<SidecarDetectorQualification?> ReadDetectorQualificationAsync(
+        CancellationToken ct)
+    {
+        try
+        {
+            var health = await _client.HealthCheckAsync(ct).ConfigureAwait(false);
+            return health?.DetectorQualification;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private static string? CombineReasons(params string?[] reasons)
+    {
+        var present = reasons.Where(reason => !string.IsNullOrWhiteSpace(reason)).ToArray();
+        return present.Length == 0 ? null : string.Join("; ", present);
     }
 
     private static VsaCodeResolver.ResolvedCode? ResolveBoundaryFromPosition(
@@ -317,10 +388,12 @@ public sealed record SingleFrameResult(
     double? ClassifierConfidence = null,
     string? ClassifierSource = null,
     double ClassifierTimeMs = 0,
-    // Degraded=true: ein Modell (DINO/SAM) meldete einen Inferenzfehler. Das leere Ergebnis darf
-    // dann NICHT als gruenes "kein Schaden" gewertet werden — die UI weist es aus.
+    // Degraded=true: Detektor nicht freigegeben oder DINO/SAM meldet einen Fehler.
+    // Das Ergebnis darf dann nicht als gruenes "kein Schaden" gewertet werden.
     bool Degraded = false,
-    string? DegradedReason = null)
+    string? DegradedReason = null,
+    bool? DetectorQualified = null,
+    string? DetectorQualificationReason = null)
 {
     public bool HasDetections => DinoDetections.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;

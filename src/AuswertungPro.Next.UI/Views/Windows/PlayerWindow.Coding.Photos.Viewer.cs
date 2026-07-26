@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

@@ -1,5 +1,6 @@
 using System.Threading;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 

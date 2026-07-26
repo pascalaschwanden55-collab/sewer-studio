@@ -29,7 +29,7 @@ public sealed class VsaYoloClassMapDependencyTests
     }
 
     [Fact]
-    public void ServiceProvider_laesst_class_map_v2_strikt_und_gebunden_einlesen()
+    public void ServiceProvider_laesst_class_map_v3_strikt_und_gebunden_einlesen()
     {
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -40,10 +40,20 @@ public sealed class VsaYoloClassMapDependencyTests
 
         var snapshot = services.TrainingYoloClasses.ReadSnapshot();
 
-        Assert.Equal(YoloDetectClassMapV2.Version, snapshot.Version);
-        Assert.Equal(14, snapshot.Classes.Count);
+        Assert.Equal(YoloDetectClassMapV3.Version, snapshot.Version);
+        Assert.Equal(15, snapshot.Classes.Count);
         Assert.Equal(13, snapshot.Classes["SONST_schaden"]);
+        Assert.Equal(14, snapshot.Classes["BCC_bogen"]);
         Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("BAB"));
+    }
+
+    [Fact]
+    public void Statische_V2_Klassenkarte_bleibt_eingefroren()
+    {
+        Assert.Equal(2, YoloDetectClassMapV2.Version);
+        Assert.Equal(14, YoloDetectClassMapV2.Classes.Count);
+        Assert.Equal(13, YoloDetectClassMapV2.Classes["SONST_schaden"]);
+        Assert.False(YoloDetectClassMapV2.Classes.ContainsKey("BCC_bogen"));
     }
 
     [Fact]

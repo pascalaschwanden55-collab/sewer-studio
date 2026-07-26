@@ -17,7 +17,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
-        var mapperPath = Path.Combine(uiRoot, "Ai", "LiveDetectionGeometryMapper.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionGeometryMapper.cs");
 
         var segmentationController = File.ReadAllText(segmentationControllerPath);
         var mapper = File.ReadAllText(mapperPath);
@@ -33,7 +33,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingMarkBoxQuantificationOverlayPolicy.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingMarkBoxQuantificationOverlayPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "SAM-Quantifizierung-zu-Overlay-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -63,8 +63,8 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var oldSegmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var segmentationControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkSegmentationController.cs");
         var maskOverlayControllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
-        var segmentWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkBoxSegmentationWorkflow.cs");
-        var renderWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkSamMaskRenderWorkflow.cs");
+        var segmentWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkBoxSegmentationWorkflow.cs");
+        var renderWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkSamMaskRenderWorkflow.cs");
         var controllerField = typeof(PlayerWindow).GetField(
             "_liveDetectionMarkSegmentationController",
             BindingFlags.Instance | BindingFlags.NonPublic);
@@ -173,8 +173,8 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerManualMarkPlayback.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionMarkToolController.cs");
-        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
-        var catalogOpenWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkActivationWorkflow.cs");
+        var catalogOpenWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkCatalogOpenWorkflow.cs");
         var markCatalogPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Catalog.cs");
 
         Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -211,10 +211,10 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowService.cs");
-        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowServiceFactory.cs");
-        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogDisplayWorkflow.cs");
-        var openWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkCatalogWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkCatalogWorkflowServiceFactory.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkCatalogDisplayWorkflow.cs");
+        var openWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkCatalogOpenWorkflow.cs");
 
         Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "LiveDetection-Markkatalog-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -260,7 +260,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkCompletionCommandWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkCompletionCommandWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Completion-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         var marking = File.ReadAllText(markingPath);
@@ -289,7 +289,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkCompletionWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkCompletionWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Abschlussentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -315,13 +315,13 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Training.cs");
-        var appenderPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkEventAppender.cs");
-        var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
-        var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
-        var seedSelectionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerSeedSelectionWorkflow.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingCommandWorkflow.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
-        var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
+        var appenderPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkEventAppender.cs");
+        var frameExporterPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionTrainingFrameExporter.cs");
+        var annotationWriterPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionTrainingAnnotationWriter.cs");
+        var seedSelectionWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerSeedSelectionWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkTrainingCommandWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkTrainingWorkflow.cs");
+        var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionManualMarkTrainingController.cs");
         var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "LiveDetectionTrainingControllerSetFactory.cs");
         var playerWindowPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
@@ -435,8 +435,8 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
             windowsRoot,
             "PlayerWindowCodingEingabemarkerControllerSetFactory.cs");
         var liveDetectionControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
-        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
-        var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkOverlayReadyWorkflow.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionManualMarkActivationWorkflow.cs");
+        var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionMarkOverlayReadyWorkflow.cs");
         var controllerField = typeof(PlayerWindow).GetField(
             "_liveDetectionMarkToolController",
             BindingFlags.Instance | BindingFlags.NonPublic);

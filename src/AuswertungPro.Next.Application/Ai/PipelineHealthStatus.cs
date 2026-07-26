@@ -5,7 +5,7 @@ public enum PipelineHealthLevel
 {
     /// <summary>Volle Multi-Model-Pipeline aktiv (gruen).</summary>
     Full,
-    /// <summary>Schwachmodus: nur Qwen verfuegbar (gelb).</summary>
+    /// <summary>Eingeschraenkter Betrieb, zum Beispiel Qwen-only oder DINO/SAM ohne freigegebenes YOLO.</summary>
     Degraded,
     /// <summary>KI aus oder gar nichts nutzbar (rot/grau).</summary>
     Down
@@ -25,7 +25,9 @@ public sealed record PipelineHealthStatus(
     bool DinoLoaded,
     bool SamLoaded,
     string Summary,
-    string Detail)
+    string Detail,
+    bool? DetectorQualified = null,
+    string? DetectorQualificationReason = null)
 {
     /// <summary>True, solange ueberhaupt eine KI-Analyse moeglich ist (Full oder Degraded).</summary>
     public bool AnalysisPossible => Level != PipelineHealthLevel.Down;

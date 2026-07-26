@@ -50,6 +50,13 @@ public sealed class TeacherAnnotation
     /// <summary>Pfad zur YOLO-Annotation (.txt).</summary>
     public string? YoloAnnotationPath { get; set; }
 
+    /// <summary>
+    /// SampleId des TrainingSamples, aus dem diese Annotation entstand (Pruefplatz-Goldfund).
+    /// Nullable: Altbestand und andere Erfassungswege (Live/Import) bleiben unberuehrt (null).
+    /// Ermoeglicht das gezielte Entfernen des Teacher-Kandidaten bei einer Codekorrektur.
+    /// </summary>
+    public string? SourceSampleId { get; set; }
+
     // --- Masse (aus Kalibrierung) ---
     public double? WidthMm { get; set; }
     public double? HeightMm { get; set; }

@@ -147,6 +147,21 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     }
 
     /// <summary>
+    /// Nur-lesende Vorschau mit einem validierten, nicht produktiven BCC-Kandidaten.
+    /// Der Sidecar waehlt das Modell selbst; der Client uebergibt keinen Dateipfad.
+    /// </summary>
+    public async Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+        YoloRequest request,
+        CancellationToken ct = default)
+    {
+        return await PostAsync<YoloRequest, BccTestYoloResponse>(
+                "/detect/yolo/bcc-test",
+                request,
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Grounding DINO open-vocabulary detection.
     /// </summary>
     public async Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)

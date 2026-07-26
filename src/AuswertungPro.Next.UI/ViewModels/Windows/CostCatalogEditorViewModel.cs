@@ -20,6 +20,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     private readonly string? _projectPath;
     private readonly Window _window;
     private readonly IDialogService _dialogs;
+    private readonly string? _catalogLoadError;
 
     public ObservableCollection<CostCatalogItem> Items { get; }
 
@@ -70,8 +71,15 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
         _dialogs = dialogs ?? new DialogService();
         _store = store ?? throw new ArgumentNullException(nameof(store));
 
-        _catalog = _store.LoadMerged(projectPath);
+        _catalog = _store.LoadMerged(projectPath, out _catalogLoadError);
         Items = new ObservableCollection<CostCatalogItem>(_catalog.Items);
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+        {
+            _dialogs.Error(
+                "Der Kostenkatalog konnte nicht sicher geladen werden. " +
+                $"Bearbeiten und Speichern sind gesperrt:\n{_catalogLoadError}",
+                "Positionen");
+        }
         WarnDuplicateNpkCodes();
 
         AddCommand = new RelayCommand(Add);
@@ -171,10 +179,19 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
     private void Save()
     {
-        _catalog.Items = Items
-            .Where(i => !string.IsNullOrWhiteSpace(i.Key))
-            .Select(i => i)
-            .ToList();
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+        {
+            _dialogs.Error(
+                "Speichern fehlgeschlagen: Der Vorgang ist gesperrt, weil der Kostenkatalog nicht sicher geladen " +
+                $"werden konnte:\n{_catalogLoadError}",
+                "Positionen");
+            return;
+        }
+
+        // Keine Zeile vor dem Store still herausfiltern. Dort werden ungueltige oder
+        // doppelte Identitaeten fail-closed gemeldet, damit kein Katalogeintrag
+        // unbemerkt verschwindet.
+        _catalog.Items = Items.ToList();
         WarnDuplicateNpkCodes();
 
         // Audit W18: projectPath mitgeben, damit unveraenderte NPK-Metadaten nicht im

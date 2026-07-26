@@ -2,6 +2,7 @@ using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -22,8 +23,7 @@ public sealed class ProtocolTrainingFileStore : IProtocolTrainingStore
 
     public ProtocolTrainingFileStore()
         : this(() => Path.Combine(
-            AppDataPathResolver.Resolve(),
-            "data",
+            KnowledgeBasePaths.GetRoot(),
             "protocol_training.json"))
     {
     }

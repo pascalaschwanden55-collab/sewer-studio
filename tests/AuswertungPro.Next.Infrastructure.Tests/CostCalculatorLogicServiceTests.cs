@@ -119,7 +119,10 @@ public sealed class CostCalculatorLogicServiceTests
     public void ParseDecimal_AcceptsNumericPrefix()
     {
         Assert.Equal(8m, CostCalculatorLogicService.ParseDecimal("8m"));
+        Assert.Equal(1300m, CostCalculatorLogicService.ParseDecimal("1'300m"));
+        Assert.Equal(1300m, CostCalculatorLogicService.ParseDecimal("1 300 m"));
         Assert.Equal(1.25m, CostCalculatorLogicService.ParseDecimal("1.25"));
+        Assert.Equal(45.678m, CostCalculatorLogicService.ParseDecimal("45,678 m"));
         Assert.Null(CostCalculatorLogicService.ParseDecimal("abc"));
     }
 

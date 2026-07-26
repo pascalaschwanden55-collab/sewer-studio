@@ -14,7 +14,7 @@ public partial class PlayerWindow
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private readonly CodingPhotoCaptureServicesOwner _codingPhotoCaptureServicesOwner = new();
     private readonly ICodingPhotoAttachmentController _codingPhotoAttachmentController;
-    private readonly Ai.CodingTrainingPersistenceContext _codingTrainingPersistenceContext;
+    private readonly Ai.Coding.CodingTrainingPersistenceContext _codingTrainingPersistenceContext;
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
     private readonly ICodingConfirmationController _codingConfirmationController;
@@ -22,9 +22,9 @@ public partial class PlayerWindow
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
-    private readonly Ai.CodingFindingContext _codingFindingContext;
-    private readonly Ai.CodingAnalysisContext _codingAnalysisContext;
-    private readonly Ai.CodingBoundaryContext _codingBoundaryContext;
+    private readonly Ai.Coding.CodingFindingContext _codingFindingContext;
+    private readonly Ai.Coding.CodingAnalysisContext _codingAnalysisContext;
+    private readonly Ai.Coding.CodingBoundaryContext _codingBoundaryContext;
     private readonly ICodingPipelineHealthController _codingPipelineHealthController;
     private readonly CodingSchemaOverlayController _codingSchemaOverlayController;
     private readonly CodingManualCalibrationController _codingManualCalibrationController;

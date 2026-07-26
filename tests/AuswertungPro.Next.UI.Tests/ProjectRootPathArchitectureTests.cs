@@ -28,7 +28,7 @@ public sealed class ProjectRootPathArchitectureTests
     {
         var checkedFiles = new[]
         {
-            "src/AuswertungPro.Next.UI/Ai/CodingProtocolPdfExportPlanner.cs",
+            "src/AuswertungPro.Next.UI/Ai/Coding/CodingProtocolPdfExportPlanner.cs",
             "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml.cs",
             "src/AuswertungPro.Next.Infrastructure/DataPage/SchachtFileTargetPathResolver.cs"
         };

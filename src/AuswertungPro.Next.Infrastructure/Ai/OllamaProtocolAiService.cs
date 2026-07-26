@@ -89,8 +89,19 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
                 var bytes = await File.ReadAllBytesAsync(imagePaths[0], ct);
                 frameBase64 = Convert.ToBase64String(bytes);
             }
-            catch { /* ignore */ }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                if (input.RequireImage)
+                {
+                    throw new IOException(
+                        "Das angeforderte Foto konnte nicht gelesen werden.",
+                        ex);
+                }
+            }
         }
+
+        if (input.RequireImage && frameBase64 is null)
+            throw new IOException("Fuer die Foto-Pruefung konnte kein Bild geladen werden.");
 
         if (frameBase64 != null)
         {

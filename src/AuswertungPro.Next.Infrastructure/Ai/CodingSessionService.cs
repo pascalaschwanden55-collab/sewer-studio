@@ -302,7 +302,11 @@ public sealed class CodingSessionService : ICodingSessionService
     /// </summary>
     private Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
     {
-        var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
+        var approved = samples
+            .Where(sample =>
+                ManualGoldTrainingPolicy.IsManuallyConfirmed(sample)
+                && !string.IsNullOrWhiteSpace(sample.FramePath))
+            .ToList();
         return IndexAndPersistAsync(approved);
     }
 
@@ -310,7 +314,9 @@ public sealed class CodingSessionService : ICodingSessionService
     public Task IndexConfirmedSampleAsync(TrainingSample sample, CancellationToken ct = default)
     {
         // Nur bestaetigtes Gold indexieren — abgelehnte/negative Samples gehoeren nicht in die positive KB.
-        if (sample is null || sample.Status != TrainingSampleStatus.Approved)
+        if (sample is null
+            || !ManualGoldTrainingPolicy.IsManuallyConfirmed(sample)
+            || string.IsNullOrWhiteSpace(sample.FramePath))
             return Task.CompletedTask;
         return IndexAndPersistAsync(new List<TrainingSample> { sample }, ct);
     }

@@ -35,6 +35,7 @@ public sealed class YoloClassVsaMapperTests
     [InlineData("BAH_schadanschluss", "BAH")]
     [InlineData("BBF_infiltration", "BBF")]
     [InlineData("BBD_boden", "BBD")]
+    [InlineData("BCC_bogen", "BCC")]
     public void ToVsaMainCode_Mappt_class_map_v2_fuer_Schwellenwerte(
         string className,
         string expected)
@@ -53,6 +54,7 @@ public sealed class YoloClassVsaMapperTests
     [Theory]
     [InlineData("BAB_riss", "BAB")]
     [InlineData("BBF_infiltration", "BBF")]
+    [InlineData("BCC_bogen", "BCC")]
     [InlineData("SONST_schaden", null)]
     public void ToPersistableVsaCode_loest_v2_Klassen_sicher_auf(
         string className,

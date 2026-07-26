@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training.ClassMaps;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
+using System.Text.Json.Serialization;
 
 namespace AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 
@@ -120,6 +121,20 @@ public sealed record TrainingExportRegistrySnapshot(
     IReadOnlyList<TrainingExportProtectedSetReference> ProtectedSets)
 {
     public const string CurrentSchemaVersion = "1.0";
+
+    /// <summary>
+    /// Optionaler, menschlich freigegebener Pilotumfang. Leer bedeutet aus
+    /// Kompatibilitaetsgruenden weiterhin: alle geeigneten TrainingSamples.
+    /// </summary>
+    public IReadOnlySet<string> ApprovedSampleIds { get; init; }
+        = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Optionaler, menschlich kuratierter Negativ-Pool (schadensfreie Gegenbeispiele,
+    /// Registry-Feld <c>negative_images</c>). Leer bei Alt-Registrys — Verhalten unveraendert.
+    /// Pfade sind beim Lesen bereits vollqualifiziert.
+    /// </summary>
+    public IReadOnlyList<TrainingExportNegativeImage> NegativeImages { get; init; } = [];
 }
 
 /// <summary>
@@ -139,7 +154,15 @@ public sealed record TrainingExportPlanRequest(
     bool EvaluationProtectionComplete,
     IReadOnlySet<string> ProtectedImageHashes,
     IReadOnlySet<string> ProtectedHoldingKeys,
-    DateTimeOffset GeneratedUtc);
+    DateTimeOffset GeneratedUtc)
+{
+    /// <summary>
+    /// Verifizierte Negativ-/Hintergrundbilder aus dem Exportregister (additive Erweiterung;
+    /// leer bei bestehenden Aufrufen). Bereits gegen den Live-Bestand gehasht und auf
+    /// Eval-/Abnahme-Kontamination geprueft.
+    /// </summary>
+    public IReadOnlyList<TrainingExportNegativeImage> NegativeImages { get; init; } = [];
+}
 
 public sealed record TrainingExportPlannedLabel(
     int ClassId,
@@ -147,12 +170,38 @@ public sealed record TrainingExportPlannedLabel(
     TrainingExportBoundingBox BoundingBox,
     IReadOnlyList<TrainingExportSourceRef> Sources);
 
+/// <summary>Fester Kenn-Schluessel fuer kuratierte Negativbilder (kein realer Haltungsbezug).</summary>
+public static class TrainingExportNegativePool
+{
+    /// <summary>HoldingKey, den alle Negativ-/Hintergrundbilder im Plan tragen.</summary>
+    public const string HoldingKey = "negative_pool";
+}
+
+/// <summary>
+/// Menschlich kuratiertes Negativ-/Hintergrundbild (schadensfrei). Wird wie
+/// <c>approved_sample_ids</c> im Exportregister freigegeben; optional mit Split-Hinweis —
+/// ohne Hinweis entscheidet der Planer deterministisch ueber den Bild-Hash.
+/// </summary>
+public sealed record TrainingExportNegativeImage(
+    string Path,
+    string Sha256,
+    TrainingExportTarget? SplitHint);
+
 public sealed record TrainingExportPlannedImage(
     string ImageSha256,
     string HoldingKey,
     TrainingExportTarget Target,
     string TargetFileName,
-    IReadOnlyList<TrainingExportPlannedLabel> Labels);
+    IReadOnlyList<TrainingExportPlannedLabel> Labels)
+{
+    /// <summary>
+    /// True fuer Negativ-/Hintergrundbilder (schadensfreie Gegenbeispiele mit bewusst
+    /// leerer Labeldatei). Additiv: bei Positivem (false) wird das Feld NICHT
+    /// serialisiert — bestehende Manifest-Bytes und die goldene Fixture bleiben identisch.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsNegative { get; init; }
+}
 
 public sealed record TrainingExportExclusion(
     TrainingExportSourceRef Source,

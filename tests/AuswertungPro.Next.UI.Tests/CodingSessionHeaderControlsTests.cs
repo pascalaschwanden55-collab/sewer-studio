@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -42,7 +43,7 @@ public sealed class CodingSessionHeaderControlsTests
 
     private static MethodInfo? FindApplyCalibrationMethod()
         => typeof(CodingDnCalibrationPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingSessionHeaderControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingSessionHeaderControls")
             ?.GetMethod(
                 "ApplyCalibration",
                 BindingFlags.Public | BindingFlags.Static,
@@ -52,7 +53,7 @@ public sealed class CodingSessionHeaderControlsTests
 
     private static MethodInfo? FindSetRangeTextMethod()
         => typeof(CodingDnCalibrationPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingSessionHeaderControls")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingSessionHeaderControls")
             ?.GetMethod(
                 "SetRangeText",
                 BindingFlags.Public | BindingFlags.Static,

@@ -8,6 +8,21 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class ImportTransactionRecoveryServiceTests
 {
+    private sealed class UnclearableJournal(ImportTransactionMarker marker)
+        : IImportTransactionJournal
+    {
+        public void Begin(string projectRoot, ImportTransactionMarker newMarker)
+        {
+        }
+
+        public ImportTransactionMarker? TryRead(string projectRoot) => marker;
+
+        public void Clear(string projectRoot)
+        {
+            // Simuliert einen Marker, der wegen eines Datei-/Rechtefehlers liegen bleibt.
+        }
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; } =
@@ -87,8 +102,26 @@ public sealed class ImportTransactionRecoveryServiceTests
 
         var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
 
-        Assert.Equal(ImportRecoveryOutcome.RolledBack, result.Outcome);
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
         Assert.True(File.Exists(published));   // bleibt wegen SHA-Abweichung
+        Assert.NotNull(journal.TryRead(dir.Path));
+        Assert.Contains("unvollstaendig", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Rollback_sperrt_wenn_am_erwarteten_Dateipfad_ein_Ordner_liegt()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-ziel-ist-ordner");
+        File.Delete(published);
+        Directory.CreateDirectory(published);
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(Directory.Exists(published));
+        Assert.NotNull(journal.TryRead(dir.Path));
     }
 
     [Fact]
@@ -103,6 +136,22 @@ public sealed class ImportTransactionRecoveryServiceTests
     }
 
     [Fact]
+    public void Beschaedigter_marker_sperrt_recovery_und_bleibt_zur_pruefung_erhalten()
+    {
+        using var dir = new TempDir();
+        var markerPath = Path.Combine(dir.Path, FileImportTransactionJournal.MarkerFileName);
+        File.WriteAllText(markerPath, "{ kaputt");
+        var service = new ImportTransactionRecoveryService(new FileImportTransactionJournal());
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.Contains("nicht sicher gelesen", result.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(markerPath));
+        Assert.Equal("{ kaputt", File.ReadAllText(markerPath));
+    }
+
+    [Fact]
     public void Zweiter_lauf_nach_rollback_ist_none_idempotent()
     {
         using var dir = new TempDir();
@@ -113,5 +162,148 @@ public sealed class ImportTransactionRecoveryServiceTests
         var second = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
 
         Assert.Equal(ImportRecoveryOutcome.None, second.Outcome);
+    }
+
+    // Schreibt einen Marker mit frei waehlbaren Zielen (simuliert manipulierte Marker).
+    private static FileImportTransactionJournal ArrangeMarker(
+        string root, string txId, params PublishedFileInfo[] targets)
+    {
+        var journal = new FileImportTransactionJournal();
+        journal.Begin(root, new ImportTransactionMarker(
+            TxId: txId,
+            StartedUtc: new DateTime(2026, 7, 25, 9, 0, 0, DateTimeKind.Utc),
+            Label: "PDF",
+            StagingRoot: Path.Combine(root, ".import-staging"),
+            PublishedTargets: targets,
+            RestorePointPath: null));
+        return journal;
+    }
+
+    [Fact]
+    public void Rollback_loescht_relativen_markereintrag_ausserhalb_des_projekts_nicht()
+    {
+        using var projectDir = new TempDir();
+        using var outsideDir = new TempDir();
+        var outsideFile = Path.Combine(outsideDir.Path, "fremd.txt");
+        File.WriteAllText(outsideFile, "fremde-datei");
+
+        // Manipulierter Marker: relativer Ausbruch "../...", Hash stimmt trotzdem.
+        var escapeRelative = $"../{Path.GetFileName(outsideDir.Path)}/fremd.txt";
+        var journal = ArrangeMarker(projectDir.Path, "tx-esc",
+            new PublishedFileInfo(escapeRelative, Sha256Hex(outsideFile)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(outsideFile));   // trotz passendem Hash NICHT geloescht
+        Assert.Contains("nicht angefasst", result.Message);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Rollback_loescht_absoluten_markereintrag_ausserhalb_des_projekts_nicht()
+    {
+        using var projectDir = new TempDir();
+        using var outsideDir = new TempDir();
+        var outsideFile = Path.Combine(outsideDir.Path, "fremd.txt");
+        File.WriteAllText(outsideFile, "fremde-datei");
+
+        // Manipulierter Marker: absoluter Pfad (Path.Combine laesst ihn unveraendert durch).
+        var journal = ArrangeMarker(projectDir.Path, "tx-abs",
+            new PublishedFileInfo(outsideFile, Sha256Hex(outsideFile)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(outsideFile));
+        Assert.Contains("nicht angefasst", result.Message);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Rollback_nimmt_gueltige_ziele_mit_und_sperrt_nur_die_ausbrueche()
+    {
+        using var projectDir = new TempDir();
+        using var outsideDir = new TempDir();
+        var outsideFile = Path.Combine(outsideDir.Path, "fremd.txt");
+        File.WriteAllText(outsideFile, "fremde-datei");
+
+        var legitRelative = "Bilder/neu.jpg";
+        var legitFull = Path.Combine(projectDir.Path, legitRelative.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(legitFull)!);
+        File.WriteAllText(legitFull, "importierter-inhalt");
+
+        var journal = ArrangeMarker(projectDir.Path, "tx-mix",
+            new PublishedFileInfo(legitRelative, Sha256Hex(legitFull)),
+            new PublishedFileInfo($"../{Path.GetFileName(outsideDir.Path)}/fremd.txt", Sha256Hex(outsideFile)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(File.Exists(legitFull));    // gueltiges Ziel normal zurueckgerollt
+        Assert.True(File.Exists(outsideFile));   // Ausbruch gesperrt
+        Assert.Contains("1 Datei(en)", result.Message);
+        Assert.Contains("nicht angefasst", result.Message);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Aufraeumfehler_sperrt_recovery_und_marker_bleibt_fuer_naechsten_lauf()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-cleanup", "rest.stage");
+        var service = new ImportTransactionRecoveryService(
+            journal,
+            (_, _) => "Arbeitsordner konnte testweise nicht entfernt werden.");
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: "tx-cleanup");
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(published));
+        Assert.NotNull(journal.TryRead(dir.Path));
+        Assert.Contains("nicht entfernt", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Arbeitsordnerpfad_als_Datei_sperrt_Recovery_und_behaelt_Marker()
+    {
+        using var dir = new TempDir();
+        var stagingPath = Path.Combine(dir.Path, ".import-staging");
+        File.WriteAllText(stagingPath, "kein Ordner");
+        var journal = ArrangeMarker(dir.Path, "tx-staging-ist-datei");
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(stagingPath));
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    [Fact]
+    public void Nicht_loeschbarer_marker_wird_nicht_als_erfolgreiche_recovery_gemeldet()
+    {
+        using var dir = new TempDir();
+        var marker = new ImportTransactionMarker(
+            TxId: "tx-marker-bleibt",
+            StartedUtc: new DateTime(2026, 7, 26, 9, 0, 0, DateTimeKind.Utc),
+            Label: "PDF",
+            StagingRoot: Path.Combine(dir.Path, ".import-staging"),
+            PublishedTargets: [],
+            RestorePointPath: null);
+        var service = new ImportTransactionRecoveryService(
+            new UnclearableJournal(marker),
+            (_, _) => null);
+
+        var result = service.RecoverIfNeeded(
+            dir.Path,
+            committedImportTxId: marker.TxId);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.Contains("Marker", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht entfernt", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

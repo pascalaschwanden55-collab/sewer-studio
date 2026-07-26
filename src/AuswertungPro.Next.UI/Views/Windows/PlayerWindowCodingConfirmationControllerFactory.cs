@@ -1,7 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -32,12 +32,18 @@ internal static class PlayerWindowCodingConfirmationControllerFactory
             new CodingConfirmationDecisionControllerActions(
                 ResolveCodingSessionService: () => dependencies.SessionRuntimeOwner.Service,
                 ResolveCodingEvents: () => dependencies.SessionHost.EventCollection,
-                PersistTrainingSample: (codingEvent, operation) =>
-                    dependencies.TrainingPersistence
-                        .PersistSingleEventAsync(codingEvent)
-                        .SafeFireAndForget(operation),
+                PersistTrainingSample: (codingEvent, _) =>
+                    dependencies.TrainingPersistence.PersistSingleEventAsync(codingEvent),
                 RefreshCodingEvents: dependencies.RefreshEvents,
                 HideConfirmationPanel: dependencies.ConfirmationPanel.Hide,
+                ShowPersistenceError: error =>
+                {
+                    dependencies.StatusController.SetCodingAiState(
+                        "Goldspeichern fehlgeschlagen",
+                        PlayerStatusColors.Error,
+                        error);
+                    dependencies.ConfirmationPanel.ShowPersistenceError(error);
+                },
                 SelectEvent: dependencies.EventsList.SelectEvent,
                 IsLiveAiEnabled: () => PlayerToggleButtonControls.IsChecked(dependencies.LiveAiToggle),
                 ResolveModelName: () => dependencies.AiRuntimeOwner.Controller.ModelName,
@@ -58,7 +64,8 @@ internal static class PlayerWindowCodingConfirmationControllerFactory
                     dependencies.StatusController.SetCodingAiState(status, color, detail),
                 Accept: decision.Accept,
                 Edit: decision.Edit,
-                Reject: decision.Reject));
+                Reject: decision.Reject,
+                RetrySave: decision.RetrySave));
     }
 
     private static void Validate(PlayerWindowCodingConfirmationControllerDependencies dependencies)

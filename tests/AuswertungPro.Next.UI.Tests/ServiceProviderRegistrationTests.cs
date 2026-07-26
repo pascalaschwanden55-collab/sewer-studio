@@ -1,7 +1,9 @@
 using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Projects;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -56,13 +58,16 @@ public sealed class ServiceProviderRegistrationTests
         // Entscheidung. Die Meldung nennt den Grund, statt nur eine nackte Zahl-Abweichung
         // zu zeigen (frueherer Kritikpunkt: nichtssagend).
         Assert.True(
-            registrations.Count == 127,
-            $"Erwartet 127 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 130,
+            $"Erwartet 130 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
             services.ProjectOverviewCatalog,
             registrations[typeof(IProjectOverviewCatalog)]);
+        Assert.Same(
+            services.KnowledgeRealtimeMirror,
+            registrations[typeof(IKnowledgeRealtimeMirrorService)]);
         Assert.Same(
             services.StoredImportFiles,
             registrations[typeof(IStoredImportFileService)]);
@@ -78,6 +83,12 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.TrainingDataInventory,
             registrations[typeof(ITrainingDataInventoryService)]);
+        Assert.Same(
+            services.PersonalGoldAlbum,
+            registrations[typeof(IPersonalGoldAlbumService)]);
+        Assert.Same(
+            services.PersonalGoldInbox,
+            registrations[typeof(IPersonalGoldInboxService)]);
         Assert.Same(
             services.TrainingExportRegistry,
             registrations[typeof(ITrainingExportRegistryStore)]);

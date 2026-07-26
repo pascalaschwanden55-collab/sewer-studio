@@ -25,6 +25,9 @@ public sealed partial class BuilderPageViewModel
             return;
 
         RefreshData();
+        if (!EnsureCostsReadyForExport())
+            return;
+
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
@@ -62,6 +65,9 @@ public sealed partial class BuilderPageViewModel
     private async Task PrintSingleKostenblattAsync()
     {
         if (IsPdfExportInProgress)
+            return;
+
+        if (!EnsureCostsReadyForExport())
             return;
 
         var row = SelectedRow;
@@ -361,6 +367,9 @@ public sealed partial class BuilderPageViewModel
     private LvPrep? PrepareLvPositions()
     {
         RefreshData();
+        if (!EnsureCostsReadyForExport())
+            return null;
+
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
@@ -380,7 +389,8 @@ public sealed partial class BuilderPageViewModel
             defaultNo: true);
 
         var projectPath = _settings.LastProjectPath ?? "";
-        var catalog = _catalogStore.LoadMerged(projectPath);
+        if (!TryLoadCatalogForExport(out var catalog))
+            return null;
         var catalogDict = BuildCatalogMap(catalog);
 
         // Schacht-Matrix-Kosten (NPK Kap. 700) mit ins projektweite LV nehmen. Fehlerhafte Datei
@@ -452,6 +462,9 @@ public sealed partial class BuilderPageViewModel
             return;
 
         RefreshData();
+        if (!EnsureCostsReadyForExport())
+            return;
+
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
@@ -478,7 +491,8 @@ public sealed partial class BuilderPageViewModel
         var excludedPauschaleTotal = pauschaleHoldings.Sum(h => h.Total);
 
         var projectPath = _settings.LastProjectPath ?? "";
-        var catalog = _catalogStore.LoadMerged(projectPath);
+        if (!TryLoadCatalogForExport(out var catalog))
+            return;
         // Schacht-Kosten (NPK Kap. 700) auch in die NPK-Offerte aufnehmen.
         var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
         if (schachtLoadError is not null)

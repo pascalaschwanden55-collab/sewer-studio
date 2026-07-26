@@ -9,6 +9,7 @@
         Foreground="{DynamicResource TextBrush}">
     <Window.Resources>
         <local:FileToImageConverter x:Key="FileToImage"/>
+        <local:PersonalGoldMainCodeToTextConverter x:Key="PersonalGoldMainCodeToText"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
@@ -40,8 +41,20 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Button Content="Fotos laden…" Style="{StaticResource ToolbarButton}"
                             Click="LoadPhotos_Click"/>
+                    <Button Content="Gold-Eingang öffnen" Style="{StaticResource ToolbarButton}"
+                            Click="OpenGoldInbox_Click" Margin="6,0,0,0"
+                            ToolTip="Öffnet die Hauptcode-Ordner für neue, noch nicht gelabelte Bilder."/>
+                    <Button Content="Eingang laden" Style="{StaticResource ToolbarButton}"
+                            Click="LoadGoldInbox_Click" Margin="6,0,0,0"
+                            ToolTip="Lädt alle Bilder aus dem Gold-Eingang in die Trainingsvorschau."/>
                     <Button Content="Warteschlange laden" Style="{StaticResource ToolbarButton}"
                             Click="LoadReviewQueue_Click" Margin="6,0,0,0"/>
+                    <Button Content="Unvollständige Goldframes" Style="{StaticResource ToolbarButton}"
+                            Click="LoadIncompleteGoldQueue_Click" Margin="6,0,0,0"
+                            ToolTip="Lädt persönlich bestätigte Goldframes, denen Box oder Segmentierung fehlt."/>
+                    <Button Content="Goldalbum" Style="{StaticResource ToolbarButton}"
+                            Click="OpenGoldAlbum_Click" Margin="6,0,0,0"
+                            ToolTip="Zeigt alle persönlich bestätigten Beispiele nach Hauptcode."/>
                     <Button Content="KI starten" Style="{StaticResource ToolbarButton}"
                             Command="{Binding StartAiCommand}" Margin="6,0,0,0"
                             ToolTip="Lokale Vision-KI starten oder erneut pruefen."/>
@@ -75,7 +88,7 @@
                     Padding="6" Margin="0,0,8,0">
                 <Grid>
                     <Image x:Name="FrameImage" Stretch="Uniform"
-                           Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}}"/>
+                           Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}, ConverterParameter=Original}"/>
                     <!-- Overlay: Box-Zeichnen + Maskenkontur (Code-behind, reine Geometrie) -->
                     <Canvas x:Name="OverlayCanvas" Background="Transparent"
                             MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
@@ -91,15 +104,110 @@
             <!-- Codier-Panel -->
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
+                    <!-- Persönlicher Goldstand -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="12,10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Goldstandard je Hauptcode"
+                                           FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Content="Aktualisieren"
+                                        Command="{Binding RefreshGoldProgressCommand}"
+                                        Style="{StaticResource ToolbarButton}"/>
+                            </Grid>
+                            <TextBlock Text="{Binding GoldProgressSummary}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <TextBlock Text="Nur persönlich bestätigte Handlabels mit Box und Segmentierung zählen."
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding GoldProgressItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,3">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                                                           Text="{Binding MainCode, Converter={StaticResource PersonalGoldMainCodeToText}}"
+                                                           FontWeight="Bold" TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                                           Text="{Binding UniqueGoldFrames, StringFormat={}{0} / 30 vollständige Frames}"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                                           Text="{Binding NeededForMinimum, StringFormat={}{0} fehlen}"
+                                                           Foreground="{DynamicResource MutedBrush}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Reiner Modelltest: automatische Treffer werden nie als Gold gespeichert. -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="12,10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Modelltest am Foto" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding PreviewModelOptions}"
+                                      SelectedItem="{Binding SelectedPreviewModel}"
+                                      DisplayMemberPath="DisplayName"
+                                      Margin="0,0,0,6"/>
+                            <Button Content="Foto mit gewähltem Modell prüfen"
+                                    Command="{Binding RunPreviewDetectionCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding PreviewDetectionSummary}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <ItemsControl ItemsSource="{Binding PreviewDetections}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
+                                                       Foreground="DeepSkyBlue"
+                                                       FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Confidence, StringFormat={}{0:P0}}"
+                                                       Foreground="{DynamicResource MutedBrush}"
+                                                       Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Blaue Boxen sind nur Vorschau. Als Gold wird nur die rote, von Hand gezogene Box gespeichert."
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- KI-Vorschlag -->
                     <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="KI-Vorschlag" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <Button Content="Bauart bestimmen (Anschluss)"
-                                    Command="{Binding BestimmeBauartCommand}"
-                                    ToolTip="Fragt die KI nach der Anschluss-Bauart und ergaenzt die Vorschlaege. Nur bei Anschluessen sinnvoll."
+                            <Button Content="Foto allgemein mit KI prüfen"
+                                    Command="{Binding FotoMitKiPruefenCommand}"
+                                    ToolTip="Prüft das ganze Foto und zeigt allgemeine VSA-Vorschläge. Deine Handdaten werden nicht verändert oder gespeichert."
                                     HorizontalAlignment="Left" Margin="0,0,0,6"/>
                             <Border Background="{DynamicResource WarningBrush}" CornerRadius="4" Padding="8,4"
                                     Margin="0,0,0,6"
@@ -138,6 +246,9 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <TextBlock Text="Vorschlag anklicken zum Übernehmen. Gespeichert wird erst mit deiner persönlichen Bestätigung."
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
 

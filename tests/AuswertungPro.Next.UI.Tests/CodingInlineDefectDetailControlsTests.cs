@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -163,7 +164,7 @@ public sealed class CodingInlineDefectDetailControlsTests
 
     private static Type? ControlsType
         => typeof(CodingDefectStatusDisplayPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingInlineDefectDetailControls");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingInlineDefectDetailControls");
 
     private static MethodInfo? FindApplyMethod()
         => ControlsType?.GetMethod(

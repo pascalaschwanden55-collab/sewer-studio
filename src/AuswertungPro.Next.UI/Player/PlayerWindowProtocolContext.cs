@@ -57,6 +57,8 @@ public sealed class PlayerWindowProtocolContext
 
     public ITrainingSampleStore TrainingSamples => _dependencies.TrainingSamples;
 
+    public ITrainingFrameStore TrainingFrames => _dependencies.TrainingFrames;
+
     public IDialogService Dialogs => _dependencies.Dialogs;
 
     public ICodeUsageTracker CodeUsage => _dependencies.CodeUsage;

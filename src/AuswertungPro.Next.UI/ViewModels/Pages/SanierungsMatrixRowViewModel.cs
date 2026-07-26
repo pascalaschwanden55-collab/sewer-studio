@@ -1,5 +1,5 @@
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
@@ -117,11 +117,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         }
         else
         {
-            Menge = decimal.TryParse(
-                Laenge?.Trim().Replace(',', '.'),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var length)
+            Menge = FachzahlParser.TryParseMeasurement(Laenge, out var length)
                 ? length
                 : 0m;
         }

@@ -312,19 +312,58 @@
                 </Grid>
             </DockPanel>
         </Border>
-    <Grid>
+    <Grid ClipToBounds="True">
         <Grid.ColumnDefinitions>
             <ColumnDefinition>
                 <ColumnDefinition.Style>
                     <Style TargetType="ColumnDefinition">
                         <Setter Property="Width" Value="220"/>
                         <Style.Triggers>
+                            <!-- Sidebar-Breite sanft animieren statt hart umschalten -->
                             <DataTrigger Binding="{Binding DataContext.IsFocusMode, ElementName=RootWindow}" Value="True">
-                                <Setter Property="Width" Value="0"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ctrl:GridLengthAnimation Storyboard.TargetProperty="Width"
+                                                                      To="0"
+                                                                      Duration="{StaticResource AnimDurationSlow}"
+                                                                      EasingFunction="{StaticResource AnimEaseInOut}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ctrl:GridLengthAnimation Storyboard.TargetProperty="Width"
+                                                                      To="220"
+                                                                      Duration="{StaticResource AnimDurationSlow}"
+                                                                      EasingFunction="{StaticResource AnimEaseInOut}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
                             </DataTrigger>
                             <!-- Sidebar ausblenden wenn nicht im Workspace -->
                             <DataTrigger Binding="{Binding DataContext.IsMenuVisible, ElementName=RootWindow}" Value="False">
-                                <Setter Property="Width" Value="0"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ctrl:GridLengthAnimation Storyboard.TargetProperty="Width"
+                                                                      To="0"
+                                                                      Duration="{StaticResource AnimDurationSlow}"
+                                                                      EasingFunction="{StaticResource AnimEaseInOut}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ctrl:GridLengthAnimation Storyboard.TargetProperty="Width"
+                                                                      To="220"
+                                                                      Duration="{StaticResource AnimDurationSlow}"
+                                                                      EasingFunction="{StaticResource AnimEaseInOut}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -333,23 +372,14 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
+        <!-- Sidebar: feste Breite + links verankert, damit die Spalten-Animation (GridLengthAnimation
+             an der ColumnDefinition oben) als sauberes Weggleiten wirkt statt als Zusammenquetschen.
+             Sichtbarkeit ergibt sich allein aus der Spaltenbreite — ein zusaetzlicher
+             Visibility-Trigger wuerde die Animation sofort verdecken. ClipToBounds am
+             umgebenden Grid schneidet den Ueberstand waehrend der Animation ab. -->
+        <Border Grid.Column="0" Width="220" HorizontalAlignment="Left"
+                Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
                 BorderBrush="{DynamicResource BorderBrush}">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Visibility" Value="Visible"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding DataContext.IsFocusMode, ElementName=RootWindow}" Value="True">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                        <!-- Sidebar ausblenden wenn nicht im Workspace -->
-                        <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Margin="16,16,16,8">
                     <StackPanel Orientation="Horizontal">
@@ -357,7 +387,7 @@
                                 Background="{DynamicResource AccentBrush}"/>
                         <TextBlock Text="SEWER STUDIO" FontSize="15" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"
-                                   FontFamily="Consolas, Segoe UI"/>
+                                   FontFamily="{DynamicResource FontMono}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
@@ -505,6 +535,12 @@
                                                     <ScaleTransform x:Name="AccentStripScale" ScaleY="0.4"/>
                                                 </Border.RenderTransform>
                                             </Border>
+                                            <!-- Hover-Overlay hinter dem Inhalt: Opacity wird
+                                                 per MouseEnter/MouseLeave animiert (weicher Uebergang). -->
+                                            <Border x:Name="HoverOverlay" Grid.Column="1"
+                                                    Background="{DynamicResource HoverBrush}"
+                                                    CornerRadius="6" Margin="4,0,0,0"
+                                                    Opacity="0"/>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
                                                     CornerRadius="6" Padding="2"
                                                     Margin="4,0,0,0">
@@ -547,9 +583,27 @@
                                                     </BeginStoryboard>
                                                 </Trigger.ExitActions>
                                             </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
-                                            </Trigger>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="1"
+                                                                         Duration="{StaticResource AnimDurationFast}"
+                                                                         EasingFunction="{StaticResource AnimEaseOut}"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="0"
+                                                                         Duration="{StaticResource AnimDurationNormal}"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Setter.Value>

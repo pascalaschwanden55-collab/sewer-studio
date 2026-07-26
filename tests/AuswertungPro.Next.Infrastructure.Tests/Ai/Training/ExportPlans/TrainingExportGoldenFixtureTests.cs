@@ -72,9 +72,9 @@ public sealed class TrainingExportGoldenFixtureTests : IDisposable
         }).ToArray();
 
         var classMap = new TrainingYoloClassMapSnapshot(
-            YoloDetectClassMapV2.Version,
+            YoloDetectClassMapV3.Version,
             fixture.VsaManifestHash,
-            YoloDetectClassMapV2.Classes,
+            YoloDetectClassMapV3.Classes,
             []);
         var registry = new TrainingExportRegistrySnapshot(
             TrainingExportRegistrySnapshot.CurrentSchemaVersion,

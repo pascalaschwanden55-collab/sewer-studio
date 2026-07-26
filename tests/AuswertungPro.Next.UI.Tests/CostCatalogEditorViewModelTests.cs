@@ -66,6 +66,30 @@ public sealed class CostCatalogEditorViewModelTests
         });
     }
 
+    [Fact]
+    public void Constructor_reports_corrupt_default_catalog_instead_of_showing_empty_silently()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = Path.Combine(temp.Path, "projekt.json");
+        var configPath = Path.Combine(temp.Path, "Config", "cost_catalog.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        File.WriteAllText(configPath, "{ kaputter Default");
+
+        StaTestRunner.Run(() =>
+        {
+            var dialogs = new DialogFake();
+            var window = CreateTestWindow();
+
+            _ = new CostCatalogEditorViewModel(
+                projectPath,
+                window,
+                new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")),
+                dialogs);
+
+            Assert.Contains("cost_catalog.json", dialogs.LastError, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
     private static Window CreateTestWindow()
         => new()
         {

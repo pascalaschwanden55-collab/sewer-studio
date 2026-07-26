@@ -131,7 +131,23 @@ internal sealed class SchachtProtocolSingleImportController
             return;
         }
 
-        _ = _actions.SaveProject();
+        var saved = ProjectSaveAttempt.Try(
+            _actions.SaveProject,
+            "Importiertes Schachtprotokoll speichern",
+            out var saveError);
+        if (!saved)
+        {
+            var notSaved =
+                $"Protokoll uebernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
+                $"({result.Schaeden.Count} Beobachtungen).";
+            _actions.SetLastResult(notSaved);
+            _dialogs.Warn(
+                notSaved + "\n\nBitte das Projekt erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError),
+                DialogTitle);
+            return;
+        }
+
         _actions.SetLastResult(
             $"Protokoll importiert: Schacht {result.Schachtnummer} " +
             $"({result.Schaeden.Count} Beobachtungen).");

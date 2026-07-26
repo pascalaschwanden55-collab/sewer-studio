@@ -58,11 +58,20 @@ internal sealed class ImportProtocolRegenerationController
             _service.RegenerateAll(project, projectFolder, _codeCatalog));
         actions.SetProgress(string.Empty);
 
-        _ = actions.SaveProject();
+        var saved = ProjectSaveAttempt.Try(
+            actions.SaveProject,
+            "Neu erzeugte Protokolle speichern",
+            out var saveError);
 
         var summary = $"Eigene Protokolle neu generiert ({count} Haltungen):"
             + $"\n  {result.Generated} Protokolle erzeugt (_E, in die Verteilung)"
             + $"\n  {result.Errors} Fehler";
+        if (!saved)
+        {
+            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError);
+        }
+
         actions.AppendSummary("\n" + summary);
         if (result.Messages.Count > 0)
         {
@@ -70,8 +79,11 @@ internal sealed class ImportProtocolRegenerationController
                 "\n\nProtokoll-Details:\n" + string.Join("\n", result.Messages.Take(50)));
         }
 
-        actions.SetStatus("Eigene Protokolle neu generiert");
-        _dialogs.Info(
+        actions.SetStatus(saved
+            ? "Eigene Protokolle neu generiert"
+            : "Eigene Protokolle uebernommen, aber nicht gespeichert");
+        Action<string, string> showResult = saved ? _dialogs.Info : _dialogs.Warn;
+        showResult(
             summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind ueber "
             + "das Feld „Eigenes Protokoll“ (PDF_Eigen) verlinkt.",
             "Protokoll neu generieren");

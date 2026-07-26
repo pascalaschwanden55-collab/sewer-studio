@@ -35,17 +35,6 @@ public sealed partial class MultiModelAnalysisService
     private readonly string _ffprobePath;
     private readonly VideoProbeService _videoProbe;
 
-    public double FrameStepSeconds { get; set; } = 3.0;
-    public int DedupWindowFrames { get; set; } = 3;
-    // Aeusserer Per-Frame-Qwen-Cap = Standard 120s (#9). Hinweis: der effektiv wirksame Cap
-    // ist ohnehin der innere FrameTimeout in EnhancedVisionAnalysisService. Ein separates,
-    // groesseres 32B-Budget (z.B. 300s) erfordert, jenen inneren Cap konfigurierbar zu machen
-    // (bewusster Folgeschritt). Frueher 300s — faktisch tot, da innen auf 60s gedeckelt.
-    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(120);
-
-    /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
-    public bool UseClsPrefilter { get; set; } = true;
-
     /// <summary>
     /// Klassifikator als fuehrende Code-Quelle (Paket 2): ResolveFromClassifier +
     /// Temporal-Voting setzen den VSA-Code, Qwen liefert nur noch OSD/Beschreibung
@@ -197,6 +186,31 @@ public sealed partial class MultiModelAnalysisService
         _logger.LogInformation("Multi-Model Pipeline runId={RunId}, Stufen-Trace: {TracePath}",
             runId, PipelineTraceWriteGuard.ResolvePath(_pipelineTraceWriter, runId));
 
+        // Qualifikations-Check einmalig zu Beginn. Ein ausdruecklich unqualifizierter
+        // Detektor wird nicht mehr als Filter oder Beweis verwendet. DINO/SAM laufen
+        // fuer jeden verwertbaren Frame weiter; der ganze Lauf bleibt review-pflichtig.
+        var detectorQualification = await ReadDetectorQualificationAsync(ct).ConfigureAwait(false);
+        bool? effectiveDetectorQualified = detectorQualification?.Qualified;
+        var detectorQualified = effectiveDetectorQualified == true;
+        var detectorQualificationReason = detectorQualified
+            ? null
+            : detectorQualification is null
+                ? "Qualifikationsstatus fehlt oder konnte nicht gelesen werden"
+                : string.IsNullOrWhiteSpace(detectorQualification.Reason)
+                    ? "Detektor wurde nicht freigegeben"
+                    : detectorQualification.Reason;
+        if (!detectorQualified)
+        {
+            _logger.LogWarning(
+                "Multi-Model Pipeline runId={RunId}: aktiver Detektor NICHT qualifiziert ({Reason}) — Ergebnis nicht qualitaetsgesichert.",
+                runId,
+                detectorQualificationReason);
+            progress?.Report(new VideoAnalysisProgress(
+                0,
+                totalFrames,
+                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen ohne YOLO-Filter; manuelle Pruefung erforderlich."));
+        }
+
         // frameSource-Seam: im Test injizierbar; sonst echter VideoFrameStream.
         var frames = _frameSource is not null
             ? _frameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct)
@@ -243,10 +257,14 @@ public sealed partial class MultiModelAnalysisService
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
             // Jeden 3. Frame immer analysieren (Bestandsaufnahme-Sweep)
             bool isPeriodicSweep = isAfterOsd && (frameIndex % 3 == 0);
-            bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
+            bool detectorQualificationBypass = !detectorQualified;
+            bool telemetryBypass =
+                detectorQualificationBypass || isBcdZone || isBceZone || isPeriodicSweep;
 
             trace.Meter = estimatedMeter;
             trace.YoloBypass = telemetryBypass;
+            if (detectorQualificationBypass)
+                MarkTraceDegraded(trace, "detector_unqualified");
 
             // ── YOLO-cls Vorfilter + Frame-Quality-Gate (CPU-billig) ──
             // Gilt bewusst AUCH fuer Sweep-/BCD-/BCE-Frames: vorher konnten schwarze
@@ -363,10 +381,11 @@ public sealed partial class MultiModelAnalysisService
                 yoloResult = new YoloResponse(
                     IsRelevant: true,
                     Detections: Array.Empty<YoloDetectionDto>(),
-                    FrameClass: "sweep",
+                    FrameClass: detectorQualificationBypass ? "detector_unqualified" : "sweep",
                     InferenceTimeMs: 0);
                 yoloMs = 0;
-                var zone = isBcdZone ? "BCD-Zone (Rohranfang)"
+                var zone = detectorQualificationBypass ? "YOLO gesperrt – DINO/SAM-Pruefung"
+                    : isBcdZone ? "BCD-Zone (Rohranfang)"
                     : isBceZone ? "BCE-Zone (Rohrende)"
                     : "Bestandsaufnahme-Sweep";
                 _logger.LogDebug("Frame {Frame}: Telemetrie-Bypass ({Zone}) @ {Meter:F2}m",
@@ -389,10 +408,36 @@ public sealed partial class MultiModelAnalysisService
                     yoloResult = await _client.DetectYoloAsync(
                         new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
 
+                    // Die Qualifikation kann sich zwischen /health und Inferenz aendern.
+                    // Auch die konkrete Antwort muss deshalb ein ausdrueckliches true tragen.
+                    if (yoloResult.DetectorQualified != true)
+                    {
+                        effectiveDetectorQualified = yoloResult.DetectorQualified;
+                        detectorQualified = false;
+                        detectorQualificationReason =
+                            yoloResult.DetectorQualificationReason
+                            ?? "YOLO-Antwort ohne positive Detektorqualifikation";
+                        detectorQualificationBypass = true;
+                        trace.YoloBypass = true;
+                        MarkTraceDegraded(trace, "detector_unqualified_response");
+                        yoloResult = yoloResult with
+                        {
+                            IsRelevant = true,
+                            Detections = Array.Empty<YoloDetectionDto>(),
+                            FrameClass = "detector_unqualified",
+                        };
+                        progress?.Report(new VideoAnalysisProgress(
+                            frameIndex,
+                            totalFrames,
+                            "WARNUNG: YOLO-Freigabe waehrend des Laufs fehlt – DINO/SAM laufen weiter."));
+                    }
+
                     // COCO-Fallback sichtbar machen: laeuft der Sidecar nicht mit den
                     // eigenen Gewichten (yolo26m), ist die Schadenserkennung faktisch
                     // blind — das darf nie wieder still passieren (realer Vorfall 2026-06-09).
-                    if (!yoloFallbackWarned && yoloResult.ModelName is { Length: > 0 } yoloModelName
+                    if (!detectorQualificationBypass
+                        && !yoloFallbackWarned
+                        && yoloResult.ModelName is { Length: > 0 } yoloModelName
                         && !yoloModelName.Contains(_expectedYoloModel, StringComparison.OrdinalIgnoreCase))
                     {
                         yoloFallbackWarned = true;
@@ -404,7 +449,9 @@ public sealed partial class MultiModelAnalysisService
                     }
 
                     // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
-                    if (yoloResult.Detections.Count > 0 && _config.YoloClassConfidence.Count > 0)
+                    if (!detectorQualificationBypass
+                        && yoloResult.Detections.Count > 0
+                        && _config.YoloClassConfidence.Count > 0)
                     {
                         var filtered = yoloResult.Detections
                             .Where(d =>
@@ -721,7 +768,9 @@ public sealed partial class MultiModelAnalysisService
             // U7: echte YOLO-Confidence des staerksten Treffers statt binaer 1.0. Auf
             // Telemetrie-Bypass-Frames ("sweep") lief YOLO nie -> null (kein Signal), damit das
             // QualityGate keine erfundene Volltreffer-Confidence bewertet.
-            double? yoloConfEvidence = yoloResult.Detections.Count > 0
+            double? yoloConfEvidence = detectorQualificationBypass
+                ? null
+                : yoloResult.Detections.Count > 0
                 ? yoloResult.Detections.Max(d => d.Confidence)
                 : string.Equals(yoloResult.FrameClass, "sweep", StringComparison.Ordinal)
                     ? null
@@ -917,50 +966,32 @@ public sealed partial class MultiModelAnalysisService
             .WriteSummaryAsync(_pipelineTraceWriter, runId, summary)
             .ConfigureAwait(false);
 
+        var degradedReasons = new List<string>();
+        if (sidecarOutage)
+            degradedReasons.Add($"Sidecar antwortete ab Frame {frameIndex} nicht mehr – Analyse unvollstaendig.");
+        if (!detectorQualified)
+        {
+            degradedReasons.Add(
+                "YOLO-Detektor nicht qualifiziert"
+                + (string.IsNullOrWhiteSpace(detectorQualificationReason)
+                    ? string.Empty
+                    : $": {detectorQualificationReason}")
+                + ". DINO/SAM wurden ohne YOLO-Filter ausgefuehrt; manuelle Pruefung erforderlich.");
+        }
+
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary,
-            Degraded: sidecarOutage,
-            DegradedReason: sidecarOutage
-                ? $"Sidecar antwortete ab Frame {frameIndex} nicht mehr — Analyse unvollstaendig."
-                : null);
-    }
-
-    /// <summary>Modell-Tag fuer den Trace: Name + Kurz-Hash aus der Sidecar-Response.</summary>
-    private static string? ClassifierModelTag(YoloClassifyResponse? cls)
-    {
-        if (cls is null || string.IsNullOrEmpty(cls.ModelName))
-            return null;
-        var sha = cls.ModelSha256;
-        return string.IsNullOrEmpty(sha) ? cls.ModelName : $"{cls.ModelName}@{sha[..Math.Min(12, sha.Length)]}";
+            Degraded: degradedReasons.Count > 0,
+            DegradedReason: degradedReasons.Count > 0
+                ? string.Join(" ", degradedReasons)
+                : null,
+            DetectorQualified: effectiveDetectorQualified,
+            DetectorQualificationReason: detectorQualificationReason);
     }
 
     // ── Conversion helper ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Convert a MultiModelFrameResult to EnhancedFrameAnalysis
-    /// (for compatibility with the existing pipeline).
-    /// </summary>
-    public static EnhancedFrameAnalysis ToEnhancedAnalysis(
-        MultiModelFrameResult result,
-        int pipeDiameterMm)
-        => MultiModelFrameAnalysisMapper.Map(result, pipeDiameterMm);
-
     // ── Private helpers ────────────────────────────────────────────────
 
     /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
-    private Task WriteTraceAsync(PipelineFrameTrace trace)
-        => PipelineTraceWriteGuard.WriteAsync(
-            _pipelineTraceWriter,
-            PipelineTraceEntryMapper.Map(trace));
-
-    public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
-
-    private double EstimateMeter(double t, double duration, ref double lastMeter)
-    {
-        // Lineare Schaetzung basierend auf geschaetzter Haltungslaenge (wird durch Qwen OSD korrigiert)
-        var estimated = t / Math.Max(duration, 1.0) * EstimatedReachLengthM;
-        lastMeter = Math.Max(lastMeter, estimated);
-        return Math.Round(lastMeter, 2);
-    }
-
 }

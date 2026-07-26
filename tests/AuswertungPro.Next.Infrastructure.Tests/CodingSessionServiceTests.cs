@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -119,6 +120,55 @@ public sealed class CodingSessionServiceTests
             if (Directory.Exists(root))
                 Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task IndexConfirmedSampleAsync_startet_KB_nur_fuer_persoenliches_Gold_mit_Bild()
+    {
+        var configCalls = 0;
+        var service = new CodingSessionService(
+            () =>
+            {
+                configCalls++;
+                return null;
+            });
+        var personalGold = new TrainingSample
+        {
+            SampleId = "gold-1",
+            Code = "BAB",
+            Beschreibung = "BAB - Riss",
+            FramePath = @"C:\KI_BRAIN\gold_frames\gold_hash.png",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            MatchLevel = MatchLevelNames.ReviewApproved,
+            HumanConfirmed = true,
+            Corrected = false,
+            ConfirmedByUser = "Besitzer",
+            ConfirmedAtUtc = new DateTime(2026, 7, 23, 8, 0, 0, DateTimeKind.Utc)
+        };
+        var unownedApproval = new TrainingSample
+        {
+            Status = TrainingSampleStatus.Approved,
+            HumanConfirmed = true,
+            FramePath = "frame.png"
+        };
+        var missingFrame = new TrainingSample
+        {
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            MatchLevel = MatchLevelNames.ReviewApproved,
+            HumanConfirmed = true,
+            Corrected = false,
+            ConfirmedByUser = "Besitzer",
+            ConfirmedAtUtc = DateTime.UtcNow
+        };
+
+        await service.IndexConfirmedSampleAsync(unownedApproval);
+        await service.IndexConfirmedSampleAsync(missingFrame);
+        Assert.Equal(0, configCalls);
+
+        await service.IndexConfirmedSampleAsync(personalGold);
+        Assert.Equal(1, configCalls);
     }
 
     private static ProtocolEntry Entry(string code, ProtocolEntrySource source)

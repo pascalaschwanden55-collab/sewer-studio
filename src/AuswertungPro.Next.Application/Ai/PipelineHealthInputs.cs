@@ -12,4 +12,6 @@ public sealed record PipelineHealthInputs(
     bool QwenAvailable,
     bool YoloLoaded = false,
     bool DinoLoaded = false,
-    bool SamLoaded = false);
+    bool SamLoaded = false,
+    bool? DetectorQualified = null,
+    string? DetectorQualificationReason = null);

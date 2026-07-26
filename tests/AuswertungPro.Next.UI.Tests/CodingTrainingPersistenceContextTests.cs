@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -17,7 +18,7 @@ public sealed class CodingTrainingPersistenceContextTests
             persistSingleAsync: (currentEvent, request) =>
             {
                 received.Add((currentEvent, request));
-                return Task.CompletedTask;
+                return Task.FromResult(CodingTrainingSamplePersistenceResult.Ok);
             },
             request: () => currentRequest);
 
@@ -80,16 +81,36 @@ public sealed class CodingTrainingPersistenceContextTests
         Assert.Same(request, receivedRequest);
     }
 
+    [Fact]
+    public async Task PersistEvents_meldet_einen_asynchronen_Speicherfehler_sichtbar()
+    {
+        var reported = new TaskCompletionSource<string>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = Context(
+            persistEventsWithResultAsync: (_, _) => Task.FromResult(
+                CodingTrainingSamplePersistenceResult.Failed("Datentraeger voll")),
+            reportBatchFailure: message => reported.TrySetResult(message));
+
+        context.PersistEvents([new CodingEvent()]);
+
+        var message = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Contains("Datentraeger voll", message, StringComparison.Ordinal);
+    }
+
     private static CodingTrainingPersistenceContext Context(
-        Func<CodingEvent, CodingTrainingSamplePersistenceRequest, Task>? persistSingleAsync = null,
+        Func<CodingEvent, CodingTrainingSamplePersistenceRequest, Task<CodingTrainingSamplePersistenceResult>>? persistSingleAsync = null,
         Func<IReadOnlyList<CodingEvent>, CodingTrainingSamplePersistenceRequest, Task>? persistEventsAsync = null,
         Func<bool>? hasCodingContext = null,
-        Func<CodingTrainingSamplePersistenceRequest>? request = null)
+        Func<CodingTrainingSamplePersistenceRequest>? request = null,
+        Func<IReadOnlyList<CodingEvent>, CodingTrainingSamplePersistenceRequest, Task<CodingTrainingSamplePersistenceResult>>? persistEventsWithResultAsync = null,
+        Action<string>? reportBatchFailure = null)
         => new(
-            persistSingleAsync ?? ((_, _) => Task.CompletedTask),
+            persistSingleAsync ?? ((_, _) => Task.FromResult(CodingTrainingSamplePersistenceResult.Ok)),
             persistEventsAsync ?? ((_, _) => Task.CompletedTask),
             hasCodingContext ?? (() => true),
-            request ?? (() => Request("default")));
+            request ?? (() => Request("default")),
+            persistEventsWithResultAsync,
+            reportBatchFailure);
 
     private static CodingTrainingSamplePersistenceRequest Request(string caseId)
         => new(

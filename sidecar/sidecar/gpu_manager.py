@@ -22,6 +22,7 @@ VRAM_BUDGET_GB = float(os.environ.get("SEWER_SIDECAR_VRAM_BUDGET_GB", "29"))
 class ModelSlot(str, enum.Enum):
     NONE = "none"
     YOLO = "yolo"
+    YOLO_TEST = "yolo_test"
     DINO = "dino"
     SAM = "sam"
 
@@ -49,6 +50,7 @@ class GpuModelManager:
         self._slots: dict[ModelSlot, SlotState] = {}
         self._locks: dict[ModelSlot, threading.Lock] = {
             ModelSlot.YOLO: threading.Lock(),
+            ModelSlot.YOLO_TEST: threading.Lock(),
             ModelSlot.DINO: threading.Lock(),
             ModelSlot.SAM: threading.Lock(),
         }

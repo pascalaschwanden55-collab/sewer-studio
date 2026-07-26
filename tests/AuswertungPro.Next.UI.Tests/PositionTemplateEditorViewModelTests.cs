@@ -100,6 +100,34 @@ public sealed class PositionTemplateEditorViewModelTests
         Assert.Equal(corruptContent, File.ReadAllText(positionPath));
     }
 
+    [Fact]
+    public void Constructor_reports_corrupt_default_position_templates()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = Path.Combine(temp.Path, "projekt.json");
+        var defaultPath = Path.Combine(temp.Path, "Config", "position_templates.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(defaultPath)!);
+        File.WriteAllText(defaultPath, "{ kaputter Default");
+
+        StaTestRunner.Run(() =>
+        {
+            var dialogs = new DialogFake();
+            var window = CreateTestWindow();
+
+            _ = new PositionTemplateEditorViewModel(
+                projectPath,
+                window,
+                new PositionTemplateStore(Path.Combine(temp.Path, "position_templates.user.json")),
+                new CostCatalogStore(Path.Combine(temp.Path, "cost_catalog.user.json")),
+                dialogs);
+
+            Assert.Contains(
+                "position_templates.json",
+                dialogs.LastError,
+                StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
     private static PositionTemplateCatalog CreatePositionCatalog()
         => new()
         {

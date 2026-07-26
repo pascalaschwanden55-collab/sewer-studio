@@ -79,7 +79,12 @@ public sealed record VideoAnalysisResult(
     // Ausfall mitten im Video). Das Ergebnis ist unvollstaendig und darf NICHT wie ein sauberes
     // Rohr behandelt werden; die UI weist es aus. IsSuccess bleibt true (Ergebnis ist nutzbar).
     bool Degraded = false,
-    string? DegradedReason = null)
+    string? DegradedReason = null,
+    // Qualifikations-Kennzeichnung des aktiven Detektors. Nur true ist freigegeben.
+    // false oder null (Status fehlt/unlesbar) bedeutet: YOLO wird umgangen, DINO/SAM
+    // laufen weiter und das Ergebnis bleibt review-pflichtig.
+    bool? DetectorQualified = null,
+    string? DetectorQualificationReason = null)
 {
     public bool IsSuccess => Error is null;
 
@@ -182,7 +187,10 @@ public sealed record FrameTiming(
     long SamMs,
     long QwenMs,
     long TotalMs,
-    bool Skipped);
+    bool Skipped,
+    // F4: Frame ist an der KI-Analyse gescheitert (Timeout/Modellfehler). Zaehlt in
+    // TelemetrySummary.FailedFrames; Skipped bleibt true (kein verwertbares Ergebnis).
+    bool Failed = false);
 
 public sealed record TelemetrySummary(
     int TotalFrames,
@@ -193,7 +201,9 @@ public sealed record TelemetrySummary(
     PhaseStat Sam,
     PhaseStat Qwen,
     PhaseStat Total,
-    long WallClockMs);
+    long WallClockMs,
+    // F4: An der KI-Analyse gescheiterte Frames (Timeout/Modellfehler).
+    int FailedFrames = 0);
 
 public sealed record PhaseStat(
     double MeanMs,

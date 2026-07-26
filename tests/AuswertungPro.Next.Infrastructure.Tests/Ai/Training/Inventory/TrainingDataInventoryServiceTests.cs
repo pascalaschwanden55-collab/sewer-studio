@@ -425,7 +425,7 @@ public sealed class TrainingDataInventoryServiceTests : TrainingInventoryTestBas
     }
 
     [Fact]
-    public async Task PlanInputBuilder_verwendet_Teacher_Disposition_aus_genau_diesem_Snapshot()
+    public async Task PlanInputBuilder_verwendet_Teacher_Daten_nicht_als_Trainingsquelle()
     {
         var imageRoot = Directory.CreateDirectory(Path.Combine(Root, "teacher_images")).FullName;
         var imagePath = Path.Combine(imageRoot, "frame.png");
@@ -476,13 +476,7 @@ public sealed class TrainingDataInventoryServiceTests : TrainingInventoryTestBas
             classMap,
             DateTimeOffset.UtcNow);
 
-        Assert.Equal(2, input.Candidates.Count);
-        Assert.Equal(
-            TrainingInventoryDisposition.TrainValCandidate,
-            input.Candidates.Single(item => item.Source.SourceId == "clean").InventoryDisposition);
-        Assert.Equal(
-            TrainingInventoryDisposition.QuarantineOrigin,
-            input.Candidates.Single(item => item.Source.SourceId == "origin").InventoryDisposition);
+        Assert.Empty(input.Candidates);
         Assert.Equal(2, input.SourceSnapshotHashes.Count);
     }
 }

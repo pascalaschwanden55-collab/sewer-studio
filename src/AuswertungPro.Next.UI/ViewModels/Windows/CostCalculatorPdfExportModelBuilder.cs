@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
@@ -83,7 +84,7 @@ public static class CostCalculatorPdfExportModelBuilder
             if (dn is null && int.TryParse(measure.DnText?.Trim(), out var parsedDn))
                 dn = parsedDn;
 
-            if (lengthM is null && decimal.TryParse(measure.LengthText?.Trim(), out var parsedLength))
+            if (lengthM is null && FachzahlParser.TryParseMeasurement(measure.LengthText, out var parsedLength))
                 lengthM = parsedLength;
 
             if (dn.HasValue && lengthM.HasValue)

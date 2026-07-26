@@ -1,5 +1,6 @@
 using System.Reflection;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -112,7 +113,7 @@ public sealed class CodingVideoNavigationControllerTests
 
     private static MethodInfo? FindResolveDisplayMeterMethod()
         => typeof(CodingVideoSyncPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingVideoNavigationController")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingVideoNavigationController")
             ?.GetMethod(
                 "ResolveDisplayMeter",
                 BindingFlags.Public | BindingFlags.Static,
@@ -122,7 +123,7 @@ public sealed class CodingVideoNavigationControllerTests
 
     private static MethodInfo? FindSyncVideoToCodingMeterMethod()
         => typeof(CodingVideoSyncPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingVideoNavigationController")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingVideoNavigationController")
             ?.GetMethod(
                 "SyncVideoToCodingMeter",
                 BindingFlags.Public | BindingFlags.Static,
@@ -132,7 +133,7 @@ public sealed class CodingVideoNavigationControllerTests
 
     private static MethodInfo? FindPrepareMoveByCommandMethod()
         => typeof(CodingVideoSyncPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingVideoNavigationController")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingVideoNavigationController")
             ?.GetMethods(BindingFlags.Public | BindingFlags.Static)
             .SingleOrDefault(method => method.Name == "PrepareMoveByCommand" && method.IsGenericMethodDefinition);
 }

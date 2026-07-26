@@ -2,7 +2,10 @@ using System.Collections.ObjectModel;
 
 namespace AuswertungPro.Next.Application.Ai.Training.ClassMaps;
 
-/// <summary>Verbindliche Klassen-IDs fuer YOLO-Detect v2.</summary>
+/// <summary>
+/// Verbindliche Klassen-IDs fuer YOLO-Detect v2. Eingefroren: neue Klassen nur
+/// als neue Kartenversion, nie in-place (siehe v3 mit BCC_bogen).
+/// </summary>
 public static class YoloDetectClassMapV2
 {
     public const int Version = 2;

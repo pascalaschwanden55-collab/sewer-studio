@@ -83,14 +83,32 @@ public sealed class DirectoryMirror
         Action<string, long>? onFileDone = null,
         CancellationToken ct = default)
     {
-        if (!Directory.Exists(source.SourceRoot))
+        BackupTargetPathGuard.EnsureRootIsSafe(backupRoot);
+        try
+        {
+            BackupSourcePathGuard.EnsureDirectoryRootIsSafe(source.SourceRoot);
+        }
+        catch (Exception ex) when (!source.Required
+                                   && ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Optionale Quellen (z. B. Logs/Telemetry bei einer frischen Installation)
+            // duerfen fehlen. Ein alter Sicherungsstand bleibt trotzdem erhalten.
+            PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
+            return;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException
+                                   or DirectoryNotFoundException
+                                   or InvalidDataException
+                                   or UnauthorizedAccessException
+                                   or IOException)
         {
             // Fehlende Quelle (getrenntes Laufwerk, umbenannter Ordner, falsch gesetzter Root)
             // nicht still uebergehen: sonst raeumt RemoveOrphans den bisherigen Spiegelinhalt
             // dieser Quelle in die Versions-Rotation, waehrend der Lauf Erfolg meldet. Warnung
             // protokollieren UND den vorhandenen Spiegelbestand als "erwartet" markieren.
             stats.Errors.Add(
-                $"{source.SourceRoot}: Quellordner nicht gefunden - uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
+                $"{source.SourceRoot}: Quellordner nicht sicher lesbar ({ex.Message}) - " +
+                "uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
             PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
             return;
         }
@@ -143,8 +161,22 @@ public sealed class DirectoryMirror
         Action<string, long>? onFileDone = null,
         CancellationToken ct = default)
     {
-        if (!File.Exists(file.SourcePath))
+        BackupTargetPathGuard.EnsureRootIsSafe(backupRoot);
+        try
+        {
+            BackupSourcePathGuard.EnsureFileIsSafe(file.SourcePath);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
             return;
+        }
+        catch (Exception ex) when (ex is InvalidDataException
+                                   or UnauthorizedAccessException
+                                   or IOException)
+        {
+            stats.Errors.Add($"{file.SourcePath}: Quelldatei nicht sicher lesbar ({ex.Message})");
+            return;
+        }
 
         expectedTargets.Add(file.TargetRelativePath);
         await CopyIfChangedAsync(file.SourcePath, backupRoot, file.TargetRelativePath,
@@ -160,6 +192,7 @@ public sealed class DirectoryMirror
     /// </summary>
     public void RemoveOrphans(string backupRoot, ISet<string> expectedTargets, MirrorStats stats)
     {
+        BackupTargetPathGuard.EnsureRootIsSafe(backupRoot);
         foreach (var file in EnumerateFiles(backupRoot, BackupVersionRetention.IsVersionsDir, stats))
         {
             var rel = Path.GetRelativePath(backupRoot, file);
@@ -167,9 +200,18 @@ public sealed class DirectoryMirror
                 continue;
             if (!BackupTargetGuard.IsInsideBackupRoot(backupRoot, file))
                 continue;
+            // Die String-Pruefung erkennt keine Junctions: eine Verknuepfung in der
+            // Pfadkette unterhalb des Roots wuerde das Loeschziel aus dem Spiegel
+            // heraus auf fremde Dateien umlenken — solche Pfade nie anfassen.
+            if (ReparsePointGuard.HasReparsePointBelow(backupRoot, file))
+            {
+                stats.Errors.Add($"{file}: Verknuepfung im Zielpfad - Entfernen uebersprungen");
+                continue;
+            }
 
             try
             {
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, file);
                 if (_versionsStandName is null)
                     File.Delete(file);
                 else
@@ -189,8 +231,12 @@ public sealed class DirectoryMirror
     private void MoveToVersions(string backupRoot, string targetRel, string file)
     {
         var versionsRel = BackupVersionRetention.BuildVersionsRelativePath(_versionsStandName!, targetRel);
-        var versionsPath = Path.Combine(backupRoot, versionsRel);
-        Directory.CreateDirectory(Path.GetDirectoryName(versionsPath)!);
+        var versionsPath = BackupTargetPathGuard.ResolveRelativePath(backupRoot, versionsRel);
+        var versionsDirectory = Path.GetDirectoryName(versionsPath)!;
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, file);
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, versionsDirectory);
+        Directory.CreateDirectory(versionsDirectory);
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, versionsPath);
         File.Move(file, versionsPath, overwrite: true);
     }
 
@@ -202,9 +248,10 @@ public sealed class DirectoryMirror
         Action<string, long>? onFileDone,
         CancellationToken ct)
     {
-        var targetFile = Path.Combine(backupRoot, targetRel);
         try
         {
+            BackupSourcePathGuard.EnsureFileIsSafe(sourceFile);
+            var targetFile = BackupTargetPathGuard.ResolveRelativePath(backupRoot, targetRel);
             var sourceInfo = new FileInfo(sourceFile);
             var targetInfo = new FileInfo(targetFile);
 
@@ -226,16 +273,24 @@ public sealed class DirectoryMirror
                 return;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+            var targetDirectory = Path.GetDirectoryName(targetFile)!;
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetDirectory);
+            Directory.CreateDirectory(targetDirectory);
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetDirectory);
 
             // Erst in Temp-Datei schreiben, dann atomar umbenennen — halbfertige
             // Kopien (Absturz/Abbruch) werden so nie faelschlich als aktuell gewertet.
             var tempFile = targetFile + TempSuffix;
             try
             {
-                var copiedInfo = await CopyNormalFileVerifiedAsync(sourceFile, tempFile, ct)
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
+                var copiedInfo = await CopyNormalFileVerifiedAsync(
+                        sourceFile, backupRoot, tempFile, ct)
                     .ConfigureAwait(false);
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetFile);
                 TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetFile);
                 File.Move(tempFile, targetFile, overwrite: true);
 
                 stats.Verified++;
@@ -245,7 +300,7 @@ public sealed class DirectoryMirror
             }
             catch
             {
-                TryDeleteTemp(tempFile);
+                TryDeleteTemp(backupRoot, tempFile);
                 throw;
             }
         }
@@ -257,6 +312,7 @@ public sealed class DirectoryMirror
                                    or UnauthorizedAccessException
                                    or PathTooLongException
                                    or NotSupportedException
+                                   or InvalidDataException
                                    or Microsoft.Data.Sqlite.SqliteException)
         {
             stats.Errors.Add($"{sourceFile}: {ex.Message}");
@@ -300,14 +356,19 @@ public sealed class DirectoryMirror
         Action<string, long>? onFileDone,
         CancellationToken ct)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+        var targetDirectory = Path.GetDirectoryName(targetFile)!;
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetDirectory);
+        Directory.CreateDirectory(targetDirectory);
+        BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetDirectory);
         var tempFile = targetFile + TempSuffix;
         try
         {
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             await _sqliteSnapshots.CreateVerifiedSnapshotAsync(
                     sourceFile, tempFile, _afterTemporaryFileWritten, ct)
                 .ConfigureAwait(false);
 
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             var effectiveWriteTime = GetEffectiveSqliteWriteTimeUtc(sourceFile, sourceInfo.LastWriteTimeUtc);
             File.SetLastWriteTimeUtc(tempFile, effectiveWriteTime);
             var tempInfo = new FileInfo(tempFile);
@@ -323,13 +384,16 @@ public sealed class DirectoryMirror
                         tempFile, targetFile, tempInfo.Length, tempInfo.LastWriteTimeUtc, ct)
                     .ConfigureAwait(false))
             {
-                TryDeleteTemp(tempFile);
+                TryDeleteTemp(backupRoot, tempFile);
                 stats.Unchanged++;
                 onFileDone?.Invoke(sourceFile, sourceInfo.Length);
                 return;
             }
 
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetFile);
             TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetFile);
             File.Move(tempFile, targetFile, overwrite: true);
             stats.Copied++;
             stats.BytesCopied += tempLength;
@@ -337,13 +401,14 @@ public sealed class DirectoryMirror
         }
         catch
         {
-            TryDeleteTemp(tempFile);
+            TryDeleteTemp(backupRoot, tempFile);
             throw;
         }
     }
 
     private async Task<VerifiedCopyInfo> CopyNormalFileVerifiedAsync(
         string sourceFile,
+        string backupRoot,
         string tempFile,
         CancellationToken ct)
     {
@@ -353,6 +418,7 @@ public sealed class DirectoryMirror
             var before = new FileInfo(sourceFile);
             byte[] sourceHash;
 
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             using (var src = new FileStream(
                        sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
@@ -375,6 +441,7 @@ public sealed class DirectoryMirror
             }
 
             _afterTemporaryFileWritten?.Invoke(tempFile);
+            BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             var tempHash = await HashFileAsync(tempFile, FileShare.Read, ct).ConfigureAwait(false);
             if (!sourceHash.AsSpan().SequenceEqual(tempHash))
                 throw new IOException("Vollstaendige Inhaltspruefung nach dem Kopieren fehlgeschlagen.");
@@ -382,11 +449,12 @@ public sealed class DirectoryMirror
             var after = new FileInfo(sourceFile);
             if (before.Length == after.Length && before.LastWriteTimeUtc == after.LastWriteTimeUtc)
             {
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
                 File.SetLastWriteTimeUtc(tempFile, after.LastWriteTimeUtc);
                 return new VerifiedCopyInfo(after.Length);
             }
 
-            TryDeleteTemp(tempFile);
+            TryDeleteTemp(backupRoot, tempFile);
             if (attempt == MaxStableCopyAttempts)
             {
                 throw new IOException(
@@ -472,7 +540,11 @@ public sealed class DirectoryMirror
         {
             MoveToVersions(backupRoot, targetRel, targetFile);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException
+                                   or UnauthorizedAccessException
+                                   or PathTooLongException
+                                   or NotSupportedException
+                                   or InvalidDataException)
         {
             stats.Errors.Add($"{targetFile}: Vorversion nicht nach {BackupVersionRetention.VersionsFolderName} verschoben ({ex.Message})");
         }
@@ -481,6 +553,8 @@ public sealed class DirectoryMirror
     /// <summary>
     /// Rekursive Datei-Enumeration, die ausgeschlossene Ordner gar nicht erst betritt
     /// (Muster SafeFileEnumeration: Stack-basiert, Fehler pro Ordner abgefangen).
+    /// Verknuepfungen/Junctions (Dateien wie Ordner) werden uebersprungen und als
+    /// Fehlerzeile gemeldet — dahinter liegt Inhalt ausserhalb des eigenen Baums.
     /// Das Praedikat bekommt den Ordnerpfad relativ zum Root.
     /// </summary>
     private static IEnumerable<string> EnumerateFiles(
@@ -488,9 +562,6 @@ public sealed class DirectoryMirror
         Func<string, bool>? isDirExcluded,
         MirrorStats stats)
     {
-        if (!Directory.Exists(root))
-            yield break;
-
         var stack = new Stack<string>();
         stack.Push(root);
 
@@ -502,6 +573,7 @@ public sealed class DirectoryMirror
             string[] children;
             try
             {
+                BackupSourcePathGuard.EnsureDirectoryRootIsSafe(current);
                 files = Directory.EnumerateFiles(current)
                     .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
@@ -509,17 +581,43 @@ public sealed class DirectoryMirror
                     .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException
+                                       or UnauthorizedAccessException
+                                       or InvalidDataException)
             {
                 stats.Errors.Add($"{current}: Ordner nicht lesbar ({ex.Message})");
                 continue;
             }
 
             foreach (var file in files)
+            {
+                // Datei-Verknuepfung nicht folgen: das Kopieren wuerde sonst still
+                // Inhalt ausserhalb der Quelle lesen.
+                try
+                {
+                    BackupSourcePathGuard.EnsureFileIsSafe(file);
+                }
+                catch (Exception ex) when (ex is IOException
+                                           or UnauthorizedAccessException
+                                           or InvalidDataException)
+                {
+                    stats.Errors.Add($"{file}: Quelldatei nicht sicher lesbar ({ex.Message})");
+                    continue;
+                }
+
                 yield return file;
+            }
 
             for (var i = children.Length - 1; i >= 0; i--)
             {
+                // Junction/Symlink nicht betreten: dahinter liegt fremder Inhalt,
+                // der weder gespiegelt noch als verwaist geloescht werden darf.
+                if (ReparsePointGuard.IsReparsePoint(children[i]))
+                {
+                    stats.Errors.Add($"{children[i]}: Verknuepfung/Junction uebersprungen");
+                    continue;
+                }
+
                 var relDir = Path.GetRelativePath(root, children[i]);
                 if (isDirExcluded is null || !isDirExcluded(relDir))
                     stack.Push(children[i]);
@@ -548,10 +646,20 @@ public sealed class DirectoryMirror
             if (!BackupTargetGuard.IsInsideBackupRoot(backupRoot, dir))
                 continue;
 
+            // Die AllDirectories-Enumeration folgt Junctions: ueber eine solche Kette
+            // duerfen keine fremden (leeren) Ordner geloescht werden. Die Junction
+            // selbst wurde beim Datei-Durchlauf bereits gemeldet, daher hier still.
+            if (ReparsePointGuard.HasReparsePointBelow(backupRoot, dir))
+                continue;
+
             try
             {
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, dir);
                 if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                {
+                    BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, dir);
                     Directory.Delete(dir);
+                }
             }
             catch (IOException)
             {
@@ -564,12 +672,15 @@ public sealed class DirectoryMirror
         }
     }
 
-    private static void TryDeleteTemp(string tempFile)
+    private static void TryDeleteTemp(string backupRoot, string tempFile)
     {
         try
         {
             if (File.Exists(tempFile))
+            {
+                BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
                 File.Delete(tempFile);
+            }
         }
         catch
         {

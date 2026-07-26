@@ -48,6 +48,21 @@ def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Pa
         yolo_wrapper._resolve_yolo_model_path()
 
 
+def test_active_detector_artifact_reports_loaded_sha256(tmp_path: Path, monkeypatch):
+    weights = tmp_path / "detector.engine"
+    weights.write_bytes(b"engine")
+    monkeypatch.setattr(yolo_wrapper, "_resolved_model_path", str(weights))
+    monkeypatch.setattr(yolo_wrapper, "_resolved_model_sha256", "a" * 64)
+    monkeypatch.setattr(yolo_wrapper, "_using_custom_weights", True)
+
+    artifact = yolo_wrapper.get_active_detector_artifact()
+
+    assert artifact["loaded"] is True
+    assert artifact["file_name"] == weights.name
+    assert artifact["backend"] == "tensorrt"
+    assert artifact["sha256"] == "a" * 64
+
+
 def test_resolve_cls_model_uses_configured_weights(tmp_path: Path, restore_yolo_settings):
     weights = tmp_path / "manual1286.pt"
     weights.write_bytes(b"weights")

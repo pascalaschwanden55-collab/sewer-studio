@@ -1,7 +1,9 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.VsaPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
+    <!-- Drei feste Karten (Bewertung, Ergebnis, Hinweis): duerfen gestaffelt einschweben. -->
+    <Grid ui:EntranceFx.Stagger="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

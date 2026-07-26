@@ -10,7 +10,10 @@ public enum ImportRecoveryOutcome
     RolledBack,
 
     /// <summary>Import war committed: nur Arbeitsordner + Marker aufgeraeumt.</summary>
-    CompletedCleanup
+    CompletedCleanup,
+
+    /// <summary>Marker vorhanden, aber nicht sicher lesbar: Projekt-Oeffnen muss stoppen.</summary>
+    Blocked
 }
 
 /// <summary>Ergebnis samt optionaler, dem Nutzer anzeigbarer Meldung.</summary>

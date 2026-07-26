@@ -21,6 +21,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     private readonly Window _window;
     private readonly IDialogService _dialogs;
     private readonly PositionTemplateCatalog _originalCatalog;
+    private string? _positionLoadError;
+    private readonly string? _costCatalogLoadError;
 
     [ObservableProperty] private PositionGroup? _selectedGroup;
     [ObservableProperty] private PositionTemplate? _selectedPosition;
@@ -72,8 +74,9 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
 
         // Load data
-        _originalCatalog = _store.LoadMerged(projectPath);
-        var costCatalog = _catalogStore.LoadMerged(projectPath);
+        _originalCatalog = _store.LoadMerged(projectPath, out _positionLoadError);
+        var costCatalog = _catalogStore.LoadMerged(projectPath, out _costCatalogLoadError);
+        ReportLoadErrors();
 
         // Setup available items for ComboBox
         AvailableItems = costCatalog.Items
@@ -131,6 +134,9 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
     private void Save()
     {
+        if (!EnsureLoadedForSave())
+            return;
+
         var catalog = new PositionTemplateCatalog
         {
             Version = _originalCatalog.Version,
@@ -161,13 +167,54 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
         if (confirmed)
         {
-            var defaultCatalog = _store.Load(_projectPath);
+            var defaultCatalog = _store.Load(_projectPath, out _positionLoadError);
+            if (!string.IsNullOrWhiteSpace(_positionLoadError))
+            {
+                _dialogs.Error(
+                    "Standard konnte nicht geladen werden; die aktuelle Liste bleibt " +
+                    $"unveraendert:\n{_positionLoadError}",
+                    "Standard wiederherstellen");
+                return;
+            }
+
             Groups.Clear();
             foreach (var group in PositionTemplateCopier.DeepCopyAll(defaultCatalog.Groups))
                 Groups.Add(group);
 
             SelectedGroup = Groups.FirstOrDefault();
         }
+    }
+
+    private void ReportLoadErrors()
+    {
+        var errors = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_positionLoadError))
+            errors.Add(_positionLoadError);
+        if (!string.IsNullOrWhiteSpace(_costCatalogLoadError))
+            errors.Add(_costCatalogLoadError);
+        if (errors.Count == 0)
+            return;
+
+        _dialogs.Error(
+            "Positionsvorlagen oder Kostenkatalog konnten nicht sicher geladen werden. " +
+            "Bearbeiten und Speichern sind gesperrt:\n" +
+            string.Join("\n", errors),
+            "Positionen");
+    }
+
+    private bool EnsureLoadedForSave()
+    {
+        if (string.IsNullOrWhiteSpace(_positionLoadError)
+            && string.IsNullOrWhiteSpace(_costCatalogLoadError))
+        {
+            return true;
+        }
+
+        _dialogs.Error(
+            "Fehler beim Speichern: Der Vorgang ist gesperrt, weil Vorlagen oder " +
+            "Kostenkatalog nicht sicher geladen werden konnten.",
+            "Fehler");
+        return false;
     }
 
     private void AddGroup()

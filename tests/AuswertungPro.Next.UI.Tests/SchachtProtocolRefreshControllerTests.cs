@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Services;
@@ -187,17 +188,36 @@ public sealed class SchachtProtocolRefreshControllerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_keeps_existing_success_result_when_save_returns_false()
+    public async Task ExecuteAsync_reports_updated_but_not_saved_when_save_returns_false()
     {
         var harness = new Harness { SaveResult = false };
 
         var outcome = await harness.Controller.ExecuteAsync(CreateRecord());
 
-        Assert.Equal(SchachtProtocolRefreshOutcome.Updated, outcome);
+        Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
         Assert.Contains("save|dirty=True|modified=True", harness.Calls);
-        Assert.Equal(
-            "last-result|Schacht S-1 aktualisiert (1 Beobachtungen).",
-            harness.Calls[^1]);
+        Assert.Contains(
+            "last-result|Schacht S-1 uebernommen, aber nicht gespeichert (1 Beobachtungen).",
+            harness.Calls);
+        Assert.Contains(
+            harness.Calls,
+            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_reports_updated_but_not_saved_when_save_throws()
+    {
+        var harness = new Harness
+        {
+            SaveException = new IOException("Datentraeger voll")
+        };
+
+        var outcome = await harness.Controller.ExecuteAsync(CreateRecord());
+
+        Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
+        Assert.Contains(
+            harness.Calls,
+            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -316,6 +336,8 @@ public sealed class SchachtProtocolRefreshControllerTests
                 {
                     Calls.Add(
                         $"save|dirty={Project.Dirty}|modified={Project.ModifiedAtUtc != DateTime.UnixEpoch}");
+                    if (SaveException is not null)
+                        throw SaveException;
                     return SaveResult;
                 },
                 SetLastResult: value => Calls.Add($"last-result|{value}"));
@@ -333,6 +355,7 @@ public sealed class SchachtProtocolRefreshControllerTests
         internal IReadOnlyList<bool> ProjectChecks { get; init; } = new[] { true, true };
         internal Project Project { get; } = new() { ModifiedAtUtc = DateTime.UnixEpoch };
         internal bool SaveResult { get; init; } = true;
+        internal Exception? SaveException { get; init; }
         internal Exception? ApplyException { get; init; }
         internal SchachtRecord? AppliedRecord { get; private set; }
         internal SchachtProtocolParseResult? AppliedResult { get; private set; }

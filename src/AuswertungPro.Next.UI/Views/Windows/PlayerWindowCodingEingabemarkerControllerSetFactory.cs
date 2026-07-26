@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
@@ -173,7 +174,9 @@ internal static class PlayerWindowCodingEingabemarkerControllerSetFactory
                     $"Fehler: {message}",
                     PlayerStatusColors.Error,
                     ""),
-                CancelMarker: () => interaction.Cancel()));
+                CancelMarker: () => interaction.Cancel(),
+                PersistTrainingAsync:
+                    dependencies.TrainingPersistence.PersistSingleEventAsync));
 
     private static ICodingEingabemarkerInputController CreateInput(
         PlayerWindowCodingEingabemarkerControllerSetDependencies dependencies,

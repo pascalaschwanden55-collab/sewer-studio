@@ -42,6 +42,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly IProjectCostStoreRepository _haltungCostRepo;
         private readonly IProjectCostStoreRepository _schachtCostRepo;
         private Project? _subscribedProject;
+        private string? _activeCostLoadError;
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
@@ -331,29 +332,55 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (_disposed)
                 return;
 
-            Dashboard = _shell.IsProjectReady
-                ? BuildStatsFor(_shell.Project, _settings.LastProjectPath, out _)
-                : null;
+            if (_shell.IsProjectReady)
+            {
+                Dashboard = BuildStatsFor(
+                    _shell.Project,
+                    _settings.LastProjectPath,
+                    out _activeCostLoadError);
+                return;
+            }
+
+            _activeCostLoadError = null;
+            Dashboard = null;
         }
 
-        private DashboardStatistics BuildStatsFor(Project project, string? projectPath, out bool costAvailable)
+        private DashboardStatistics BuildStatsFor(
+            Project project,
+            string? projectPath,
+            out string? costLoadError)
         {
-            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hOk);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sOk);
-            costAvailable = hOk || sOk;
+            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
+            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            costLoadError = CombineCostLoadErrors(hError, sError);
             return DashboardStatisticsBuilder.Build(project, hCosts, sCosts);
         }
 
-        private static ProjectCostStore LoadCostStore(IProjectCostStoreRepository repo, string? projectPath, out bool ok)
+        private static ProjectCostStore LoadCostStore(
+            IProjectCostStoreRepository repo,
+            string? projectPath,
+            out string? loadError)
         {
-            ok = false;
+            loadError = null;
             if (string.IsNullOrWhiteSpace(projectPath))
                 return new ProjectCostStore();
 
             var store = repo.Load(projectPath, out var error);
-            ok = error is null;
+            loadError = error;
             return error is null ? store : new ProjectCostStore();
         }
+
+        private static string? CombineCostLoadErrors(string? haltungError, string? schachtError)
+        {
+            var errors = new[] { haltungError, schachtError }
+                .Where(error => !string.IsNullOrWhiteSpace(error))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            return errors.Length == 0 ? null : string.Join(Environment.NewLine, errors);
+        }
+
+        private string? CurrentCostLoadError
+            => ShowFullDashboard ? _activeCostLoadError : SelectedPreview?.CostLoadError;
 
         private void UpdateDashboardPresentation()
         {
@@ -365,7 +392,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OnPropertyChanged(nameof(ShowPreviewMetadata));
             OnPropertyChanged(nameof(DashboardTitle));
             OnPropertyChanged(nameof(DashboardProjectName));
-            DashboardCostText = FormatDashboardCostText(ActiveDashboard);
+            DashboardCostText = CurrentCostLoadError is null
+                ? FormatDashboardCostText(ActiveDashboard)
+                : "Kostendaten nicht lesbar";
             PrintPreviewPdfCommand.NotifyCanExecuteChanged();
         }
 
@@ -373,7 +402,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.CurrentCulture);
 
         private bool CanPrintPreviewPdf()
-            => HasActiveDashboard && !IsPreviewLoading && !IsPreviewPdfExportInProgress;
+            => HasActiveDashboard
+               && CurrentCostLoadError is null
+               && !IsPreviewLoading
+               && !IsPreviewPdfExportInProgress;
 
         private async Task PrintPreviewPdfAsync()
         {
@@ -422,11 +454,21 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private ProjectPreview? BuildPrintablePreview()
         {
             if (!ShowFullDashboard)
-                return SelectedPreview;
+                return SelectedPreview?.CostLoadError is null ? SelectedPreview : null;
 
             var projectPath = _settings.LastProjectPath ?? string.Empty;
-            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out _);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out _);
+            var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
+            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            _activeCostLoadError = CombineCostLoadErrors(hError, sError);
+            if (_activeCostLoadError is not null)
+            {
+                UpdateDashboardPresentation();
+                _dialogs.Error(
+                    "Die Kostendaten sind nicht lesbar. Die PDF-Vorschau wurde nicht erstellt.",
+                    "Projektvorschau");
+                return null;
+            }
+
             return ProjectPreviewFactory.FromProject(Project, projectPath, hCosts, sCosts);
         }
 
@@ -729,10 +771,15 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             ct.ThrowIfCancellationRequested();
             if (res.Ok && res.Value is not null)
             {
-                var hCosts = LoadCostStore(_haltungCostRepo, request.Path, out _);
-                var sCosts = LoadCostStore(_schachtCostRepo, request.Path, out _);
+                var hCosts = LoadCostStore(_haltungCostRepo, request.Path, out var hError);
+                var sCosts = LoadCostStore(_schachtCostRepo, request.Path, out var sError);
                 ct.ThrowIfCancellationRequested();
-                return ProjectPreviewFactory.FromProject(res.Value, request.Path, hCosts, sCosts);
+                return ProjectPreviewFactory
+                    .FromProject(res.Value, request.Path, hCosts, sCosts)
+                    with
+                    {
+                        CostLoadError = CombineCostLoadErrors(hError, sError)
+                    };
             }
         }
         catch (OperationCanceledException)

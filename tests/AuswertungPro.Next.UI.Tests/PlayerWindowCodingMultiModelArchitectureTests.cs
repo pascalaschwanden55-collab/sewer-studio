@@ -10,7 +10,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     public void PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow()
     {
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisCommandWorkflow.cs");
 
         Assert.True(File.Exists(commandWorkflowPath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
@@ -46,8 +46,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     {
         var aiEventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs");
         var addDecisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(multiModelPath), "Multi-Model-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
@@ -100,8 +100,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     public void PlayerWindow_segmented_finding_projection_lives_in_mapper()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
-        var mapperPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingFrameMapper.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
+        var mapperPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingFrameMapper.cs");
 
         Assert.True(File.Exists(mapperPath), "SegmentedFinding-zu-LiveFrameFinding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -119,7 +119,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     public void PlayerWindow_multi_model_coverage_uses_existing_policy()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
         var decisionPath = RepoFile("src", "AuswertungPro.Next.Application", "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         var events = File.ReadAllText(eventsPath);
@@ -135,8 +135,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     public void PlayerWindow_multi_model_quality_gate_uses_policy()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelFindingEventWorkflow.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelQualityGatePolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelQualityGatePolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Multi-Model-QualityGate-Evidenz muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -155,8 +155,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
     public void PlayerWindow_multi_model_mask_render_candidates_live_in_visibility_policy()
     {
         var renderingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Rendering.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingVisibility.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelResultsRenderWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingVisibility.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelResultsRenderWorkflow.cs");
 
         var rendering = File.ReadAllText(renderingPath);
         var policy = File.ReadAllText(policyPath);
@@ -173,7 +173,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var renderingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Rendering.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSamMaskOverlayController.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelResultsRenderWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelResultsRenderWorkflow.cs");
         var stateControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingOverlayRenderStateController.cs");
 
         Assert.True(File.Exists(renderingPath), "Multi-Model-Maskenanzeige soll aus dem allgemeinen Coding.Ai-Partial heraus.");

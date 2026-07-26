@@ -233,6 +233,28 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Portabilitaets_Controller_meldet_wenn_Ergebnis_nicht_gespeichert_wurde()
+    {
+        var dialogs = new DialogFake();
+        var project = new Project();
+        project.Data.Add(new HaltungRecord());
+        var summary = string.Empty;
+        var controller = new ImportProjectPortabilityController(dialogs, new PortabilityFake());
+
+        await controller.ExecuteAsync(new ImportProjectPortabilityActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            SaveProject: () => false,
+            SetProgress: _ => { },
+            AppendSummary: value => summary += value,
+            AppendDetails: _ => { }));
+
+        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, dialogs.LastInfoMessage);
+    }
+
+    [Fact]
     public async Task Fotozuordnungs_Controller_uebernimmt_Ergebnis_und_speichert_Projekt()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Fotos" };
@@ -263,6 +285,28 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains("2 Haltungen", summary);
         Assert.Contains("Foto B", details);
         Assert.Equal("Fotos zuordnen", dialogs.LastInfoTitle);
+    }
+
+    [Fact]
+    public async Task Fotozuordnungs_Controller_meldet_wenn_Ergebnis_nicht_gespeichert_wurde()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Fotos" };
+        var project = new Project();
+        project.Data.Add(new HaltungRecord());
+        var summary = string.Empty;
+        var controller = new ImportProjectPhotoAssignmentController(dialogs, new PhotoAssignmentFake());
+
+        await controller.ExecuteAsync(new ImportProjectPhotoAssignmentActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            SaveProject: () => false,
+            SetProgress: _ => { },
+            AppendSummary: value => summary += value,
+            AppendDetails: _ => { }));
+
+        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, dialogs.LastInfoMessage);
     }
 
     [Fact]
@@ -304,6 +348,34 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Protokoll_Controller_meldet_wenn_Ergebnis_nicht_gespeichert_wurde()
+    {
+        var dialogs = new DialogFake();
+        var project = new Project();
+        project.Data.Add(new HaltungRecord());
+        var summary = string.Empty;
+        var status = string.Empty;
+        var controller = new ImportProtocolRegenerationController(
+            dialogs,
+            new ProtocolRegenerationFake(),
+            new CodeCatalogFake());
+
+        await controller.ExecuteAsync(new ImportProtocolRegenerationActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            SaveProject: () => false,
+            SetProgress: _ => { },
+            AppendSummary: value => summary += value,
+            AppendDetails: _ => { },
+            SetStatus: value => status = value));
+
+        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("nicht gespeichert", status, StringComparison.Ordinal);
+        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, dialogs.LastInfoMessage);
+    }
+
+    [Fact]
     public async Task Protokollverteilungs_Controller_speichert_und_meldet_Dateifehler_sicher()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
@@ -318,7 +390,11 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             GetProjectFolder: () => @"C:\Projekt",
             GetProject: () => project,
             CollectionLock: collectionLock,
-            SaveProject: () => saveCalls++));
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            }));
 
         Assert.Equal(1, distributor.Calls);
         Assert.Equal(@"C:\Projekt", distributor.ProjectFolder);
@@ -334,6 +410,87 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Protokollverteilungs_Controller_meldet_wenn_Ergebnis_nicht_gespeichert_wurde()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var controller = new ImportProtocolDistributionController(
+            dialogs,
+            new ProtocolDistributionFake(),
+            new CapturingLogger());
+
+        await controller.ExecuteAsync(new ImportProtocolDistributionActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => new Project(),
+            CollectionLock: new object(),
+            SaveProject: () => false));
+
+        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, dialogs.LastInfoMessage);
+    }
+
+    [Fact]
+    public async Task Postimport_Controller_melden_Speicherausnahmen_statt_sie_durchzureichen()
+    {
+        static bool ThrowSave() => throw new IOException("Datentraeger voll");
+
+        var portabilityDialogs = new DialogFake();
+        var portabilityProject = new Project();
+        portabilityProject.Data.Add(new HaltungRecord());
+        await new ImportProjectPortabilityController(portabilityDialogs, new PortabilityFake())
+            .ExecuteAsync(new ImportProjectPortabilityActions(
+                GetProjectFolder: () => @"C:\Projekt",
+                GetProject: () => portabilityProject,
+                SaveProject: ThrowSave,
+                SetProgress: _ => { },
+                AppendSummary: _ => { },
+                AppendDetails: _ => { }));
+        Assert.Contains("nicht gespeichert", portabilityDialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("kann jetzt 1:1", portabilityDialogs.LastWarnMessage, StringComparison.Ordinal);
+
+        var photoDialogs = new DialogFake { SelectedFolder = @"C:\Fotos" };
+        var photoProject = new Project();
+        photoProject.Data.Add(new HaltungRecord());
+        await new ImportProjectPhotoAssignmentController(photoDialogs, new PhotoAssignmentFake())
+            .ExecuteAsync(new ImportProjectPhotoAssignmentActions(
+                GetProjectFolder: () => @"C:\Projekt",
+                GetProject: () => photoProject,
+                SaveProject: ThrowSave,
+                SetProgress: _ => { },
+                AppendSummary: _ => { },
+                AppendDetails: _ => { }));
+        Assert.Contains("nicht gespeichert", photoDialogs.LastWarnMessage, StringComparison.Ordinal);
+
+        var regenerationDialogs = new DialogFake();
+        var regenerationProject = new Project();
+        regenerationProject.Data.Add(new HaltungRecord());
+        await new ImportProtocolRegenerationController(
+                regenerationDialogs,
+                new ProtocolRegenerationFake(),
+                new CodeCatalogFake())
+            .ExecuteAsync(new ImportProtocolRegenerationActions(
+                GetProjectFolder: () => @"C:\Projekt",
+                GetProject: () => regenerationProject,
+                SaveProject: ThrowSave,
+                SetProgress: _ => { },
+                AppendSummary: _ => { },
+                AppendDetails: _ => { },
+                SetStatus: _ => { }));
+        Assert.Contains("nicht gespeichert", regenerationDialogs.LastWarnMessage, StringComparison.Ordinal);
+
+        var distributionDialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        await new ImportProtocolDistributionController(
+                distributionDialogs,
+                new ProtocolDistributionFake(),
+                new CapturingLogger())
+            .ExecuteAsync(new ImportProtocolDistributionActions(
+                GetProjectFolder: () => @"C:\Projekt",
+                GetProject: () => new Project(),
+                CollectionLock: new object(),
+                SaveProject: ThrowSave));
+        Assert.Contains("nicht gespeichert", distributionDialogs.LastWarnMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Ein_Knopf_Import_Controller_speichert_Report_und_Ergebnis()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
@@ -346,10 +503,13 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         var summary = string.Empty;
         var details = string.Empty;
         var saveCalls = 0;
+        var replaced = new List<Project>();
 
         await controller.ExecuteAsync(new ImportOneClickProjectActions(
             GetProjectFolder: () => @"C:\Projekt",
             GetProject: () => project,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: replaced.Add,
             CollectionLock: collectionLock,
             SaveProject: () =>
             {
@@ -368,6 +528,200 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Contains("4 Haltungen", summary);
         Assert.Contains("Importmeldung", details);
         Assert.Equal("Import Kanalfernseh-Projekt", dialogs.LastInfoTitle);
+
+        // Arbeitskopie-Regel: der Importer lief NICHT auf dem Live-Projekt;
+        // uebernommen wird genau die mutierte Kopie.
+        var copy = Assert.Single(replaced);
+        Assert.Same(copy, importer.ReceivedProject);
+        Assert.NotSame(project, importer.ReceivedProject);
+        Assert.True(copy.Dirty);
+        Assert.False(project.Dirty);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_speicherfehler_wird_laut_gemeldet_statt_abgeschlossen()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan);
+        var reports = new OneClickReportWriterFake();
+        var controller = new ImportOneClickProjectController(dialogs, () => importer, reports);
+        var project = new Project();
+        var summary = string.Empty;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            DeepCopyProject: p => p,
+            ReplaceProject: _ => { },
+            CollectionLock: new object(),
+            SaveProject: () => false,   // Speichern schlaegt fehl
+            SetProgress: _ => { },
+            AppendSummary: value => summary += value,
+            AppendDetails: _ => { }));
+
+        Assert.Contains("Speichern fehlgeschlagen", summary);
+        Assert.Contains("manuell speichern", summary);
+        Assert.DoesNotContain("Import abgeschlossen", summary);
+        Assert.Contains("Speichern fehlgeschlagen", dialogs.LastErrorMessage);
+        Assert.Equal(string.Empty, dialogs.LastInfoMessage);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_speicherausnahme_wird_laut_gemeldet()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan);
+        var controller = new ImportOneClickProjectController(
+            dialogs, () => importer, new OneClickReportWriterFake());
+        var project = new Project();
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            DeepCopyProject: p => p,
+            ReplaceProject: _ => { },
+            CollectionLock: new object(),
+            SaveProject: () => throw new IOException("Datentraeger voll"),
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { }));
+
+        Assert.Contains("Speichern fehlgeschlagen", dialogs.LastErrorMessage);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_ausnahme_uebernimmt_und_speichert_nichts()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan)
+        {
+            ThrowOnImport = new InvalidOperationException("DB korrupt")
+        };
+        var controller = new ImportOneClickProjectController(
+            dialogs, () => importer, new OneClickReportWriterFake());
+        var saveCalls = 0;
+        var replaceCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => new Project(),
+            DeepCopyProject: p => p,
+            ReplaceProject: _ => replaceCalls++,
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { }));
+
+        Assert.Equal(0, replaceCalls);
+        Assert.Equal(0, saveCalls);
+        Assert.Contains("nicht uebernommen", dialogs.LastErrorMessage);
+        // Rohe Exception-Texte gehoeren nicht in den Dialog (UserError-Regelwerk).
+        Assert.DoesNotContain("DB korrupt", dialogs.LastErrorMessage);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_projektwechsel_waehrend_des_laufs_verwirft_ergebnis()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan);
+        var controller = new ImportOneClickProjectController(
+            dialogs, () => importer, new OneClickReportWriterFake());
+        var liveProject = new Project();
+        var getCalls = 0;
+        var saveCalls = 0;
+        var replaceCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => getCalls++ == 0 ? liveProject : new Project(),   // Wechsel nach Start
+            DeepCopyProject: p => p,
+            ReplaceProject: _ => replaceCalls++,
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { }));
+
+        Assert.Equal(0, replaceCalls);
+        Assert.Equal(0, saveCalls);
+        Assert.Contains("gewechselt", dialogs.LastErrorMessage);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_speicherpfadwechsel_waehrend_des_laufs_verwirft_ergebnis()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan);
+        var controller = new ImportOneClickProjectController(
+            dialogs, () => importer, new OneClickReportWriterFake());
+        var liveProject = new Project();
+        var folderCalls = 0;
+        var saveCalls = 0;
+        var replaceCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => folderCalls++ == 0 ? @"C:\Projekt" : @"C:\AnderesProjekt",
+            GetProject: () => liveProject,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: _ => replaceCalls++,
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { }));
+
+        Assert.Equal(0, replaceCalls);
+        Assert.Equal(0, saveCalls);
+        Assert.Contains("Speicherpfad", dialogs.LastErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_bearbeitung_am_selben_projekt_verwirft_ergebnis()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var liveProject = new Project { Name = "Vor Import" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan)
+        {
+            OnImport = () => liveProject.Name = "Manuell bearbeitet"
+        };
+        var controller = new ImportOneClickProjectController(
+            dialogs, () => importer, new OneClickReportWriterFake());
+        var saveCalls = 0;
+        var replaceCalls = 0;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => liveProject,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: _ => replaceCalls++,
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                saveCalls++;
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { },
+            ComputeSignature: project => project.Name));
+
+        Assert.Equal(0, replaceCalls);
+        Assert.Equal(0, saveCalls);
+        Assert.Equal("Manuell bearbeitet", liveProject.Name);
+        Assert.Contains("bearbeitet", dialogs.LastErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -382,6 +736,8 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         await controller.ExecuteAsync(new ImportOneClickProjectActions(
             GetProjectFolder: () => @"C:\Projekt",
             GetProject: () => new Project(),
+            DeepCopyProject: p => p,
+            ReplaceProject: _ => { },
             CollectionLock: new object(),
             SaveProject: () =>
             {
@@ -663,6 +1019,9 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 
         public int Calls { get; private set; }
         public ImportRunContext? Context { get; private set; }
+        public Project? ReceivedProject { get; private set; }
+        public Exception? ThrowOnImport { get; init; }
+        public Action? OnImport { get; init; }
 
         public OneClickProjectImportResult Import(
             string sourceFolder,
@@ -672,6 +1031,11 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         {
             Calls++;
             Context = context;
+            ReceivedProject = project;
+            if (ThrowOnImport is not null)
+                throw ThrowOnImport;
+            OnImport?.Invoke();
+            project.Dirty = true;   // wie der echte Orchestrator (Schritt 8)
             return new OneClickProjectImportResult(
                 _format,
                 Found: 4,
@@ -751,6 +1115,8 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         public string? SelectedFolder { get; init; }
         public string LastInfoMessage { get; private set; } = string.Empty;
         public string LastInfoTitle { get; private set; } = string.Empty;
+        public string LastWarnMessage { get; private set; } = string.Empty;
+        public string LastWarnTitle { get; private set; } = string.Empty;
         public string LastErrorMessage { get; private set; } = string.Empty;
         public string LastErrorTitle { get; private set; } = string.Empty;
 
@@ -763,7 +1129,11 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             LastInfoMessage = message;
             LastInfoTitle = title;
         }
-        public void Warn(string message, string title = "Warnung") { }
+        public void Warn(string message, string title = "Warnung")
+        {
+            LastWarnMessage = message;
+            LastWarnTitle = title;
+        }
         public void Error(string message, string title = "Fehler")
         {
             LastErrorMessage = message;

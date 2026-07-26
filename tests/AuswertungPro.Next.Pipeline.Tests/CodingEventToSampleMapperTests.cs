@@ -98,8 +98,12 @@ public sealed class CodingEventToSampleMapperTests
     public void FromCodingEvent_Accept_SetztHumanConfirmedTrueOhneCorrected()
     {
         var ev = BuildEvent(CodingUserDecision.Accepted, qg: "Green");
+        ev.AiContext!.SamMaskRle = "0,1000,50,306150";
+        ev.AiContext.SamMaskImageWidth = 640;
+        ev.AiContext.SamMaskImageHeight = 480;
+        ev.AiContext.Evidence = new CodingEventAiEvidence { SamMaskStability = 0.91 };
         var s = CodingEventToSampleMapper.FromCodingEvent(
-            ev, "H1", null, null,
+            ev, "H1", "gold.png", null,
             confirmedByUser: "tester",
             confirmedAtUtc: new System.DateTime(2026, 6, 13, 9, 0, 0, System.DateTimeKind.Utc));
 
@@ -107,6 +111,14 @@ public sealed class CodingEventToSampleMapperTests
         Assert.Equal(false, s.Corrected);
         Assert.Equal("tester", s.ConfirmedByUser);
         Assert.Equal("Green", s.QualityGateLevel);
+        Assert.Equal(SourceTypeNames.ManualCoding, s.SourceType);
+        Assert.Equal(MatchLevelNames.ReviewApproved, s.MatchLevel);
+        Assert.Equal("BCA - x", s.Beschreibung);
+        Assert.Equal("0,1000,50,306150", s.SamMaskRle);
+        Assert.Equal(640, s.SamMaskImageWidth);
+        Assert.Equal(480, s.SamMaskImageHeight);
+        Assert.Equal(0.91, s.SamMaskConfidence);
+        Assert.Equal("BCA", s.SamMaskLabel);
         Assert.Equal("test-v2", s.CentralDecision!.PolicyVersion);
         Assert.NotSame(ev.AiContext!.CentralDecision, s.CentralDecision);
     }
@@ -159,14 +171,20 @@ public sealed class CodingEventToSampleMapperTests
             MeterAtCapture = 1.2
         };
 
-        var sample = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null);
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev,
+            "H1",
+            "gold.png",
+            confirmedByUser: "tester",
+            confirmedAtUtc: new DateTime(2026, 7, 23, 8, 0, 0, DateTimeKind.Utc));
 
         Assert.Equal(TrainingSampleStatus.Approved, sample.Status);
         Assert.Equal(true, sample.HumanConfirmed);
         Assert.Null(sample.KiCode);
-        Assert.Null(sample.MatchLevel);
-        Assert.Null(sample.Corrected);
+        Assert.Equal(MatchLevelNames.ReviewApproved, sample.MatchLevel);
+        Assert.Equal(false, sample.Corrected);
         Assert.Equal(SourceTypeNames.ManualCoding, sample.SourceType);
+        Assert.True(ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, "tester"));
     }
 
     [Fact]
@@ -181,5 +199,73 @@ public sealed class CodingEventToSampleMapperTests
         Assert.Equal(@"C:\frames\raw.png", sample.FramePath);
         Assert.Equal(@"C:\frames\annotated.png", sample.EvidenceFramePath);
         Assert.Null(sample.AdditionalFramePaths);
+    }
+
+    [Theory]
+    [InlineData("1,2,3")]            // Laufsumme 5 statt 10x10=100
+    [InlineData("0,10,5,80")]        // Laufsumme 95 statt 10x10=100
+    [InlineData("0,100")]            // Leermaske: 100 Hintergrund-, 0 Masken-Pixel
+    public void FromCodingEvent_formal_defekte_SamMask_wird_nicht_uebernommen(string rle)
+    {
+        // Gold-Wahrheits-Haertung: formal defekte Masken bleiben weg — das Sample bleibt
+        // sichtbar unvollstaendig und landet in 'Unvollstaendige Goldframes'.
+        var ev = BuildEvent(CodingUserDecision.Accepted);
+        ev.AiContext!.SamMaskRle = rle;
+        ev.AiContext.SamMaskImageWidth = 10;
+        ev.AiContext.SamMaskImageHeight = 10;
+        ev.AiContext.Evidence = new CodingEventAiEvidence { SamMaskStability = 0.9 };
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", "gold.png", null);
+
+        Assert.Null(s.SamMaskRle);
+        Assert.Null(s.SamMaskImageWidth);
+        Assert.Null(s.SamMaskImageHeight);
+        Assert.Null(s.SamMaskConfidence);
+        Assert.Null(s.SamMaskLabel);
+        Assert.False(s.HasSamMask);
+    }
+
+    [Fact]
+    public void FromCodingEvent_formatgueltige_SamMask_wird_uebernommen()
+    {
+        var ev = BuildEvent(CodingUserDecision.Accepted);
+        ev.AiContext!.SamMaskRle = "0,10,5,85";   // 10x10, 5 Masken-Pixel
+        ev.AiContext.SamMaskImageWidth = 10;
+        ev.AiContext.SamMaskImageHeight = 10;
+        ev.AiContext.Evidence = new CodingEventAiEvidence { SamMaskStability = 0.9 };
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", "gold.png", null);
+
+        Assert.Equal("0,10,5,85", s.SamMaskRle);
+        Assert.Equal(10, s.SamMaskImageWidth);
+        Assert.Equal(10, s.SamMaskImageHeight);
+        Assert.Equal(0.9, s.SamMaskConfidence);
+        Assert.Equal("BCA", s.SamMaskLabel);
+        Assert.True(s.HasSamMask);
+    }
+
+    [Fact]
+    public void FromCodingEvent_mit_Box_enthaelt_die_Signatur_einen_Geometrie_Teil()
+    {
+        // Mehrfachobjekt: Box (0.1/0.2)-(0.5/0.6) -> Zentrum 0.3/0.4, Breite/Hoehe 0.4.
+        var ev = BuildEvent(CodingUserDecision.Accepted);
+        ev.Overlay = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Rectangle,
+            Points = new List<NormalizedPoint> { new(0.1, 0.2), new(0.5, 0.6) }
+        };
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null, null);
+
+        Assert.Equal("H1|BCA|12.3|12.3|b:0.300,0.400,0.400,0.400", s.Signature);
+    }
+
+    [Fact]
+    public void FromCodingEvent_ohne_Box_behhaelt_die_Signatur_das_4_Teiler_Format()
+    {
+        var s = CodingEventToSampleMapper.FromCodingEvent(
+            BuildEvent(CodingUserDecision.Accepted), "H1", null, null);
+
+        Assert.Equal("H1|BCA|12.3|12.3", s.Signature);
     }
 }

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from sidecar.main import app
-from sidecar.models import yolo_wrapper
+from sidecar.models import detector_qualification, yolo_wrapper
 
 # Trusted-Host-Header, damit die Loopback-Middleware den Request durchlaesst.
 _HEADERS = {"host": "localhost"}
@@ -18,6 +18,28 @@ _BODY = {"image_base64": "x", "confidence_threshold": 0.25}
 def _client() -> TestClient:
     # raise_server_exceptions=False: Handler-Response statt Re-Raise im Test.
     return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture(autouse=True)
+def qualified_standard_detector(monkeypatch):
+    """These tests exercise inference errors behind the qualification gate."""
+
+    monkeypatch.setattr(
+        detector_qualification,
+        "evaluate_active_detector",
+        lambda: {
+            "qualified": True,
+            "status": "qualified",
+            "reason": None,
+            "artifact": {
+                "file_name": "detector.pt",
+                "sha256": "a" * 64,
+                "backend": "pytorch",
+                "loaded": False,
+            },
+            "marked_utc": "2026-07-25T00:00:00Z",
+        },
+    )
 
 
 def test_unexpected_error_returns_generic_500_without_stacktrace(monkeypatch):

@@ -12,10 +12,10 @@ public sealed class PlayerWindowCodingClassifierArchitectureTests
         var classifierPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.cs");
         var boundaryPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var structuralPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
-        var boundaryCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
-        var boundaryWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingBoundaryClassifierResultWorkflow.cs");
-        var structuralCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStructuralClassifierCommandWorkflow.cs");
-        var structuralWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStructuralClassifierResultWorkflow.cs");
+        var boundaryCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryClassifierCommandWorkflow.cs");
+        var boundaryWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingBoundaryClassifierResultWorkflow.cs");
+        var structuralCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStructuralClassifierCommandWorkflow.cs");
+        var structuralWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStructuralClassifierResultWorkflow.cs");
 
         Assert.True(File.Exists(boundaryPath), "Boundary-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
         Assert.True(File.Exists(structuralPath), "Structural-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
@@ -53,8 +53,8 @@ public sealed class PlayerWindowCodingClassifierArchitectureTests
     public void PlayerWindow_structural_classifier_finding_lives_in_factory()
     {
         var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStructuralClassifierResultWorkflow.cs");
-        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStructuralClassifierFindingFactory.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStructuralClassifierResultWorkflow.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStructuralClassifierFindingFactory.cs");
 
         Assert.True(File.Exists(factoryPath), "Structural-Classifier-Finding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Structural-Classifier-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");

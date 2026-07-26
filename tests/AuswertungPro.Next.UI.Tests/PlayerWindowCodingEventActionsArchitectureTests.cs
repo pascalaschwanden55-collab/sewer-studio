@@ -9,17 +9,17 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
     public void PlayerWindow_coding_event_actions_live_in_actions_partial()
     {
         var actionsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.Actions.cs");
-        var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogService.cs");
-        var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogServiceFactory.cs");
-        var dialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogWorkflow.cs");
-        var deleteApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDeleteApplier.cs");
-        var editApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditApplier.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventListActionWorkflow.cs");
-        var seekCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventSeekCommandWorkflow.cs");
-        var editCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditCommandWorkflow.cs");
-        var editButtonCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditButtonCommandWorkflow.cs");
-        var deleteCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDeleteCommandWorkflow.cs");
-        var closeStretchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventCloseStretchCommandWorkflow.cs");
+        var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventActionDialogService.cs");
+        var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventActionDialogServiceFactory.cs");
+        var dialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventActionDialogWorkflow.cs");
+        var deleteApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventDeleteApplier.cs");
+        var editApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventEditApplier.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventListActionWorkflow.cs");
+        var seekCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventSeekCommandWorkflow.cs");
+        var editCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventEditCommandWorkflow.cs");
+        var editButtonCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventEditButtonCommandWorkflow.cs");
+        var deleteCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventDeleteCommandWorkflow.cs");
+        var closeStretchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventCloseStretchCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
         Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");

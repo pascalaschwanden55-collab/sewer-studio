@@ -109,6 +109,59 @@ public sealed class SanierungsMatrixDetailEditSessionTests
         Assert.Equal(99.63m, recomputed.MwstAmount);
     }
 
+    [Fact]
+    public void Einzelmassnahme_detailbearbeitung_behaelt_menge_einheit_preis_und_texte()
+    {
+        // Regression: Eine Matrix-Zeile mit genau EINER Massnahme darf beim Bearbeiten ihre
+        // Detailfelder nicht verlieren und nicht durch Template-Defaults ersetzt werden.
+        var stored = Holding(
+            Measure("SCHLAUCHLINER_GFK", "Schlauchliner GFK",
+                Line("Hauptarbeit", "GFK", "GFK-Liner DN 300 inkl. Sonderleistung", "m", 12.5m, 321.90m, true) with
+                {
+                    IsPriceOverridden = true,
+                    IsQtyOverridden = true,
+                    PriceHint = ""
+                },
+                Line("Zusatz", "VD", "Verkehrsdienst Nacht", "Stk", 2m, 95m, false)));
+
+        // Exakt der Weg der Matrix-Detailbearbeitung: LoadDetailForRow -> FromCost,
+        // Nutzer aendert die Menge, DetailUebernehmen -> ToHoldingCost.
+        var session = SanierungsMatrixDetailEditSession.FromCost(stored, 0.081m);
+        var measureVm = Assert.Single(session.Measures);
+
+        measureVm.Lines[0].Qty = 13.5m;
+
+        var saved = session.ToHoldingCost("H1", new DateTime(2026, 7, 25), 0.081m);
+
+        var measure = Assert.Single(saved.Measures);
+        Assert.Equal("SCHLAUCHLINER_GFK", measure.MeasureId);
+        Assert.Equal("Schlauchliner GFK", measure.MeasureName);
+
+        // Bearbeitete Position: eigene Texte/Einheit/Preis bleiben, die Menge ist die editierte.
+        var haupt = measure.Lines[0];
+        Assert.Equal("Hauptarbeit", haupt.Group);
+        Assert.Equal("GFK", haupt.ItemKey);
+        Assert.Equal("GFK-Liner DN 300 inkl. Sonderleistung", haupt.Text);
+        Assert.Equal("m", haupt.Unit);
+        Assert.Equal(13.5m, haupt.Qty);
+        Assert.Equal(321.90m, haupt.UnitPrice);
+        Assert.True(haupt.Selected);
+        Assert.True(haupt.IsPriceOverridden);
+        Assert.True(haupt.IsQtyOverridden);
+
+        // Unberuehrte Position: kommt unveraendert durch die Rundreise (nichts geht verloren).
+        var zusatz = measure.Lines[1];
+        Assert.Equal("Zusatz", zusatz.Group);
+        Assert.Equal("VD", zusatz.ItemKey);
+        Assert.Equal("Verkehrsdienst Nacht", zusatz.Text);
+        Assert.Equal("Stk", zusatz.Unit);
+        Assert.Equal(2m, zusatz.Qty);
+        Assert.Equal(95m, zusatz.UnitPrice);
+        Assert.False(zusatz.Selected);
+
+        Assert.Equal(13.5m * 321.90m, saved.Total);
+    }
+
     private static HoldingCost Holding(params MeasureCost[] measures)
     {
         return new HoldingCost

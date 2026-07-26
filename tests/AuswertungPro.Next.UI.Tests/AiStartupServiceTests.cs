@@ -78,6 +78,12 @@ public sealed class AiStartupServiceTests
                     out var exportRoot)
                 && exportRoot.EndsWith(
                     Path.Combine("training", "datasets"),
+                    StringComparison.OrdinalIgnoreCase)
+                && p.EnvironmentVariables.TryGetValue(
+                    "SEWER_SIDECAR_TRAINING_MODEL_CANDIDATES_ROOT",
+                    out var candidateRoot)
+                && candidateRoot.EndsWith(
+                    Path.Combine("training", "models", "candidates"),
                     StringComparison.OrdinalIgnoreCase));
             Assert.Contains(result.Messages, m => m.Contains("KI aktiviert", StringComparison.OrdinalIgnoreCase));
             Assert.Contains("Modelle geladen", status.StatusText, StringComparison.OrdinalIgnoreCase);

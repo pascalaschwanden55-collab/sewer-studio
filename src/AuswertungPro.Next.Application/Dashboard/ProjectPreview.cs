@@ -26,6 +26,12 @@ public sealed record ProjectPreview(
     string Firma,
     DashboardStatistics Statistics)
 {
+    /// <summary>
+    /// Gesetzt, wenn vorhandene Kostendaten nicht sicher gelesen werden konnten.
+    /// Der Wert verhindert, dass eine scheinbar gueltige 0-CHF-Vorschau exportiert wird.
+    /// </summary>
+    public string? CostLoadError { get; init; }
+
     public IReadOnlyList<ZustandBucket> HoldingConditionClasses => Statistics.Haltungen.Buckets;
     public IReadOnlyList<ZustandBucket> SchachtConditionClasses => Statistics.Schaechte.Buckets;
 

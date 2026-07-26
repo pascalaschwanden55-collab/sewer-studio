@@ -7,12 +7,12 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Training.ClassMaps;
 public sealed class TrainingYoloClassMapArtifactsTests
 {
     [Fact]
-    public void Versionierte_Vorlagen_sind_vollstaendig_und_noch_bewusst_ungenehmigt()
+    public void Versionierte_Vorlagen_sind_vollstaendig_und_nur_BCC_ist_fuer_den_Pilot_freigegeben()
     {
         var classMapPath = TestRepoPaths.RepoFile(
-            "training", "class_maps", "detect_class_map_v2.json");
+            "training", "class_maps", "detect_class_map_v3.json");
         var migrationPath = TestRepoPaths.RepoFile(
-            "training", "class_maps", "detect_class_migration_v2.candidate.json");
+            "training", "class_maps", "detect_class_migration_v3.candidate.json");
         var manifestPath = TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
 
@@ -22,7 +22,7 @@ public sealed class TrainingYoloClassMapArtifactsTests
             manifestPath).ReadSnapshot();
 
         Assert.Equal(
-            YoloDetectClassMapV2.Classes.OrderBy(item => item.Value),
+            YoloDetectClassMapV3.Classes.OrderBy(item => item.Value),
             snapshot.Classes.OrderBy(item => item.Value));
         Assert.Equal(4, snapshot.MigrationSourceHashes.Count);
         Assert.Equal(
@@ -34,6 +34,12 @@ public sealed class TrainingYoloClassMapArtifactsTests
                 TrainingYoloClassSourceKinds.ProductiveYoloName
             },
             snapshot.ResolutionOrder);
+        var bcc = snapshot.ResolveRequired(
+            "BCCAY",
+            sourceKind: TrainingYoloClassSourceKinds.TeacherVsaCode);
+        Assert.True(bcc.ShouldExport);
+        Assert.Equal("BCC_bogen", bcc.TargetKey);
+        Assert.Equal(14, bcc.ClassId);
 
         using var migration = JsonDocument.Parse(File.ReadAllText(migrationPath));
         var entries = migration.RootElement.GetProperty("entries").EnumerateArray().ToArray();
@@ -47,9 +53,42 @@ public sealed class TrainingYoloClassMapArtifactsTests
             entries
                 .Where(entry => GetString(entry, "source_kind") == "teacher_vsa_code")
                 .Sum(entry => entry.GetProperty("observed_count").GetInt32()));
-        Assert.All(
-            entries,
-            entry => Assert.Equal("pending", GetString(entry, "approval_status")));
+        var approved = entries
+            .Where(entry => GetString(entry, "approval_status") == "approved")
+            .ToArray();
+        Assert.Equal(10, approved.Length);
+        Assert.All(approved, entry =>
+        {
+            Assert.StartsWith("BCC", GetString(entry, "source_key"));
+            Assert.Equal("map", GetString(entry, "proposed_action"));
+            Assert.Equal("BCC_bogen", GetString(entry, "proposed_target"));
+            Assert.Equal("Besitzer", GetString(entry, "approved_by"));
+        });
+        Assert.Equal(
+            114,
+            entries.Count(entry => GetString(entry, "approval_status") == "pending"));
+    }
+
+    [Fact]
+    public void Eingefrorene_V2_Vorlagen_bleiben_ohne_BCC_lesbar()
+    {
+        var classMapPath = TestRepoPaths.RepoFile(
+            "training", "class_maps", "detect_class_map_v2.json");
+        var migrationPath = TestRepoPaths.RepoFile(
+            "training", "class_maps", "detect_class_migration_v2.candidate.json");
+        var manifestPath = TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
+
+        var snapshot = new TrainingYoloClassMapFileStore(
+            classMapPath,
+            migrationPath,
+            manifestPath).ReadSnapshot();
+
+        Assert.Equal(YoloDetectClassMapV2.Version, snapshot.Version);
+        Assert.Equal(
+            YoloDetectClassMapV2.Classes.OrderBy(item => item.Value),
+            snapshot.Classes.OrderBy(item => item.Value));
+        Assert.False(snapshot.Classes.ContainsKey("BCC_bogen"));
     }
 
     private static int CountKind(IEnumerable<JsonElement> entries, string kind)

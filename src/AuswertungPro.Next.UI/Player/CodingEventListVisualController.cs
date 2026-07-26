@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Player;

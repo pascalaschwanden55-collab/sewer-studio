@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -180,7 +181,7 @@ public sealed class CodingEventListActionWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingEventEditApplier).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingEventListActionWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingEventListActionWorkflow");
 
     private static MethodInfo? FindCompleteEditMethod()
         => WorkflowType?.GetMethod(

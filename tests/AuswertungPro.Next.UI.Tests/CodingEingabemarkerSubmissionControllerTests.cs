@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -47,6 +48,31 @@ public sealed class CodingEingabemarkerSubmissionControllerTests
     }
 
     [Fact]
+    public async Task SubmitAsync_Persistenzfehler_zeigt_keinen_Erfolgsstatus()
+    {
+        var calls = new List<string>();
+        var service = new RecordingCodingSessionService(calls);
+        var controller = new CodingEingabemarkerSubmissionController(
+            Bindings(
+                calls,
+                service,
+                overlay: null,
+                persistTrainingAsync: _ => Task.FromResult(
+                    CodingTrainingSamplePersistenceResult.Failed("JSON gesperrt"))));
+
+        var result = await controller.SubmitAsync("Riss");
+
+        Assert.Equal(
+            CodingEingabemarkerSubmissionWorkflowOutcome.PersistenceFailed,
+            result.Outcome);
+        Assert.Contains("error:JSON gesperrt", calls);
+        Assert.DoesNotContain(
+            calls,
+            call => call.StartsWith("status:", StringComparison.Ordinal));
+        Assert.Equal("cancel", calls[^1]);
+    }
+
+    [Fact]
     public async Task SubmitAsync_runs_ai_fallback_and_always_cancels_marker()
     {
         var calls = new List<string>();
@@ -82,7 +108,8 @@ public sealed class CodingEingabemarkerSubmissionControllerTests
         List<string> calls,
         ICodingSessionService? service,
         OverlayGeometry? overlay,
-        Func<string, string?>? resolveCodeHint = null)
+        Func<string, string?>? resolveCodeHint = null,
+        Func<CodingEvent, Task<CodingTrainingSamplePersistenceResult>>? persistTrainingAsync = null)
         => new(
             HasCodingViewModel: () =>
             {
@@ -148,7 +175,8 @@ public sealed class CodingEingabemarkerSubmissionControllerTests
                 return Task.CompletedTask;
             },
             ShowErrorStatus: message => calls.Add($"error:{message}"),
-            CancelMarker: () => calls.Add("cancel"));
+            CancelMarker: () => calls.Add("cancel"),
+            PersistTrainingAsync: persistTrainingAsync);
 
     private sealed class RecordingCodingSessionService(List<string> calls) : ICodingSessionService
     {

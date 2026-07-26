@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Evidence;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;

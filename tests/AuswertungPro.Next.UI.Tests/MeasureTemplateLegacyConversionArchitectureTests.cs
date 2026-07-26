@@ -51,7 +51,7 @@ public sealed class MeasureTemplateLegacyConversionArchitectureTests
             "MeasureTemplateEditorViewModel.cs"));
 
         var migrationStart = viewModel.IndexOf("private void TryOfferLegacyMigration()", StringComparison.Ordinal);
-        var migrationEnd = viewModel.IndexOf("private static decimal ParseQtyOrDefault", migrationStart, StringComparison.Ordinal);
+        var migrationEnd = viewModel.IndexOf("private static bool TryParseQty", migrationStart, StringComparison.Ordinal);
         Assert.True(migrationStart >= 0 && migrationEnd > migrationStart);
         var migration = string.Concat(
             viewModel[migrationStart..migrationEnd].Where(character => !char.IsWhiteSpace(character)));

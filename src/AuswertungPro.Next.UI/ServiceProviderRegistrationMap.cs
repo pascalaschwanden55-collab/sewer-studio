@@ -76,6 +76,7 @@ internal static class ServiceProviderRegistrationMap
         return new Dictionary<Type, object>
         {
             [typeof(IFullBackupService)] = services.FullBackup,
+            [typeof(IKnowledgeRealtimeMirrorService)] = services.KnowledgeRealtimeMirror,
             [typeof(IFullBackupSourcesProvider)] = services.BackupSources,
             [typeof(IBackupTargetMarkerGuard)] = services.BackupTargetMarkers,
             [typeof(ISqliteSnapshotCopier)] = services.SqliteSnapshots,
@@ -180,6 +181,8 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ITeacherAnnotationStore)] = services.TeacherAnnotations,
             [typeof(IAiOptimizationSessionStore)] = services.AiOptimizationSessions,
             [typeof(ITrainingSampleStore)] = services.TrainingSamples,
+            [typeof(IPersonalGoldAlbumService)] = services.PersonalGoldAlbum,
+            [typeof(IPersonalGoldInboxService)] = services.PersonalGoldInbox,
             [typeof(ITrainingDataInventoryService)] = services.TrainingDataInventory,
             [typeof(ITrainingExportRegistryStore)] = services.TrainingExportRegistry,
             [typeof(ITrainingExportPlanInputBuilder)] = services.TrainingExportPlanInput,

@@ -49,7 +49,7 @@ public sealed class AiDocumentationPdfBuilder
         var logSteps = new List<string>
         {
             "%LOCALAPPDATA%\\SewerStudio\\logs",
-            "%LOCALAPPDATA%\\SewerStudio\\data\\protocol_training.json",
+            "<KnowledgeRoot>\\protocol_training.json",
             "%LOCALAPPDATA%\\SewerStudio\\data\\measures_learning.json",
             "Data\\measures-model.zip (Massnahmen-KI Modell)"
         };

@@ -23,10 +23,10 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     public void PlayerWindow_coding_event_display_order_lives_in_policy()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDisplayOrderPolicy.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListControls.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsRefreshWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventDisplayOrderPolicy.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsListControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsRefreshWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsListRefreshCommandWorkflow.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventsRefreshController.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -58,8 +58,8 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_coding_event_list_surface_uses_controls()
     {
-        var eventsControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListControls.cs");
-        var importControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
+        var eventsControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsListControls.cs");
+        var importControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceControls.cs");
         var relevantPartialPaths = new[]
         {
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"),
@@ -93,8 +93,8 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var markingTrainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
-        var manualMarkWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
-        var resolverPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentMeterResolver.cs");
+        var manualMarkWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Live", "LiveDetectionManualMarkTrainingWorkflow.cs");
+        var resolverPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCurrentMeterResolver.cs");
 
         var events = File.ReadAllText(eventsPath);
         var markingTraining = File.ReadAllText(markingTrainingPath);
@@ -111,13 +111,13 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     public void PlayerWindow_manual_coding_ai_context_lives_in_factory()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualEventFactory.cs");
-        var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualEventAppender.cs");
-        var selectedCodeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSelectedCodeEventWorkflow.cs");
-        var selectCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSelectCodeCommandWorkflow.cs");
-        var manualEntryWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCodeExplorerManualEntryWorkflow.cs");
-        var createCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
-        var postWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventCreationPostWorkflow.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingManualEventFactory.cs");
+        var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingManualEventAppender.cs");
+        var selectedCodeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSelectedCodeEventWorkflow.cs");
+        var selectCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSelectCodeCommandWorkflow.cs");
+        var manualEntryWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCodeExplorerManualEntryWorkflow.cs");
+        var createCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
+        var postWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventCreationPostWorkflow.cs");
         var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
         var sidePanelControllerSetPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSidePanelControllerSet.cs");
 

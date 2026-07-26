@@ -19,7 +19,10 @@ public sealed partial class CostLineVm : ObservableObject
     [ObservableProperty] private bool _priceMissing;
     [ObservableProperty] private string _priceHint = "";
 
-    public decimal LineTotal => Selected ? Qty * UnitPrice : 0m;
+    public decimal LineTotal
+        => Selected && Qty >= 0m && UnitPrice >= 0m
+            ? Qty * UnitPrice
+            : 0m;
 
     public event Action? LineChanged;
 

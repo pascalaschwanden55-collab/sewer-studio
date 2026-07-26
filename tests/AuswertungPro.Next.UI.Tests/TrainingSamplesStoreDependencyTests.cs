@@ -143,5 +143,9 @@ public sealed class TrainingSamplesStoreDependencyTests
             MergeAndSaveCalls++;
             return Task.CompletedTask;
         }
+
+        public Task<bool> RemoveBySampleIdAsync(string sampleId) => Task.FromResult(false);
+        public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample) => Task.FromResult(false);
+        public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default) => Task.FromResult(true);
     }
 }

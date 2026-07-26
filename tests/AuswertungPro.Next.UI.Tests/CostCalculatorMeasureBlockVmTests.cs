@@ -5,6 +5,113 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CostCalculatorMeasureBlockVmTests
 {
+    [Theory]
+    [InlineData(-1, 10)]
+    [InlineData(1, -10)]
+    public void AusgewaehlteNegativeMengeOderPreis_ErzeugtWederSummeNochModell(
+        int quantity,
+        int unitPrice)
+    {
+        var block = new MeasureBlockVm(
+            new MeasureTemplate { Id = "PAUSCHALE", Name = "Pauschale" },
+            new Dictionary<string, CostCatalogItem>());
+        block.LoadFrom(new MeasureCost
+        {
+            Lines =
+            [
+                new CostLine
+                {
+                    ItemKey = "POSITION",
+                    Text = "Position",
+                    Unit = "Stk",
+                    Qty = quantity,
+                    UnitPrice = unitPrice,
+                    Selected = true
+                }
+            ]
+        });
+
+        Assert.Equal(0m, block.Lines[0].LineTotal);
+        Assert.Equal(0m, block.Total);
+        var error = Assert.Throws<InvalidOperationException>(() => block.ToModel());
+        Assert.Contains("negativ", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(0, 10)]
+    [InlineData(1, 0)]
+    public void AusgewaehlteNullMengeOderNullPreis_BleibtAlsUngepflegterZustandErlaubt(
+        int quantity,
+        int unitPrice)
+    {
+        var block = new MeasureBlockVm(
+            new MeasureTemplate { Id = "PAUSCHALE", Name = "Pauschale" },
+            new Dictionary<string, CostCatalogItem>());
+        block.LoadFrom(new MeasureCost
+        {
+            Lines =
+            [
+                new CostLine
+                {
+                    ItemKey = "POSITION",
+                    Text = "Position",
+                    Unit = "Stk",
+                    Qty = quantity,
+                    UnitPrice = unitPrice,
+                    Selected = true
+                }
+            ]
+        });
+
+        var model = block.ToModel();
+
+        Assert.Equal(0m, block.Total);
+        Assert.Equal(0m, model.Total);
+        Assert.True(Assert.Single(model.Lines).Selected);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("0")]
+    [InlineData("-1")]
+    public void AusgewaehlteMeterzeile_OhnePositiveLaenge_FliesstNichtInSummeEin(
+        string lengthText)
+    {
+        var block = new MeasureBlockVm(
+            new MeasureTemplate { Id = "LINER", Name = "Schlauchliner" },
+            new Dictionary<string, CostCatalogItem>());
+        block.LoadFrom(new MeasureCost
+        {
+            LengthMeters = 12m,
+            Lines =
+            [
+                new CostLine
+                {
+                    ItemKey = "METER",
+                    Text = "Meterposition",
+                    Unit = "m",
+                    Qty = 12m,
+                    UnitPrice = 10m,
+                    Selected = true
+                },
+                new CostLine
+                {
+                    ItemKey = "PAUSCHALE",
+                    Text = "Pauschale",
+                    Unit = "Stk",
+                    Qty = 1m,
+                    UnitPrice = 5m,
+                    Selected = true
+                }
+            ]
+        });
+
+        block.LengthText = lengthText;
+
+        Assert.Equal(5m, block.Total);
+        Assert.Equal(5m, block.ToModel().Total);
+    }
+
     [Fact]
     public void LoadFromUndToModel_BewahrenKostenfelderUndSummierenNurAktiveZeilen()
     {

@@ -4,7 +4,11 @@ using AuswertungPro.Next.Domain.Protocol;
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>Auf die Pruefplatz-Felder reduziertes Ergebnis einer VSA-Code-Auswahl im Codierfenster.</summary>
-public readonly record struct WorkbenchCodeSelection(string? Code, double? ClockPosition, int? Severity);
+public readonly record struct WorkbenchCodeSelection(
+    string? Code,
+    string? Beschreibung,
+    double? ClockPosition,
+    int? Severity);
 
 /// <summary>
 /// Bildet einen <see cref="ProtocolEntry"/> aus dem VsaCodeExplorer auf die Pruefplatz-Felder ab.
@@ -36,6 +40,10 @@ public static class WorkbenchCodeSelectionMapper
             severity = s;
         }
 
-        return new WorkbenchCodeSelection(code, clock, severity);
+        var beschreibung = string.IsNullOrWhiteSpace(entry.Beschreibung)
+            ? null
+            : entry.Beschreibung.Trim();
+
+        return new WorkbenchCodeSelection(code, beschreibung, clock, severity);
     }
 }

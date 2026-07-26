@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -365,16 +366,39 @@ public sealed class SchachtProtocolSingleImportControllerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_save_false_keeps_historic_success_result()
+    public async Task ExecuteAsync_save_false_reports_imported_but_not_saved()
     {
         var harness = new Harness { SaveResult = false };
 
         await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "quelle.pdf");
 
         Assert.Contains("save|dirty=True|modified=True", harness.Calls);
-        Assert.Equal(
-            "last-result|Protokoll importiert: Schacht S-1 (1 Beobachtungen).",
-            harness.Calls[^1]);
+        Assert.Contains(
+            "last-result|Protokoll uebernommen, aber nicht gespeichert: Schacht S-1 (1 Beobachtungen).",
+            harness.Calls);
+        Assert.Contains(
+            harness.Warnings,
+            warning => warning.Message.Contains(
+                "uebernommen, aber nicht gespeichert",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_save_exception_reports_imported_but_not_saved()
+    {
+        var harness = new Harness
+        {
+            SaveException = new IOException("Datentraeger voll")
+        };
+
+        await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "quelle.pdf");
+
+        Assert.Contains(
+            harness.Warnings,
+            warning => warning.Message.Contains(
+                "uebernommen, aber nicht gespeichert",
+                StringComparison.Ordinal));
+        Assert.Contains("nicht gespeichert", harness.LastResult, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -510,6 +534,8 @@ public sealed class SchachtProtocolSingleImportControllerTests
                 {
                     Calls.Add(
                         $"save|dirty={Project.Dirty}|modified={Project.ModifiedAtUtc != DateTime.UnixEpoch}");
+                    if (SaveException is not null)
+                        throw SaveException;
                     return SaveResult;
                 },
                 SetSelected: record =>
@@ -545,6 +571,7 @@ public sealed class SchachtProtocolSingleImportControllerTests
             new[] { true, true, true, true };
         internal DialogConfirm CollisionChoice { get; set; } = DialogConfirm.Yes;
         internal bool SaveResult { get; init; } = true;
+        internal Exception? SaveException { get; init; }
         internal SchachtRecord? Selected { get; private set; }
         internal string? LastResult { get; private set; }
     }

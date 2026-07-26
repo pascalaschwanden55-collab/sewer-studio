@@ -8,7 +8,7 @@ using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
-public enum TrainingSampleStatus { New, Approved, Rejected, Removed }
+public enum TrainingSampleStatus { New, Approved, Rejected, Removed, Draft }
 
 /// <summary>KB-Indexierungszustand eines TrainingSamples.</summary>
 public enum KbIndexState
@@ -174,10 +174,33 @@ public sealed class TrainingSample
     /// CaseId ist Teil der Signatur, damit gleiche Codes in verschiedenen Haltungen nicht kollidieren.
     /// </summary>
     public static string BuildCanonicalSignature(string caseId, string code, double meterCenter, double meterEnd)
+        => BuildCanonicalSignature(caseId, code, meterCenter, meterEnd, null, null, null, null);
+
+    /// <summary>
+    /// Zentrale Signatur-Berechnung fuer Dedup, optional mit Objekt-Geometrie.
+    /// Bei vollstaendiger Box gehoert sie zur Objekt-Identitaet (Mehrfachobjekt):
+    /// zwei Befunde mit gleichem Code/Meter, aber verschiedenen Boxen sind verschiedene
+    /// Objekte (Format "...|b:x,y,w,h", je 3 Dezimalstellen, InvariantCulture).
+    /// Ohne Box bleibt das 4-Teiler-Format — Legacy-Daten bleiben gueltig.
+    /// </summary>
+    public static string BuildCanonicalSignature(
+        string caseId,
+        string code,
+        double meterCenter,
+        double meterEnd,
+        double? bboxXCenter,
+        double? bboxYCenter,
+        double? bboxWidth,
+        double? bboxHeight)
     {
         var rc = Math.Round(meterCenter, 1);
         var re = Math.Round(meterEnd, 1);
-        return $"{caseId}|{code}|{rc:F1}|{re:F1}";
+        var baseSignature = $"{caseId}|{code}|{rc:F1}|{re:F1}";
+        if (bboxXCenter is null || bboxYCenter is null || bboxWidth is null || bboxHeight is null)
+            return baseSignature;
+
+        string F3(double value) => Math.Round(value, 3).ToString("F3", CultureInfo.InvariantCulture);
+        return $"{baseSignature}|b:{F3(bboxXCenter.Value)},{F3(bboxYCenter.Value)},{F3(bboxWidth.Value)},{F3(bboxHeight.Value)}";
     }
 }
 
@@ -202,6 +225,9 @@ public static class TrainingSampleEligibility
 
     public static TrainingEligibilityResult Evaluate(TrainingSample sample)
     {
+        if (ManualGoldTrainingPolicy.IsManuallyConfirmed(sample))
+            return new TrainingEligibilityResult(true, null);
+
         var result = Evaluate(sample.InspectionDate);
         if (!result.IsEligible)
             return result;

@@ -45,7 +45,7 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
             }
 
             var migration = TrainingYoloClassMapJsonReader.ReadMigration(_migrationPath);
-            if (migration.Version != YoloDetectClassMapV2.Version
+            if (migration.Version != classMap.Version
                 || migration.TargetClassMapVersion != classMap.Version)
             {
                 throw new TrainingYoloClassMapException(
@@ -93,19 +93,15 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
 
     private static void ValidateClassMap(TrainingYoloClassMapFileDocument classMap)
     {
-        if (classMap.Version != YoloDetectClassMapV2.Version)
+        var expectedClasses = SupportedClasses(classMap.Version);
+
+        if (classMap.Classes.Count != expectedClasses.Count)
         {
             throw new TrainingYoloClassMapException(
-                $"Nicht unterstuetzte Detect-Klassenkartenversion {classMap.Version}; erwartet wird v{YoloDetectClassMapV2.Version}.");
+                $"class_map v{classMap.Version} muss genau {expectedClasses.Count} Klassen enthalten.");
         }
 
-        if (classMap.Classes.Count != YoloDetectClassMapV2.Classes.Count)
-        {
-            throw new TrainingYoloClassMapException(
-                $"class_map v2 muss genau {YoloDetectClassMapV2.Classes.Count} Klassen enthalten.");
-        }
-
-        foreach (var expected in YoloDetectClassMapV2.Classes)
+        foreach (var expected in expectedClasses)
         {
             if (!classMap.Classes.TryGetValue(expected.Key, out var actualId)
                 || actualId != expected.Value)
@@ -114,6 +110,17 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
                     $"Klasse '{expected.Key}' muss die feste ID {expected.Value} haben.");
             }
         }
+    }
+
+    private static IReadOnlyDictionary<string, int> SupportedClasses(int version)
+    {
+        if (version == YoloDetectClassMapV2.Version)
+            return YoloDetectClassMapV2.Classes;
+        if (version == YoloDetectClassMapV3.Version)
+            return YoloDetectClassMapV3.Classes;
+        throw new TrainingYoloClassMapException(
+            $"Nicht unterstuetzte Detect-Klassenkartenversion {version}; erwartet wird " +
+            $"v{YoloDetectClassMapV2.Version} (eingefroren) oder v{YoloDetectClassMapV3.Version}.");
     }
 
     private static string ComputeSha256(string path)

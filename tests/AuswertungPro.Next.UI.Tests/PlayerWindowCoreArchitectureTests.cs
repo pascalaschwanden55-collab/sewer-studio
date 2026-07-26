@@ -219,7 +219,7 @@ public sealed class PlayerWindowCoreArchitectureTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var clockPath = Path.Combine(uiRoot, "Player", "PlayerClock.cs");
-        var trainingPersistencePath = Path.Combine(uiRoot, "Ai", "CodingTrainingPersistenceContext.cs");
+        var trainingPersistencePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingTrainingPersistenceContext.cs");
 
         Assert.True(File.Exists(clockPath), "Zeit-Zugriffe aus PlayerWindow sollen in einer kleinen Clock-Hilfe liegen.");
         Assert.True(File.Exists(trainingPersistencePath), "Trainingsspeicherung soll ausserhalb der PlayerWindow-Partials liegen.");

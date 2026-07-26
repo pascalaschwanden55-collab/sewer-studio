@@ -63,5 +63,15 @@ public static class TrainingSampleMerge
             target.CentralDecision = AiDecisionAuditCloner.Clone(source.CentralDecision);
         if (source.SnapshotError is not null) target.SnapshotError = source.SnapshotError;
         if (!string.IsNullOrWhiteSpace(source.EvidenceFramePath)) target.EvidenceFramePath = source.EvidenceFramePath;
+
+        // Eine ausdruecklich persoenliche Goldbestaetigung ersetzt einen eventuell
+        // frueher gespeicherten Auto-/Sessionstand. Nur so bleibt der sichere
+        // inhaltsadressierte Goldpfad die verbindliche Bildquelle.
+        if (ManualGoldTrainingPolicy.IsManuallyConfirmed(source)
+            && !string.IsNullOrWhiteSpace(source.FramePath))
+        {
+            target.FramePath = source.FramePath;
+            target.Beschreibung = source.Beschreibung;
+        }
     }
 }

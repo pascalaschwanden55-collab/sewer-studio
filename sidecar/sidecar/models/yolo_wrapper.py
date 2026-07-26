@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # Flag: True when custom sewer-specific weights are loaded, False for COCO fallback.
 _using_custom_weights = False
 _resolved_model_path: str | None = None
+_resolved_model_sha256: str | None = None
 _tensorrt_class_names: dict[int, str] = {}
 _tensorrt_names_warning_paths: set[str] = set()
 _tensorrt_class_warning_keys: set[tuple[str, int]] = set()
@@ -57,6 +58,38 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
         )
 
     return "yolo11m.pt", False
+
+
+def get_active_detector_artifact() -> dict:
+    """Resolve the artifact that the standard YOLO endpoint would actually use."""
+
+    if _resolved_model_path is not None:
+        model_path = _resolved_model_path
+        using_custom = _using_custom_weights
+        resolution_error = None
+        loaded = True
+    else:
+        loaded = False
+        try:
+            model_path, using_custom = _resolve_yolo_model_path()
+            resolution_error = None
+        except FileNotFoundError:
+            model_path = str(
+                Path(settings.models_dir) / "yolo26m" / settings.yolo_model_name
+            )
+            using_custom = True
+            resolution_error = "configured model artifact not found"
+
+    model_name = Path(model_path).name
+    return {
+        "path": model_path,
+        "file_name": model_name,
+        "backend": _model_backend(model_name),
+        "using_custom_weights": using_custom,
+        "loaded": loaded,
+        "resolution_error": resolution_error,
+        "sha256": _resolved_model_sha256 if loaded else None,
+    }
 
 
 def get_runtime_status() -> dict:
@@ -112,13 +145,14 @@ def _configured_backend() -> str:
 
 def _load_yolo_on(device: str):
     """Load YOLO model onto *device*. Returns (model, None)."""
-    global _using_custom_weights, _resolved_model_path, _tensorrt_class_names
+    global _using_custom_weights, _resolved_model_path, _resolved_model_sha256
+    global _tensorrt_class_names
     from ultralytics import YOLO
 
     model_path, using_custom = _resolve_yolo_model_path()
-    _using_custom_weights = using_custom
-    _resolved_model_path = model_path
-    _tensorrt_class_names = _load_tensorrt_class_names(Path(model_path))
+    model_file = Path(model_path)
+    artifact_sha256 = _sha256_of(model_file) if using_custom else None
+    tensorrt_class_names = _load_tensorrt_class_names(model_file)
 
     if using_custom:
         logger.info("Loading custom YOLO weights from %s onto %s", model_path, device)
@@ -130,8 +164,16 @@ def _load_yolo_on(device: str):
         )
 
     model = YOLO(str(model_path))
-    if _configured_backend() != "tensorrt":
+    if _model_backend(model_file.name) != "tensorrt":
         model.to(device)
+
+    if using_custom and _sha256_of(model_file) != artifact_sha256:
+        raise RuntimeError("YOLO model artifact changed while loading")
+
+    _using_custom_weights = using_custom
+    _resolved_model_path = model_path
+    _resolved_model_sha256 = artifact_sha256
+    _tensorrt_class_names = tensorrt_class_names
     return model, None
 
 

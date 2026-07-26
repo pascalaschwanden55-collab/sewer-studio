@@ -56,6 +56,16 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
     private string? _storeLoadError;
+    // Defekte Berechnungsgrundlagen duerfen nicht als leere Kataloge/Vorlagen
+    // weiterlaufen, weil das bestehende Kosten still entfernen oder auf CHF 0 setzen kann.
+    private string? _catalogLoadError;
+    private string? _templateLoadError;
+    // Nichtleere unlesbare Tabellenkosten duerfen weder als CHF 0 gelten noch
+    // beim Speichern unbemerkt durch abgeleitete Werte ersetzt werden.
+    private string? _tableCostParseError;
+    // Nichtleere unlesbare oder negative Haltungslaengen duerfen nicht auf die
+    // Default-Menge einer Meterposition zurueckfallen.
+    private string? _lengthParseError;
     private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private string _projectPath = "";
     private readonly string? _singleHoldingTarget;
@@ -182,6 +192,14 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (measure is null)
             return;
 
+        if (_templateLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Vorlage kann nicht gespeichert werden, weil die Massnahmenvorlagen nicht sauber geladen wurden:\n{_templateLoadError}",
+                "Vorlage");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(measure.MeasureId))
         {
             _dialogs.Warn("Vorlagen-ID fehlt.", "Vorlage");
@@ -248,14 +266,14 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _touchedHoldings.Clear();
         _projectPath = _settings.LastProjectPath ?? "";
 
-        var catalog = _catalogStore.LoadMerged(_projectPath);
+        var catalog = _catalogStore.LoadMerged(_projectPath, out _catalogLoadError);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         _catalog = catalog.Items
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var tplCatalog = _templateStore.LoadMerged(_projectPath);
+        var tplCatalog = _templateStore.LoadMerged(_projectPath, out _templateLoadError);
         _templates = tplCatalog.Measures
             .Where(m => !m.Disabled && !string.IsNullOrWhiteSpace(m.Id))
             .GroupBy(m => m.Id.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -264,6 +282,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         BuildMeasureOptions();
 
         _store = _costRepo.Load(_projectPath, out _storeLoadError);
+        _tableCostParseError = FindTableCostParseError(_shell.Project.Data);
+        _lengthParseError = FindLengthParseError(_shell.Project.Data);
 
         var loadedRows = new List<SanierungMatrixRowVm>();
         foreach (var record in _shell.Project.Data)
@@ -307,13 +327,91 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
                 ? $"Sanierungsmassnahme geladen: {SelectedRow?.Holding}"
                 : $"{Rows.Count} Haltungen geladen.";
 
+        var calculationLoadError = BuildCalculationLoadError();
         if (_storeLoadError is not null)
         {
-            Status = $"WARNUNG: {_storeLoadError} — Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
+            Status = $"WARNUNG: {_storeLoadError} - Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
             _dialogs.Warn(
                 $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit costs.json nicht mit einem leeren Stand ueberschrieben wird.\nBitte Datei pruefen (costs\\costs.json bzw. .bak) und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
         }
+        else if (calculationLoadError is not null)
+        {
+            Status = $"FEHLER: {calculationLoadError} - Berechnungen und Speichern sind gesperrt.";
+            _dialogs.Error(
+                $"{calculationLoadError}\n\n" +
+                "Berechnungen und Speichern sind gesperrt, damit bestehende Kosten nicht mit leeren Ersatzdaten veraendert werden. " +
+                "Bitte die Dateien pruefen und danach 'Neu laden'.",
+                "Sanierungs-Matrix");
+        }
+        else if (_tableCostParseError is not null)
+        {
+            Status = $"FEHLER: {_tableCostParseError} - Speichern ist gesperrt.";
+            _dialogs.Error(
+                $"{_tableCostParseError}\n\n" +
+                "Nichtleere ungueltige Kosten werden nicht als CHF 0 behandelt. " +
+                "Bitte die Kostenfelder korrigieren und danach 'Neu laden'.",
+                "Sanierungs-Matrix");
+        }
+    }
+
+    private string? BuildCalculationLoadError()
+    {
+        var errors = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+            errors.Add($"Kostenkatalog konnte nicht geladen werden: {_catalogLoadError}");
+        if (!string.IsNullOrWhiteSpace(_templateLoadError))
+            errors.Add($"Massnahmenvorlagen konnten nicht geladen werden: {_templateLoadError}");
+        if (!string.IsNullOrWhiteSpace(_lengthParseError))
+            errors.Add(_lengthParseError);
+        return errors.Count == 0 ? null : string.Join("\n", errors);
+    }
+
+    private static string? FindTableCostParseError(IEnumerable<HaltungRecord> records)
+    {
+        var invalidHoldings = records
+            .Where(record =>
+            {
+                var raw = record.GetFieldValue(FieldKeys.Cost);
+                return !string.IsNullOrWhiteSpace(raw)
+                       && !TablePauschaleCostHelper.TryParseTableNetCost(raw, out _);
+            })
+            .Select(record =>
+            {
+                var holding = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
+                return string.IsNullOrWhiteSpace(holding) ? "(ohne Haltungsname)" : holding;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        return invalidHoldings.Count == 0
+            ? null
+            : $"Tabellenkosten sind nicht lesbar bei: {string.Join(", ", invalidHoldings)}";
+    }
+
+    private static string? FindLengthParseError(IEnumerable<HaltungRecord> records)
+    {
+        var invalidHoldings = records
+            .Where(record =>
+            {
+                var raw = record.GetFieldValue(FieldKeys.HoldingLengthMeters);
+                return !string.IsNullOrWhiteSpace(raw)
+                       && (!FachzahlParser.TryParseMeasurement(raw, out var length)
+                           || length <= 0m);
+            })
+            .Select(record =>
+            {
+                var holding = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
+                return string.IsNullOrWhiteSpace(holding) ? "(ohne Haltungsname)" : holding;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        return invalidHoldings.Count == 0
+            ? null
+            : $"Haltungslaenge ist nicht lesbar bei: {string.Join(", ", invalidHoldings)}";
     }
 
     private void UpdatePageTexts()
@@ -358,13 +456,19 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     private void RecomputeRow(SanierungMatrixRowVm row)
     {
+        var calculationLoadError = BuildCalculationLoadError();
+        if (calculationLoadError is not null)
+        {
+            row.Hinweis = "Berechnung gesperrt";
+            Status = $"FEHLER: {calculationLoadError}";
+            return;
+        }
+
         if (row.HasMultipleStoredMeasures)
         {
             row.Hinweis = "Mehrfach-Massnahme geschuetzt";
             return;
         }
-
-        var preservedDetailCost = ResolveDirtyDetailForRowRecompute(row);
 
         var measureId = row.SelectedMeasure?.Id;
         if (string.IsNullOrWhiteSpace(measureId))
@@ -383,6 +487,18 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return;
         }
 
+        if (row.SelectedMeasure?.ManuelleMenge != true
+            && (!FachzahlParser.TryParseMeasurement(row.Laenge, out var length)
+                || length <= 0m))
+        {
+            row.Hinweis = "Laenge fehlt oder ist ungueltig - Berechnung gesperrt";
+            Status =
+                $"FEHLER: Haltungslaenge fuer {row.Holding} fehlt oder ist ungueltig. " +
+                "Bestehende Kosten bleiben unveraendert.";
+            return;
+        }
+
+        var preservedDetailCost = ResolveDirtyDetailForRowRecompute(row);
         _clearedHoldings.Remove(row.Holding); // wieder belegt
 
         var extras = new List<string>();
@@ -712,7 +828,18 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     private void ReloadCatalogAndApplyPrices()
     {
-        var catalog = _catalogStore.LoadMerged(_projectPath);
+        var catalog = _catalogStore.LoadMerged(_projectPath, out var loadError);
+        if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            _catalogLoadError = loadError;
+            Status = $"FEHLER: Kostenkatalog konnte nicht geladen werden: {loadError}";
+            _dialogs.Error(
+                $"Katalogpreise wurden nicht angewendet, weil der Kostenkatalog nicht sauber geladen werden konnte:\n{loadError}",
+                "Sanierungs-Matrix");
+            return;
+        }
+
+        _catalogLoadError = null;
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         _catalog = catalog.Items
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
@@ -762,6 +889,25 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         {
             _dialogs.Error(
                 $"Speichern gesperrt: costs.json konnte beim Laden nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei pruefen (costs\\costs.json bzw. .bak), dann 'Neu laden'.",
+                "Sanierungs-Matrix");
+            return;
+        }
+
+        var calculationLoadError = BuildCalculationLoadError();
+        if (calculationLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Speichern gesperrt: {calculationLoadError}\n\n" +
+                "Bitte Kostenkatalog/Massnahmenvorlagen pruefen und danach 'Neu laden'.",
+                "Sanierungs-Matrix");
+            return;
+        }
+
+        if (_tableCostParseError is not null)
+        {
+            _dialogs.Error(
+                $"Speichern gesperrt: {_tableCostParseError}\n\n" +
+                "Bitte die Tabellenkosten korrigieren und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
             return;
         }

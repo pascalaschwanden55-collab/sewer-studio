@@ -9,8 +9,8 @@ using AuswertungPro.Next.Application.Ai.Workbench;
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>
-/// Liefert die zwei Pruefplatz-Quellen (Etappe 1): lose Fotos und die Review-Warteschlange
-/// aus dem Sample-Bestand. Filter- und Sortierlogik ist rein und testbar; das Fenster ruft nur.
+/// Liefert die Pruefplatz-Quellen: lose Fotos, Review-Warteschlange und unvollstaendige
+/// persoenliche Goldframes. Filter- und Sortierlogik ist rein und testbar.
 /// </summary>
 public sealed class WorkbenchQueueService
 {
@@ -45,11 +45,37 @@ public sealed class WorkbenchQueueService
         return items;
     }
 
+    /// <summary>Baut Pruefplatz-Items aus dem vorbereitenden Gold-Eingang.</summary>
+    public static IReadOnlyList<WorkbenchItem> BuildGoldInboxItems(
+        IReadOnlyList<PersonalGoldInboxImage> images,
+        int? pipeDiameterMm)
+        => images
+            .Select(image => new WorkbenchItem(
+                image.FramePath,
+                image.QueueId,
+                MeterStart: 0,
+                MeterEnd: 0,
+                HaltungName: null,
+                VideoPath: null,
+                PipeDiameterMm: pipeDiameterMm,
+                SuggestedMainCode: image.SuggestedMainCode))
+            .ToArray();
+
     /// <summary>Laedt die Review-Warteschlange aus dem Sample-Bestand.</summary>
     public async Task<IReadOnlyList<WorkbenchItem>> LoadReviewQueueAsync()
     {
         var samples = await _sampleStore.LoadAsync().ConfigureAwait(false);
         return BuildReviewQueue(samples, _fileExists);
+    }
+
+    /// <summary>
+    /// Laedt persoenliche Goldframes, die Entwurf sind oder denen Bild, Box oder
+    /// Segmentierung fehlt.
+    /// </summary>
+    public async Task<IReadOnlyList<WorkbenchItem>> LoadIncompletePersonalGoldQueueAsync(string confirmedByUser)
+    {
+        var samples = await _sampleStore.LoadAsync().ConfigureAwait(false);
+        return BuildIncompletePersonalGoldQueue(samples, confirmedByUser, _fileExists);
     }
 
     /// <summary>
@@ -65,6 +91,41 @@ public sealed class WorkbenchQueueService
             .ThenByDescending(s => s.InspectionDate ?? DateTime.MinValue)
             .Select(ToItem)
             .ToList();
+
+    public static IReadOnlyList<WorkbenchItem> BuildIncompletePersonalGoldQueue(
+        IReadOnlyList<TrainingSample> samples,
+        string confirmedByUser,
+        Func<string, bool> fileExists)
+        => samples
+            .Where(sample =>
+                // Persoenlich bestaetigte Goldframes (Approved) UND eigene Entwuerfe (Draft):
+                // beide gehoeren in die Reparatur-Queue, solange Freigabe, Bild oder
+                // Geometrie unvollstaendig sind.
+                // Die ManualGoldTrainingPolicy bleibt bewusst unveraendert (nur Approved).
+                (ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, confirmedByUser)
+                    || GoldDraftMatcher.IsOwnDraft(sample, confirmedByUser))
+                && (GoldDraftMatcher.IsOwnDraft(sample, confirmedByUser)
+                    || !ManualGoldTrainingPolicy.HasValidGoldGeometry(sample)
+                    || !FrameExists(sample.FramePath, fileExists)))
+            .OrderBy(sample => sample.Code, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(sample => sample.SampleId, StringComparer.OrdinalIgnoreCase)
+            .Select(ToItem)
+            .ToList();
+
+    private static bool FrameExists(string? framePath, Func<string, bool> fileExists)
+    {
+        if (string.IsNullOrWhiteSpace(framePath))
+            return false;
+
+        try
+        {
+            return fileExists(framePath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private static bool IsReviewCandidate(TrainingSample s, Func<string, bool> fileExists)
         => GateRank(s.QualityGateLevel) > 0
@@ -86,5 +147,8 @@ public sealed class WorkbenchQueueService
             // Review-Sample stammt aus dieser Haltung -> HaltungName setzen schliesst die QuarantineOrigin-Luecke.
             HaltungName: string.IsNullOrWhiteSpace(s.CaseId) ? null : s.CaseId,
             VideoPath: null,
-            PipeDiameterMm: null);
+            PipeDiameterMm: null,
+            ExistingSampleId: s.SampleId,
+            ExistingCode: s.Code,
+            ExistingBeschreibung: s.Beschreibung);
 }

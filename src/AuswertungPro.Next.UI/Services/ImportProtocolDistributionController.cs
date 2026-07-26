@@ -8,7 +8,7 @@ internal sealed record ImportProtocolDistributionActions(
     Func<string?> GetProjectFolder,
     Func<Project> GetProject,
     object CollectionLock,
-    Action SaveProject);
+    Func<bool> SaveProject);
 
 /// <summary>
 /// Steuert Auswahl, Hintergrundlauf und Ergebnisanzeige der Protokollverteilung.
@@ -51,12 +51,25 @@ internal sealed class ImportProtocolDistributionController
             _distributor.Distribute(project, projectFolder, sourceFolder, actions.CollectionLock));
 
         project.Dirty = true;
-        actions.SaveProject();
+        var saved = ProjectSaveAttempt.Try(
+            actions.SaveProject,
+            "Protokollverteilung speichern",
+            out var saveError);
 
         foreach (var message in report.Meldungen)
             _logger.LogWarning("Protokollverteilung: {Meldung}", message);
 
-        _dialogs.Info(BuildResultText(report), "Protokolle verteilen");
+        var resultText = BuildResultText(report);
+        if (!saved)
+        {
+            resultText +=
+                "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError);
+            _dialogs.Warn(resultText, "Protokolle verteilen");
+            return;
+        }
+
+        _dialogs.Info(resultText, "Protokolle verteilen");
     }
 
     private static string BuildResultText(ProtocolDistributionReport report)

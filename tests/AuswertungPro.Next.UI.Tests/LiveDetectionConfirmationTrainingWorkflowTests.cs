@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -206,7 +207,7 @@ public sealed class LiveDetectionConfirmationTrainingWorkflowTests
 
     private static Type? WorkflowType
         => typeof(LiveDetectionTrainingAnnotationWriter).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.LiveDetectionConfirmationTrainingWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Live.LiveDetectionConfirmationTrainingWorkflow");
 
     private static async Task<object?> InvokeAsync(MethodInfo method, object?[] args)
     {

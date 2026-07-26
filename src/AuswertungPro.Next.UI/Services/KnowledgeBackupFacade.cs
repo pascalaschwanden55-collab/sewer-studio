@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Backup;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -47,6 +48,7 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
     private readonly KnowledgeBackupLocations _locations;
     private readonly Action _flushPendingSettings;
     private readonly Action<IProgress<string>?> _flushSqliteWal;
+    private readonly ISqliteSnapshotCopier _sqliteSnapshots;
     private readonly SemaphoreSlim _operationLock = new(1, 1);
 
     public KnowledgeBackupTransferService()
@@ -60,13 +62,16 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
     internal KnowledgeBackupTransferService(
         KnowledgeBackupLocations locations,
         Action flushPendingSettings,
-        Action<IProgress<string>?> flushSqliteWal)
+        Action<IProgress<string>?> flushSqliteWal,
+        ISqliteSnapshotCopier? sqliteSnapshots = null)
     {
         _locations = locations ?? throw new ArgumentNullException(nameof(locations));
         _flushPendingSettings = flushPendingSettings
             ?? throw new ArgumentNullException(nameof(flushPendingSettings));
         _flushSqliteWal = flushSqliteWal
             ?? throw new ArgumentNullException(nameof(flushSqliteWal));
+        _sqliteSnapshots = sqliteSnapshots
+            ?? new AuswertungPro.Next.Infrastructure.Backup.SqliteSnapshotCopyService();
     }
 
     public Task<KnowledgeBackupService.BackupResult> ExportAsync(
@@ -79,6 +84,7 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
                 _locations,
                 _flushPendingSettings,
                 _flushSqliteWal,
+                _sqliteSnapshots,
                 progress,
                 token),
             ct);

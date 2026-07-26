@@ -203,7 +203,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerCodingPlayback.cs");
         var navigationControllerPath = Path.Combine(uiRoot, "Player", "CodingNavigationController.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
-        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
+        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingModePreparePlaybackWorkflow.cs");
         var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var codingPaths = new[]
         {

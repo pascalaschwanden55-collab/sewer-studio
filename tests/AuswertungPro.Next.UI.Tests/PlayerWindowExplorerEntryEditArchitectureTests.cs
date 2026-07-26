@@ -15,9 +15,9 @@ public sealed class PlayerWindowExplorerEntryEditArchitectureTests
         var eventActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
-        var editWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerEditWorkflow.cs");
-        var copierPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryCopier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerWorkflowService.cs");
+        var editWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerEditWorkflow.cs");
+        var copierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolEntryCopier.cs");
 
         Assert.True(File.Exists(workflowPath), "Code-Explorer-Workflow soll editierbare Werte ausserhalb der PlayerWindow-Partials kopieren.");
         Assert.True(File.Exists(editWorkflowPath), "Code-Explorer-Edit-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");

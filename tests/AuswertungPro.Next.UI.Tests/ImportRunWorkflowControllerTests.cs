@@ -700,8 +700,10 @@ public sealed class ImportRunWorkflowControllerTests
             Actions(project, state, calls, journal: journal),
             CancellationToken.None);
 
-        // Marker wurde geschrieben (vor + nach Publish) und am Ende wieder geloescht.
+        // Marker wurde vor dem ersten Datei-Move bereits mit den geplanten
+        // Rollback-Zielen geschrieben und danach mit dem Ist-Stand erneuert.
         Assert.True(journal.BeginCalls.Count >= 2);
+        Assert.Single(journal.BeginCalls[0].PublishedTargets);
         Assert.Equal(1, journal.ClearCalls);
         Assert.Null(journal.TryRead(staging.ProjectRoot));
         // Der uebernommene Record traegt die Commit-TxId des Markers.
@@ -709,6 +711,68 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Equal(txId, state.ReplacedProject!.LastCommittedImportTxId);
         // Nach der Veroeffentlichung enthaelt der Marker die veroeffentlichte Zieldatei.
         Assert.Contains(journal.BeginCalls, m => m.PublishedTargets.Count == 1);
+        Assert.All(journal.BeginCalls, marker => Assert.Equal(staging.StagingRoot, marker.StagingRoot));
+    }
+
+    [Fact]
+    public async Task RunAsync_Speicherfehler_mit_Dateistaging_behaelt_Marker_fuer_Recovery()
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var staging = new FileStagingSessionFake(calls);
+        var journal = new FakeTransactionJournal();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) => Result<ImportStats>.Success(
+                new ImportStats(1, 1, 0, 0, 0, [])),
+            SaveProjectAfterCommit: true,
+            BeginFileStaging: _ => staging);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                saveProject: () => false,
+                journal: journal),
+            CancellationToken.None);
+
+        Assert.True(staging.Accepted);
+        Assert.NotNull(journal.TryRead(staging.ProjectRoot));
+        Assert.Equal(0, journal.ClearCalls);
+        Assert.Contains("nicht gespeichert", state.Summary);
+    }
+
+    [Fact]
+    public async Task RunAsync_Aufraeumfehler_behaelt_Marker_fuer_Recovery()
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var staging = new FileStagingSessionFake(calls, throwOnDispose: true);
+        var journal = new FakeTransactionJournal();
+        var request = new ImportRunWorkflowRequest<string>(
+            Label: "PDF",
+            Source: "source.pdf",
+            Import: (_, _, _) => Result<ImportStats>.Success(
+                new ImportStats(1, 1, 0, 0, 0, [])),
+            SaveProjectAfterCommit: true,
+            BeginFileStaging: _ => staging);
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(project, state, calls, journal: journal),
+            CancellationToken.None);
+
+        Assert.NotNull(journal.TryRead(staging.ProjectRoot));
+        Assert.Equal(0, journal.ClearCalls);
+        Assert.Contains(
+            "nicht vollstaendig aufgeraeumt",
+            state.Details,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -845,10 +909,15 @@ public sealed class ImportRunWorkflowControllerTests
         }
     }
 
-    private sealed class FileStagingSessionFake(List<string> calls) : IImportFileStagingSession
+    private sealed class FileStagingSessionFake(
+        List<string> calls,
+        bool throwOnDispose = false) : IImportFileStagingSession
     {
         public string ProjectRoot => @"C:\Projekte\Test";
+        public string StagingRoot => Path.Combine(ProjectRoot, "Projektdateien", ".import-staging");
         public bool Accepted { get; private set; }
+        public IReadOnlyList<PublishedFileInfo> PreparedFiles { get; } =
+            [new PublishedFileInfo("Bilder/1.jpg", "AABB")];
         public IReadOnlyList<PublishedFileInfo> PublishedFiles { get; private set; } = [];
 
         public string StageCopy(
@@ -870,6 +939,11 @@ public sealed class ImportRunWorkflowControllerTests
             calls.Add("accept-files");
         }
 
-        public void Dispose() => calls.Add("dispose-files");
+        public void Dispose()
+        {
+            calls.Add("dispose-files");
+            if (throwOnDispose)
+                throw new IOException("Arbeitsordner gesperrt");
+        }
     }
 }

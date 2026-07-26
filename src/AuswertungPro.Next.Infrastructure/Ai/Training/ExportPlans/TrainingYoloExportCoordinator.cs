@@ -83,7 +83,19 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
             .ConfigureAwait(false);
 
         var samples = inventory.TrainingSamples.ToList();
-        var selection = SelectTrainingSamples(samples);
+        var selection = SelectTrainingSamples(
+            samples,
+            registry.Snapshot.ApprovedBy,
+            registry.Snapshot.ApprovedSampleIds);
+
+        if (selection.RegistryGateSkippedSampleIds.Count > 0)
+        {
+            Report(
+                progress,
+                TrainingYoloExportProgressStage.RegistryGateNotice,
+                $"YOLO-Export: {selection.RegistryGateSkippedSampleIds.Count} vollstaendige " +
+                "Goldsamples nicht im Freigaberegister - nicht exportiert.");
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         Report(
@@ -109,7 +121,8 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
                 TrainingYoloExportResultStatus.NoImages,
                 bundle.Plan,
                 null,
-                new TrainingExportCompletionResult(0, []));
+                new TrainingExportCompletionResult(0, []),
+                RegistryGateSkippedOrNull(selection));
         }
 
         if (command.Mode == TrainingYoloExportMode.PlanOnly)
@@ -127,7 +140,8 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
                 TrainingYoloExportResultStatus.Planned,
                 bundle.Plan,
                 null,
-                new TrainingExportCompletionResult(0, []));
+                new TrainingExportCompletionResult(0, []),
+                RegistryGateSkippedOrNull(selection));
         }
 
         Report(
@@ -167,36 +181,119 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
             TrainingYoloExportResultStatus.Completed,
             bundle.Plan,
             execution,
-            completion);
+            completion,
+            RegistryGateSkippedOrNull(selection));
     }
 
-    private CandidateSelection SelectTrainingSamples(IReadOnlyList<TrainingSample> samples)
+    private static IReadOnlyList<string>? RegistryGateSkippedOrNull(CandidateSelection selection)
+        => selection.RegistryGateSkippedSampleIds.Count > 0
+            ? selection.RegistryGateSkippedSampleIds
+            : null;
+
+    private CandidateSelection SelectTrainingSamples(
+        IReadOnlyList<TrainingSample> samples,
+        string? approvedBy,
+        IReadOnlySet<string> registrySampleIds)
     {
+        ArgumentNullException.ThrowIfNull(registrySampleIds);
         var approvedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var requiresPersistence = false;
         var updates = new List<EligibilityUpdate>();
+        var foundRegistryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var rejectedRegistryIds = new List<string>();
+        var registryGateSkippedIds = new List<string>();
         foreach (var sample in samples)
         {
-            if (sample.Status != TrainingSampleStatus.Approved
-                || string.IsNullOrWhiteSpace(sample.FramePath)
-                || !File.Exists(sample.FramePath))
+            var sampleId = sample.SampleId?.Trim();
+            var inRegistry = !string.IsNullOrWhiteSpace(sampleId)
+                             && registrySampleIds.Contains(sampleId);
+            if (registrySampleIds.Count > 0 && !inRegistry)
             {
+                // Dokumentiertes Pilot-Gate: Nicht registrierte Samples bleiben
+                // ausgeschlossen. Exportfaehige Goldsamples werden dabei sichtbar
+                // gesammelt, damit der Gate-Effekt nicht still bleibt.
+                if (!string.IsNullOrWhiteSpace(sampleId)
+                    && EvaluateExportEligibility(sample, approvedBy) is { IsEligible: true })
+                {
+                    registryGateSkippedIds.Add(sampleId);
+                }
+
                 continue;
             }
 
-            var eligibility = TrainingSampleEligibility.Evaluate(sample, _codeCatalog);
-            var changed = sample.TrainingEligible != eligibility.IsEligible
+            if (inRegistry)
+                foundRegistryIds.Add(sampleId!);
+
+            var eligibility = EvaluateExportEligibility(sample, approvedBy);
+            if (eligibility is null)
+            {
+                if (inRegistry)
+                    rejectedRegistryIds.Add(sampleId!);
+                continue;
+            }
+
+            var changed = sample.TrainingEligible != eligibility.Value.IsEligible
                           || !string.Equals(
                               sample.TrainingEligibilityReason,
-                              eligibility.Reason,
+                              eligibility.Value.Reason,
                               StringComparison.Ordinal);
-            updates.Add(new EligibilityUpdate(sample, eligibility));
+            updates.Add(new EligibilityUpdate(sample, eligibility.Value));
             requiresPersistence |= changed;
-            if (eligibility.IsEligible && !string.IsNullOrWhiteSpace(sample.SampleId))
-                approvedIds.Add(sample.SampleId.Trim());
+            if (eligibility.Value.IsEligible && !string.IsNullOrWhiteSpace(sampleId))
+                approvedIds.Add(sampleId);
+            else if (inRegistry)
+                rejectedRegistryIds.Add(sampleId!);
         }
 
-        return new CandidateSelection(approvedIds, updates, requiresPersistence);
+        if (registrySampleIds.Count > 0)
+        {
+            var missing = registrySampleIds
+                .Where(sampleId => !foundRegistryIds.Contains(sampleId))
+                .OrderBy(sampleId => sampleId, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (missing.Length > 0)
+            {
+                throw new TrainingExportPlanException(
+                    $"Freigegebene Pilot-Samples fehlen im aktuellen Bestand: {string.Join(", ", missing)}");
+            }
+
+            var rejected = rejectedRegistryIds
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(sampleId => sampleId, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (rejected.Length > 0)
+            {
+                throw new TrainingExportPlanException(
+                    $"Freigegebene Pilot-Samples sind nicht mehr exportbereit: {string.Join(", ", rejected)}");
+            }
+        }
+
+        return new CandidateSelection(
+            approvedIds,
+            updates,
+            requiresPersistence,
+            registryGateSkippedIds);
+    }
+
+    /// <summary>
+    /// Fuehrt dieselben Exportpruefungen wie im Auswahlweg aus, ohne etwas zu
+    /// veraendern. Null bedeutet: Status oder Goldbild verhindern den Export.
+    /// </summary>
+    private TrainingEligibilityResult? EvaluateExportEligibility(
+        TrainingSample sample,
+        string? approvedBy)
+    {
+        if (sample.Status != TrainingSampleStatus.Approved
+            || string.IsNullOrWhiteSpace(sample.FramePath)
+            || !File.Exists(sample.FramePath))
+        {
+            return null;
+        }
+
+        var manualApproval = ManualGoldTrainingPolicy.EvaluateForExport(sample, approvedBy);
+        return manualApproval.IsEligible
+            ? TrainingSampleEligibility.Evaluate(sample, _codeCatalog)
+            : manualApproval;
     }
 
     private static void ApplyEligibilityUpdates(IReadOnlyList<EligibilityUpdate> updates)
@@ -261,7 +358,8 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
     private sealed record CandidateSelection(
         IReadOnlySet<string> ApprovedSampleIds,
         IReadOnlyList<EligibilityUpdate> EligibilityUpdates,
-        bool RequiresPersistence);
+        bool RequiresPersistence,
+        IReadOnlyList<string> RegistryGateSkippedSampleIds);
 
     private sealed record EligibilityUpdate(
         TrainingSample Sample,

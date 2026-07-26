@@ -2,6 +2,7 @@ using System.Threading;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;

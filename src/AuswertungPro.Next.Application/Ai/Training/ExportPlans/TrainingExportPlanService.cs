@@ -46,15 +46,23 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         var exportable = prepared
             .Where(candidate => candidate.ExclusionReason is null)
             .ToArray();
-        var images = BuildImages(exportable);
-        var sourcePaths = BuildSourcePathMap(exportable);
-        var trainHoldings = images
+        var positiveImages = BuildImages(exportable);
+        var negativeImages = BuildNegativeImages(
+            request.NegativeImages,
+            protectedImageHashes,
+            positiveImages);
+        var images = positiveImages
+            .Concat(negativeImages)
+            .OrderBy(image => image.ImageSha256, StringComparer.Ordinal)
+            .ToArray();
+        var sourcePaths = BuildSourcePathMap(exportable, request.NegativeImages);
+        var trainHoldings = positiveImages
             .Where(image => image.Target == TrainingExportTarget.Train)
             .Select(image => image.HoldingKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var validationHoldings = images
+        var validationHoldings = positiveImages
             .Where(image => image.Target == TrainingExportTarget.Validation)
             .Select(image => image.HoldingKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -332,9 +340,76 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         return images;
     }
 
+    /// <summary>
+    /// Baut die Plan-Eintraege fuer kuratierte Negativ-/Hintergrundbilder: inhaltsadressierte
+    /// img_-Namen wie Positive, bewusst LEERE Labelliste (YOLO-Negativ ueblich), fester
+    /// Pool-HoldingKey. Eval-Kontamination, Duplikate und Kollisionen mit positiven
+    /// Bildern sind harte Stopps — ein Eval-Bild darf nie ins Training.
+    /// </summary>
+    private static IReadOnlyList<TrainingExportPlannedImage> BuildNegativeImages(
+        IReadOnlyList<TrainingExportNegativeImage> negatives,
+        IReadOnlySet<string> protectedImageHashes,
+        IReadOnlyList<TrainingExportPlannedImage> positiveImages)
+    {
+        if (negatives.Count == 0)
+            return [];
+
+        var positiveHashes = positiveImages
+            .Select(image => image.ImageSha256)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var images = new List<TrainingExportPlannedImage>(negatives.Count);
+        foreach (var negative in negatives.OrderBy(item => item.Sha256, StringComparer.Ordinal))
+        {
+            var sha256 = negative.Sha256.Trim().ToLowerInvariant();
+            RequireSha256(sha256, "Negativ-Bild-Hash");
+            if (images.Any(image => image.ImageSha256.Equals(sha256, StringComparison.OrdinalIgnoreCase)))
+                throw new TrainingExportPlanException($"Negativbild {sha256} steht mehrfach im Plan-Input.");
+            if (positiveHashes.Contains(sha256))
+            {
+                throw new TrainingExportPlanException(
+                    $"Bild {sha256} ist zugleich als positives Trainingsbild und als Negativbild freigegeben (Kollision).");
+            }
+            if (protectedImageHashes.Contains(sha256))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild {sha256} gehoert zum eingefrorenen Eval-/Abnahme-Set.");
+            }
+
+            var extension = NormalizeRequiredImageExtension(
+                Path.GetExtension(negative.Path),
+                new TrainingExportSourceRef(TrainingExportSourceType.TrainingSample, $"negative:{sha256[..12]}"));
+            images.Add(new TrainingExportPlannedImage(
+                sha256,
+                TrainingExportNegativePool.HoldingKey,
+                negative.SplitHint ?? ComputeNegativeTarget(sha256),
+                $"img_{sha256}{extension}",
+                Array.Empty<TrainingExportPlannedLabel>())
+            {
+                IsNegative = true
+            });
+        }
+
+        return images;
+    }
+
+    /// <summary>
+    /// Deterministische Train/Dev-Val-Zuordnung fuer Negative ohne Register-Hinweis:
+    /// Hash des Bild-Hashs, ~20 % Pruefanteil (gleicher Zielwert wie der Pilot-Split).
+    /// </summary>
+    private static TrainingExportTarget ComputeNegativeTarget(string imageSha256)
+    {
+        var digest = SHA256.HashData(
+            Encoding.UTF8.GetBytes($"export-negative-split-v1|{imageSha256}"));
+        return digest[0] < 51
+            ? TrainingExportTarget.Validation
+            : TrainingExportTarget.Train;
+    }
+
     private static IReadOnlyDictionary<string, string> BuildSourcePathMap(
-        IReadOnlyList<PreparedCandidate> candidates)
-        => candidates
+        IReadOnlyList<PreparedCandidate> candidates,
+        IReadOnlyList<TrainingExportNegativeImage> negatives)
+    {
+        var map = candidates
             .GroupBy(candidate => candidate.ImageSha256!, StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.Ordinal)
             .ToDictionary(
@@ -344,6 +419,15 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
                     .First()
                     .FramePath,
                 StringComparer.OrdinalIgnoreCase);
+        foreach (var negative in negatives)
+        {
+            var sha256 = negative.Sha256.Trim().ToLowerInvariant();
+            if (!map.ContainsKey(sha256))
+                map.Add(sha256, negative.Path);
+        }
+
+        return map;
+    }
 
     private static IReadOnlyDictionary<string, string> ValidateSourceSnapshotHashes(
         IReadOnlyDictionary<string, string> sourceHashes)
@@ -493,11 +577,27 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
     }
 
     private static TrainingExportBoundingBox Canonicalize(TrainingExportBoundingBox box)
-        => new(
-            Math.Round(box.XCenter, 6, MidpointRounding.AwayFromZero),
-            Math.Round(box.YCenter, 6, MidpointRounding.AwayFromZero),
-            Math.Round(box.Width, 6, MidpointRounding.AwayFromZero),
-            Math.Round(box.Height, 6, MidpointRounding.AwayFromZero));
+    {
+        var xCenter = RoundCoordinate(box.XCenter);
+        var yCenter = RoundCoordinate(box.YCenter);
+        return new TrainingExportBoundingBox(
+            xCenter,
+            yCenter,
+            RoundSizeInward(box.Width, xCenter),
+            RoundSizeInward(box.Height, yCenter));
+    }
+
+    private static double RoundCoordinate(double value)
+        => Math.Round(value, 6, MidpointRounding.AwayFromZero);
+
+    private static double RoundSizeInward(double value, double center)
+    {
+        const double scale = 1_000_000d;
+        var rounded = Math.Round(value, 6, MidpointRounding.AwayFromZero);
+        var maximumInsideImage = 2 * Math.Min(center, 1 - center);
+        var maximumAtSixDecimals = Math.Floor((maximumInsideImage + 1e-12) * scale) / scale;
+        return Math.Min(rounded, maximumAtSixDecimals);
+    }
 
     private static string LabelKey(PreparedCandidate candidate)
         => $"{candidate.ClassId}|{BoxKey(candidate.BoundingBox!)}";

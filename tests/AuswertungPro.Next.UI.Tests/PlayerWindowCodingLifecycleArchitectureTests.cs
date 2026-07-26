@@ -34,17 +34,17 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var importReferencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var uiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
-        var importReferenceResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceStateResetter.cs");
-        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchStateResetter.cs");
-        var preparePlaybackWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModePreparePlaybackWorkflow.cs");
-        var defaultToolWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDefaultToolWorkflow.cs");
-        var showUiWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeShowUiWorkflow.cs");
-        var backgroundServicesWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeBackgroundServicesWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeCommandWorkflow.cs");
-        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
-        var exitCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitCommandWorkflow.cs");
-        var sessionStateCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionStateCreationWorkflow.cs");
-        var sessionStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionStartWorkflow.cs");
+        var importReferenceResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportReferenceStateResetter.cs");
+        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchStateResetter.cs");
+        var preparePlaybackWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModePreparePlaybackWorkflow.cs");
+        var defaultToolWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDefaultToolWorkflow.cs");
+        var showUiWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeShowUiWorkflow.cs");
+        var backgroundServicesWorkflowPath = RepoFile("src", "AuswertungPro.Next.Application", "UseCases", "CodingModeBackgroundServicesWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeCommandWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeEnterWorkflow.cs");
+        var exitCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeExitCommandWorkflow.cs");
+        var sessionStateCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSessionStateCreationWorkflow.cs");
+        var sessionStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSessionStartWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.False(File.Exists(oldExitPath), "Codiermodus-Exit darf nicht als PlayerWindow-Partial zurueckkehren.");
@@ -308,8 +308,8 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var controllerFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindowCodingModeExitControllerFactory.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingModeExitController.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitFinalizationWorkflow.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeExitFinalizationWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTerminalBoundaryPresencePolicy.cs");
 
         Assert.False(File.Exists(oldExitPath), "Coding-Exit-Cleanup darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(File.Exists(controllerPath), "Coding-Exit-Cleanup soll in einem eigenen Controller liegen.");
@@ -340,9 +340,9 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     public void PlayerWindow_dn_calibration_initialization_lives_in_policy()
     {
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDnCalibrationPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDnCalibrationApplyWorkflow.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionHeaderControls.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingDnCalibrationPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingDnCalibrationApplyWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSessionHeaderControls.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "DN-/Kalibrierungs-Anwendungsreihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -382,12 +382,12 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     public void PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial()
     {
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTrainingPersistenceContext.cs");
+        var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingTrainingPersistenceContext.cs");
         var lengthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
-        var ensureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureService.cs");
-        var ensureServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
-        var ensureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureWorkflow.cs");
-        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
+        var ensureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingHaltungslaengeEnsureService.cs");
+        var ensureServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingHaltungslaengeEnsureServiceFactory.cs");
+        var ensureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingHaltungslaengeEnsureWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
         Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
@@ -434,9 +434,9 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogService.cs");
-        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogServiceFactory.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogWorkflow.cs");
+        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDialogService.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDialogServiceFactory.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDialogWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Coding-Modus-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");

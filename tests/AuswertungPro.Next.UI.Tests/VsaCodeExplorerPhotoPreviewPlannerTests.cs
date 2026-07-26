@@ -1,5 +1,6 @@
 using System.Reflection;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Vsa;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -34,7 +35,7 @@ public sealed class VsaCodeExplorerPhotoPreviewPlannerTests
     private static object Plan(IReadOnlyList<string> photoPaths, Func<string, bool> fileExists)
     {
         var type = typeof(VsaCodeExplorerDispatchWorkflow).Assembly.GetType(
-            "AuswertungPro.Next.UI.Ai.VsaCodeExplorerPhotoPreviewPlanner");
+            "AuswertungPro.Next.UI.Ai.Vsa.VsaCodeExplorerPhotoPreviewPlanner");
         Assert.NotNull(type);
         var method = type
             .GetMethods(BindingFlags.Public | BindingFlags.Static)

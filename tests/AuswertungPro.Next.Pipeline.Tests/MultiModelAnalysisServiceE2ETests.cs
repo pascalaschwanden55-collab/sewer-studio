@@ -72,6 +72,9 @@ public sealed class MultiModelAnalysisServiceE2ETests
     /// </summary>
     private sealed class BcdOnlyClassifierStub : IVisionPipelineClient
     {
+        public int YoloCalls { get; private set; }
+        public int DinoCalls { get; private set; }
+
         public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
             => Task.FromResult<SidecarHealthResponse?>(null);
 
@@ -84,16 +87,22 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 Error: null));
 
         public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
-            => Task.FromResult(new YoloResponse(
+        {
+            YoloCalls++;
+            return Task.FromResult(new YoloResponse(
                 IsRelevant: true,
                 Detections: Array.Empty<YoloDetectionDto>(),
                 FrameClass: "structural",
                 InferenceTimeMs: 1));
+        }
 
         public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
-            => Task.FromResult(new DinoResponse(
+        {
+            DinoCalls++;
+            return Task.FromResult(new DinoResponse(
                 Detections: Array.Empty<DinoDetectionDto>(),
                 InferenceTimeMs: 1));
+        }
 
         public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
             => Task.FromResult(new SamResponse(
@@ -118,7 +127,11 @@ public sealed class MultiModelAnalysisServiceE2ETests
     private sealed class DeadSidecarYoloClient : IVisionPipelineClient
     {
         public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
-            => Task.FromResult<SidecarHealthResponse?>(null);
+            => Task.FromResult<SidecarHealthResponse?>(new SidecarHealthResponse(
+                Status: "ok",
+                Version: "test",
+                Gpu: null,
+                DetectorQualification: new SidecarDetectorQualification(true, null)));
 
         public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
             => Task.FromResult(new PipelineHealthCheckResult(true, true, 200, null, null));
@@ -282,5 +295,127 @@ public sealed class MultiModelAnalysisServiceE2ETests
         Assert.True(traceWriter.WriteCalls > 0);
         Assert.Equal(1, traceWriter.SummaryCalls);
         Assert.Equal(1, traceWriter.ResolvePathCalls);
+    }
+
+    /// <summary>Wie <see cref="BcdOnlyClassifierStub"/>, aber /health meldet einen NICHT
+    /// qualifizierten Detektor (Altmodell mit BBox-Kollaps).</summary>
+    private sealed class UnqualifiedDetectorStub : IVisionPipelineClient
+    {
+        public int YoloCalls { get; private set; }
+        public int DinoCalls { get; private set; }
+        public int SamCalls { get; private set; }
+
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(new SidecarHealthResponse(
+                Status: "ok",
+                Version: "test",
+                Gpu: null,
+                DetectorQualification: new SidecarDetectorQualification(
+                    Qualified: false,
+                    Reason: "Altmodell: BBox-Kollaps.")));
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+            => Task.FromResult(new PipelineHealthCheckResult(true, true, 200, null, null));
+
+        public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+        {
+            YoloCalls++;
+            return Task.FromResult(new YoloResponse(
+                true,
+                [new YoloDetectionDto(0, 0, 1, 1, "BAB_crack", 0.99)],
+                "damage",
+                1));
+        }
+
+        public Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+        {
+            DinoCalls++;
+            return Task.FromResult(new DinoResponse(
+                [new DinoDetectionDto(10, 10, 30, 30, "crack", 0.8, "crack")],
+                1));
+        }
+
+        public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
+        {
+            SamCalls++;
+            return Task.FromResult(new SamResponse(
+                [
+                    new SamMaskResult(
+                        Label: "crack",
+                        Confidence: 0.8,
+                        Bbox: [10, 10, 30, 30],
+                        MaskRle: string.Empty,
+                        MaskAreaPixels: 400,
+                        ImageAreaPixels: 640 * 480,
+                        HeightPixels: 20,
+                        WidthPixels: 20,
+                        CentroidX: 20,
+                        CentroidY: 20)
+                ],
+                640,
+                480,
+                1));
+        }
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
+            => Task.FromResult(new YoloClassifyResponse(
+                new[] { new YoloClassifyPrediction("BCD", 0.95) },
+                1,
+                Usable: true,
+                QualityReason: "ok",
+                ClassifierLoaded: true));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_bei_unqualifiziertem_Detektor_kennzeichnet_das_Ergebnis()
+    {
+        // Das kollabierte YOLO wird nicht mehr aufgerufen. DINO und SAM analysieren
+        // die Frames weiter, der Lauf bleibt aber sichtbar review-pflichtig.
+        var client = new UnqualifiedDetectorStub();
+        var svc = new MultiModelAnalysisService(
+            client: client,
+            config: MinimalConfig(),
+            ffmpegPath: "ffmpeg",
+            frameSource: TenFrameSource,
+            durationProbe: (_, _) => Task.FromResult(10.0));
+        svc.FrameStepSeconds = 1.0;
+        svc.UseClsPrefilter = false;
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Degraded);
+        Assert.Equal(false, result.DetectorQualified);
+        Assert.Equal("Altmodell: BBox-Kollaps.", result.DetectorQualificationReason);
+        Assert.Contains("manuelle Pruefung", result.DegradedReason);
+        Assert.Equal(0, client.YoloCalls);
+        Assert.True(client.DinoCalls > 0);
+        Assert.Equal(client.DinoCalls, client.SamCalls);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_bei_unbekannter_Qualifikation_umgeht_Yolo_und_verlangt_Review()
+    {
+        // Aelterer Sidecar ohne Feld oder Health-Lesefehler: kein Vertrauensbeweis.
+        // Deshalb YOLO umgehen, DINO weiter nutzen und den Lauf review-pflichtig markieren.
+        var client = new BcdOnlyClassifierStub();
+        var svc = new MultiModelAnalysisService(
+            client: client,
+            config: MinimalConfig(),
+            ffmpegPath: "ffmpeg",
+            frameSource: TenFrameSource,
+            durationProbe: (_, _) => Task.FromResult(10.0));
+        svc.FrameStepSeconds = 1.0;
+        svc.UseClsPrefilter = false;
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Degraded);
+        Assert.Null(result.DetectorQualified);
+        Assert.Contains("Qualifikationsstatus", result.DetectorQualificationReason);
+        Assert.Contains("manuelle Pruefung", result.DegradedReason);
+        Assert.Equal(0, client.YoloCalls);
+        Assert.True(client.DinoCalls > 0);
     }
 }

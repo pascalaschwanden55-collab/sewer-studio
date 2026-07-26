@@ -49,6 +49,8 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     private Dictionary<string, CostCatalogItem> _catalog = new(StringComparer.OrdinalIgnoreCase);
     private ProjectCostStore _store = new();
     private string? _storeLoadError;
+    private string? _catalogLoadError;
+    private string? _templateLoadError;
     private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private string _projectPath = "";
     private bool _hasUnsavedChanges;
@@ -156,14 +158,14 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         _touchedSchaechte.Clear();
         _projectPath = _getProjectPath() ?? "";
 
-        var catalog = _catalogStore.LoadMerged(_projectPath);
+        var catalog = _catalogStore.LoadMerged(_projectPath, out _catalogLoadError);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         _catalog = catalog.Items
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var tplCatalog = _templateStore.LoadMerged(_projectPath);
+        var tplCatalog = _templateStore.LoadMerged(_projectPath, out _templateLoadError);
         _templates = tplCatalog.Measures
             .Where(m => !m.Disabled && !string.IsNullOrWhiteSpace(m.Id))
             .GroupBy(m => m.Id.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -196,6 +198,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             ? "Keine Schaechte geladen (Projekt mit importierten Schacht-Protokollen oeffnen)."
             : $"{Rows.Count} Schaechte geladen.";
 
+        var calculationLoadError = BuildCalculationLoadError();
         if (_storeLoadError is not null)
         {
             Status = $"WARNUNG: {_storeLoadError} — Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
@@ -203,6 +206,24 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
                 $"Schacht-Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit schacht_costs.json nicht mit einem leeren Stand ueberschrieben wird.",
                 "Schacht-Matrix");
         }
+        else if (calculationLoadError is not null)
+        {
+            Status = $"FEHLER: {calculationLoadError} - Berechnungen und Speichern sind gesperrt.";
+            _dialogs.Error(
+                $"{calculationLoadError}\n\n" +
+                "Berechnungen und Speichern sind gesperrt, damit bestehende Schacht-Kosten nicht mit leeren Ersatzdaten veraendert werden.",
+                "Schacht-Matrix");
+        }
+    }
+
+    private string? BuildCalculationLoadError()
+    {
+        var errors = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+            errors.Add($"Kostenkatalog konnte nicht geladen werden: {_catalogLoadError}");
+        if (!string.IsNullOrWhiteSpace(_templateLoadError))
+            errors.Add($"Massnahmenvorlagen konnten nicht geladen werden: {_templateLoadError}");
+        return errors.Count == 0 ? null : string.Join("\n", errors);
     }
 
     private void InitRowFromStore(SchachtMatrixRowVm row, string nummer)
@@ -244,6 +265,14 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
     private void RecomputeRow(SchachtMatrixRowVm row)
     {
+        var calculationLoadError = BuildCalculationLoadError();
+        if (calculationLoadError is not null)
+        {
+            row.Hinweis = "Berechnung gesperrt";
+            Status = $"FEHLER: {calculationLoadError}";
+            return;
+        }
+
         var measureId = row.SelectedMeasure?.Id;
         if (string.IsNullOrWhiteSpace(measureId))
         {
@@ -259,14 +288,23 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             return;
         }
 
+        if (row.Menge <= 0m)
+        {
+            row.Hinweis = "Menge muss groesser als 0 sein - Berechnung gesperrt";
+            Status =
+                $"FEHLER: Menge fuer {row.Schachtnummer} muss groesser als 0 sein. " +
+                "Bestehende Kosten bleiben unveraendert.";
+            return;
+        }
+
         var extras = new List<string>();
         if (row.OptReinigung) extras.Add(KeyReinigung);
         if (row.OptVd) extras.Add(SanierungsMatrixOptionKeys.Verkehrsdienst);
         if (row.OptWasserhaltung) extras.Add(SanierungsMatrixOptionKeys.Wasserhaltung);
         if (row.OptDokumentation) extras.Add(SanierungsMatrixOptionKeys.Dokumentation);
 
-        // Schaechte: Menge immer manuell. > 0 uebersteuert die Hauptarbeit; sonst Template-Default (1).
-        decimal hauptMenge = row.Menge > 0m ? row.Menge : 1m;
+        // Schaechte: Menge immer manuell und bereits fachlich validiert.
+        var hauptMenge = row.Menge;
         var hauptKey = row.SelectedMeasure?.HauptItemKey;
         if (SchachtAbdeckungStkAutoFill.TryApplyForMeasure(row.Record, measureId, row.SelectedMeasure?.Name))
         {
@@ -319,6 +357,18 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             _dialogs.Error($"Speichern gesperrt: {_storeLoadError}", PageTitle);
             return;
         }
+        var calculationLoadError = BuildCalculationLoadError();
+        if (calculationLoadError is not null)
+        {
+            _dialogs.Error($"Speichern gesperrt: {calculationLoadError}", PageTitle);
+            return;
+        }
+        var quantityValidationError = FindQuantityValidationError();
+        if (quantityValidationError is not null)
+        {
+            _dialogs.Error($"Speichern gesperrt: {quantityValidationError}", PageTitle);
+            return;
+        }
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
             _dialogs.Warn("Kein Projektpfad — bitte zuerst ein Projekt speichern.", PageTitle);
@@ -351,6 +401,20 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         _hasUnsavedChanges = false;
         Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schaechte).";
         _dashboardRefresh.NotifyCostsChanged();
+    }
+
+    private string? FindQuantityValidationError()
+    {
+        var invalidShafts = Rows
+            .Where(row => row.SelectedMeasure?.Id is not null && row.Menge <= 0m)
+            .Select(row => row.Schachtnummer)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        return invalidShafts.Count == 0
+            ? null
+            : $"Menge muss groesser als 0 sein bei: {string.Join(", ", invalidShafts)}";
     }
 
     public bool ConfirmLeave()
@@ -413,8 +477,12 @@ public sealed partial class SchachtMatrixRowVm : ObservableObject
 
     partial void OnSelectedMeasureChanged(MeasureOption? value)
     {
-        if (!_suppress && SchachtAbdeckungStkAutoFill.IsRahmenDeckelMeasure(value?.Id, value?.Name) && Menge <= 0m)
+        if (!_suppress && value?.Id is not null && Menge <= 0m)
+        {
+            _suppress = true;
             Menge = 1m;
+            _suppress = false;
+        }
 
         Recalc();
     }

@@ -93,6 +93,26 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         }
     }
 
+    [Fact]
+    public void Npk_nummer_mit_endnuller_bleibt_text_und_wird_keine_zahl()
+    {
+        // Regression: "612.110" darf von Excel nicht als Zahl 612.11 interpretiert werden —
+        // die NPK-Position waere im Leistungsverzeichnis sonst verfaelscht (612.110 <> 612.11).
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            new[] { Fixed("612.110", 10m, 200m, 2000m) });
+
+        using var wb = Open(bytes);
+        foreach (var sheet in new[] { "Zum Ausfüllen", "Kalkulation (intern)" })
+        {
+            var ws = wb.Worksheet(sheet);
+            // PositionRow findet die Zeile nur, wenn der Zelltext unverstuemmelt vorliegt.
+            var cell = PositionRow(ws, "612.110").Cell(ColNpk);
+
+            Assert.Equal(XLDataType.Text, cell.DataType);
+            Assert.Equal("612.110", cell.GetString());
+        }
+    }
+
     private static IXLRangeRow PositionRow(IXLWorksheet ws, string npk)
     {
         var row = ws.RangeUsed()?.RowsUsed()

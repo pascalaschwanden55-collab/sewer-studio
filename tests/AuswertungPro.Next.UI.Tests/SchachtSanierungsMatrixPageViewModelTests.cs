@@ -92,6 +92,38 @@ public sealed class SchachtSanierungsMatrixPageViewModelTests : IDisposable
         Assert.Equal("SCHACHT_PAUSCHAL", row2.SelectedMeasure?.Id);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Nichtpositive_Menge_wird_nicht_still_als_eins_berechnet_oder_gespeichert(
+        int invalidQuantity)
+    {
+        var (shell, sp) = CreateShell(("KS MENGE", "Kontrollschacht", ""));
+        var dialogs = new DialogFake();
+        sp.Dialogs = dialogs;
+        var vm = new SchachtSanierungsMatrixPageViewModel(shell, sp);
+        var row = Assert.Single(vm.Rows);
+
+        row.SelectedMeasure = vm.MeasureOptions.First(o => o.Id == "SCHACHT_PAUSCHAL");
+
+        Assert.Equal(1m, row.Menge);
+        var initialCost = Assert.IsType<HoldingCost>(row.StoredCost);
+        var initialMainLine = Assert.Single(
+            initialCost.Measures.SelectMany(measure => measure.Lines),
+            line => line.ItemKey == row.SelectedMeasure.HauptItemKey);
+        Assert.Equal(1m, initialMainLine.Qty);
+
+        row.Menge = invalidQuantity;
+
+        Assert.Contains("Menge", row.Hinweis, StringComparison.Ordinal);
+        Assert.Contains("KS MENGE", vm.Status, StringComparison.Ordinal);
+
+        vm.SpeichernCommand.Execute(null);
+
+        Assert.Contains("Speichern gesperrt", dialogs.LastError, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_dir, "costs", "schacht_costs.json")));
+    }
+
     [Fact]
     public void Auswahl_keine_entfernt_den_Zeilen_Eintrag_wieder()
     {
@@ -120,10 +152,52 @@ public sealed class SchachtSanierungsMatrixPageViewModelTests : IDisposable
         Assert.Equal("1", row.Record.GetFieldValue("Abdeckung Stk."));
     }
 
+    [Theory]
+    [InlineData("cost_catalog.json", "Kostenkatalog")]
+    [InlineData("measure_templates.json", "Massnahmenvorlagen")]
+    public void Beschaedigte_Berechnungsgrundlage_sperrt_Schachtkosten(
+        string fileName,
+        string expectedLabel)
+    {
+        var (shell, sp) = CreateShell(("KS 1", "", ""));
+        var configDirectory = Path.Combine(_dir, "Config");
+        Directory.CreateDirectory(configDirectory);
+        File.WriteAllText(Path.Combine(configDirectory, fileName), "{ kaputt");
+        var dialogs = new DialogFake();
+        sp.Dialogs = dialogs;
+
+        var vm = new SchachtSanierungsMatrixPageViewModel(shell, sp);
+
+        Assert.Contains(expectedLabel, vm.Status, StringComparison.Ordinal);
+        Assert.Contains(expectedLabel, dialogs.LastError, StringComparison.Ordinal);
+
+        dialogs.LastError = "";
+        vm.SpeichernCommand.Execute(null);
+
+        Assert.Contains("Speichern gesperrt", dialogs.LastError, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_dir, "costs", "schacht_costs.json")));
+    }
+
     public void Dispose()
     {
         _lf.Dispose();
         if (Directory.Exists(_dir))
             Directory.Delete(_dir, recursive: true);
+    }
+
+    private sealed class DialogFake : IDialogService
+    {
+        public string LastError { get; set; } = "";
+
+        public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
+        public string[] OpenFiles(string title, string filter) => [];
+        public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
+        public string? SelectFolder(string title, string? initialPath = null) => null;
+        public void Info(string message, string title = "Hinweis") { }
+        public void Warn(string message, string title = "Warnung") { }
+        public void Error(string message, string title = "Fehler") => LastError = message;
+        public bool Confirm(string message, string title = "Bestaetigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
     }
 }

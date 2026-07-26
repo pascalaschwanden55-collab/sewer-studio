@@ -11,15 +11,15 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var boundaryContextPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryContext.cs");
+        var boundaryContextPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingBoundaryContext.cs");
         var closePromptPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Streckenschaden.ClosePrompt.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptBuilder.cs");
-        var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePolicy.cs");
-        var closeApplierPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageCloseApplier.cs");
-        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogService.cs");
-        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogServiceFactory.cs");
-        var dialogWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogWorkflow.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptCommandWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamagePromptBuilder.cs");
+        var closePolicyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamagePolicy.cs");
+        var closeApplierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamageCloseApplier.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamageDialogService.cs");
+        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamageDialogServiceFactory.cs");
+        var dialogWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamageDialogWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamagePromptCommandWorkflow.cs");
 
         Assert.True(File.Exists(closePromptPath), "Dialog fuer offene Streckenschaeden soll aus dem Boundary-Partial heraus.");
         Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -87,8 +87,8 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
-        var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionInputBuilder.cs");
-        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
+        var builderPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionInputBuilder.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionApplier.cs");
 
         Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionsausfuehrung muss den Action-Input-Builder nutzen.");
@@ -112,8 +112,8 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplyCommandWorkflow.cs");
-        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionApplyCommandWorkflow.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionApplier.cs");
 
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Aktions-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionen muessen ausserhalb der PlayerWindow-Partials angewendet werden.");
@@ -147,7 +147,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
-        var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenObservationBuilder.cs");
+        var builderPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenObservationBuilder.cs");
 
         Assert.True(File.Exists(builderPath), "Segment-zu-Streckenschaden-Observation-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -178,7 +178,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var importPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackingController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenTrackingCommandWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenTrackingCommandWorkflow.cs");
 
         Assert.False(File.Exists(oldPartialPath), "Die alte PlayerWindow-Streckenschaden-Teilklasse soll entfernt bleiben.");
         Assert.True(File.Exists(controllerPath), "Streckenschaden-Tracking soll in einem eigenen Controller liegen.");
@@ -252,9 +252,9 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenEventFactory.cs");
-        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageManualCloseApplier.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenEventFactory.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStretchDamageManualCloseApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEventListActionWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(applierPath), "Manuelles Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials angewendet werden.");
@@ -286,8 +286,8 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageClosePolicy.cs");
-        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageManualCloseApplier.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStretchDamageClosePolicy.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStretchDamageManualCloseApplier.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(policyPath), "Streckenschaden-Schliessregel muss ausserhalb der PlayerWindow-Partials liegen.");

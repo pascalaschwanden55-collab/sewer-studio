@@ -6,6 +6,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 

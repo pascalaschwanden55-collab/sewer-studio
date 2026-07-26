@@ -3,6 +3,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Ai.Live;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 

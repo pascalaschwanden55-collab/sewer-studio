@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -53,7 +54,7 @@ public sealed class CodingConfirmationResumeWorkflowTests
 
     private static MethodInfo? FindApplyMethod()
         => typeof(CodingConfirmationDecisionWorkflow).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingConfirmationResumeWorkflow")
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingConfirmationResumeWorkflow")
             ?.GetMethod(
                 "Apply",
                 BindingFlags.Public | BindingFlags.Static,

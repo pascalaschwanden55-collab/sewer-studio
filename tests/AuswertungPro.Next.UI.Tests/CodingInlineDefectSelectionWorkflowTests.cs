@@ -2,6 +2,7 @@ using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -89,7 +90,7 @@ public sealed class CodingInlineDefectSelectionWorkflowTests
 
     private static Type? WorkflowType
         => typeof(CodingDefectStatusDisplayPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingInlineDefectSelectionWorkflow");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingInlineDefectSelectionWorkflow");
 
     private static MethodInfo? FindApplyMethod()
         => WorkflowType?.GetMethod(

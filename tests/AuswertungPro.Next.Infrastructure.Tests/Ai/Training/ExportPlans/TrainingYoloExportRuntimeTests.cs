@@ -39,6 +39,9 @@ public sealed class TrainingYoloExportRuntimeTests
         public Task SaveAsync(List<TrainingSample> samples) => Task.CompletedTask;
         public Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples) => Task.CompletedTask;
         public Task MergeAndSaveAsync(List<TrainingSample> samples) => Task.CompletedTask;
+        public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> RemoveBySampleIdAsync(string sampleId) => Task.FromResult(false);
+        public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample) => Task.FromResult(false);
     }
 
     private sealed class FakeCodeCatalog : ICodeCatalogProvider

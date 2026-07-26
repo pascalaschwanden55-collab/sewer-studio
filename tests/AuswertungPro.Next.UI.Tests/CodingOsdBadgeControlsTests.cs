@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -76,7 +77,7 @@ public sealed class CodingOsdBadgeControlsTests
 
     private static Type? ControlsType
         => typeof(CodingOsdBadgeDisplayPolicy).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.CodingOsdBadgeControls");
+            .GetType("AuswertungPro.Next.UI.Ai.Coding.CodingOsdBadgeControls");
 
     private static MethodInfo? FindShowMethod()
         => ControlsType?.GetMethod(

@@ -133,6 +133,31 @@ public sealed class TrainingExportPlanServiceTests
     }
 
     [Fact]
+    public void CreatePlan_rundet_Bildrand_Box_nach_innen()
+    {
+        var bundle = new TrainingExportPlanService().CreatePlan(Request(
+            [
+                Candidate(
+                    "edge-box",
+                    "100-200",
+                    "BAB_riss",
+                    box: new TrainingExportBoundingBox(
+                        0.5615234375,
+                        0.619140625,
+                        0.802734375,
+                        0.76171875))
+            ],
+            Registry(("100-200", TrainingExportHoldingRole.Train))));
+
+        var box = Assert.Single(Assert.Single(bundle.Plan.Images).Labels).BoundingBox;
+
+        Assert.True(box.IsValid);
+        Assert.Equal(0.619141, box.YCenter);
+        Assert.Equal(0.761718, box.Height);
+        Assert.Equal(1, box.YCenter + box.Height / 2, precision: 6);
+    }
+
+    [Fact]
     public void CreatePlan_verwendet_SourceId_nie_als_Dateipfad()
     {
         var candidate = Candidate(@"..\..\kunde", "100-200", "BAB_riss");

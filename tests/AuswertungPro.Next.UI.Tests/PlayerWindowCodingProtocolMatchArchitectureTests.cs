@@ -10,8 +10,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     public void PlayerWindow_import_confirmation_badge_uses_display_policy()
     {
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchDisplayPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchDisplayPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolImportTrainingWorkflowService.cs");
 
         var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
@@ -29,8 +29,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
     public void PlayerWindow_green_match_accept_overlay_uses_display_policy()
     {
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchDisplayPolicy.cs");
-        var runnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolGreenMatchTrainingRunner.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchDisplayPolicy.cs");
+        var runnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolGreenMatchTrainingRunner.cs");
 
         var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
@@ -53,9 +53,9 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
         var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var importSeekWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportEventSeekCommandWorkflow.cs");
-        var matchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchCommandWorkflow.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchSummaryControls.cs");
+        var importSeekWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportEventSeekCommandWorkflow.cs");
+        var matchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchCommandWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchSummaryControls.cs");
 
         Assert.True(File.Exists(importSeekWorkflowPath), "Import-Event-Seek-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchCommandWorkflowPath), "Protocol-Match-Ausfuehrungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -108,12 +108,12 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var protocolMatchPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingProtocolMatchController.cs");
         var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var acceptGreenCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportConfirmCommandWorkflow.cs");
-        var confirmWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
-        var importTrainingResultWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportTrainingResultWorkflow.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
-        var workflowFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
+        var acceptGreenCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAcceptGreenMatchesCommandWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportConfirmCommandWorkflow.cs");
+        var confirmWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
+        var importTrainingResultWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingImportTrainingResultWorkflow.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolImportTrainingWorkflowService.cs");
+        var workflowFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(trainingPath), "ProtocolMatch-Trainingsuebernahme soll aus dem Match-Partial heraus.");
         Assert.True(File.Exists(acceptGreenCommandWorkflowPath), "Green-Match-Accept-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -198,8 +198,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var oldHighlightingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
         var listVisualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventListVisualController.cs");
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchHighlightControls.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchListHighlightWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchHighlightControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingProtocolMatchListHighlightWorkflow.cs");
 
         Assert.True(File.Exists(listVisualControllerPath), "ProtocolMatch-Listenhighlighting soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(controlsPath), "ProtocolMatch-Listenhighlighting-Control-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");

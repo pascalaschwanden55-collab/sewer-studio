@@ -42,6 +42,9 @@ class SidecarSettings(BaseSettings):
     # Fester Sandbox-Root fuer plan-gesteuerte Trainings-Exporte. Muss mit
     # <KnowledgeRoot>/training/datasets der Windows-App uebereinstimmen.
     training_export_root: str = r"C:\KI_BRAIN\training\datasets"
+    # Getrennter, nur lesender Root fuer nicht produktive Trainingskandidaten.
+    # Der BCC-Testendpunkt akzeptiert keinen freien Modellpfad vom Client.
+    training_model_candidates_root: str = r"C:\KI_BRAIN\training\models\candidates"
     training_max_image_bytes: int = 25 * 1024 * 1024
     inference_max_image_bytes: int = 25 * 1024 * 1024
     max_image_pixels: int = 50_000_000

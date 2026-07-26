@@ -11,6 +11,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -173,9 +174,9 @@ public sealed class PlayerWindowCodingEingabemarkerControllerSetFactoryTests
             Assert.Empty(context.AiFallbackKeywords);
             Assert.Equal(Visibility.Collapsed, context.Controls.InputPopup.Visibility);
 
-            var training = Assert.Single(context.BackgroundCalls);
-            Assert.Equal("TrainingSaveSingle", training.Operation);
-            training.Task.GetAwaiter().GetResult();
+            // Der Trainings-Task wird jetzt direkt im Submission-Workflow erwartet.
+            // Erfolg darf deshalb nicht mehr vorzeitig im Hintergrund gemeldet werden.
+            Assert.Empty(context.BackgroundCalls);
             var successStatus = Assert.Single(context.Status.CodingStates);
             Assert.Equal(
                 $"BBA Wurzeleinwuchs bei {12.3:F2}m eingetragen",
@@ -256,7 +257,7 @@ public sealed class PlayerWindowCodingEingabemarkerControllerSetFactoryTests
                 {
                     PersistenceCalls++;
                     PersistedEvent = codingEvent;
-                    return Task.CompletedTask;
+                    return Task.FromResult(new CodingTrainingSamplePersistenceResult(true, null));
                 },
                 persistEventsAsync: (_, _) => Task.CompletedTask,
                 hasCodingContext: () => true,

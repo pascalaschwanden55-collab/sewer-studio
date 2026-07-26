@@ -359,6 +359,37 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_bricht_sichtbar_ab_wenn_kostendaten_beschaedigt_sind()
+    {
+        var dialogs = new CapturingDialogService();
+        var costs = new RecordingProjectCostStoreRepository
+        {
+            LoadError = "costs.json ist beschaedigt: invalid json"
+        };
+        var optionsDialogCalled = false;
+        var controller = CreateController(
+            dialogs,
+            getLastProjectPath: () => "C:\\projekt\\Projektdateien\\projekt.json",
+            projectCosts: costs,
+            selectDossierPrintOptions: _ =>
+            {
+                optionsDialogCalled = true;
+                return null;
+            },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => throw new InvalidOperationException("pdf should not be built"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        // Sichtbarer Abbruch VOR dem Optionsdialog — kein stiller Bericht ohne Kosten.
+        Assert.False(optionsDialogCalled);
+        Assert.Empty(dialogs.SaveFileCalls);
+        Assert.Null(dialogs.LastInfo);
+        Assert.NotNull(dialogs.LastError);
+        Assert.Equal("Dossier", dialogs.LastError.Value.Title);
+        Assert.Contains("costs.json ist beschaedigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_warnt_bei_dirty_project_und_bricht_bei_nein_ab()
     {
         var dialogs = new CapturingDialogService { ConfirmWarnResult = false };
@@ -731,6 +762,7 @@ public sealed class DataPagePrintControllerTests
     {
         public ProjectCostStore Store { get; } = new();
         public string? LoadedProjectPath { get; private set; }
+        public string? LoadError { get; set; }
 
         public ProjectCostStore Load(string? projectPath)
         {
@@ -740,7 +772,7 @@ public sealed class DataPagePrintControllerTests
 
         public ProjectCostStore Load(string? projectPath, out string? loadError)
         {
-            loadError = null;
+            loadError = LoadError;
             return Load(projectPath);
         }
 

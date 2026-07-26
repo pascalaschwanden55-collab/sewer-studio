@@ -12,6 +12,7 @@ public sealed class WorkbenchCodeSelectionMapperTests
         var entry = new ProtocolEntry
         {
             Code = "BABBC",
+            Beschreibung = "Riss - radial",
             CodeMeta = new ProtocolEntryCodeMeta
             {
                 Code = "BABBC",
@@ -23,6 +24,7 @@ public sealed class WorkbenchCodeSelectionMapperTests
         var sel = WorkbenchCodeSelectionMapper.FromProtocolEntry(entry);
 
         Assert.Equal("BABBC", sel.Code);
+        Assert.Equal("Riss - radial", sel.Beschreibung);
         Assert.Equal(3.0, sel.ClockPosition);
         Assert.Equal(3, sel.Severity);
     }
@@ -35,6 +37,7 @@ public sealed class WorkbenchCodeSelectionMapperTests
         var sel = WorkbenchCodeSelectionMapper.FromProtocolEntry(entry);
 
         Assert.Equal("BAB", sel.Code);
+        Assert.Null(sel.Beschreibung);
         Assert.Null(sel.ClockPosition);
         Assert.Null(sel.Severity);
     }

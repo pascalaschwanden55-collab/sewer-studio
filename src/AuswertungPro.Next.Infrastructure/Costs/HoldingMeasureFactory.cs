@@ -46,6 +46,16 @@ public static class HoldingMeasureFactory
         var defaults = record is not null
             ? MeasureImportDefaultsResolver.Resolve(record)
             : new MeasureImportDefaultsResolver.ImportDefaults(null, null, 0);
+        if (defaults.LengthIsInvalid)
+            return null;
+        if (record is not null
+            && !defaults.LengthMeters.HasValue
+            && lines.Any(line =>
+                line.Selected
+                && string.Equals(line.Unit?.Trim(), "m", StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
 
         // --- Schritt 3: DN anwenden -> Katalogpreise + Endmanschetten-Regel ---
         if (defaults.Dn.HasValue)

@@ -120,8 +120,25 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                 continue;
 
             var link = record.GetFieldValue(FieldKeys.Link)?.Trim();
-            if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link) || !File.Exists(link))
+            if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link))
                 continue;
+
+            // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
+            if (MediaFileAllowlist.IsUnc(link))
+            {
+                messages.Add($"Video {haltung}: UNC-Pfad wird nicht uebernommen: {link}");
+                continue;
+            }
+
+            if (!File.Exists(link))
+                continue;
+
+            // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
+            if (!MediaFileAllowlist.IsImportableMediaOrPdf(link))
+            {
+                messages.Add($"Video {haltung}: Dateityp nicht erlaubt, wird nicht kopiert: {link}");
+                continue;
+            }
 
             try
             {

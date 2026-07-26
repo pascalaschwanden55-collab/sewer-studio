@@ -52,12 +52,21 @@ internal sealed class ImportProjectPortabilityController
         var result = await Task.Run(() => _service.MakePortable(projectFolder, project));
         actions.SetProgress(string.Empty);
 
-        _ = actions.SaveProject();
+        var saved = ProjectSaveAttempt.Try(
+            actions.SaveProject,
+            "Portables Projekt speichern",
+            out var saveError);
 
         var summary = $"Projekt portabel gemacht ({count} Haltungen):"
             + $"\n  {result.RelinkedPaths} Pfade relativ verlinkt"
             + $"\n  {result.FotosCopied} Fotos ins Projekt kopiert"
             + $"\n  {result.Unresolved} nicht aufloesbar";
+        if (!saved)
+        {
+            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+                + ProjectSaveAttempt.ErrorDetails(saveError);
+        }
+
         actions.AppendSummary("\n" + summary);
         if (result.Messages.Count > 0)
         {
@@ -65,8 +74,12 @@ internal sealed class ImportProjectPortabilityController
                 "\n\nPortabilitaet-Details:\n" + string.Join("\n", result.Messages.Take(50)));
         }
 
-        _dialogs.Info(
-            summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden.",
-            "Projekt portabel machen");
+        var message = saved
+            ? summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden."
+            : summary + "\n\nErst nach erfolgreichem Speichern ist der Projektordner sicher kopierbereit.";
+        if (saved)
+            _dialogs.Info(message, "Projekt portabel machen");
+        else
+            _dialogs.Warn(message, "Projekt portabel machen");
     }
 }

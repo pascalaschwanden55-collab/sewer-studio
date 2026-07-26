@@ -14,6 +14,24 @@ public interface ITrainingFrameStore
         string sampleId,
         string? framesDir = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Kopiert ein vorhandenes Foto unveraendert und inhaltsadressiert in den
+    /// Trainingsspeicher. Das Quellbild bleibt unangetastet.
+    /// </summary>
+    Task<string?> StoreExistingAsync(
+        string sourcePath,
+        string? framesDir = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Speichert bereits vorliegende Bildbytes unveraendert und inhaltsadressiert.
+    /// </summary>
+    Task<string?> StoreBytesAsync(
+        byte[] imageBytes,
+        string extension,
+        string? framesDir = null,
+        CancellationToken ct = default);
 }
 
 /// <summary>Reine Dateinamenregel ohne Datei- oder Prozesszugriff.</summary>

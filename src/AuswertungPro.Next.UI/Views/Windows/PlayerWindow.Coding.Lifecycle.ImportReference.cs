@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -35,15 +36,27 @@ public partial class PlayerWindow
 
     /// <summary>
     /// Verdrahtet Drag&amp;Drop der Befund-Kacheln zwischen KI- und Import-Spalte:
-    /// markiert die KI-Spalte und setzt fuer beide Listen denselben Drop-Callback.
+    /// markiert die KI-Spalte, setzt den Session-Schluessel (dieses Fenster = genau eine
+    /// Haltung/Session; Drops aus fremden PlayerWindow-Instanzen werden verworfen) und
+    /// setzt fuer beide Listen denselben Drop-Callback.
     /// </summary>
     private void WireCodingDragDrop()
     {
         CodingEventDragDropBehavior.SetIsKiColumn(LstCodingEvents, true);
         CodingEventDragDropBehavior.SetIsKiColumn(LstImportEvents, false);
+        CodingEventDragDropBehavior.SetSessionKey(LstCodingEvents, this);
+        CodingEventDragDropBehavior.SetSessionKey(LstImportEvents, this);
+        CodingEventDragDropBehavior.SetForeignDropHint(LstCodingEvents, ShowForeignCodingDropHint);
+        CodingEventDragDropBehavior.SetForeignDropHint(LstImportEvents, ShowForeignCodingDropHint);
         CodingEventDragDropBehavior.SetDropHandler(LstCodingEvents, HandleAbgleichDrop);
         CodingEventDragDropBehavior.SetDropHandler(LstImportEvents, HandleAbgleichDrop);
     }
+
+    /// <summary>Kurzer Hinweis, wenn eine Kachel aus einem fremden Fenster abgelegt werden soll.</summary>
+    private void ShowForeignCodingDropHint()
+        => ShowOverlay(
+            "Befund-Kacheln nur innerhalb derselben Haltung verschieben.",
+            TimeSpan.FromSeconds(3));
 
     /// <summary>
     /// Fuehrt einen Kachel-Drop im Abgleich-Panel aus. Die RICHTUNG bestimmt die Aktion:

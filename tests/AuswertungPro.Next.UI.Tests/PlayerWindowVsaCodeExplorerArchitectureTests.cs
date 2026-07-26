@@ -15,9 +15,9 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var servicePath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogService.cs");
         var factoryPath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogServiceFactory.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
-        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowServiceFactory.cs");
-        var serviceCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerServiceCreationWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerWorkflowServiceFactory.cs");
+        var serviceCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingCodeExplorerServiceCreationWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "VSA-Code-Explorer-Dialoggrenze muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "VSA-Code-Explorer-Fenstererzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -53,7 +53,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var plannerPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoPreviewPlanner.cs");
+        var plannerPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoPreviewPlanner.cs");
 
         Assert.True(File.Exists(plannerPath), "Foto-Vorschau-Entscheidung muss ausserhalb der Window-Code-behind liegen.");
 
@@ -75,7 +75,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoPreviewRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoPreviewRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Foto-Vorschau-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -97,8 +97,8 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoResultWorkflow.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoResultRenderer.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoResultWorkflow.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoResultRenderer.cs");
 
         Assert.True(File.Exists(workflowPath), "PhotoAssistant-Ergebnislogik muss ausserhalb der Window-Code-behind liegen.");
         Assert.True(File.Exists(rendererPath), "PhotoAssistant-Ergebnis-Rendering muss ausserhalb der Window-Code-behind liegen.");
@@ -126,7 +126,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoAssistantOpenPolicy.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoAssistantOpenPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "PhotoAssistant-Oeffnungsentscheidung muss ausserhalb der Window-Code-behind liegen.");
 
@@ -148,7 +148,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoCaptureWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoCaptureWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "Foto-Capture-Orchestrierung muss ausserhalb der Window-Code-behind liegen.");
 
@@ -178,7 +178,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPhotoCaptureButtonsRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPhotoCaptureButtonsRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Foto-Capture-Button-Zustand soll ausserhalb der Window-Code-behind gerendert werden.");
 
@@ -196,8 +196,8 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockTextWorkflow.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockTextRenderer.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockTextWorkflow.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockTextRenderer.cs");
 
         Assert.True(File.Exists(workflowPath), "Uhr-Textbox-Logik muss ausserhalb der Window-Code-behind liegen.");
         Assert.True(File.Exists(rendererPath), "Uhr-Textbox-Rendering muss ausserhalb der Window-Code-behind liegen.");
@@ -230,7 +230,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockPickerRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockPickerRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Uhr-Picker-zu-Textbox-Sync muss ausserhalb der Window-Code-behind gerendert werden.");
 
@@ -255,8 +255,8 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerStreckenschadenWorkflow.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerStreckenschadenRenderer.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerStreckenschadenWorkflow.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerStreckenschadenRenderer.cs");
 
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Zustandslogik soll ausserhalb der Window-Code-behind liegen.");
         Assert.True(File.Exists(rendererPath), "Streckenschaden-WPF-Rendering soll ausserhalb der Window-Code-behind liegen.");
@@ -280,7 +280,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerInitialTimeWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerInitialTimeWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "Initiale Videozeit soll ausserhalb der Window-Code-behind entschieden werden.");
 
@@ -301,7 +301,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerInitialFieldsRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerInitialFieldsRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Initiale Formularfeld-Werte muessen ausserhalb der Window-Code-behind gerendert werden.");
 
@@ -327,7 +327,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockPanelPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockPanelPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Uhr-Panel-Praesentation muss ausserhalb der Window-Code-behind liegen.");
 
@@ -351,7 +351,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockPanelRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockPanelRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Uhr-Panel-WPF-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -379,8 +379,8 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockPresetWorkflow.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerClockPresetRenderer.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockPresetWorkflow.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerClockPresetRenderer.cs");
 
         Assert.True(File.Exists(workflowPath), "Uhr-Schnellwahl-Parsing muss ausserhalb der Window-Code-behind liegen.");
         Assert.True(File.Exists(rendererPath), "Uhr-Schnellwahl-Rendering muss ausserhalb der Window-Code-behind liegen.");
@@ -404,7 +404,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerBreadcrumbPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerBreadcrumbPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Breadcrumb-Praesentation muss ausserhalb der Window-Code-behind berechnet werden.");
 
@@ -425,7 +425,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerBreadcrumbRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerBreadcrumbRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Breadcrumb-WPF-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -462,7 +462,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerColumnLayoutPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerColumnLayoutPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Spaltenlayout-Entscheidungen sollen ausserhalb der Window-Code-behind liegen.");
 
@@ -482,7 +482,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerColumnTilePresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerColumnTilePresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Column-Tile-Praesentation soll ausserhalb der Window-Code-behind liegen.");
 
@@ -503,7 +503,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerColumnTileRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerColumnTileRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Column-Tile-WPF-Aufbau soll ausserhalb der Window-Code-behind liegen.");
 
@@ -528,7 +528,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerQuantPanelPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerQuantPanelPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Q1/Q2-Panel-Praesentation muss ausserhalb der Window-Code-behind liegen.");
 
@@ -557,7 +557,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerQuantPanelRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerQuantPanelRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Q1/Q2-WPF-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -580,7 +580,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerResultPanelPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerResultPanelPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Ergebnis-Panel-Praesentation muss ausserhalb der Window-Code-behind liegen.");
 
@@ -602,7 +602,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerResultPanelRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerResultPanelRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Ergebnis-Panel-WPF-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -626,7 +626,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerResultPanelPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerResultPanelPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Finalcode/Label/Warnung sollen ueber Ergebnis-Presenter aktualisiert werden.");
 
@@ -648,7 +648,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerValidationPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerValidationPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Footer-Validierungsanzeige muss ausserhalb der Window-Code-behind berechnet werden.");
 
@@ -667,7 +667,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerValidationRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerValidationRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Footer-Validierungsrendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -688,7 +688,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerPropertyChangeWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerPropertyChangeWorkflow.cs");
 
         Assert.True(File.Exists(workflowPath), "PropertyChanged-Routing muss ausserhalb der Window-Code-behind liegen.");
 
@@ -713,8 +713,8 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerFieldErrorPresenter.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerFieldErrorRenderer.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerFieldErrorPresenter.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerFieldErrorRenderer.cs");
 
         Assert.True(File.Exists(presenterPath), "Q1/Q2-Fehlerpraesentation muss ausserhalb der Window-Code-behind berechnet werden.");
         Assert.True(File.Exists(rendererPath), "Q1/Q2-Fehlerrendering muss ausserhalb der Window-Code-behind liegen.");
@@ -738,7 +738,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var presenterPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerProgressPresenter.cs");
+        var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerProgressPresenter.cs");
 
         Assert.True(File.Exists(presenterPath), "Fortschritts-Praesentation muss ausserhalb der Window-Code-behind liegen.");
 
@@ -762,7 +762,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var rendererPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerProgressRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerProgressRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Fortschritts-WPF-Rendering muss ausserhalb der Window-Code-behind liegen.");
 
@@ -786,7 +786,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "VsaCodeExplorerKeyboardNavigationPolicy.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerKeyboardNavigationPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Keyboard-Navigation muss ausserhalb der Window-Code-behind liegen.");
 

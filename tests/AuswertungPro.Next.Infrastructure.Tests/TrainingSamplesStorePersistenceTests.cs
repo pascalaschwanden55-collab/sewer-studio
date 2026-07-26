@@ -131,6 +131,161 @@ public sealed class TrainingSamplesStorePersistenceTests
         }
     }
 
+    [Fact]
+    public async Task MergeOrUpdate_gleicheSampleId_neueSignatur_aktualisiert_denselben_Eintrag()
+    {
+        // Codekorrektur-Fall: gleiche SampleId, aber neue Signatur (enthaelt den neuen Code).
+        // Der Id-Match muss denselben Datensatz aktualisieren — kein Dublett.
+        await WithTempStore(async _ =>
+        {
+            await TrainingSamplesStore.SaveAsync([
+                Sample("wb_1", "H-TEST|BAB|1.0|1.0", notes: "alt")
+            ]);
+
+            await TrainingSamplesStore.MergeOrUpdateAsync([
+                Sample("wb_1", "H-TEST|BBA|1.0|1.0", TrainingSampleStatus.Approved, "korrigiert")
+            ]);
+
+            var samples = await TrainingSamplesStore.LoadAsync();
+            var updated = Assert.Single(samples);
+            Assert.Equal("wb_1", updated.SampleId);
+            Assert.Equal(TrainingSampleStatus.Approved, updated.Status);
+            Assert.Equal("korrigiert", updated.Notes);
+        });
+    }
+
+    [Fact]
+    public async Task MergeOrUpdate_gleicheSignatur_verschiedeneIds_nutzt_Signatur_Fallback()
+    {
+        // Dokumentation des bisherigen Verhaltens: ohne Id-Treffer matcht die Signatur
+        // (Alt-Aufrufer ohne stabile Id-Zuordnung). Der bestehende Eintrag wird
+        // aktualisiert — die neue Id erzeugt KEINEN zweiten Datensatz.
+        await WithTempStore(async _ =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("alt-id", "sig-x", notes: "alt")]);
+
+            await TrainingSamplesStore.MergeOrUpdateAsync([
+                Sample("neu-id", "sig-x", TrainingSampleStatus.Approved, "neu")
+            ]);
+
+            var samples = await TrainingSamplesStore.LoadAsync();
+            var updated = Assert.Single(samples);
+            Assert.Equal("alt-id", updated.SampleId);   // Id des bestehenden Eintrags bleibt
+            Assert.Equal("neu", updated.Notes);
+        });
+    }
+
+    [Fact]
+    public async Task MergeOrUpdate_unbekannteIdUndSignatur_haengt_an()
+    {
+        await WithTempStore(async _ =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("a", "sig-a")]);
+
+            await TrainingSamplesStore.MergeOrUpdateAsync([Sample("b", "sig-b")]);
+
+            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+        });
+    }
+
+    [Fact]
+    public async Task ReplaceBySampleId_ersetzt_unter_einer_Sperre_genau_einen_Eintrag()
+    {
+        await WithTempStore(async _ =>
+        {
+            await TrainingSamplesStore.SaveAsync([
+                Sample("wb_1", "H-TEST|BAB|1.0|1.0", notes: "alt"),
+                Sample("wb_2", "H-TEST|BAB|2.0|2.0", notes: "unberuehrt")
+            ]);
+
+            var ersatz = Sample("wb_1", "H-TEST|BBA|1.0|1.0", TrainingSampleStatus.Approved, "korrigiert");
+            ersatz.Code = "BBA";
+
+            var replaced = await TrainingSamplesStore.Current.ReplaceBySampleIdAsync(ersatz);
+
+            Assert.True(replaced);
+            var samples = await TrainingSamplesStore.LoadAsync();
+            Assert.Equal(2, samples.Count);                       // kein Eintrag verloren/verdoppelt
+            var updated = Assert.Single(samples, sample => sample.SampleId == "wb_1");
+            Assert.Equal("BBA", updated.Code);                    // neuer Code unter gleicher Id
+            Assert.Equal("H-TEST|BBA|1.0|1.0", updated.Signature);
+            Assert.Equal("unberuehrt", Assert.Single(samples, sample => sample.SampleId == "wb_2").Notes);
+        });
+    }
+
+    [Fact]
+    public async Task ReplaceBySampleId_unbekannteId_schreibt_nichts()
+    {
+        await WithTempStore(async path =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("wb_1", "sig-1", notes: "alt")]);
+            var before = await File.ReadAllTextAsync(path);
+
+            var replaced = await TrainingSamplesStore.Current.ReplaceBySampleIdAsync(
+                Sample("wb_fremd", "sig-fremd"));
+
+            Assert.False(replaced);
+            Assert.Equal(before, await File.ReadAllTextAsync(path));   // Datei unveraendert
+        });
+    }
+
+    [Fact]
+    public async Task ReplaceBySampleId_Signatur_gehoert_anderer_Id_bricht_laut_ab_und_schreibt_nichts()
+    {
+        await WithTempStore(async path =>
+        {
+            await TrainingSamplesStore.SaveAsync([
+                Sample("wb_1", "H-TEST|BAB|1.0|1.0", notes: "zu ersetzen"),
+                Sample("wb_2", "H-TEST|BBA|2.0|2.0", notes: "bestehende Wahrheit")
+            ]);
+            var before = await File.ReadAllTextAsync(path);
+            var ersatz = Sample(
+                "wb_1",
+                "H-TEST|BBA|2.0|2.0",
+                TrainingSampleStatus.Approved,
+                "darf nicht geschrieben werden");
+            ersatz.Code = "BBA";
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => TrainingSamplesStore.Current.ReplaceBySampleIdAsync(ersatz));
+
+            Assert.Contains("Signatur", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("wb_2", error.Message, StringComparison.Ordinal);
+            Assert.Equal(before, await File.ReadAllTextAsync(path));
+        });
+    }
+
+    [Fact]
+    public async Task TryAddNew_neues_Sample_wird_angehaengt_und_gemeldet()
+    {
+        await WithTempStore(async _ =>
+        {
+            var neu = Sample("wb_neu", "sig-neu");
+
+            var added = await TrainingSamplesStore.Current.TryAddNewAsync(neu);
+
+            Assert.True(added);
+            Assert.Single(await TrainingSamplesStore.LoadAsync());
+        });
+    }
+
+    [Fact]
+    public async Task TryAddNew_gleiche_Signatur_meldet_false_und_laesst_Datei_unveraendert()
+    {
+        await WithTempStore(async path =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("wb_1", "sig-1", notes: "alt")]);
+            var before = await File.ReadAllTextAsync(path);
+
+            var added = await TrainingSamplesStore.Current.TryAddNewAsync(
+                Sample("wb_2", "sig-1", notes: "duplikat"));
+
+            Assert.False(added);
+            Assert.Equal(before, await File.ReadAllTextAsync(path));   // Inhalt unveraendert
+            Assert.Single(await TrainingSamplesStore.LoadAsync());
+        });
+    }
+
     private static TrainingSample Sample(
         string id,
         string signature,

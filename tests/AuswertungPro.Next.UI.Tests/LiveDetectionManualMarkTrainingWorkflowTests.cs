@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Live;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -153,7 +154,7 @@ public sealed class LiveDetectionManualMarkTrainingWorkflowTests
 
     private static MethodInfo? FindSaveMethod()
         => typeof(LiveDetectionManualMarkEventAppender).Assembly
-            .GetType("AuswertungPro.Next.UI.Ai.LiveDetectionManualMarkTrainingWorkflow")
+            .GetType("AuswertungPro.Next.UI.Ai.Live.LiveDetectionManualMarkTrainingWorkflow")
             ?.GetMethod(
                 "SaveAsync",
                 BindingFlags.Public | BindingFlags.Static,

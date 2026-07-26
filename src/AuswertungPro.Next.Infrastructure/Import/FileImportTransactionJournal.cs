@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -7,8 +8,9 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 
 /// <summary>
 /// Datei-basierter Transaktions-Marker <c>.import-transaction.json</c> im Projekt-Root,
-/// atomar geschrieben ueber <see cref="AtomicTextFileWriter"/>. Lesefehler (fehlend/kaputt)
-/// ergeben null statt einer Ausnahme — Recovery entscheidet dann „keine offene Transaktion".
+/// atomar geschrieben ueber <see cref="AtomicTextFileWriter"/>. Ein fehlender Marker ist
+/// eindeutig von einem vorhandenen, aber nicht sicher lesbaren Marker getrennt; Recovery
+/// blockiert im zweiten Fall.
 /// </summary>
 public sealed class FileImportTransactionJournal : IImportTransactionJournal
 {
@@ -25,25 +27,53 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
         AtomicTextFileWriter.WriteAllText(MarkerPath(projectRoot), json);
     }
 
-    public ImportTransactionMarker? TryRead(string projectRoot)
+    public ImportTransactionJournalReadResult Read(string projectRoot)
     {
         if (string.IsNullOrWhiteSpace(projectRoot))
-            return null;
+            return ImportTransactionJournalReadResult.Missing();
 
-        var path = MarkerPath(projectRoot);
-        if (!File.Exists(path))
-            return null;
+        string path;
+        try
+        {
+            path = MarkerPath(projectRoot);
+            _ = File.GetAttributes(path);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return ImportTransactionJournalReadResult.Missing();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException)
+        {
+            return ReadFailed();
+        }
 
         try
         {
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<ImportTransactionMarker>(json, Opt);
+            var marker = JsonSerializer.Deserialize<ImportTransactionMarker>(json, Opt);
+            return IsValid(marker)
+                ? ImportTransactionJournalReadResult.Loaded(marker!)
+                : ReadFailed();
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return ImportTransactionJournalReadResult.Missing();
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            return null;
+            return ReadFailed();
         }
     }
+
+    public ImportTransactionMarker? TryRead(string projectRoot)
+        => Read(projectRoot) is
+        {
+            Outcome: ImportTransactionJournalReadOutcome.Loaded,
+            Marker: not null
+        } result
+            ? result.Marker
+            : null;
 
     public void Clear(string projectRoot)
     {
@@ -64,4 +94,19 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
 
     private static string MarkerPath(string projectRoot)
         => Path.Combine(projectRoot, MarkerFileName);
+
+    private static bool IsValid(ImportTransactionMarker? marker)
+        => marker is not null
+           && !string.IsNullOrWhiteSpace(marker.TxId)
+           && !string.IsNullOrWhiteSpace(marker.Label)
+           && !string.IsNullOrWhiteSpace(marker.StagingRoot)
+           && marker.PublishedTargets is not null
+           && marker.PublishedTargets.All(target =>
+               target is not null
+               && !string.IsNullOrWhiteSpace(target.RelativePath)
+               && !string.IsNullOrWhiteSpace(target.Sha256));
+
+    private static ImportTransactionJournalReadResult ReadFailed()
+        => ImportTransactionJournalReadResult.Failed(
+            "Der Import-Wiederherstellungsmarker ist vorhanden, konnte aber nicht sicher gelesen werden.");
 }

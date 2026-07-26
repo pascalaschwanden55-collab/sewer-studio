@@ -1,6 +1,8 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -14,7 +16,9 @@ public static class PlayerCodingConfirmationPanelInitializer
         TextBlock code,
         TextBlock confidence,
         TextBlock description,
-        TextBlock detail)
+        TextBlock detail,
+        FrameworkElement saveErrorPanel,
+        TextBlock saveErrorText)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(panel);
@@ -23,6 +27,8 @@ public static class PlayerCodingConfirmationPanelInitializer
         ArgumentNullException.ThrowIfNull(confidence);
         ArgumentNullException.ThrowIfNull(description);
         ArgumentNullException.ThrowIfNull(detail);
+        ArgumentNullException.ThrowIfNull(saveErrorPanel);
+        ArgumentNullException.ThrowIfNull(saveErrorText);
 
         owner.Initialize(
             new CodingConfirmationPanelControls(
@@ -31,6 +37,8 @@ public static class PlayerCodingConfirmationPanelInitializer
                 code,
                 confidence,
                 description,
-                detail));
+                detail,
+                saveErrorPanel,
+                saveErrorText));
     }
 }

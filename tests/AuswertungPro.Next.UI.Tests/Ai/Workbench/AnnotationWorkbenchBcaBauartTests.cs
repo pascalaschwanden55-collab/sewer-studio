@@ -24,6 +24,8 @@ public sealed class AnnotationWorkbenchBcaBauartTests
             pipelineClient: null!,
             retrieval: null,
             sampleStore: null!,
+            frameStore: null!,
+            resolveGoldFramesDir: null!,
             kbIndexer: null!,
             teacherStore: null!,
             teacherClassMap: null!,

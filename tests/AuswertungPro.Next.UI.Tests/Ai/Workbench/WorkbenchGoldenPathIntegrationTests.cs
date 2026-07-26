@@ -55,6 +55,8 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
             new ThrowingPipeline(),
             retrieval: null,
             sampleStore,
+            new TrainingFrameFileStore(),
+            () => Path.Combine(_root, "gold_frames"),
             new IndexAllIndexer(),
             teacherStore,
             new StubClassMap(),
@@ -65,7 +67,9 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
 
         var item = new WorkbenchItem(framePath, "287425-81162", 12.5, 12.5, "287425-81162", @"C:\vid.mpg", 300);
         var box = new BoundingBox(0.5, 0.5, 0.3, 0.3);
-        var seg = new WorkbenchSegmentation("0,100", 640, 480, 5.0, "Maske erstellt.", Degraded: false);
+        // Gueltige 640x480-Maske (SamMaskValidator): 100 Pixel in Zeile 240, Spalte 300-399 —
+        // liegt in der Box (Pixel x 224-416, y 168-312).
+        var seg = new WorkbenchSegmentation("0,153900,100,153200", 640, 480, 5.0, "Maske erstellt.", Degraded: false);
         var decision = new WorkbenchDecision("BAB", WasCorrected: false, "Riss quer im Scheitel", 12.0, 3, "Pascal");
 
         // ── Act 1 ──
@@ -82,8 +86,13 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
         Assert.Equal("Riss quer im Scheitel", sample.Beschreibung);
         Assert.True(sample.HumanConfirmed);
         Assert.False(sample.Corrected);
-        Assert.Equal(TrainingSample.BuildCanonicalSignature("287425-81162", "BAB", 12.5, 12.5), sample.Signature);
-        Assert.Equal("0,100", sample.SamMaskRle);
+        Assert.StartsWith(Path.Combine(_root, "gold_frames"), sample.FramePath);
+        Assert.True(File.Exists(sample.FramePath), "Gesicherte Goldbildkopie fehlt.");
+        Assert.True(File.Exists(framePath), "Das Originalfoto wurde veraendert oder entfernt.");
+        Assert.Equal(
+            TrainingSample.BuildCanonicalSignature("287425-81162", "BAB", 12.5, 12.5, 0.5, 0.5, 0.3, 0.3),
+            sample.Signature);
+        Assert.Equal("0,153900,100,153200", sample.SamMaskRle);
 
         var annos = await teacherStore.LoadAsync();
         var anno = Assert.Single(annos);
@@ -95,12 +104,14 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
         Assert.True(File.Exists(anno.FullFramePath), "Full-Frame-Bild fehlt.");
         Assert.True(File.Exists(anno.YoloAnnotationPath), "YOLO-Label-Datei fehlt.");
 
-        // ── Act 2: gleiche Signatur -> kein Sample-Duplikat ──
+        // ── Act 2: gleiche Objekt-Signatur -> sichtbare Dubletten-Abweisung (kein stilles
+        // Ueberspringen mehr; so entstehen keine KB-/Teacher-Eintraege ohne JSON-Sample) ──
         var r2 = await service.SaveAsync(item, box, seg, decision);
-        Assert.True(r2.Saved);
+        Assert.False(r2.Saved);
+        Assert.Contains("Bereits als Goldsample vorhanden", r2.RefusalReason);
 
         var samplesAfter = await sampleStore.LoadAsync();
-        Assert.Single(samplesAfter);   // Dedup via Signatur
+        Assert.Single(samplesAfter);   // weiterhin genau ein Datensatz (Dedup via Signatur)
     }
 
     // ── Fakes (nur der Save-Pfad wird geuebt; SAM/Classify werden nie gerufen) ──

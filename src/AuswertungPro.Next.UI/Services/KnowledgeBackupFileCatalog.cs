@@ -21,6 +21,7 @@ internal static class KnowledgeBackupFileCatalog
 
         yield return (Path.Combine(knowledgeRoot, "training_samples.json"), "knowledge/training_samples.json");
         yield return (Path.Combine(knowledgeRoot, "training_settings.json"), "knowledge/training_settings.json");
+        yield return (Path.Combine(knowledgeRoot, "protocol_training.json"), "knowledge/protocol_training.json");
 
         var knowledgeFramesDir = Path.Combine(knowledgeRoot, "frames");
         if (Directory.Exists(knowledgeFramesDir))
@@ -41,6 +42,12 @@ internal static class KnowledgeBackupFileCatalog
                 yield return (file, "knowledge/gold_labels/" + relativePath);
             }
         }
+
+        foreach (var item in EnumerateTree(
+                     Path.Combine(knowledgeRoot, "gold_frames"),
+                     "*.*",
+                     "knowledge/gold_frames/"))
+            yield return item;
 
         yield return (Path.Combine(knowledgeRoot, "fewshot_examples.json"), "knowledge/fewshot_examples.json");
         var fewshotImagesDir = Path.Combine(knowledgeRoot, "fewshot_images");
@@ -68,6 +75,23 @@ internal static class KnowledgeBackupFileCatalog
         yield return (Path.Combine(knowledgeRoot, "measures_learning.json"), "knowledge/measures_learning.json");
         yield return (Path.Combine(knowledgeRoot, "measures-model.zip"), "knowledge/measures-model.zip");
         yield return (locations.TrainingCenterStatePath, "knowledge/training_center.json");
+
+        // personal_gold_v1: kompletter Trainings-Subbaum des KnowledgeRoot
+        // (Freigaberegister export_registry_v1.json, gold_standard, gold_inbox,
+        // gold_migrations, Datensaetze mit Manifesten, Berichte) sowie der
+        // Eval-Set-Root mit den Schutz-Set-Manifesten (_manifest.json).
+        // Fehlende Teilbaeume werden wie uebrige optionale Pfade uebersprungen.
+        foreach (var item in EnumerateTree(
+                     Path.Combine(knowledgeRoot, "training"),
+                     "*.*",
+                     "knowledge/training/"))
+            yield return item;
+
+        foreach (var item in EnumerateTree(
+                     Path.Combine(knowledgeRoot, "eval_set"),
+                     "*.*",
+                     "knowledge/eval_set/"))
+            yield return item;
 
         var legacyKbDir = Path.Combine(locations.RoamingAuswertungPro, "KiVideoanalyse");
         yield return (Path.Combine(legacyKbDir, "KnowledgeBase.db"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db");

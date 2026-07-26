@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Coding;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -30,7 +31,8 @@ public sealed record CodingEingabemarkerSubmissionControllerBindings(
     Action<string> ShowAiFallbackStatus,
     Func<string, Task> RunAiFallbackAsync,
     Action<string> ShowErrorStatus,
-    Action CancelMarker);
+    Action CancelMarker,
+    Func<CodingEvent, Task<CodingTrainingSamplePersistenceResult>>? PersistTrainingAsync = null);
 
 public sealed class CodingEingabemarkerSubmissionController : ICodingEingabemarkerSubmissionController
 {
@@ -87,7 +89,11 @@ public sealed class CodingEingabemarkerSubmissionController : ICodingEingabemark
                 ShowAiFallbackStatus: _bindings.ShowAiFallbackStatus,
                 RunAiFallbackAsync: _bindings.RunAiFallbackAsync,
                 ShowErrorStatus: _bindings.ShowErrorStatus,
-                CancelMarker: _bindings.CancelMarker));
+                CancelMarker: _bindings.CancelMarker,
+                AddDirectEventAsync: (codeHint, keyword) => AddDirectEventAsync(
+                    codeHint,
+                    keyword,
+                    codingSessionService!)));
     }
 
     private CodingEingabemarkerDuplicateMatch? FindDuplicate(string codeHint)
@@ -121,5 +127,35 @@ public sealed class CodingEingabemarkerSubmissionController : ICodingEingabemark
                 UpdateToolBadge: _bindings.UpdateToolBadge,
                 PersistTraining: _bindings.PersistTraining,
                 ShowSuccessStatus: _bindings.ShowSuccessStatus));
+    }
+
+    private Task<CodingTrainingSamplePersistenceResult> AddDirectEventAsync(
+        string codeHint,
+        string keyword,
+        ICodingSessionService codingSessionService)
+        => CodingEingabemarkerDirectEventWorkflow.ExecuteAsync(
+            new CodingEingabemarkerDirectEventWorkflowRequest(
+                codeHint,
+                keyword,
+                _bindings.ResolveCurrentOverlay(),
+                codingSessionService),
+            new CodingEingabemarkerDirectEventAsyncWorkflowActions(
+                ResolveMeter: _bindings.ResolveMeter,
+                ResolveVideoTime: _bindings.ResolveVideoTime,
+                LookupLabel: _bindings.LookupLabel,
+                CapturePhoto: _bindings.CapturePhoto,
+                RefreshEvents: _bindings.RefreshEvents,
+                UpdateToolBadge: _bindings.UpdateToolBadge,
+                PersistTrainingAsync: PersistTrainingAsync,
+                ShowSuccessStatus: _bindings.ShowSuccessStatus));
+
+    private async Task<CodingTrainingSamplePersistenceResult> PersistTrainingAsync(
+        CodingEvent codingEvent)
+    {
+        if (_bindings.PersistTrainingAsync is not null)
+            return await _bindings.PersistTrainingAsync(codingEvent).ConfigureAwait(false);
+
+        _bindings.PersistTraining(codingEvent);
+        return CodingTrainingSamplePersistenceResult.Ok;
     }
 }

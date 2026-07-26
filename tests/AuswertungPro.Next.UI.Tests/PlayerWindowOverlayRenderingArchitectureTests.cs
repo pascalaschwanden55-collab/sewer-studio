@@ -85,7 +85,7 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var fillLevelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.FillLevel.cs");
         var intrusionPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.Intrusion.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingActiveSchemaRenderWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingActiveSchemaRenderWorkflow.cs");
         var pipeBendRendererPath = Path.Combine(uiRoot, "Player", "CodingActivePipeBendSchemaRenderer.cs");
         var intrusionRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveIntrusionSchemaRenderer.cs");
         var fillLevelRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveFillLevelSchemaRenderer.cs");
@@ -146,7 +146,7 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
         var activePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingActiveSchemaRenderWorkflow.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingActiveSchemaRenderWorkflow.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayRenderer.cs");
 
         Assert.True(File.Exists(activePath), "Aktive Schema-Vorschau soll aus dem allgemeinen Schema-Rendering-Partial heraus.");
@@ -357,7 +357,7 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
         var measurementPanelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeasurementPanelControls.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingMeasurementPanelControls.cs");
 
         Assert.True(File.Exists(measurementPanelPath), "Overlay-Messwert-Panel soll aus dem allgemeinen OverlayRendering-Partial heraus.");
         Assert.True(File.Exists(controlsPath), "Overlay-Messwert-Panel-Control-Zuweisungen sollen ausserhalb des PlayerWindow-Partials liegen.");
@@ -457,7 +457,7 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
         var cleanupPolicyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
-        var renderCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayRenderCommandWorkflow.cs");
+        var renderCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAiOverlayRenderCommandWorkflow.cs");
         var aiRendererPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayRenderer.cs");
         var primitiveRendererPath = Path.Combine(uiRoot, "Player", "CodingAiPrimitiveOverlayRenderer.cs");
         var rectangleRendererPath = Path.Combine(uiRoot, "Player", "CodingAiRectangleOverlayRenderer.cs");

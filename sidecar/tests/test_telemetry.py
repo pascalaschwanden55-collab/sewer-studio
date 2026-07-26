@@ -30,6 +30,22 @@ def test_detect_yolo_writes_telemetry_jsonl(tmp_path, monkeypatch):
 
     monkeypatch.setattr(settings, "telemetry_enabled", True, raising=False)
     monkeypatch.setattr(settings, "telemetry_dir", str(tmp_path), raising=False)
+    monkeypatch.setattr(
+        yolo_route.detector_qualification,
+        "evaluate_active_detector",
+        lambda: {
+            "qualified": True,
+            "status": "qualified",
+            "reason": None,
+            "artifact": {
+                "file_name": "yolo26m.engine",
+                "sha256": "a" * 64,
+                "backend": "tensorrt",
+                "loaded": False,
+            },
+            "marked_utc": "2026-07-25T00:00:00Z",
+        },
+    )
 
     def fake_detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         assert image_base64 == "test-image"
@@ -84,3 +100,6 @@ def test_detect_yolo_writes_telemetry_jsonl(tmp_path, monkeypatch):
     assert event["vram_total_gb"] == 31.5
     assert event["detection_count"] == 1
     assert event["confidence_threshold"] == 0.7
+    assert event["detector_qualified"] is True
+    assert event["detector_qualification_status"] == "qualified"
+    assert event["detector_artifact_sha256"] == "a" * 64

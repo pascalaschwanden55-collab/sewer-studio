@@ -33,6 +33,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     private readonly string _activeUserTemplatePath;
     private MeasureTemplateCatalog _templates;
     private CostCatalog _catalog;
+    private string? _templateLoadError;
+    private string? _catalogLoadError;
 
     public ObservableCollection<TemplateRow> Templates { get; } = new();
     public ObservableCollection<CatalogItemRow> AvailablePrices { get; } = new();
@@ -86,8 +88,9 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
         TryOfferLegacyMigration();
 
-        _templates = _templateStore.LoadMerged(projectPath);
-        _catalog = _catalogStore.LoadMerged(projectPath);
+        _templates = _templateStore.LoadMerged(projectPath, out _templateLoadError);
+        _catalog = _catalogStore.LoadMerged(projectPath, out _catalogLoadError);
+        ReportLoadErrors();
         WarnDuplicateNpkCodes();
 
         LoadTemplates();
@@ -183,23 +186,41 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     [RelayCommand]
     private void SaveTemplate()
     {
+        if (!EnsureTemplatesLoaded())
+            return;
+
         if (string.IsNullOrWhiteSpace(TemplateId) || string.IsNullOrWhiteSpace(TemplateName))
         {
             _dialogs.Warn("ID und Name muessen ausgefuellt sein.", "Hinweis");
             return;
         }
 
+        var lines = new List<MeasureLineTemplate>();
+        foreach (var row in CurrentLines)
+        {
+            if (!TryParseQty(row.Qty, out var quantity))
+            {
+                _dialogs.Error(
+                    $"Die Menge '{row.Qty}' fuer '{row.Label}' ist ungueltig. " +
+                    "Bitte eine nichtnegative Zahl eingeben.",
+                    "Vorlagen");
+                return;
+            }
+
+            lines.Add(new MeasureLineTemplate
+            {
+                Group = row.Group,
+                ItemKey = row.ItemRef,
+                Enabled = true,
+                DefaultQty = quantity
+            });
+        }
+
         var template = new MeasureTemplate
         {
             Id = TemplateId,
             Name = TemplateName,
-            Lines = CurrentLines.Select(r => new MeasureLineTemplate
-            {
-                Group = r.Group,
-                ItemKey = r.ItemRef,
-                Enabled = true,
-                DefaultQty = ParseQtyOrDefault(r.Qty)
-            }).ToList()
+            Lines = lines
         };
 
         if (!_templateStore.UpsertUserTemplate(template, out var error))
@@ -218,6 +239,9 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     [RelayCommand]
     private void DeleteTemplate()
     {
+        if (!EnsureTemplatesLoaded())
+            return;
+
         if (SelectedTemplate == null) return;
 
         var confirmed = _dialogs.Confirm(
@@ -319,10 +343,12 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
     private void SaveCatalog()
     {
-        _catalog.Items = AvailablePrices
-            .Where(r => !string.IsNullOrWhiteSpace(r.Id))
-            .Select(r => r.Item)
-            .ToList();
+        if (!EnsureCatalogLoaded())
+            return;
+
+        // Der Store validiert alle Identitaeten. Vorheriges Filtern wuerde eine
+        // ungueltige Zeile als stilles Loeschen speichern.
+        _catalog.Items = AvailablePrices.Select(r => r.Item).ToList();
         WarnDuplicateNpkCodes();
 
         if (!_catalogStore.SaveUserOverrides(_catalog, _projectPath, out var error))
@@ -351,8 +377,53 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
     private void ReloadTemplatesFromStore()
     {
-        _templates = _templateStore.LoadMerged(_projectPath);
+        var templates = _templateStore.LoadMerged(_projectPath, out _templateLoadError);
+        if (!EnsureTemplatesLoaded())
+            return;
+
+        _templates = templates;
         LoadTemplates();
+    }
+
+    private void ReportLoadErrors()
+    {
+        var errors = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_templateLoadError))
+            errors.Add(_templateLoadError);
+        if (!string.IsNullOrWhiteSpace(_catalogLoadError))
+            errors.Add(_catalogLoadError);
+        if (errors.Count == 0)
+            return;
+
+        _dialogs.Error(
+            "Vorlagen oder Kostenpositionen konnten nicht sicher geladen werden. " +
+            "Die betroffenen Speicherfunktionen sind gesperrt:\n" +
+            string.Join("\n", errors),
+            "Vorlagen");
+    }
+
+    private bool EnsureTemplatesLoaded()
+    {
+        if (string.IsNullOrWhiteSpace(_templateLoadError))
+            return true;
+
+        _dialogs.Error(
+            "Template konnte nicht gespeichert werden, weil die Quelldatei nicht " +
+            $"sicher geladen werden konnte:\n{_templateLoadError}",
+            "Vorlagen");
+        return false;
+    }
+
+    private bool EnsureCatalogLoaded()
+    {
+        if (string.IsNullOrWhiteSpace(_catalogLoadError))
+            return true;
+
+        _dialogs.Error(
+            "Positionen koennen nicht gespeichert werden, weil der Kostenkatalog nicht " +
+            $"sicher geladen werden konnte:\n{_catalogLoadError}",
+            "Positionen");
+        return false;
     }
 
     private string CreateNewCatalogId()
@@ -416,15 +487,16 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         }
     }
 
-    private static decimal ParseQtyOrDefault(string? raw)
+    private static bool TryParseQty(string? raw, out decimal quantity)
     {
         if (string.IsNullOrWhiteSpace(raw))
-            return 1m;
+        {
+            quantity = 1m;
+            return true;
+        }
 
-        var text = raw.Trim().Replace(',', '.');
-        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var qty)
-            ? qty
-            : 1m;
+        return FachzahlParser.TryParseMeasurement(raw, out quantity)
+               && quantity >= 0m;
     }
 
     private static MeasureTemplate CloneTemplate(MeasureTemplate template)

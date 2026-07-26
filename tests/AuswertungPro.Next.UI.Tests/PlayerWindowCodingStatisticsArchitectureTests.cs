@@ -12,13 +12,13 @@ public sealed class PlayerWindowCodingStatisticsArchitectureTests
         var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
         var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
         var navigationControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationController.cs");
-        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsPolicy.cs");
-        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsControls.cs");
-        var refreshPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsRefreshPolicy.cs");
-        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsRefreshWorkflow.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
-        var statisticsCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingStatisticsUpdateCommandWorkflow.cs");
-        var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStatisticsPolicy.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStatisticsControls.cs");
+        var refreshPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStatisticsRefreshPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsRefreshWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventsListRefreshCommandWorkflow.cs");
+        var statisticsCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingStatisticsUpdateCommandWorkflow.cs");
+        var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingUiUpdateWorkflow.cs");
         var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEventsRefreshController.cs");
         var playerPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
 
