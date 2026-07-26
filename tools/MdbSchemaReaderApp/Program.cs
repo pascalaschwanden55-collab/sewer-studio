@@ -1,9 +1,11 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.OleDb;
 using System.Collections.Generic;
+using System.Runtime.Versioning;
 
-class Program
+[SupportedOSPlatform("windows")]
+sealed class Program
 {
     static void Main(string[] args)
     {
@@ -17,13 +19,13 @@ class Program
         using var conn = new OleDbConnection(connStr);
         conn.Open();
         // Hole alle Spaltennamen aus SI_T
-        DataTable columns = conn.GetSchema("Columns", new string[] { null, null, "SI_T", null });
+        DataTable columns = conn.GetSchema("Columns", new string?[] { null, null, "SI_T", null });
         var wanted = new List<string> { "SI_Sectionname", "SI_Section_ID", "SI_MediaLocation", "SI_MediaNumber1", "SI_MediaNumber2", "SI_DVD_PDFName", "SI_ProtocolFile", "SI_VCR_PDFName", "SI_VCRNumber1", "SI_VCRNumber2", "SI_Feature1FileName", "SI_Feature2FileName", "SI_Feature3FileName" };
         var available = new List<string>();
         foreach (DataRow col in columns.Rows)
         {
-            var name = col["COLUMN_NAME"].ToString();
-            if (wanted.Contains(name))
+            var name = col["COLUMN_NAME"]?.ToString();
+            if (name is not null && wanted.Contains(name))
                 available.Add(name);
         }
         if (available.Count == 0)

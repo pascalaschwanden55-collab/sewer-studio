@@ -907,12 +907,6 @@ static List<CadasterTopologyHolding> ResolveCadasterHaltungen(
     List<string> globalWarnings)
     => CadasterHaltungResolver.Resolve(stammdatenByPair, topologyRows, globalWarnings);
 
-// Delegiert an CadasterTopologyConventions (reine Logik, kein IO).
-// Lokale Konvention: Schaechte mit "10.<ziffern>"-Praefix gehoeren immer
-// auf die Downstream-Seite. Mirror der Python-Implementierung.
-static void ApplyTopologyConventions(CadasterTopologyHolding h)
-    => CadasterTopologyConventions.ApplyTopologyConventions(h);
-
 static List<CadasterRawTopologyPair> LoadCadasterTopologyRows(FbConnection conn)
 {
     var rows = new List<CadasterRawTopologyPair>();
@@ -984,17 +978,8 @@ static bool TrySplitHoldingPair(string value, out string start, out string end)
 static string UnorderedPairKey(string a, string b)
     => CadasterTopologyConventions.UnorderedPairKey(a, b);
 
-static string NormalizePairComponent(string value)
-    => CadasterTopologyConventions.NormalizePairComponent(value);
-
 static string CleanNodeId(string value)
     => CadasterTopologyConventions.CleanNodeId(value);
-
-static List<string> BuildAlternativeHoldingIds(string schachtOben, string schachtUnten)
-    => CadasterTopologyConventions.BuildAlternativeHoldingIds(schachtOben, schachtUnten);
-
-static void AddPairVariants(List<string> variants, string a, string b)
-    => CadasterTopologyConventions.AddPairVariants(variants, a, b);
 
 static string SanitizePathSegment(string value)
     => CadasterTopologyConventions.SanitizePathSegment(value);
@@ -1251,12 +1236,6 @@ static object? ReadValue(FbDataReader reader, int index)
 // Delegiert an CadasterClassification (reine Logik, kein IO).
 static List<CandidateTableReport> FindCandidateTables(List<TableReport> tables, CandidateKind kind)
     => CadasterClassification.FindCandidateTables(tables, kind);
-
-static int ScoreTable(TableReport table, CandidateKind kind)
-    => CadasterClassification.ScoreTable(table, kind);
-
-static bool ContainsAny(string text, params string[] keys)
-    => CadasterClassification.ContainsAny(text, keys);
 
 static string QuoteId(string id) => "\"" + id.Replace("\"", "\"\"") + "\"";
 

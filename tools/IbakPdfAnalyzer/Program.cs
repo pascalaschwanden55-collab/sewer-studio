@@ -36,7 +36,7 @@ for (int i = startPage; i <= Math.Min(endPage, document.NumberOfPages); i++)
     var page = document.GetPage(i);
     Console.WriteLine($"=== Page {i} ===");
     Console.WriteLine($"Text length: {page.Text.Length} chars");
-    Console.WriteLine($"Letters: {page.Letters.Count()}");
+    Console.WriteLine($"Letters: {page.Letters.Count}");
     Console.WriteLine($"Images: {page.GetImages().Count()}");
     Console.WriteLine($"Width: {page.Width}, Height: {page.Height}");
     
@@ -51,7 +51,7 @@ for (int i = startPage; i <= Math.Min(endPage, document.NumberOfPages); i++)
         Console.WriteLine("\nWords extraction:");
         var words = page.GetWords().ToList();
         Console.WriteLine($"Total words: {words.Count}");
-        if (words.Any())
+        if (words.Count > 0)
         {
             var sample = string.Join(" ", words.Take(50).Select(w => w.Text));
             Console.WriteLine($"Sample: {sample}");
@@ -64,14 +64,14 @@ for (int i = startPage; i <= Math.Min(endPage, document.NumberOfPages); i++)
         // Check if there are any visible words/letters
         if (page.Letters.Any())
         {
-            Console.WriteLine($"Found {page.Letters.Count()} letters");
+            Console.WriteLine($"Found {page.Letters.Count} letters");
             var sample = string.Join("", page.Letters.Take(100).Select(l => l.Value));
             Console.WriteLine($"Sample: {sample}");
         }
         
         // Check images
         var images = page.GetImages().ToList();
-        if (images.Any())
+        if (images.Count > 0)
         {
             Console.WriteLine($"\nImages found: {images.Count}");
             foreach (var img in images)
