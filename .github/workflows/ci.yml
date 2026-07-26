@@ -1,0 +1,63 @@
+# Serverseitiges CI-Gate (Schluss des lokalen Pre-Push-Hooks, siehe .githooks/pre-push).
+# Prueft den vollstaendigen Release-Weg aus AGENTS.md:
+# Build der Gesamtlsung, alle vier .NET-Testprojekte, Sidecar (ohne GPU) und QGIS-Bruecke.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dotnet:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore AuswertungPro.sln
+
+      - name: Build Gesamtloesung (Release)
+        run: dotnet build AuswertungPro.sln -c Release --no-restore
+
+      - name: Tests Infrastructure
+        run: dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore
+
+      - name: Tests Pipeline
+        run: dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore
+
+      - name: Tests UI
+        run: dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore
+
+      - name: Tests ProjectModernizer
+        run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore
+
+  python:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # CPU-Torch zuerst, damit pip nicht das grosse CUDA-Bundle zieht.
+      - name: Sidecar installieren
+        working-directory: sidecar
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+
+      - name: Sidecar-Tests (ohne GPU)
+        working-directory: sidecar
+        run: python -m pytest -m "not gpu" -q
+
+      - name: QGIS-Brueckentests
+        run: python -m unittest discover integrations/qgis/tests -v
