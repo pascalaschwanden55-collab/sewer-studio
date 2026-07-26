@@ -11,6 +11,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -38,6 +39,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly IProcessOutputReader _processOutputs;
     private readonly IPipelineEnvironmentOptions _pipelineEnvironmentOptions;
     private readonly ISidecarTelemetryWriter _sidecarTelemetry;
+    // Kontrollierter Sidecar-Neustart (Paket 3/A2): null = kein Neustart (heutiges Verhalten).
+    private readonly Application.Ai.Startup.ISidecarRestartService? _sidecarRestart;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
@@ -47,7 +50,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
         : this(
             PipelineTraceWriter.Current,
             ProcessOutputReader.Current,
@@ -58,7 +62,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             codeCatalog,
             loggerFactory,
             pipelineEnvironmentOptions,
-            sidecarTelemetry)
+            sidecarTelemetry,
+            sidecarRestart)
     {
     }
 
@@ -71,7 +76,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
         : this(
             pipelineTraceWriter,
             ProcessOutputReader.Current,
@@ -82,7 +88,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             codeCatalog,
             loggerFactory,
             pipelineEnvironmentOptions,
-            sidecarTelemetry)
+            sidecarTelemetry,
+            sidecarRestart)
     {
     }
 
@@ -96,12 +103,14 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _processOutputs = processOutputs ?? throw new ArgumentNullException(nameof(processOutputs));
         _pipelineEnvironmentOptions = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         _sidecarTelemetry = sidecarTelemetry ?? SidecarTelemetryWriter.Current;
+        _sidecarRestart = sidecarRestart;
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
@@ -172,7 +181,17 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 qwenVision: qwenVision,
                 logger: _loggerFactory.CreateLogger<MultiModelAnalysisService>(),
                 pipelineEnvironmentOptions: _pipelineEnvironmentOptions,
-                processOutputs: _processOutputs);
+                processOutputs: _processOutputs,
+                // Checkpoint-Journal (Resume) am Erzeugungsort des Multi-Model-Services,
+                // gleiches Muster wie die uebbrigen hier gebauten Infrastruktur-Dienste.
+                checkpointJournal: new AnalysisCheckpointJournal(
+                    _loggerFactory.CreateLogger<AnalysisCheckpointJournal>()),
+                sidecarRestart: _sidecarRestart);
+            // Abgeschlossene Journale sicher begrenzen: nur streng lesbare, abgeschlossene,
+            // aeltere Dateien. Laufende oder beschaedigte Journale bleiben immer erhalten.
+            AnalysisCheckpointJournal.CleanupCompletedJournals(
+                TelemetryPathResolver.Current, TimeSpan.FromDays(14),
+                _loggerFactory.CreateLogger<AnalysisCheckpointJournal>());
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
 
@@ -238,6 +257,16 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
+        // Unvollstaendigkeits-Hinweis (Skip-Quote > 10 %): ueber denselben WARNUNG-Pfad
+        // wie der Degraded-Hinweis ausspielen — Ergebnis ist nutzbar, aber lueckenhaft.
+        if (videoResult.Incomplete)
+        {
+            _logger.LogWarning("Videoanalyse unvollstaendig: mehr als 10 % der Frames fehlerbedingt uebersprungen.");
+            progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
+                "WARNUNG: Mehr als 10 % der Frames wurden fehlerbedingt uebersprungen – Ergebnis unvollstaendig.",
+                FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
+        }
+
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
             $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
@@ -278,6 +307,12 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 "Manuelle Pruefung erforderlich: "
                 + (videoResult.DegradedReason ?? "Die Videoanalyse war eingeschraenkt."));
         }
+        if (videoResult.Incomplete)
+        {
+            resultWarnings.Add(
+                "Ergebnis unvollstaendig: mehr als 10 % der Frames wurden fehlerbedingt "
+                + "uebersprungen (Sidecar-/Modellfehler). Manuelle Pruefung empfohlen.");
+        }
 
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
             $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} EintrÃ¤ge gemappt.",
@@ -289,7 +324,9 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             100,
             videoResult.Degraded
                 ? "Fertig – Ergebnis ist eingeschraenkt und muss manuell geprueft werden."
-                : "Fertig."));
+                : videoResult.Incomplete
+                    ? "Fertig – Ergebnis ist unvollstaendig (>10 % der Frames uebersprungen); manuelle Pruefung empfohlen."
+                    : "Fertig."));
 
         return new PipelineResult(
             Document: genResult.Document,
@@ -303,7 +340,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 EntriesWithHighConfidence: genResult.MappedEntries.Count(e => e.Confidence >= 0.75)),
             Warnings: resultWarnings,
             Error: null,
-            Telemetry: videoResult.Telemetry);
+            Telemetry: videoResult.Telemetry,
+            Incomplete: videoResult.Incomplete);
     }
 
     /// <summary>

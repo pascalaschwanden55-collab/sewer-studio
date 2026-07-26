@@ -38,3 +38,39 @@ def test_dino_endpoint(client):
     data = resp.json()
     assert "detections" in data
     assert "inference_time_ms" in data
+
+
+def test_dino_model_unloaded_liefert_503_statt_degraded(client, monkeypatch):
+    """Unload-Race (model=None nach ensure_loaded) liegt jetzt INNERHALB des
+    Inferenz-try (Lease umfasst Laden+Inferenz, Paket 2): der Fehler darf dort
+    nicht als degraded-200 verschluckt werden, sondern muss als 503
+    model_unloaded an den C#-Client gehen (Retry loest Nachladen aus)."""
+    import sys
+    import types
+
+    from sidecar.gpu_manager import ModelSlot, gpu_manager
+    from sidecar.models import dino_wrapper
+
+    monkeypatch.setattr(dino_wrapper, "_load_dino_on", lambda device: (None, None))
+    monkeypatch.setattr(dino_wrapper, "_resolve_device", lambda: "cpu")
+
+    package = types.ModuleType("groundingdino")
+    util = types.ModuleType("groundingdino.util")
+    inference = types.ModuleType("groundingdino.util.inference")
+    inference.predict = lambda **_kw: ([], [], [])
+    package.util = util
+    util.inference = inference
+    monkeypatch.setitem(sys.modules, "groundingdino", package)
+    monkeypatch.setitem(sys.modules, "groundingdino.util", util)
+    monkeypatch.setitem(sys.modules, "groundingdino.util.inference", inference)
+
+    try:
+        resp = client.post("/detect/dino", json={
+            "image_base64": _make_test_image(),
+            "box_threshold": 0.30,
+            "text_threshold": 0.25,
+        })
+        assert resp.status_code == 503
+        assert resp.json()["code"] == "model_unloaded"
+    finally:
+        gpu_manager.unload(ModelSlot.DINO)

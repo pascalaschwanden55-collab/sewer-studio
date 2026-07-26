@@ -11,7 +11,7 @@ import numpy as np
 
 from ..config import settings
 from ..cuda_errors import looks_like_cuda_failure, looks_like_oom
-from ..gpu_manager import gpu_manager, ModelSlot
+from ..gpu_manager import gpu_manager, ModelSlot, ModelUnloadedError
 from ..schemas.detection import DinoDetection, DinoResponse
 from .image_decode import decode_image_safe
 
@@ -112,9 +112,6 @@ def detect(
 ) -> DinoResponse:
     """Run Grounding DINO detection on a base64-encoded image."""
     device = _resolve_device()
-    state = gpu_manager.ensure_loaded(ModelSlot.DINO, device, lambda: _load_dino_on(device))
-    model = state.model
-
     prompt = text_prompt or settings.dino_labels
 
     img = decode_image_safe(
@@ -139,7 +136,18 @@ def detect(
 
         # Inferenz serialisieren (Gesamtaudit P7): parallele Threadpool-Requests auf
         # demselben DINO-Modell koennen sich verschraenken (Race/OOM) — wie SAM/YOLO.
-        with _dino_predict_lock:
+        # Lock ZUERST, Lease DANACH (Paket 2): wartende Requests besitzen noch keine
+        # Lease und koennen die Busy-Uhr des laufenden Requests weder verschieben
+        # noch loeschen. Laden + Inferenz laufen UNTER der Lease: das geladene
+        # Modell ist vom ensure_loaded bis zum Inferenzende vor Eviction geschuetzt.
+        with _dino_predict_lock, gpu_manager.busy_slot(ModelSlot.DINO):
+            state = gpu_manager.ensure_loaded(
+                ModelSlot.DINO, device, lambda: _load_dino_on(device))
+            model = state.model
+            if model is None:
+                # Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und
+                # Zugriff entladen -> kontrollierter 503 statt AttributeError/500.
+                raise ModelUnloadedError(ModelSlot.DINO.value)
             boxes, logits, phrases = predict(
                 model=model,
                 image=img_tensor,
@@ -147,6 +155,10 @@ def detect(
                 box_threshold=box_threshold,
                 text_threshold=text_threshold,
             )
+    except ModelUnloadedError:
+        # Unload-Race (Paket 3/B) darf NICHT in ein degraded-200 laufen: der
+        # zentrale Handler liefert 503, der C#-Client wiederholt den Request.
+        raise
     except Exception as exc:
         # OOM/CUDA-Fehler re-raisen, damit der zentrale Handler VRAM freigibt und 503 liefert;
         # sonst bliebe der Sidecar im OOM-Zustand haengen (degraded-200 loest keine Erholung aus).

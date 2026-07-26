@@ -75,7 +75,7 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
                 return false;
             }
 
-            if (!_startedProcesses.TryTrack(process, out var trackingError))
+            if (!_startedProcesses.TryTrack(process, ClassifyKind(request), request.FileName, out var trackingError))
             {
                 try
                 {
@@ -126,6 +126,26 @@ public sealed class DefaultAiStartupLauncher : IAiStartupLauncher
         }
 
         return startInfo;
+    }
+
+    /// <summary>
+    /// Prozessart fuer das Tracking (Paket 2/A3) aus dem Startauftrag ableiten — die
+    /// Startkonventionen stehen im AiStartupOrchestrator (Application, unveraendert):
+    /// Ollama = "ollama serve", Sidecar = PowerShell mit dem Skript start_sidecar.ps1.
+    /// Unbekannte Auftraege bleiben konservativ Unknown (strengere Neustart-Regeln
+    /// greifen dann nicht, Shutdown-Verhalten bleibt unveraendert).
+    /// </summary>
+    internal static AiStartedProcessKind ClassifyKind(AiStartupProcessRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.FileName.Contains("ollama", StringComparison.OrdinalIgnoreCase))
+            return AiStartedProcessKind.Ollama;
+
+        if (request.Arguments.Contains("start_sidecar", StringComparison.OrdinalIgnoreCase))
+            return AiStartedProcessKind.Sidecar;
+
+        return AiStartedProcessKind.Unknown;
     }
 
     public async Task<AiStartupModelPreloadResult> PreloadOllamaModelAsync(

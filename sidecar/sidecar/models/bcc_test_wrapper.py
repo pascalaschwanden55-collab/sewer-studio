@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from ..config import settings
-from ..gpu_manager import ModelSlot, gpu_manager
+from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
 from ..schemas.detection import BccTestYoloResponse, YoloDetection
 from . import yolo_wrapper
 
@@ -218,12 +218,23 @@ def _load_candidate(candidate: BccCandidate, device: str):
     return model, None
 
 
-def _ensure_candidate_model(candidate: BccCandidate, device: str):
+def _discard_stale_candidate(candidate: BccCandidate) -> None:
+    """Entlaedt den Test-Slot bei Kandidatenwechsel.
+
+    Muss UNTER _predict_lock, aber VOR der Busy-Lease laufen (Paket 2): eine
+    eigene Lease wuerde das unload sonst sperren (Lease-Schutz). Der
+    _predict_lock serialisiert alle Zugriffe auf diesen Slot, darum kann hier
+    keine fremde Lease aktiv sein.
+    """
     global _loaded_candidate_sha256
 
     if _loaded_candidate_sha256 != candidate.weights_sha256:
         gpu_manager.unload(ModelSlot.YOLO_TEST)
         _loaded_candidate_sha256 = None
+
+
+def _ensure_candidate_model(candidate: BccCandidate, device: str):
+    global _loaded_candidate_sha256
 
     state = gpu_manager.ensure_loaded(
         ModelSlot.YOLO_TEST,
@@ -255,15 +266,26 @@ def detect(image_base64: str, confidence_threshold: float) -> BccTestYoloRespons
         )
 
     with _predict_lock:
-        model = _ensure_candidate_model(candidate, device)
-        started = time.perf_counter()
-        results = model.predict(
-            source=np.array(image),
-            conf=confidence_threshold,
-            imgsz=settings.yolo_imgsz,
-            verbose=False,
-        )
-        inference_time_ms = (time.perf_counter() - started) * 1000
+        # Kandidatenwechsel VOR der Lease erledigen (eigene Lease wuerde das
+        # unload sonst sperren); danach Laden + Inferenz UNTER der Lease
+        # (Paket 2): das geladene Kandidaten-Modell ist vom ensure_loaded bis
+        # zum Inferenzende vor Eviction geschuetzt, und wartende Requests
+        # koennen die Busy-Uhr nicht verschieben.
+        _discard_stale_candidate(candidate)
+        with gpu_manager.busy_slot(ModelSlot.YOLO_TEST):
+            model = _ensure_candidate_model(candidate, device)
+            if model is None:
+                # Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und Zugriff
+                # entladen -> kontrollierter 503 statt AttributeError/500.
+                raise ModelUnloadedError(ModelSlot.YOLO_TEST.value)
+            started = time.perf_counter()
+            results = model.predict(
+                source=np.array(image),
+                conf=confidence_threshold,
+                imgsz=settings.yolo_imgsz,
+                verbose=False,
+            )
+            inference_time_ms = (time.perf_counter() - started) * 1000
 
     detections: list[YoloDetection] = []
     if results:

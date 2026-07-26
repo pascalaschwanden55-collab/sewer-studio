@@ -15,7 +15,7 @@ from .auth_token import resolve_or_create_token
 from .config import settings
 from .cuda_errors import looks_like_cuda_failure as _looks_like_cuda_failure
 from .cuda_errors import looks_like_oom as _looks_like_oom
-from .gpu_manager import gpu_manager
+from .gpu_manager import gpu_manager, InsufficientVramError, ModelUnloadedError
 from .routes import health, yolo, dino, sam, training, warmup
 
 logging.basicConfig(
@@ -44,7 +44,14 @@ async def lifespan(app: FastAPI):
     logging.getLogger("sidecar").info(
         "Auth aktiv: X-Sidecar-Token erforderlich (Token-Datei: %s).", _token_file_path()
     )
+    # Inferenz-Waechter (Paket 3/A): beendet den Prozess hart, wenn ein Predict-Lock
+    # laenger als das Limit haengt (fester CUDA-Call); der C#-Neustartdienst startet neu.
+    # Startet bewusst UNBEDINGT (Paket 2/A5): seit dem Lease-Konzept werden auch
+    # CPU-Inferenzen ueberwacht — YOLO-CPU-Singleton und YOLO-cls laufen ueber die
+    # logischen Slots yolo_cpu/yolo_cls, DINO/SAM erzeugen auch auf CPU echte Slots.
+    gpu_manager.start_watchdog()
     yield
+    gpu_manager.stop_watchdog()
     logging.getLogger("sidecar").info("Sidecar shutting down — unloading all models ...")
     gpu_manager.unload_all()
 
@@ -55,6 +62,39 @@ app = FastAPI(
     description="Multi-Model Vision Pipeline (YOLO / Grounding DINO / SAM)",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(InsufficientVramError)
+async def handle_insufficient_vram(request: Request, exc: InsufficientVramError):
+    """VRAM-Zulassung verweigert (Paket 3/B): kontrollierter 503 mit maschinenlesbarem
+    Detail — OHNE dass ein Ladeversuch stattgefunden hat."""
+    logger.warning(
+        "VRAM-Zulassung verweigert fuer %s: %.1f GB frei < %.1f GB benoetigt.",
+        exc.slot.value, exc.free_gb, exc.required_gb,
+    )
+    return JSONResponse(
+        {
+            "detail": "insufficient VRAM",
+            "code": "insufficient_vram",
+            "slot": exc.slot.value,
+            "free_gb": round(exc.free_gb, 2),
+            "required_gb": round(exc.required_gb, 2),
+            # Paket 2: abgezogene Ollama-Reserve im Detail (additiv, abwaertskompatibel).
+            "reserved_gb": round(exc.reserved_gb, 2),
+        },
+        status_code=503,
+    )
+
+
+@app.exception_handler(ModelUnloadedError)
+async def handle_model_unloaded(request: Request, exc: ModelUnloadedError):
+    """Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und Nutzung entladen.
+    503 statt 500 — der C#-Client wiederholt den Request einmal und loest das Nachladen aus."""
+    logger.warning("Unload-Race abgefangen bei %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        {"detail": "model slot was unloaded concurrently", "code": "model_unloaded"},
+        status_code=503,
+    )
 
 
 @app.exception_handler(Exception)

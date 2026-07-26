@@ -34,7 +34,11 @@ public sealed record PipelineResult(
     PipelineStats? Stats,
     IReadOnlyList<string> Warnings,
     string? Error,
-    TelemetrySummary? Telemetry = null)
+    TelemetrySummary? Telemetry = null,
+    // Incomplete=true: mehr als 10 % der analysierten Frames wurden fehlerbedingt
+    // uebersprungen (Sidecar-/Modellfehler). Das Ergebnis ist nutzbar, aber
+    // unvollstaendig — die UI weist ueber den Warnungspfad darauf hin.
+    bool Incomplete = false)
 {
     public bool IsSuccess => Error is null;
 
@@ -84,7 +88,11 @@ public sealed record VideoAnalysisResult(
     // false oder null (Status fehlt/unlesbar) bedeutet: YOLO wird umgangen, DINO/SAM
     // laufen weiter und das Ergebnis bleibt review-pflichtig.
     bool? DetectorQualified = null,
-    string? DetectorQualificationReason = null)
+    string? DetectorQualificationReason = null,
+    // Incomplete=true: mehr als 10 % der analysierten Frames wurden fehlerbedingt
+    // uebersprungen (Transport- oder Modellfehler). Kein Abbruch, aber das
+    // Ergebnis ist unvollstaendig und wird ueber den Warnungspfad ausgewiesen.
+    bool Incomplete = false)
 {
     public bool IsSuccess => Error is null;
 

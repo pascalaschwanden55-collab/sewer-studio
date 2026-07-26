@@ -11,7 +11,7 @@ import numpy as np
 
 from ..config import settings
 from ..cuda_errors import looks_like_cuda_failure, looks_like_oom
-from ..gpu_manager import gpu_manager, ModelSlot
+from ..gpu_manager import gpu_manager, ModelSlot, ModelUnloadedError
 from ..schemas.detection import BoundingBox
 from ..schemas.segmentation import MaskResult, SamResponse
 from .image_decode import decode_image_safe
@@ -155,8 +155,6 @@ def segment(
     """
     _ = pipe_diameter_mm  # bewusst ungenutzt (siehe Docstring)
     device = _resolve_device()
-    state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
-    predictor = state.processor  # SAM2ImagePredictor
 
     img = decode_image_safe(
         image_base64,
@@ -175,7 +173,18 @@ def segment(
     first_error: str | None = None
 
     # SAM2ImagePredictor ist stateful: set_image und predict muessen pro Request atomar bleiben.
-    with _sam_predict_lock:
+    # Lock ZUERST, Lease DANACH (Paket 2): wartende Requests besitzen keine Lease und
+    # koennen die Busy-Uhr des laufenden Requests weder verschieben noch loeschen.
+    # Laden + Inferenz laufen UNTER der Lease: das geladene Modell ist vom
+    # ensure_loaded bis zum Inferenzende vor Eviction geschuetzt. Ein haengender
+    # CUDA-Call haelt das Lock unbegrenzt; der Waechter beendet nach dem Limit hart.
+    with _sam_predict_lock, gpu_manager.busy_slot(ModelSlot.SAM):
+        state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
+        predictor = state.processor  # SAM2ImagePredictor
+        if predictor is None:
+            # Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und Zugriff
+            # entladen -> kontrollierter 503 statt AttributeError/500.
+            raise ModelUnloadedError(ModelSlot.SAM.value)
         predictor.set_image(img_array)
 
         for bbox in bounding_boxes:

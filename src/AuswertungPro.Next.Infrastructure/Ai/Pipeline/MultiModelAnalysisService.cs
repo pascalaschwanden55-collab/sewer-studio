@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.VsaCatalog;
@@ -34,6 +35,8 @@ public sealed partial class MultiModelAnalysisService
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
     private readonly VideoProbeService _videoProbe;
+    // Checkpoint-Journal (Resume): null = ohne Journal (Tests/aeltere Aufrufer).
+    private readonly IAnalysisCheckpointJournal? _checkpointJournal;
 
     /// <summary>
     /// Klassifikator als fuehrende Code-Quelle (Paket 2): ResolveFromClassifier +
@@ -79,7 +82,8 @@ public sealed partial class MultiModelAnalysisService
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
         Func<string, CancellationToken, Task<double>>? durationProbe = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null,
+        IAnalysisCheckpointJournal? checkpointJournal = null, ISidecarRestartService? sidecarRestart = null)
         : this(
             PipelineTraceWriter.Current,
             client,
@@ -89,7 +93,7 @@ public sealed partial class MultiModelAnalysisService
             logger,
             frameSource,
             durationProbe,
-            pipelineEnvironmentOptions, processOutputs)
+            pipelineEnvironmentOptions, processOutputs, checkpointJournal, sidecarRestart)
     {
     }
 
@@ -102,7 +106,8 @@ public sealed partial class MultiModelAnalysisService
         ILogger? logger = null,
         Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
         Func<string, CancellationToken, Task<double>>? durationProbe = null,
-        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null)
+        IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null, IProcessOutputReader? processOutputs = null,
+        IAnalysisCheckpointJournal? checkpointJournal = null, ISidecarRestartService? sidecarRestart = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         var options = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
@@ -122,6 +127,8 @@ public sealed partial class MultiModelAnalysisService
         ClassifierDecisionEnabled = options.ClassifierDecisionEnabled();
         ClassifierOnlyStructuralEnabled = options.ClassifierOnlyStructuralEnabled();
         _expectedYoloModel = options.ExpectedYoloModel();
+        _checkpointJournal = checkpointJournal;
+        _sidecarRestart = sidecarRestart;
     }
     public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
         => qwenMeterAccepted ? ("QwenOsd", false) : ("LinearEstimate", true);
@@ -166,12 +173,14 @@ public sealed partial class MultiModelAnalysisService
         bool yoloFallbackWarned = false;
         _codeVoting.Reset();   // Voting-Fenster gilt pro Video-Lauf
         _lastFinding = null;   // Vorheriger-Befund-Kontext darf nicht ueber Video-Grenzen lecken
-        // befund-2: Stirbt der Sidecar mitten im Video, scheitert YOLO Frame um Frame. Statt das
-        // still als Erfolg mit Teil-/Leerergebnis durchzureichen, brechen wir nach genug
-        // Folgefehlern ab und kennzeichnen den Lauf als degraded.
+        // Einheitlicher Ausfallschutz (befund-2 erweitert): Folge-Frames mit Sidecar-Transportfehler
+        // (YOLO/DINO/SAM) -> Abbruch. Qwen (Ollama): eigener Prozess, ab Limit nur Degraded-Notiz.
         const int sidecarOutageLimit = 8;
-        int consecutiveYoloErrors = 0;
+        var outageGuard = new SidecarOutageGuard(sidecarOutageLimit);
+        var qwenOutage = new QwenOutageTracker(sidecarOutageLimit);
         bool sidecarOutage = false;
+        string? vramInsufficientMessage = null;   // Paket 2/A4: erste VRAM-Mangel-Meldung des Laufs (Degraded-Grund)
+        _sidecarRestartAttemptedThisRun = false;   // Neustart-Budget: einmalig pro Lauf (Paket 3/A2)
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
@@ -211,6 +220,15 @@ public sealed partial class MultiModelAnalysisService
                 "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen ohne YOLO-Filter; manuelle Pruefung erforderlich."));
         }
 
+        var resume = await RestoreCheckpointAsync(videoPath, detections, deduplicator, totalFrames, lastMeter, progress, ct).ConfigureAwait(false);
+        lastMeter = resume.LastMeter;
+
+        // Paket 3/A2: Transportfehler -> Zaehler; am Limit einmalig kontrollierter
+        // Neustart statt sofortigem Abbruch (Logik in MultiModelAnalysisService.SidecarRestart.cs).
+        Task<bool> RegisterSidecarTransportErrorAsync() =>
+            HandleSidecarTransportErrorAsync(
+                outageGuard, () => sidecarOutage = true, progress, frameIndex, totalFrames, ct);
+
         // frameSource-Seam: im Test injizierbar; sonst echter VideoFrameStream.
         var frames = _frameSource is not null
             ? _frameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct)
@@ -221,6 +239,7 @@ public sealed partial class MultiModelAnalysisService
             ct.ThrowIfCancellationRequested();
             var frameSw = Stopwatch.StartNew();
             frameIndex++;
+            if (frameIndex <= resume.LastFrameIndex) continue;   // Resume: journalierte Frames dekodieren, NICHT erneut inferieren (v1)
             var t = frame.TimestampSeconds;
 
             var trace = new PipelineFrameTrace
@@ -242,6 +261,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "empty_frame";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, lastMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -291,6 +311,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = $"frame_{clsResult.QualityReason}";
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -318,6 +339,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.ClassifierModel = ClassifierModelTag(clsResult);
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -339,6 +361,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = "yolo_cls_normal";
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -358,6 +381,11 @@ public sealed partial class MultiModelAnalysisService
                     _logger.LogWarning("Frame {Frame}: Bogen-Veto fehlgeschlagen - is_bend=false wird nicht fuer Klassifikator-Code vertraut.",
                         frameIndex);
                 }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Nutzerabbruch: sofort weiterwerfen, nie als Fehler zaehlen.
+                throw;
             }
             catch (Exception ex)
             {
@@ -472,6 +500,30 @@ public sealed partial class MultiModelAnalysisService
                         };
                     }
                 }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
+                    throw;
+                }
+                catch (SidecarInsufficientVramException ex)
+                {
+                    // Paket 2/A4: VRAM-Mangel ist ein Kapazitaetsfehler, KEIN Transport-Ausfall:
+                    // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
+                    // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+                    _logger.LogWarning(ex, "Frame {Frame}: YOLO wegen VRAM-Mangels uebersprungen", frameIndex);
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex} – YOLO uebersprungen: {ex.Message}"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    trace.Path = "yolo_error";
+                    trace.DropReason = "vram_insufficient";
+                    MarkTraceDegraded(trace, "vram_insufficient");
+                    await WriteTraceAsync(trace).ConfigureAwait(false);
+                    detections.AddRange(deduplicator.AdvanceAll());
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                    outageGuard.RegisterFailureSkip();
+                    vramInsufficientMessage ??= ex.Message;
+                    continue;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Frame {Frame}: YOLO detection failed", frameIndex);
@@ -482,19 +534,13 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = "yolo_error";
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
-                    if (++consecutiveYoloErrors >= sidecarOutageLimit)
-                    {
-                        sidecarOutage = true;
-                        _logger.LogError("Sidecar antwortet seit {Count} Frames nicht — Analyse abgebrochen (degraded).",
-                            consecutiveYoloErrors);
-                        break;
-                    }
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                    if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
             }
 
-            consecutiveYoloErrors = 0;   // YOLO hat geantwortet -> Sidecar lebt, Folgefehler-Zaehler zuruecksetzen
             trace.YoloRelevant = yoloResult.IsRelevant;
             trace.YoloDetectionCount = yoloResult.Detections.Count;
 
@@ -508,6 +554,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "yolo_irrelevant";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -527,6 +574,30 @@ public sealed partial class MultiModelAnalysisService
                         _config.DinoBoxThreshold,
                         _config.DinoTextThreshold), ct).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
+                throw;
+            }
+            catch (SidecarInsufficientVramException ex)
+            {
+                // Paket 2/A4: VRAM-Mangel = Kapazitaetsfehler, KEIN Transport-Ausfall:
+                // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
+                // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+                _logger.LogWarning(ex, "Frame {Frame}: DINO wegen VRAM-Mangels uebersprungen", frameIndex);
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex} – DINO uebersprungen: {ex.Message}"));
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "dino_error";
+                trace.DropReason = "vram_insufficient";
+                MarkTraceDegraded(trace, "vram_insufficient");
+                await WriteTraceAsync(trace).ConfigureAwait(false);
+                detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                outageGuard.RegisterFailureSkip();
+                vramInsufficientMessage ??= ex.Message;
+                continue;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Frame {Frame}: DINO detection failed", frameIndex);
@@ -537,6 +608,8 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "dino_error";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
@@ -558,6 +631,8 @@ public sealed partial class MultiModelAnalysisService
                 trace.DegradedReason = dinoResult.ErrorCode ?? "dino_degraded";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                outageGuard.RegisterFailureSkip();   // Modellfehler: nur Skip-Quote, kein Transport-Ausfall
                 continue;
             }
 
@@ -615,12 +690,14 @@ public sealed partial class MultiModelAnalysisService
                         isMeterEstimated: mEst));
                     trace.ActiveCount = deduplicator.ActiveCount;
                     trace.DetectionsTotal = detections.Count;
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.Update, frameIndex, t, meterNoBox, mSrc, mEst, evidence, new List<EnhancedFinding> { structuralOnly }), ct).ConfigureAwait(false);
                 }
                 else
                 {
                     trace.Path = "dino_no_boxes";
                     trace.DropReason = "dino_no_boxes";
                     detections.AddRange(deduplicator.AdvanceAll());
+                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, meterNoBox, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
                 }
 
                 await WriteTraceAsync(trace).ConfigureAwait(false);
@@ -643,6 +720,30 @@ public sealed partial class MultiModelAnalysisService
                 samResult = await _client.SegmentSamAsync(
                     new SamRequest(frameBase64, samBoxes, pipeDiameterMm), ct).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
+                throw;
+            }
+            catch (SidecarInsufficientVramException ex)
+            {
+                // Paket 2/A4: VRAM-Mangel = Kapazitaetsfehler, KEIN Transport-Ausfall:
+                // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
+                // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+                _logger.LogWarning(ex, "Frame {Frame}: SAM wegen VRAM-Mangels uebersprungen", frameIndex);
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex} – SAM uebersprungen: {ex.Message}"));
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "sam_error";
+                trace.DropReason = "vram_insufficient";
+                MarkTraceDegraded(trace, "vram_insufficient");
+                await WriteTraceAsync(trace).ConfigureAwait(false);
+                detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                outageGuard.RegisterFailureSkip();
+                vramInsufficientMessage ??= ex.Message;
+                continue;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Frame {Frame}: SAM segmentation failed", frameIndex);
@@ -653,6 +754,8 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "sam_error";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
+                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
@@ -788,116 +891,14 @@ public sealed partial class MultiModelAnalysisService
             var qwenMeterAccepted = false;
             if (_qwenVision is not null && findings.Count > 0)
             {
-                trace.QwenCalled = true;
-                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} – Qwen VSA-Code-Mapping...",
-                    FramePreviewPng: frameBytes));
-
-                phaseSw.Restart();
-                try
-                {
-                    var multiModelContext = new MultiModelFrameResult(
-                        TimestampSec: t,
-                        Meter: meter,
-                        IsRelevant: true,
-                        DinoDetections: dinoResult.Detections,
-                        SamMasks: samResult.Masks,
-                        ImageWidth: samResult.ImageWidth,
-                        ImageHeight: samResult.ImageHeight,
-                        YoloTimeMs: yoloResult.InferenceTimeMs,
-                        DinoTimeMs: dinoResult.InferenceTimeMs,
-                        SamTimeMs: samResult.InferenceTimeMs);
-
-                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    qwenCts.CancelAfter(QwenFrameTimeout);
-                    // Vorherigen Befund als Kontext uebergeben (nur wenn < 1m entfernt)
-                    var prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
-                        ? _lastFinding : null;
-                    var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
-                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token,
-                        previousFinding: prevCtx).ConfigureAwait(false);
-
-                    trace.QwenImageQuality = qwenResult.ImageQuality;
-                    trace.QwenRawFindingCount = qwenResult.Findings.Count;
-
-                    var badQuality = string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase);
-
-                    // OSD-Meter nur uebernehmen, wenn plausibel (0..500 m) UND nicht aus einem schlechten
-                    // Bild — sonst vergiftet ein halluzinierter/fehlgelesener Meter die fortlaufende
-                    // Timeline (lastMeter). Bei schlechtem Bild ist auch das OSD-Lesen unzuverlaessig. (Audit R7)
-                    if (qwenResult.Meter.HasValue && !badQuality
-                        && AuswertungPro.Next.Infrastructure.Ai.MeterPlausibility.IsPlausible(qwenResult.Meter.Value))
-                    {
-                        meter = qwenResult.Meter.Value;
-                        lastMeter = meter;
-                        qwenMeterAccepted = true;
-                    }
-                    else if (qwenResult.Meter.HasValue)
-                    {
-                        _logger.LogDebug("Frame {Frame}: OSD-Meter {Meter} verworfen ({Reason})",
-                            frameIndex, qwenResult.Meter.Value, badQuality ? "schlechtes Bild" : "unplausibel");
-                    }
-
-                    // ImageQuality-Gate: Bei schlechter Bildqualitaet Findings verwerfen
-                    if (badQuality)
-                    {
-                        _logger.LogDebug("Frame {Frame}: ImageQuality=schlecht, {Count} Findings verworfen",
-                            frameIndex, findings.Count);
-                        trace.DropReason = "image_quality_bad";
-                        findings.Clear();
-                    }
-
-                    if (qwenResult.HasFindings)
-                    {
-                        // Match Qwen findings to our quantified findings by label similarity
-                        foreach (var qf in qwenResult.Findings)
-                        {
-                            var match = findings.FirstOrDefault(f =>
-                                f.Label.Equals(qf.Label, StringComparison.OrdinalIgnoreCase) ||
-                                qf.Label.Contains(f.Label, StringComparison.OrdinalIgnoreCase) ||
-                                f.Label.Contains(qf.Label, StringComparison.OrdinalIgnoreCase));
-
-                            // Klassifikator fuehrt (Paket 2): bestaetigte Codes darf Qwen
-                            // nicht ueberschreiben — nur noch leere Hints fuellen.
-                            if (match is not null && !string.IsNullOrWhiteSpace(qf.VsaCodeHint)
-                                && (classifierCode is null || string.IsNullOrWhiteSpace(match.VsaCodeHint)))
-                            {
-                                var idx = findings.IndexOf(match);
-                                // Replace with enriched finding (keep SAM quantification, add Qwen VSA code)
-                                findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
-                            }
-                        }
-
-                        // Letzten Befund merken fuer Qwen-Kontext beim naechsten Frame
-                        var topFinding = qwenResult.Findings
-                            .Where(f => !string.IsNullOrEmpty(f.VsaCodeHint))
-                            .OrderByDescending(f => f.Severity)
-                            .FirstOrDefault();
-                        if (topFinding != null)
-                        {
-                            _lastFinding = (
-                                topFinding.VsaCodeHint ?? topFinding.Label,
-                                topFinding.Label,
-                                meter,
-                                topFinding.Severity / 5.0); // Severity 1-5 → Confidence 0.2-1.0
-                        }
-
-                        _logger.LogDebug("Frame {Frame}: Qwen enriched {Count} findings with VSA codes",
-                            frameIndex, qwenResult.Findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint)));
-                    }
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                {
-                    trace.DropReason = "qwen_timeout";
-                    _logger.LogWarning("Frame {Frame}: Qwen VSA-Code-Mapping timeout ({Timeout}s)",
-                        frameIndex, QwenFrameTimeout.TotalSeconds);
-                }
-                catch (Exception ex)
-                {
-                    trace.DropReason = "qwen_error";
-                    _logger.LogWarning(ex, "Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen", frameIndex);
-                }
-                qwenMs = phaseSw.ElapsedMilliseconds;
+                var qwenContext = new QwenFrameContext(meter, lastMeter);
+                qwenMs = await EnrichFindingsWithQwenAsync(
+                    qwenContext, findings, classifierCode, frameIndex, t, frameBytes, frameBase64,
+                    dinoResult, samResult, yoloResult, pipeDiameterMm, totalFrames,
+                    trace, qwenOutage, progress, ct).ConfigureAwait(false);
+                meter = qwenContext.Meter;
+                lastMeter = qwenContext.LastMeter;
+                qwenMeterAccepted = qwenContext.MeterAccepted;
             }
 
             telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
@@ -939,6 +940,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = "all_findings_missing_code";
             }
             await WriteTraceAsync(trace).ConfigureAwait(false);
+            await AppendCheckpointAsync(new(CheckpointFrameKind.Update, frameIndex, t, meter, meterSource, isMeterEstimated, frameEvidence, findings), ct).ConfigureAwait(false);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
@@ -948,6 +950,7 @@ public sealed partial class MultiModelAnalysisService
         }
 
         detections.AddRange(deduplicator.Flush());
+        if (!sidecarOutage && _checkpointJournal is not null) await _checkpointJournal.CompleteAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video",
@@ -966,27 +969,9 @@ public sealed partial class MultiModelAnalysisService
             .WriteSummaryAsync(_pipelineTraceWriter, runId, summary)
             .ConfigureAwait(false);
 
-        var degradedReasons = new List<string>();
-        if (sidecarOutage)
-            degradedReasons.Add($"Sidecar antwortete ab Frame {frameIndex} nicht mehr – Analyse unvollstaendig.");
-        if (!detectorQualified)
-        {
-            degradedReasons.Add(
-                "YOLO-Detektor nicht qualifiziert"
-                + (string.IsNullOrWhiteSpace(detectorQualificationReason)
-                    ? string.Empty
-                    : $": {detectorQualificationReason}")
-                + ". DINO/SAM wurden ohne YOLO-Filter ausgefuehrt; manuelle Pruefung erforderlich.");
-        }
-
-        return new VideoAnalysisResult(videoPath, duration, frameIndex,
-            detections.OrderBy(d => d.MeterStart).ToList(), null, summary,
-            Degraded: degradedReasons.Count > 0,
-            DegradedReason: degradedReasons.Count > 0
-                ? string.Join(" ", degradedReasons)
-                : null,
-            DetectorQualified: effectiveDetectorQualified,
-            DetectorQualificationReason: detectorQualificationReason);
+        return BuildResult(videoPath, duration, frameIndex, resume.LastFrameIndex, detections, summary,
+            sidecarOutage, detectorQualified, effectiveDetectorQualified, detectorQualificationReason,
+            outageGuard, qwenOutage, vramInsufficientMessage);
     }
 
     // ── Conversion helper ──────────────────────────────────────────────

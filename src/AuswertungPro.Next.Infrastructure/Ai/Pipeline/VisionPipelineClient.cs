@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -29,6 +30,18 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNameCaseInsensitive = true,
     };
+
+    // Paket 3/C: Per-Request-Cap fuer Inferenzaufrufe (YOLO/DINO/SAM), entkoppelt vom
+    // geteilten Client-Timeout (Default 5 min aus der Ollama-Konfiguration). Ein
+    // haengender CUDA-Call im Sidecar blockiert sonst einen Frame bis zum Client-Timeout;
+    // der kurze Cap macht ihn zum ehrlichen Transportfehler (zaehlt im Ausfallschutz).
+    // Env-Override im Stil der uebrigen SEWERSTUDIO_-Optionen (mit AUSWERTUNGPRO_-Compat).
+    public const string RequestTimeoutEnvVar = "SEWERSTUDIO_SIDECAR_REQUEST_TIMEOUT_SEC";
+    public static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(120);
+
+    /// <summary>Per-Request-Cap fuer Inferenzaufrufe. Default 120 s, per Env ueberschreibbar.
+    /// Instanz-Eigenschaft, damit Tests den Wert ohne Prozess-Umgebung setzen koennen.</summary>
+    public TimeSpan RequestTimeout { get; set; } = ResolveRequestTimeout();
 
     public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null, string? sidecarToken = null)
         : this(baseUri, httpClient, sidecarToken, SidecarTelemetryWriter.Current)
@@ -143,7 +156,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     /// </summary>
     public async Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
     {
-        return await PostAsync<YoloRequest, YoloResponse>("/detect/yolo", request, ct).ConfigureAwait(false);
+        return await PostInferenceAsync<YoloRequest, YoloResponse>("/detect/yolo", "YOLO", request, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -154,8 +167,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         YoloRequest request,
         CancellationToken ct = default)
     {
-        return await PostAsync<YoloRequest, BccTestYoloResponse>(
+        return await PostInferenceAsync<YoloRequest, BccTestYoloResponse>(
                 "/detect/yolo/bcc-test",
+                "YOLO",
                 request,
                 ct)
             .ConfigureAwait(false);
@@ -166,7 +180,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     /// </summary>
     public async Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
     {
-        return await PostAsync<DinoRequest, DinoResponse>("/detect/dino", request, ct).ConfigureAwait(false);
+        return await PostInferenceAsync<DinoRequest, DinoResponse>("/detect/dino", "DINO", request, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -174,7 +188,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     /// </summary>
     public async Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
     {
-        return await PostAsync<SamRequest, SamResponse>("/segment/sam", request, ct).ConfigureAwait(false);
+        return await PostInferenceAsync<SamRequest, SamResponse>("/segment/sam", "SAM", request, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -182,10 +196,42 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     /// </summary>
     public async Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
     {
-        return await PostAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", request, ct).ConfigureAwait(false);
+        return await PostInferenceAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", "YOLO-cls", request, ct).ConfigureAwait(false);
     }
 
     // ── Internal ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Inferenzaufrufe (YOLO/DINO/SAM/cls) mit Per-Request-Cap (Paket 3/C):
+    /// linked CancellationTokenSource mit RequestTimeout. Ein Cap-Ausloeser wird als
+    /// SidecarRequestTimeoutException gemeldet (= Transportfehler im Ausfallschutz);
+    /// ein Abbruch durch den Aufrufer bleibt unveraendert OperationCanceledException.
+    /// Health-Checks und der (lange) Trainings-Export laufen bewusst ohne dieses Cap.
+    /// Paket 2/A6: <paramref name="model"/> ist das Modell-Label fuer die Timeout-Meldung.
+    /// </summary>
+    private async Task<TResponse> PostInferenceAsync<TRequest, TResponse>(
+        string endpoint, string model, TRequest request, CancellationToken ct)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(RequestTimeout);
+        try
+        {
+            return await PostAsync<TRequest, TResponse>(endpoint, request, timeoutCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+        {
+            throw new SidecarRequestTimeoutException(endpoint, RequestTimeout, model);
+        }
+    }
+
+    private static TimeSpan ResolveRequestTimeout()
+    {
+        var raw = Environment.GetEnvironmentVariable(RequestTimeoutEnvVar)
+                  ?? Environment.GetEnvironmentVariable("AUSWERTUNGPRO_SIDECAR_REQUEST_TIMEOUT_SEC");
+        return double.TryParse(raw?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var sec) && sec > 0
+            ? TimeSpan.FromSeconds(sec)
+            : DefaultRequestTimeout;
+    }
 
     private async Task<TResponse> PostAsync<TRequest, TResponse>(
         string endpoint, TRequest request, CancellationToken ct)
@@ -197,6 +243,8 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         // Ohne Retry kippt ein einzelner Schluckauf den Frame unnoetig in den
         // Degraded-/Skip-Pfad. Bewusst KEIN Retry bei Abbruch durch den Aufrufer und
         // kein Mehrfach-Retry — echte Ausfaelle sollen schnell ehrlich scheitern.
+        // Ausnahme (Paket 2/A4): 503 mit code=insufficient_vram wird schon in PostOnceAsync
+        // als SidecarInsufficientVramException geworfen (Kapazitaetsfehler, kein Retry).
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -260,6 +308,20 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
             if (IsClientSidecarRequestError(resp.StatusCode))
                 throw new SidecarBadRequestException(endpoint, resp.StatusCode, body);
 
+            // Paket 2/A4: 503-Fehlerbody EINMAL defensiv parsen. "insufficient_vram" ist ein
+            // Kapazitaetsfehler (kein transienter Transportfehler): eigener Exception-Typ,
+            // KEIN HTTP-Retry, kein Outage-Zaehler — der Frame-Catch behandelt ihn wie einen
+            // Modellfehler. "model_unloaded" bleibt gezielt transient (Modell wird nachgeladen);
+            // unbekannte/fehlende Codes und beschaedigte Bodys laufen wie bisher ueber den
+            // allgemeinen 503-Weg (1 Retry, danach SidecarUnavailableException).
+            if (resp.StatusCode == HttpStatusCode.ServiceUnavailable
+                && TryParseSidecarErrorBody(body) is { } errorBody
+                && string.Equals(errorBody.Code, "insufficient_vram", StringComparison.Ordinal))
+            {
+                throw new SidecarInsufficientVramException(
+                    endpoint, errorBody.FreeGb, errorBody.RequiredGb, errorBody.ReservedGb);
+            }
+
             throw new HttpRequestException(
                 $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}",
                 inner: null,
@@ -278,6 +340,71 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
 
     private static bool IsClientSidecarRequestError(HttpStatusCode statusCode)
         => (int)statusCode is >= 400 and <= 499;
+
+    /// <summary>
+    /// Defensives Parsen eines Sidecar-Fehlerbodys (Paket 2/A4).
+    /// Echter Vertrag des Sidecars (main.py exception_handler): code und die Zahlen
+    /// stehen auf TOP-EBENE, "detail" ist ein Klartext-String —
+    /// {"detail": "insufficient VRAM", "code": "insufficient_vram", "slot"?, "free_gb"?,
+    /// "required_gb"?, "reserved_gb"?}.
+    /// Toleranz: ein verschachteltes Format {"detail": {"code": ...}} wird ebenfalls
+    /// akzeptiert; "detail" als nackter String zaehlt nur, wenn kein Top-Level-Code
+    /// existiert. Beschaedigte oder anders geformte Bodys liefern null (= bisheriges
+    /// Verhalten, allgemeiner 503-Weg).
+    /// </summary>
+    private static SidecarErrorBody? TryParseSidecarErrorBody(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var code = ReadOptionalString(root, "code");
+            var free = ReadOptionalGb(root, "free_gb");
+            var required = ReadOptionalGb(root, "required_gb");
+            var reserved = ReadOptionalGb(root, "reserved_gb");
+
+            if (code is null && root.TryGetProperty("detail", out var detail))
+            {
+                if (detail.ValueKind == JsonValueKind.String)
+                {
+                    code = detail.GetString();
+                }
+                else if (detail.ValueKind == JsonValueKind.Object)
+                {
+                    code = ReadOptionalString(detail, "code");
+                    free ??= ReadOptionalGb(detail, "free_gb");
+                    required ??= ReadOptionalGb(detail, "required_gb");
+                    reserved ??= ReadOptionalGb(detail, "reserved_gb");
+                }
+            }
+
+            return code is null && free is null && required is null && reserved is null
+                ? null
+                : new SidecarErrorBody(code, free, required, reserved);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ReadOptionalString(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var child)
+           && child.ValueKind == JsonValueKind.String
+            ? child.GetString()
+            : null;
+
+    private static double? ReadOptionalGb(JsonElement detail, string propertyName)
+        => detail.TryGetProperty(propertyName, out var element)
+           && element.ValueKind == JsonValueKind.Number
+           && element.TryGetDouble(out var value)
+            ? value
+            : null;
+
+    private sealed record SidecarErrorBody(string? Code, double? FreeGb, double? RequiredGb, double? ReservedGb);
 
     private static SidecarTelemetryEvent CreateTelemetryEvent(
         string endpoint,

@@ -567,6 +567,35 @@ namespace AuswertungPro.Next.UI
                 PipelineCfg,
                 SidecarTelemetry,
                 TimeProvider.System);
+            // Kontrollierter Sidecar-Neustart (Paket 3/A2): delegiert auf den bestehenden
+            // Startweg (Skript + Launcher + Prozess-Tracking). Der Dienst selbst prueft pro
+            // Versuch, ob die App den Sidecar gestartet hat; sonst bleibt es bei Degraded.
+            var sidecarRestart = new SidecarRestartService(
+                AiStartedProcesses,
+                new DefaultAiStartupLauncher(AiStartedProcesses),
+                getTarget: () =>
+                {
+                    var restartPlatform = AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings));
+                    var restartToken = SidecarTokens.Resolve(restartPlatform.SidecarToken);
+                    return new Application.Ai.Startup.SidecarRestartTarget(
+                        SidecarUrl: restartPlatform.SidecarUrl,
+                        Headers: restartToken is null
+                            ? null
+                            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                [SidecarTokenResolver.HeaderName] = restartToken
+                            },
+                        ScriptPath: SidecarScripts.FindDefaultSidecarScript(),
+                        PowerShellExe: SidecarScripts.ResolvePowerShellExe(),
+                        EnvironmentVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["SEWER_SIDECAR_TRAINING_EXPORT_ROOT"] = Path.Combine(
+                                KnowledgeRoot, "training", "datasets"),
+                            ["SEWER_SIDECAR_TRAINING_MODEL_CANDIDATES_ROOT"] = Path.Combine(
+                                KnowledgeRoot, "training", "models", "candidates")
+                        });
+                },
+                logger: LoggerFactory.CreateLogger<SidecarRestartService>());
             VideoAnalysisPipelines = new Infrastructure.Ai.VideoAnalysisPipelineFactory(
                 PipelineTrace,
                 ProcessOutputs,
@@ -574,7 +603,8 @@ namespace AuswertungPro.Next.UI
                 CodeCatalog,
                 LoggerFactory,
                 PipelineEnvironment,
-                SidecarTelemetry);
+                SidecarTelemetry,
+                sidecarRestart);
             SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).

@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from ..config import settings
-from ..gpu_manager import gpu_manager, ModelSlot
+from ..gpu_manager import gpu_manager, ModelSlot, ModelUnloadedError
 from ..schemas.detection import YoloDetection, YoloResponse
 from .image_decode import decode_image_safe
 
@@ -296,6 +296,10 @@ def _get_yolo_model():
         state = gpu_manager.ensure_loaded(
             ModelSlot.YOLO, device, lambda: _load_yolo_on(device)
         )
+        if state.model is None:
+            # Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und Zugriff
+            # entladen -> kontrollierter 503 statt AttributeError/500.
+            raise ModelUnloadedError(ModelSlot.YOLO.value)
         return state.model
 
 
@@ -434,36 +438,48 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
       dark/blank/blurry frames. YOLO detections are still returned for info,
       but is_relevant is based on image quality, not COCO class detections.
     """
-    model = _get_yolo_model()
+    device = _resolve_device()
+    # CPU-Pfad laeuft als Modul-Singleton AM GpuModelManager vorbei — die logische
+    # Lease YOLO_CPU macht ihn fuer den Inferenz-Waechter trotzdem sichtbar
+    # (Paket 2/A5: CPU-Inferenzen werden bewusst ueberwacht).
+    busy_target = ModelSlot.YOLO_CPU if device == "cpu" else ModelSlot.YOLO
 
     img = decode_image(image_base64)
 
     # Image-quality pre-screening (always run, fast)
     usable, quality_reason = _is_frame_usable(img)
 
-    if not usable:
-        # Frame is not usable at all – skip without running YOLO inference
-        return YoloResponse(
-            is_relevant=False,
-            detections=[],
-            frame_class=quality_reason,
-            inference_time_ms=0.0,
-            **_response_telemetry(),
-        )
-
     # Ultralytics-Predict ist nicht thread-sicher; FastAPI fuehrt sync-Routen im
     # Threadpool aus -> parallele Requests serialisieren (Gesamtaudit P7, wie SAM).
     # Wartezeit am Lock als queue_wait_ms messen; inference_time_ms bleibt reine Predict-Zeit.
+    # Lock ZUERST, Lease DANACH (Paket 2): wartende Requests besitzen noch keine
+    # Lease und koennen die Busy-Uhr des laufenden Requests weder verschieben noch
+    # loeschen. Die Lease deckt bewusst auch das (Erst-)Laden ab: das geladene
+    # Modell ist so vom ensure_loaded bis zum Inferenzende vor Eviction geschuetzt,
+    # und ein haengender Lade-/CUDA-Init waere fuer den Waechter sonst unsichtbar
+    # (das Limit ist fuer lokale Ladevorgaenge grosszuegig bemessen).
     t_queue = time.perf_counter()
     with _yolo_predict_lock:
         queue_wait_ms = (time.perf_counter() - t_queue) * 1000
-        t0 = time.perf_counter()
-        results = model.predict(
-            source=np.array(img),
-            conf=confidence_threshold,
-            imgsz=settings.yolo_imgsz,
-            verbose=False,
-        )
+        with gpu_manager.busy_slot(busy_target):
+            model = _get_yolo_model()
+            if not usable:
+                # Frame is not usable at all – skip without running YOLO inference.
+                # Das Modell wurde trotzdem geladen (Warmup-Verhalten bleibt erhalten).
+                return YoloResponse(
+                    is_relevant=False,
+                    detections=[],
+                    frame_class=quality_reason,
+                    inference_time_ms=0.0,
+                    **_response_telemetry(queue_wait_ms),
+                )
+            t0 = time.perf_counter()
+            results = model.predict(
+                source=np.array(img),
+                conf=confidence_threshold,
+                imgsz=settings.yolo_imgsz,
+                verbose=False,
+            )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     detections: list[YoloDetection] = []
@@ -746,7 +762,14 @@ def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, floa
 
     t0 = time.perf_counter()
     # Inferenz serialisieren (Gesamtaudit P7) — _cls_lock schuetzt nur das Laden.
-    with _cls_predict_lock:
+    # ENTSCHEIDUNG (Paket 2): cls wird ueber den logischen Slot YOLO_CLS vom
+    # Inferenz-Waechter ueberwacht. Begruendung: cls ist eine CUDA-faehige Inferenz
+    # mit eigenem Predict-Lock (_resolve_cls_device kann auf cuda routen) — ein
+    # Haenger dort (fester CUDA-Call) waere heute fuer den Waechter unsichtbar und
+    # wuerde den Sidecar still blockieren. Das Modell ist ein Modul-Singleton ohne
+    # Manager-Slot, darum logische Lease (kein VRAM, kein ensure_loaded). Lock
+    # ZUERST, Lease DANACH — wie bei allen anderen Wrappern.
+    with _cls_predict_lock, gpu_manager.busy_slot(ModelSlot.YOLO_CLS):
         if meta.get("preprocessing") == "letterbox":
             # Wie eval_cls.py --no-crop: Letterbox in PIL, dann RGB->BGR-Array
             # (predict behandelt numpy-Eingaben als BGR und konvertiert intern).

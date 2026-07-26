@@ -17,13 +17,16 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
     private readonly IProcessOutputReader _processOutputs;
     private readonly IPipelineEnvironmentOptions _pipelineEnvironmentOptions;
     private readonly ISidecarTelemetryWriter _sidecarTelemetry;
+    // Kontrollierter Sidecar-Neustart (Paket 3/A2): null = kein Neustart (heutiges Verhalten).
+    private readonly Application.Ai.Startup.ISidecarRestartService? _sidecarRestart;
 
     public VideoAnalysisPipelineFactory(
         Func<PipelineConfig> getPipelineConfig,
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
         : this(
             PipelineTraceWriter.Current,
             ProcessOutputReader.Current,
@@ -31,7 +34,8 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
             codeCatalog,
             loggerFactory,
             pipelineEnvironmentOptions,
-            sidecarTelemetry)
+            sidecarTelemetry,
+            sidecarRestart)
     {
     }
 
@@ -41,7 +45,8 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
         : this(
             pipelineTraceWriter,
             ProcessOutputReader.Current,
@@ -49,7 +54,8 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
             codeCatalog,
             loggerFactory,
             pipelineEnvironmentOptions,
-            sidecarTelemetry)
+            sidecarTelemetry,
+            sidecarRestart)
     {
     }
 
@@ -60,12 +66,14 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
         ICodeCatalogProvider? codeCatalog = null,
         ILoggerFactory? loggerFactory = null,
         IPipelineEnvironmentOptions? pipelineEnvironmentOptions = null,
-        ISidecarTelemetryWriter? sidecarTelemetry = null)
+        ISidecarTelemetryWriter? sidecarTelemetry = null,
+        Application.Ai.Startup.ISidecarRestartService? sidecarRestart = null)
     {
         _pipelineTraceWriter = pipelineTraceWriter ?? throw new ArgumentNullException(nameof(pipelineTraceWriter));
         _processOutputs = processOutputs ?? throw new ArgumentNullException(nameof(processOutputs));
         _pipelineEnvironmentOptions = pipelineEnvironmentOptions ?? PipelineEnvironmentOptions.Current;
         _sidecarTelemetry = sidecarTelemetry ?? SidecarTelemetryWriter.Current;
+        _sidecarRestart = sidecarRestart;
         _getPipelineConfig = getPipelineConfig ?? throw new ArgumentNullException(nameof(getPipelineConfig));
         _codeCatalog = codeCatalog;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
@@ -90,6 +98,7 @@ public sealed class VideoAnalysisPipelineFactory : IVideoAnalysisPipelineFactory
             _codeCatalog,
             _loggerFactory,
             _pipelineEnvironmentOptions,
-            _sidecarTelemetry);
+            _sidecarTelemetry,
+            _sidecarRestart);
     }
 }
