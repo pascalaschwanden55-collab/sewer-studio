@@ -48,20 +48,10 @@ class EvalMetadataReviewStoreTests(unittest.TestCase):
         self._write_eval_set(
             [self._candidate("damage-a", "BAJA", "H-1", 1.2)]
         )
-        catalog_path = self.root / "vsa_catalog.json"
-        catalog_path.write_text(
-            json.dumps(
-                {
-                    "codes": [
-                        {
-                            "code": "BAJA",
-                            "title": "Breite Rohrverbindung",
-                        }
-                    ]
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
+        catalog_path = self._write_catalog(
+            {
+                "BAJA": "Breite Rohrverbindung",
+            }
         )
 
         store = EvalMetadataReviewStore(
@@ -74,9 +64,141 @@ class EvalMetadataReviewStoreTests(unittest.TestCase):
         self.assertEqual("BAJA", item["expected_code"])
         self.assertEqual("Breite Rohrverbindung", item["expected_title"])
 
+    def test_falscher_code_kann_mit_katalogklartext_korrigiert_werden(self):
+        self._write_eval_set(
+            [self._candidate("damage-a", "BAJA", "H-1", 1.2)]
+        )
+        catalog_path = self._write_catalog(
+            {
+                "BAJA": "Breite Rohrverbindung",
+                "BAIZ": "Einragendes Dichtungsmaterial",
+            }
+        )
+        store = EvalMetadataReviewStore(
+            self.eval_root,
+            self.output,
+            catalog_path=catalog_path,
+            now_utc=lambda: "2026-07-27T15:30:00+00:00",
+        )
+
+        state = store.set_review(
+            "damage-a",
+            3,
+            "H-1-BAIZ-01",
+            None,
+            None,
+            "Pascal",
+            "Vorgabe war falsch.",
+            code_decision="corrected",
+            corrected_code="baiz",
+        )
+
+        item = state["items"][0]
+        self.assertTrue(item["complete"])
+        self.assertEqual("corrected", item["code_decision"])
+        self.assertEqual("BAIZ", item["effective_code"])
+        self.assertEqual("Einragendes Dichtungsmaterial", item["effective_title"])
+        self.assertFalse(item["excluded_from_damage_eval"])
+
+    def test_kein_passender_schaden_ist_ohne_stufe_und_ereignis_abgeschlossen(self):
+        self._write_eval_set(
+            [self._candidate("damage-a", "BAJA", "H-1", 1.2)]
+        )
+        store = EvalMetadataReviewStore(
+            self.eval_root,
+            self.output,
+            now_utc=lambda: "2026-07-27T15:30:00+00:00",
+        )
+
+        state = store.set_review(
+            "damage-a",
+            None,
+            None,
+            None,
+            None,
+            "Pascal",
+            "Kein passender Schaden sichtbar.",
+            code_decision="no_damage",
+        )
+
+        item = state["items"][0]
+        self.assertTrue(item["complete"])
+        self.assertEqual("no_damage", item["code_decision"])
+        self.assertIsNone(item["effective_code"])
+        self.assertTrue(item["excluded_from_damage_eval"])
+        self.assertIsNone(item["expected_severity"])
+        self.assertIsNone(item["event_id"])
+
+    def test_korrektur_akzeptiert_nur_ba_oder_bb_code_aus_dem_katalog(self):
+        self._write_eval_set(
+            [self._candidate("damage-a", "BAJA", "H-1", 1.2)]
+        )
+        catalog_path = self._write_catalog(
+            {
+                "BAJA": "Breite Rohrverbindung",
+                "BCC": "Anschluss",
+            }
+        )
+        store = EvalMetadataReviewStore(
+            self.eval_root,
+            self.output,
+            catalog_path=catalog_path,
+        )
+
+        with self.assertRaisesRegex(ValueError, "BA- oder BB-Schadencode"):
+            store.set_review(
+                "damage-a",
+                3,
+                "event-1",
+                None,
+                None,
+                "Pascal",
+                "",
+                code_decision="corrected",
+                corrected_code="BCC",
+            )
+
+    def test_bestehender_ereigniskonflikt_bleibt_zur_korrektur_offen(self):
+        self._write_eval_set(
+            [
+                self._candidate("damage-a", "BAJA", "H-1", 1.2),
+                self._candidate("damage-b", "BAIZ", "H-1", 2.2),
+            ]
+        )
+        first = EvalMetadataReviewStore(
+            self.eval_root,
+            self.output,
+            now_utc=lambda: "2026-07-27T15:30:00+00:00",
+        )
+        first.set_review("damage-a", 2, "event-1", None, None, "Pascal", "")
+        saved = json.loads(self.output.read_text(encoding="utf-8"))
+        saved["reviews"][1].update(
+            {
+                "code_decision": "matches",
+                "expected_severity": 2,
+                "event_id": "event-1",
+                "reviewed_by": "Pascal",
+                "reviewed_at_utc": "2026-07-27T15:31:00+00:00",
+            }
+        )
+        self.output.write_text(
+            json.dumps(saved, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        resumed = EvalMetadataReviewStore(self.eval_root, self.output)
+        state = resumed.state()
+
+        self.assertEqual(0, state["done"])
+        self.assertEqual(2, state["open"])
+        self.assertEqual(2, state["conflicting_reviews"])
+        self.assertTrue(all(item["event_conflict"] for item in state["items"]))
+
     def test_pruefplatz_erklaert_die_wirkung_der_schadensstufe(self):
         self.assertIn("Stufe 4 und 5", INDEX_HTML)
         self.assertIn("weder den Code noch die Zustandsklasse", INDEX_HTML)
+        self.assertIn("Anderer Schadencode", INDEX_HTML)
+        self.assertIn("kein passender Schaden sichtbar", INDEX_HTML)
 
     def test_review_braucht_stufe_und_ereignis_id(self):
         self._write_eval_set([self._candidate("damage-a", "BAIZ", "H-1", 1.2)])
@@ -191,6 +313,25 @@ class EvalMetadataReviewStoreTests(unittest.TestCase):
             json.dumps(candidates, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+
+    def _write_catalog(self, entries):
+        catalog_path = self.root / "vsa_catalog.json"
+        catalog_path.write_text(
+            json.dumps(
+                {
+                    "codes": [
+                        {
+                            "code": code,
+                            "title": title,
+                        }
+                        for code, title in entries.items()
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        return catalog_path
 
     @staticmethod
     def _candidate(case_id, code, holding, meter):

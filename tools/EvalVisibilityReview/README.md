@@ -17,6 +17,9 @@ Start:
 
 Pro Schadensbild werden diese Angaben erfasst:
 
+- ob der Vorgabe-Code zum Bild passt
+- bei Bedarf ein anderer BA-/BB-Schadencode mit Katalog-Klartext
+- alternativ: kein passender Schaden sichtbar
 - Schadensstufe 1 bis 5
 - Ereignis-ID
 - optionaler Meterbereich und Bemerkung
@@ -31,6 +34,14 @@ Die Schadensstufe ist nur eine fachliche Gewichtung für den KI-Prüfsatz:
 
 Mehrere Bilder desselben realen Schadens erhalten dieselbe Ereignis-ID. Der Knopf
 `Wie vorheriger Schaden` übernimmt dafür die Angaben des vorherigen Bildes.
+Eine Ereignis-ID darf innerhalb derselben Haltung nicht für verschiedene Codes,
+Stufen oder Meterbereiche verwendet werden. Solche Konflikte werden wieder als
+offen angezeigt.
+
+Nur `Speichern und weiter` speichert eine Entscheidung. `Überspringen (nicht
+speichern)` blättert bewusst ohne Speichern. Bei `Kein passender Schaden sichtbar`
+sind Schadensstufe und Ereignis-ID nicht erforderlich; das Bild wird für die
+spätere Schadensauswertung als ausgeschlossen gekennzeichnet.
 
 Der Zwischenstand wird nach jedem Bild atomar gespeichert:
 

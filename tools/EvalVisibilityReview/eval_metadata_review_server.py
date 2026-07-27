@@ -18,6 +18,9 @@ from urllib.parse import parse_qs, quote, urlparse
 
 
 REVIEW_FIELDS = (
+    "code_decision",
+    "corrected_code",
+    "corrected_title",
     "expected_severity",
     "event_id",
     "meter_start",
@@ -26,6 +29,8 @@ REVIEW_FIELDS = (
     "reviewed_at_utc",
     "comment",
 )
+
+CODE_DECISIONS = {"matches", "corrected", "no_damage"}
 
 DEFAULT_CATALOG_PATH = (
     Path(__file__).resolve().parents[2]
@@ -119,6 +124,9 @@ class EvalMetadataReviewStore:
                     code,
                     "Klartext im aktiven VSA-Katalog nicht gefunden",
                 ),
+                "code_decision": None,
+                "corrected_code": None,
+                "corrected_title": None,
                 "category": str(candidate.get("kategorie") or "").strip(),
                 "expected_severity": _optional_integer(
                     candidate.get("expected_severity")
@@ -166,6 +174,8 @@ class EvalMetadataReviewStore:
                 continue
             for field in REVIEW_FIELDS:
                 row[field] = old.get(field, row.get(field))
+            if row["code_decision"] is None and _has_legacy_damage_review(row):
+                row["code_decision"] = "matches"
 
     def prepare_output(self) -> dict[str, object]:
         with self._lock:
@@ -174,21 +184,36 @@ class EvalMetadataReviewStore:
 
     def state(self) -> dict[str, object]:
         with self._lock:
-            items = [self._public_row(row) for row in self.rows]
-            done = sum(1 for row in self.rows if _is_complete(row))
+            conflict_ids = self._event_conflict_ids()
+            items = [self._public_row(row, conflict_ids) for row in self.rows]
+            done = sum(
+                1
+                for row in self.rows
+                if _is_complete(row) and str(row["id"]) not in conflict_ids
+            )
             current = next(
-                (row for row in self.rows if not _is_complete(row)),
+                (
+                    row
+                    for row in self.rows
+                    if not _is_complete(row) or str(row["id"]) in conflict_ids
+                ),
                 self.rows[0] if self.rows else None,
             )
             return {
                 "total": len(self.rows),
                 "done": done,
                 "open": len(self.rows) - done,
+                "conflicting_reviews": len(conflict_ids),
                 "missing_images": sum(
                     1 for row in self.rows if not bool(row["image_exists"])
                 ),
                 "source_candidates_sha256": self.source_candidates_sha256,
-                "current": self._public_row(current) if current else None,
+                "damage_code_options": [
+                    {"code": code, "title": title}
+                    for code, title in sorted(self._code_titles.items())
+                    if code.startswith(("BA", "BB"))
+                ],
+                "current": self._public_row(current, conflict_ids) if current else None,
                 "items": items,
             }
 
@@ -201,19 +226,58 @@ class EvalMetadataReviewStore:
         meter_end: object,
         reviewed_by: object,
         comment: object,
+        code_decision: object = "matches",
+        corrected_code: object = None,
     ) -> dict[str, object]:
         with self._lock:
             row = self._rows_by_id.get(str(case_id))
             if row is None:
                 raise KeyError(f"Schadensfall nicht gefunden: {case_id}")
 
-            parsed_severity = _required_severity(severity)
-            parsed_event_id = _required_identifier(event_id, "Ereignis-ID")
+            parsed_decision = _required_code_decision(code_decision)
             parsed_reviewer = _required_identifier(reviewed_by, "Pruefer")
-            parsed_start = _optional_number(meter_start)
-            parsed_end = _optional_number(meter_end)
-            _validate_meter_range(row, parsed_start, parsed_end)
+            parsed_corrected_code: str | None = None
+            parsed_corrected_title: str | None = None
+            parsed_severity: int | None = None
+            parsed_event_id: str | None = None
+            parsed_start: float | None = None
+            parsed_end: float | None = None
 
+            if parsed_decision == "corrected":
+                parsed_corrected_code = _normalize_code(corrected_code)
+                if not parsed_corrected_code.startswith(("BA", "BB")):
+                    raise ValueError(
+                        "Die Korrektur muss ein BA- oder BB-Schadencode sein."
+                    )
+                parsed_corrected_title = self._code_titles.get(parsed_corrected_code)
+                if parsed_corrected_title is None:
+                    raise ValueError(
+                        f"Schadencode nicht im aktiven VSA-Katalog: {parsed_corrected_code}"
+                    )
+
+            if parsed_decision != "no_damage":
+                parsed_severity = _required_severity(severity)
+                parsed_event_id = _required_identifier(event_id, "Ereignis-ID")
+                parsed_start = _optional_number(meter_start)
+                parsed_end = _optional_number(meter_end)
+                _validate_meter_range(row, parsed_start, parsed_end)
+                effective_code = (
+                    parsed_corrected_code
+                    if parsed_decision == "corrected"
+                    else str(row["expected_code"])
+                )
+                self._validate_event_consistency(
+                    row,
+                    effective_code,
+                    parsed_severity,
+                    parsed_event_id,
+                    parsed_start,
+                    parsed_end,
+                )
+
+            row["code_decision"] = parsed_decision
+            row["corrected_code"] = parsed_corrected_code
+            row["corrected_title"] = parsed_corrected_title
             row["expected_severity"] = parsed_severity
             row["event_id"] = parsed_event_id
             row["meter_start"] = parsed_start
@@ -225,6 +289,60 @@ class EvalMetadataReviewStore:
             self._write_output_locked()
             return self.state()
 
+    def _validate_event_consistency(
+        self,
+        current: dict[str, object],
+        effective_code: str,
+        severity: int,
+        event_id: str,
+        meter_start: float | None,
+        meter_end: float | None,
+    ) -> None:
+        holding_key = str(current["holding_key"]).strip().casefold()
+        normalized_event_id = event_id.casefold()
+        for other in self.rows:
+            if other is current or not _is_complete(other):
+                continue
+            if str(other["holding_key"]).strip().casefold() != holding_key:
+                continue
+            if str(other.get("event_id") or "").strip().casefold() != normalized_event_id:
+                continue
+            if (
+                _effective_code(other) != effective_code
+                or other.get("expected_severity") != severity
+                or other.get("meter_start") != meter_start
+                or other.get("meter_end") != meter_end
+            ):
+                raise ValueError(
+                    "Diese Ereignis-ID ist in derselben Haltung bereits mit "
+                    "anderen Angaben belegt. Bitte eine andere Ereignis-ID verwenden."
+                )
+
+    def _event_conflict_ids(self) -> set[str]:
+        events: dict[tuple[str, str], tuple[tuple[object, ...], str]] = {}
+        conflicts: set[str] = set()
+        for row in self.rows:
+            if not _is_complete(row) or row.get("code_decision") == "no_damage":
+                continue
+            key = (
+                str(row["holding_key"]).strip().casefold(),
+                str(row.get("event_id") or "").strip().casefold(),
+            )
+            metadata = (
+                _effective_code(row),
+                row.get("expected_severity"),
+                row.get("meter_start"),
+                row.get("meter_end"),
+            )
+            case_id = str(row["id"])
+            previous = events.get(key)
+            if previous is None:
+                events[key] = (metadata, case_id)
+            elif previous[0] != metadata:
+                conflicts.add(previous[1])
+                conflicts.add(case_id)
+        return conflicts
+
     def image_path_for(self, case_id: str) -> Path:
         row = self._rows_by_id.get(case_id)
         if row is None:
@@ -234,25 +352,40 @@ class EvalMetadataReviewStore:
             raise FileNotFoundError(f"Bild nicht gefunden: {path}")
         return path
 
-    def _public_row(self, row: dict[str, object] | None) -> dict[str, object] | None:
+    def _public_row(
+        self,
+        row: dict[str, object] | None,
+        conflict_ids: set[str] | None = None,
+    ) -> dict[str, object] | None:
         if row is None:
             return None
         public = dict(row)
+        event_conflict = str(row["id"]) in (conflict_ids or set())
+        public["effective_code"] = _effective_code(row)
+        public["effective_title"] = _effective_title(row)
+        public["excluded_from_damage_eval"] = row.get("code_decision") == "no_damage"
+        public["event_conflict"] = event_conflict
         public["image_url"] = f"/image?id={quote(str(row['id']))}"
-        public["complete"] = _is_complete(row)
+        public["complete"] = _is_complete(row) and not event_conflict
         return public
 
     def _write_output_locked(self) -> None:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
+        conflict_ids = self._event_conflict_ids()
         payload = {
-            "schema_version": 1,
-            "purpose": "SewerStudio V1 Ereignis- und Schadensstufen-Review",
+            "schema_version": 2,
+            "purpose": "SewerStudio V1 Code-, Ereignis- und Schadensstufen-Review",
             "source_eval_root": str(self.eval_root),
             "source_candidates_sha256": self.source_candidates_sha256,
             "source_catalog_path": str(self.catalog_path),
             "source_catalog_sha256": self.source_catalog_sha256,
             "damage_frames": len(self.rows),
-            "completed_reviews": sum(1 for row in self.rows if _is_complete(row)),
+            "completed_reviews": sum(
+                1
+                for row in self.rows
+                if _is_complete(row) and str(row["id"]) not in conflict_ids
+            ),
+            "conflicting_reviews": len(conflict_ids),
             "reviews": [dict(row) for row in self.rows],
         }
         handle, temp_name = tempfile.mkstemp(
@@ -335,6 +468,13 @@ def _required_severity(value: object) -> int:
     return severity
 
 
+def _required_code_decision(value: object) -> str:
+    decision = str(value or "").strip().lower()
+    if decision not in CODE_DECISIONS:
+        raise ValueError("Bitte entscheiden, ob der Vorgabe-Code zum Bild passt.")
+    return decision
+
+
 def _required_identifier(value: object, label: str) -> str:
     text = unicodedata.normalize("NFC", str(value or "").strip())
     if not text:
@@ -361,10 +501,52 @@ def _validate_meter_range(
 
 
 def _is_complete(row: dict[str, object]) -> bool:
+    decision = str(row.get("code_decision") or "").strip().lower()
+    if decision not in CODE_DECISIONS:
+        return False
+    if not str(row.get("reviewed_by") or "").strip():
+        return False
+    if not str(row.get("reviewed_at_utc") or "").strip():
+        return False
+    if decision == "no_damage":
+        return True
+    if decision == "corrected" and not str(row.get("corrected_code") or "").strip():
+        return False
     severity = _optional_integer(row.get("expected_severity"))
     return severity is not None and 1 <= severity <= 5 and bool(
         str(row.get("event_id") or "").strip()
     )
+
+
+def _has_legacy_damage_review(row: dict[str, object]) -> bool:
+    severity = _optional_integer(row.get("expected_severity"))
+    return (
+        severity is not None
+        and 1 <= severity <= 5
+        and bool(str(row.get("event_id") or "").strip())
+        and bool(str(row.get("reviewed_by") or "").strip())
+        and bool(str(row.get("reviewed_at_utc") or "").strip())
+    )
+
+
+def _effective_code(row: dict[str, object]) -> str | None:
+    decision = str(row.get("code_decision") or "").strip().lower()
+    if decision == "no_damage":
+        return None
+    if decision == "corrected":
+        return _normalize_code(row.get("corrected_code")) or None
+    if decision == "matches":
+        return _normalize_code(row.get("expected_code")) or None
+    return None
+
+
+def _effective_title(row: dict[str, object]) -> str | None:
+    decision = str(row.get("code_decision") or "").strip().lower()
+    if decision == "corrected":
+        return _optional_text(row.get("corrected_title"))
+    if decision == "matches":
+        return _optional_text(row.get("expected_title"))
+    return None
 
 
 def _sha256(path: Path) -> str:
@@ -409,6 +591,8 @@ def make_handler(store: EvalMetadataReviewStore, reviewer: str):
                     payload.get("meter_end"),
                     payload.get("reviewed_by"),
                     payload.get("comment"),
+                    payload.get("code_decision"),
+                    payload.get("corrected_code"),
                 )
                 self._send_json(state)
             except Exception as exc:  # pragma: no cover - defensiver Serverpfad
@@ -475,6 +659,7 @@ label { display: block; margin: 11px 0 4px; }
 input, textarea, select { width: 100%; box-sizing: border-box; background: #0b0f14; color: #f1f5f9; border: 1px solid #3b4655; border-radius: 6px; padding: 9px; font-size: 15px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .explanation { margin-top: 8px; padding: 9px 10px; border-left: 3px solid #38bdf8; background: #0c1720; color: #cbd5e1; font-size: 13px; line-height: 1.35; }
+.hidden { display: none; }
 textarea { min-height: 70px; resize: vertical; }
 button { border: 1px solid #3b4655; background: #242b35; color: #f1f5f9; border-radius: 6px; padding: 10px 16px; cursor: pointer; }
 button:hover { background: #303947; }
@@ -486,7 +671,7 @@ button:disabled { opacity: .55; cursor: wait; }
 </head>
 <body>
 <header>
-  <h1>KI-Pruefsatz: Ereignis und Schadensstufe</h1>
+  <h1>KI-Pruefsatz: Code, Ereignis und Schadensstufe</h1>
   <div class="status" id="status">Lade...</div>
 </header>
 <main>
@@ -499,28 +684,44 @@ button:disabled { opacity: .55; cursor: wait; }
       <span>Meter</span><strong id="meter">-</strong>
       <span>Bild</span><span class="muted" id="imageName">-</span>
     </div>
-    <label for="severity">Schadensstufe fuer den KI-Test (1 bis 5)</label>
-    <select id="severity">
+    <label for="codeDecision">Passt der Vorgabe-Code zum Bild?</label>
+    <select id="codeDecision" onchange="updateCodeDecisionUi()">
       <option value="">Bitte waehlen</option>
-      <option value="1">1 - gering</option>
-      <option value="2">2 - eher gering</option>
-      <option value="3">3 - mittel</option>
-      <option value="4">4 - schwer / wichtiger KI-Prueffall</option>
-      <option value="5">5 - kritisch / wichtiger KI-Prueffall</option>
+      <option value="matches">Ja, Code passt</option>
+      <option value="corrected">Nein, anderer Schadencode</option>
+      <option value="no_damage">Nein, kein passender Schaden sichtbar</option>
     </select>
-    <div class="explanation">
-      <strong>Wirkung:</strong> Bewerte die fachliche Bedeutung des Schadens,
-      nicht die Bildqualitaet. Die Stufe veraendert weder den Code noch die Zustandsklasse.
-      Stufe 4 und 5 werden zusaetzlich als wichtige Schaeden
-      ausgewertet. Fuer eine belastbare Freigabe braucht der Pruefsatz mindestens
-      20 unterschiedliche Ereignisse mit Stufe 4 oder 5.
+    <div id="correctionFields" class="hidden">
+      <label for="correctedCode">Anderer Schadencode</label>
+      <input id="correctedCode" list="damageCodes" placeholder="z.B. BAIZ"
+             oninput="updateCorrectedTitle()">
+      <datalist id="damageCodes"></datalist>
+      <div class="muted" id="correctedTitle">Klartext erscheint nach der Code-Eingabe.</div>
     </div>
-    <label for="eventId">Ereignis-ID</label>
-    <input id="eventId" placeholder="z.B. 81030-80945-BAIZ-01">
-    <div class="muted">Mehrere Bilder desselben Schadens erhalten dieselbe ID.</div>
-    <div class="pair">
-      <div><label for="meterStart">MeterStart optional</label><input id="meterStart" type="number" step="0.001" min="0"></div>
-      <div><label for="meterEnd">MeterEnd optional</label><input id="meterEnd" type="number" step="0.001" min="0"></div>
+    <div id="damageFields" class="hidden">
+      <label for="severity">Schadensstufe fuer den KI-Test (1 bis 5)</label>
+      <select id="severity">
+        <option value="">Bitte waehlen</option>
+        <option value="1">1 - gering</option>
+        <option value="2">2 - eher gering</option>
+        <option value="3">3 - mittel</option>
+        <option value="4">4 - schwer / wichtiger KI-Prueffall</option>
+        <option value="5">5 - kritisch / wichtiger KI-Prueffall</option>
+      </select>
+      <div class="explanation">
+        <strong>Wirkung:</strong> Bewerte die fachliche Bedeutung des Schadens,
+        nicht die Bildqualitaet. Die Stufe veraendert weder den Code noch die Zustandsklasse.
+        Stufe 4 und 5 werden zusaetzlich als wichtige Schaeden
+        ausgewertet. Fuer eine belastbare Freigabe braucht der Pruefsatz mindestens
+        20 unterschiedliche Ereignisse mit Stufe 4 oder 5.
+      </div>
+      <label for="eventId">Ereignis-ID</label>
+      <input id="eventId" placeholder="z.B. 81030-80945-BAIZ-01">
+      <div class="muted">Mehrere Bilder desselben Schadens erhalten dieselbe ID.</div>
+      <div class="pair">
+        <div><label for="meterStart">MeterStart optional</label><input id="meterStart" type="number" step="0.001" min="0"></div>
+        <div><label for="meterEnd">MeterEnd optional</label><input id="meterEnd" type="number" step="0.001" min="0"></div>
+      </div>
     </div>
     <label for="reviewer">Geprueft von</label>
     <input id="reviewer" value="__REVIEWER__">
@@ -533,10 +734,11 @@ button:disabled { opacity: .55; cursor: wait; }
   <button onclick="previousItem()">Zurueck</button>
   <button onclick="copyPrevious()">Wie vorheriger Schaden</button>
   <button class="save" onclick="saveCurrent()">Speichern und weiter</button>
-  <button onclick="nextItem()">Weiter</button>
+  <button onclick="nextItem()">Ueberspringen (nicht speichern)</button>
 </footer>
 <script>
 let items = [];
+let codeOptions = [];
 let index = 0;
 let busy = false;
 
@@ -544,6 +746,8 @@ async function loadState() {
   const response = await fetch('/api/state');
   const state = await response.json();
   items = state.items || [];
+  codeOptions = state.damage_code_options || [];
+  fillDamageCodeList();
   const openIndex = items.findIndex(item => !item.complete);
   index = openIndex >= 0 ? openIndex : 0;
   render(state);
@@ -561,16 +765,27 @@ function render(state) {
   document.getElementById('holding').textContent = item.holding_key || '-';
   document.getElementById('meter').textContent = item.meter ?? '-';
   document.getElementById('imageName').textContent = item.image_name || '-';
+  document.getElementById('codeDecision').value = item.code_decision || '';
+  document.getElementById('correctedCode').value = item.corrected_code || '';
   document.getElementById('severity').value = item.expected_severity || '';
   document.getElementById('eventId').value = item.event_id || '';
   document.getElementById('meterStart').value = item.meter_start ?? '';
   document.getElementById('meterEnd').value = item.meter_end ?? '';
   document.getElementById('reviewer').value = item.reviewed_by || '__REVIEWER__';
   document.getElementById('comment').value = item.comment || '';
-  document.getElementById('warning').textContent = item.image_exists ? '' : 'Bilddatei fehlt.';
+  updateCodeDecisionUi();
+  updateCorrectedTitle();
+  const warnings = [];
+  if (!item.image_exists) warnings.push('Bilddatei fehlt.');
+  if (item.event_conflict) {
+    warnings.push('Diese Ereignis-ID ist mit anderen Codes oder Stufen belegt. Bitte korrigieren.');
+  }
+  document.getElementById('warning').textContent = warnings.join(' ');
   const done = items.filter(row => row.complete).length;
+  const conflicts = items.filter(row => row.event_conflict).length;
   document.getElementById('status').textContent =
-    `Schadensbild ${index + 1} / ${items.length} | geprueft: ${done} | offen: ${items.length - done}`;
+    `Schadensbild ${index + 1} / ${items.length} | geprueft: ${done} | offen: ${items.length - done}` +
+    (conflicts ? ` | Konflikte: ${conflicts}` : '');
 }
 
 function valueOrNull(id) {
@@ -595,7 +810,9 @@ async function saveCurrent() {
         meter_start: valueOrNull('meterStart'),
         meter_end: valueOrNull('meterEnd'),
         reviewed_by: document.getElementById('reviewer').value,
-        comment: document.getElementById('comment').value
+        comment: document.getElementById('comment').value,
+        code_decision: document.getElementById('codeDecision').value,
+        corrected_code: document.getElementById('correctedCode').value
       })
     });
     const state = await response.json();
@@ -604,7 +821,8 @@ async function saveCurrent() {
       return;
     }
     items = state.items || items;
-    const nextOpen = items.findIndex((row, rowIndex) => rowIndex > index && !row.complete);
+    let nextOpen = items.findIndex((row, rowIndex) => rowIndex > index && !row.complete);
+    if (nextOpen < 0) nextOpen = items.findIndex(row => !row.complete);
     if (nextOpen >= 0) index = nextOpen;
     else if (index < items.length - 1) index++;
     render(state);
@@ -619,10 +837,51 @@ async function saveCurrent() {
 function copyPrevious() {
   if (index === 0) return;
   const previous = items[index - 1];
+  const current = items[index];
+  if (previous.code_decision === 'no_damage') {
+    document.getElementById('codeDecision').value = 'no_damage';
+    document.getElementById('correctedCode').value = '';
+  } else if (previous.effective_code === current.expected_code) {
+    document.getElementById('codeDecision').value = 'matches';
+    document.getElementById('correctedCode').value = '';
+  } else if (previous.effective_code) {
+    document.getElementById('codeDecision').value = 'corrected';
+    document.getElementById('correctedCode').value = previous.effective_code;
+  }
   document.getElementById('severity').value = previous.expected_severity || '';
   document.getElementById('eventId').value = previous.event_id || '';
   document.getElementById('meterStart').value = previous.meter_start ?? '';
   document.getElementById('meterEnd').value = previous.meter_end ?? '';
+  updateCodeDecisionUi();
+  updateCorrectedTitle();
+}
+
+function fillDamageCodeList() {
+  const list = document.getElementById('damageCodes');
+  list.replaceChildren();
+  codeOptions.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.code;
+    option.label = item.title;
+    list.appendChild(option);
+  });
+}
+
+function normalizedCode(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function updateCorrectedTitle() {
+  const code = normalizedCode(document.getElementById('correctedCode').value);
+  const match = codeOptions.find(item => item.code === code);
+  document.getElementById('correctedTitle').textContent =
+    match ? match.title : (code ? 'Code nicht im aktiven VSA-Katalog gefunden.' : 'Klartext erscheint nach der Code-Eingabe.');
+}
+
+function updateCodeDecisionUi() {
+  const decision = document.getElementById('codeDecision').value;
+  document.getElementById('correctionFields').classList.toggle('hidden', decision !== 'corrected');
+  document.getElementById('damageFields').classList.toggle('hidden', decision === 'no_damage' || decision === '');
 }
 
 function nextItem() {

@@ -680,7 +680,10 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   ursprünglichen `_candidates.json` fortgesetzt. Der Prüfplatz zeigt Code und
   Klartext aus dem aktiven VSA-Katalog. Die Stufe verändert weder Code noch
   Zustandsklasse; nur Ereignisse der Stufen 4/5 werden zusätzlich als wichtige
-  Fälle ausgewertet.
+  Fälle ausgewertet. Pro Bild wird zuerst bestätigt, korrigiert oder festgehalten,
+  dass kein passender BA-/BB-Schaden sichtbar ist. Korrekturen müssen aus dem
+  aktiven Katalog stammen; Ausschlüsse brauchen keine Stufe oder Ereignis-ID.
+  Widersprüchlich wiederverwendete Ereignis-IDs bleiben sichtbar offen.
 
 ## Fachdomaene Kanalinspektion
 
