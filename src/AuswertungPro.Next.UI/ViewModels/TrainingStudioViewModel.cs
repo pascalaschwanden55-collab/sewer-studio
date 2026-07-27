@@ -241,23 +241,32 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
 
         _isStartingAi = true;
         IsBusy = true;
+        var acceptsProgress = true;
         try
         {
-            var progress = new Progress<string>(message => StatusText = message);
+            var progress = new Progress<string>(message =>
+            {
+                if (acceptsProgress)
+                    StatusText = message;
+            });
             var result = await _ensureAiReady(progress, ct);
+            acceptsProgress = false;
             StatusText = result.StatusText;
         }
         catch (OperationCanceledException)
         {
+            acceptsProgress = false;
             StatusText = "KI-Start abgebrochen.";
         }
         catch (Exception ex)
         {
+            acceptsProgress = false;
             StatusText = "KI konnte nicht gestartet werden: "
                 + UserError.DescribeAndReport(ex, "Training-Studio KI-Start");
         }
         finally
         {
+            acceptsProgress = false;
             _isStartingAi = false;
             IsBusy = false;
         }
