@@ -90,6 +90,7 @@ namespace AuswertungPro.Next.UI
                 WindowStateManager.Configure(settings);
                 ViewCustomizationStore.Configure(settings);
                 MotionSettings.Configure(settings.ReduceMotion);
+                ButtonFx.RegisterGlobal();
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
                 ThemeManager.ApplyTheme(Resources, settings.UiTheme);

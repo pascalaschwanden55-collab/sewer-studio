@@ -53,6 +53,24 @@ internal static class StartupSplashAnimationPolicy
             return 1;
         return value;
     }
+
+    /// <summary>
+    /// Tiefennebel: daempft die ferne Hemisphaere (Depth -1 = hinten) auf
+    /// <paramref name="fogFloor"/>, die nahe (Depth +1 = vorn) bleibt unveraendert.
+    /// </summary>
+    public static double DepthFog(double depth, double fogFloor = 0.35)
+    {
+        fogFloor = Clamp01(fogFloor);
+        var depth01 = Clamp01((depth + 1.0) / 2.0);
+        return fogFloor + (1.0 - fogFloor) * depth01;
+    }
+
+    /// <summary>Kubischer Ease-in auf 0..1 (der Eingang wird geclamppt).</summary>
+    public static double EaseInCubic(double t)
+    {
+        t = Clamp01(t);
+        return t * t * t;
+    }
 }
 
 internal readonly record struct StartupSplashProjection(

@@ -48,4 +48,35 @@ public sealed class StartupSplashAnimationPolicyTests
         Assert.Equal(to, StartupSplashAnimationPolicy.Blend(from, to, 1.2));
         Assert.Equal(Color.FromRgb(60, 120, 80), StartupSplashAnimationPolicy.Blend(from, to, 0.5));
     }
+
+    [Theory]
+    [InlineData(-1, 0.35)]
+    [InlineData(1, 1.0)]
+    [InlineData(-5, 0.35)]
+    [InlineData(5, 1.0)]
+    public void DepthFog_daempft_ferne_Hemisphaere_auf_den_Floor_und_clamppt(double depth, double expected)
+    {
+        Assert.Equal(expected, StartupSplashAnimationPolicy.DepthFog(depth), precision: 10);
+    }
+
+    [Fact]
+    public void DepthFog_steigt_monoton_mit_der_Tiefe()
+    {
+        var hinten = StartupSplashAnimationPolicy.DepthFog(-0.5);
+        var mitte = StartupSplashAnimationPolicy.DepthFog(0);
+        var vorn = StartupSplashAnimationPolicy.DepthFog(0.5);
+
+        Assert.True(hinten < mitte && mitte < vorn);
+    }
+
+    [Theory]
+    [InlineData(-0.5, 0)]
+    [InlineData(0, 0)]
+    [InlineData(0.5, 0.125)]
+    [InlineData(1, 1)]
+    [InlineData(2, 1)]
+    public void EaseInCubic_begrenzt_und_kubiert_den_Eingang(double t, double expected)
+    {
+        Assert.Equal(expected, StartupSplashAnimationPolicy.EaseInCubic(t), precision: 10);
+    }
 }

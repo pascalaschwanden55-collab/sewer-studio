@@ -43,6 +43,7 @@ public partial class StartupSplashWindow
         _activePulses.Clear();
         _flares.Clear();
         _satellites.Clear();
+        _dust.Clear();
 
         BuildBackdrop();
         BuildSphere();
@@ -116,6 +117,100 @@ public partial class StartupSplashWindow
         AddSatellite(210, 0.35, Math.PI, AccentBlue, 4);
         AddSatellite(170, -0.55, 1.1, AccentCyan, 4);
         AddSatellite(130, 0.85, 2.4, AccentCyan, 3.5);
+
+        BuildGoldArc();
+        BuildDustField();
+    }
+
+    /// <summary>
+    /// Kurzes goldenes Leuchtsegment auf dem Aussenring: laeuft etwas schneller
+    /// als der Ring selbst und gibt dem dunklen Bild einen wandernden Gold-Akzent.
+    /// </summary>
+    private void BuildGoldArc()
+    {
+        _goldArcRotate = new RotateTransform(0, CanvasCenterX, CanvasCenterY);
+        _goldArc = new Path
+        {
+            Stroke = new SolidColorBrush(Color.FromArgb(150, PulseGold.R, PulseGold.G, PulseGold.B)),
+            StrokeThickness = 2.2,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            Opacity = 0,
+            Data = BuildArcGeometry(CanvasCenterX, CanvasCenterY, 210, 188, 52),
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 12,
+                ShadowDepth = 0,
+                Color = PulseGold,
+                Opacity = 0.5
+            },
+            RenderTransform = _goldArcRotate,
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(_goldArc, 2);
+        NeuralCanvas.Children.Add(_goldArc);
+    }
+
+    private static PathGeometry BuildArcGeometry(
+        double centerX, double centerY, double radius, double startDegrees, double sweepDegrees)
+    {
+        var figure = new PathFigure
+        {
+            StartPoint = ArcPoint(centerX, centerY, radius, startDegrees),
+            IsClosed = false
+        };
+        figure.Segments.Add(new ArcSegment
+        {
+            Point = ArcPoint(centerX, centerY, radius, startDegrees + sweepDegrees),
+            Size = new Size(radius, radius),
+            IsLargeArc = sweepDegrees > 180,
+            SweepDirection = SweepDirection.Clockwise,
+            IsStroked = true
+        });
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(figure);
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private static Point ArcPoint(double centerX, double centerY, double radius, double degrees)
+    {
+        var radians = degrees * Math.PI / 180.0;
+        return new Point(
+            centerX + radius * Math.Cos(radians),
+            centerY + radius * Math.Sin(radians));
+    }
+
+    /// <summary>
+    /// Feines, dunkles Sternenfeld hinter dem Netz (deterministischer Seed):
+    /// Staubkoerner bleiben ortsfest und pulsieren nur leicht in der Deckkraft.
+    /// </summary>
+    private void BuildDustField()
+    {
+        var rng = new Random(23);
+        for (var i = 0; i < DustCount; i++)
+        {
+            var size = 1.0 + rng.NextDouble() * 1.6;
+            var tint = rng.NextDouble();
+            var color = tint < 0.70 ? LineAccent : tint < 0.92 ? AccentCyan : PulseGold;
+            var dot = new Ellipse
+            {
+                Width = size,
+                Height = size,
+                Opacity = 0,
+                Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(dot, rng.NextDouble() * 940);
+            Canvas.SetTop(dot, rng.NextDouble() * 500);
+            Panel.SetZIndex(dot, 2);
+            NeuralCanvas.Children.Add(dot);
+            _dust.Add(new BackgroundDust(
+                dot,
+                baseOpacity: 0.05 + rng.NextDouble() * 0.12,
+                phase: rng.NextDouble() * Math.PI * 2,
+                speed: 0.3 + rng.NextDouble() * 0.9));
+        }
     }
 
     private void AddSatellite(double radius, double speed, double startAngle, Color color, double size)
@@ -283,7 +378,11 @@ public partial class StartupSplashWindow
 
     private void AdvanceFrame(double dt)
     {
-        _rotationY += 0.42 * dt;
+        // Rotation faehrt ueber die ersten Sekunden weich hoch statt sofort
+        // voll zu drehen — der Aufbau wirkt ruhiger und edler.
+        var ramp = StartupSplashAnimationPolicy.EaseInCubic(
+            _animationClock.Elapsed.TotalSeconds / RotationRampSeconds);
+        _rotationY += 0.42 * ramp * dt;
         _rotationX = 0.22 + Math.Sin(_rotationY * 0.45) * 0.08;
         _rotationZ = Math.Sin(_rotationY * 0.31) * 0.10;
         _breathPhase += 1.35 * dt;
@@ -294,6 +393,8 @@ public partial class StartupSplashWindow
             _ringMiddleRotate.Angle -= 8.1 * dt;
         if (_ringInnerRotate is not null)
             _ringInnerRotate.Angle += 12.6 * dt;
+        if (_goldArcRotate is not null)
+            _goldArcRotate.Angle += 7.4 * dt;
 
         foreach (var node in _nodes)
             node.Activation = Math.Max(0, node.Activation - 1.2 * dt);
@@ -447,8 +548,13 @@ public partial class StartupSplashWindow
             }
 
             var depth01 = Clamp01((depth + 1.0) / 2.0);
-            var size = (4.0 + perspective * 3.4 + depth01 * 3.0) * (1.0 + node.Activation * 0.7);
-            var alpha = (byte)Math.Clamp(80 + depth01 * 150 + node.Activation * 40, 0, 255);
+            // Tiefennebel: die ferne Hemisphaere wird kleiner und dunkler,
+            // die nahe bleibt unveraendert — dadurch wirkt die Kugel plastisch.
+            var fog = StartupSplashAnimationPolicy.DepthFog(depth);
+            var size = (4.0 + perspective * 3.4 + depth01 * 3.0)
+                * (1.0 + node.Activation * 0.7)
+                * (0.72 + fog * 0.28);
+            var alpha = (byte)Math.Clamp((80 + depth01 * 150 + node.Activation * 40) * fog, 0, 255);
             var color = Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30);
 
             node.Visual.Width = size;
@@ -479,14 +585,16 @@ public partial class StartupSplashWindow
             }
 
             var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 2.0) / 4.0);
-            var alpha = (byte)Math.Clamp(18 + depth01 * 70 + connection.Activation * 160, 0, 235);
+            var fog = StartupSplashAnimationPolicy.DepthFog((_screenDepth[a] + _screenDepth[b]) / 2.0);
+            var alpha = (byte)Math.Clamp((18 + depth01 * 70 + connection.Activation * 160) * fog, 0, 235);
             var color = Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20);
 
             connection.Visual.X1 = _screenX[a];
             connection.Visual.Y1 = _screenY[a];
             connection.Visual.X2 = _screenX[b];
             connection.Visual.Y2 = _screenY[b];
-            connection.Visual.StrokeThickness = 0.45 + depth01 * 0.6 + connection.Activation * 1.7;
+            connection.Visual.StrokeThickness =
+                (0.45 + depth01 * 0.6 + connection.Activation * 1.7) * (0.75 + fog * 0.25);
             connection.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Panel.SetZIndex(connection.Visual, 8 + (int)(depth01 * 12));
         }
@@ -496,6 +604,41 @@ public partial class StartupSplashWindow
         UpdateBackdrop();
         UpdateScanLine(waveActive, waveX, waveStrength);
         UpdateSatellites();
+        UpdateDust();
+        UpdateProgressSheen();
+    }
+
+    private void UpdateDust()
+    {
+        var elapsed = _animationClock.Elapsed.TotalSeconds;
+        var fadeIn = Clamp01((elapsed - 0.8) / 1.6);
+        if (fadeIn <= 0)
+            return;
+
+        foreach (var mote in _dust)
+        {
+            var twinkle = 0.55 + 0.45 * Math.Sin(mote.Phase + elapsed * mote.Speed);
+            mote.Visual.Opacity = mote.BaseOpacity * twinkle * fadeIn;
+        }
+    }
+
+    /// <summary>
+    /// Wandernder Glanzstreifen auf dem Fortschrittsbalken. Laueft nur waehrend
+    /// des Ladens; beim Ready-Uebergang (EmitPulses aus) blendet er sich aus.
+    /// </summary>
+    private void UpdateProgressSheen()
+    {
+        if (!_emitPulses)
+        {
+            ProgressSheen.Opacity = 0;
+            return;
+        }
+
+        var elapsed = _animationClock.Elapsed.TotalSeconds;
+        var fadeIn = Clamp01((elapsed - 1.0) / 1.0);
+        var cycle = elapsed % SheenCycleSeconds / SheenCycleSeconds;
+        ProgressSheenSlide.X = -80 + cycle * (ProgressFullWidth + 160);
+        ProgressSheen.Opacity = 0.6 * fadeIn;
     }
 
     private void UpdateScanLine(bool waveActive, double waveX, double waveStrength)
@@ -623,6 +766,12 @@ public partial class StartupSplashWindow
             _ringMiddle.Opacity = 0.42 + breath * 0.20;
         if (_ringInner is not null)
             _ringInner.Opacity = 0.55 + breath * 0.22;
+
+        if (_goldArc is not null)
+        {
+            var fadeIn = Clamp01((_animationClock.Elapsed.TotalSeconds - 0.7) / 1.4);
+            _goldArc.Opacity = (0.35 + breath * 0.30) * fadeIn;
+        }
     }
 
     private void FirePulse(int connectionIndex, Color color, bool reverse = false, int generation = 0)

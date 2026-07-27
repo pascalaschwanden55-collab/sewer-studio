@@ -32,6 +32,9 @@ public partial class StartupSplashWindow : Window
     private const double CameraDistance = 4.6;
     private const double ProgressFullWidth = 920;
     private const double ProgressReadyWidth = ProgressFullWidth * 0.9;
+    private const int DustCount = 70;
+    private const double RotationRampSeconds = 2.5;
+    private const double SheenCycleSeconds = 2.6;
     private static readonly TimeSpan MinimumDisplayTime = TimeSpan.FromMilliseconds(8000);
     private static readonly TimeSpan ReadyProgressDuration = TimeSpan.FromMilliseconds(260);
 
@@ -43,6 +46,7 @@ public partial class StartupSplashWindow : Window
     private readonly List<ActivePulse> _activePulses = new();
     private readonly List<NodeFlare> _flares = new();
     private readonly List<RingSatellite> _satellites = new();
+    private readonly List<BackgroundDust> _dust = new();
     private List<int>[] _adjacency = Array.Empty<List<int>>();
 
     // Wird gesetzt, sobald der Fortschrittsbalken durchgelaufen ist (oder das Fenster schliesst).
@@ -65,6 +69,8 @@ public partial class StartupSplashWindow : Window
     private RotateTransform? _ringOuterRotate;
     private ScaleTransform? _coreGlowScale;
     private Rectangle? _scanLine;
+    private Path? _goldArc;
+    private RotateTransform? _goldArcRotate;
 
     private int _statusIndex;
     private int _pulseColorCursor;
@@ -197,6 +203,23 @@ public partial class StartupSplashWindow : Window
         public Ellipse Visual { get; }
         public Color Color { get; }
         public double T { get; set; }
+    }
+
+    /// <summary>Winziges Hintergrund-Staubkorn: feste Position, sanftes Twinkle.</summary>
+    private sealed class BackgroundDust
+    {
+        public BackgroundDust(Ellipse visual, double baseOpacity, double phase, double speed)
+        {
+            Visual = visual;
+            BaseOpacity = baseOpacity;
+            Phase = phase;
+            Speed = speed;
+        }
+
+        public Ellipse Visual { get; }
+        public double BaseOpacity { get; }
+        public double Phase { get; }
+        public double Speed { get; }
     }
 
     private static readonly string[] StatusMessages =

@@ -279,12 +279,10 @@
                 <StackPanel ui:EntranceFx.Stagger="True">
                     <Border Style="{StaticResource Card}"
                             Visibility="{Binding ShowProjectChoice, Converter={StaticResource BoolToVis}}">
-                        <StackPanel HorizontalAlignment="Center" TextBlock.TextAlignment="Center">
-                            <TextBlock Text="&#xE8B7;"
-                                       FontFamily="{DynamicResource FontIcon}"
-                                       FontSize="32"
-                                       Foreground="{DynamicResource MutedBrush}"
-                                       Margin="0,0,0,8"/>
+                        <Grid MinHeight="240">
+                            <!-- Pseudo-3D-Rohrfahrt als Hero hinter dem Leer-Hinweis -->
+                            <ctrl:PipeFlightControl Opacity="0.9"/>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.TextAlignment="Center">
                             <TextBlock Text="Projekt wählen"
                                        FontSize="18"
                                        FontWeight="SemiBold"
@@ -292,7 +290,8 @@
                             <TextBlock Text="Projekt links wählen - oder Projektordner hierher ziehen."
                                        Margin="0,6,0,0"
                                        Foreground="{DynamicResource MutedBrush}"/>
-                        </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
                     <Border Style="{StaticResource Card}"

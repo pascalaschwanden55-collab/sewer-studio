@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Controls;
 
@@ -35,6 +36,9 @@ public partial class NeuralSphereControl : UserControl
     private const int NodeCount = 50;
     private const int PulseCount = 6;
     private const double GoldenRatio = 1.6180339887498949;
+
+    // Dauer des Rotations-Anlaufs in Sekunden (weich hochfahren statt sofort volle Drehzahl).
+    private const double RotationRampSeconds = 2.0;
 
     // Rueckfallfarben, falls das Theme-Dictionary die Schluessel nicht fuehrt (z. B. im Test).
     private static readonly Color FallbackAccent = Color.FromRgb(0x25, 0x63, 0xEB);
@@ -70,6 +74,10 @@ public partial class NeuralSphereControl : UserControl
 
     private readonly DispatcherTimer _timer;
     private bool _visualsCreated;
+
+    // Startzeitpunkt des aktuellen Animationslaufs; null, solange der Timer steht.
+    // Dient dem weichen Rotations-Anlauf ueber die ersten Sekunden nach dem Start.
+    private DateTime? _rampStartUtc;
 
     public NeuralSphereControl()
     {
@@ -112,9 +120,18 @@ public partial class NeuralSphereControl : UserControl
     private void UpdateTimerState()
     {
         if (IsActive && IsVisible && !MotionSettings.ReduceMotion)
+        {
+            // Nur bei einem echten (Neu-)Start merken, damit der Anlauf bei jedem
+            // Start von vorn beginnt und ein laufender Loop nicht zurueckspringt.
+            if (!_timer.IsEnabled)
+                _rampStartUtc = DateTime.UtcNow;
             _timer.Start();
+        }
         else
+        {
             _timer.Stop();
+            _rampStartUtc = null;
+        }
     }
 
     /// <summary>Holt die Akzentfarben aus dem aktiven Theme; ohne Treffer bleiben die Rueckfallwerte.</summary>
@@ -256,7 +273,14 @@ public partial class NeuralSphereControl : UserControl
     private void OnTick(object? sender, EventArgs e)
     {
         var active = IsActive;
-        var rotSpeed = active ? 1.0 : 0.25;
+
+        // Rotations-Anlauf: die Drehzahl faehrt ueber die ersten Sekunden weich hoch
+        // (kubisches Ease-in wie im Startsplash), statt sofort voll zu drehen.
+        var ramp = _rampStartUtc is DateTime rampStart
+            ? StartupSplashAnimationPolicy.EaseInCubic(
+                (DateTime.UtcNow - rampStart).TotalSeconds / RotationRampSeconds)
+            : 0.0;
+        var rotSpeed = (active ? 1.0 : 0.25) * ramp;
         _rotY += 0.012 * rotSpeed;
         _rotX += 0.004 * rotSpeed;
 
@@ -349,8 +373,13 @@ public partial class NeuralSphereControl : UserControl
         for (int i = 0; i < NodeCount; i++)
         {
             var depth01 = (_pz[i] + 1.0) / 2.0; // 0=back, 1=front
-            var size = 2.0 + depth01 * 3.5;
-            var alpha = active ? (byte)(40 + depth01 * 180) : (byte)(20 + depth01 * 60);
+            // Tiefennebel: die ferne Hemisphaere wird kleiner und dunkler,
+            // die nahe bleibt unveraendert — dadurch wirkt die Kugel plastisch.
+            var fog = StartupSplashAnimationPolicy.DepthFog(_pz[i]);
+            var size = (2.0 + depth01 * 3.5) * (0.72 + fog * 0.28);
+            var alpha = active
+                ? (byte)((40 + depth01 * 180) * fog)
+                : (byte)((20 + depth01 * 60) * fog);
 
             var e = _nodeEllipses[i];
             e.Width = size;
@@ -370,7 +399,13 @@ public partial class NeuralSphereControl : UserControl
             line.Y2 = _py[b];
 
             var avgDepth = (_pz[a] + _pz[b] + 2.0) / 4.0;
-            var alpha = active ? (byte)(20 + avgDepth * 60) : (byte)(10 + avgDepth * 25);
+            // Gleicher Tiefennebel wie bei den Knoten: Linien nach hinten verblassen
+            // und werden feiner, nach vorn bleiben sie satt.
+            var fog = StartupSplashAnimationPolicy.DepthFog((_pz[a] + _pz[b]) / 2.0);
+            var alpha = active
+                ? (byte)((20 + avgDepth * 60) * fog)
+                : (byte)((10 + avgDepth * 25) * fog);
+            line.StrokeThickness = 0.8 * (0.75 + fog * 0.25);
             ((SolidColorBrush)line.Stroke).Color = Color.FromArgb(alpha, _accentColor.R, _accentColor.G, _accentColor.B);
         }
 

@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using AuswertungPro.Next.UI.Services;
 
@@ -85,6 +86,46 @@ public partial class ToastHost : UserControl
         border.BeginAnimation(OpacityProperty, new DoubleAnimation(0d, 1d, duration) { EasingFunction = ease });
         var translate = EnsureMutableTranslateTransform(border);
         translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(12d, 0d, duration) { EasingFunction = ease });
+
+        if (border.DataContext is ToastItem { Severity: ToastSeverity.Success })
+            PlaySuccessPulse(border);
+    }
+
+    /// <summary>
+    /// Einmaliger Erfolgs-Puls beim Erscheinen: Akzent-Schein 0 -> 0.5 -> 0 in ~500 ms.
+    /// Ersetzt den Karten-Schatten nur fuer die Pulsdauer und stellt ihn danach wieder her.
+    /// Kurze Ereignis-Rueckmeldung — laeuft immer, auch bei reduzierter Bewegung (Muster wie WindowFx).
+    /// </summary>
+    private static void PlaySuccessPulse(Border border)
+    {
+        var color = border.TryFindResource("SuccessBrush") is SolidColorBrush success ? success.Color
+            : border.TryFindResource("AccentBrush") is SolidColorBrush accent ? accent.Color
+            : Color.FromRgb(0x25, 0x63, 0xEB);
+
+        // Der Template-Schatten ist eingefroren — fuer die Animation ein eigenes Effect-Objekt
+        // setzen und am Ende das urspruengliche zurueckhaengen.
+        var resting = border.Effect;
+        var pulse = new DropShadowEffect
+        {
+            Color = color,
+            BlurRadius = 18,
+            ShadowDepth = 0,
+            Opacity = 0
+        };
+        border.Effect = pulse;
+
+        var animation = new DoubleAnimation(0d, 0.5d, new Duration(TimeSpan.FromMilliseconds(250)))
+        {
+            AutoReverse = true,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        animation.Completed += (_, _) =>
+        {
+            // Toast kann beim Abschluss schon geschlossen sein — dann ist nichts mehr zu tun.
+            if (ReferenceEquals(border.Effect, pulse))
+                border.Effect = resting;
+        };
+        pulse.BeginAnimation(DropShadowEffect.OpacityProperty, animation);
     }
 
     /// <summary>
