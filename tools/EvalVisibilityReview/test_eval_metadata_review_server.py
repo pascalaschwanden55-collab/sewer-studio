@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.EvalVisibilityReview.eval_metadata_review_server import EvalMetadataReviewStore
+from tools.EvalVisibilityReview.eval_metadata_review_server import (
+    INDEX_HTML,
+    EvalMetadataReviewStore,
+)
 
 
 class EvalMetadataReviewStoreTests(unittest.TestCase):
@@ -40,6 +43,40 @@ class EvalMetadataReviewStoreTests(unittest.TestCase):
         self.assertEqual(before, saved["source_candidates_sha256"])
         self.assertEqual(["damage-a", "damage-b"], [row["id"] for row in saved["reviews"]])
         self.assertNotIn("structure", self.output.read_text(encoding="utf-8"))
+
+    def test_store_liefert_code_und_klartext_aus_aktivem_katalog(self):
+        self._write_eval_set(
+            [self._candidate("damage-a", "BAJA", "H-1", 1.2)]
+        )
+        catalog_path = self.root / "vsa_catalog.json"
+        catalog_path.write_text(
+            json.dumps(
+                {
+                    "codes": [
+                        {
+                            "code": "BAJA",
+                            "title": "Breite Rohrverbindung",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+        store = EvalMetadataReviewStore(
+            self.eval_root,
+            self.output,
+            catalog_path=catalog_path,
+        )
+
+        item = store.state()["items"][0]
+        self.assertEqual("BAJA", item["expected_code"])
+        self.assertEqual("Breite Rohrverbindung", item["expected_title"])
+
+    def test_pruefplatz_erklaert_die_wirkung_der_schadensstufe(self):
+        self.assertIn("Stufe 4 und 5", INDEX_HTML)
+        self.assertIn("weder den Code noch die Zustandsklasse", INDEX_HTML)
 
     def test_review_braucht_stufe_und_ereignis_id(self):
         self._write_eval_set([self._candidate("damage-a", "BAIZ", "H-1", 1.2)])

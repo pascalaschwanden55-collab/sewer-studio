@@ -677,7 +677,10 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   Ereignis-ID und optionalen Meterbereich atomar nach
   `C:\KI_BRAIN\eval_review\v1_event_metadata_review.json` und verändert das
   eingefrorene Eval-Set nie. Ein Zwischenstand wird nur bei gleicher SHA-256 der
-  ursprünglichen `_candidates.json` fortgesetzt.
+  ursprünglichen `_candidates.json` fortgesetzt. Der Prüfplatz zeigt Code und
+  Klartext aus dem aktiven VSA-Katalog. Die Stufe verändert weder Code noch
+  Zustandsklasse; nur Ereignisse der Stufen 4/5 werden zusätzlich als wichtige
+  Fälle ausgewertet.
 
 ## Fachdomaene Kanalinspektion
 

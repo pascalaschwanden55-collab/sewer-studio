@@ -7,6 +7,7 @@ Eval-Set nicht. Ergebnisse werden immer in einer getrennten Datei gespeichert.
 
 Der Prüfplatz lädt `C:\KI_BRAIN\eval_set` nur lesend. Aus den 120 Bildern werden
 automatisch nur die Schadenscodes der Gruppen BA und BB angezeigt.
+Zu jedem Code zeigt er den Klartext aus dem aktiven VSA-KEK-2020-Katalog.
 
 Start:
 
@@ -20,6 +21,13 @@ Pro Schadensbild werden diese Angaben erfasst:
 - Ereignis-ID
 - optionaler Meterbereich und Bemerkung
 - Prüfer und Prüfzeitpunkt
+
+Die Schadensstufe ist nur eine fachliche Gewichtung für den KI-Prüfsatz:
+
+- Sie verändert weder den VSA-Code noch eine Zustandsklasse.
+- Stufe 4 und 5 werden zusätzlich als wichtige Schäden ausgewertet.
+- Für eine belastbare KI-Freigabe braucht der Prüfsatz mindestens 20
+  unterschiedliche Ereignisse der Stufen 4 oder 5.
 
 Mehrere Bilder desselben realen Schadens erhalten dieselbe Ereignis-ID. Der Knopf
 `Wie vorheriger Schaden` übernimmt dafür die Angaben des vorherigen Bildes.

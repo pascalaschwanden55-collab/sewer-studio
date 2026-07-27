@@ -27,6 +27,14 @@ REVIEW_FIELDS = (
     "comment",
 )
 
+DEFAULT_CATALOG_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "AuswertungPro.Next.UI"
+    / "Data"
+    / "vsa_kek_2020_catalog_manifest.json"
+)
+
 
 class EvalMetadataReviewStore:
     """Lesender V1-Pruefplatz mit getrenntem, atomarem Review-Ergebnis."""
@@ -35,10 +43,12 @@ class EvalMetadataReviewStore:
         self,
         eval_root: str | Path,
         output_path: str | Path,
+        catalog_path: str | Path = DEFAULT_CATALOG_PATH,
         now_utc: Callable[[], str] | None = None,
     ):
         self.eval_root = Path(eval_root).resolve()
         self.output_path = Path(output_path).resolve()
+        self.catalog_path = Path(catalog_path).resolve()
         self.candidates_path = self.eval_root / "_candidates.json"
         self._now_utc = now_utc or (
             lambda: datetime.now(timezone.utc).isoformat()
@@ -53,8 +63,14 @@ class EvalMetadataReviewStore:
             raise FileNotFoundError(
                 f"Eval-Kandidaten nicht gefunden: {self.candidates_path}"
             )
+        if not self.catalog_path.is_file():
+            raise FileNotFoundError(
+                f"VSA-Codekatalog nicht gefunden: {self.catalog_path}"
+            )
 
         self.source_candidates_sha256 = _sha256(self.candidates_path)
+        self.source_catalog_sha256 = _sha256(self.catalog_path)
+        self._code_titles = _load_code_titles(self.catalog_path)
         self.rows = self._load_damage_rows()
         self._rows_by_id = {row["id"]: row for row in self.rows}
         self._merge_existing_output()
@@ -99,6 +115,10 @@ class EvalMetadataReviewStore:
                 ).strip(),
                 "meter": meter,
                 "expected_code": code,
+                "expected_title": self._code_titles.get(
+                    code,
+                    "Klartext im aktiven VSA-Katalog nicht gefunden",
+                ),
                 "category": str(candidate.get("kategorie") or "").strip(),
                 "expected_severity": _optional_integer(
                     candidate.get("expected_severity")
@@ -229,6 +249,8 @@ class EvalMetadataReviewStore:
             "purpose": "SewerStudio V1 Ereignis- und Schadensstufen-Review",
             "source_eval_root": str(self.eval_root),
             "source_candidates_sha256": self.source_candidates_sha256,
+            "source_catalog_path": str(self.catalog_path),
+            "source_catalog_sha256": self.source_catalog_sha256,
             "damage_frames": len(self.rows),
             "completed_reviews": sum(1 for row in self.rows if _is_complete(row)),
             "reviews": [dict(row) for row in self.rows],
@@ -255,6 +277,23 @@ class EvalMetadataReviewStore:
 def _normalize_code(value: object) -> str:
     text = str(value or "").strip()
     return "".join(ch.upper() for ch in text if ch.isalnum())
+
+
+def _load_code_titles(catalog_path: Path) -> dict[str, str]:
+    manifest = json.loads(catalog_path.read_text(encoding="utf-8-sig"))
+    codes = manifest.get("codes") if isinstance(manifest, dict) else None
+    if not isinstance(codes, list):
+        raise ValueError("Der VSA-Codekatalog enthaelt keine Code-Liste.")
+
+    titles: dict[str, str] = {}
+    for entry in codes:
+        if not isinstance(entry, dict):
+            continue
+        code = _normalize_code(entry.get("code"))
+        title = str(entry.get("title") or "").strip()
+        if code and title:
+            titles[code] = title
+    return titles
 
 
 def _optional_text(value: object) -> str | None:
@@ -435,6 +474,7 @@ img { max-width: 100%; max-height: calc(100vh - 160px); object-fit: contain; bac
 label { display: block; margin: 11px 0 4px; }
 input, textarea, select { width: 100%; box-sizing: border-box; background: #0b0f14; color: #f1f5f9; border: 1px solid #3b4655; border-radius: 6px; padding: 9px; font-size: 15px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.explanation { margin-top: 8px; padding: 9px 10px; border-left: 3px solid #38bdf8; background: #0c1720; color: #cbd5e1; font-size: 13px; line-height: 1.35; }
 textarea { min-height: 70px; resize: vertical; }
 button { border: 1px solid #3b4655; background: #242b35; color: #f1f5f9; border-radius: 6px; padding: 10px 16px; cursor: pointer; }
 button:hover { background: #303947; }
@@ -454,19 +494,27 @@ button:disabled { opacity: .55; cursor: wait; }
   <aside class="side">
     <div class="facts">
       <span>Code</span><strong id="code">-</strong>
+      <span>Klartext</span><strong id="codeTitle">-</strong>
       <span>Haltung</span><strong id="holding">-</strong>
       <span>Meter</span><strong id="meter">-</strong>
       <span>Bild</span><span class="muted" id="imageName">-</span>
     </div>
-    <label for="severity">Schadensstufe 1 bis 5</label>
+    <label for="severity">Schadensstufe fuer den KI-Test (1 bis 5)</label>
     <select id="severity">
       <option value="">Bitte waehlen</option>
-      <option value="1">1 - optisch</option>
-      <option value="2">2 - leicht</option>
+      <option value="1">1 - gering</option>
+      <option value="2">2 - eher gering</option>
       <option value="3">3 - mittel</option>
-      <option value="4">4 - schwer</option>
-      <option value="5">5 - kritisch</option>
+      <option value="4">4 - schwer / wichtiger KI-Prueffall</option>
+      <option value="5">5 - kritisch / wichtiger KI-Prueffall</option>
     </select>
+    <div class="explanation">
+      <strong>Wirkung:</strong> Bewerte die fachliche Bedeutung des Schadens,
+      nicht die Bildqualitaet. Die Stufe veraendert weder den Code noch die Zustandsklasse.
+      Stufe 4 und 5 werden zusaetzlich als wichtige Schaeden
+      ausgewertet. Fuer eine belastbare Freigabe braucht der Pruefsatz mindestens
+      20 unterschiedliche Ereignisse mit Stufe 4 oder 5.
+    </div>
     <label for="eventId">Ereignis-ID</label>
     <input id="eventId" placeholder="z.B. 81030-80945-BAIZ-01">
     <div class="muted">Mehrere Bilder desselben Schadens erhalten dieselbe ID.</div>
@@ -509,6 +557,7 @@ function render(state) {
   const item = items[index];
   document.getElementById('photo').src = item.image_url;
   document.getElementById('code').textContent = item.expected_code || '-';
+  document.getElementById('codeTitle').textContent = item.expected_title || '-';
   document.getElementById('holding').textContent = item.holding_key || '-';
   document.getElementById('meter').textContent = item.meter ?? '-';
   document.getElementById('imageName').textContent = item.image_name || '-';
@@ -616,10 +665,11 @@ loadState().catch(() => {
 def run_server(
     eval_root: Path,
     output: Path,
+    catalog: Path,
     port: int,
     reviewer: str,
 ) -> None:
-    store = EvalMetadataReviewStore(eval_root, output)
+    store = EvalMetadataReviewStore(eval_root, output, catalog)
     store.prepare_output()
     server = ThreadingHTTPServer(
         ("127.0.0.1", port),
@@ -627,6 +677,7 @@ def run_server(
     )
     print(f"KI-Pruefsatz laeuft: http://127.0.0.1:{port}/")
     print(f"Eval-Set (nur lesen): {eval_root}")
+    print(f"VSA-Codekatalog:       {catalog}")
     print(f"Review-Ausgabe:       {output}")
     print("Stoppen mit Strg+C")
     server.serve_forever()
@@ -641,6 +692,7 @@ def parse_args() -> argparse.Namespace:
         "--output",
         default=r"C:\KI_BRAIN\eval_review\v1_event_metadata_review.json",
     )
+    parser.add_argument("--catalog", default=str(DEFAULT_CATALOG_PATH))
     parser.add_argument("--reviewer", default="Pascal")
     parser.add_argument("--port", type=int, default=8772)
     parser.add_argument(
@@ -655,14 +707,15 @@ def main() -> None:
     args = parse_args()
     eval_root = Path(args.eval_root)
     output = Path(args.output)
+    catalog = Path(args.catalog)
     if args.prepare_only:
-        store = EvalMetadataReviewStore(eval_root, output)
+        store = EvalMetadataReviewStore(eval_root, output, catalog)
         state = store.prepare_output()
         print(f"Review-Vorlage vorbereitet: {output}")
         print(f"Schadensbilder: {state['total']}")
         print(f"Bereits geprueft: {state['done']}")
         return
-    run_server(eval_root, output, args.port, args.reviewer)
+    run_server(eval_root, output, catalog, args.port, args.reviewer)
 
 
 if __name__ == "__main__":
