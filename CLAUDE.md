@@ -672,6 +672,12 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
 - Das vorhandene 120er-Set ist noch nicht menschlich mit Severity und EventId
   nachgepflegt. AP 0.4 ist deshalb nicht abgeschlossen und keine Modellfreigabe darf
   allein aus der neuen technischen Messlogik abgeleitet werden.
+- `tools/EvalVisibilityReview/start_eval_metadata_review.ps1` öffnet dafür einen
+  lokalen Bild-Prüfplatz. Er zeigt nur BA-/BB-Schadensframes, schreibt Stufe,
+  Ereignis-ID und optionalen Meterbereich atomar nach
+  `C:\KI_BRAIN\eval_review\v1_event_metadata_review.json` und verändert das
+  eingefrorene Eval-Set nie. Ein Zwischenstand wird nur bei gleicher SHA-256 der
+  ursprünglichen `_candidates.json` fortgesetzt.
 
 ## Fachdomaene Kanalinspektion
 
