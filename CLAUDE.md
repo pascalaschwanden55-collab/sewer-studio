@@ -685,6 +685,13 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   aktiven Katalog stammen; Ausschlüsse brauchen keine Stufe oder Ereignis-ID.
   Widersprüchlich wiederverwendete Ereignis-IDs bleiben sichtbar offen.
 
+- `EvalReviewedDamageDataset` bindet diese getrennte Review nur bei passendem
+  `_candidates.json`-SHA-256, vollstaendigen Entscheidungen und null Konflikten an
+  den Benchmark. `EvalReviewedDamageScorer` misst Schadenspraesenz, Fehlalarme,
+  exakten Code, Hauptcode, Stufe und Ereignisse. `EvalSetBenchmark --review-file`
+  verwendet dafuer das Ollama-Bildmodell ohne YOLO-/DINO-/SAM-Hinweise; das
+  QualityGate wird in diesem Modus ausdruecklich nicht als gemessen ausgegeben.
+
 ## Fachdomaene Kanalinspektion
 
 ### Grundbegriffe

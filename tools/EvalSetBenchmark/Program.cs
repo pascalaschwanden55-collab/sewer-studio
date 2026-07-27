@@ -18,10 +18,21 @@ if (options.ShowHelp)
 
 try
 {
-    var allCases = EvalSetBenchmarkDataset.Load(options.EvalSetRoot);
+    var reviewedDataset = string.IsNullOrWhiteSpace(options.ReviewFile)
+        ? null
+        : EvalReviewedDamageDataset.Load(options.EvalSetRoot, options.ReviewFile);
+    var allReviewedCases = reviewedDataset?.Cases.ToList();
+    var allCases = allReviewedCases is null
+        ? EvalSetBenchmarkDataset.Load(options.EvalSetRoot).ToList()
+        : allReviewedCases.Select(item => item.BenchmarkCase).ToList();
     var cases = options.MaxFrames > 0
         ? allCases.Take(options.MaxFrames).ToList()
         : allCases.ToList();
+    var reviewedCases = allReviewedCases is null
+        ? null
+        : options.MaxFrames > 0
+            ? allReviewedCases.Take(options.MaxFrames).ToList()
+            : allReviewedCases;
 
     if (cases.Count == 0)
         throw new InvalidOperationException("Keine Eval-Frames gefunden.");
@@ -57,6 +68,8 @@ try
 
     Console.WriteLine($"Eval-Set: {options.EvalSetRoot}");
     Console.WriteLine($"Frames:   {cases.Count}/{allCases.Count}");
+    if (reviewedDataset is not null)
+        Console.WriteLine($"Review:   {Path.GetFullPath(options.ReviewFile!)}");
 
     if (options.RouterPlan || options.RouterPlanOnly)
     {
@@ -218,6 +231,40 @@ try
         Console.WriteLine($"[{i + 1,3}/{cases.Count}] {c.FrameFileName}  GT={c.ExpectedFullCode}  PRED={predText}{contextInfo}  {prediction.TimeMs} ms");
     }
 
+    if (reviewedDataset is not null && reviewedCases is not null)
+    {
+        var reviewScore = EvalReviewedDamageScorer.Evaluate(reviewedCases, predictions);
+        var reviewStamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
+        var reviewModelSlug = Slug(model);
+        var reviewCsvPath = Path.Combine(
+            options.OutputDir,
+            $"eval_{reviewStamp}_{reviewModelSlug}_reviewed_damage.csv");
+        var reviewJsonPath = Path.Combine(
+            options.OutputDir,
+            $"eval_{reviewStamp}_{reviewModelSlug}_reviewed_damage.json");
+
+        EvalReviewedDamageScorer.WriteCsv(reviewCsvPath, reviewScore.Rows);
+        EvalReviewedDamageScorer.WriteSummaryJson(reviewJsonPath, reviewScore.Summary, new
+        {
+            created_at = DateTimeOffset.Now.ToString("O"),
+            eval_set_root = options.EvalSetRoot,
+            review_file = Path.GetFullPath(options.ReviewFile!),
+            review_schema_version = reviewedDataset.SchemaVersion,
+            source_candidates_sha256 = reviewedDataset.SourceCandidatesSha256,
+            completed_reviews = reviewedDataset.CompletedReviews,
+            frames_total = allCases.Count,
+            frames_run = cases.Count,
+            model,
+            ollama_url = baseUri.ToString(),
+            context = "kein Kontext",
+            gate_measured = false,
+            manifest = TryReadManifestInfo(options.EvalSetRoot)
+        });
+
+        PrintReviewedDamageResult(reviewScore.Summary, reviewCsvPath, reviewJsonPath);
+        return 0;
+    }
+
     var rows = EvalSetBenchmarkScorer.Evaluate(cases, predictions);
     var summary = EvalSetBenchmarkScorer.Summarize(rows);
     var byCode = EvalSetBenchmarkScorer.SummarizeByExpectedCode(rows);
@@ -299,6 +346,44 @@ static string DescribeContextMode(BenchmarkOptions options)
     if (options.UseYoloPresenceContext)
         return "YOLO-Bildhinweise";
     return "kein Kontext";
+}
+
+static void PrintReviewedDamageResult(
+    EvalReviewedDamageSummary summary,
+    string csvPath,
+    string jsonPath)
+{
+    Console.WriteLine();
+    Console.WriteLine("Ergebnis gegen die menschliche Schadensreview:");
+    Console.WriteLine(
+        $"  Schaden gefunden:  {summary.TruePositiveDamageFrames}/{summary.DamageFrames} " +
+        $"= {summary.DamageRecall:P1}");
+    Console.WriteLine(
+        $"  Fehlalarm:          {summary.FalsePositiveDamageFrames}/{summary.NoDamageFrames} " +
+        $"Nicht-Schadensbilder");
+    Console.WriteLine(
+        $"  Code exakt:         {summary.ExactCodeCorrectFrames}/{summary.DamageFrames} " +
+        $"= {summary.ExactCodeAccuracy:P1}");
+    Console.WriteLine(
+        $"  Hauptcode richtig:  {summary.MainCodeCorrectFrames}/{summary.DamageFrames} " +
+        $"= {summary.MainCodeAccuracy:P1}");
+    Console.WriteLine(
+        $"  Stufe exakt:        {summary.SeverityExactFrames}/{summary.SeverityEvaluatedFrames} " +
+        $"= {summary.SeverityExactAccuracy:P1}");
+    Console.WriteLine(
+        $"  Stufe +/-1:         {summary.SeverityWithinOneFrames}/{summary.SeverityEvaluatedFrames} " +
+        $"= {summary.SeverityWithinOneAccuracy:P1}");
+    Console.WriteLine(
+        $"  Ereignis gefunden:  {summary.PresenceEvents.DetectedEvents}/{summary.PresenceEvents.EventCount}");
+    Console.WriteLine(
+        $"  Ereignis + Code:    {summary.ExactCodeEvents.DetectedEvents}/{summary.ExactCodeEvents.EventCount}");
+    Console.WriteLine(
+        $"  Schwere Ereignisse: {summary.SeverePresenceEvents.EventCount}/{summary.RequiredSevereEvents} " +
+        $"(Mindestmenge {(summary.HasMinimumSevereEvents ? "erreicht" : "nicht erreicht")})");
+    Console.WriteLine($"  Ohne KI-Antwort:    {summary.UnresolvedFrames}");
+    Console.WriteLine("  QualityGate:        in diesem Bildlauf nicht gemessen");
+    Console.WriteLine($"  Detail-CSV:         {csvPath}");
+    Console.WriteLine($"  JSON:               {jsonPath}");
 }
 
 static string ShortHint(string hint)
@@ -610,6 +695,7 @@ Beispiele:
 
 Optionen:
   --eval-set <pfad>     Standard: C:\KI_BRAIN\eval_set
+  --review-file <pfad>  Menschliche Schadensreview; misst nur diese geprueften Bilder
   --out <ordner>        Standard: docs\benchmarks
   --model <name>        Standard: App-Konfiguration
   --ollama-url <url>    Standard: App-Konfiguration
@@ -713,6 +799,7 @@ static void PrintClassifierCoverage(
 
 internal sealed record BenchmarkOptions(
     string EvalSetRoot,
+    string? ReviewFile,
     string OutputDir,
     string? Model,
     Uri? OllamaUrl,
@@ -742,6 +829,7 @@ internal sealed record BenchmarkOptions(
     public static BenchmarkOptions Parse(string[] args)
     {
         var root = @"C:\KI_BRAIN\eval_set";
+        string? reviewFile = null;
         var output = Path.Combine("docs", "benchmarks");
         string? model = null;
         Uri? url = null;
@@ -778,6 +866,9 @@ internal sealed record BenchmarkOptions(
                     break;
                 case "--eval-set":
                     root = RequireValue(args, ref i, arg);
+                    break;
+                case "--review-file":
+                    reviewFile = RequireValue(args, ref i, arg);
                     break;
                 case "--out":
                     output = RequireValue(args, ref i, arg);
@@ -871,9 +962,20 @@ internal sealed record BenchmarkOptions(
             throw new ArgumentException("--source-file-list-val-ratio muss zwischen 0 und 1 liegen.");
         if (maxPerClassPerSplit < 0)
             throw new ArgumentException("--max-per-class-split darf nicht negativ sein.");
+        if (!string.IsNullOrWhiteSpace(reviewFile)
+            && (contextModeCount > 0
+                || yoloDetectOnly
+                || !string.IsNullOrWhiteSpace(classifierDataset)
+                || routerPlan
+                || buildRouterDataset))
+        {
+            throw new ArgumentException(
+                "--review-file ist nur fuer einen direkten Qwen-Bildlauf ohne Testkontext erlaubt.");
+        }
 
         return new BenchmarkOptions(
             root,
+            reviewFile,
             output,
             model,
             url,

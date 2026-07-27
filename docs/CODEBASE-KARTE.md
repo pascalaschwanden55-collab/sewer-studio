@@ -361,9 +361,15 @@ Die frühere Sammeldatei `EvalSetBenchmark.cs` ist aufgeteilt; öffentliche Klas
 | `EvalSetReleaseDatasetValidator` | `LoadAndValidate` für Release-Abnahme: fehlende Bilder/Haltungen, ungültige/widersprüchliche Werte stoppen; `EventId` nur bei Schäden Pflicht |
 | `EvalSetV2Builder` | übernimmt die neuen Felder, verlangt Severity + Ereignis-ID bei Schäden |
 | `EvalSetEventScorer` | zählt ein Ereignis über mehrere Frames einmal (Schlüssel Haltung+`EventId`), trennt Detect-Treffer vom Gate; Severity 4/5 ≥ 20 unabhängige Ereignisse, Wilson-/exakte 95%-Grenzen |
+| `EvalReviewedDamageDataset` | bindet die getrennte menschliche V1-Schadensreview nur bei passendem Kandidaten-Hash, Vollständigkeit und null Konflikten ein |
+| `EvalReviewedDamageScorer` | misst Schadenspräsenz, Fehlalarme, Code, Stufe und Ereignisse; Nicht-Schadenscodes auf ausgeschlossenen Bildern sind kein Schadens-Fehlalarm |
 | `EvalSetManifestHasher` | Manifest-Hashing des Eval-Sets |
 
-Das reale 120er-Set ist noch nicht mit Severity/EventId nachgepflegt — AP 0.4 ist nicht abgeschlossen; keine Modellfreigabe allein aus der Messlogik.
+Die 32 BA-/BB-Vorgabebilder des realen 120er-Sets sind menschlich geprüft. Der
+übrige Bestand ist noch nicht vollständig mit Severity/EventId nachgepflegt.
+`EvalSetBenchmark --review-file` misst nur das Ollama-Bildmodell ohne
+YOLO-/DINO-/SAM-Hinweise und ohne QualityGate. AP 0.4 ist deshalb nicht
+abgeschlossen; keine Modellfreigabe allein aus dieser Teilmessung.
 
 ---
 

@@ -59,6 +59,28 @@ Nur Vorlage erzeugen, ohne den Browser-Prüfplatz zu starten:
 python .\tools\EvalVisibilityReview\eval_metadata_review_server.py --prepare-only
 ```
 
+## Geprüfte Schadensbilder auswerten
+
+Nach einer vollständigen und konfliktfreien Review kann das aktuelle
+Ollama-Bildmodell direkt gegen diese menschlichen Entscheidungen gemessen werden:
+
+```powershell
+dotnet run --project tools\EvalSetBenchmark -c Release --no-build -- `
+  --eval-set C:\KI_BRAIN\eval_set `
+  --review-file C:\KI_BRAIN\eval_review\v1_event_metadata_review.json `
+  --model qwen3-vl:8b-q8 `
+  --out C:\KI_BRAIN\eval_review\benchmarks
+```
+
+Der Lauf prüft vor dem ersten KI-Aufruf den SHA-256 des eingefrorenen
+`_candidates.json`, die Vollständigkeit und die Ereigniskonflikte. V1 bleibt
+unverändert. Gemessen werden Schadenspräsenz, Fehlalarme, exakter Code,
+Hauptcode, Schadensstufe und Ereignistreffer.
+
+Dieser Modus misst das Ollama-Bildmodell ohne Hinweise von YOLO, DINO oder SAM.
+Das QualityGate ist deshalb nicht Teil dieser Messung. Der JSON-Bericht weist
+diese Grenze ausdrücklich aus.
+
 ## Sichtbarkeitsprüfung
 
 Der ältere Drei-Tasten-Prüfplatz bleibt unverändert verfügbar:
