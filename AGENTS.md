@@ -1,6 +1,6 @@
 # AGENTS.md — Einstieg für Codex und andere Agenten
 
-Immer einfach und ehrlich antworten.
+Immer einfach und ehrlich antworten. Denken und Antworten immer auf Deutsch.
 
 ## Verbindliche Projektbeschreibung
 
