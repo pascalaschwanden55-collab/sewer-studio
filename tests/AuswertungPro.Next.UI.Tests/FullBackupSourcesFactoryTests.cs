@@ -64,6 +64,43 @@ public sealed class FullBackupSourcesFactoryTests
         Assert.False(sources.EnvironmentVariables.ContainsKey("PATH"));
     }
 
+    [Fact]
+    public void Instanzdienst_trennt_Pflichtprojekte_von_alten_Merkeintraegen()
+    {
+        var provider = new FullBackupSourcesProvider(
+            new RepositoryRootLocatorFake(@"C:\Repo"),
+            getKnowledgeRoot: () => @"C:\Knowledge",
+            localSewerStudioDir: @"C:\Local\SewerStudio",
+            getFolderPath: folder => folder switch
+            {
+                Environment.SpecialFolder.ApplicationData => @"C:\Roaming",
+                Environment.SpecialFolder.DesktopDirectory => @"C:\Desktop",
+                _ => throw new ArgumentOutOfRangeException(nameof(folder))
+            },
+            getEnvironmentVariables: () => new Hashtable(),
+            baseDirectory: @"C:\App",
+            appVersion: "4.5-test");
+        var settings = new AppSettings
+        {
+            ProjectsRootDirectory = @"D:\Projekte",
+            LastProjectPath = @"D:\Projekte\Aktuell\Projektdateien\projekt.json",
+            RecentProjectPaths =
+            [
+                @"D:\Projekte\Aktuell\Projektdateien\projekt.json",
+                @"C:\Downloads\AltesProjekt\Projektdateien\projekt.json"
+            ]
+        };
+
+        var sources = provider.Resolve(settings);
+
+        Assert.Equal(
+            [@"D:\Projekte", @"D:\Projekte\Aktuell"],
+            sources.ProjectRoots);
+        Assert.Equal(
+            [@"C:\Downloads\AltesProjekt"],
+            sources.OptionalProjectRoots);
+    }
+
     private sealed class RepositoryRootLocatorFake(string result) : IRepositoryRootLocator
     {
         public string? StartPath { get; private set; }

@@ -15,6 +15,8 @@ namespace AuswertungPro.Next.Application.Backup;
 /// <param name="DesktopDir">Desktop des Nutzers (Startskripte).</param>
 /// <param name="AppVersion">App-Version fuer das Manifest.</param>
 /// <param name="EnvironmentVariables">Snapshot der SEWERSTUDIO_*/SEWER_*-Umgebungsvariablen.</param>
+/// <param name="ProjectRoots">Konfigurierte Projektwurzel und aktuelles Projekt; fehlende Quellen stoppen die Sicherung.</param>
+/// <param name="OptionalProjectRoots">Historische externe Projekte aus der Merkliste; fehlende Quellen werden sichtbar gewarnt.</param>
 public sealed record FullBackupSources(
     string? RepoRoot,
     string KnowledgeRoot,
@@ -25,4 +27,5 @@ public sealed record FullBackupSources(
     string AppVersion,
     IReadOnlyDictionary<string, string> EnvironmentVariables,
     IReadOnlyList<string>? ProjectRoots = null,
-    bool IncludeProjectVideos = false);
+    bool IncludeProjectVideos = false,
+    IReadOnlyList<string>? OptionalProjectRoots = null);

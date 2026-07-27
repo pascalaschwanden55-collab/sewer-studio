@@ -68,6 +68,8 @@ public sealed class DirectoryMirror
         public int DatabasesSnapshotted;
         /// <summary>Format "pfad: grund" — Fehler brechen den Lauf nicht ab.</summary>
         public List<string> Errors { get; } = new();
+        /// <summary>Nicht-kritische Hinweise, die nach erfolgreichem Lauf sichtbar werden.</summary>
+        public List<string> Warnings { get; } = new();
     }
 
     /// <summary>
@@ -91,8 +93,14 @@ public sealed class DirectoryMirror
         catch (Exception ex) when (!source.Required
                                    && ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            // Optionale Quellen (z. B. Logs/Telemetry bei einer frischen Installation)
-            // duerfen fehlen. Ein alter Sicherungsstand bleibt trotzdem erhalten.
+            // Optionale Quellen duerfen fehlen. Historische Projekt-Merkeintraege
+            // werden sichtbar gemeldet; normale optionale App-Ordner bleiben still.
+            if (source.WarnIfMissing)
+            {
+                stats.Warnings.Add(
+                    $"{source.SourceRoot}: Gemerkter Projektordner nicht gefunden - " +
+                    "uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
+            }
             PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
             return;
         }

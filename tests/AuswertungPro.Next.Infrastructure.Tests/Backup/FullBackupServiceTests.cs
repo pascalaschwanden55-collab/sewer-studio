@@ -138,6 +138,7 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.True(File.Exists(Path.Combine(backupRoot, "Projekte", "01_projects", "Fotos", "foto.jpg")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Projekte", "01_projects", "Videos", "haltung.mp4")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "bin", "skip.dll")));
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", ".tmp", "pytest-rest.txt")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "KI_BRAIN", "training_frames", "frame.png")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "KI_BRAIN", "yolo_vsa_dataset", "labels.txt")));
         Assert.False(Directory.Exists(Path.Combine(backupRoot, "Einstellungen", "Local_SewerStudio", "Knowledge")));
@@ -303,6 +304,24 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.Contains(report.Issues, issue =>
             issue.Path == "../outside.txt"
             && issue.Message.Contains("Unsicherer", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_Fehlendes_altes_Merklistenprojekt_warnt_aber_Sicherung_bleibt_erfolgreich()
+    {
+        var missingProject = Path.Combine(_root, "verschobenes-altes-projekt");
+        var sources = CreateSourceTree() with
+        {
+            OptionalProjectRoots = [missingProject]
+        };
+        var targetParent = Path.Combine(_root, "target-missing-recent-project");
+
+        var result = await new FullBackupService(() => sources).RunAsync(targetParent);
+
+        Assert.True(result.Success, result.Error);
+        var warning = Assert.Single(result.SkippedFiles);
+        Assert.Contains(missingProject, warning);
+        Assert.Contains("bisheriger Sicherungsstand bleibt erhalten", warning);
     }
 
     [Fact]
@@ -509,6 +528,7 @@ public sealed class FullBackupServiceTests : IDisposable
 
         Write(Path.Combine(repo, "src", "app.cs"), "code");
         Write(Path.Combine(repo, "bin", "skip.dll"), "skip");
+        Write(Path.Combine(repo, ".tmp", "pytest-rest.txt"), "temporary");
         Write(Path.Combine(repo, ".git", "HEAD"), "abc123");
         Write(Path.Combine(repo, "sidecar", "models", "active.json"), "{}");
 

@@ -211,7 +211,7 @@ public sealed class FullBackupService : IFullBackupService
                 stats,
                 "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
 
-            var skipped = stats.Errors.Take(200).ToArray();
+            var skipped = stats.Warnings.Take(200).ToArray();
             var hashProgressThrottle = Stopwatch.StartNew();
             BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
             var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(

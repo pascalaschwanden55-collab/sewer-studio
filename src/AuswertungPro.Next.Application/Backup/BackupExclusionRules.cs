@@ -18,7 +18,7 @@ public static class BackupExclusionRules
     };
     // Build-/Tool-Artefakte im Repo: aus Quellcode jederzeit neu erzeugbar.
     private static readonly string[] ProgramExcludedNames =
-        { "bin", "obj", ".vs", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".pytest_tmp" };
+        { "bin", "obj", ".vs", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".pytest_tmp", ".tmp" };
 
     // Regenerierbare Brocken im KI-Gehirn (mit Nutzer geklaert, 2026-07-03):
     // Trainings-Datensaetze und alte KB-Zwischensicherungen lassen sich neu bauen.

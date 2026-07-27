@@ -208,7 +208,14 @@ Wurzel konfiguriert wurde. Bestehende Spiegeldateien bleiben bei optionalen
 Fehlstellen erhalten. `KnowledgeRoot` und jede tatsaechlich konfigurierte
 Projektquelle bleiben Pflicht. `DirectoryMirror`, `BackupTargetMarkerGuardService`
 und `KnowledgeMirrorMarker` bilden die zentralen Datei-, Zielbesitz- und
-Spiegelbesitz-Grenzen.
+Spiegelbesitz-Grenzen. Die Programmquelle betritt regenerierbare Arbeits- und
+Testordner wie `.tmp` nicht; Projekt- und Wissensquellen bleiben davon unberuehrt.
+Die konfigurierte Projektwurzel und das aktuelle Projekt sind Pflichtquellen.
+Historische externe Projekte aus `RecentProjectPaths` bleiben dagegen optionale
+Quellen: vorhandene Ordner werden weiter gesichert; ein wirklich fehlender Ordner
+erzeugt nach erfolgreichem Lauf eine sichtbare Warnung und sein bisheriger
+Spiegelstand bleibt erhalten. Ein vorhandener, aber unlesbarer Ordner bleibt ein
+harter Sicherungsfehler.
 
 `StoredImportFileService` plant neue Importkopien fuer beide Projektdatei-Strukturen
 unter `<Projekt>\Imports\<Art>`. Im manuellen Import schreibt er zunaechst ueber die

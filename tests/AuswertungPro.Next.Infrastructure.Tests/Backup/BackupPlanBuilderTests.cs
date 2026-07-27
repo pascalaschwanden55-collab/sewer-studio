@@ -14,6 +14,7 @@ public class BackupPlanBuilderTests
     private static FullBackupSources TestSources(
         string? repoRoot = @"X:\Repo",
         IReadOnlyList<string>? projectRoots = null,
+        IReadOnlyList<string>? optionalProjectRoots = null,
         bool includeProjectVideos = false) => new(
         RepoRoot: repoRoot,
         KnowledgeRoot: @"X:\Brain",
@@ -24,7 +25,8 @@ public class BackupPlanBuilderTests
         AppVersion: "4.4",
         EnvironmentVariables: new Dictionary<string, string>(),
         ProjectRoots: projectRoots,
-        IncludeProjectVideos: includeProjectVideos);
+        IncludeProjectVideos: includeProjectVideos,
+        OptionalProjectRoots: optionalProjectRoots);
 
     [Fact]
     public void Build_LiefertSechsKomponenten()
@@ -141,5 +143,26 @@ public class BackupPlanBuilderTests
                 includeProjectVideos: true))
             .Single(k => k.Name == "Projekte").Sources.Single();
         Assert.Null(withVideos.IsFileExcluded);
+    }
+
+    [Fact]
+    public void Build_Projekte_Pflichtwurzel_deckt_Unterordner_ab_und_alter_externer_Pfad_bleibt_optional()
+    {
+        var plan = BackupPlanBuilder.Build(TestSources(
+            projectRoots: [@"X:\Projekte"],
+            optionalProjectRoots:
+            [
+                @"X:\Projekte\AltesProjekt",
+                @"Y:\NichtMehrVorhanden"
+            ]));
+
+        var projects = plan.Single(k => k.Name == "Projekte");
+        Assert.Equal(2, projects.Sources.Count);
+        var required = Assert.Single(projects.Sources, source => source.SourceRoot == @"X:\Projekte");
+        Assert.True(required.Required);
+        Assert.False(required.WarnIfMissing);
+        var optional = Assert.Single(projects.Sources, source => source.SourceRoot == @"Y:\NichtMehrVorhanden");
+        Assert.False(optional.Required);
+        Assert.True(optional.WarnIfMissing);
     }
 }

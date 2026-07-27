@@ -42,8 +42,10 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
         _appVersion = appVersion ?? AppIdentity.Version;
     }
 
-    public FullBackupSources Resolve(AppSettings? settings = null) =>
-        new(
+    public FullBackupSources Resolve(AppSettings? settings = null)
+    {
+        var projectRoots = BuildProjectRoots(settings);
+        return new FullBackupSources(
             RepoRoot: _repositoryRootLocator.Locate(_baseDirectory),
             KnowledgeRoot: _getKnowledgeRoot(),
             LocalSewerStudioDir: _localSewerStudioDir,
@@ -56,28 +58,43 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
             DesktopDir: _getFolderPath(Environment.SpecialFolder.DesktopDirectory),
             AppVersion: _appVersion,
             EnvironmentVariables: BuildEnvironmentSnapshot(),
-            ProjectRoots: BuildProjectRoots(settings),
-            IncludeProjectVideos: settings?.FullBackupIncludeProjectVideos ?? false);
+            ProjectRoots: projectRoots.Required,
+            IncludeProjectVideos: settings?.FullBackupIncludeProjectVideos ?? false,
+            OptionalProjectRoots: projectRoots.Optional);
+    }
 
-    private static IReadOnlyList<string> BuildProjectRoots(AppSettings? settings)
+    private static ProjectRootSelection BuildProjectRoots(AppSettings? settings)
     {
         if (settings is null)
-            return Array.Empty<string>();
+            return new ProjectRootSelection([], []);
 
-        var roots = new List<string>();
+        var required = new List<string>();
         if (!string.IsNullOrWhiteSpace(settings.ProjectsRootDirectory))
-            roots.Add(settings.ProjectsRootDirectory);
+            AddDistinct(required, settings.ProjectsRootDirectory);
 
-        foreach (var projectPath in settings.RecentProjectPaths.Prepend(settings.LastProjectPath))
+        var lastProjectRoot = ProjectFileLocator.ProjectRootFromFile(settings.LastProjectPath);
+        if (!string.IsNullOrWhiteSpace(lastProjectRoot))
+            AddDistinct(required, lastProjectRoot);
+
+        var optional = new List<string>();
+        foreach (var projectPath in settings.RecentProjectPaths)
         {
             if (string.IsNullOrWhiteSpace(projectPath))
                 continue;
             var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectPath);
-            if (!string.IsNullOrWhiteSpace(projectRoot))
-                roots.Add(projectRoot);
+            if (string.IsNullOrWhiteSpace(projectRoot)
+                || required.Contains(projectRoot, StringComparer.OrdinalIgnoreCase))
+                continue;
+            AddDistinct(optional, projectRoot);
         }
 
-        return roots;
+        return new ProjectRootSelection(required, optional);
+    }
+
+    private static void AddDistinct(List<string> roots, string root)
+    {
+        if (!roots.Contains(root, StringComparer.OrdinalIgnoreCase))
+            roots.Add(root);
     }
 
     private IReadOnlyDictionary<string, string> BuildEnvironmentSnapshot()
@@ -98,6 +115,10 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
 
         return result;
     }
+
+    private sealed record ProjectRootSelection(
+        IReadOnlyList<string> Required,
+        IReadOnlyList<string> Optional);
 }
 
 /// <summary>Kompatibilitaetsfassade fuer bestehende Aufrufer.</summary>

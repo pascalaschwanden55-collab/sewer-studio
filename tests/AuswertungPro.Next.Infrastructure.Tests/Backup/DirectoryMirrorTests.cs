@@ -109,6 +109,35 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task MirrorSourceAsync_Fehlendes_gemerktes_Projekt_warnt_und_behaelt_Altstand()
+    {
+        var source = Path.Combine(_root, "altes_projekt");
+        var backupRoot = Path.Combine(_root, "backup-gemerktes-projekt");
+        var mirrored = Path.Combine(backupRoot, "Projekte", "02_altes_projekt", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(mirrored)!);
+        File.WriteAllText(mirrored, "bestehend");
+        var stats = new DirectoryMirror.MirrorStats();
+        var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await new DirectoryMirror(null).MirrorSourceAsync(
+            new BackupSource(
+                source,
+                Path.Combine("Projekte", "02_altes_projekt"),
+                Required: false,
+                WarnIfMissing: true),
+            backupRoot,
+            expected,
+            stats);
+
+        Assert.Empty(stats.Errors);
+        var warning = Assert.Single(stats.Warnings);
+        Assert.Contains(source, warning);
+        Assert.Contains("bisheriger Sicherungsstand bleibt erhalten", warning);
+        Assert.Contains(Path.Combine("Projekte", "02_altes_projekt", "projekt.json"), expected);
+        Assert.True(File.Exists(mirrored));
+    }
+
+    [Fact]
     public async Task MirrorSourceAsync_Groessenaenderung_KopiertNeu()
     {
         var source = Path.Combine(_root, "source");

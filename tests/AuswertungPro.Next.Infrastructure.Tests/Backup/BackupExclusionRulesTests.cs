@@ -53,6 +53,7 @@ public class BackupExclusionRulesTests
     [InlineData("__pycache__")]
     [InlineData(".pytest_cache")]
     [InlineData(".pytest_tmp")]
+    [InlineData(".tmp")]
     [InlineData("BIN")] // case-insensitive
     public void Programm_BuildArtefakte_Ausgeschlossen(string name)
         => Assert.True(BackupExclusionRules.IsProgramDirExcluded(name));

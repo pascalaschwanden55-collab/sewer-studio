@@ -14,7 +14,8 @@ public sealed record BackupSource(
     string TargetRelativeRoot,
     Func<string, bool>? IsDirExcluded = null,
     Func<string, bool>? IsFileExcluded = null,
-    bool Required = true);
+    bool Required = true,
+    bool WarnIfMissing = false);
 
 /// <summary>Eine einzelne Datei: Quellpfad → Ziel-Relativpfad (z. B. Desktop-Skripte).</summary>
 public sealed record BackupSingleFile(string SourcePath, string TargetRelativePath);
@@ -63,7 +64,10 @@ public static class BackupPlanBuilder
                 sources.IncludeProjectVideos
                     ? "Projektdateien, Fotos, Restore-Points und Videos (Videos enthalten: ja)"
                     : "Projektdateien, Fotos und Restore-Points (Videos enthalten: nein)",
-                BuildProjectSources(sources.ProjectRoots, sources.IncludeProjectVideos)),
+                BuildProjectSources(
+                    sources.ProjectRoots,
+                    sources.OptionalProjectRoots,
+                    sources.IncludeProjectVideos)),
 
             new(
                 "Einstellungen",
@@ -107,13 +111,66 @@ public static class BackupPlanBuilder
     }
 
     private static IReadOnlyList<BackupSource> BuildProjectSources(
-        IReadOnlyList<string>? roots,
+        IReadOnlyList<string>? requiredRoots,
+        IReadOnlyList<string>? optionalRoots,
         bool includeVideos)
     {
-        if (roots is null || roots.Count == 0)
+        if ((requiredRoots is null || requiredRoots.Count == 0)
+            && (optionalRoots is null || optionalRoots.Count == 0))
             return Array.Empty<BackupSource>();
 
-        var normalized = new List<string>();
+        var normalized = new List<ProjectRootCandidate>();
+        AddProjectRoots(normalized, requiredRoots, required: true);
+        AddProjectRoots(normalized, optionalRoots, required: false);
+
+        var selected = new List<ProjectRootCandidate>();
+        foreach (var candidate in normalized
+                     .OrderBy(item => item.Path.Length)
+                     .ThenByDescending(item => item.Required)
+                     .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase))
+        {
+            var parentIndex = selected.FindIndex(parent =>
+                IsSameOrChildPath(parent.Path, candidate.Path));
+            if (parentIndex < 0)
+            {
+                selected.Add(candidate);
+                continue;
+            }
+
+            if (candidate.Required && !selected[parentIndex].Required)
+            {
+                selected[parentIndex] = selected[parentIndex] with { Required = true };
+            }
+        }
+
+        var result = new List<BackupSource>();
+        for (var index = 0; index < selected.Count; index++)
+        {
+            var candidate = selected[index];
+            var leaf = SanitizeTargetSegment(Path.GetFileName(candidate.Path));
+            if (string.IsNullOrWhiteSpace(leaf))
+                leaf = "Projektwurzel";
+            var target = Path.Combine("Projekte", $"{index + 1:00}_{leaf}");
+            result.Add(new BackupSource(
+                candidate.Path,
+                target,
+                IsDirExcluded: null,
+                IsFileExcluded: includeVideos ? null : BackupExclusionRules.IsProjectVideoFileExcluded,
+                Required: candidate.Required,
+                WarnIfMissing: !candidate.Required));
+        }
+
+        return result;
+    }
+
+    private static void AddProjectRoots(
+        List<ProjectRootCandidate> result,
+        IReadOnlyList<string>? roots,
+        bool required)
+    {
+        if (roots is null)
+            return;
+
         foreach (var root in roots)
         {
             if (string.IsNullOrWhiteSpace(root))
@@ -121,39 +178,24 @@ public static class BackupPlanBuilder
 
             try
             {
-                var full = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                if (!normalized.Contains(full, StringComparer.OrdinalIgnoreCase))
-                    normalized.Add(full);
+                var full = Path.GetFullPath(root)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var existingIndex = result.FindIndex(item =>
+                    string.Equals(item.Path, full, StringComparison.OrdinalIgnoreCase));
+                if (existingIndex < 0)
+                {
+                    result.Add(new ProjectRootCandidate(full, required));
+                }
+                else if (required && !result[existingIndex].Required)
+                {
+                    result[existingIndex] = result[existingIndex] with { Required = true };
+                }
             }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
             {
                 // Ungueltige Settings-Pfade nicht in den Sicherungsplan aufnehmen.
             }
         }
-
-        var selected = new List<string>();
-        foreach (var root in normalized.OrderBy(p => p.Length).ThenBy(p => p, StringComparer.OrdinalIgnoreCase))
-        {
-            if (selected.Any(parent => IsSameOrChildPath(parent, root)))
-                continue;
-            selected.Add(root);
-        }
-
-        var result = new List<BackupSource>();
-        for (var index = 0; index < selected.Count; index++)
-        {
-            var leaf = SanitizeTargetSegment(Path.GetFileName(selected[index]));
-            if (string.IsNullOrWhiteSpace(leaf))
-                leaf = "Projektwurzel";
-            var target = Path.Combine("Projekte", $"{index + 1:00}_{leaf}");
-            result.Add(new BackupSource(
-                selected[index],
-                target,
-                IsDirExcluded: null,
-                IsFileExcluded: includeVideos ? null : BackupExclusionRules.IsProjectVideoFileExcluded));
-        }
-
-        return result;
     }
 
     private static bool IsSameOrChildPath(string parent, string candidate)
@@ -181,4 +223,6 @@ public static class BackupPlanBuilder
         }
         return files;
     }
+
+    private sealed record ProjectRootCandidate(string Path, bool Required);
 }
