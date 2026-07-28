@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Test-Fixture fuer Phase 1 (Geometrie-Fundament).
+  Klein und kontrolliert: gemischtes Bild mit/ohne Geometrie.
+
+  Enthaelt:
+    - Schacht S1: Abwasserknoten MIT Lage (LV95: 2687970.0, 1168928.0)
+    - Schacht S2: Abwasserknoten OHNE Lage  -> GeometrySource=None
+    - Haltung H1: Verlauf mit 2 Punkten (LV95)
+    - Haltung H2: Verlauf mit 3 Punkten (LV95)
+    - Haltung H3: KEIN Verlauf            -> GeometrySource=None
+
+  Koordinaten sind realistische Goeschenen-LV95-Werte
+  (Ost ~ 2'687'9xx / Nord ~ 1'168'9xx).
+-->
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+    <HEADERSECTION SENDER="phase1-fixture" VERSION="2.3">
+        <MODELS>
+            <MODEL NAME="SIA405_ABWASSER_2020_LV95" URI="http://www.sia.ch/405" VERSION="26.06.2021" />
+        </MODELS>
+    </HEADERSECTION>
+    <DATASECTION>
+        <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="bid_fixture_001">
+
+            <!-- Schacht S1: hat Abwasserknoten mit Lage -->
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="ns_S1">
+                <Bezeichnung>S1</Bezeichnung>
+                <Funktion>Kontrollschacht</Funktion>
+                <Material>Beton</Material>
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="ak_S1">
+                <Bezeichnung>S1</Bezeichnung>
+                <Lage>
+                    <COORD>
+                        <C1>2687970.000</C1><C2>1168928.000</C2>
+                    </COORD>
+                </Lage>
+                <AbwasserbauwerkRef REF="ns_S1" />
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+
+            <!-- Schacht S2: Abwasserknoten OHNE Lage -->
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="ns_S2">
+                <Bezeichnung>S2</Bezeichnung>
+                <Funktion>Kontrollschacht</Funktion>
+                <Material>Beton</Material>
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="ak_S2">
+                <Bezeichnung>S2</Bezeichnung>
+                <AbwasserbauwerkRef REF="ns_S2" />
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+
+            <!-- Haltung H1: 2-Punkt-Verlauf -->
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="ha_H1">
+                <Bezeichnung>H1</Bezeichnung>
+                <LaengeEffektiv>12.50</LaengeEffektiv>
+                <Lichte_Hoehe>200</Lichte_Hoehe>
+                <Material>Beton_Normalbeton</Material>
+                <Verlauf>
+                    <COORD>
+                        <C1>2687970.000</C1><C2>1168928.000</C2>
+                        <C1>2687980.000</C1><C2>1168935.000</C2>
+                    </COORD>
+                </Verlauf>
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+
+            <!-- Haltung H2: 3-Punkt-Polylinie -->
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="ha_H2">
+                <Bezeichnung>H2</Bezeichnung>
+                <LaengeEffektiv>18.30</LaengeEffektiv>
+                <Lichte_Hoehe>250</Lichte_Hoehe>
+                <Material>Kunststoff_Polyvinilchlorid</Material>
+                <Verlauf>
+                    <COORD>
+                        <C1>2687980.000</C1><C2>1168935.000</C2>
+                        <C1>2687985.500</C1><C2>1168942.250</C2>
+                        <C1>2687990.000</C1><C2>1168950.000</C2>
+                    </COORD>
+                </Verlauf>
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+
+            <!-- Haltung H3: OHNE Verlauf -->
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="ha_H3">
+                <Bezeichnung>H3</Bezeichnung>
+                <LaengeEffektiv>5.20</LaengeEffektiv>
+                <Lichte_Hoehe>150</Lichte_Hoehe>
+                <Material>unbekannt</Material>
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+
+        </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    </DATASECTION>
+</TRANSFER>
