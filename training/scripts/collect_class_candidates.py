@@ -205,7 +205,8 @@ def holding_label(eintrag: dict) -> str:
 
 
 def is_line_inspection(haltung: str, eintrag: dict) -> bool:
-    text = f"{haltung} {eintrag.get('bemerkung', '')} {eintrag.get('quell_datei', '')}"
+    text = (f"{haltung} {eintrag.get('bemerkung', '')} {eintrag.get('quell_datei', '')} "
+            f"{eintrag.get('datei_name', '')}")
     return bool(re.search(r"(^|[/\\_\-\s])L[_\-]", text)) or "DN160" in text.upper().replace(" ", "")
 
 

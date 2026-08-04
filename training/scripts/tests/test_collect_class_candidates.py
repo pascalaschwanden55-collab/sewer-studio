@@ -119,6 +119,15 @@ class CollectClassCandidatesTests(unittest.TestCase):
         self.assertEqual(befunde, [])
         self.assertEqual(dict(totals), {})
 
+    def test_leitungsinspektion_ueber_bilddateiname_erkannt(self):
+        # L_-Muster steht oft nur im Fotodateinamen, nicht in Haltung/Quelle.
+        eintrag = {"bemerkung": "", "quell_datei": "projekt.xtf",
+                   "datei_name": "L_33394-975.05_730.jpg"}
+        self.assertTrue(MODULE.is_line_inspection("33394-975.05", eintrag))
+        eintrag_ok = {"bemerkung": "", "quell_datei": "projekt.xtf",
+                      "datei_name": "img_0001.jpg"}
+        self.assertFalse(MODULE.is_line_inspection("716915-690666", eintrag_ok))
+
 
 if __name__ == "__main__":
     unittest.main()
