@@ -127,7 +127,6 @@ yolo_cls_export_v2/
 yolo_cls_runs/
 
 # Tools
-tools/PdfImageAnalyzer/
 tools/**/output/
 tools/ProtocolPipelineDiagnostics/output-smoke/
 tools/SewerStudioTrainingBatch/*.json

@@ -90,3 +90,29 @@ Bestand kaum oder gar nicht. Zusaetzlich sind getrennte Beispiele fuer
 Sobald dieses Ergebnis die weitere Modellentwicklung beeinflusst, ist dieser
 Bestand nur noch ein Diagnose-/Entwicklungsbestand. Vor einer spaeteren
 Aktivierung ist deshalb ein neuer, zuvor unberuehrter Release-Holdout notwendig.
+
+## Nachtrag 2026-08-03 (spaeter): Holdout-Kontamination aufgedeckt
+
+Der schreibfreie Prueflauf `training/scripts/repair_pdf_gold_holding_ids.py`
+(Bericht: `docs/quality/PRUEFBERICHT-PDF-GOLD-HALTUNGS-IDS-2026-08-03.json`,
+SHA-256 `239ebd9b50f1ddec089a4fa74dc592288b854d5cf6191ec2a0b2dac31dfd08a7`)
+hat 239 PDF-Goldsamples mit falscher Haltungs-ID gefunden. Dreizehn davon
+zeigen byte- bzw. ordnerbelegt auf zwei Haltungen DIESES Holdouts:
+`07.148371-10300` (4 Samples) und `60604-60603` (9 Samples).
+
+Acht dieser Samples stehen im Trainingsregister DETECT_ALL, mit dem der
+Kandidat `detect_gold_9eb020e30322` trainiert wurde:
+
+- aus `07.148371-10300` (Gruppe 1, Bildbeleg): `wb_4eb82c1a51f7`,
+  `wb_6bbc15171015`, `wb_e343ca2a7f4e`
+- aus `60604-60603` (Gruppe 4, farbnormalisiert): `wb_33e0e2b3d56f`,
+  `wb_5f7cbd92367e`, `wb_070730d4a8eb`, `wb_647eefeb9840`, `wb_6ab38a8e51a4`
+
+Konsequenz: Der Holdout ist fuer diesen Kandidaten nicht unabhaengig; die
+gemessenen Werte (Recall 10,3 %, F1 16,2 %) sind nach OBEN verzerrt. Am Urteil
+`not_release_qualified` aendert das nichts — es verschaerft es hoechstens.
+Der oben verlinkte Diagnosebericht bleibt als Messartefact dieses Stands
+bytegenau bestehen; diese Grenze der Interpretation ist mit diesem Nachtrag
+markiert. Vor dem naechsten Training sind die acht Samples aus dem Register
+zu entfernen, jede Haltungs-Reparatur braucht einen Nachlauf der
+Eval-Schutzpruefung, und ein frischer Holdout bleibt ohnehin Pflicht.
