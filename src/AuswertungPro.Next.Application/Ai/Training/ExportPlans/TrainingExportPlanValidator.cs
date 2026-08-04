@@ -37,10 +37,20 @@ public static class TrainingExportPlanValidator
         var validationHoldings = new HashSet<string>(plan.ValidationHoldingKeys, StringComparer.OrdinalIgnoreCase);
         if (trainHoldings.Overlaps(validationHoldings))
             throw new TrainingExportPlanException("Eine Haltung liegt gleichzeitig in Train und Dev-Val.");
+        var trainPhysicalHoldings = trainHoldings
+            .Select(TrainingExportHoldingIdentity.PhysicalKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var validationPhysicalHoldings = validationHoldings
+            .Select(TrainingExportHoldingIdentity.PhysicalKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (trainPhysicalHoldings.Overlaps(validationPhysicalHoldings))
+            throw new TrainingExportPlanException("Eine Haltung oder ihre Gegenrichtung liegt gleichzeitig in Train und Dev-Val.");
 
         var imageHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var imageTargetsByPhysicalHolding =
+            new Dictionary<string, TrainingExportTarget>(StringComparer.OrdinalIgnoreCase);
         foreach (var image in plan.Images)
         {
             RequireSha256(image.ImageSha256, "Bild-Hash");
@@ -58,21 +68,38 @@ public static class TrainingExportPlanValidator
             var expectedHoldings = image.Target == TrainingExportTarget.Train
                 ? trainHoldings
                 : validationHoldings;
-            if (image.IsNegative)
+            var isLegacyNegativePool = image.IsNegative
+                                       && string.Equals(
+                                           image.HoldingKey,
+                                           TrainingExportNegativePool.HoldingKey,
+                                           StringComparison.Ordinal);
+            if (!isLegacyNegativePool)
             {
-                // Negativ-/Hintergrundbilder: fester Pool-Schluessel statt realer Haltung,
-                // bewusst LEERE Labelliste (YOLO-Negativ). Split- und Label-Pruefung der
-                // Positivbilder gilt fuer sie nicht.
-                if (!string.Equals(
-                        image.HoldingKey,
-                        TrainingExportNegativePool.HoldingKey,
-                        StringComparison.Ordinal))
+                var physicalKey = TrainingExportHoldingIdentity.PhysicalKey(image.HoldingKey);
+                if (imageTargetsByPhysicalHolding.TryGetValue(physicalKey, out var previousTarget)
+                    && previousTarget != image.Target)
                 {
                     throw new TrainingExportPlanException(
-                        $"Negativbild {image.ImageSha256} traegt nicht den Negativ-Pool-Schluessel.");
+                        $"Haltung '{image.HoldingKey}' liegt zugleich in Train und Dev-Val.");
                 }
+                imageTargetsByPhysicalHolding.TryAdd(physicalKey, image.Target);
+            }
+            if (image.IsNegative)
+            {
                 if (image.Labels.Count != 0)
                     throw new TrainingExportPlanException($"Negativbild {image.ImageSha256} darf keine Labels tragen.");
+                if (isLegacyNegativePool)
+                    continue;
+                if (!TrainingExportHoldingIdentity.IsCompleteNumericPair(image.HoldingKey))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Negativbild-Haltung '{image.HoldingKey}' ist kein vollstaendiges numerisches Schachtpaar.");
+                }
+                if (!expectedHoldings.Contains(image.HoldingKey))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Split von Negativbild {image.ImageSha256} passt nicht zur Haltung.");
+                }
                 continue;
             }
             if (!expectedHoldings.Contains(image.HoldingKey))

@@ -240,5 +240,6 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
     }
 
     private static bool CanPersist(CodingEvent codingEvent)
-        => !string.IsNullOrWhiteSpace(codingEvent.Entry.Code);
+        => codingEvent.Entry.Training?.SkipAutomaticPersistence != true
+           && !string.IsNullOrWhiteSpace(codingEvent.Entry.Code);
 }

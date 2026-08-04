@@ -93,6 +93,18 @@ public sealed class TrainingSample
     /// <summary>Herkunft des Samples, siehe SourceTypeNames.</summary>
     public string? SourceType { get; set; }
 
+    /// <summary>
+    /// Urspruenglicher Code einer externen, bereits codierten Referenz.
+    /// Der persoenlich bestaetigte finale <see cref="Code"/> darf davon abweichen.
+    /// </summary>
+    public string? SourceReferenceCode { get; set; }
+
+    /// <summary>
+    /// Urspruenglicher Befundtext einer externen Referenz. Er bleibt neben einer
+    /// persoenlichen Korrektur erhalten und ist kein automatischer KI-Vorschlag.
+    /// </summary>
+    public string? SourceReferenceDescription { get; set; }
+
     /// <summary>Strukturierte VSA-Zusatzdaten aus Import oder Codiermodus.</summary>
     public ProtocolEntryCodeMeta? CodeMeta { get; set; }
 

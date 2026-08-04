@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ── YOLO ────────────────────────────────────────────────────────────────────
@@ -10,6 +10,31 @@ from pydantic import BaseModel, Field
 class YoloRequest(BaseModel):
     image_base64: str
     confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+
+
+class BccTestYoloRequest(BaseModel):
+    """Getrennter BCC-Testvertrag ohne frei waehlbaren Modellpfad."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_base64: str
+    confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    candidate_id: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+    )
+    candidate_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{64}$",
+    )
+
+    @model_validator(mode="after")
+    def validate_candidate_pin(self) -> "BccTestYoloRequest":
+        if (self.candidate_id is None) != (self.candidate_sha256 is None):
+            raise ValueError(
+                "candidate_id und candidate_sha256 muessen gemeinsam angegeben werden."
+            )
+        return self
 
 
 class YoloDetection(BaseModel):
@@ -52,6 +77,24 @@ class BccTestYoloResponse(BaseModel):
     candidate_sha256: str = ""
     model_name: str = ""
     device: str = ""
+    frame_usable: bool = True
+    quality_reason: str | None = None
+
+
+class BccTestCandidateInfo(BaseModel):
+    """Pfadfreie Metadaten eines manifest- und hashgeprueften Testkandidaten."""
+
+    candidate_id: str
+    candidate_sha256: str
+    map50: float
+    epochs_completed: int
+    created_utc: str
+
+
+class BccTestCandidatesResponse(BaseModel):
+    available: bool = False
+    error: str | None = None
+    candidates: list[BccTestCandidateInfo] = Field(default_factory=list)
 
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────

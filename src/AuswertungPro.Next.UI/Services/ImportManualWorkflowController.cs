@@ -24,6 +24,7 @@ internal sealed class ImportManualWorkflowController
     private readonly IWinCanDbImportService _winCanImport;
     private readonly IIbakImportService _ibakImport;
     private readonly IKinsImportService _kinsImport;
+    private readonly ISchachtProImportService _schachtProImport;
     private readonly IStoredImportFileService _storedImportFiles;
     private readonly IImportFileStagingService _fileStaging;
     private readonly IImportMediaDistributionService _mediaDistribution;
@@ -36,6 +37,7 @@ internal sealed class ImportManualWorkflowController
         IWinCanDbImportService winCanImport,
         IIbakImportService ibakImport,
         IKinsImportService kinsImport,
+        ISchachtProImportService schachtProImport,
         IStoredImportFileService storedImportFiles,
         IImportFileStagingService fileStaging,
         IImportMediaDistributionService mediaDistribution,
@@ -47,6 +49,7 @@ internal sealed class ImportManualWorkflowController
         _winCanImport = winCanImport ?? throw new ArgumentNullException(nameof(winCanImport));
         _ibakImport = ibakImport ?? throw new ArgumentNullException(nameof(ibakImport));
         _kinsImport = kinsImport ?? throw new ArgumentNullException(nameof(kinsImport));
+        _schachtProImport = schachtProImport ?? throw new ArgumentNullException(nameof(schachtProImport));
         _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
         _fileStaging = fileStaging ?? throw new ArgumentNullException(nameof(fileStaging));
         _mediaDistribution = mediaDistribution ?? throw new ArgumentNullException(nameof(mediaDistribution));
@@ -119,6 +122,78 @@ internal sealed class ImportManualWorkflowController
             "KINS-Projektordner waehlen",
             _kinsImport.ImportKinsExport,
             context);
+
+    internal Task ImportSchachtProAsync(ImportManualWorkflowContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var paths = _dialogs.OpenFiles(
+            "SchachtPro-Archiv importieren",
+            "SchachtPro-Archiv (*.spro)|*.spro|Alle Dateien|*.*");
+        if (paths.Length == 0)
+            return Task.CompletedTask;
+
+        return RunAsync(
+            "SchachtPro",
+            paths,
+            (source, project, runContext) => ImportSchachtProBatch(source, project, runContext),
+            (source, project, runContext) => PostImportFilesAsync(
+                source,
+                project,
+                runContext,
+                context,
+                "SchachtPro",
+                "SchachtPro-Archive"),
+            context);
+    }
+
+    private Result<ImportStats> ImportSchachtProBatch(
+        string[] paths,
+        Project project,
+        ImportRunContext runContext)
+    {
+        var totalFound = 0;
+        var totalCreated = 0;
+        var totalUpdated = 0;
+        var totalUncertain = 0;
+        var totalErrors = 0;
+        var messages = new List<string>();
+
+        for (var index = 0; index < paths.Length; index++)
+        {
+            runContext.CancellationToken.ThrowIfCancellationRequested();
+            var path = paths[index];
+            runContext.Progress?.Report(new ImportProgress(
+                "SchachtPro-Archiv lesen",
+                index + 1,
+                paths.Length,
+                $"Archiv {index + 1}/{paths.Length}: {Path.GetFileName(path)}",
+                Path.GetFileName(path)));
+
+            var result = _schachtProImport.ImportSchachtProArchive(path, project, runContext);
+            if (!result.Ok || result.Value is null)
+            {
+                totalErrors++;
+                messages.Add($"Error: {Path.GetFileName(path)}: {result.ErrorMessage}");
+                continue;
+            }
+
+            totalFound += result.Value.Found;
+            totalCreated += result.Value.Created;
+            totalUpdated += result.Value.Updated;
+            totalUncertain += result.Value.Uncertain;
+            totalErrors += result.Value.Errors;
+            foreach (var message in result.Value.Messages)
+                messages.Add($"{Path.GetFileName(path)}: {message}");
+        }
+
+        return Result<ImportStats>.Success(new ImportStats(
+            totalFound,
+            totalCreated,
+            totalUpdated,
+            totalErrors,
+            totalUncertain,
+            messages));
+    }
 
     private Task ImportFolderAsync(
         string label,

@@ -61,6 +61,7 @@ using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 
 namespace AuswertungPro.Next.UI;
 
@@ -145,6 +146,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IIbakFdbConnectionOptions)] = services.IbakConnections,
             [typeof(IIbakImportService)] = services.IbakImport,
             [typeof(IKinsImportService)] = services.KinsImport,
+            [typeof(ISchachtProImportService)] = services.SchachtProImport,
             [typeof(IKinsDvdTextEnricher)] = services.KinsDvdTextEnrichment,
             [typeof(IKinsDbfWhitelistEnricher)] = services.KinsDbfWhitelistEnrichment,
             [typeof(IKinsGesamtprotokollLocator)] = services.KinsGesamtprotokolle,
@@ -183,6 +185,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ITrainingSampleStore)] = services.TrainingSamples,
             [typeof(IPersonalGoldAlbumService)] = services.PersonalGoldAlbum,
             [typeof(IPersonalGoldInboxService)] = services.PersonalGoldInbox,
+            [typeof(ITrainingPdfReviewImportService)] = services.TrainingPdfReviews,
             [typeof(ITrainingDataInventoryService)] = services.TrainingDataInventory,
             [typeof(ITrainingExportRegistryStore)] = services.TrainingExportRegistry,
             [typeof(ITrainingExportPlanInputBuilder)] = services.TrainingExportPlanInput,

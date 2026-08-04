@@ -85,6 +85,19 @@ public sealed class VsaCodePathResolver
                 if (!normalized.StartsWith(candidateCodeKey, System.StringComparison.Ordinal))
                     continue;
 
+                if (codeDef.FinalCode is not null
+                    && string.Equals(
+                        normalized,
+                        NormalizeCode(codeDef.FinalCode),
+                        System.StringComparison.Ordinal))
+                {
+                    groupKey = grpKey;
+                    codeKey = candidateCodeKey;
+                    level = 1;
+                    finalCode = codeDef.FinalCode;
+                    return true;
+                }
+
                 var rest = normalized[candidateCodeKey.Length..];
 
                 // Endcode ohne Char1/Char2.

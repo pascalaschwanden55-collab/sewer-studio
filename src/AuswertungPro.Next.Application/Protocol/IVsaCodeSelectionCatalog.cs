@@ -5,6 +5,10 @@ namespace AuswertungPro.Next.Application.Protocol;
 public interface IVsaCodeSelectionCatalog
 {
     IReadOnlyDictionary<string, GroupDef> Groups { get; }
+    string? LookupExactLabel(string code) => null;
+    string? LookupNavigationLabel(string codePrefix) => null;
+    VsaCodeDef? LookupExactCodeDef(string code) => null;
+    bool IsSelectableCode(string code) => false;
     (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? char1Key);
     ClockRule GetClockRule(string codeKey);
     IReadOnlyDictionary<string, string>? GetChar2Options(VsaCodeDef codeDef, string char1Key);
@@ -28,6 +32,8 @@ public sealed class EmptyVsaCodeSelectionCatalog : IVsaCodeSelectionCatalog
     public ClockRule GetClockRule(string codeKey)
         => new() { Mode = "none" };
 
+    public bool IsSelectableCode(string code) => false;
+
     public IReadOnlyDictionary<string, string>? GetChar2Options(VsaCodeDef codeDef, string char1Key)
         => null;
 
@@ -44,6 +50,8 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
     };
 
     private readonly Dictionary<string, GroupDef> _groups = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _labels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, VsaCodeDef> _exactCodeDefs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, QuantRule> _quantRules = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ClockRule> _clockRules = new(StringComparer.OrdinalIgnoreCase);
 
@@ -54,6 +62,50 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
     }
 
     public IReadOnlyDictionary<string, GroupDef> Groups => _groups;
+
+    public string? LookupExactLabel(string code)
+        => _labels.TryGetValue(NormalizeCode(code), out var label)
+            ? label
+            : null;
+
+    public string? LookupNavigationLabel(string codePrefix)
+    {
+        var prefix = NormalizeCode(codePrefix);
+        if (prefix.Length == 0)
+            return null;
+
+        var descendantLabels = _exactCodeDefs
+            .Where(pair =>
+                pair.Key.Length > prefix.Length
+                && pair.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(pair => pair.Value.Label)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (descendantLabels.Count == 0)
+            return null;
+
+        var commonLabel = FindCommonWordPrefix(descendantLabels);
+        if (string.IsNullOrWhiteSpace(commonLabel))
+            return null;
+
+        var parentCode = prefix.Length > 3 ? prefix[..^1] : prefix;
+        return string.Equals(
+            commonLabel,
+            LookupExactLabel(parentCode),
+            StringComparison.OrdinalIgnoreCase)
+            ? null
+            : commonLabel;
+    }
+
+    public VsaCodeDef? LookupExactCodeDef(string code)
+        => _exactCodeDefs.TryGetValue(NormalizeCode(code), out var codeDef)
+            ? codeDef
+            : null;
+
+    public bool IsSelectableCode(string code)
+        => _exactCodeDefs.ContainsKey(NormalizeCode(code));
 
     public (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? char1Key)
     {
@@ -113,11 +165,17 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
             if (code.Length < 2)
                 continue;
 
+            if (IsAuthoritativeSelectable(def) && !string.IsNullOrWhiteSpace(def.Title))
+            {
+                _labels[code] = def.Title.Trim();
+                _exactCodeDefs[code] = ToExactCodeDef(code, def);
+            }
+
             ApplyQuantRule(code, def);
             ApplyClockRule(code, def);
         }
 
-        foreach (var def in allCodes.Where(c => c.IsSelectable && !c.IsObservedExtension))
+        foreach (var def in allCodes.Where(IsAuthoritativeSelectable))
         {
             var code = NormalizeCode(def.Code);
             if (code.Length < 2)
@@ -219,8 +277,92 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
         {
             Pflicht = parameter.Required ? "P" : "O",
             Label = string.IsNullOrWhiteSpace(parameter.Name) ? parameter.DataKey : parameter.Name,
-            Einheit = parameter.Unit
+            Einheit = NormalizeUnit(parameter.Unit)
         };
+
+    private static VsaCodeDef ToExactCodeDef(string code, CodeDefinition def)
+        => new()
+        {
+            Label = def.Title.Trim(),
+            FinalCode = code,
+            Source = def.Source,
+            CanonicalCode = string.IsNullOrWhiteSpace(def.CanonicalCode)
+                ? code
+                : NormalizeCode(def.CanonicalCode),
+            StandardAnnotation = def.StandardAnnotation,
+            Warn = ResolveWarning(def)
+        };
+
+    private static bool IsAuthoritativeSelectable(CodeDefinition def)
+        => def.IsSelectable
+           && !def.IsObservedExtension
+           && IsAuthoritativeSource(def.Source);
+
+    private static bool IsAuthoritativeSource(string? source)
+        => string.Equals(source, VsaKekCatalogSources.Ili, StringComparison.OrdinalIgnoreCase)
+           || string.Equals(source, VsaKekCatalogSources.Icm, StringComparison.OrdinalIgnoreCase)
+           || string.Equals(source, VsaKekCatalogSources.Heading, StringComparison.OrdinalIgnoreCase);
+
+    private static string? FindCommonWordPrefix(IReadOnlyList<string> labels)
+    {
+        var words = labels
+            .Select(label => label.Split(
+                [' ', '\t', '\r', '\n'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .ToList();
+        var commonCount = words.Min(parts => parts.Length);
+
+        for (var index = 0; index < commonCount; index++)
+        {
+            var first = words[0][index];
+            if (words.Skip(1).Any(parts =>
+                    !string.Equals(first, parts[index], StringComparison.OrdinalIgnoreCase)))
+            {
+                commonCount = index;
+                break;
+            }
+        }
+
+        while (commonCount > 0 && IsTrailingConnector(words[0][commonCount - 1]))
+            commonCount--;
+
+        return commonCount == 0
+            ? null
+            : string.Join(' ', words[0].Take(commonCount));
+    }
+
+    private static bool IsTrailingConnector(string value)
+    {
+        var word = value.Trim().Trim(',', ':', ';', '-', '\u2013', '\u2014');
+        return word.Equals("nach", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("mit", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("und", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("oder", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("von", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("im", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("in", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("am", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("an", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("zu", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("zur", StringComparison.OrdinalIgnoreCase)
+               || word.Equals("zum", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeUnit(string? unit)
+    {
+        var value = unit?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return value.ToLowerInvariant() switch
+        {
+            "mm" or "millimeter" => "mm",
+            "%" or "prozent" or "percent" => "%",
+            "\u00b0" or "grad" or "degree" or "degrees" or "deg" => "\u00b0",
+            "st" or "stk" or "stk." or "stueck" or "st\u00fcck" => "Stk.",
+            _ => value
+        };
+    }
 
     private static string NormalizeCode(string? code)
         => (code ?? string.Empty).Trim().ToUpperInvariant();

@@ -30,9 +30,24 @@ internal static class PdfFontEncodingDecoder
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
+        var shift = DetectShift(text);
+        return shift > 0
+            ? ShiftAllChars(text, shift)
+            : text;
+    }
+
+    /// <summary>
+    /// Ermittelt den festen Unicode-Offset eines verschobenen PDF-Fonts.
+    /// Null bedeutet, dass kein ausreichend sicherer Shift erkannt wurde.
+    /// </summary>
+    internal static int DetectShift(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
         int existingMatches = CountWordMatches(text, KnownTextAnchorWords);
         if (existingMatches >= 3)
-            return text;
+            return 0;
 
         int bestShift = 0;
         int bestCount = existingMatches;
@@ -49,9 +64,9 @@ internal static class PdfFontEncodingDecoder
         }
 
         if (bestShift > 0 && bestCount >= 3)
-            return ShiftAllChars(text, bestShift);
+            return bestShift;
 
-        return text;
+        return 0;
     }
 
     /// <summary>

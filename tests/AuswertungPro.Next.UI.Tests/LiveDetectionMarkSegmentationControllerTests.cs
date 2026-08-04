@@ -48,10 +48,43 @@ public sealed class LiveDetectionMarkSegmentationControllerTests
         Assert.Equal(20, overlay.Q2Mm);
         Assert.Equal(3, overlay.FillPercent);
         Assert.Equal(3, overlay.ClockFrom);
+        Assert.NotNull(overlay.SamMask);
+        Assert.Equal("0,10,20,7970", overlay.SamMask!.MaskRle);
+        Assert.Equal(100, overlay.SamMask.ImageWidth);
+        Assert.Equal(80, overlay.SamMask.ImageHeight);
+        Assert.Equal(20, overlay.SamMask.MaskAreaPixels);
+        Assert.Equal(0.9, overlay.SamMask.Confidence);
     }
 
     [Fact]
-    public void ShowMask_preserves_bend_marker_decision()
+    public async Task TrySegmentAsync_removes_previous_mask_when_new_segmentation_fails()
+    {
+        var overlay = new OverlayGeometry
+        {
+            Points = [new NormalizedPoint(0.2, 0.3), new NormalizedPoint(0.6, 0.7)],
+            SamMask = new OverlaySamMask
+            {
+                MaskRle = "0,10,20,7970",
+                ImageWidth = 100,
+                ImageHeight = 80,
+                MaskAreaPixels = 20,
+                Confidence = 0.9
+            }
+        };
+        var controller = new LiveDetectionMarkSegmentationController(
+            Bindings(
+                hasBoxSegmentation: () => true,
+                segmentBoxAsync: (_, _, _, _) =>
+                    Task.FromResult<BoxSegmentationResult?>(null)));
+
+        var result = await controller.TrySegmentAsync(overlay, [1, 2, 3]);
+
+        Assert.Null(result);
+        Assert.Null(overlay.SamMask);
+    }
+
+    [Fact]
+    public void ShowMask_renders_exact_mask_for_bend_instead_of_oval()
     {
         var calls = new List<string>();
         var overlay = new OverlayGeometry
@@ -65,18 +98,19 @@ public sealed class LiveDetectionMarkSegmentationControllerTests
                     calls.Add("rect");
                     return new Rect(0, 0, 640, 480);
                 },
-                showBendMarker: (x, y, rect) =>
+                showBendMarker: (_, _, _) =>
+                    throw new InvalidOperationException("Kein Oval in der SAM-Vorschau erwartet."),
+                renderMasks: (response, quantifications, rect) =>
                 {
-                    Assert.Equal(0.4, x);
-                    Assert.Equal(0.5, y);
+                    Assert.Single(response.Masks);
+                    Assert.Single(quantifications);
                     Assert.Equal(480, rect.Height);
-                    calls.Add("bend");
-                },
-                renderMasks: (_, _, _) => throw new InvalidOperationException("Maske darf bei erkanntem Bogen nicht erscheinen.")));
+                    calls.Add("mask");
+                }));
 
         controller.ShowMask(Result(isBend: true, vanishX: 0.4, vanishY: 0.5), overlay);
 
-        Assert.Equal(["rect", "bend"], calls);
+        Assert.Equal(["rect", "mask"], calls);
     }
 
     private static LiveDetectionMarkSegmentationControllerBindings Bindings(
@@ -113,9 +147,9 @@ public sealed class LiveDetectionMarkSegmentationControllerTests
                 "root",
                 0.9,
                 [1, 2, 3, 4],
-                "",
+                "0,10,20,7970",
                 20,
-                100,
+                8000,
                 4,
                 5,
                 10,

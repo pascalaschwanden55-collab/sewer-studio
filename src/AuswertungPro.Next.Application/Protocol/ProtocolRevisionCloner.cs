@@ -40,10 +40,12 @@ public static class ProtocolRevisionCloner
             Mpeg = source.Mpeg,
             Zeit = source.Zeit,
             FotoPaths = new List<string>(source.FotoPaths),
+            OriginalFotoPaths = new List<string>(source.OriginalFotoPaths ?? []),
             Source = source.Source,
             IsDeleted = source.IsDeleted,
             CodeMeta = CloneCodeMeta(source.CodeMeta),
-            Ai = CloneAiMeta(source.Ai)
+            Ai = CloneAiMeta(source.Ai),
+            Training = ProtocolEntryCloner.CloneTrainingMeta(source.Training)
         };
 
     public static ProtocolEntryCodeMeta? CloneCodeMeta(ProtocolEntryCodeMeta? source)

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
@@ -17,7 +18,7 @@ namespace AuswertungPro.Next.UI.Services;
 /// (wie <see cref="TrainingReviewSamSegmentationService"/>), damit die Application-Schicht keine
 /// Infrastruktur bindet.
 /// </summary>
-public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, IDisposable
+public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchService, IDisposable
 {
     private readonly ITrainingReviewSamSegmentationService _samService;
     private readonly IVisionPipelineClient _pipelineClient;
@@ -36,6 +37,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
     private readonly Func<string, string?> _codeLabelLookup;
     private readonly IProtocolAiService? _protocolAi;
     private readonly Func<IReadOnlyList<string>> _resolveAllowedCodes;
+    private readonly Func<string, (int Width, int Height)?> _readImageDimensions;
 
     public AnnotationWorkbenchService(
         ITrainingReviewSamSegmentationService samService,
@@ -54,7 +56,8 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         IBcaFineCodeClassifier? bcaClassifier = null,
         Func<string, string?>? codeLabelLookup = null,
         IProtocolAiService? protocolAi = null,
-        Func<IReadOnlyList<string>>? resolveAllowedCodes = null)
+        Func<IReadOnlyList<string>>? resolveAllowedCodes = null,
+        Func<string, (int Width, int Height)?>? readImageDimensions = null)
     {
         _bcaClassifier = bcaClassifier;
         _samService = samService;
@@ -69,11 +72,15 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         _readFileBytes = readFileBytes;
         _resolveEvalSetRoot = resolveEvalSetRoot;
         _exportServiceFactory = exportServiceFactory;
-        // Default: zentrale VSA-Katalog-Pruefung. Testbar per Delegate, ohne statischen Katalog-Zustand.
-        _isCodeKnown = isCodeKnown ?? (code => VsaCodeResolver.LookupLabel(code) is not null);
         _codeLabelLookup = codeLabelLookup ?? VsaCodeResolver.LookupLabel;
         _protocolAi = protocolAi;
-        _resolveAllowedCodes = resolveAllowedCodes ?? (() => Array.Empty<string>());
+        _resolveAllowedCodes = resolveAllowedCodes
+            ?? (() => VsaCodeResolver.CurrentCatalog?.AllowedCodes() ?? Array.Empty<string>());
+        // Speichern darf nur einen exakt auswaehlbaren Code des aktiven Katalogs
+        // akzeptieren. LookupLabel ist dafuer ungeeignet, weil es absichtlich auf
+        // Hauptcodes zurueckfaellt und dadurch erfundene Untercodes beschriften kann.
+        _isCodeKnown = isCodeKnown ?? VsaCodeResolver.IsExactSelectableCode;
+        _readImageDimensions = readImageDimensions ?? TrainingImageFileProbe.ReadDimensions;
     }
 
     public async Task<WorkbenchSegmentation> SegmentAsync(WorkbenchItem item, BoundingBox box, string codeHint, CancellationToken ct = default)
@@ -99,8 +106,20 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                 Degraded: true);
         }
 
-        double? areaPercent = mask.ImageAreaPixels > 0
-            ? Math.Round(100.0 * mask.MaskAreaPixels / mask.ImageAreaPixels, 1)
+        var maskAreaPixels = SamMaskFormatValidator.TryGetForegroundPixelCount(
+            mask.MaskRle,
+            resp.ImageWidth,
+            resp.ImageHeight,
+            out var parsedMaskAreaPixels,
+            out _)
+            ? parsedMaskAreaPixels
+            : (int?)null;
+        double? areaPercent = maskAreaPixels.HasValue
+                              && resp.ImageWidth > 0
+                              && resp.ImageHeight > 0
+            ? Math.Round(
+                100.0 * maskAreaPixels.Value / (resp.ImageWidth * (double)resp.ImageHeight),
+                1)
             : null;
 
         var statusText = degraded ? "Teil-Segmentierung — pruefen." : "Maske erstellt.";
@@ -110,7 +129,10 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
             MaskImageHeight: resp.ImageHeight,
             AreaPercent: areaPercent,
             StatusText: statusText,
-            Degraded: degraded);
+            Degraded: degraded,
+            MaskAreaPixels: maskAreaPixels,
+            Confidence: mask.Confidence,
+            Label: mask.Label);
     }
 
     public Task<WorkbenchSuggestion> SuggestAsync(
@@ -282,11 +304,45 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         return new WorkbenchSuggestion(candidates, true, string.Empty, false);
     }
 
-    public async Task<WorkbenchSaveResult> SaveAsync(
-        WorkbenchItem item, BoundingBox box, WorkbenchSegmentation? segmentation, WorkbenchDecision decision, CancellationToken ct = default)
+    public Task<WorkbenchSaveResult> SaveAsync(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchSegmentation? segmentation,
+        WorkbenchDecision decision,
+        CancellationToken ct = default)
+        => SaveCoreAsync(item, box, segmentation, decision, imageSnapshot: null, ct);
+
+    public Task<WorkbenchSaveResult> SaveAsync(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchSegmentation? segmentation,
+        WorkbenchDecision decision,
+        WorkbenchImageSnapshot imageSnapshot,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(imageSnapshot);
+        return SaveCoreAsync(item, box, segmentation, decision, imageSnapshot, ct);
+    }
+
+    private async Task<WorkbenchSaveResult> SaveCoreAsync(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchSegmentation? segmentation,
+        WorkbenchDecision decision,
+        WorkbenchImageSnapshot? imageSnapshot,
+        CancellationToken ct)
     {
         // 1) Validierung (VOR jedem Schreiben und vor dem Eval-Guard).
         var beschreibung = decision.Beschreibung?.Trim() ?? string.Empty;
+        var confirmedByUser = decision.ConfirmedByUser?.Trim() ?? string.Empty;
+        var finalCode = NormalizeCode(decision.VsaCode);
+        if (confirmedByUser.Length == 0)
+        {
+            return new WorkbenchSaveResult(
+                false,
+                "Persoenliche Bestaetigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.",
+                null, "-", null);
+        }
         if (beschreibung.Length < 10)
             return new WorkbenchSaveResult(false, "Beschreibung zu kurz (mindestens 10 Zeichen).", null, "-", null);
         if (GoldBeschreibungGuard.IsPlaceholder(beschreibung))
@@ -294,8 +350,161 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                 false,
                 "Bitte die Platzhalter-Beschreibung ersetzen (Lage und Ausmass konkret angeben).",
                 null, "-", null);
-        if (!_isCodeKnown(decision.VsaCode))
+        if (!_isCodeKnown(finalCode))
             return new WorkbenchSaveResult(false, $"Unbekannter VSA-Code '{decision.VsaCode}'.", null, "-", null);
+
+        var repairsExistingSample = !string.IsNullOrWhiteSpace(item.ExistingSampleId);
+        TrainingSample? existingSample = null;
+        if (repairsExistingSample)
+        {
+            try
+            {
+                var matches = (await _sampleStore.LoadAsync().ConfigureAwait(false))
+                    .Where(sample => string.Equals(
+                        sample.SampleId,
+                        item.ExistingSampleId,
+                        StringComparison.Ordinal))
+                    .ToList();
+                if (matches.Count != 1)
+                {
+                    return new WorkbenchSaveResult(
+                        false,
+                        matches.Count == 0
+                            ? "Goldsample wurde nicht gespeichert: Der zu reparierende Bestandseintrag wurde nicht gefunden."
+                            : "Die Sample-ID ist im Bestand nicht eindeutig. Es wurde nichts gespeichert.",
+                        null, "-", null);
+                }
+
+                existingSample = matches[0];
+                if (item.ExpectedConfirmedAtUtc.HasValue
+                    && (!existingSample.ConfirmedAtUtc.HasValue
+                        || ToUtc(existingSample.ConfirmedAtUtc.Value)
+                           != item.ExpectedConfirmedAtUtc.Value.ToUniversalTime()))
+                {
+                    return new WorkbenchSaveResult(
+                        false,
+                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geaendert. Bitte die Goldpruefung neu laden.",
+                        null, "-", null);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return new WorkbenchSaveResult(
+                    false,
+                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {ex.Message}",
+                    null, "-", null);
+            }
+        }
+
+        var sourceType = existingSample is null
+            ? (item.SourceSuggestion is null
+                ? SourceTypeNames.ManualCoding
+                : SourceTypeNames.PdfPhoto)
+            : existingSample.SourceType;
+        var sourceNote = existingSample is null
+            ? BuildSourceNote(item.SourceSuggestion)
+            : existingSample.Notes ?? string.Empty;
+        var sourceReferenceCode = existingSample is null
+            ? item.SourceSuggestion?.VsaCode?.Trim()
+            : existingSample.SourceReferenceCode;
+        var sourceReferenceDescription = existingSample is null
+            ? item.SourceSuggestion?.Beschreibung?.Trim()
+            : existingSample.SourceReferenceDescription;
+        var isPdfPhoto = string.Equals(
+            sourceType,
+            SourceTypeNames.PdfPhoto,
+            StringComparison.OrdinalIgnoreCase);
+        var isManualCoding = string.Equals(
+            sourceType,
+            SourceTypeNames.ManualCoding,
+            StringComparison.OrdinalIgnoreCase);
+        if (!isPdfPhoto && !isManualCoding)
+        {
+            return new WorkbenchSaveResult(
+                false,
+                "Die gespeicherte Herkunft ist nicht als persoenliches Gold zugelassen. Es wurde nichts gespeichert.",
+                null, "-", null);
+        }
+        if (isPdfPhoto
+            && (!PdfGoldProvenancePolicy.IsValid(sourceNote)
+                || string.IsNullOrWhiteSpace(sourceReferenceCode)
+                || string.IsNullOrWhiteSpace(sourceReferenceDescription)))
+        {
+            return new WorkbenchSaveResult(
+                false,
+                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Pruefspur ist unvollstaendig oder ungueltig.",
+                null, "-", null);
+        }
+        if (existingSample is null
+            && item.SourceSuggestion is not null
+            && !isPdfPhoto)
+        {
+            return new WorkbenchSaveResult(
+                false,
+                "Die PDF-Herkunft konnte nicht eindeutig gebunden werden. Es wurde nichts gespeichert.",
+                null, "-", null);
+        }
+
+        var codeChanged = repairsExistingSample
+            && !string.Equals(
+                NormalizeCode(existingSample?.Code ?? item.ExistingCode),
+                finalCode,
+                StringComparison.OrdinalIgnoreCase);
+        var keepsExistingReviewDecision = repairsExistingSample
+            && !codeChanged
+            && existingSample?.Corrected.HasValue == true
+            && (string.Equals(
+                    existingSample.MatchLevel,
+                    MatchLevelNames.ReviewApproved,
+                    StringComparison.Ordinal)
+                || string.Equals(
+                    existingSample.MatchLevel,
+                    MatchLevelNames.ReviewCorrected,
+                    StringComparison.Ordinal));
+        var wasCorrected = keepsExistingReviewDecision
+            ? existingSample!.Corrected!.Value
+            : isPdfPhoto
+                ? !string.Equals(
+                    NormalizeCode(sourceReferenceCode),
+                    finalCode,
+                    StringComparison.OrdinalIgnoreCase)
+                : decision.WasCorrected;
+        var matchLevel = keepsExistingReviewDecision
+            ? existingSample!.MatchLevel!
+            : wasCorrected
+                ? MatchLevelNames.ReviewCorrected
+                : MatchLevelNames.ReviewApproved;
+
+        // Fuer gebundene Qualitaetspruefungen werden genau die beim Laden geprueften
+        // Bildbytes als Snapshot verwendet. Damit koennen weder ein Dateiaustausch
+        // noch ein Schreib-/Lese-Rennen die alte Maske mit einem neuen Bild verbinden.
+        if (!string.IsNullOrWhiteSpace(item.ExpectedImageSha256))
+        {
+            try
+            {
+                imageSnapshot ??= WorkbenchImageSnapshot.Create(
+                    _readFileBytes(item.FramePath),
+                    Path.GetExtension(item.FramePath));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return new WorkbenchSaveResult(
+                    false,
+                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {ex.Message}",
+                    null, "-", null);
+            }
+
+            if (!string.Equals(
+                    imageSnapshot.Sha256,
+                    item.ExpectedImageSha256.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return new WorkbenchSaveResult(
+                    false,
+                    "Das Bild wurde seit dem Laden der Goldpruefung geaendert. Bitte die Goldpruefung neu laden.",
+                    null, "-", null);
+            }
+        }
 
         // 2) Eval-Schutz (hart): kein eingefrorenes Mess-Bild darf ins Training/Retrieval.
         var root = _resolveEvalSetRoot();
@@ -311,11 +520,21 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                 $"Eval-Schutz nicht verfuegbar: {ex.Message}",
                 null, "-", null);
         }
-        var verdict = EvalContaminationGuard.ClassifyForExport(
-            evalSets.ImageHashes,
-            evalSets.HaltungKeys,
-            item.FramePath,
-            item.CaseId);
+        // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
+        // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
+        // StoreBytesAsync; der veraenderbare Quellpfad wird nicht erneut gelesen.
+        var snapshotBytes = imageSnapshot?.CopyImageBytes();
+        var verdict = snapshotBytes is null
+            ? EvalContaminationGuard.ClassifyForExport(
+                evalSets.ImageHashes,
+                evalSets.HaltungKeys,
+                item.FramePath,
+                item.CaseId)
+            : EvalContaminationGuard.ClassifyForExport(
+                evalSets.ImageHashes,
+                evalSets.HaltungKeys,
+                snapshotBytes,
+                item.CaseId);
         if (verdict != EvalContaminationGuard.ExportContaminationResult.Clean)
         {
             return new WorkbenchSaveResult(
@@ -329,12 +548,6 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         // behaelt seine SampleId — bei gleichem Code als Ergaenzung (MergeOrUpdate), bei
         // geaendertem Code als Ersatz (Loeschen + Neuanlage inkl. KB-/Teacher-Bereinigung,
         // siehe Schritt 6). So entsteht bei einer Codekorrektur kein zweiter Datensatz.
-        var repairsExistingSample = !string.IsNullOrWhiteSpace(item.ExistingSampleId);
-        var codeChanged = repairsExistingSample
-            && !string.Equals(
-                NormalizeCode(item.ExistingCode),
-                NormalizeCode(decision.VsaCode),
-                StringComparison.OrdinalIgnoreCase);
         var sampleId = repairsExistingSample
             ? item.ExistingSampleId!
             : $"wb_{Guid.NewGuid():N}"[..15];
@@ -343,14 +556,18 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         {
             var goldFramesRoot = _resolveGoldFramesDir();
             var codeFolder = PersonalGoldMainCodeCatalog.FormatFolderName(
-                decision.VsaCode,
+                finalCode,
                 _codeLabelLookup);
             var codeFramesDir = string.IsNullOrWhiteSpace(goldFramesRoot)
                 ? goldFramesRoot
                 : Path.Combine(goldFramesRoot, codeFolder);
-            storedFramePath = await _frameStore
-                .StoreExistingAsync(item.FramePath, codeFramesDir, ct)
-                .ConfigureAwait(false);
+            storedFramePath = snapshotBytes is null
+                ? await _frameStore
+                    .StoreExistingAsync(item.FramePath, codeFramesDir, ct)
+                    .ConfigureAwait(false)
+                : await _frameStore
+                    .StoreBytesAsync(snapshotBytes, imageSnapshot!.Extension, codeFramesDir, ct)
+                    .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -367,30 +584,76 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                 null, "-", null);
         }
 
+        string storedImageSha256;
+        try
+        {
+            storedImageSha256 = imageSnapshot?.Sha256
+                ?? Convert.ToHexStringLower(SHA256.HashData(_readFileBytes(storedFramePath)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new WorkbenchSaveResult(
+                false,
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}",
+                null, "-", null);
+        }
+
         // 4) Entwurf oder Gold? Vollstaendig ist ein Fund nur mit gepruefter SAM-Maske.
         // Die zentrale Pruefung (SamMaskValidator) verlangt mehr als HasSamMask: lesbares,
         // dimensionstreues, nicht-leeres RLE, das zur gezogenen Box passt, und kein
         // Degraded-Ergebnis. Ohne gueltige Maske bleibt das Sample ein Entwurf (Schritt 7).
-        var maskValid = SamMaskValidator.IsValid(
+        var maskDimensionsMatch = false;
+        if (segmentation is not null)
+        {
+            try
+            {
+                var actualDimensions = _readImageDimensions(storedFramePath);
+                maskDimensionsMatch = actualDimensions is { } dimensions
+                                      && dimensions.Width == segmentation.MaskImageWidth
+                                      && dimensions.Height == segmentation.MaskImageHeight;
+            }
+            catch
+            {
+                // Unlesbare oder widerspruechliche Bildmasse duerfen nie Gold ergeben.
+                maskDimensionsMatch = false;
+            }
+        }
+
+        var maskValid = maskDimensionsMatch && SamMaskValidator.IsValid(
             segmentation?.MaskRle,
             segmentation?.MaskImageWidth,
             segmentation?.MaskImageHeight,
             box,
             segmentation?.Degraded ?? false,
             out _);
+        int? derivedMaskAreaPixels = null;
+        if (maskValid
+            && SamMaskFormatValidator.TryGetForegroundPixelCount(
+                segmentation?.MaskRle,
+                segmentation?.MaskImageWidth,
+                segmentation?.MaskImageHeight,
+                out var foregroundPixelCount,
+                out _))
+        {
+            derivedMaskAreaPixels = foregroundPixelCount;
+        }
+        else
+        {
+            maskValid = false;
+        }
 
         // 5) TrainingSample als geprueften Fund bauen (Feldfolge wie ReviewApprovalService).
         var sample = new TrainingSample
         {
             SampleId = sampleId,
             CaseId = item.CaseId,
-            Code = decision.VsaCode,
+            Code = finalCode,
             Beschreibung = beschreibung,
             MeterStart = item.MeterStart,
             MeterEnd = item.MeterEnd,
             Signature = TrainingSample.BuildCanonicalSignature(
                 item.CaseId,
-                decision.VsaCode,
+                finalCode,
                 item.MeterStart,
                 item.MeterEnd,
                 // Mehrfachobjekt: die Hand-Box gehoert zur Objekt-Identitaet — zwei Befunde
@@ -401,15 +664,24 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                 box.Height),
             Status = maskValid ? TrainingSampleStatus.Approved : TrainingSampleStatus.Draft,
             HumanConfirmed = true,
-            Corrected = decision.WasCorrected,
-            ConfirmedByUser = decision.ConfirmedByUser,
+            Corrected = wasCorrected,
+            ConfirmedByUser = confirmedByUser,
             ConfirmedAtUtc = DateTime.UtcNow,
             QualityGateLevel = maskValid ? "Green" : "Yellow",
-            SourceType = SourceTypeNames.ManualCoding,
-            MatchLevel = decision.WasCorrected ? MatchLevelNames.ReviewCorrected : MatchLevelNames.ReviewApproved,
+            SourceType = sourceType,
+            Notes = sourceNote,
+            SourceReferenceCode = sourceReferenceCode,
+            SourceReferenceDescription = sourceReferenceDescription,
+            MatchLevel = matchLevel,
+            IsStreckenschaden = existingSample?.IsStreckenschaden ?? item.IsStreckenschaden,
+            InspectionDate = existingSample?.InspectionDate
+                ?? item.InspectionDate
+                ?? item.SourceSuggestion?.InspectionDate,
             FramePath = storedFramePath,
             KbIndexState = KbIndexState.Pending,
         };
+        PreserveRepairContext(existingSample, sample);
+        ApplyDecisionCodeMeta(sample, finalCode, decision);
         box.ApplyTo(sample);
         // Nur eine gepruefte Maske wird persistiert. Eine abgelehnte Maske (Leermaske, falsche
         // Box, Degraded) bleibt bewusst weg, damit der Entwurf ueber !HasSamMask in der Queue
@@ -419,6 +691,23 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
             sample.SamMaskRle = segmentation.MaskRle;
             sample.SamMaskImageWidth = segmentation.MaskImageWidth;
             sample.SamMaskImageHeight = segmentation.MaskImageHeight;
+            sample.SamMaskAreaPixels = derivedMaskAreaPixels;
+            sample.SamMaskConfidence = segmentation.Confidence;
+            sample.SamMaskLabel = segmentation.Label;
+        }
+
+        // Letzte zentrale Gold-Schranke: Caller-Flags allein duerfen keinen
+        // unvollstaendigen Fund zu KB oder Teacher durchreichen.
+        var goldEligibility = maskValid
+            ? ManualGoldTrainingPolicy.EvaluateForExport(sample, confirmedByUser)
+            : new TrainingEligibilityResult(
+                false,
+                ManualGoldTrainingPolicy.GoldGeometryRequiredReason);
+        var goldApproved = maskValid && goldEligibility.IsEligible;
+        if (!goldApproved)
+        {
+            sample.Status = TrainingSampleStatus.Draft;
+            sample.QualityGateLevel = "Yellow";
         }
 
         // 6) Neues Sample speichern, ein geladenes Bestandssample ergaenzen (gleicher Code)
@@ -496,7 +785,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         // KB-Index (KbIndexState bleibt Pending) und Teacher-Kandidat werden NICHT geschrieben.
         // Das Sample landet in 'Unvollstaendige Goldframes'; beim Nachruesten mit Maske
         // (Reparatur ueber denselben SaveAsync) laeuft der volle Gold-Pfad inkl. KB/Teacher.
-        if (!maskValid)
+        if (!goldApproved)
         {
             return new WorkbenchSaveResult(
                 true,
@@ -505,7 +794,10 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
                     replaceWarning),
                 sampleId,
                 "Entwurf",
-                null);
+                null,
+                StoredImageSha256: storedImageSha256,
+                StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } draftConfirmedAtUtc
+                    ? ToUtc(draftConfirmedAtUtc) : null);
         }
 
         // 8) KB-Index; Zustand nachtragen (Skipped/Error werden nicht wiederholt).
@@ -535,7 +827,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
         string? teacherWarning = null;
         try
         {
-            var classId = _teacherClassMap.GetOrAddClassId(decision.VsaCode);
+            var classId = _teacherClassMap.GetOrAddClassId(finalCode);
             var bbox = new NormalizedBoundingBox
             {
                 XCenter = box.XCenter,
@@ -545,7 +837,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
             };
             var annotation = new TeacherAnnotation
             {
-                VsaCode = decision.VsaCode,
+                VsaCode = finalCode,
                 Beschreibung = beschreibung,
                 Severity = decision.Severity,
                 MeterPosition = item.MeterStart,
@@ -559,7 +851,7 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
             var exportService = _exportServiceFactory?.Invoke()
                 ?? TrainingAnnotationExportServiceFactory.Create(_teacherStore);
             var export = await exportService
-                .ExportAsync(storedFramePath, bbox, decision.VsaCode, classId, $"wb_{annotation.AnnotationId}", ct)
+                .ExportAsync(storedFramePath, bbox, finalCode, classId, $"wb_{annotation.AnnotationId}", ct)
                 .ConfigureAwait(false);
             if (!export.Success)
                 throw new InvalidOperationException(export.Error ?? "Teacher-Export meldete keinen Erfolg.");
@@ -578,7 +870,16 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
 
         // KB-, Teacher- und Ersetz-Warnung gemeinsam sichtbar machen; das Sample selbst ist gespeichert.
         var warning = CombineWarnings(replaceWarning, kbWarning, teacherWarning);
-        return new WorkbenchSaveResult(true, warning, sampleId, kbState, teacherId);
+        return new WorkbenchSaveResult(
+            true,
+            warning,
+            sampleId,
+            kbState,
+            teacherId,
+            GoldApproved: true,
+            StoredImageSha256: storedImageSha256,
+            StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
+                ? ToUtc(goldConfirmedAtUtc) : null);
     }
 
     /// <summary>
@@ -678,6 +979,14 @@ public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, ID
 
     private static string NormalizeCode(string? code)
         => (code ?? string.Empty).Trim().Replace(".", string.Empty).ToUpperInvariant();
+
+    private static DateTimeOffset ToUtc(DateTime value)
+        => value.Kind switch
+        {
+            DateTimeKind.Utc => new DateTimeOffset(value, TimeSpan.Zero),
+            DateTimeKind.Local => new DateTimeOffset(value).ToUniversalTime(),
+            _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeSpan.Zero),
+        };
 
     // Der Pruefplatz baut SAM-Service und Vision-Client pro Fenster frisch (eigener HttpClient).
     // Dispose gibt sie frei, falls disposbar — Fakes/geteilte Clients (nicht IDisposable) bleiben

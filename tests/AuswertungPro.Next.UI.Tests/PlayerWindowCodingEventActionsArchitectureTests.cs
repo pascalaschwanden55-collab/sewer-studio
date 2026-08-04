@@ -61,6 +61,12 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         Assert.Contains("CodingEventCloseStretchCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
+        Assert.Contains(
+            "ResolveCodingMeterForFrame(_playerTimelineHost.CurrentSeconds)",
+            actions);
+        Assert.DoesNotContain(
+            "CodingEventListActionWorkflow.CloseStretch(\n                    startEvent,\n                    _codingSessionRuntimeOwner.Service,\n                    _codingSessionHost.CurrentMeter,",
+            actions.Replace("\r\n", "\n", StringComparison.Ordinal));
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
         Assert.Contains("_codingSessionHost", actions);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds", seekCommandWorkflow);

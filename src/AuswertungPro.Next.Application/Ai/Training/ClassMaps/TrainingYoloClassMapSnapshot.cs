@@ -46,16 +46,28 @@ public sealed class TrainingYoloClassMapSnapshot
         IReadOnlyDictionary<string, int> classes,
         IReadOnlyList<TrainingYoloClassMapping> mappings,
         IReadOnlyDictionary<string, string>? migrationSourceHashes = null,
-        IReadOnlyList<string>? resolutionOrder = null)
+        IReadOnlyList<string>? resolutionOrder = null,
+        string? classMapSha256 = null)
     {
         if (version <= 0)
             throw new ArgumentOutOfRangeException(nameof(version));
         ArgumentException.ThrowIfNullOrWhiteSpace(vsaManifestHash);
         ArgumentNullException.ThrowIfNull(classes);
         ArgumentNullException.ThrowIfNull(mappings);
+        if (!string.IsNullOrWhiteSpace(classMapSha256)
+            && (classMapSha256.Trim().Length != 64
+                || !classMapSha256.Trim().All(Uri.IsHexDigit)))
+        {
+            throw new ArgumentException(
+                "Der Klassenkarten-Hash ist kein gueltiger SHA-256.",
+                nameof(classMapSha256));
+        }
 
         Version = version;
         VsaManifestHash = vsaManifestHash.Trim().ToLowerInvariant();
+        ClassMapSha256 = string.IsNullOrWhiteSpace(classMapSha256)
+            ? null
+            : classMapSha256.Trim().ToLowerInvariant();
         _classes = new ReadOnlyDictionary<string, int>(
             classes.ToDictionary(
                 item => item.Key,
@@ -109,6 +121,8 @@ public sealed class TrainingYoloClassMapSnapshot
     public int Version { get; }
 
     public string VsaManifestHash { get; }
+
+    public string? ClassMapSha256 { get; }
 
     public IReadOnlyDictionary<string, int> Classes => _classes;
 

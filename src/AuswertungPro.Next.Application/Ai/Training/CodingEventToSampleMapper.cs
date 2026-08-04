@@ -115,16 +115,37 @@ public static class CodingEventToSampleMapper
         // Tokens, falsche Laufsumme, Leermaske) wird NICHT gespeichert. Das Sample bleibt
         // sichtbar unvollstaendig und landet zur Nachruestung in 'Unvollstaendige
         // Goldframes' — gewollt, statt eine faule Maske in KB/Training zu tragen.
+        var overlayMask = ev.Overlay?.SamMask;
+        var hasValidOverlayMask = SamMaskFormatValidator.IsValid(
+            overlayMask?.MaskRle,
+            overlayMask?.ImageWidth,
+            overlayMask?.ImageHeight,
+            out _);
+        var maskRle = hasValidOverlayMask
+            ? overlayMask!.MaskRle
+            : ev.AiContext?.SamMaskRle;
+        var maskImageWidth = hasValidOverlayMask
+            ? overlayMask!.ImageWidth
+            : ev.AiContext?.SamMaskImageWidth;
+        var maskImageHeight = hasValidOverlayMask
+            ? overlayMask!.ImageHeight
+            : ev.AiContext?.SamMaskImageHeight;
+
         if (SamMaskFormatValidator.IsValid(
-                ev.AiContext?.SamMaskRle,
-                ev.AiContext?.SamMaskImageWidth,
-                ev.AiContext?.SamMaskImageHeight,
+                maskRle,
+                maskImageWidth,
+                maskImageHeight,
                 out _))
         {
-            sample.SamMaskRle = ev.AiContext!.SamMaskRle;
-            sample.SamMaskImageWidth = ev.AiContext!.SamMaskImageWidth;
-            sample.SamMaskImageHeight = ev.AiContext!.SamMaskImageHeight;
-            sample.SamMaskConfidence = ev.AiContext?.Evidence?.SamMaskStability;
+            sample.SamMaskRle = maskRle;
+            sample.SamMaskImageWidth = maskImageWidth;
+            sample.SamMaskImageHeight = maskImageHeight;
+            sample.SamMaskAreaPixels = hasValidOverlayMask
+                ? overlayMask!.MaskAreaPixels
+                : null;
+            sample.SamMaskConfidence = hasValidOverlayMask
+                ? overlayMask!.Confidence
+                : ev.AiContext?.Evidence?.SamMaskStability;
             sample.SamMaskLabel = ev.Entry.Code;
         }
 

@@ -125,7 +125,10 @@ public sealed record RawVideoDetection(
     int? DiameterReductionMm = null,
     EvidenceVector? Evidence = null,
     string? MeterSource = null,
-    bool IsMeterEstimated = false)
+    bool IsMeterEstimated = false,
+    // Exakte fachliche Stufe 1-5. Das bisherige Textfeld Severity bleibt fuer
+    // Anzeige und Kompatibilitaet erhalten.
+    int? SeverityLevel = null)
 {
     public string Code => VsaCodeHint ?? string.Empty;
     public string Label => FindingLabel;

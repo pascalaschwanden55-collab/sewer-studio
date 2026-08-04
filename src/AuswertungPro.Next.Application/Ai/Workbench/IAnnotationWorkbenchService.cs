@@ -39,4 +39,23 @@ public interface IAnnotationWorkbenchService
 
     /// <summary>Speichert die menschliche Entscheidung: Eval-Schutz, TrainingSample, KB-Index, Teacher-Kandidat.</summary>
     Task<WorkbenchSaveResult> SaveAsync(WorkbenchItem item, BoundingBox box, WorkbenchSegmentation? segmentation, WorkbenchDecision decision, CancellationToken ct = default);
+
+    /// <summary>
+    /// Sicherer Foto-Weg mit einer bereits SHA-256-gebundenen Momentaufnahme.
+    /// Die produktive Implementierung verwendet genau diese Bytes fuer Eval-Schutz
+    /// und Goldkopie. Der alte Pfad-Aufruf bleibt fuer bestehende Aufrufer erhalten.
+    /// </summary>
+    Task<WorkbenchSaveResult> SaveAsync(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchSegmentation? segmentation,
+        WorkbenchDecision decision,
+        WorkbenchImageSnapshot imageSnapshot,
+        CancellationToken ct = default)
+        => Task.FromResult(new WorkbenchSaveResult(
+            false,
+            "Dieser Pruefplatz unterstuetzt keine gebundene Originalbild-Momentaufnahme.",
+            null,
+            "-",
+            null));
 }

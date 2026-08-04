@@ -58,7 +58,7 @@
 
                     <Button Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
-                            ToolTip="XTF/M150/MDB, WinCan, IBAK, KINS importieren">
+                            ToolTip="XTF/M150/MDB, WinCan, IBAK, KINS, SchachtPro importieren">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Quellen" VerticalAlignment="Center"/>
@@ -84,6 +84,11 @@
                                 <MenuItem Header="KINS-Projekte" Command="{Binding ImportKinsCommand}">
                                     <MenuItem.Icon>
                                         <ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="SchachtPro-Archiv (.spro)" Command="{Binding ImportSchachtProCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource MutedBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                             </ContextMenu>

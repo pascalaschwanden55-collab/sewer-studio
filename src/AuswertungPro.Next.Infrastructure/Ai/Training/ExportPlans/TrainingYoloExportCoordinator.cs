@@ -98,6 +98,15 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        var currentRegistry = _registryStore.ReadBundle();
+        if (!currentRegistry.Snapshot.RegistryHash.Equals(
+                registry.Snapshot.RegistryHash,
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Das Exportregister wurde waehrend der Vorbereitung veraendert.");
+        }
+        registry = currentRegistry;
         Report(
             progress,
             TrainingYoloExportProgressStage.CreatingPlan,

@@ -389,8 +389,20 @@ public static class PhotoMeasurementGeometryService
         NormalizedPoint end,
         double minNormalizedSize = 0.01)
     {
-        double minX = Math.Min(start.X, end.X), maxX = Math.Max(start.X, end.X);
-        double minY = Math.Min(start.Y, end.Y), maxY = Math.Max(start.Y, end.Y);
+        if (!double.IsFinite(start.X)
+            || !double.IsFinite(start.Y)
+            || !double.IsFinite(end.X)
+            || !double.IsFinite(end.Y))
+        {
+            return null;
+        }
+
+        // Die Maus kann mit Capture ausserhalb des sichtbaren Fotos losgelassen
+        // werden. Die SAM-Box muss trotzdem vollstaendig im Bild bleiben.
+        double minX = Math.Clamp(Math.Min(start.X, end.X), 0.0, 1.0);
+        double maxX = Math.Clamp(Math.Max(start.X, end.X), 0.0, 1.0);
+        double minY = Math.Clamp(Math.Min(start.Y, end.Y), 0.0, 1.0);
+        double maxY = Math.Clamp(Math.Max(start.Y, end.Y), 0.0, 1.0);
         if (maxX - minX < minNormalizedSize || maxY - minY < minNormalizedSize)
             return null;
 

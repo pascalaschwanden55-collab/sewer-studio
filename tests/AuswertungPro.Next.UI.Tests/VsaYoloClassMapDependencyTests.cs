@@ -44,7 +44,9 @@ public sealed class VsaYoloClassMapDependencyTests
         Assert.Equal(15, snapshot.Classes.Count);
         Assert.Equal(13, snapshot.Classes["SONST_schaden"]);
         Assert.Equal(14, snapshot.Classes["BCC_bogen"]);
-        Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("BAB"));
+        // BAB ist inzwischen bewusst als freigegebene Goldklasse gebunden. Strikt
+        // bleiben muss die Karte fuer wirklich unbekannte Quellcodes.
+        Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("XYZ"));
     }
 
     [Fact]

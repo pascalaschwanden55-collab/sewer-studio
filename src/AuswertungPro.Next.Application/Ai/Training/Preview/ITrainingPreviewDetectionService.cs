@@ -27,7 +27,9 @@ public sealed record TrainingPreviewDetectionResult(
     string ModelName,
     string ModelSha256,
     IReadOnlyList<TrainingPreviewDetection> Detections,
-    double InferenceTimeMs);
+    double InferenceTimeMs,
+    bool FrameUsable = true,
+    string? QualityReason = null);
 
 /// <summary>
 /// Qualifikationsstand des aktiven Standard-Detektors (aus der Sidecar-Statusdatei).
@@ -36,6 +38,19 @@ public sealed record TrainingPreviewDetectionResult(
 /// </summary>
 public sealed record TrainingDetectorQualification(bool Qualified, string? Reason);
 
+/// <summary>Pfadfreie Auswahlmetadaten eines manifest- und hashgeprueften Kandidaten.</summary>
+public sealed record TrainingPreviewCandidateInfo(
+    string CandidateId,
+    string CandidateSha256,
+    double Map50,
+    int EpochsCompleted,
+    string CreatedUtc);
+
+public sealed record TrainingPreviewCandidateCatalogResult(
+    bool Available,
+    string? Error,
+    IReadOnlyList<TrainingPreviewCandidateInfo> Candidates);
+
 public interface ITrainingPreviewDetectionService
 {
     Task<TrainingPreviewDetectionResult> DetectAsync(
@@ -43,6 +58,28 @@ public interface ITrainingPreviewDetectionService
         TrainingPreviewModelKind modelKind,
         double confidenceThreshold = 0.25,
         CancellationToken cancellationToken = default);
+
+    Task<TrainingPreviewDetectionResult> DetectBccCandidateAsync(
+        string framePath,
+        string candidateId,
+        string candidateSha256,
+        double confidenceThreshold = 0.25,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new TrainingPreviewDetectionResult(
+            Available: false,
+            Error: "Dieser Dienst unterstuetzt die exakte Anheftung eines BCC-Kandidaten nicht.",
+            TrainingPreviewModelKind.BccTestCandidate,
+            ModelName: candidateId,
+            ModelSha256: candidateSha256,
+            Detections: [],
+            InferenceTimeMs: 0));
+
+    Task<TrainingPreviewCandidateCatalogResult> GetBccCandidatesAsync(
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new TrainingPreviewCandidateCatalogResult(
+            Available: false,
+            Error: "Die BCC-Kandidatenliste wird von diesem Dienst nicht unterstuetzt.",
+            Candidates: []));
 
     /// <summary>
     /// Liefert die Qualifikation des aktiven Detektors. Fehlende oder unlesbare Angaben

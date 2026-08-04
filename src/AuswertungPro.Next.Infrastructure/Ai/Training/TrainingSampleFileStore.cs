@@ -113,21 +113,21 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             var incoming = FilterEvalContamination(samples);
             var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
             var signatures = existing
-                .Where(sample => !string.IsNullOrEmpty(sample.Signature))
-                .Select(sample => sample.Signature)
+                .SelectMany(GetDedupSignatures)
                 .ToHashSet(StringComparer.Ordinal);
 
             var reportAdded = false;
             foreach (var sample in incoming)
             {
-                if (!string.IsNullOrEmpty(sample.Signature) && signatures.Contains(sample.Signature))
+                var sampleSignatures = GetDedupSignatures(sample).ToArray();
+                if (sampleSignatures.Any(signatures.Contains))
                     continue;
 
                 existing.Add(sample);
                 if (ReferenceEquals(sample, reportSample))
                     reportAdded = true;
-                if (!string.IsNullOrEmpty(sample.Signature))
-                    signatures.Add(sample.Signature);
+                foreach (var signature in sampleSignatures)
+                    signatures.Add(signature);
             }
 
             await SaveInternalAsync(existing).ConfigureAwait(false);
@@ -137,6 +137,25 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         {
             fileLock.Release();
         }
+    }
+
+    private static IEnumerable<string> GetDedupSignatures(TrainingSample sample)
+    {
+        if (!string.IsNullOrEmpty(sample.Signature))
+            yield return sample.Signature;
+
+        if (!sample.HasBbox)
+            yield break;
+
+        yield return TrainingSample.BuildCanonicalSignature(
+            sample.CaseId,
+            sample.Code,
+            sample.MeterStart,
+            sample.MeterEnd,
+            sample.BboxXCenter,
+            sample.BboxYCenter,
+            sample.BboxWidth,
+            sample.BboxHeight);
     }
 
     public async Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)

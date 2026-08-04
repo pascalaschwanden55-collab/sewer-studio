@@ -245,6 +245,56 @@ public sealed class CodingEventToSampleMapperTests
     }
 
     [Fact]
+    public void FromCodingEvent_manuelle_Overlay_Segmentierung_bleibt_ohne_KiKontext_erhalten()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry
+            {
+                Code = "BCC",
+                Beschreibung = "Bogen",
+                Source = ProtocolEntrySource.Manual
+            },
+            ReviewContext = new CodingEventReviewContext
+            {
+                Decision = CodingUserDecision.Accepted
+            },
+            Overlay = new OverlayGeometry
+            {
+                ToolType = OverlayToolType.Rectangle,
+                Points = [new NormalizedPoint(0.1, 0.2), new NormalizedPoint(0.5, 0.6)],
+                SamMask = new OverlaySamMask
+                {
+                    MaskRle = "0,10,5,85",
+                    ImageWidth = 10,
+                    ImageHeight = 10,
+                    MaskAreaPixels = 5,
+                    Confidence = 0.92,
+                    Label = "manuell"
+                }
+            },
+            MeterAtCapture = 4.2
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev,
+            "H1",
+            "gold.png",
+            confirmedByUser: "tester",
+            confirmedAtUtc: new DateTime(2026, 7, 29, 8, 0, 0, DateTimeKind.Utc));
+
+        Assert.Null(ev.AiContext);
+        Assert.Equal(SourceTypeNames.ManualCoding, sample.SourceType);
+        Assert.Equal("0,10,5,85", sample.SamMaskRle);
+        Assert.Equal(10, sample.SamMaskImageWidth);
+        Assert.Equal(10, sample.SamMaskImageHeight);
+        Assert.Equal(5, sample.SamMaskAreaPixels);
+        Assert.Equal(0.92, sample.SamMaskConfidence);
+        Assert.Equal("BCC", sample.SamMaskLabel);
+        Assert.True(sample.HasSamMask);
+    }
+
+    [Fact]
     public void FromCodingEvent_mit_Box_enthaelt_die_Signatur_einen_Geometrie_Teil()
     {
         // Mehrfachobjekt: Box (0.1/0.2)-(0.5/0.6) -> Zentrum 0.3/0.4, Breite/Hoehe 0.4.

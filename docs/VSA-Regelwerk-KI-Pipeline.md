@@ -370,8 +370,8 @@ Dieses Teilsystem definiert das gesamte **Datenmodell** (Projekt, Haltung, Schac
 
 - Ein `Project` haelt zwei `ObservableCollection`s: `Data` (Haltungen) und `SchaechteData` (Schaechte).
 - Jeder `HaltungRecord` traegt seine Daten als String-`Dictionary` (`Fields`) plus pro Feld eine `FieldMetadata` (Herkunft + Userschutz). Zusaetzlich strukturierte `VsaFindings` (aus XTF, fuer Berechnung) und ein optionales `ProtocolDocument` (Beobachtungen mit Revisionshistorie).
-- Der VSA-Katalog wird beim App-Start aus `vsa_kek_2020_catalog_manifest.json` geladen (read-only) und ueber `ICodeCatalogProvider` exponiert. Daraus baut `CodeCatalogSelectionCatalog` die UI-/Quantifizierungs-Sicht (`IVsaCodeSelectionCatalog`).
-- Fallstrick: Es gibt **zwei** statische Code-Wahrheiten — den dynamischen Manifest-Katalog (Laufzeit, fuer App/Validierung) und einen hartcodierten `VsaCodeTree` (Domain, nur als strenger Eintrittsfilter fuer Trainingslabels). Beim Nachbau beide getrennt halten.
+- Der VSA-Katalog wird beim App-Start aus `vsa_kek_2020_catalog_manifest.json` geladen (read-only) und ueber `ICodeCatalogProvider` exponiert. Daraus baut `CodeCatalogSelectionCatalog` die exakte Endcode-/Klartext-Sicht (`IVsaCodeSelectionCatalog`).
+- Fallstrick: Es gibt **zwei getrennte fachliche Quellen**. Der dynamische Manifest-Katalog entscheidet zur Laufzeit, welcher Endcode auswählbar ist und welchen exakten Klartext er trägt. Der hartcodierte `VsaCodeTree` dient als Eintrittsfilter für Trainingslabels und liefert zusätzlich die Navigation sowie die code-/charakterabhängigen Quantifizierungsregeln des aktuell angebotenen Kanal-Pickers. `VsaCodeTreeSelectionCatalog` verbindet beides; die Manifest-Whitelist darf dabei nie durch den Baum erweitert werden.
 
 ### Feld-Infrastruktur (Pfad: `Domain/Models/`)
 
@@ -436,7 +436,7 @@ VSA-Bewertung (`Domain/Vsa/`):
 
 ### VSA-Katalog: Manifest, Provider, Auswahl-Sicht
 
-**Datendatei** `vsa_kek_2020_catalog_manifest.json` liegt unter `src/AuswertungPro.Next.UI/Data/` (wird ins Output (`<Output>/Data/`) kopiert; Dateiname-Konstante `VsaKekManifestFileName` in `ServiceProvider.cs`). Im HEAD: `version=1`, 680 Codes. Quellen-Verteilung: `VSA-KEK-2020-ILI` 657, `VSA-KEK-2020-Heading` 6, `VSA-KEK-2020-ICM` 16, `VSA-XTF-Observed` 1; 678 selektierbar, 190 mit Parametern.
+**Datendatei** `vsa_kek_2020_catalog_manifest.json` liegt unter `src/AuswertungPro.Next.UI/Data/` (wird ins Output (`<Output>/Data/`) kopiert; Dateiname-Konstante `VsaKekManifestFileName` in `ServiceProvider.cs`). Aktueller Stand: `version=1`, 719 Codes. Quellen-Verteilung: `VSA-KEK-2020-ILI` 657, `VSA-KEK-2020-Heading` 43, `VSA-KEK-2020-ICM` 16, `VSA-XTF-Observed` 1 und zwei nicht auswählbare `WinCan-Fallback`-Einträge; 715 Endcodes sind auswählbar, 190 Einträge tragen Parameter.
 
 **Manifest-JSON-Struktur** (Wurzel: `{ "version": int, "codes": [...] }`). Jeder Eintrag = `CodeDefinition`:
 ```json
@@ -491,23 +491,29 @@ Das Manifest ist generiert, nicht handgepflegt. `VsaKekCatalogBuilder.Build(iliT
 `IVsaCodeSelectionCatalog` transformiert die flache `CodeDefinition`-Liste in eine UI-taugliche Gruppen-/Hierarchie-Sicht:
 ```csharp
 IReadOnlyDictionary<string, GroupDef> Groups { get; }
+string? LookupExactLabel(string code);
+string? LookupNavigationLabel(string codePrefix);
+VsaCodeDef? LookupExactCodeDef(string code);
+bool IsSelectableCode(string code);
 (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? char1Key);
 ClockRule GetClockRule(string codeKey);
 IReadOnlyDictionary<string,string>? GetChar2Options(VsaCodeDef codeDef, string char1Key);
 bool IsInvalidCombo(VsaCodeDef codeDef, string char1Key, string char2Key);
 ```
-- `EmptyVsaCodeSelectionCatalog.Instance` — Null-Object (leere Gruppen, ClockRule `none`).
-- `CodeCatalogSelectionCatalog(ICodeCatalogProvider)` — baut die Sicht im Konstruktor (`Build`): gruppiert selektierbare Codes nach 2-Buchstaben-Praefix; `CreateGroup` mappt feste Labels/Farben/Icons (`BA`="Baulicher Zustand"/#DC2626, `BB`="Betrieblicher Zustand"/#F59E0B, `BC`="Anschluesse/Reparaturen"/#2563EB, `BD`, `AE`, `DA`–`DD`). Quant-Regeln (`Pflicht` "P"/"O"/"V") und Clock-Regeln (Mode `range`/`none`, Hint) werden aus `Parameters` abgeleitet (`SchadenlageAnfang/Ende` => Clock-Range).
+- `EmptyVsaCodeSelectionCatalog.Instance` — ausfallsicheres Null-Object (leere Gruppen, ClockRule `none`, kein Code auswählbar).
+- `CodeCatalogSelectionCatalog(ICodeCatalogProvider)` — baut die flache Katalogsicht im Konstruktor. Exakte Labels/Definitionen und `IsSelectableCode` werden nur für `IsSelectable && !IsObservedExtension` aus den VSA-KEK-2020-Quellen bereitgestellt; `WinCan-Fallback` und beobachtete XTF-Erweiterungen können daher keine UI-Endcodes freigeben. `LookupNavigationLabel` leitet Zwischenbezeichnungen aus gemeinsamen exakten Nachfahren ab. Dadurch werden WinCan-Eingabeaufforderungen wie `Status` oder `Vertikale Richtung` nicht fälschlich als Code-Klartext verwendet. Unbekannte Manifest-Einheiten werden normalisiert (`mm`, `%`, `°`, `Stk.`).
+- `VsaCodeTreeSelectionCatalog` stellt die gewohnte Kanal-Navigation aus `VsaCodeTree` bereit, lässt die exakte Endcode-Whitelist aber beim Manifest. Für die im Baum angebotenen Codes kommen die fachlichen Q1-/Q2-Regeln aus dem gegen `EN13508_VSA-2019_CH_DEU_SEC.xml` abgeglichenen Baum, weil das generierte Manifest vielfach nur die Feldpräsenz und keine Einheit oder Grenze enthält.
+- `VsaCodeExplorerViewModel` filtert nicht auswählbare Haupt-, Char1- und Char2-Endcodes, nutzt im Ergebnis und in `ProtocolEntryCodeMeta` die exakte Manifestdefinition und sperrt auch nicht auswählbare Altwerte beim Wiederöffnen/Speichern. Favoriten ohne auswählbaren exakten Klartext werden ausgeblendet. `VsaCodePathResolver` unterstützt abweichende Endcodes wie `BAG → BAGA`.
 
 **VSA-Katalog-Records** (`Domain/VsaCatalog/VsaCatalogModels.cs`, Records):
 - `GroupDef(string Label, string Color, string Icon, Dictionary<string,VsaCodeDef> Codes)`.
 - `VsaCodeDef`: `Label`, `FinalCode?`, `bool IsSteuer`, `Note?`, `Warn?`, `Source?`, `CanonicalCode?`, `StandardAnnotation?`, `bool XPrefix`, `Dictionary<string,CharDef>? Char1`, `Dictionary<string,string>? Char2`, `Dictionary<string,Dictionary<string,string>>? Char2PerChar1`, `Dictionary<string,HashSet<string>>? Invalid`, `bool AllValid`.
 - `CharDef`: `Label`, optional eigenes `Char2`.
-- `QuantRule`: `Q1?`, `Q1PerChar1?`, `Q2?`; `QuantField`: `Pflicht` ("O"/"P"/"V"), `Einheit?`, `Label?`, `Min?`, `Max?`, `Hint?`; `ClockRule`: `Mode` ("range"/"none"), `Hint?`.
+- `QuantRule`: `Q1?`, `Q1PerChar1?`, `Q2?`, `Q2PerChar1?`; `QuantField`: `Pflicht` ("O"/"P"/"V"), `Einheit?`, `Label?`, `Min?`, `Max?`, `Hint?`; `ClockRule`: `Mode` ("range"/"none"), `Hint?`.
 
 ### Statischer Code-Baum + strenger Validator (`Domain/VsaCatalog/`)
 
-Getrennt vom dynamischen Manifest existiert ein **hartcodierter** Baum `VsaCodeTree.Groups` (`VsaCodeTree.cs`, EN 13508-2 / VSA-KEK 2018-Stand): Hierarchie Gruppe -> Hauptcode -> Char1 -> Char2 (z.B. `BA`="Struktur der Rohrleitungen", `BAA`="Verformung", `BAB`="Risse" mit Char1 A/B/C und Char2 A–E `AllValid=true`, `BAF` mit `Invalid`-Kombinationsregeln). Dieser Baum dient ausschliesslich `VsaCodeValidator`.
+Getrennt vom dynamischen Manifest existiert ein **hartcodierter** Baum `VsaCodeTree.Groups` (`VsaCodeTree.cs`, EN 13508-2 / VSA-Kanalstruktur): Hierarchie Gruppe -> Hauptcode -> Char1 -> Char2 (z.B. `BA`="Struktur der Rohrleitungen", `BAA`="Verformung", `BAB`="Risse" mit Char1 A/B/C und Char2 A–E `AllValid=true`, `BAF` mit `Invalid`-Kombinationsregeln). Der Baum dient `VsaCodeValidator` als Eintrittsfilter und `VsaCodeTreeSelectionCatalog` als begrenzte Kanal-Picker-Navigation. Er ist **keine** Endcode-Whitelist; die kommt ausschließlich aus dem Manifest. Seine `QuantRules` und `ClockRules` enthalten die für diesen Picker semantisch vollständigen Einheiten, Bereiche und charabhängigen Felder.
 
 `VsaCodeValidator` (`VsaCodeValidator.cs`, static) — strenger Eintrittsfilter fuer Trainingslabels aus freiem PDF-Text (UI/KI-Resolver duerfen toleranter sein):
 - `bool IsKnownCode(string?)`: normalisiert (Punkte raus, Upper), prueft Regex `^[A-Z]{3,8}$`, dann ob die ersten 2 Zeichen eine bekannte Gruppe und die ersten 3 einen bekannten Hauptcode in `VsaCodeTree` sind.
@@ -1342,7 +1348,7 @@ Steuert einen Codier-Durchlauf von 0.00m bis Haltungsende (`StartSession`/Pause/
 
 Reine, seiteneffektarme Prüffunktionen (`Application/Ai/Training`). Zwei orthogonale Sperren:
 - **Hash-Sperre** (pixelidentische Frames): `ComputeFileHash` = SHA-256-Hex (lowercase) des Datei-**Inhalts** (nicht des Namens). `LoadEvalImageHashes(evalSetRoot)` liest bevorzugt `_manifest.json` (`hashes["images/*"].sha256`), sonst direkt aus `images/`. `IsEvalContaminated(hashes, framePath)`.
-- **Haltungs-Sperre** (gleiche reale Haltung, anderer Frame): `NormalizeHaltungKey(caseId)` extrahiert das kanonische Schacht-Paar (z.B. `"06.24379-06.24377" → "24379-24377"`, Bereichs-Präfix entfernt). `LoadEvalHaltungKeys(evalSetRoot)` liest bevorzugt `_candidates.json` (`haltung_key`), sonst aus Dateinamen-Präfix. `IsEvalHaltung(keys, caseId)`.
+- **Haltungs-Sperre** (gleiche reale Haltung, anderer Frame): `NormalizeHaltungKey(caseId)` extrahiert das kanonische Schacht-Paar (z.B. `"06.24379-06.24377" → "24379-24377"`, Bereichs-Präfix entfernt). `LoadEvalHaltungKeys(evalSetRoot)` liest bevorzugt `_candidates.json` (`haltung_key`), sonst aus Dateinamen-Präfix. `IsEvalHaltung(keys, caseId)` sperrt auch die umgekehrte Richtung desselben Schachtpaars.
 
 `ClassifyForExport(hashes, haltungKeys, framePath, caseId)` → `ExportContaminationResult { Clean, EvalImageHash, EvalHaltung }` (Reihenfolge Hash → Haltung). Leere Sätze ⇒ `Clean` (Schutz inaktiv statt Fehlalarm; degradiert sicher auf fremden Maschinen). Diese Guards werden überall vor KB-Indexierung und Trainings-/YOLO-Export verdrahtet; in der UI via `EvalContaminationGuard.LoadEval...(AppSettings.Load().EvalSetRoot)`.
 
@@ -1354,8 +1360,80 @@ Layout unter der Eval-Root (Default `C:\KI_BRAIN\eval_set`):
 - `_candidates.json`: Kandidaten mit `haltung_key` und Erwartungscodes.
 - `subsets/eval_visible_clean_eval_set/` (57 Frames, jeweils eigenes `images/`+`labels/`+Manifest) — der saubere Satz für **Modellvergleiche/Entscheidungen**.
 - `subsets/eval_unclean_or_hidden_eval_set/` (63 Frames) — Kontrollblick (nicht "verbrennen"). Summe 57+63 = 120.
+- `subsets/bcc_release_holdout_<sha>/` — separater BCC-Abnahmebestand. Der
+  Builder `training/scripts/bcc_release_holdout.py` verwendet XTF-Codes nur für
+  eine verdeckte, ausgewogene Vorauswahl, prüft Bild- und Haltungsüberlapp,
+  Kandidaten-Receipts samt lokaler YOLO-Konfiguration sowie vorhandene
+  Eval-Hash-Manifeste und veröffentlicht atomar. Die Ausnahme fuer noch nicht
+  direkt konfigurationsgebundene Kandidaten ist auf exakt vier historische
+  Kandidaten-IDs und deren unveraenderte Manifest-SHA begrenzt. Jedes Manifest
+  im BCC-Kandidatenordner muss `pilot=BCC_bogen` tragen. Falsch typisierte, leere
+  oder nicht eindeutig aufloesbare Legacy-Collapse-Dateinamen stoppen den Scan.
+  Der Blind-Review liegt außerhalb
+  des Eval-Sets, bindet Manifest sowie Kandidatenliste per SHA-256 und folgt keinen
+  Verknüpfungen in der Pfadkette. Ein prozessweiter Datei-Lock plus
+  Versionspruefung verhindert unbemerktes paralleles Ueberschreiben.
+  Sichtbar ist fuer alle Bilder nur der feste Pruefauftrag `BCC — Bogen`;
+  bildbezogener XTF-Untercode, Vorauswahl und Modellvorhersage bleiben verborgen.
+  Kandidatenumfang sowie die aggregierten
+  Fingerprints der bekannten Bild-Hashes und Haltungs-Aliase müssen bei jeder
+  V1-Statusprüfung exakt gleich bleiben. Ohne menschliche Boxen misst der Bestand
+  nur BCC-Präsenz und Fehlalarme, nicht Lokalisation oder mAP.
+  Der reale V1-Review ist mit 29 positiven und 31 negativen Bildern
+  abgeschlossen. `training/scripts/evaluate_bcc_release_holdout.py` vergleicht
+  den eingefrorenen Kandidatenumfang mit festem `conf=0.25`, `imgsz=1280` und
+  nur Klasse 14. Es bindet Review, Kandidaten, Aufhebungsmarker, Gewichte,
+  Klassenkarte, Bild-Momentaufnahmen, Geraet und Qualitaetsgrenzen. Zuerst wird
+  ein labelblinder Vorhersagebeleg atomar geschrieben; nur dessen erneut
+  eingelesene SHA-gebundene Bytes werden bewertet. Technische Fehler zaehlen
+  nicht als Negativbefund und verhindern einen endgueltigen Teilbericht.
+  Der Lauf vom 28.07.2026 hatte 240 fehlerfreie Vorhersagen. Die beiden noch
+  relevanten Modelle erzielten TP/FN/TN/FP 24/5/9/22 und 26/3/6/25. Wegen der
+  hohen Fehlalarmzahl und des Zielkonflikts gibt es keine Freigabe und keinen
+  eindeutigen Spitzenreiter. Der Bericht lautet
+  `comparison_complete_not_release_qualified`; vor einer spaeteren Aktivierung
+  ist ein frischer Bestaetigungsholdout erforderlich.
+- `subsets/detect_release_holdout_<sha>/` ist der allgemeine 15-Klassen-Bestand
+  aus frischen PDF-/Video-Haltungen (Eval-Weg geprueft am 03.08.2026). Holdout,
+  Bilder, Kandidat, class_map v3 und VSA-Manifest sind hashgebunden; die getrennte
+  menschliche Review kennt `positive`, `negative` und `exclude` und speichert bei
+  positiven Bildern alle bestaetigten Boxen. Der Diagnose-Runner
+  `training/scripts/evaluate_detect_release_holdout.py` verwendet fest
+  `conf=0,25`, `imgsz=1280` und `IoU=0,5`. Er versiegelt zuerst Vorhersagen auf
+  allen Bildern labelblind und liest erst danach die Review zum Scoring. Negative
+  Bilder messen zusaetzlich Bild-Fehlalarme; technische Fehler sind nie Negative.
+  Mindestabdeckung, Modellfreigabe und Aktivierung bleiben getrennte Gates. Der
+  aktuelle Review umfasst 400/400 Bilder, ist mit 241 positiv, 74 negativ und 85
+  ausgeschlossen jedoch nur `coverage_incomplete` und deshalb diagnostisch.
 
 Dateinamenschema der Eval-Frames: `<haltung_key>_<zeit>s_<code>_t+0.png` (bzw. `..._kein_schaden.png` für Negative). Erwartungscode steckt im Namen und in `_candidates.json`.
+
+Hard-Negative-Daten sind davon strikt getrennt. Der Builder
+`training/scripts/bcc_hard_negative_review.py` sperrt alle bekannten Bildbytes
+und physischen Haltungen samt Gegenrichtung, bindet die aktive 15er-class_map v3,
+den VSA-Hash, Trainings-/Registry-Fingerprints, Auswahlmodelle und geschuetzte
+Eval-Sets. Er kopiert genau ein unveraendertes Vollbild je Haltung in eine neue
+atomare Queue. Der lokale Browser zeigt weder Modellwerte noch XTF-Hinweise.
+Nur `all_classes_clear` bestaetigt die Abwesenheit **aller 15** Detect-Klassen;
+`negative` aus dem BCC-Release-Review bedeutet nur „kein BCC“ und ist hier
+ungueltig. Der aktuelle Bestand `bcc_hn_d37e1e0e481c` umfasst 14 Bilder aus
+14 Haltungen. Sein hashgebundener Review ist abgeschlossen: 10 Bilder sind
+`all_classes_clear`, 4 zeigen mindestens eine gemappte Klasse. Nur die 10
+freigegebenen Vollbilder wurden als eingefrorener Negativsatz
+`bcc_hn_54f6608b975a` veroeffentlicht (8 Train, 2 Validation). Set-ID, Bilder,
+Haltungen, Splitregel, Review, Queue, Kandidatenliste und class_map v3 sind in
+Manifest und kopierten Receipts per SHA-256 verbunden; Originale werden nie
+veraendert und vorhandene Saetze nie ueberschrieben.
+
+Der strikte Exportlauf vom 2026-07-28 erzeugte den 67-Bilder-Datensatz
+`f23a95b149addf9d24365834b563b7784f76132190d9e4e60f4c61e84a652bc9`
+(57 BCC-Positive, 10 Negative; 48 Train, 19 Validation). Der nicht aktivierte
+Kandidat `bcc_bogen_f23a95b149ad_hn10_strict` stoppte nach 33/40 Epochen.
+Die interne Validation (P 0,5371; R 0,4706; mAP50 0,4829; mAP50-95 0,1613)
+und Aktivierungen auf 2/2 strikten Validation-Negativen sowie 7/14
+nicht mittrainierten Altnegativen sind ausdruecklich kein Release-Beweis.
+Vor einer Aktivierung werden weitere unterschiedliche BCC-Boxen, weitere streng
+reviewte Hard-Negatives und ein frischer, zuvor unberuehrter Holdout benoetigt.
 
 ### Benchmark-Tool (`tools/EvalSetBenchmark`)
 
@@ -1371,6 +1449,15 @@ einzige Sample-Wahrheit. Danach prueft der gemeinsame Weg das menschlich freigeg
 Migration. Klassen-IDs, Haltungs-Split, Multi-Label-Zusammenfuehrung, Dateinamen und
 Ausschluesse stehen unveraenderlich im pfadfreien Plan.
 
+Fuer Negativbilder bleibt nur eine reine Legacy-Registry mit dem alten flachen
+Pool kompatibel. Ein neuer Lauf verwendet ausschliesslich streng reviewte
+`--negative-set`-Quellen. Deren Registry-Eintraege nennen echte Haltung und
+Gegenrichtungsschutz, festen Split, Set- und Manifest-Hash, Review, Queue,
+Kandidatenbeleg sowie class_map v3. Python und C# gleichen diese Felder erneut
+mit `_manifest.json`, Bildbytes und den kopierten Receipts ab. Eine Mischung aus
+Legacy- und strikten Negativen stoppt den Export. Der Holdout-Kontaminationsscan
+schuetzt beide Bestandsarten anhand Bildhash und physischer Haltung.
+
 Ein echter Export schreibt atomar nach
 `<KnowledgeRoot>\training\datasets\<plan-id>`: `images/{train,val}`,
 `labels/{train,val}`, `classes.txt`, `data.yaml`, `manifest.json` und
@@ -1380,6 +1467,13 @@ nicht mehr. `--dry-run`/`--plan-only` prueft bis zum fertigen Plan, speichert un
 mutiert aber nichts. `--val-ratio`, `--allow-dummy-bbox` sowie fremde Quell- oder
 Zielpfade werden abgelehnt. Erst nach bestaetigtem Export werden Eligibility und
 `ExportedUtc` gemeinsam einmal gespeichert.
+
+`training/scripts/train_bcc_pilot.py` akzeptiert fuer den BCC-Pilot nur einen
+solchen vollstaendigen Export. Receipt-Hashes muessen zu `manifest.json`,
+`data.yaml`, `classes.txt`, allen Bildern und Labels passen. In `data.yaml` sind
+nur `path: .`, `train: images/train` und `val: images/val` erlaubt. Neu erzeugte
+Kandidatenmanifeste binden Receipt-, YAML- und Klassen-Hash zusaetzlich zum
+Dataset-Manifest.
 
 Der fruehere, nicht registrierte `YoloDatasetExportService` ist entfernt. Er hatte
 einen eigenen Zufalls-Split, dynamische Klassen und beliebige Zielordner. Damit gibt es
@@ -1735,7 +1829,7 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 
 ### BA – Bauliche Schäden (Kanal)
 
-**BAA - Verformung**  | Quant: (keine im Katalog; Q1 % laut Richtlinie) | 3 Codes
+**BAA - Verformung**  | Quant: Q1* (%) | 3 Codes
   - `BAAA` Rohr vertikal deformiert
   - `BAAB` Rohr horizontal deformiert
 
@@ -1747,10 +1841,10 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 **BAC - Leitungsbruch / Einsturz**  | Quant: Q1*, Uhrlage(A/E), Verbindung | 4 Codes
   - `BACA` In der Lage verschobene Scherbe · `BACB` Fehlende Scherbe/Wandungsteil (Loch) · `BACC` Leitungsbruch/Einsturz
 
-**BAD - Defektes Mauerwerk**  | Quant: (keine) | 5 Codes
+**BAD - Defektes Mauerwerk**  | Quant: nur C mit Q1* (20–1000 mm) | 5 Codes
   - `BADA` Steine verschoben · `BADB` Steine fehlen · `BADC` Sohle abgesackt · `BADD` Einsturz
 
-**BAE - Mörtel aus Mauerwerk fehlt**  | Quant: (keine; Q1 Tiefe mm laut Richtlinie) | 1 Code
+**BAE - Mörtel aus Mauerwerk fehlt**  | Quant: Q1* (5–500 mm) | 1 Code
 
 **BAF - Oberflächenschaden**  | Quant: Uhrlage(A/E), Verbindung | 64 Codes
   Systematik Char1: A=raue Rohrwand, B=Abplatzung, C=Zuschlagstoffe sichtbar, D=Zuschlagstoffe einragend, E=Zuschlagstoffe fehlen, F=Bewehrung sichtbar, G=Bewehrung einragend, H=Bewehrung korrodiert, I=fehlende Rohrwandung, J=Rohrwand korrodiert, K=Beule, Z=andersartig.
@@ -1768,10 +1862,10 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 **BAJ - Verschobene Rohrverbindung**  | Quant: Q1*, Uhrlage(A/E), Verbindung | 4 Codes
   - `BAJA` Breite Rohrverbindung (Q1 Abstand mm) · `BAJB` Versetzt (Q1 mm) · `BAJC` Knick (Q1 Winkel °)
 
-**BAK - Feststellung der Innenauskleidung**  | Quant: (keine) | 19 Codes
+**BAK - Feststellung der Innenauskleidung**  | Quant: charakterabhängig (% oder mm) | 19 Codes
   - `BAKA` abgelöst · `BAKB` verfärbt · `BAKC` Endstelle schadhaft · `BAKDA-DD` Faltenbildung (längs/radial/komplex/spiral) · `BAKE` Blasen/Beulen · `BAKF` Beule nach aussen · `BAKG` Ablösen Innenhaut · `BAKH` Ablösen Verbindungsnaht · `BAKI` Riss/Spalt · `BAKJ` Loch · `BAKK` Verbindung defekt · `BAKL` Werkstoff weich · `BAKM` Harz fehlt · `BAKN` Ende nicht abgedichtet · `BAKZ` andersartig
 
-**BAL - Schadhafte Reparatur**  | Quant: (keine) | 12 Codes
+**BAL - Schadhafte Reparatur**  | Quant: nur G mit Q1* (Rissbreite mm) | 12 Codes
   - `BALA` Wand fehlt teilweise · `BALB` Loch mangelhaft · `BALC` löst sich vom Altrohr · `BALD` fehlt an Kontaktfläche · `BALE` überschüssig (Hindernis) · `BALF` Loch · `BALGA-GD` Riss (längs/radial/komplex/spiral) · `BALZ` andersartig
 
 **BAM - Schadhafte Schweissnaht**  | Quant: (keine) | 4 Codes — `BAMA` längs · `BAMB` radial · `BAMC` spiralförmig
@@ -1789,10 +1883,10 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 **BBC - Ablagerung**  | Quant: Q1* (% Querschnitt), Uhrlage(A/E), Verbindung | 5 Codes
   - `BBCA` lose Sand · `BBCB` lose Kies · `BBCC` harte Ablagerungen · `BBCZ` andersartig
 
-**BBD - Eindringendes Bodenmaterial**  | Quant: (keine; Q1 % laut Richtlinie) | 5 Codes
+**BBD - Eindringendes Bodenmaterial**  | Quant: Q1* (1–100 %) | 5 Codes
   - `BBDA` Sand · `BBDB` organisch · `BBDC` Feinmaterial · `BBDD` Grobmaterial · `BBDZ` Bodenmaterial
 
-**BBE - Hindernis**  | Quant: (keine) | 9 Codes
+**BBE - Hindernis**  | Quant: Q1* (1–100 %) | 9 Codes
   - `BBEA` Stein in Sohle · `BBEB` Leitungsstück · `BBEC` Gegenstand in Sohle · `BBED` ragt durch Wand · `BBEE` in Rohrverbindung eingeklemmt · `BBEF` aus Anschluss in Hauptleitung · `BBEG` fremde Werkleitungen/Kabel · `BBEH` in Rohrkörper eingebaut · `BBEZ` andersartig
 
 **BBF - Infiltration**  | Quant: Uhrlage(A/E), Verbindung | 5 Codes
@@ -1800,7 +1894,7 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 
 **BBG - Sichtbarer Wasseraustritt (Exfiltration)** | 1 Code, keine Quant.
 
-**BBH - Ungeziefer**  | Quant: (keine; Q1 Anzahl laut Richtlinie) | 12 Codes
+**BBH - Ungeziefer**  | Quant: Q1* (0–10000 Stk.) | 12 Codes
   - `BBHA*` Ratte · `BBHB*` Kakerlake · `BBHZ*` Tier (jeweils in Rohrleitung/Anschluss/offener Rohrverbindung)
 
 ### BC – Bestandsaufnahme / Grundgerüst (Kanal)
@@ -1812,8 +1906,9 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 **BCB - Punktuelle Reparatur (sichtbar)**  | Quant: Uhrlage(A/E), Verbindung | 9 Codes
   - `BCBA` Rohr ausgetauscht · `BCBB`/`BCBF` örtliche Innenauskleidung · `BCBC` Mörtelinjizierung · `BCBD` Injizierung · `BCBE` Loch repariert · `BCBG` Anschluss-Reparatur · `BCBZ` andersartig (grabenlos)
 
-**BCC - Bogen**  | Quant: (keine; Q1 Winkel ° laut Richtlinie) | 10 Codes
+**BCC - Bogen**  | Quant: Q1* (1–359 °), keine Uhrlage | 8 auswählbare Endcodes
   - `BCCAA` links oben · `BCCAB` links unten · `BCCAY` **nach links** · `BCCBA` rechts oben · `BCCBB` rechts unten · `BCCBY` **nach rechts** · `BCCYA` nach oben · `BCCYB` nach unten
+  - `BCCYY` ist nur ein beobachteter XTF-Code und nicht auswählbar.
 
 **BCD - Rohranfang**  | Steuercode | 2 Codes — `BCD`, `BCDXP` (Distanzmessung Anfang)
 **BCE - Rohrende**  | Steuercode | 2 Codes — `BCE`, `BCEXP` (Distanzmessung Ende)
@@ -1862,28 +1957,39 @@ B A B . B . A   = Riss, Untertyp "Riss", Lage "längs"
 
 ## 6. Quantifizierung — Einheiten pro Schadenstyp
 
-| Code | Q1 (Einheit) | Q2 | Hinweis |
-|---|---|---|---|
-| BAA Verformung | % Deformation | – | materialabhängig (s. §11) |
-| BAB Riss | Breite mm | – | A=Haarriss: **keine** Quant. |
-| BAC Bruch | Länge mm | – | |
-| BAE fehlender Mörtel | Tiefe mm | – | |
-| BAF Oberflächenschaden | % Ausmaß | – | |
-| BAG einragender Anschluss | % Querschnittsminderung | – | |
-| BAI einragendes Dichtungsmaterial | % Querschnittsminderung | – | DN-relativ |
-| BAJ verschobene Rohrverbindung | A/B: Abstand mm · C: Winkel ° | – | DN-relativ |
-| BBA Wurzeln | % Querschnitt | – | |
-| BBB anhaftende Stoffe | % Querschnitt | – | |
-| BBC Ablagerung | % Querschnitt | – | |
-| BBD eindringender Boden | % Querschnitt | – | |
-| BBE Hindernis | % Querschnitt | – | |
-| BBH Ungeziefer | Anzahl | – | |
-| BCA Anschluss | Höhe mm | Breite mm | |
-| BCC Bogen | Winkel ° | – | (geometrisch, s. §16) |
-| BDD Wasserspiegel | % lichte Höhe | – | |
-| BDE Zufluss | % Wasserspiegel Anschluss | – | |
+Im Codierfenster stehen Einheit und erlaubter Bereich direkt rechts neben jedem
+Q1-/Q2-Eingabefeld. Der Validator benutzt dieselbe Regel und nennt die Einheit auch
+im Fehlertext. Ein sichtbares Feld ohne Einheit ist ein Fehler. Die folgende
+Kanal-Picker-Matrix ist gegen den lokal installierten WinCan-Katalog
+`EN13508_VSA-2019_CH_DEU_SEC.xml` abgeglichen:
 
-**Keine Quantifizierung:** BAD, BAH, BAK, BAL, BAM, BAN, BAO, BAP, BBF, BBG, BCB, BCD, BCE, BDA, BDB, BDC, BDF, BDG, AE*.
+| Code | Q1 (Einheit und Bereich) | Q2 | Hinweis |
+|---|---|---|---|
+| BAA Verformung | Verformung `%` | – | materialabhängig (s. §11) |
+| BAB Riss | B/C: Rissbreite `1–200 mm` | – | A: keine Quantifizierung |
+| BAC Bruch | Bruchlänge `10–1000 mm` | – | |
+| BAD Mauerwerk | C: Absackung `20–1000 mm` | – | A/B/D: keine Quantifizierung |
+| BAE fehlender Mörtel | Mörteltiefe `5–500 mm` | – | |
+| BAG einragender Anschluss | einragende Länge `1–100 %` | – | bezogen auf DN/Höhe |
+| BAI einragendes Dichtungsmaterial | Z: Querschnittsminderung `1–100 %` | – | A: keine Quantifizierung |
+| BAJ verschobene Rohrverbindung | A/B: `0–9999 mm` · C: `1–359 °` | – | |
+| BAK Innenauskleidung | A–E/Z: `0–100 %` · F/I/J: `mm` | – | übrige Charaktere ohne Quantifizierung |
+| BAL schadhafte Reparatur | G: Rissbreite `mm` | – | übrige Charaktere ohne Quantifizierung |
+| BBA Wurzeln | `1–100 %` | – | Querschnittsverminderung |
+| BBB anhaftende Stoffe | `1–100 %` | – | Querschnittsverminderung |
+| BBC Ablagerung | `0–100 %` | – | Ablagerungshöhe |
+| BBD eindringender Boden | `1–100 %` | – | Querschnittsverminderung |
+| BBE Hindernis | `1–100 %` | – | Querschnittsverminderung |
+| BBH Ungeziefer | `0–10000 Stk.` | – | Anzahl |
+| BCA Anschluss | Höhe `0–10000 mm` | Breite `0–10000 mm` | Q2 optional |
+| BCC Bogen | Richtungsänderung `1–359 °` | – | keine zusätzliche Uhrlage |
+| BDD Wasserspiegel | `0–100 %` | – | lichte Höhe |
+| BDE Zufluss | `0–100 %` | – | Wasserspiegel am Anschluss |
+| AEC Rohrprofilwechsel | Höhe `0–4500 mm` | Breite `0–4500 mm` | Q2 optional; beim Kreisprofil C nicht vorhanden |
+
+**Keine Quantifizierung:** BAF, BAH, BAM, BAN, BAO, BAP, BBF, BBG, BCB,
+BCD, BCE, BDA, BDB, BDC, BDF, BDG, AED und AEF. Bei BAD, BAI, BAK und BAL
+entscheidet Char1, ob ein Feld erscheint.
 
 ---
 

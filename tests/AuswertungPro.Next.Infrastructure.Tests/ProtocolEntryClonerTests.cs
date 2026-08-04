@@ -47,17 +47,48 @@ public sealed class ProtocolEntryClonerTests
     {
         var source = new ProtocolEntry
         {
-            FotoPaths = new List<string> { "foto1.jpg", "foto2.jpg" }
+            FotoPaths = new List<string> { "foto1.jpg", "foto2.jpg" },
+            OriginalFotoPaths = new List<string> { "original1.jpg", "original2.jpg" }
         };
 
         var clone = ProtocolEntryCloner.CloneLegacyProtocolEntry(source);
 
         Assert.NotSame(source.FotoPaths, clone.FotoPaths);
         Assert.Equal(new[] { "foto1.jpg", "foto2.jpg" }, clone.FotoPaths);
+        Assert.NotSame(source.OriginalFotoPaths, clone.OriginalFotoPaths);
+        Assert.Equal(new[] { "original1.jpg", "original2.jpg" }, clone.OriginalFotoPaths);
 
         // Aenderung am Original darf den Klon nicht beeinflussen
         source.FotoPaths.Add("foto3.jpg");
+        source.OriginalFotoPaths.Add("original3.jpg");
         Assert.Equal(2, clone.FotoPaths.Count);
+        Assert.Equal(2, clone.OriginalFotoPaths.Count);
+    }
+
+    [Fact]
+    public void Clone_TrainingMetaWirdTiefKopiert()
+    {
+        var source = new ProtocolEntry
+        {
+            Training = new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = true,
+                SkipReason = "Fotoannotation bereits separat gespeichert",
+                PhotoAnnotationSampleIds = new List<string> { "sample-1", "sample-2" }
+            }
+        };
+
+        var clone = ProtocolEntryCloner.CloneLegacyProtocolEntry(source);
+
+        Assert.NotNull(clone.Training);
+        Assert.NotSame(source.Training, clone.Training);
+        Assert.True(clone.Training!.SkipAutomaticPersistence);
+        Assert.Equal("Fotoannotation bereits separat gespeichert", clone.Training.SkipReason);
+        Assert.NotSame(source.Training.PhotoAnnotationSampleIds, clone.Training.PhotoAnnotationSampleIds);
+        Assert.Equal(new[] { "sample-1", "sample-2" }, clone.Training.PhotoAnnotationSampleIds);
+
+        source.Training.PhotoAnnotationSampleIds.Add("sample-3");
+        Assert.Equal(2, clone.Training.PhotoAnnotationSampleIds.Count);
     }
 
     [Fact]
@@ -162,5 +193,13 @@ public sealed class ProtocolEntryClonerTests
         var source = new ProtocolEntry { Ai = null };
         var clone = ProtocolEntryCloner.CloneLegacyProtocolEntry(source);
         Assert.Null(clone.Ai);
+    }
+
+    [Fact]
+    public void Clone_NullTraining_BleibtNull()
+    {
+        var source = new ProtocolEntry { Training = null };
+        var clone = ProtocolEntryCloner.CloneLegacyProtocolEntry(source);
+        Assert.Null(clone.Training);
     }
 }

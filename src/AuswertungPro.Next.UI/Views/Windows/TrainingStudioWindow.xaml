@@ -6,7 +6,8 @@
         Height="900" Width="1500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}"
-        Foreground="{DynamicResource TextBrush}">
+        Foreground="{DynamicResource TextBrush}"
+        PreviewKeyDown="TrainingStudioWindow_PreviewKeyDown">
     <Window.Resources>
         <local:FileToImageConverter x:Key="FileToImage"/>
         <local:PersonalGoldMainCodeToTextConverter x:Key="PersonalGoldMainCodeToText"/>
@@ -34,13 +35,22 @@
                 Padding="12,8" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <WrapPanel x:Name="PdfSourceToolbar" Grid.Row="0" Grid.Column="0">
                     <Button Content="Fotos laden…" Style="{StaticResource ToolbarButton}"
                             Click="LoadPhotos_Click"/>
+                    <Button Content="PDF laden…" Style="{StaticResource ToolbarButton}"
+                            Click="LoadPdfProtocol_Click" Margin="6,0,0,0"
+                            ToolTip="Extrahiert nur eindeutig zugeordnete Operateur-Fotos und Codes. Gold entsteht erst nach Box, Segmentierung und Bestätigung."/>
+                    <Button Content="PDF-Ordner laden…" Style="{StaticResource ToolbarButton}"
+                            Click="LoadPdfFolders_Click" Margin="6,0,0,0"
+                            ToolTip="Mehrere Ordner wählen. PDFs werden rekursiv gesucht und ihre eindeutig zugeordneten Fotos gemeinsam geladen."/>
                     <Button Content="Gold-Eingang öffnen" Style="{StaticResource ToolbarButton}"
                             Click="OpenGoldInbox_Click" Margin="6,0,0,0"
                             ToolTip="Öffnet die Hauptcode-Ordner für neue, noch nicht gelabelte Bilder."/>
@@ -49,9 +59,15 @@
                             ToolTip="Lädt alle Bilder aus dem Gold-Eingang in die Trainingsvorschau."/>
                     <Button Content="Warteschlange laden" Style="{StaticResource ToolbarButton}"
                             Click="LoadReviewQueue_Click" Margin="6,0,0,0"/>
-                    <Button Content="Unvollständige Goldframes" Style="{StaticResource ToolbarButton}"
+                    <Button Content="Segmentierung abarbeiten" Style="{StaticResource ToolbarButton}"
                             Click="LoadIncompleteGoldQueue_Click" Margin="6,0,0,0"
-                            ToolTip="Lädt persönlich bestätigte Goldframes, denen Box oder Segmentierung fehlt."/>
+                            ToolTip="Lädt alle lesbaren persönlichen Bilder mit fehlender oder ungültiger Maske. Vorhandene Boxen werden automatisch erneut mit SAM segmentiert."/>
+                    <Button Content="Goldprüfung (90)" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding LoadGoldQualityReviewCommand}" Margin="6,0,0,0"
+                            ToolTip="Prüft je 15 freigegebene Goldbilder für BAB, BAF, BAI, BAJ, BBC und BBF. Die Sitzung wird sicher fortgesetzt."/>
+                    <Button Content="Alle Gold-Reparaturfälle" Style="{StaticResource ToolbarButton}"
+                            Click="LoadAllIncompleteGoldQueue_Click" Margin="6,0,0,0"
+                            ToolTip="Diagnoseliste aller persönlichen Entwürfe und Reparaturfälle, auch wenn die Bilddatei fehlt oder nicht geöffnet werden kann."/>
                     <Button Content="Goldalbum" Style="{StaticResource ToolbarButton}"
                             Click="OpenGoldAlbum_Click" Margin="6,0,0,0"
                             ToolTip="Zeigt alle persönlich bestätigten Beispiele nach Hauptcode."/>
@@ -63,20 +79,35 @@
                     <TextBox Text="{Binding PipeDiameterInput, UpdateSourceTrigger=PropertyChanged}"
                              Width="60" VerticalContentAlignment="Center"
                              ToolTip="Optionaler Rohrdurchmesser in mm (leer = 300 mm Standard)."/>
-                </StackPanel>
-                <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                </WrapPanel>
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                           HorizontalAlignment="Left" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
                            Text="{Binding CurrentImagePath, TargetNullValue='Keine Warteschlange geladen'}"/>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="12,0,0,0">
+                    <StackPanel x:Name="PdfImportProgressPanel" Orientation="Horizontal"
+                                Visibility="Collapsed" Margin="0,0,12,0">
+                        <ProgressBar Width="90" Height="8" IsIndeterminate="True"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Button x:Name="PdfImportCancelButton"
+                                Content="PDF-Import abbrechen"
+                                Style="{StaticResource ToolbarButtonDanger}"
+                                Click="CancelPdfImport_Click"/>
+                    </StackPanel>
                     <TextBlock Text="Geprueft:" Foreground="{DynamicResource MutedBrush}"/>
                     <TextBlock Text="{Binding QueueDoneCount}" Margin="4,0,0,0" FontWeight="Bold"
                                Foreground="{DynamicResource SuccessBrush}"/>
+                    <TextBlock Text=" / " Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding QueueTotalCount}" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- ── Hauptbereich: Bild links, Codier-Panel rechts ──────────────── -->
-        <Grid Grid.Row="1">
+        <Grid x:Name="PdfReviewArea" Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="380"/>
@@ -91,6 +122,7 @@
                            Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}, ConverterParameter=Original}"/>
                     <!-- Overlay: Box-Zeichnen + Maskenkontur (Code-behind, reine Geometrie) -->
                     <Canvas x:Name="OverlayCanvas" Background="Transparent"
+                            IsHitTestVisible="{Binding IsAnnotationEntryEnabled}"
                             MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
                             MouseMove="OverlayCanvas_MouseMove"
                             MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"/>
@@ -156,10 +188,29 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Bereits vom Operateur codierte PDF-Quelle; noch kein Gold. -->
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                            Padding="12,10" Margin="0,0,0,8"
+                            Visibility="{Binding HasSourceSuggestion, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="PDF-Operateurvorgabe — noch nicht bestätigt"
+                                       FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                                       Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding SourceReferenceDetails}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="Erst deine Box, die sichtbare SAM-Maske und Akzeptieren machen daraus Gold."
+                                       TextWrapping="Wrap" Margin="0,6,0,0" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Reiner Modelltest: automatische Treffer werden nie als Gold gespeichert. -->
                     <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="12,10" Margin="0,0,0,8">
+                            Padding="12,10" Margin="0,0,0,8"
+                            IsEnabled="{Binding IsAnnotationEntryEnabled}">
                         <StackPanel>
                             <TextBlock Text="Modelltest am Foto" FontWeight="Bold" Margin="0,0,0,6"/>
                             <ComboBox ItemsSource="{Binding PreviewModelOptions}"
@@ -202,7 +253,8 @@
                     <!-- KI-Vorschlag -->
                     <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="12,10" Margin="0,0,0,8">
+                            Padding="12,10" Margin="0,0,0,8"
+                            IsEnabled="{Binding IsAnnotationEntryEnabled}">
                         <StackPanel>
                             <TextBlock Text="KI-Vorschlag" FontWeight="Bold" Margin="0,0,0,6"/>
                             <Button Content="Foto allgemein mit KI prüfen"
@@ -255,7 +307,8 @@
                     <!-- Codierung -->
                     <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="12,10" Margin="0,0,0,8">
+                            Padding="12,10" Margin="0,0,0,8"
+                            IsEnabled="{Binding IsAnnotationEntryEnabled}">
                         <StackPanel>
                             <TextBlock Text="Codierung" FontWeight="Bold" Margin="0,0,0,6"/>
 
@@ -313,23 +366,47 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10">
                         <StackPanel>
-                            <Button Content="Akzeptieren (A)" Style="{StaticResource SuccessButton}"
-                                    Command="{Binding AcceptCommand}" Margin="0,0,0,6"/>
-                            <Button Content="Korrektur speichern (K)" Style="{StaticResource PrimaryButton}"
-                                    Command="{Binding CorrectCommand}" Margin="0,0,0,6"/>
-                            <TextBlock Text="Ein geaenderter Code wird als Lernkorrektur zurueckgegeben."
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
-                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="Verwerfen (V)" Style="{StaticResource ToolbarButtonDanger}"
-                                        Command="{Binding DiscardCommand}" Margin="0,0,4,0"/>
-                                <Button Grid.Column="1" Content="Naechstes (→)" Style="{StaticResource ToolbarButton}"
-                                        Command="{Binding NextItemCommand}" Margin="4,0,0,0"/>
-                            </Grid>
+                            <StackPanel IsEnabled="{Binding IsAnnotationEntryEnabled}">
+                                <Button Content="Akzeptieren (A)" Style="{StaticResource SuccessButton}"
+                                        Command="{Binding AcceptCommand}" Margin="0,0,0,6"/>
+                                <Button Content="Korrektur speichern (K)" Style="{StaticResource PrimaryButton}"
+                                        Command="{Binding CorrectCommand}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Ein geaenderter Code wird als Lernkorrektur zurueckgegeben."
+                                           Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Verwerfen (V)" Style="{StaticResource ToolbarButtonDanger}"
+                                            Command="{Binding DiscardCommand}" Margin="0,0,4,0"/>
+                                    <Button Grid.Column="1" Content="Naechstes (→)" Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding NextItemCommand}" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource AccentSubtleBrush}"
+                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    BorderThickness="1" CornerRadius="5" Padding="9"
+                                    Margin="0,8,0,0"
+                                    Visibility="{Binding IsAwaitingImageCompletion, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="Ereignis gespeichert — wie weiter?"
+                                               FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding ImageCompletionPrompt}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="11" Margin="0,0,0,8"/>
+                                    <Button Content="Weiteres Ereignis auf diesem Bild"
+                                            Style="{StaticResource PrimaryButton}"
+                                            Command="{Binding AddAnotherEventCommand}"
+                                            Margin="0,0,0,6"/>
+                                    <Button Content="Bild fertig"
+                                            Style="{StaticResource SuccessButton}"
+                                            Command="{Binding FinishImageCommand}"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -340,24 +417,39 @@
         <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="6"
                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                 Padding="8" Margin="0,8,0,0" MaxHeight="96">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Items}">
-                    <ItemsControl.ItemsPanel>
+            <ListBox x:Name="PdfThumbnailQueue"
+                     ItemsSource="{Binding Items}"
+                     SelectedIndex="{Binding CurrentIndex, Mode=OneWay}"
+                     SelectionChanged="PdfThumbnailQueue_SelectionChanged"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling">
+                    <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
+                            <VirtualizingStackPanel Orientation="Horizontal"/>
                         </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="4"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}}"
+                                <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=160}"
                                        Stretch="UniformToFill"/>
                             </Border>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
         </Border>
 
         <!-- ── Statuszeile ────────────────────────────────────────────────── -->
@@ -369,6 +461,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                           ToolTip="{Binding StatusText}" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1" Text="Arbeitet…" Foreground="{DynamicResource AccentBrush}"
                            FontWeight="SemiBold" VerticalAlignment="Center"

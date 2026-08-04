@@ -98,6 +98,58 @@ public sealed class SamMaskValidatorTests
         Assert.Contains("kein Vordergrundpixel", reason);
     }
 
+    [Fact]
+    public void Maske_mit_79_Prozent_in_der_Box_wird_abgelehnt()
+    {
+        var box = new BoundingBox(0.395, 0.5, 0.79, 1.0);
+
+        var valid = SamMaskValidator.IsValid(
+            "1,100",
+            100,
+            1,
+            box,
+            degraded: false,
+            out var reason);
+
+        Assert.False(valid);
+        Assert.Contains("79.0 % innerhalb", reason);
+        Assert.Contains("mindestens 80 %", reason);
+    }
+
+    [Fact]
+    public void Maske_mit_genau_80_Prozent_in_der_Box_wird_akzeptiert()
+    {
+        var box = new BoundingBox(0.4, 0.5, 0.8, 1.0);
+
+        var valid = SamMaskValidator.IsValid(
+            "1,100",
+            100,
+            1,
+            box,
+            degraded: false,
+            out var reason);
+
+        Assert.True(valid);
+        Assert.Equal(string.Empty, reason);
+    }
+
+    [Fact]
+    public void Grossflaechige_Uebersichtsmaske_in_grosser_Box_wird_akzeptiert()
+    {
+        var largeBox = new BoundingBox(0.5, 0.5, 0.96, 0.96);
+
+        var valid = SamMaskValidator.IsValid(
+            "1,10000",
+            100,
+            100,
+            largeBox,
+            degraded: false,
+            out var reason);
+
+        Assert.True(valid);
+        Assert.Equal(string.Empty, reason);
+    }
+
     [Theory]
     [InlineData("1,1,15", 0.125, 0.125)]
     [InlineData("0,15,1", 0.875, 0.875)]

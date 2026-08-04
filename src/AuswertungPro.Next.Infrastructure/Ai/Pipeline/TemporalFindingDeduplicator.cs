@@ -416,7 +416,8 @@ internal sealed class TemporalFindingDeduplicator
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
                 MeterSource: MeterSource,
-                IsMeterEstimated: IsMeterEstimated);
+                IsMeterEstimated: IsMeterEstimated,
+                SeverityLevel: MaxSeverity);
         }
 
         private string? NormalizeStoredClock(string? clock) =>

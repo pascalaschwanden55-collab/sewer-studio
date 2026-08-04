@@ -22,16 +22,23 @@ public static class VsaCodeEntryValidator
             return rule.Pflicht == "P" ? "Pflichtfeld" : null;
 
         if (!TryParseDouble(value, out var num))
-            return "Ungueltige Zahl";
+            return string.IsNullOrWhiteSpace(rule.Einheit)
+                ? "Ungueltige Zahl"
+                : $"Ungueltige Zahl ({rule.Einheit})";
 
         if (rule.Min.HasValue && num < rule.Min.Value)
-            return $">= {rule.Min.Value}";
+            return FormatLimit(">=", rule.Min.Value, rule.Einheit);
 
         if (rule.Max.HasValue && num > rule.Max.Value)
-            return $"<= {rule.Max.Value}";
+            return FormatLimit("<=", rule.Max.Value, rule.Einheit);
 
         return null;
     }
+
+    private static string FormatLimit(string comparison, double limit, string? unit)
+        => string.IsNullOrWhiteSpace(unit)
+            ? $"{comparison} {limit}"
+            : $"{comparison} {limit} {unit}";
 
     /// <summary>
     /// Prueft ob ein Uhrzeigerstellungs-String gueltig ist (ganze Zahl 0–12).

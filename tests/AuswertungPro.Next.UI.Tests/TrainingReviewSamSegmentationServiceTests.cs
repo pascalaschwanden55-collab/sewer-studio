@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -15,7 +16,7 @@ public sealed class TrainingReviewSamSegmentationServiceTests
                     Label: "BAB",
                     Confidence: 0.93,
                     Bbox: [400, 25, 600, 225],
-                    MaskRle: "0,500000",
+                    MaskRle: "0,100450,1500,398050",
                     MaskAreaPixels: 1500,
                     ImageAreaPixels: 500000,
                     HeightPixels: 200,
@@ -50,6 +51,56 @@ public sealed class TrainingReviewSamSegmentationServiceTests
         Assert.Equal(1.0, sentBox.Confidence);
         Assert.Single(result.Response.Masks);
         Assert.Single(result.QuantifiedMasks);
+    }
+
+    [Fact]
+    public async Task SegmentFrameAsync_lehnt_falsche_Antwort_Bildmasse_ab()
+    {
+        var service = new TrainingReviewSamSegmentationService(
+            new FakeSamClient(new SamResponse([], 999, 500, 1)));
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            service.SegmentFrameAsync(
+                [1],
+                1000,
+                500,
+                new BoundingBox(0.5, 0.5, 0.2, 0.2),
+                "BAB"));
+
+        Assert.Contains("Originalbild", error.Message);
+    }
+
+    [Fact]
+    public async Task SegmentFrameAsync_lehnt_Maskenflaeche_ab_die_nicht_zur_Rle_passt()
+    {
+        var service = new TrainingReviewSamSegmentationService(
+            new FakeSamClient(new SamResponse(
+                [
+                    new SamMaskResult(
+                        "BAB",
+                        0.9,
+                        [0, 0, 1, 1],
+                        "0,10,5,17",
+                        MaskAreaPixels: 4,
+                        ImageAreaPixels: 32,
+                        HeightPixels: 1,
+                        WidthPixels: 1,
+                        CentroidX: 0,
+                        CentroidY: 0),
+                ],
+                8,
+                4,
+                1)));
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            service.SegmentFrameAsync(
+                [1],
+                8,
+                4,
+                new BoundingBox(0.5, 0.5, 0.5, 0.5),
+                "BAB"));
+
+        Assert.Contains("RLE", error.Message);
     }
 
     [Fact]

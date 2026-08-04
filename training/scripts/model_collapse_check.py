@@ -756,7 +756,7 @@ def _parse_args() -> argparse.Namespace:
         default=MIN_DETECTION_RATE,
         help=(
             "Mindestanteil Pruefbilder mit Erkennung fuer PASS/FAIL "
-            f"(Default: {MIN_DETECTION_RATE:.0%})."
+            f"(Default als Anteil: {MIN_DETECTION_RATE:.2f})."
         ),
     )
     parser.add_argument(

@@ -6,6 +6,33 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class VsaCodeExplorerPhotoCaptureWorkflowTests
 {
     [Fact]
+    public async Task CaptureAsync_setzt_anzeige_und_original_auf_dasselbe_neue_foto()
+    {
+        var photoPaths = new List<string> { "old-overlay.png" };
+        var originalPhotoPaths = new List<string> { "old-original.png" };
+
+        var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureAsync(
+            new VsaCodeExplorerPhotoCaptureRequest(
+                PhotoIndex: 0,
+                PhotoPaths: photoPaths,
+                LiveSnapshotProvider: () => "new-frame.png",
+                VideoPath: null,
+                CurrentVideoTime: null,
+                TimeText: null,
+                FileExists: path => path == "new-frame.png",
+                ResolveFfmpeg: () => throw new InvalidOperationException(),
+                ExtractFramePngAsync: (_, _, _, _) => throw new InvalidOperationException(),
+                CreateTempPhotoPath: _ => throw new InvalidOperationException(),
+                WriteAllBytesAsync: (_, _, _) => throw new InvalidOperationException(),
+                CancellationToken: CancellationToken.None,
+                OriginalPhotoPaths: originalPhotoPaths));
+
+        Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+        Assert.Equal(["new-frame.png"], photoPaths);
+        Assert.Equal(["new-frame.png"], originalPhotoPaths);
+    }
+
+    [Fact]
     public async Task CaptureAsync_nutzt_existierenden_live_snapshot_und_setzt_fotoslot()
     {
         var photoPaths = new List<string>();

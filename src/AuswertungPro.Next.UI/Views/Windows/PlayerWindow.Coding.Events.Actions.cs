@@ -48,7 +48,7 @@ public partial class PlayerWindow
                 CloseStretch: startEvent => CodingEventListActionWorkflow.CloseStretch(
                     startEvent,
                     _codingSessionRuntimeOwner.Service,
-                    _codingSessionHost.CurrentMeter,
+                    ResolveCodingMeterForFrame(_playerTimelineHost.CurrentSeconds),
                     _playerTimelineHost.CurrentTimeOrZero),
                 ShowRequiresLaterMeterPrompt: CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter,
                 RefreshEvents: RefreshCodingEventsList,

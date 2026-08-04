@@ -474,6 +474,112 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task DetectBccTestYoloAsync_sends_only_candidate_id_and_sha_not_a_path()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "is_relevant": false,
+            "detections": [],
+            "frame_class": "empty",
+            "inference_time_ms": 1.0,
+            "candidate_id": "bcc_bogen_b50b37ab8a4f",
+            "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "model_name": "bcc_bogen_b50b37ab8a4f",
+            "device": "cpu"
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        await client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+            "abc",
+            0.25,
+            "bcc_bogen_b50b37ab8a4f",
+            "a" + new string('a', 63)));
+
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        Assert.Equal(
+            "bcc_bogen_b50b37ab8a4f",
+            request.RootElement.GetProperty("candidate_id").GetString());
+        Assert.Equal(
+            new string('a', 64),
+            request.RootElement.GetProperty("candidate_sha256").GetString());
+        Assert.DoesNotContain("path", handler.LastRequestBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DetectBccTestYoloAsync_rejects_missing_exact_pin_before_post()
+    {
+        var handler = new CaptureHandler("""{"available":true,"detections":[]}""");
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+                "abc",
+                0.25,
+                null!,
+                null!)));
+
+        Assert.Null(handler.LastRequestPath);
+    }
+
+    [Fact]
+    public async Task GetBccTestCandidatesAsync_uses_catalog_endpoint_and_token()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "candidates": [
+                {
+                    "candidate_id": "bcc_bogen_b50b37ab8a4f",
+                    "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "map50": 0.74,
+                    "epochs_completed": 40,
+                    "created_utc": "2026-07-28T14:43:21Z"
+                }
+            ]
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        var response = await client.GetBccTestCandidatesAsync();
+
+        Assert.True(response.Available);
+        Assert.Equal(
+            "bcc_bogen_b50b37ab8a4f",
+            Assert.Single(response.Candidates).CandidateId);
+        Assert.Equal("/detect/yolo/bcc-test/candidates", handler.LastRequestPath);
+        Assert.Equal("bcc-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task Default_candidate_pin_never_falls_back_to_unpinned_request()
+    {
+        IVisionPipelineClient client = new LegacyVisionPipelineClient();
+
+        var error = await Assert.ThrowsAsync<NotSupportedException>(
+            () => client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+                "abc",
+                0.25,
+                "bcc_bogen_b50b37ab8a4f",
+                "a" + new string('0', 63))));
+
+        Assert.Contains("exakte", error.Message);
+        Assert.Equal(0, ((LegacyVisionPipelineClient)client).UnpinnedCandidateCalls);
+    }
+
+    [Fact]
     public void MultiModelFrameResult_CanBeConstructed()
     {
         var result = new MultiModelFrameResult(
@@ -498,8 +604,9 @@ public class VisionPipelineClientTests
     {
         public string? LastSidecarToken { get; private set; }
         public string? LastRequestPath { get; private set; }
+        public string? LastRequestBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
@@ -507,12 +614,15 @@ public class VisionPipelineClientTests
             LastSidecarToken = request.Headers.TryGetValues("X-Sidecar-Token", out var values)
                 ? values.SingleOrDefault()
                 : null;
+            LastRequestBody = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
 
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
-            return Task.FromResult(response);
+            return response;
         }
     }
 
@@ -527,6 +637,46 @@ public class VisionPipelineClientTests
         }
 
         public string? ResolvePath() => null;
+    }
+
+    private sealed class LegacyVisionPipelineClient : IVisionPipelineClient
+    {
+        public int UnpinnedCandidateCalls { get; private set; }
+
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(null);
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(
+            CancellationToken ct = default)
+            => Task.FromException<PipelineHealthCheckResult>(new NotSupportedException());
+
+        public Task<YoloResponse> DetectYoloAsync(
+            YoloRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<YoloResponse>(new NotSupportedException());
+
+        public Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+            YoloRequest request,
+            CancellationToken ct = default)
+        {
+            UnpinnedCandidateCalls++;
+            return Task.FromException<BccTestYoloResponse>(new NotSupportedException());
+        }
+
+        public Task<DinoResponse> DetectDinoAsync(
+            DinoRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<DinoResponse>(new NotSupportedException());
+
+        public Task<SamResponse> SegmentSamAsync(
+            SamRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<SamResponse>(new NotSupportedException());
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(
+            YoloClassifyRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<YoloClassifyResponse>(new NotSupportedException());
     }
 
     private sealed class StatusCodeHandler(HttpStatusCode statusCode, string body) : HttpMessageHandler

@@ -6,7 +6,9 @@ import logging
 import numpy as np
 from fastapi import APIRouter
 from ..schemas.detection import (
-    YoloRequest, YoloResponse, BccTestYoloResponse,
+    YoloRequest, YoloResponse,
+    BccTestYoloRequest, BccTestYoloResponse,
+    BccTestCandidateInfo, BccTestCandidatesResponse,
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
 )
 from ..models import bcc_test_wrapper, detector_qualification, yolo_wrapper
@@ -66,14 +68,16 @@ def detect_yolo(req: YoloRequest) -> YoloResponse:
 
 
 @router.post("/detect/yolo/bcc-test", response_model=BccTestYoloResponse)
-def detect_yolo_bcc_test(req: YoloRequest) -> BccTestYoloResponse:
-    """Prueft ein Foto mit dem besten validierten, nicht aktiven BCC-Kandidaten."""
+def detect_yolo_bcc_test(req: BccTestYoloRequest) -> BccTestYoloResponse:
+    """Prueft ein Foto mit einem manifest- und hashgeprueften BCC-Kandidaten."""
 
     started = time.perf_counter()
     try:
         response = bcc_test_wrapper.detect(
             image_base64=req.image_base64,
             confidence_threshold=req.confidence_threshold,
+            candidate_id=req.candidate_id,
+            candidate_sha256=req.candidate_sha256,
         )
     except bcc_test_wrapper.BccTestCandidateError as exc:
         logger.warning("BCC-Testmodell nicht verfuegbar: %s", exc)
@@ -84,10 +88,47 @@ def detect_yolo_bcc_test(req: YoloRequest) -> BccTestYoloResponse:
         "available": response.available,
         "detection_count": len(response.detections),
         "candidate_id": response.candidate_id or None,
+        "requested_candidate_id": req.candidate_id,
         "candidate_sha256": response.candidate_sha256 or None,
         "device": response.device or None,
         "confidence_threshold": req.confidence_threshold,
     })
+    return response
+
+
+@router.get(
+    "/detect/yolo/bcc-test/candidates",
+    response_model=BccTestCandidatesResponse,
+)
+def get_yolo_bcc_test_candidates() -> BccTestCandidatesResponse:
+    """Liefert pfadfreie Metadaten manifest- und hashgepruefter Kandidaten."""
+
+    try:
+        candidates = bcc_test_wrapper.list_candidates()
+        response = BccTestCandidatesResponse(
+            available=True,
+            candidates=[
+                BccTestCandidateInfo(
+                    candidate_id=item.candidate_id,
+                    candidate_sha256=item.weights_sha256,
+                    map50=item.map50,
+                    epochs_completed=item.epochs_completed,
+                    created_utc=item.created_utc,
+                )
+                for item in candidates
+            ],
+        )
+    except bcc_test_wrapper.BccTestCandidateError as exc:
+        logger.warning("BCC-Testkandidaten nicht verfuegbar: %s", exc)
+        response = BccTestCandidatesResponse(available=False, error=str(exc))
+
+    write_event(
+        "bcc_test_candidates",
+        {
+            "available": response.available,
+            "candidate_count": len(response.candidates),
+        },
+    )
     return response
 
 

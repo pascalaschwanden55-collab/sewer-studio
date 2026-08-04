@@ -74,7 +74,8 @@ public sealed class MarkBoxSegmentationService
 }
 
 /// <summary>Ergebnis der Box-Segmentierung: quantifizierte Maske + Rohmaske + Bildmasse
-/// + Bogen-Geometrie (Fluchtpunkt). IsBend=true -> im Codiermodus Bogen-Marker statt Maske.</summary>
+/// + optionales Bogen-Geometriesignal (Fluchtpunkt). Die Vorschau zeigt unabhaengig
+/// davon immer die echte SAM-Maske.</summary>
 public sealed record BoxSegmentationResult(
     MaskQuantificationService.QuantifiedMask Quant,
     SamMaskResult Mask,

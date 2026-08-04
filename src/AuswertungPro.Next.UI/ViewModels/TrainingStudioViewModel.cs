@@ -12,8 +12,9 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.Preview;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
+using AuswertungPro.Next.Application.UseCases.TrainingStudioSegmentation;
 using AuswertungPro.Next.Infrastructure.Ai;   // VsaCodeResolver (Default-Label-Lookup)
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;   // GoldBeschreibungGuard (Platzhalter-Schutz)
 
 namespace AuswertungPro.Next.UI.ViewModels;
@@ -24,20 +25,6 @@ public sealed record TrainingStudioSuggestionItem(
     string Klartext,
     double Confidence,
     string Quelle);
-
-/// <summary>Auswahl eines Modells, das das Foto nur zur Vorschau prueft.</summary>
-public sealed record TrainingStudioPreviewModelOption(
-    TrainingPreviewModelKind Kind,
-    string DisplayName);
-
-/// <summary>Automatisch erkannte Vorschau-Box in echten Bildpixeln.</summary>
-public sealed record TrainingStudioPreviewDetectionItem(
-    double X1,
-    double Y1,
-    double X2,
-    double Y2,
-    string DisplayText,
-    double Confidence);
 
 /// <summary>
 /// Pruefplatz-ViewModel (Etappe 1): duenn ueber <see cref="IAnnotationWorkbenchService"/>.
@@ -53,12 +40,20 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     private readonly Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? _ensureAiReady;
     private readonly Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>>? _loadGoldProgress;
     private readonly ITrainingPreviewDetectionService? _previewDetection;
+    private readonly TrainingStudioBoxAnalysisUseCase _boxAnalysis;
+    private readonly TrainingStudioTextPresenter _textPresenter;
+    private readonly IGoldQualityReviewQueueUseCase? _goldQualityReview;
 
     private CancellationTokenSource? _boxCts;
     private bool _boxRunActive;
     private bool _saveInProgress;
     private bool _isStartingAi;
     private bool _isCheckingPhoto;
+    private bool _isRunningPreviewDetection;
+    private bool _isLoadingGoldQualityReview;
+    private string? _activeGoldQualityReviewSessionId;
+    private TrainingStudioQueueMode _queueMode;
+    private int _queueVersion;
 
     public TrainingStudioViewModel(
         IAnnotationWorkbenchService workbench,
@@ -67,15 +62,19 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         Func<string, string?>? codeLabelLookup = null,
         Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? ensureAiReady = null,
         Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>>? loadGoldProgress = null,
-        ITrainingPreviewDetectionService? previewDetection = null)
+        ITrainingPreviewDetectionService? previewDetection = null,
+        IGoldQualityReviewQueueUseCase? goldQualityReview = null)
     {
         _workbench = workbench;
         _loadQueue = loadQueue;
         _confirmedByUser = confirmedByUser;
         _codeLabelLookup = codeLabelLookup ?? VsaCodeResolver.LookupLabel;
+        _boxAnalysis = new TrainingStudioBoxAnalysisUseCase(workbench);
+        _textPresenter = new TrainingStudioTextPresenter(_codeLabelLookup);
         _ensureAiReady = ensureAiReady;
         _loadGoldProgress = loadGoldProgress;
         _previewDetection = previewDetection;
+        _goldQualityReview = goldQualityReview;
         SelectedPreviewModel = PreviewModelOptions[0];
     }
 
@@ -91,10 +90,14 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentItem))]
+    [NotifyPropertyChangedFor(nameof(HasSourceSuggestion))]
+    [NotifyPropertyChangedFor(nameof(SourceReferenceDetails))]
     private ObservableCollection<WorkbenchItem> _items = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentItem))]
+    [NotifyPropertyChangedFor(nameof(HasSourceSuggestion))]
+    [NotifyPropertyChangedFor(nameof(SourceReferenceDetails))]
     private int _currentIndex = -1;
 
     [ObservableProperty] private string? _currentImagePath;
@@ -116,8 +119,11 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartAiCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddAnotherEventCommand))]
+    [NotifyCanExecuteChangedFor(nameof(FinishImageCommand))]
     private bool _isBusy;
     [ObservableProperty] private int _queueDoneCount;
+    [ObservableProperty] private int _queueTotalCount;
     [ObservableProperty] private ObservableCollection<PersonalGoldMainCodeStatus> _goldProgressItems = new();
     [ObservableProperty] private string _goldProgressSummary = "Goldstand wird geladen …";
     [ObservableProperty] private TrainingStudioPreviewModelOption? _selectedPreviewModel;
@@ -129,7 +135,6 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     private IReadOnlyList<TrainingStudioPreviewModelOption> _previewModelOptions =
     [
         new(TrainingPreviewModelKind.ActiveStandard, "Aktives Standardmodell"),
-        new(TrainingPreviewModelKind.BccTestCandidate, "BCC-Testmodell (nicht aktiv)"),
     ];
 
     /// <summary>Optionaler Rohrdurchmesser in mm fuer neu geladene Fotos (leer = 300-mm-Default).</summary>
@@ -137,7 +142,15 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
 
     /// <summary>Aktuell angezeigtes Item (oder null, wenn die Warteschlange leer/abgearbeitet ist).</summary>
     public WorkbenchItem? CurrentItem =>
-        CurrentIndex >= 0 && CurrentIndex < Items.Count ? Items[CurrentIndex] : null;
+        _activeAdditionalObjectItem
+        ?? (CurrentIndex >= 0 && CurrentIndex < Items.Count ? Items[CurrentIndex] : null);
+
+    /// <summary>Zeigt an, dass Code und Befund aus einem PDF-Operateurprotokoll stammen.</summary>
+    public bool HasSourceSuggestion => CurrentItem?.SourceSuggestion is not null;
+
+    /// <summary>Lesbare, nicht bestaetigte PDF-Referenz ohne absoluten Kundenpfad.</summary>
+    public string SourceReferenceDetails =>
+        TrainingStudioPdfSourcePresentation.Format(CurrentItem);
 
     /// <summary>true = Sidecar meldet unbrauchbaren Frame oder Bogen-Veto (Warnhinweis anzeigen).</summary>
     public bool ShowQualityWarning =>
@@ -165,22 +178,22 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         Suggestion?.Candidates
             .Select(candidate => new TrainingStudioSuggestionItem(
                 candidate.VsaCode,
-                ResolveCodeLabel(candidate.VsaCode),
+                _textPresenter.ResolveCodeLabel(candidate.VsaCode),
                 candidate.Confidence,
                 candidate.Quelle))
             .ToArray()
         ?? Array.Empty<TrainingStudioSuggestionItem>();
 
     /// <summary>Lesbare Bedeutung des aktuell eingetragenen Codes.</summary>
-    public string SelectedCodeLabel => ResolveCodeLabel(SelectedCode);
+    public string SelectedCodeLabel => _textPresenter.ResolveCodeLabel(SelectedCode);
 
     partial void OnSelectedCodeChanging(string? oldValue, string? newValue)
     {
-        var previousTemplate = BuildBeschreibungVorlage(oldValue, ClockPosition);
+        var previousTemplate = _textPresenter.BuildBeschreibungVorlage(oldValue, ClockPosition);
         if (string.IsNullOrWhiteSpace(Beschreibung)
             || string.Equals(Beschreibung, previousTemplate, StringComparison.Ordinal))
         {
-            Beschreibung = BuildBeschreibungVorlage(newValue, ClockPosition);
+            Beschreibung = _textPresenter.BuildBeschreibungVorlage(newValue, ClockPosition);
         }
     }
 
@@ -189,14 +202,50 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         int.TryParse(PipeDiameterInput, out var dn) && dn > 0 ? dn : null;
 
     /// <summary>Uebernimmt eine extern erzeugte Item-Liste (z. B. Fotos aus dem Dateidialog).</summary>
-    public void LoadItems(IReadOnlyList<WorkbenchItem> items)
+    public bool LoadItems(IReadOnlyList<WorkbenchItem> items)
     {
+        var previousMode = _queueMode;
+        var previousReviewSessionId = _activeGoldQualityReviewSessionId;
+        _queueMode = TrainingStudioQueueMode.Normal;
+        _activeGoldQualityReviewSessionId = null;
+        if (LoadItemsCore(items))
+            return true;
+        _queueMode = previousMode;
+        _activeGoldQualityReviewSessionId = previousReviewSessionId;
+        return false;
+    }
+
+    private bool LoadItemsCore(IReadOnlyList<WorkbenchItem> items)
+    {
+        if (SavedEventCountForCurrentImage > 0)
+        {
+            StatusText =
+                "Auf dem aktuellen Bild ist bereits mindestens ein Ereignis gespeichert. " +
+                "Bitte den zusaetzlichen Befund speichern oder verwerfen und danach 'Bild fertig' waehlen.";
+            return false;
+        }
+
+        if (_saveInProgress
+            || _isCheckingPhoto
+            || _isRunningPreviewDetection
+            || _isStartingAi
+            || _isLoadingGoldQualityReview)
+        {
+            StatusText = "Ein KI- oder Speichervorgang läuft noch. Die Warteschlange wurde nicht gewechselt.";
+            return false;
+        }
+
+        CancelBoxRunForImageChange();
+        Interlocked.Increment(ref _queueVersion);
+        ResetCompletedQueueItems();
         Items = new ObservableCollection<WorkbenchItem>(items);
         CurrentIndex = Items.Count > 0 ? 0 : -1;
         QueueDoneCount = 0;
+        QueueTotalCount = Items.Count;
         ResetForCurrent();
         if (Items.Count == 0)
             StatusText = "Keine Bilder geladen.";
+        return true;
     }
 
     /// <summary>
@@ -209,8 +258,16 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         int? severity,
         string? katalogBeschreibung = null)
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
+                "oder 'Bild fertig' waehlen.";
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(code))
-            SelectedCode = NormalizeCode(code);
+            SelectedCode = _textPresenter.NormalizeCode(code);
         if (clockPosition.HasValue)
             ClockPosition = clockPosition;
         if (severity.HasValue)
@@ -220,7 +277,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         // Platzhalter; selbst geschriebener Text bleibt unangetastet.
         if (string.IsNullOrWhiteSpace(Beschreibung) || GoldBeschreibungGuard.IsPlaceholder(Beschreibung))
         {
-            Beschreibung = BuildKatalogBeschreibung(
+            Beschreibung = _textPresenter.BuildKatalogBeschreibung(
                 SelectedCode,
                 katalogBeschreibung,
                 ClockPosition,
@@ -251,6 +308,8 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             });
             var result = await _ensureAiReady(progress, ct);
             acceptsProgress = false;
+            if (result.Ready)
+                await RefreshPreviewModelsAsync(ct);
             StatusText = result.StatusText;
         }
         catch (OperationCanceledException)
@@ -272,157 +331,6 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         }
     }
 
-    private bool _standardModelMarkedUnavailable;
-
-    /// <summary>
-    /// Beschriftet das Standardmodell ehrlich um (nur Anzeige — die Auswahl bleibt
-    /// moeglich, der Lauf zeigt dann die Sperr-Meldung statt Boxen). Einmalig.
-    /// </summary>
-    private void MarkStandardModelUnavailable()
-    {
-        if (_standardModelMarkedUnavailable)
-            return;
-        _standardModelMarkedUnavailable = true;
-        PreviewModelOptions =
-        [
-            new(TrainingPreviewModelKind.ActiveStandard, "Aktives Standardmodell (nicht freigegeben)"),
-            PreviewModelOptions[1],
-        ];
-        if (SelectedPreviewModel?.Kind == TrainingPreviewModelKind.ActiveStandard)
-            SelectedPreviewModel = PreviewModelOptions[0];
-    }
-
-    partial void OnSelectedPreviewModelChanged(TrainingStudioPreviewModelOption? value)
-    {
-        PreviewDetections = new ObservableCollection<TrainingStudioPreviewDetectionItem>();
-        PreviewDetectionSummary = value is null
-            ? "Bitte ein Modell wählen."
-            : $"{value.DisplayName}: bereit für einen reinen Fototest.";
-    }
-
-    /// <summary>
-    /// Prüft das aktuelle Foto mit dem gewählten Modell. Die Treffer bleiben reine
-    /// Vorschau und werden bewusst nie in CurrentBox oder ein Goldsample übernommen.
-    /// </summary>
-    [RelayCommand(AllowConcurrentExecutions = false)]
-    private async Task RunPreviewDetectionAsync(CancellationToken cancellationToken)
-    {
-        var item = CurrentItem;
-        var model = SelectedPreviewModel;
-        if (_previewDetection is null)
-        {
-            PreviewDetectionSummary = "Der Modelltest ist in diesem Fenster nicht verfügbar.";
-            return;
-        }
-        if (item is null || string.IsNullOrWhiteSpace(item.FramePath))
-        {
-            PreviewDetectionSummary = "Bitte zuerst ein Foto laden.";
-            return;
-        }
-        if (model is null)
-        {
-            PreviewDetectionSummary = "Bitte ein Modell wählen.";
-            return;
-        }
-        if (IsBusy)
-        {
-            PreviewDetectionSummary = "Bitte warten, bis der laufende KI-Schritt fertig ist.";
-            return;
-        }
-
-        // Das Standardmodell darf nur nach einer ausdruecklich positiven Qualifikation
-        // blaue Vorschau-Boxen liefern. Fehlender/unlesbarer Status bleibt gesperrt.
-        // Der getrennte BCC-Testkandidat ist davon nicht betroffen.
-        if (model.Kind == TrainingPreviewModelKind.ActiveStandard)
-        {
-            var qualification = await _previewDetection
-                .GetDetectorQualificationAsync(cancellationToken);
-            if (qualification?.Qualified != true)
-            {
-                MarkStandardModelUnavailable();
-                PreviewDetectionSummary = string.IsNullOrWhiteSpace(qualification?.Reason)
-                    ? "Standardmodell gesperrt: Der Qualifikationsstatus konnte nicht sicher geprueft werden."
-                    : $"Standardmodell gesperrt: {qualification.Reason}";
-                StatusText = PreviewDetectionSummary;
-                return;
-            }
-        }
-
-        PreviewDetections = new ObservableCollection<TrainingStudioPreviewDetectionItem>();
-        PreviewDetectionSummary = $"{model.DisplayName}: Foto wird geprüft …";
-        StatusText = PreviewDetectionSummary;
-        IsBusy = true;
-        try
-        {
-            var result = await _previewDetection
-                .DetectAsync(item.FramePath, model.Kind, 0.25, cancellationToken);
-            if (!result.Available)
-            {
-                PreviewDetectionSummary = string.IsNullOrWhiteSpace(result.Error)
-                    ? $"{model.DisplayName}: Modell ist nicht verfügbar."
-                    : $"{model.DisplayName}: {result.Error}";
-                StatusText = PreviewDetectionSummary;
-                return;
-            }
-
-            var items = result.Detections
-                .Select(detection =>
-                {
-                    var code = YoloClassVsaMapper.ToPersistableVsaCode(detection.ClassName);
-                    var text = string.IsNullOrWhiteSpace(code)
-                        ? detection.ClassName
-                        : $"{code} — {ResolveCodeLabel(code)}";
-                    return new TrainingStudioPreviewDetectionItem(
-                        detection.X1,
-                        detection.Y1,
-                        detection.X2,
-                        detection.Y2,
-                        text,
-                        detection.Confidence);
-                })
-                .ToArray();
-            PreviewDetections = new ObservableCollection<TrainingStudioPreviewDetectionItem>(items);
-
-            PreviewDetectionSummary = items.Length == 0
-                ? $"{model.DisplayName}: kein Treffer. Nur Vorschau — nichts gespeichert."
-                : $"{model.DisplayName}: {items.Length} Treffer. Blaue Boxen sind nur Vorschau und werden nicht gespeichert.";
-            StatusText = PreviewDetectionSummary;
-        }
-        catch (OperationCanceledException)
-        {
-            PreviewDetectionSummary = "Modelltest abgebrochen.";
-            StatusText = PreviewDetectionSummary;
-        }
-        catch (SidecarUnavailableException ex)
-        {
-            UserError.DescribeAndReport(ex, "Training-Studio Modelltest");
-            PreviewDetectionSummary =
-                "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' wählen.";
-            StatusText = PreviewDetectionSummary;
-        }
-        catch (Exception ex)
-        {
-            PreviewDetectionSummary = "Modelltest nicht möglich: "
-                + UserError.DescribeAndReport(ex, "Training-Studio Modelltest");
-            StatusText = PreviewDetectionSummary;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private void LoadQueue()
-    {
-        Items = new ObservableCollection<WorkbenchItem>(_loadQueue());
-        CurrentIndex = Items.Count > 0 ? 0 : -1;
-        QueueDoneCount = 0;
-        ResetForCurrent();
-        if (Items.Count == 0)
-            StatusText = "Warteschlange leer.";
-    }
-
     [RelayCommand(AllowConcurrentExecutions = false)]
     private Task RefreshGoldProgressAsync(CancellationToken cancellationToken)
         => RefreshGoldProgressCoreAsync(cancellationToken);
@@ -430,9 +338,27 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     [RelayCommand]
     private async Task BoxDrawnAsync(BoundingBox box)
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
+                "oder 'Bild fertig' waehlen.";
+            return;
+        }
+
         var item = CurrentItem;
         if (item is null)
             return;
+        if (_isRunningPreviewDetection)
+        {
+            StatusText = "Der Modelltest laeuft noch. Bitte kurz warten und die Box danach erneut ziehen.";
+            return;
+        }
+        if (_saveInProgress)
+        {
+            StatusText = "Speichern laeuft noch. Bitte die Box danach erneut ziehen.";
+            return;
+        }
         if (_isCheckingPhoto)
         {
             StatusText = "Die allgemeine Foto-Pruefung laeuft noch. Bitte kurz warten.";
@@ -460,48 +386,43 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         Suggestion = null;
         CurrentBox = box;
         IsBusy = true;
-        Task<WorkbenchSegmentation>? segTask = null;
-        Task<WorkbenchSuggestion>? sugTask = null;
         try
         {
-            var codeHint = Suggestion?.Candidates.FirstOrDefault()?.VsaCode ?? "damage";
-            segTask = _workbench.SegmentAsync(item, box, codeHint, ct);
-            sugTask = _workbench.SuggestAsync(item, box, ct);
-            await Task.WhenAll(segTask, sugTask);
+            // Eine bereits sichtbare Hand-/PDF-Auswahl ist der beste SAM-Hinweis.
+            // Suggestion wurde fuer die neue Box oben absichtlich geloescht und darf
+            // deshalb hier nicht als Quelle verwendet werden.
+            var codeHint = _textPresenter.NormalizeCode(SelectedCode);
+            if (string.IsNullOrWhiteSpace(codeHint))
+                codeHint = "damage";
+            var result = await _boxAnalysis.AnalyzeAsync(item, box, codeHint, ct);
 
-            if (ct.IsCancellationRequested)
+            if (ct.IsCancellationRequested || !ReferenceEquals(CurrentItem, item))
                 return;   // ein neuerer Lauf hat uebernommen
 
-            ApplyCompletedBoxResults(segTask, sugTask);
-
-            StatusText = Suggestion is { FrameUsable: false }
-                ? $"Frame nicht verwertbar: {Suggestion.QualityReason}"
-                : Segmentation?.StatusText ?? "KI-Vorschlag erstellt.";
+            ApplyCompletedBoxResults(result);
+            if (result.Failure == TrainingStudioBoxAnalysisFailure.None)
+            {
+                StatusText = IsStrictReviewQueue
+                    ? BuildSegmentationRepairMaskStatus(saveAttempt: false)
+                    : Suggestion is { FrameUsable: false }
+                        ? $"Frame nicht verwertbar: {Suggestion.QualityReason}"
+                        : Segmentation?.StatusText ?? "KI-Vorschlag erstellt.";
+            }
+            else if (result.Failure == TrainingStudioBoxAnalysisFailure.SidecarUnavailable)
+            {
+                UserError.DescribeAndReport(result.Error!, "Training-Studio Segmentierung");
+                StatusText = BuildPartialResultPrefix()
+                    + "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' wählen und die Box erneut ziehen.";
+            }
+            else
+            {
+                StatusText = BuildPartialResultPrefix() + "KI-Vorschlag/Maske nicht möglich: "
+                    + UserError.DescribeAndReport(result.Error!, "Training-Studio Segmentierung");
+            }
         }
         catch (OperationCanceledException)
         {
             // Abgebrochen durch einen neuen Box-Lauf: Zustand nicht uebernehmen.
-        }
-        catch (SidecarUnavailableException ex)
-        {
-            if (_boxCts == cts)
-            {
-                ApplyCompletedBoxResults(segTask, sugTask);
-                var partial = BuildPartialResultPrefix();
-                UserError.DescribeAndReport(ex, "Training-Studio Segmentierung");
-                StatusText = partial
-                    + "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' waehlen und die Box erneut ziehen.";
-            }
-        }
-        catch (Exception ex)
-        {
-            // Sidecar/Netzwerk/Modellfehler: sichtbare Meldung statt App-Absturz.
-            if (_boxCts == cts)
-            {
-                ApplyCompletedBoxResults(segTask, sugTask);
-                StatusText = BuildPartialResultPrefix() + "KI-Vorschlag/Maske nicht moeglich: "
-                    + UserError.DescribeAndReport(ex, "Training-Studio Segmentierung");
-            }
         }
         finally
         {
@@ -509,26 +430,25 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             {
                 _boxRunActive = false;
                 IsBusy = false;
+                _boxCts = null;
             }
+            cts.Dispose();
         }
     }
 
-    private void ApplyCompletedBoxResults(
-        Task<WorkbenchSegmentation>? segmentationTask,
-        Task<WorkbenchSuggestion>? suggestionTask)
+    private void ApplyCompletedBoxResults(TrainingStudioBoxAnalysisResult result)
     {
-        if (segmentationTask?.Status == TaskStatus.RanToCompletion)
-            Segmentation = segmentationTask.Result;
+        Segmentation = result.Segmentation;
 
-        if (suggestionTask?.Status != TaskStatus.RanToCompletion)
+        if (result.Suggestion is null)
             return;
 
-        Suggestion = suggestionTask.Result;
+        Suggestion = result.Suggestion;
         var top = Suggestion.Candidates.FirstOrDefault()?.VsaCode;
         if (string.IsNullOrWhiteSpace(SelectedCode) && !string.IsNullOrWhiteSpace(top))
         {
-            SelectedCode = NormalizeCode(top);
-            Beschreibung = BuildBeschreibungVorlage(SelectedCode, ClockPosition);
+            SelectedCode = _textPresenter.NormalizeCode(top);
+            Beschreibung = _textPresenter.BuildBeschreibungVorlage(SelectedCode, ClockPosition);
         }
     }
 
@@ -550,22 +470,57 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     [RelayCommand]
     private void Discard()
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Das gespeicherte Ereignis kann hier nicht verworfen werden. Bitte 'Bild fertig' " +
+                "oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+            return;
+        }
+
+        var persistedDraft = !string.IsNullOrWhiteSpace(CurrentItem?.ExistingSampleId)
+            && (_activeDraftStartedAsNewObject || _newDraftQueueItemIndices.Contains(CurrentIndex));
+        CancelBoxRunForImageChange();
         CurrentBox = null;
         Segmentation = null;
         Suggestion = null;
         SelectedCode = null;
         Beschreibung = string.Empty;
-        StatusText = "Markierung verworfen.";
+        if (SavedEventCountForCurrentImage > 0)
+        {
+            IsAwaitingImageCompletion = true;
+            StatusText = persistedDraft
+                ? "Markierung geschlossen. Der bereits gespeicherte Entwurf bleibt unter " +
+                  "'Unvollstaendige Goldframes' fuer eine spaetere Reparatur erhalten. " +
+                  "Das bestaetigte Ereignis auf diesem Bild bleibt ebenfalls erhalten."
+                : "Zusaetzliche Markierung verworfen. Das bereits gespeicherte Ereignis bleibt erhalten. " +
+                  "Jetzt erneut 'Weiteres Ereignis auf diesem Bild' oder 'Bild fertig' waehlen.";
+        }
+        else
+        {
+            StatusText = persistedDraft
+                ? "Markierung geschlossen. Der bereits gespeicherte Entwurf bleibt unter " +
+                  "'Unvollstaendige Goldframes' fuer eine spaetere Reparatur erhalten."
+                : "Markierung verworfen.";
+        }
     }
 
     /// <summary>Uebernimmt einen Vorschlags-Code als aktuellen Code (Klick auf Kandidat).</summary>
     [RelayCommand]
     private void SelectCode(string? code)
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
+                "oder 'Bild fertig' waehlen.";
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(code))
         {
-            SelectedCode = NormalizeCode(code);
-            Beschreibung = BuildBeschreibungVorlage(SelectedCode, ClockPosition);
+            SelectedCode = _textPresenter.NormalizeCode(code);
+            Beschreibung = _textPresenter.BuildBeschreibungVorlage(SelectedCode, ClockPosition);
         }
     }
 
@@ -577,6 +532,13 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task FotoMitKiPruefenAsync(CancellationToken cancellationToken)
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+            return;
+        }
+
         var item = CurrentItem;
         if (item is null)
         {
@@ -630,7 +592,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             }
 
             StatusText =
-                $"KI-Vorschlag: {NormalizeCode(top.VsaCode)} — {ResolveCodeLabel(top.VsaCode)} " +
+                $"KI-Vorschlag: {_textPresenter.NormalizeCode(top.VsaCode)} — {_textPresenter.ResolveCodeLabel(top.VsaCode)} " +
                 $"({top.Confidence:P0}). Zum Uebernehmen anklicken. Nichts gespeichert.";
         }
         catch (OperationCanceledException)
@@ -672,34 +634,143 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     /// <summary>Setzt die Schadensstufe (1..5) aus dem Button-Parameter; sonst keine Aenderung.</summary>
     [RelayCommand]
     private void SetSeverity(string? level)
-        => Severity = int.TryParse(level, out var s) && s is >= 1 and <= 5 ? s : Severity;
+    {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
+                "oder 'Bild fertig' waehlen.";
+            return;
+        }
+
+        Severity = int.TryParse(level, out var s) && s is >= 1 and <= 5 ? s : Severity;
+    }
 
     [RelayCommand]
-    private void NextItem()
+    private async Task NextItem()
     {
-        if (CurrentIndex < Items.Count - 1)
+        if (IsAwaitingImageCompletion)
         {
-            CurrentIndex++;
+            StatusText =
+                "Das Ereignis ist gespeichert. Bitte ausdruecklich 'Bild fertig' oder " +
+                "'Weiteres Ereignis auf diesem Bild' waehlen.";
+            return;
+        }
+
+        if (SavedEventCountForCurrentImage > 0)
+        {
+            StatusText =
+                "Ein weiteres Ereignis auf diesem Bild ist noch offen. Bitte speichern oder verwerfen; " +
+                "danach 'Bild fertig' waehlen.";
+            return;
+        }
+
+        if (IsStrictReviewQueue)
+        {
+            StatusText =
+                "In dieser Gold-Warteschlange geht es erst nach einer gültigen Maske und persönlichem Akzeptieren weiter.";
+            return;
+        }
+        if (_saveInProgress || (IsStrictReviewQueue && IsBusy))
+        {
+            StatusText = "Die KI arbeitet noch. Bitte kurz warten.";
+            return;
+        }
+
+        var nextIndex = FindNextOpenQueueItemIndex(CurrentIndex + 1);
+        if (nextIndex >= 0)
+        {
+            CurrentIndex = nextIndex;
             ResetForCurrent();
+            await PrepareCurrentStrictReviewItemAsync(CancellationToken.None);
         }
         else
         {
-            StatusText = "Warteschlange abgearbeitet.";
+            var firstOpenIndex = FindNextOpenQueueItemIndex(0);
+            if (firstOpenIndex >= 0 && firstOpenIndex != CurrentIndex)
+            {
+                CurrentIndex = firstOpenIndex;
+                ResetForCurrent();
+                await PrepareCurrentStrictReviewItemAsync(CancellationToken.None);
+            }
+            else
+            {
+                StatusText = IsStrictReviewQueue
+                    ? "Ende der Liste. Nicht bestätigte Bilder bleiben offen und erscheinen beim nächsten Laden wieder."
+                    : "Ende der offenen Warteschlange.";
+            }
         }
     }
 
     [RelayCommand]
-    private void PreviousItem()
+    private async Task PreviousItem()
     {
-        if (CurrentIndex > 0)
+        if (IsAwaitingImageCompletion)
         {
-            CurrentIndex--;
+            StatusText =
+                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+            return;
+        }
+
+        if (SavedEventCountForCurrentImage > 0)
+        {
+            StatusText =
+                "Ein weiteres Ereignis auf diesem Bild ist noch offen. Bitte speichern oder verwerfen; " +
+                "danach 'Bild fertig' waehlen.";
+            return;
+        }
+
+        if (IsStrictReviewQueue)
+        {
+            StatusText =
+                "Bereits abgeschlossene Bilder bleiben gesperrt. Diese Gold-Warteschlange wird der Reihe nach abgearbeitet.";
+            return;
+        }
+
+        if (_saveInProgress || (IsStrictReviewQueue && IsBusy))
+        {
+            StatusText = "Die KI arbeitet noch. Bitte kurz warten.";
+            return;
+        }
+
+        var previousIndex = FindPreviousOpenQueueItemIndex(CurrentIndex - 1);
+        if (previousIndex >= 0)
+        {
+            CurrentIndex = previousIndex;
             ResetForCurrent();
+            await PrepareCurrentStrictReviewItemAsync(CancellationToken.None);
+        }
+        else if (CurrentIndex > 0)
+        {
+            StatusText =
+                "Die vorherigen Bilder sind bereits abgeschlossen. Fertige Goldfaelle werden hier nicht erneut geoeffnet.";
         }
     }
 
     private async Task SaveInternalAsync(bool asCorrection)
     {
+        if (IsAwaitingImageCompletion)
+        {
+            StatusText =
+                "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
+                "oder 'Bild fertig' waehlen.";
+            return;
+        }
+
+        if (CurrentItem is null)
+        {
+            StatusText = Items.Count == 0
+                ? "Bitte zuerst ein Foto laden."
+                : "Warteschlange abgearbeitet.";
+            return;
+        }
+
+        if (_isRunningPreviewDetection)
+        {
+            StatusText = "Der Modelltest laeuft noch. Bitte vor dem Speichern kurz warten.";
+            return;
+        }
+
         // Akzeptieren/Korrigieren ist erst moeglich, wenn Maske und Vorschlag fertig sind.
         if (_boxRunActive)
         {
@@ -715,27 +786,91 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             return;
         }
 
+        if (IsBusy)
+        {
+            StatusText = "Ein anderer KI-Schritt laeuft noch. Bitte vor dem Speichern kurz warten.";
+            return;
+        }
+
         var item = CurrentItem;
-        var normalizedCode = NormalizeCode(SelectedCode);
+        var normalizedCode = _textPresenter.NormalizeCode(SelectedCode);
         if (item is null || CurrentBox is null || string.IsNullOrWhiteSpace(normalizedCode))
         {
             StatusText = "Zum Speichern fehlen Box oder Code.";
             return;
         }
 
+        if (!CanSaveCurrentSegmentationRepairItem())
+            return;
+
         var topCode = Suggestion?.Candidates.FirstOrDefault()?.VsaCode;
-        var wasCorrected = !string.IsNullOrWhiteSpace(topCode)
-            && !string.Equals(normalizedCode, topCode, StringComparison.OrdinalIgnoreCase);
+        // Bei einem PDF-Operateurbefund ist dessen sichtbarer Code die Referenz.
+        // Die unabhaengige KI bleibt nur ein Vergleich und darf eine bestaetigte
+        // Operateurvorgabe weder ueberschreiben noch als "Korrektur" umdeuten.
+        var referenceCode = item.ExistingCode ?? item.SourceSuggestion?.VsaCode ?? topCode;
+        var wasCorrected = !string.IsNullOrWhiteSpace(referenceCode)
+            && !string.Equals(normalizedCode, referenceCode, StringComparison.OrdinalIgnoreCase);
         SelectedCode = normalizedCode;
         var decision = new WorkbenchDecision(normalizedCode, wasCorrected, Beschreibung, ClockPosition, Severity, _confirmedByUser);
+        var queueVersion = Volatile.Read(ref _queueVersion);
 
         _saveInProgress = true;
         IsBusy = true;
+        var prepareNextRepairItem = false;
         try
         {
             var result = await _workbench.SaveAsync(item, CurrentBox.Value, Segmentation, decision);
+            if (queueVersion != Volatile.Read(ref _queueVersion)
+                || !ReferenceEquals(CurrentItem, item))
+            {
+                StatusText = result.Saved
+                    ? "Das vorherige Bild wurde gespeichert; die neue Warteschlange bleibt unverändert."
+                    : $"Das vorherige Bild wurde nicht gespeichert: {result.RefusalReason}";
+                return;
+            }
             if (result.Saved)
             {
+                if (!result.GoldApproved)
+                {
+                    BindSavedDraftToCurrentItem(item, result);
+                    StatusText =
+                        "Noch nicht als Gold abgeschlossen: " +
+                        (result.RefusalReason ?? "Die gespeicherte Maske hat das Gold-Gate nicht bestanden.") +
+                        " Das Bild bleibt zur Korrektur geöffnet.";
+                    await RefreshGoldProgressCoreAsync(CancellationToken.None);
+                    return;
+                }
+
+                if (IsGoldQualityReviewQueue)
+                {
+                    try
+                    {
+                        if (_goldQualityReview is null
+                            || string.IsNullOrWhiteSpace(_activeGoldQualityReviewSessionId)
+                            || string.IsNullOrWhiteSpace(item.ExistingSampleId))
+                        {
+                            throw new InvalidOperationException(
+                                "Die aktive Goldpruefungs-Sitzung ist nicht vollstaendig gebunden.");
+                        }
+
+                        await _goldQualityReview.MarkCompletedAsync(
+                            new GoldQualityReviewCompletionRequest(
+                                _activeGoldQualityReviewSessionId,
+                                item.ExistingSampleId,
+                                _confirmedByUser),
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusText =
+                            "Das Goldsample wurde gespeichert, aber der Pruefungsfortschritt nicht. " +
+                            "Bitte die Goldpruefung neu laden und diesen Fall erneut bestaetigen: " +
+                            UserError.DescribeAndReport(ex, "Training-Studio Goldpruefung abschliessen");
+                        await RefreshGoldProgressCoreAsync(CancellationToken.None);
+                        return;
+                    }
+                }
+
                 var savedStatus = result.RefusalReason is null
                     ? $"Gespeichert + {result.KbIndexState}."
                     : $"Gespeichert ({result.KbIndexState}) — Hinweis: {result.RefusalReason}";
@@ -744,9 +879,23 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                 else if (asCorrection)
                     savedStatus = $"Code entspricht dem KI-Vorschlag und wurde bestaetigt. {savedStatus}";
 
-                QueueDoneCount++;
                 await RefreshGoldProgressCoreAsync(CancellationToken.None);
-                MoveToNextItemAfterSave(savedStatus);
+                BindOpenPdfReferencesToStoredImage(item, result.StoredImageSha256);
+                if (CanOfferMultipleObjects(item))
+                {
+                    OpenImageCompletionChoice(savedStatus, result.StoredImageSha256);
+                }
+                else
+                {
+                    if (!TryMarkCurrentQueueItemCompleted())
+                    {
+                        StatusText =
+                            "Dieses Bild war bereits abgeschlossen und wurde nicht doppelt gezaehlt.";
+                        return;
+                    }
+                    QueueDoneCount = Math.Min(QueueDoneCount + 1, QueueTotalCount);
+                    prepareNextRepairItem = MoveToNextItemAfterSave(savedStatus);
+                }
             }
             else
             {
@@ -765,6 +914,9 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             _saveInProgress = false;
             IsBusy = false;
         }
+
+        if (prepareNextRepairItem)
+            await PrepareCurrentStrictReviewItemAsync(CancellationToken.None);
     }
 
     private async Task RefreshGoldProgressCoreAsync(CancellationToken cancellationToken)
@@ -798,34 +950,32 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         }
     }
 
-    private void MoveToNextItemAfterSave(string savedStatus)
-    {
-        if (CurrentIndex < Items.Count - 1)
-        {
-            CurrentIndex++;
-            ResetForCurrent();
-            StatusText = $"{savedStatus} Naechstes Bild: {CurrentIndex + 1} von {Items.Count}.";
-            return;
-        }
-
-        StatusText = $"{savedStatus} Warteschlange abgearbeitet.";
-    }
-
     private void ResetForCurrent()
     {
+        ResetMultiObjectStateForCurrentItem();
+        CancelBoxRunForImageChange();
         PreviewDetections = new ObservableCollection<TrainingStudioPreviewDetectionItem>();
         PreviewDetectionSummary = SelectedPreviewModel is null
             ? "Bitte ein Modell wählen."
             : $"{SelectedPreviewModel.DisplayName}: bereit für einen reinen Fototest.";
-        CurrentBox = null;
-        Segmentation = null;
+        CurrentBox = IsStrictReviewQueue
+            ? CurrentItem?.ExistingBox
+            : null;
+        Segmentation = IsGoldQualityReviewQueue
+            ? CurrentItem?.ExistingSegmentation
+            : null;
         Suggestion = null;
-        SelectedCode = NormalizeCode(CurrentItem?.ExistingCode);
-        Beschreibung = string.IsNullOrWhiteSpace(CurrentItem?.ExistingBeschreibung)
-            ? BuildBeschreibungVorlage(SelectedCode, clock: null)
-            : CurrentItem.ExistingBeschreibung;
-        ClockPosition = null;
-        Severity = null;
+        var sourceSuggestion = CurrentItem?.SourceSuggestion;
+        SelectedCode = _textPresenter.NormalizeCode(
+            CurrentItem?.ExistingCode
+            ?? sourceSuggestion?.VsaCode);
+        Beschreibung = !string.IsNullOrWhiteSpace(CurrentItem?.ExistingBeschreibung)
+            ? CurrentItem.ExistingBeschreibung
+            : !string.IsNullOrWhiteSpace(sourceSuggestion?.Beschreibung)
+                ? sourceSuggestion.Beschreibung
+                : _textPresenter.BuildBeschreibungVorlage(SelectedCode, clock: null);
+        ClockPosition = CurrentItem?.ExistingClockPosition;
+        Severity = CurrentItem?.ExistingSeverity;
         CurrentImagePath = CurrentItem?.FramePath;
         if (CurrentItem is not null)
         {
@@ -834,54 +984,14 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                 : $" · Ordnerhinweis: {PersonalGoldMainCodeCatalog.FormatDisplayName(
                     CurrentItem.SuggestedMainCode,
                     _codeLabelLookup)}";
-            StatusText = $"Bild {CurrentIndex + 1} von {Items.Count}{folderHint}";
+            var sourceHint = sourceSuggestion is null
+                ? string.Empty
+                : $" · PDF-Referenz: {sourceSuggestion.VsaCode}, Seite {sourceSuggestion.PageNumber}" +
+                  (string.IsNullOrWhiteSpace(sourceSuggestion.PhotoId)
+                      ? string.Empty
+                      : $", Foto {sourceSuggestion.PhotoId}");
+            StatusText = $"Bild {CurrentIndex + 1} von {Items.Count}{folderHint}{sourceHint}";
         }
     }
 
-    private string BuildBeschreibungVorlage(string? code, double? clock)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return string.Empty;
-        var normalizedCode = NormalizeCode(code);
-        var label = _codeLabelLookup(normalizedCode) ?? normalizedCode;
-        return clock.HasValue
-            ? $"{label} bei {clock.Value:0.#} Uhr — Ausmass ergaenzen"
-            : $"{label} — Lage und Ausmass ergaenzen";
-    }
-
-    private string BuildKatalogBeschreibung(
-        string? code,
-        string? katalogBeschreibung,
-        double? clock,
-        int? severity)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return string.Empty;
-
-        var normalizedCode = NormalizeCode(code);
-        var label = string.IsNullOrWhiteSpace(katalogBeschreibung)
-            ? _codeLabelLookup(normalizedCode)
-            : katalogBeschreibung.Trim();
-        var beschreibung = string.IsNullOrWhiteSpace(label)
-            ? $"VSA-Code {normalizedCode}"
-            : $"{normalizedCode} — {label}";
-
-        if (clock.HasValue)
-            beschreibung += $", bei {clock.Value:0.#} Uhr";
-        if (severity.HasValue)
-            beschreibung += $", Schadensstufe {severity.Value}";
-
-        return beschreibung;
-    }
-
-    private string ResolveCodeLabel(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return string.Empty;
-
-        return _codeLabelLookup(NormalizeCode(code)) ?? "Code nicht im VSA-Katalog gefunden";
-    }
-
-    private static string NormalizeCode(string? code)
-        => code?.Trim().ToUpperInvariant() ?? string.Empty;
 }

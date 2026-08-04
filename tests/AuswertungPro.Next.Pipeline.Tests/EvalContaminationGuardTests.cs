@@ -94,6 +94,7 @@ public sealed class EvalContaminationGuardTests
 
         Assert.True(EvalContaminationGuard.IsEvalHaltung(keys, "287425-81162"));            // exakt
         Assert.True(EvalContaminationGuard.IsEvalHaltung(keys, "80945-81176/2025_Saniert")); // mit Suffix
+        Assert.True(EvalContaminationGuard.IsEvalHaltung(keys, "81162-287425"));             // umgekehrte Richtung, gleiche Leitung
         Assert.False(EvalContaminationGuard.IsEvalHaltung(keys, "999999-888888"));           // andere Haltung
         Assert.False(EvalContaminationGuard.IsEvalHaltung(keys, ""));                        // leere CaseId
         Assert.False(EvalContaminationGuard.IsEvalHaltung(new HashSet<string>(), "287425-81162")); // leerer Satz

@@ -13,7 +13,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
-    <Grid Margin="0">
+    <Grid x:Name="RootContent" Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -285,6 +285,9 @@
                                             <TextBlock x:Name="TxtQ2Unit" FontSize="12" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
+                                            <TextBlock x:Name="TxtQ2Range" FontSize="10"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center"/>
                                         </DockPanel>
                                         <TextBlock x:Name="TxtQ2Error" FontSize="10" Foreground="{StaticResource DangerBrush}"
                                                    Margin="0,2,0,0" Visibility="Collapsed"/>

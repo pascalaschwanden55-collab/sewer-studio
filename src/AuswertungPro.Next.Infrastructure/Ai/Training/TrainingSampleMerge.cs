@@ -21,12 +21,17 @@ public static class TrainingSampleMerge
         target.MatchLevel = source.MatchLevel;
         target.KiCode = source.KiCode;
         target.KbIndexState = source.KbIndexState;
+        if (source.SourceReferenceCode is not null)
+            target.SourceReferenceCode = source.SourceReferenceCode;
+        if (source.SourceReferenceDescription is not null)
+            target.SourceReferenceDescription = source.SourceReferenceDescription;
         if (source.CodeMeta is not null)
             target.CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(source.CodeMeta);
         // Anreicherung: nur ueberschreiben wenn der neue Wert gesetzt ist
         if (source.SourceType is not null) target.SourceType = source.SourceType;
         if (source.TechniqueGrade is not null) target.TechniqueGrade = source.TechniqueGrade;
         if (source.InspectionDate is not null) target.InspectionDate = source.InspectionDate;
+        if (source.ExportedUtc is not null) target.ExportedUtc = source.ExportedUtc;
         if (source.InspectionDate is not null ||
             source.TrainingEligible ||
             !string.IsNullOrWhiteSpace(source.TrainingEligibilityReason))

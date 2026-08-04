@@ -387,6 +387,17 @@ def decode_image(image_base64: str) -> Image.Image:
     )
 
 
+def _pil_rgb_to_ultralytics_bgr(img: Image.Image) -> np.ndarray:
+    """Wandelt ein PIL-RGB-Bild in ein echtes BGR-NumPy-Bild um.
+
+    Ultralytics behandelt NumPy-Eingaben als BGR. Ohne diesen ausdruecklichen
+    Kanalwechsel waeren Rot und Blau bei der Inferenz vertauscht.
+    """
+
+    rgb = np.asarray(img.convert("RGB"))
+    return np.ascontiguousarray(rgb[:, :, ::-1])
+
+
 def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     """Check if a frame is usable for analysis using image quality heuristics.
 
@@ -475,7 +486,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
                 )
             t0 = time.perf_counter()
             results = model.predict(
-                source=np.array(img),
+                source=_pil_rgb_to_ultralytics_bgr(img),
                 conf=confidence_threshold,
                 imgsz=settings.yolo_imgsz,
                 verbose=False,
@@ -779,7 +790,10 @@ def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, floa
             results = model.predict(source=src, imgsz=imgsz, verbose=False)
         else:
             # Legacy (Grundgeruest, mit Crop trainiert): bisheriges Verhalten
-            results = model.predict(source=np.array(img), verbose=False)
+            results = model.predict(
+                source=_pil_rgb_to_ultralytics_bgr(img),
+                verbose=False,
+            )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     if not results or len(results) == 0:

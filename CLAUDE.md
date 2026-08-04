@@ -84,30 +84,204 @@
   gemeinsamen Split-Gruppe. Ein Pilot braucht >= 30 Samples sowie Train und Val/Test.
   Platzhalter-Beschreibungen sind fuer das reine BBox-Training zulaessig und werden
   nur als `kb_text_offen` markiert — KB-Index und Qwen-Retrieval sperren sie.
-  Stand des schreibfreien Berichts vom 2026-07-25 (nach Bereinigung): 218 Eintraege,
-  24 Drafts (14 alte Entwuerfe + 10 Bildduplikate, als Draft markiert und in `Notes`
-  dokumentiert), 194 verwendbar, 0 Duplikatgruppen, 186 offene KB-Texte. Die
-  Haltungsidentitaet aller 194 wurde per Bild-SHA-256-Match gegen die Quelldateien
-  in `D:\Trainingsfotos` rekonstruiert (eindeutig, 0 Mehrdeutigkeiten); `CaseId` und
-  `Signature` tragen jetzt die echte Haltungsnummer, die alte Pseudo-CaseId steht in
-  `Notes`. Der Split ist damit release-faehig: 128/52/14 aus 69 Haltungsgruppen.
-  BCC=59 und BCA=42 sind auswertbare Piloten (>= 30, Train und Val/Test), weiterhin
-  keine Modellfreigabe. Backups: `training_samples.json.bak_vor_haltung_*`,
-  `KnowledgeBase.backup_vor_haltung_*.db`.
+  Der aktuelle, an Register und Exportdatensatz gebundene Bericht
+  `gold_stock_audit_20260803_191255_470.json` hat SHA-256
+  `5d036fd74dbdc6e80dae1ca2600b648fc99073f9b8a0157bee5da1a6027a0987`.
+  Er prueft 1391 Eintraege: 14 Drafts werden uebersprungen, 24 Kandidaten werden
+  verworfen und 1353 sind verwendbar. Der Haltungssplit umfasst 961 Train-,
+  264 Validation- und 128 eingefrorene Testinstanzen. Gebunden ist der dabei
+  gepruefte `training_samples.json`-Snapshot mit SHA-256
+  `fd5340ce35d5b317273e9d34e340d70e319448c78c23d640ec682b94fb9c6a1b`.
+  Der Audit vom 2026-08-02 bleibt der unveraenderte Beleg des weiterhin
+  `not_deployed` stehenden vorigen Kandidaten.
+- `training/scripts/repair_gold_holding_ids.py` repariert persoenlich bestaetigte
+  `foto_*`-Goldsamples nur ueber einen eindeutigen bytegleichen SHA-256-Treffer in
+  einem Quellenordner. Standard ist ein schreibfreier Prueflauf. `--execute`
+  verlangt eine ruhige App/SQLite-DB, sichert JSON und SQLite konsistent und
+  aktualisiert Sample, Signatur, Notiz, Teacher-Haltung und `Samples.CaseId`
+  gemeinsam; Kundenbilder werden nie veraendert.
+- `training/scripts/prepare_detect_gold.py` baut daraus fail-closed das getrennte
+  Mehrklassen-Register `DETECT_ALL`. Es verlangt den expliziten Audit, die daran
+  gebundene persoenliche Codefreigabe, unveraenderte Bild-/Sample-Hashes und nur
+  streng reviewte `all_classes_clear`-Negative. Das aktuelle Register enthaelt
+  894 Goldinstanzen (710 Train, 184 Validation) und 9 strikte Negative (7/2).
+  Der gebundene Exportplan
+  `ea8e715f3c4cee8a5e43adae35c734e4c8890be389ab0bba91148126d785bfc2`
+  fuehrt gleiche Bildbytes zusammen und enthaelt deshalb 852 Bilder
+  (686 Train, 166 Validation) mit 894 Boxen. Belegt sind 13 der 15 festen Klassen.
+  Register, Beleg und Archive sind gegen Links/Junctions
+  geschuetzt; ein Transaktionsmarker setzt einen abgebrochenen Zwei-Datei-Wechsel
+  bytegenau zurueck oder erkennt einen bereits vollstaendigen Commit. Negative
+  Bilder werden zusaetzlich gegen alle Auditrollen geprueft: derselbe Bildhash ist
+  immer gesperrt, Testhaltungen samt Gegenrichtung sind gesperrt und abweichende
+  Train-/Validation-Rollen sind ebenfalls ein harter Fehler. Bei einer Erneuerung
+  duerfen neue eingefrorene Eval-Sets nur monoton ergaenzt werden; jedes bereits im
+  Register gebundene Schutzmanifest muss unveraendert vorhanden bleiben.
+- `training/scripts/derive_negative_set_for_gold_audit.py` leitet dafuer einen
+  neuen unveraenderlichen Negativsatz ab, ohne Quelle oder Review umzuschreiben.
+  Es entfernt nur Audit-Testhaltungen und Splitkonflikte; bytegleiche
+  Gold-/Negativbilder bleiben ein harter Fehler. Der aktuelle Satz
+  `bcc_hn_c25fd2f9d33f` besitzt 9 Bilder (7 Train, 2 Validation), Set-ID
+  `c25fd2f9d33f09454e03c2e0ed2e25d5fa8faafcd2b50c9af68c03288fbbe0f2`
+  und Manifest-SHA-256
+  `518a341419b285da88ce674accfe7b0b41330f8cae736ef87a95ea9a48221772`.
+- `training/scripts/train_detect_gold.py` prueft danach Plan, Exportbeleg,
+  Klassenkarte, alle Datei-Hashes und jedes YOLO-Label erneut. Es trainiert nur
+  einen getrennten Kandidaten mit Status `not_deployed`; produktive Gewichte oder
+  Modellzeiger werden nie veraendert. Ein laufender Sidecar oder weniger als
+  28000 MB freier VRAM sperrt den Start. Der neue Kandidat
+  `detect_gold_9eb020e30322` hat 40/40 Epochen beendet und bleibt
+  `not_deployed`. Die interne Validation ergibt P 0,3917, R 0,3129,
+  mAP50 0,3026 und mAP50-95 0,1726. Der Gewichtshash ist
+  `fdf30f77b6aa6271014d130248fde99089854bfc0e58b44d75d462b3b9172ebf`,
+  der Kandidatenmanifest-Hash
+  `dd40258fd531198be7a781f265cad6e6f74b8d6704ec762b80b8012a140c392d`.
+  Der vorige Kandidat `detect_gold_ffbb8612fe50`
+  beendete 40/40 Epochen mit P 0,4156, R 0,2575, mAP50 0,2417 und
+  mAP50-95 0,1286. Auch diese internen Werte sind keine Produktfreigabe.
+- Der rohe Detect-Testanteil des an `detect_gold_ffbb8612fe50` gebundenen Audits
+  umfasste 83 Instanzen auf 79 Bildern. Die Haltung `77457-77453`
+  ueberschnitt sich jedoch mit einem
+  Trainingsnegativ. Nach Ausschluss dieser ganzen Haltung bleiben 81 Instanzen auf
+  77 Bildern aus 30 physischen Haltungen als sicherer positiver Testbestand.
+- `training/scripts/detect_gold_holdout_provenance.py`,
+  `detect_gold_holdout_scoring.py` und `evaluate_detect_gold_holdout.py` pruefen
+  Kandidat, Gewicht, Basisgewicht, Dataset, DETECT_ALL-Beleg, Klassenkarte,
+  Migration, beide Gold-Audits, aktuelle Samples sowie Bild-/Sample-/Haltungs-
+  Ueberschneidungen erneut. Das feste Protokoll ist `conf=0,25`, `imgsz=1280` und
+  `IoU=0,5`; zuerst entsteht ein labelblinder, SHA-gebundener Vorhersagebeleg.
+  Technische Fehler werden nie als Negativtreffer gewertet. Mehrfachboxen werden
+  mit maximaler Trefferzahl und danach maximalem Gesamt-IoU zugeordnet.
+- Der korrigierte GPU-Lauf vom 2026-08-02 hat Bericht-SHA-256
+  `9ce6aaad85317061953796085ff7daf921b554295f2bad21e904cc5dc78789f6`
+  und Vorhersagebeleg-SHA-256
+  `87002b0aa6cca5d6a5ec33ef05d5662ff80be2f71458ddaba3374916633aa450`.
+  Ergebnis: TP 17, FP 24, FN 64, Precision 41,5 %, Recall 21,0 %, F1 27,9 %.
+  `BCC_bogen` traf 14/16 (Recall 87,5 %), `BCA_anschluss` 3/17; die elf
+  weiteren gemessenen Klassen hatten keinen exakten Treffer. Der Status ist
+  `positive_holdout_only_not_release_qualified`: Es fehlen insbesondere frische,
+  saubere Negativbilder, und das Modell bleibt `not_deployed`. Der fruehere Lauf
+  `..._20260802_120445_930796.json` ist wegen einer dabei entdeckten falschen
+  RGB/BGR-Uebergabe aufgehoben und darf nicht verwendet werden.
+- Der allgemeine Detect-Release-Holdout wird ohne Modellvorhersagen aus frischen
+  PDF-/Video-Haltungen vorbereitet. `prepare_detect_release_pdf_extraction.py`
+  plant hoechstens ein PDF-/Video-Paar je physischer Haltung. Der getrennte
+  `tools/DetectReleaseHoldoutPdfExtractor` uebernimmt ueber den bestehenden
+  `TrainingPdfReviewImportService` nur eindeutig zugeordnete Operateurfotos und
+  optional einen deterministischen Video-Hintergrundframe je PDF. Kundenoriginale
+  bleiben unveraendert; der Extraktionsbeleg sperrt Training und Gold.
+- `training/scripts/prepare_detect_release_holdout.py` prueft Kandidat, Gewicht,
+  Basismodell, class_map v3, VSA-Hash, Extraktionsbeleg sowie bekannte Bildhashes
+  und beide Richtungen jeder Haltung erneut. Erst `--execute` veroeffentlicht
+  atomar einen eingefrorenen Ordner `detect_release_holdout_<sha>`. Dieser Bestand
+  darf nie fuer Training, Gold, Few-Shot oder Kandidatenauswahl verwendet werden.
+- `tools/EvalVisibilityReview/detect_release_holdout_review_server.py` zeigt keine
+  Modellvorhersagen; PDF-Angaben sind sichtbar als Operateur-Referenz bezeichnet.
+  Bei `positive` markiert der Mensch alle sichtbaren Objekte der 15 Klassen mit
+  einer oder mehreren Boxen. `negative` gilt nur, wenn keine dieser Klassen
+  sichtbar ist; unklare Bilder erhalten `exclude`. Die getrennte Review ist an
+  Holdout, Kandidat, Gewicht, Klassenkarte, VSA-Manifest und Bildbytes gebunden.
+- `training/scripts/detect_release_holdout_status.py` prueft Holdout und Review
+  schreibfrei. `ready_for_detect_evaluation` verlangt eine vollstaendige Review,
+  mindestens 20 Instanzen je Klasse, 75 echte Negativbilder und 30 negative
+  physische Haltungen; diese Grenzen duerfen nur erhoeht werden. Der Status startet
+  kein Modell und ist keine Freigabe. Der aktuelle Review ist mit 400/400 Bildern
+  abgeschlossen: 241 positiv, 74 negativ und 85 ausgeschlossen. Wegen fehlender
+  Klassenabdeckung und eines fehlenden Negativbilds bleibt er
+  `coverage_incomplete`.
+- `training/scripts/evaluate_detect_release_holdout.py` fuehrt deshalb nur eine
+  klar bezeichnete Mehrklassen-Diagnose aus. Mit festem `conf=0,25`,
+  `imgsz=1280` und `IoU=0,5` inferiert es bei ausgeschaltetem Sidecar zuerst alle
+  400 Bilder ueber die private Kandidatenkopie und den geprueften RGB-zu-BGR-Weg.
+  Der labelblinde SHA-Beleg wird geschrieben und erneut validiert, bevor die
+  Review geladen wird. Nur die 315 positiven und negativen Bilder werden
+  bewertet; `exclude` wird ignoriert. Technische Fehler auf gewerteten Bildern
+  brechen die Diagnose ab und gelten nie als Negativtreffer. Das Werkzeug
+  trainiert oder aktiviert nichts und kann keine Modellfreigabe erteilen.
+- Der erste GPU-Lauf vom 2026-08-03 hatte 400/400 technisch fehlerfreie
+  Vorhersagen. Auf 350 Soll-Boxen ergaben sich TP 36, FP 59 und FN 314
+  (Precision 37,9 %, Recall 10,3 %, F1 16,2 %); 9/74 echte Negativbilder hatten
+  mindestens einen Fehlalarm. `BCC_bogen` traf 27/37, `BCA_anschluss` 8/39 und
+  `BAF_oberflaeche` 1/89; die elf weiteren gemessenen Klassen hatten null exakte
+  Treffer. Bericht-SHA-256:
+  `64bd6ae370bc1a0bc7320aca5a0921a89cfa467fc9b7ff1c5e926780dc00dcbc`,
+  Ledger-SHA-256:
+  `a771cbd7fa1a959b49ecf41621df700259471494b7e110d73c7b96eb919adbf2`.
+  Details stehen in `docs/quality/DETECT-RELEASE-DIAGNOSTIC-2026-08-03.md`.
+- `training/scripts/detect_gold_error_review.py` erzeugt aus genau diesem
+  korrigierten Bericht und seinem labelblinden Vorhersagebeleg eine eingefrorene,
+  rein diagnostische Fehlfall-Queue. Sie enthaelt jede nicht exakt getroffene
+  Goldinstanz sowie jede geometrisch unzugeordnete Vorhersage genau einmal,
+  kopiert keine Bilder und setzt alle Trainings-/Exportrechte ausdruecklich auf
+  `false`. Der aktuelle gueltige Stand
+  `detect_gold_failure_a46a82535c82` umfasst 80 Faelle auf 67 Bildern:
+  56 verpasst, 8 falsche Klasse und 16 zusaetzliche KI-Boxen.
+- Der lokale Pruefplatz
+  `tools/EvalVisibilityReview/detect_gold_error_review_server.py` zeigt Gold- und
+  KI-Boxen mit Klasse und erlaubt nur `confirmed_model_error`, `gold_suspect`
+  oder `exclude_uncertain`. Review und Queue liegen getrennt unter
+  `<KnowledgeRoot>/eval_review/detect_gold_failure_review`. Bericht, Ledger,
+  Kandidatenmanifest, Gewicht, Gold-Audit, Trainingssamples und Klassenkarte
+  werden per SHA-256 gebunden und vor jeder Entscheidung erneut geprueft.
+  Browser-Revision und Dateisperre verhindern stilles Ueberschreiben durch zwei
+  Tabs oder Prozesse. Dieser Weg mutiert weder Gold, KB, Trainingsdaten,
+  Registry noch Modell. Werden seine Erkenntnisse zur Modellentwicklung genutzt,
+  darf derselbe Holdout danach nicht erneut als unabhaengige Release-Abnahme gelten.
+- `training/scripts/publish_detect_gold_collection_plan.py` akzeptiert nur eine
+  vollstaendige, zur Queue und zum Reviewer passende Review. Der Standardlauf ist
+  schreibfrei; `--execute` publiziert atomar und idempotent ausschliesslich einen
+  aggregierten Klassen-Sammelplan ohne Bildpfade, Bildhashes, Sample-, Prediction-,
+  Fall-IDs oder Kommentare. Gold-fragliche Faelle bleiben getrennte
+  Annotation-Audit-Ziele; ausgeschlossene Faelle erzeugen kein Sammelziel. Eine
+  bestaetigte falsche Klasse zaehlt zugleich als Positivbedarf der Sollklasse und
+  als konkrete Soll-zu-Vorhersage-Verwechslung. Die Review der Queue
+  `detect_gold_failure_a46a82535c82` ist abgeschlossen: 80/80 Entscheidungen,
+  davon 75 bestaetigte Modellfehler, 0 Gold-Verdachtsfaelle und 5 Ausschluesse.
+  Der gueltige Sammelplan ist `detect_gold_collection_874ec160e346`: 60 positive
+  Fehlerhinweise, 15 Fehlalarm-Hinweise und 6 Verwechslungen in 4 Klassenpaaren.
+  Der fruehere Plan `detect_gold_collection_44a08fe9895e` ist wegen der damals
+  fehlenden Verwechslungsliste aufgehoben und darf nicht verwendet werden.
+- `yolo_wrapper._pil_rgb_to_ultralytics_bgr` wandelt dekodierte PIL-RGB-Bilder vor
+  jeder Ultralytics-NumPy-Inferenz explizit in zusammenhaengendes BGR um. Detect,
+  Legacy-Classification und beide Holdout-Auswerter verwenden denselben Helfer;
+  Rot und Blau duerfen nicht erneut still vertauscht werden.
 - SAM-Video-Regel (Goldgewinnung): SAM 2.1 kann Masken durch Videos propagieren,
   darf aber nur als Pruefwerkzeug fuer den Menschen dienen, nicht als automatische
   Goldfabrik. Propagierte Nachbarframes sind stark voneinander abhaengige
   Vorschlaege; sie werden einzeln ausgewaehlt und menschlich bestaetigt, bevor sie
   Gold werden. Kein automatischer Gold-Export aus Video-Propagation.
-- Negativ-/Hintergrundbilder sind seit 2026-07-25 im gemeinsamen Detect-Plan angeschlossen:
-  Die Export-Registry traegt optional `negative_images` (Pfad + SHA-256, menschlich kuratiert,
-  Default-Pool `<KnowledgeRoot>/training/negatives/bcc_pilot` via
-  `prepare_bcc_pilot.py --negatives-dir`). Der Plan prueft Hashes und Eval-Schutz auch fuer
-  Negative, verteilt sie deterministisch (ca. 20 % val) und schreibt leere Labeldateien
-  (`IsNegative`-Flag, serialisiert nur bei `true` — Plaene ohne Negative bleiben bytegleich).
+- Negativ-/Hintergrundbilder sind seit 2026-07-25 im gemeinsamen Detect-Plan
+  angeschlossen. Alte reine Registrys duerfen weiter den flachen Pool
+  `<KnowledgeRoot>/training/negatives/bcc_pilot` mit Pfad + SHA-256 lesen. Neue
+  Trainingslaeufe verwenden stattdessen nur explizite `--negative-set`-Ordner unter
+  `training/negatives/sets`. Deren Manifest bindet Bild, echte Haltung, festen
+  Train-/Validation-Split, All-Class-Review, Queue, Kandidatenliste und class_map v3.
+  Gold-Audit, `prepare_bcc_pilot.py` und C# pruefen diese Kette erneut; Legacy und
+  strikte Saetze duerfen in einem neuen Register nicht gemischt werden. Der aktuelle
+  strikte Lauf verwendet deshalb nur die 10 reviewten Bilder aus
+  `bcc_hn_54f6608b975a`; die 14 Altnegative ohne All-Class-Beleg bleiben draussen.
+  `prepare_bcc_pilot.py` verlangt einen expliziten aktuellen `--gold-audit`,
+  uebernimmt nur dessen Rollen `train` und `val` und schliesst `test` strikt aus.
+  Ein bestehendes Register wird nur mit `--execute --renew-existing` nach erneuter
+  Hash-Pruefung ersetzt; der Altstand wird bytegenau unter
+  `training/pilots/BCC/registry_history/<sha256>.json` archiviert. Der Plan prueft
+  Hashes, echte Haltungen, Gegenrichtungen, Split und Eval-Schutz auch fuer Negative
+  und schreibt leere Labeldateien (`IsNegative` nur bei `true` serialisiert).
   `train_bcc_pilot.py` akzeptiert leere Labeldateien als Negative (Positive ohne Labeldatei
   stoppen weiter), trainiert mit `flipud=0.0, fliplr=0.0` (Uhrlage!) und leichter
   HSV-Augmentierung (`hsv_h=0.01, hsv_s=0.3, hsv_v=0.3`) sowie `--patience` Default 10.
+  Der strikte Lauf vom 2026-07-28 exportierte Plan
+  `f23a95b149addf9d24365834b563b7784f76132190d9e4e60f4c61e84a652bc9`
+  mit 57 BCC-Positiven und 10 Negativen (48 Train, 19 Validation). Der Kandidat
+  `bcc_bogen_f23a95b149ad_hn10_strict` stoppte nach 33/40 Epochen und bleibt
+  `not_deployed`; Gewicht-SHA-256:
+  `89331f637fe59cd2c321c3330733cc0278c57b4bd3a5c512662c12fef4a1ee78`.
+  Seine interne, fuer Early Stopping verwendete Validation ist noch kein
+  Release-Beweis (P=0,5371, R=0,4706, mAP50=0,4829, mAP50-95=0,1613).
+  Bei `conf=0,25` aktiviert er auf beiden strikten Validation-Negativen und auf
+  7/14 nicht mittrainierten Altnegativen. Deshalb nicht aktivieren: zuerst mehr
+  unterschiedliche BCC-Boxen und streng reviewte Hard-Negatives sammeln, danach
+  einen frischen, zuvor unberuehrten Release-Holdout pruefen.
 
 ## Build & Test
 ```bash
@@ -116,7 +290,7 @@ dotnet test AuswertungPro.sln
 ```
 
 `AuswertungPro.sln` enthaelt die vier produktiven Projekte, die vier Testprojekte
-und alle 41 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
+und alle 42 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
 verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brechen.
 
 ## Wichtige Klassen
@@ -148,7 +322,7 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `PipelineProgressMapper` → laufbezogene Fortschritts-, ETA- und Live-Frame-Abbildung; liefert dem Fenster nur Render-/Weiterleitungs-Hinweise
 - `PipelineResultPresenter` → zustandslose Abschlussabbildung fuer Statistik, Telemetrie und hoechstens 250 sichtbare Befunde
 
-- `ManualGoldTrainingPolicy`      -> erlaubt fuer neues Training nur persoenlich manuell codierte, bestaetigte Goldsamples mit vorhandenem Bild, BBox und SAM-Segmentierung
+- `ManualGoldTrainingPolicy`      -> erlaubt fuer neues Training nur persoenlich bestaetigte `ManualCoding`- oder streng belegte `PdfPhoto`-Samples mit vorhandenem Bild, randgueltiger BBox und SAM-Segmentierung; mindestens 80 % der Maskenpixel muessen in der Hand-Box liegen
 - `CodingTrainingSamplePersistenceCoordinator` -> uebernimmt persoenliche Annahmen/Korrekturen aus dem Player-Codiermodus nach `gold_frames`, Trainingsliste und KB
 - `PersonalGoldProgressCalculator` -> berechnet den Live-Goldstand je Hauptcode (Ziel 30-50), ohne Daten zu veraendern
 - `IPersonalGoldAlbumService`/`PersonalGoldAlbumService` -> liefert das rein lesende Fotoalbum der persoenlichen Handlabels nach Hauptcode
@@ -162,6 +336,7 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `TrainingDataInventoryService`  -> rein lesendes Inventar fuer Teacher-/Trainingsquellen, Pfade und Eval-Schutz je Eval-Set
 - `TrainingInventoryReportValidator` -> strenger Vertrag fuer Schema 2.2, Triage, Pfade, Quellen und Zusammenfassung
 - `tools/TrainingDataInventory`   -> AP-0.1-Werkzeug; Bericht plus SHA-256 unter `<KnowledgeRoot>/training/reports`
+- `tools/DetectReleaseHoldoutPdfExtractor` -> liest codierte PDF-Protokolle und erzeugt einen hashgebundenen, nicht trainierbaren Extraktionsbeleg fuer den Mehrklassen-Release-Holdout
 - `ITrainingYoloClassMapStore`    -> rein lesender, unveraenderlicher class_map-Snapshot (aktiv v3, v2 eingefroren lesbar) fuer den lokalen Detect-Export
 - `TrainingYoloClassMapFileStore` -> prueft feste Klassenzahl je Version (v2 = 14, v3 = 15 inkl. BCC_bogen), echten VSA-Manifest-Hash, Quell-Hashfelder, Zeilenzahlen, Quellenreihenfolge und menschlich freigegebene Migration
 - `VsaYoloClassMapFileStore`      -> Teacher-Karte; `GetClassId` liest strikt, nur `GetOrAddClassId` darf bewusst erweitern
@@ -313,15 +488,24 @@ Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`
 wiederhergestellt oder eine neu angelegte Kopie entfernt.
 
 Die versionierten Vorlagen liegen unter `training/class_maps/` und werden beim Build
-nach `Data/Training/` kopiert. `detect_class_migration_v2.candidate.json` enthaelt
-124 vollstaendige Alt-Zuordnungen. Davon sind nur die 10 BCC-Zeilen fuer den
-persoenlich freigegebenen Bogen-Pilot auf `approved`; 114 Zeilen bleiben `pending`.
-Unbekannte oder offene Klassen werden vor jeder lokalen Exportausgabe hart gestoppt;
-es gibt keine stille neue ID und keinen automatischen SONST-Rueckfall.
-Die Migrationsdatei prueft alle vier Herkunfts-Hashfelder auf SHA-256-Format, die
+nach `Data/Training/` kopiert. Die v2-Karte mit 14 Klassen und 124
+Migrationszeilen bleibt eingefroren. Aktiv ist v3 mit 15 festen Klassen und 142
+Migrationszeilen: 92 Teacher-Codes, 35 Legacy-Schluessel, 10 produktive Modellnamen
+und 5 Annotation-Overrides. Persoenlich freigegeben sind 60 `map`- und 12
+`discard`-Entscheidungen fuer Teacher-Codes; zusammen mit einer freigegebenen
+Legacy-Zeile sind 73 Zeilen `approved`, 69 bleiben `pending`.
+`personal_gold_approval` bindet diese Entscheidungen an den Audit-SHA-256
+`bb7f01f6b3582029ad4393c7217e5c2bbbb4ed5770ab15c807a574972b4905ba`
+und den gebundenen `training_samples.json`-SHA-256
+`bfcb3362762dc552861feb0680f1267e086e8d7d3fb71d70e5806841b82daa83`.
+Die Freigabe umfasst 72 beobachtete Quellcodes; neu ist insbesondere
+`BAFCZ -> BAF_oberflaeche`.
+Unbekannte oder offene Klassen werden vor jeder Exportausgabe hart gestoppt; es
+gibt keine stille neue ID und keinen automatischen SONST-Rueckfall.
+Die Migrationsdatei prueft die Herkunfts- und persoenlichen Beleg-Hashes, die
 deklarierte Zeilenzahl und die feste Aufloesungsreihenfolge. Nur der VSA-Hash wird
-beim Lesen gegen die echte Datei neu berechnet; die anderen drei bleiben Auditwerte
-der Erzeugung. `BBD_boden` wird im produktiven Befundweg ueber
+beim Lesen gegen die echte Datei neu berechnet; die historischen Herkunftshashes
+bleiben Auditwerte der Erzeugung. `BBD_boden` wird im produktiven Befundweg ueber
 `CodingFindingCodeResolver`/`VsaCodeResolver` zu `BBDZ`, nie zum nackten `BBD`.
 
 ## Plan-gesteuerter YOLO-Export (AP 0.3)
@@ -333,7 +517,7 @@ TrainingCenter
   -> duenne UI-Huelle ruft ITrainingYoloExportCoordinator
   -> freigegebenes export_registry_v1.json lesen
   -> einen aktuellen TrainingDataInventoryRuntimeSnapshot erzeugen
-  -> class_map v2 strikt lesen
+  -> aktive class_map v3 strikt lesen
   -> ITrainingExportPlanService erzeugt genau einen Plan
   -> ITrainingExportExecutionService nutzt Sidecar ODER lokalen Ausfuehrer
   -> ITrainingExportCompletionService markiert nur bestaetigte TrainingSamples
@@ -349,6 +533,9 @@ Wichtige Regeln:
 - `TrainingExportRegistryFileStore` liest
   `<KnowledgeRoot>\training\export_registry_v1.json` strikt. Status `candidate`,
   unbekannte Felder, fehlende Schutz-Sets oder abweichende Manifest-Hashes stoppen.
+  Hauptablauf, Validierung und interne JSON-Dokumente liegen wartbar getrennt in
+  `TrainingExportRegistryFileStore.cs`, `.Validation.cs` und
+  `TrainingExportRegistryFileDocuments.cs`.
   Das optionale Feld `approved_sample_ids` begrenzt einen menschlich freigegebenen
   Pilot auf exakt diese TrainingSample-IDs. Ist es leer, bleibt das bisherige
   Verhalten mit allen geeigneten Goldsamples erhalten.
@@ -388,10 +575,13 @@ Wichtige Regeln:
   keine Dienste erzeugen. `ServiceProvider.cs` enthaelt dadurch nur noch Aufbau und
   den abschliessenden Aufruf der Map.
 
-Produktiv bleibt der allgemeine Export bewusst gesperrt, solange seine
-Migrationszeilen nicht fachlich freigegeben sind. Der getrennte BCC-Bogen-Pilot ist
-mit `BCC_bogen` und fester ID 14 freigegeben; sein Register darf nur die einzeln
-persoenlich bestaetigten Goldsample-IDs enthalten. Diese Sperren nie automatisch umgehen.
+Das aktive `DETECT_ALL`-Register ist fuer die 73 fachlich entschiedenen Teacher-Codes
+freigegeben und nennt jede erlaubte Goldsample-ID einzeln. Nicht belegte oder weiter
+offene Codes bleiben gesperrt. Diese Exportfreigabe ist keine Modellfreigabe: Der
+fertig trainierte Mehrklassen-Kandidat `detect_gold_9eb020e30322` bleibt getrennt
+und `not_deployed`; seine interne Validation ist keine Release-Freigabe. Der BCC-Bogen-Pilot mit
+`BCC_bogen` und fester ID 14 bleibt als enger Altweg erhalten. Diese Sperren nie
+automatisch umgehen.
 
 `tools/StageAExporter` ist jetzt eine reine Kompatibilitaets-CLI vor derselben Runtime
 und demselben Coordinator wie WPF. Sie besitzt keine eigene Klassen-, Split-, Label-
@@ -414,18 +604,120 @@ akzeptiert danach nur einen vollstaendig gehashten Export unter
 aktivierten Kandidaten unter `training\models\candidates`. Es startet nie bei
 erreichbarem Sidecar oder weniger als 28000 MB freiem VRAM und ersetzt keine
 produktiven Gewichte. Der kleine BCC-Pilot verwendet die auf dieser Hardware
-gemessene Batch-Groesse 3; `patience=0` fuehrt die verlangten Epochen vollstaendig
-aus. Von Ultralytics erzeugte `train.cache`/`val.cache` werden nach jedem Lauf
-entfernt, damit der plan-gesteuerte Datensatz unveraendert bleibt.
+gemessene Batch-Groesse 3 und standardmaessig `patience=10`; nur ein ausdrueckliches
+`patience=0` erzwingt alle verlangten Epochen. Von Ultralytics erzeugte
+`train.cache`/`val.cache` werden nach jedem Lauf entfernt, damit der
+plan-gesteuerte Datensatz unveraendert bleibt.
 
 Der nicht aktivierte BCC-Kandidat kann ausschliesslich im Training Studio als
 reiner Fototest verwendet werden. `TrainingPreviewDetectionService` ruft dafuer
-den getrennten Sidecar-Endpunkt `POST /detect/yolo/bcc-test` auf. Der Sidecar
-waehlt den Kandidaten selbst unter `<KnowledgeRoot>\training\models\candidates`,
-akzeptiert nur `not_deployed`, Pilot `BCC_bogen`, mindestens 30 Bilder, die
-freigegebene 15er-Klassenkarte und eine passende SHA-256. Er laedt ihn in den
-eigenen GPU-Slot `YOLO_TEST`; das aktive Standardmodell im Slot `YOLO` wird weder
-ersetzt noch entladen. Der Client darf keinen Modellpfad liefern.
+zuerst die pfadfreie, manifest- und hashgepruefte Liste ueber
+`GET /detect/yolo/bcc-test/candidates` ab. Der Benutzer waehlt im bestehenden
+Modellfeld genau einen Kandidaten. `POST /detect/yolo/bcc-test` erhaelt nur dessen
+ID und erwartete SHA-256, niemals einen Modellpfad. Antwort-ID und -Hash muessen
+exakt zur Auswahl passen; sonst werden alle Boxen verworfen. Der Sidecar akzeptiert
+nur direkte, unverknuepfte Unterordner mit `not_deployed`, Pilot `BCC_bogen`,
+mindestens 30 Bildern und passender Gewicht-SHA. Die freigegebene
+15er-Klassenkarte wird beim Modellladen fuer alle IDs und Namen exakt geprueft.
+Der Sidecar kopiert einen einmal gelesenen, hashgeprueften Byte-Strom in eine
+private temporaere Momentaufnahme; YOLO oeffnet nie erneut den veraenderbaren
+Kandidatenpfad, und die Momentaufnahme wird nach dem Laden nochmals gehasht.
+Dieser Pilot liefert ausschliesslich Treffer der geprueften Klasse 14 `BCC_bogen`;
+Klassen 0 bis 13 werden im BCC-Endpunkt verworfen. Der Kandidat laeuft im eigenen
+GPU-Slot `YOLO_TEST` und ersetzt den produktiven Artefaktzeiger nicht. Bei
+VRAM-Mangel kann der allgemeine LRU-Manager den geladenen Slot `YOLO`
+voruebergehend entladen; das aktive Modell wird bei Bedarf wieder geladen. Der
+alte Request ohne ID bleibt nur als kompatibler automatischer Sidecar-Weg
+erhalten und wird vom Training Studio nicht mehr angeboten.
+
+Der gleich parametrische Vergleich vom 2026-07-28 (`conf=0,25`, `imgsz=1280`)
+zeigt fuer `bcc_bogen_b50b37ab8a4f` auf den drei wirklich unbekannten,
+geschuetzten BCC-Bildern 3/3 Treffer und eine mittlere Box-IoU von 0,8607.
+Auf 9/14 kuratierten Negativbildern entstand jedoch mindestens eine Aktivierung.
+Der Kandidat bleibt deshalb `not_deployed`. Die drei aelteren Kandidaten kannten
+die heutigen Positivbilder bereits; der v3-Negativ-Kandidat und der neue Kandidat
+kannten den heutigen Negativpool. Aus diesen 17 Bildern darf deshalb kein fairer
+Gesamtsieger oder eine Produktfreigabe abgeleitet werden.
+
+Der unabhaengige BCC-Release-Holdout wird mit
+`training/scripts/bcc_release_holdout.py` aus nach dem lokalen
+Basismodell-Zeitstempel aufgenommenen XTF-Fotoquellen vorbereitet. Ohne das
+urspruengliche Trainingsinventar ist diese Zeitgrenze nicht vollstaendig
+beweisbar. Das Werkzeug gleicht Bild-SHA-256 und beide Richtungen jeder Haltung
+gegen alle lokal nachvollziehbaren Kandidaten, Trainingssamples, Negativpools,
+Collapse-Berichte und Eval-Sets ab. Es kopiert Originale nur lesend in einen neuen,
+atomar veroeffentlichten Ordner unter `eval_set/subsets`; vorhandene Holdouts werden
+nie ueberschrieben. Kandidaten-Datensaetze werden einschliesslich Receipt,
+Bild-/Labelbytes sowie der lokalen `data.yaml`- und `classes.txt`-Hashes geprueft.
+`train_bcc_pilot.py` erlaubt nur `path: .`, `images/train` und `images/val` und
+bindet Receipt-, YAML- und Klassen-Hash in jedes neu erzeugte Kandidatenmanifest.
+Die vier Alt-Kandidaten besitzen diese direkte Manifestbindung noch nicht; ihre
+heutigen drei Datensaetze sind dennoch vollstaendig gegen ihre Receipts geprueft.
+Die Legacy-Ausnahme gilt nur fuer ihre exakt bekannten Kandidaten-IDs und
+Manifest-SHAs; jeder neue oder veraenderte Kandidat ohne diese drei Bindungen
+stoppt den Scan. Ein Manifest im BCC-Kandidatenordner ohne exakt
+`pilot=BCC_bogen` stoppt ebenfalls, statt unbemerkt uebersprungen zu werden.
+Bestehende eingefrorene Eval-Manifeste werden gegen jede deklarierte Datei und
+gegen die exakte Bild-/Labelmenge validiert; Legacy-Collapse-Berichte werden ueber
+ihre heutigen Bildpfade nachvollzogen und nicht mehr still ignoriert. Ein alter
+`dateien`-Eintrag muss ein Array nichtleerer Dateinamen sein und jeder Name muss
+eindeutig auf ein bekanntes Bild aufloesbar sein, sonst stoppt der Scan. Der am
+2026-07-28 eingefrorene Bestand
+`bcc_release_holdout_64d06094c921` enthaelt 60 Bilder aus 60 Haltungen. Seine
+verdeckte Vorauswahl war 30/30 und keine Ground-Truth. Der getrennte
+Blind-Review ist abgeschlossen: 60/60 Bilder, davon 29 positiv, 31 negativ und
+0 ausgeschlossen. Der dynamische Status ist `ready_for_binary_evaluation`; das
+eingefrorene Manifest behaelt als Erstellungsbeleg unveraendert
+`dataset_status=review_incomplete` und `release_status=not_evaluated`.
+Er zeigt fuer alle Bilder nur den festen Pruefauftrag `BCC — Bogen`; bildbezogener
+XTF-Untercode, verdeckte Vorauswahl und Modellvorhersage bleiben unsichtbar.
+Mindestens 20 bestaetigte Positiv- und 20 Negativhaltungen bedeuten nur
+`ready_for_binary_evaluation`, niemals eine Modellfreigabe. Ohne menschliche Boxen
+misst dieser Bestand keine Lokalisation und kein mAP. Fuer den eingefrorenen
+V1-Bestand muessen Kandidatenumfang sowie die aggregierten Fingerprints der
+bekannten Bild-Hashes und Haltungs-Aliase exakt gleich bleiben. Eine Aenderung,
+die einen dieser Werte veraendert, sperrt den Status; eingefrorene Eval-Manifeste
+werden zusaetzlich dateiexakt geprueft. Danach wird ein neuer Holdout benoetigt. Die
+gebundene Review-Datei unter `C:\KI_BRAIN\eval_review` hat SHA-256
+`d3c71fa37bca6bc189e2beebef75986c43a819da4094bf5eb0a36228664de663`.
+
+`training/scripts/evaluate_bcc_release_holdout.py` vergleicht exakt den
+eingefrorenen Kandidatenumfang mit festem `conf=0,25`, `imgsz=1280` und nur
+Klasse 14 `BCC_bogen`. Es braucht die Python-Umgebung des Sidecars, sperrt einen
+parallel laufenden Sidecar, liest alle Modelle aus privaten hashgeprueften
+Momentaufnahmen und schreibt zuerst einen labelblinden Vorhersagebeleg. Nur
+dessen neu eingelesene, SHA-gebundene Bytes werden gegen die gebundene
+Review-Momentaufnahme bewertet. Technische Fehler zaehlen nie als Negativbefund;
+ein Teilfehler verhindert den endgueltigen Auswertungsbericht. Aufhebungsmarker,
+Klassenkarte, Bildbytes, Geraet, Qualitaetsgrenzen und Laufzeitversionen werden
+mitgebunden. Das Werkzeug trainiert, aktiviert und ersetzt kein Modell.
+
+Der reale Vergleich vom 2026-07-28 hatte 240 Vorhersagen und null technische
+Fehler. Die zwei aufgehobenen Altlaeufe bleiben reine Diagnose. Bei den zwei noch
+relevanten Kandidaten erreichte `bcc_bogen_af8020b688ac_v3_negatives`
+TP/FN/TN/FP = 24/5/9/22 (Balanced Accuracy 55,9 %);
+`bcc_bogen_b50b37ab8a4f` erreichte 26/3/6/25 (54,5 %). Der erste hat weniger
+Fehlalarme, der zweite weniger verpasste Boegen; es gibt keinen eindeutigen
+Spitzenreiter. Beide erzeugen zu viele Fehlalarme und bleiben `not_deployed`.
+Der Bericht sagt deshalb `comparison_complete_not_release_qualified`. Da dieser
+Holdout vier Kandidaten verglichen hat, braucht ein spaeterer Spitzenreiter vor
+Aktivierung einen frischen, zuvor unberuehrten Bestaetigungsholdout.
+
+`training/scripts/bcc_hard_negative_review.py` bereitet getrennt davon frische
+BCC-Fehlalarmbilder fuer ein menschliches All-Class-Review vor. Es sperrt bekannte
+Bildhashes sowie gleiche oder umgedrehte Trainings-/Eval-Haltungen, bindet class_map
+v3 samt VSA-Hash und waehlt genau ein Vollbild je physischer Haltung. Die
+Modellvorhersagen bleiben im lokalen Browser unsichtbar. Der eigene Pruefplatz
+`tools/EvalVisibilityReview/bcc_hard_negative_review_server.py` akzeptiert nur
+`all_classes_clear`, `mapped_object_visible` oder `exclude_uncertain`; das alte
+Holdout-Urteil `negative` ist ausdruecklich kein Trainingsnegativ. Queue und Review
+werden getrennt und atomar gespeichert. Der Review `bcc_hn_d37e1e0e481c` ist mit
+14/14 Bildern abgeschlossen: 10 `all_classes_clear`, 4
+`mapped_object_visible`, 0 unklar. Der Publisher hat nur die 10 vollstaendig
+klassenfreien Bilder als unveraenderlichen Satz `bcc_hn_54f6608b975a`
+veroeffentlicht (8 Train, 2 Validation, eine physische Haltung je Bild). Sein
+Manifest bindet Bildbytes, Review, Queue-Manifest, Kandidatenliste und class_map v3
+ueber SHA-256-Belege; Originale und ausgeschlossene Bilder bleiben unangetastet.
 
 ## SAM-Review im Training Center
 
@@ -445,10 +737,91 @@ startet nur den ViewModel-Befehl und enthaelt keine Prozesslogik. Segmentierung 
 Code-Vorschlag laufen parallel. Wenn nur einer der beiden Aufrufe scheitert, behaelt das
 ViewModel das bereits abgeschlossene Teilergebnis sichtbar.
 
-Das Fenster bietet fuer den reinen Fototest `Aktives Standardmodell` und
-`BCC-Testmodell (nicht aktiv)` an. Automatische Treffer erscheinen nur als blaue
-Vorschau-Boxen mit Code und Klartext. Sie werden nie in `CurrentBox`, die SAM-Maske
-oder einen Goldsample uebernommen. Nur die rote, vom Menschen gezogene Box kann
+`PDF-Protokoll laden` verwendet den Application-Vertrag
+`ITrainingPdfReviewImportService` und den Infrastructure-Dienst
+`TrainingPdfReviewImportService`. Das Kunden-PDF wird nur gelesen und vor sowie nach
+der Extraktion per SHA-256 kontrolliert. Als sicher gelten in dieser Reihenfolge:
+ein Code im selben Fotoblock, eine exakte Foto-ID beziehungsweise ein exakter
+Dateiname und zuletzt nur die vollständige Kombination aus Videozeit, Meter und
+normalisiert identischem Befundtext. Unsichere Bilder oder Seitengrafiken werden
+mit Hinweis übersprungen; mehrere Operateur-Codes am selben Foto bleiben getrennte
+Prüffälle. Die extrahierten Prüfbilder liegen inhaltsadressiert unter
+`<KnowledgeRoot>\training\pdf_review_imports\<vollstaendiger-pdf-sha256>`.
+`PDF-Ordner laden` verwendet zusätzlich
+`ITrainingPdfFolderDiscoveryService` und
+`TrainingPdfReviewBatchImportUseCase`. Der Benutzer kann mehrere Wurzeln
+wählen; darunter werden PDF-Dateien rekursiv, stabil sortiert und ohne
+Verzeichnis-/Dateiverknüpfungen gesucht. Überlappende Wurzeln und identische
+PDF-Inhalte werden dedupliziert. Die PDFs werden bewusst nacheinander gelesen;
+ein Kunden-PDF wird niemals verändert und ein defektes PDF stoppt die
+restlichen Dateien nicht. Der WPF-Weg zeigt Fortschritt und Abbruch, sperrt
+währenddessen widersprüchliche Prüfaktionen und virtualisiert die kleinen
+Vorschaubilder.
+
+Einzel- und Ordnerimport binden vor dem ersten PDF über
+`TrainingPdfReviewProtectedImportService` beziehungsweise den Batch-UseCase
+einen unveränderlichen Eval-Schutzstand. Konfigurierte Schutzdaten müssen
+echte SHA-256-Werte und kanonische Haltungsnummern enthalten; beim PDF-Import
+ist wegen einer möglichen Farbnormalisierung mindestens eine Haltungsmenge
+Pflicht. Gleiche und umgedrehte Eval-Haltungen sowie exakte Bildbytes werden
+pro Foto vor Matching und Arbeitsablage ausgelassen. Ist der Schutz nicht
+lesbar oder semantisch ungültig, beginnt kein PDF-Import.
+`ServiceProvider.TrainingPdfReviews` registriert deshalb die geschützte
+Fassade; nur der interne `TrainingPdfReviewReader` steht dem einmal geschützten
+Batch als Rohleser zur Verfügung.
+Der Reader stoppt grosse Protokolle fail-closed bei insgesamt mehr als 256 MiB
+extrahierten Fotobytes oder 250 Millionen Fotopixeln.
+JPEG-Fotos mit `DeviceCMYK`/Adobe-YCCK oder einer nicht identischen PDF-`Decode`-
+Regel werden vor Vorschau, SAM und Trainingsablage ueber
+`ITrainingPdfJpegColorNormalizer` in ein sichtbares RGB-PNG umgewandelt. Die
+Format-, Mass- und Farbraumpruefung liegt im kleinen
+`TrainingPdfEmbeddedImageReader`; die WPF-Implementierung trennt dabei die
+DCT-Kanalpolaritaet von der eigentlichen PDF-`Decode`-Regel. Ein unbekannter
+Farbraum, ein CMYK-JPEG ohne eindeutigen Adobe-Farbmarker oder eine fehlgeschlagene
+Normalisierung wird fail-closed ausgelassen; normale RGB-JPEGs bleiben bytegleich.
+Custom-Font-Verschiebungen werden einmal je Seite erkannt und identisch auf
+Seitentext und lokalen Fotoblock angewandt. Ein eindeutiger Protokolltitel ist die
+kanonische Haltungsnummer; nur die zweizeilige Fretz-Tabelle auf derselben
+`Haltungsinspektion`-Titelseite darf eine interne Haltungsnummer als Alias binden.
+`Haltungsbilder`-Titel erzeugen selbst keine Aliase, direkte `Haltung`-Felder ohne
+Fretz-Haupttitel bleiben echte Abschnittsmarker. Kompakte Datumsblöcke vor der Datei-ID
+werden nur bei passendem Elternordner abgetrennt. Sammel-PDFs halten die explizite
+Haltung je Abschnitt und damit je `WorkbenchItem` getrennt; mehrdeutige Abschnitte
+werden ausgelassen. Globale Befund-Fallbacks sind bei mehreren Haltungen gesperrt,
+damit kein Foto Daten aus einem fremden Abschnitt übernimmt. Meter, Befundtext und
+Start-/Ende-Daten eines Streckenschadens werden stattdessen nur aus dem einmal
+materialisierten Text der sicher zugeordneten Haltung ergänzt.
+`TrainingPdfProtocolFindingParser` kapselt dabei Befundzeilen und die
+Start-/Ende-Paarung; der Metadaten-Parser bleibt für Dokument- und Haltungsdaten
+zuständig.
+`TrainingPdfProtocolFindingParser` kapselt dabei Befundzeilen und die
+Start-/Ende-Paarung; der Metadaten-Parser bleibt für Dokument- und Haltungsdaten
+zuständig.
+Inspektionsdatum, vollständiger mehrzeiliger Befundtext und
+sichere Von-Bis-Meter eines Streckenschadens werden als Referenz übernommen.
+Code und Befund stehen nur in `WorkbenchItem.SourceSuggestion`; `ExistingCode`
+bleibt Reparaturen vorhandener Samples vorbehalten. Eine unabhängige KI-Anzeige
+darf diese Operateurvorgabe nicht überschreiben. Gold, KB und Teacher werden erst
+nach persönlicher BBox, gültiger sichtbarer SAM-Maske und Akzeptieren geschrieben.
+Das bestätigte Sample behält die Prüfspur als `SourceType=PdfPhoto` und in `Notes`
+mit Dokumentname, vollständigem PDF-Hash, Seite, Foto-ID und Zuordnungsart.
+`SourceReferenceCode` und `SourceReferenceDescription` bewahren zusätzlich die
+ursprüngliche Operateurangabe; beide sind für PDF-Gold Pflicht.
+
+Das Fenster bietet fuer den reinen Fototest `Aktives Standardmodell` und nach
+erfolgreicher KI-Bereitschaft jeden manifest- und hashgeprueften BCC-Kandidaten
+einzeln mit ID und gekuerzter SHA-256 an. Es gibt dort keine automatische
+BCC-Auswahl. `TrainingStudioPreviewModelCatalog` baut diese fail-closed Liste;
+`TrainingStudioPreviewPresenter` formatiert das reine Anzeigeergebnis ausserhalb
+des ViewModels. Automatische Treffer erscheinen nur als blaue Vorschau-Boxen
+mit Code und Klartext. Sie werden nie in `CurrentBox`, die SAM-Maske oder einen
+Goldsample uebernommen. Ein Bild- oder Kandidatenwechsel verwirft ein spaetes
+Vorschauergebnis. Ein Katalogfehler entfernt alte Kandidaten; ein spaetes
+Katalogergebnis ueberschreibt keine neuere Benutzerauswahl. Fehlt der exakte
+ID-/SHA-Pin, bleibt der Kandidat gesperrt. Ein qualitaetsbedingt nicht
+ausgewertetes Foto wird ausdruecklich als `nicht geprueft` und nicht als
+Negativtreffer gemeldet. Solange der Modelltest laeuft, beginnen weder ein neuer
+Box-Lauf noch ein Speichervorgang. Nur die rote, vom Menschen gezogene Box kann
 ueber Akzeptieren/Korrigieren gespeichert werden.
 Das aktive Standardmodell darf nur bei ausdruecklichem `qualified=true` laufen.
 Fehlende oder unlesbare Qualifikation sperrt den Fototest ebenfalls. Der await im
@@ -478,9 +851,85 @@ SAM-Maske und persoenliches Akzeptieren bleiben fuer Gold immer Pflicht.
 
 Das Training Studio zeigt den durch `PersonalGoldProgressCalculator` berechneten
 Goldstand je Hauptcode mit Ziel 30-50 an und aktualisiert ihn nach jedem erfolgreichen
-Speichern. Die Warteschlange `Unvollstaendige Goldframes` laedt nur persoenlich
-bestaetigte Handlabels ohne Box oder SAM-Segmentierung. Beim Nachlabeln wird das
-bestehende Sample anhand seiner ID ergaenzt; es entsteht kein doppelter Datensatz.
+Speichern. Album und Fortschritt zeigen auch eigene Entwürfe und persönlich bestätigte
+Reparaturfälle; sie zählen erst nach vollständiger Geometrie als Gold.
+Die Schaltfläche `Segmentierung abarbeiten` lädt über `WorkbenchQueueService` eine
+gezielte Reparaturliste aus demselben Sample-Bestand. Aufgenommen werden nur lesbare
+eigene Bilder mit fehlender oder ungültiger SAM-Maske. Neben RLE, Maskenfläche und der
+80-Prozent-Boxregel werden die gespeicherten Maskenmaße über
+`TrainingImageFileProbe` gegen die echten Bildmaße geprüft. Fehlende oder unlesbare
+Dateien erscheinen nicht als leere Arbeitskarten. Eine weiterhin gültige Hand-Box
+steht als `WorkbenchItem.ExistingBox` bereit und startet beim Anzeigen automatisch
+SAM und den getrennten Codevergleich. Ohne gültige Box zeigt die allgemeine Foto-KI
+nur einen Vorschlag; der Mensch zeichnet danach selbst die Box. In dieser Liste ist
+Akzeptieren ohne gültige sichtbare Maske gesperrt. Beim Nachlabeln wird das bestehende
+Sample anhand seiner ID ersetzt; es entsteht kein doppelter Datensatz und es werden
+keine zweiten Arbeitskopien als neue Samples angelegt. Ein Bildwechsel verwirft einen
+noch laufenden Box-Lauf sicher.
+Ein alter `PdfPhoto`-Entwurf wird nicht erneut angeboten, wenn exakt dieselbe
+unveränderliche PDF-Referenz (Dokument-Hash, Seite, Foto), dasselbe Bild, dieselbe
+Haltung und derselbe Code bereits als geometrisch gültiges `Approved`-Sample
+vorliegen. Der Altentwurf bleibt zur Nachvollziehbarkeit gespeichert; nur die
+Arbeitsliste blendet die erledigte Dublette aus.
+Die Vorschaubild-Auswahl ist mit dem tatsaechlich bearbeiteten Bild verbunden; in
+der Reparaturliste kann sie keinen noch offenen Fall ueberspringen.
+
+Die Schaltflaeche `Goldpruefung (90)` startet eine feste persoenliche
+Qualitaetspruefung mit je 15 Bildern fuer `BAB`, `BAF`, `BAI`, `BAJ`, `BBC` und
+`BBF`. `GoldQualityReviewQueueUseCase` waehlt nur einzeln im freigegebenen
+Exportregister enthaltene Train-/Development-Validation-Sample-IDs. Der
+`GoldQualityReviewSnapshotProvider` verlangt davor einen erfolgreichen strikten
+Live-Inventarlauf mit vollstaendigem Eval-Schutz; geschuetzte Bild-Hashes und
+Haltungen sind ausgeschlossen. Die Auswahl bevorzugt verschiedene physische
+Haltungen und verwendet kein Bild doppelt. Das unveraenderliche Sitzungsmanifest
+unter `<KnowledgeRoot>\training\gold_quality_reviews` bindet Register-Hash,
+Schutzfingerprint, Bild-Hash und Ausgangsbestaetigung und wird bei einem Neustart
+fortgesetzt. Pro abgeschlossenem Fall entsteht zusaetzlich ein unveraenderlicher
+persoenlicher Abschlussbeleg; eine blosse externe Neuspeicherung zaehlt nicht als
+Pruefung. Das Training Studio zeigt vorhandene Box und gespeicherte Goldmaske zuerst
+unveraendert; die KI ist nur ein Vergleich. Erst eine neu gezogene Box startet SAM
+neu. Vor dem Schreiben werden der beim Laden gebundene Sample-Zeitstand und exakt
+dieselben Bildbytes nochmals geprueft. Korrigierte Uhrlage und Schadensstufe werden
+auch in `TrainingSample.CodeMeta` uebernommen. Ein Fall zaehlt erst nach erneutem
+persoenlichem Gold-Akzeptieren und erfolgreichem Abschlussbeleg; gespeichert wird
+mit derselben Sample-ID, sodass keine Dublette entsteht.
+Die Metadaten-Uebernahme bestehender Samples ist in
+`AnnotationWorkbenchService.SampleMapping.cs` getrennt; die reine blaue
+Modellvorschau liegt in `TrainingStudioViewModel.PreviewDetection.cs` und schreibt
+selbst keine Gold-Daten.
+
+Die parallele SAM-/Code-Analyse liegt als
+`TrainingStudioBoxAnalysisUseCase` in der Application-Schicht. Die UI-Koordination
+der Liste ist in `TrainingStudioViewModel.RepairQueue.cs` getrennt. Vor der Aufnahme
+in die Arbeitsliste prueft `TrainingImageFileProbe` neben den Bildmassen auch eine
+vollstaendige Dekodierung. Der Rueckgabevertrag `WorkbenchSaveResult.GoldApproved`
+ist nur nach dem vollstaendigen persoenlichen Gold-Gate wahr. Training Studio und
+Foto-Annotation duerfen einen gespeicherten Entwurf deshalb weder als Gold melden
+noch automatisch zum naechsten Bild weiterschalten.
+
+Bei einer neuen normalen Pruefplatzkarte bleibt das Foto nach jedem erfolgreichen
+Gold-Save sichtbar. Der Benutzer waehlt ausdruecklich `Weiteres Ereignis auf diesem
+Bild` oder `Bild fertig`; Pfeiltasten, Queuewechsel, Modelltest und weitere
+Codieraenderungen duerfen diese Entscheidung nicht umgehen. Ein zusaetzliches
+Ereignis erhaelt eine neue Hand-Box, eigene sichtbare SAM-Maske, eigenen VSA-Code
+und eine eigene Sample-ID. Es wird als `ManualCoding` ohne geerbte PDF- oder
+Bestandsmetadaten gespeichert, aber per SHA-256 an exakt dieselben Bildbytes
+gebunden. Der Pruefplatz setzt solche Zusatzereignisse bewusst als Punktbefund bei
+`MeterStart`; ein zweiter Streckenschaden mit eigener Von-Bis-Strecke gehoert in
+einen dafuer erweiterten Fachdialog und darf hier nicht geraten werden.
+Mehrere Operateurbefunde desselben PDF-Fotos bleiben zuerst als getrennte
+`WorkbenchItem`s zusammen und werden vollstaendig geprueft, bevor der Dialog ein
+weiteres manuelles Ereignis anbietet. Ein noch nicht goldfaehiger Save wird mit
+seiner zurueckgegebenen Sample-ID und dem gespeicherten Bildhash an dieselbe
+Arbeitskarte gebunden; die Korrektur ersetzt diesen Draft. Abgeschlossene Karten
+sind in der aktuellen Warteschlange gesperrt und koennen weder erneut gespeichert
+noch doppelt gezaehlt werden. Vorhandene Reparatur- und Goldpruefungsfaelle bleiben
+weiterhin Einzelfall-Queues.
+`TrainingStudioBoxAnalysisUseCase.ValidateSegmentation` liefert der UI den exakten
+Grund fuer eine Ablehnung. Eine formal sichtbare, aber noch nicht goldfaehige Maske
+wird im Training Studio orange statt gruen gezeichnet und meldet zum Beispiel den
+echten Pixelanteil innerhalb der Hand-Box. SAM-Masken werden dafuer nicht still auf
+die Box beschnitten; die 80-Prozent-Schranke bleibt fail-closed.
 
 Die Schaltflaeche `Goldalbum` oeffnet `PersonalGoldAlbumWindow`. Das Fenster liest
 ueber `IPersonalGoldAlbumService` ausschliesslich persoenlich bestaetigte Handlabels,
@@ -520,7 +969,9 @@ Der Speicherweg trennt seit 2026-07-25 streng zwischen Entwurf und Gold
 Platzhalter-Texte („Ausmass ergaenzen") ab, und `SamMaskValidator`
 (Infrastructure, neben `SamMaskDecoder`) prueft die Maske: nicht `Degraded`,
 RLE strikt dekodierbar (Laufsumme = Breite x Hoehe), mindestens ein gesetztes
-Pixel und mindestens ein echter Maskenpixel-Mittelpunkt innerhalb der Hand-Box.
+Pixel und mindestens 80 % aller Maskenpixel-Mittelpunkte innerhalb der Hand-Box.
+Maskendimensionen müssen den echten Pixelmassen des Goldbilds entsprechen; die
+Maskenfläche wird aus der RLE abgeleitet und nicht aus Sidecar-Metadaten vertraut.
 Gerade und ungerade RLE-Tokenzahlen sind erlaubt, weil der echte Sidecar-Encoder
 keinen kuenstlichen Abschlussrun anhaengt; Startwert und Runs bleiben streng.
 Nur mit gueltiger Maske entsteht ein
@@ -562,6 +1013,58 @@ Der Player-Codiermodus prueft Masken mit demselben strengen Format
 (`SamMaskFormatValidator` in Application; `SamMaskValidator` in Infrastructure
 delegiert dorthin und ergaenzt Degraded/Dekodierung/Box-Schnitt); ungueltige
 Masken werden nicht uebernommen, das Sample bleibt sichtbar unvollstaendig.
+Bei einer manuellen Rechteckmarkierung liest der Player vor der Eingabe das native
+Video-Seitenverhaeltnis samt Pixel-Seitenverhaeltnis und Ausrichtung aus LibVLC,
+damit Box und Maske auch bei Letterbox/Pillarbox und alten PAL-Videos auf demselben
+Bildausschnitt liegen. Nach dem Loslassen wird die Box mit SAM
+segmentiert und die echte Maske drei Sekunden angezeigt, bevor sich das
+VSA-Codierfenster oeffnet. Das Bogen-Geometriesignal darf diese Vorschau nie durch
+ein Oval ersetzen. Die bestaetigte Maske bleibt als `OverlayGeometry.SamMask` am
+manuellen Ereignis erhalten und wird ohne erfundenen KI-Kontext streng geprueft in
+das Trainingssample uebernommen. Schlaegt eine erneute Segmentierung fehl, wird eine
+vorherige Maske entfernt und kann nicht als aktuelles Ergebnis gespeichert werden.
+
+Eine zweite, bewusst getrennte Handmarkierung lebt im Foto-Assistenten einer bereits
+geöffneten VSA-Beobachtung. `PhotoAnnotationUseCase` liest das unveränderte
+Originalfoto vor und nach SAM, vergleicht den SHA-256 und bindet danach eine private
+Byte-Momentaufnahme fest an Box und Maske. Das Foto-Fenster zeigt die echte Maske auf
+einer eigenen Vorschau-Ebene; der Overlay-Export enthält sie nicht. Erst eine
+zusätzliche sichtbare Goldbestätigung im VSA-Fenster ruft den geschützten
+`AnnotationWorkbenchService.SaveAsync` mit dem finalen Code auf. Eval-Hashprüfung
+und `StoreBytesAsync` verwenden dabei exakt dieselbe Momentaufnahme; der
+veränderbare Originalpfad wird beim Speichern nicht erneut gelesen.
+Damit bleiben Eval-Schutz, inhaltsadressierte Goldkopie, Maskenprüfung,
+Dublettschutz, KB-Index und Teacher-Eintrag zentral. Dieser Foto-Weg ist der einzige
+Persistenzbesitzer seiner Maske und hängt sie nicht zusätzlich an das Coding-Ereignis.
+`ProtocolEntry.OriginalFotoPaths` hält dabei je Fotoslot die unveränderte Quelle,
+während `FotoPaths` das vermessene Anzeigebild enthalten darf. Altprotokolle ohne
+dieses additive Feld übernehmen beim ersten VSA-Laden ihren bisherigen Fotopfad als
+Original; eine neue Videoaufnahme setzt beide Listen auf den neuen Frame.
+`PhotoAnnotationBatchSaveUseCase` prueft bei mehreren Fotos zuerst das gesamte
+eingefrorene Paket. Scheitert ein spaeterer externer Speicherschritt nach einem
+Teilerfolg, wird genau der vorher eingefrorene Protokolleintrag uebernommen und mit
+den bereits geschriebenen Sample-IDs verknuepft; eine nachtraegliche Umcodierung
+oder ein Abbruch kann das Goldsample dadurch nicht verwaisen lassen.
+`PhotoAnnotationBatchSaveUseCase` prueft bei mehreren Fotos zuerst das gesamte
+eingefrorene Paket. Scheitert ein spaeterer externer Speicherschritt nach einem
+Teilerfolg, wird genau der vorher eingefrorene Protokolleintrag uebernommen und mit
+den bereits geschriebenen Sample-IDs verknuepft; eine nachtraegliche Umcodierung
+oder ein Abbruch kann das Goldsample dadurch nicht verwaisen lassen.
+Der finale Eintrag gibt auch `IsStreckenschaden` an das Goldsample weiter. Das
+automatisch erzeugte Ende eines Streckenschadens erhält deshalb weiterhin weder Foto
+noch Overlay, SAM-Maske oder die Trainings-Sprungmarkierung des Anfangs.
+Bei einem noch offenen Streckenschaden repraesentiert das Goldfoto nur den
+Startpunkt (`MeterEnd = MeterStart`); das spaetere Ende aktualisiert dieses
+Bildsample nicht und erzeugt bewusst kein zweites Bildsample.
+Bei einem noch offenen Streckenschaden repraesentiert das Goldfoto nur den
+Startpunkt (`MeterEnd = MeterStart`); das spaetere Ende aktualisiert dieses
+Bildsample nicht und erzeugt bewusst kein zweites Bildsample.
+
+Das additive `ProtocolEntry.Training` dokumentiert separat erzeugte
+`PhotoAnnotationSampleIds`. Bei `SkipAutomaticPersistence=true` ueberspringt
+`CodingTrainingSamplePersistenceCoordinator` diesen Eintrag sowohl einzeln als auch
+beim Session-Abschluss, damit kein zweites Goldsample entsteht. Die allgemeinen
+Protokoll- und Coding-Kopierwege klonen diese Metadaten samt ID-Liste tief.
 
 Persoenliche Entscheidungen im Player-Codiermodus verwenden denselben Goldspeicher.
 `CodingEventToSampleMapper` markiert nur `Accepted` oder `AcceptedWithEdit` mit
@@ -691,6 +1194,17 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   exakten Code, Hauptcode, Stufe und Ereignisse. `EvalSetBenchmark --review-file`
   verwendet dafuer das Ollama-Bildmodell ohne YOLO-/DINO-/SAM-Hinweise; das
   QualityGate wird in diesem Modus ausdruecklich nicht als gemessen ausgegeben.
+- `EvalSetBenchmark --review-file <Datei> --full-chain` fuehrt dieselben geprueften
+  Bilder durch den produktiven DINO -> SAM -> Qwen-Bildanalyse ->
+  Text-Code-Mapping -> QualityGate-Weg. Ein fail-closed Client sperrt dabei sowohl
+  YOLO-Detect als auch YOLO-cls; der KB-Kontext bleibt ebenfalls ausgeschaltet.
+  Der ausdrueckliche Pruefbefehl aktiviert nur fuer diesen Lauf das Code-Mapping,
+  auch wenn der allgemeine App-KI-Schalter aus ist. CSV und JSON weisen die
+  erreichten Stufen, technische Fehler, exakte numerische Stufe, QualityGate sowie
+  Erkennung und gruenes Gate je Ereignis getrennt aus.
+- `RawVideoDetection.SeverityLevel` traegt additiv die exakte Stufe 1-5 aus dem
+  `TemporalFindingDeduplicator`. Das bestehende Textfeld `Severity` bleibt fuer
+  Anzeige und Kompatibilitaet unveraendert.
 
 ## Fachdomaene Kanalinspektion
 
@@ -732,10 +1246,23 @@ Codes sind hierarchisch aufgebaut: **Hauptcode** (2-3 Buchstaben) + **Char1** (U
 - **Severity 1-5:** 1=optisch, 2=leicht, 3=mittel (Sanierung mittelfristig), 4=schwer (kurzfristig), 5=kritisch (Sofortmassnahme)
 - **Ausdehnung:** Prozent des Rohrumfangs
 - **Querschnittsverringerung:** Prozent des freien Querschnitts
+- Das VSA-Codierfenster zeigt an jedem sichtbaren Q1-/Q2-Feld die fachliche
+  Einheit direkt neben der Zahl (`mm`, `%`, `°` oder `Stk.`) und den erlaubten
+  Bereich. Dieselbe Regel validiert die Eingabe; ein sichtbares Mengenfeld ohne
+  Einheit ist nicht zulässig.
+- Der aktive VSA-KEK-2020-Manifestkatalog entscheidet, welche Endcodes
+  auswählbar sind. Die code- und charakterabhängigen Einheiten und Grenzwerte
+  des Kanal-Pickers sind gegen den lokal installierten WinCan-Katalog
+  `EN13508_VSA-2019_CH_DEU_SEC.xml` abgeglichen. WinCan-Zwischenüberschriften
+  wie `Status` oder `Vertikale Richtung` sind keine Code-Klartexte.
 
 ### Punktschaden vs. Streckenschaden
 - **Punktschaden:** An einer Stelle (z.B. Riss, Anschluss) — ein Meterstand
 - **Streckenschaden:** Ueber Laenge (z.B. Korrosion 2.5m-8.0m) — MeterStart bis MeterEnd
+- Beim manuellen Schliessen wird der Endmeter aus dem aktuellen Videoframe
+  ermittelt: frische OSD-Metrierung vor Timeline-Schaetzung vor dem letzten
+  Sessionwert. So darf ein sichtbarer neuer Meterstand nicht durch einen alten
+  Startwert ersetzt werden.
 
 ## Coding-Regeln
 - Bestehenden Code nur aendern wenn explizit gefragt

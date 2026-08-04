@@ -27,6 +27,116 @@ public sealed class TrainingPreviewDetectionServiceTests
     }
 
     [Fact]
+    public async Task Selected_candidate_is_pinned_by_id_and_sha()
+    {
+        var pipeline = new FakePipelineClient
+        {
+            ResponseCandidateId = "bcc_bogen_b50b37ab8a4f",
+            ResponseCandidateSha = "a" + new string('0', 63),
+        };
+        var service = new TrainingPreviewDetectionService(
+            pipeline,
+            _ => [1, 2, 3]);
+
+        var result = await service.DetectBccCandidateAsync(
+            @"C:\frames\bogen.jpg",
+            "bcc_bogen_b50b37ab8a4f",
+            "a" + new string('0', 63));
+
+        Assert.True(result.Available);
+        Assert.NotNull(pipeline.LastCandidateRequest);
+        Assert.Equal(
+            "bcc_bogen_b50b37ab8a4f",
+            pipeline.LastCandidateRequest.CandidateId);
+        Assert.Equal(
+            "a" + new string('0', 63),
+            pipeline.LastCandidateRequest.CandidateSha256);
+    }
+
+    [Theory]
+    [InlineData("bcc_bogen_anders", null)]
+    [InlineData(null, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")]
+    public async Task Selected_candidate_discards_boxes_when_response_pin_differs(
+        string? differentId,
+        string? differentSha)
+    {
+        const string requestedId = "bcc_bogen_b50b37ab8a4f";
+        var requestedSha = "a" + new string('0', 63);
+        var pipeline = new FakePipelineClient
+        {
+            ResponseCandidateId = differentId ?? requestedId,
+            ResponseCandidateSha = differentSha ?? requestedSha,
+        };
+        var service = new TrainingPreviewDetectionService(
+            pipeline,
+            _ => [1, 2, 3]);
+
+        var result = await service.DetectBccCandidateAsync(
+            @"C:\frames\bogen.jpg",
+            requestedId,
+            requestedSha);
+
+        Assert.False(result.Available);
+        Assert.Empty(result.Detections);
+        Assert.Contains("anderen BCC-Kandidaten", result.Error);
+    }
+
+    [Fact]
+    public async Task Candidate_preserves_unusable_frame_reason_without_detections()
+    {
+        const string candidateId = "bcc_bogen_b50b37ab8a4f";
+        var candidateSha = "a" + new string('0', 63);
+        var pipeline = new FakePipelineClient
+        {
+            ResponseCandidateId = candidateId,
+            ResponseCandidateSha = candidateSha,
+            ResponseFrameUsable = false,
+            ResponseQualityReason = "zu dunkel",
+        };
+        var service = new TrainingPreviewDetectionService(pipeline, _ => [1, 2, 3]);
+
+        var result = await service.DetectBccCandidateAsync(
+            @"C:\frames\bogen.jpg",
+            candidateId,
+            candidateSha);
+
+        Assert.True(result.Available);
+        Assert.False(result.FrameUsable);
+        Assert.Equal("zu dunkel", result.QualityReason);
+        Assert.Empty(result.Detections);
+    }
+
+    [Fact]
+    public async Task Candidate_catalog_contains_no_paths()
+    {
+        var pipeline = new FakePipelineClient();
+        var service = new TrainingPreviewDetectionService(pipeline);
+
+        var result = await service.GetBccCandidatesAsync();
+
+        Assert.True(result.Available);
+        var candidate = Assert.Single(result.Candidates);
+        Assert.Equal("bcc_bogen_b50b37ab8a4f", candidate.CandidateId);
+        Assert.Equal("a" + new string('0', 63), candidate.CandidateSha256);
+    }
+
+    [Fact]
+    public async Task Default_candidate_pin_never_falls_back_to_unpinned_detection()
+    {
+        ITrainingPreviewDetectionService service = new LegacyPreviewDetectionService();
+
+        var result = await service.DetectBccCandidateAsync(
+            @"C:\frames\bogen.jpg",
+            "bcc_bogen_b50b37ab8a4f",
+            "a" + new string('0', 63));
+
+        Assert.False(result.Available);
+        Assert.Empty(result.Detections);
+        Assert.Contains("exakte", result.Error);
+        Assert.Equal(0, ((LegacyPreviewDetectionService)service).DetectCalls);
+    }
+
+    [Fact]
     public async Task Standard_uses_the_existing_production_endpoint()
     {
         var pipeline = new FakePipelineClient
@@ -123,6 +233,11 @@ public sealed class TrainingPreviewDetectionServiceTests
         public Exception? HealthError { get; set; }
         public bool? ResponseQualified { get; set; } = true;
         public string? ResponseQualificationReason { get; set; }
+        public string ResponseCandidateId { get; set; } = "bcc_candidate";
+        public string ResponseCandidateSha { get; set; } = "test-sha";
+        public bool ResponseFrameUsable { get; set; } = true;
+        public string? ResponseQualityReason { get; set; }
+        public BccTestYoloRequest? LastCandidateRequest { get; private set; }
 
         public Task<YoloResponse> DetectYoloAsync(
             YoloRequest request,
@@ -154,11 +269,38 @@ public sealed class TrainingPreviewDetectionServiceTests
                 Detections,
                 FrameClass: "damage",
                 InferenceTimeMs: 8,
-                CandidateId: "bcc_candidate",
-                CandidateSha256: "test-sha",
+                CandidateId: ResponseCandidateId,
+                CandidateSha256: ResponseCandidateSha,
                 ModelName: "bcc_test",
-                Device: "cpu"));
+                Device: "cpu",
+                FrameUsable: ResponseFrameUsable,
+                QualityReason: ResponseQualityReason));
         }
+
+        public Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+            BccTestYoloRequest request,
+            CancellationToken ct = default)
+        {
+            LastCandidateRequest = request;
+            return DetectBccTestYoloAsync(
+                new YoloRequest(request.ImageBase64, request.ConfidenceThreshold),
+                ct);
+        }
+
+        public Task<BccTestCandidatesResponse> GetBccTestCandidatesAsync(
+            CancellationToken ct = default)
+            => Task.FromResult(new BccTestCandidatesResponse(
+                Available: true,
+                Error: null,
+                Candidates:
+                [
+                    new BccTestCandidateInfo(
+                        "bcc_bogen_b50b37ab8a4f",
+                        "a" + new string('0', 63),
+                        Map50: 0.74,
+                        EpochsCompleted: 40,
+                        CreatedUtc: "2026-07-28T14:43:21Z")
+                ]));
 
         public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
             => HealthError is not null
@@ -182,5 +324,31 @@ public sealed class TrainingPreviewDetectionServiceTests
             YoloClassifyRequest request,
             CancellationToken ct = default)
             => Task.FromException<YoloClassifyResponse>(new NotSupportedException());
+    }
+
+    private sealed class LegacyPreviewDetectionService : ITrainingPreviewDetectionService
+    {
+        public int DetectCalls { get; private set; }
+
+        public Task<TrainingPreviewDetectionResult> DetectAsync(
+            string framePath,
+            TrainingPreviewModelKind modelKind,
+            double confidenceThreshold = 0.25,
+            CancellationToken cancellationToken = default)
+        {
+            DetectCalls++;
+            return Task.FromResult(new TrainingPreviewDetectionResult(
+                Available: true,
+                Error: null,
+                modelKind,
+                ModelName: "unpinned",
+                ModelSha256: "unpinned",
+                Detections: [],
+                InferenceTimeMs: 0));
+        }
+
+        public Task<TrainingDetectorQualification?> GetDetectorQualificationAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<TrainingDetectorQualification?>(null);
     }
 }

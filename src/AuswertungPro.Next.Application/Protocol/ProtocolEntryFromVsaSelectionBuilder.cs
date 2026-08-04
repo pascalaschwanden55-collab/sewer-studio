@@ -26,6 +26,7 @@ public sealed class VsaSelectionInput
     public string? StreckenschadenTyp { get; init; }
     public string? Bemerkungen { get; init; }
     public IReadOnlyList<string> FotoPaths { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> OriginalFotoPaths { get; init; } = Array.Empty<string>();
     public VsaCodeDef? CurrentVsaCodeDef { get; init; }
 }
 
@@ -86,6 +87,10 @@ public static class ProtocolEntryFromVsaSelectionBuilder
         entry.FotoPaths.Clear();
         foreach (var foto in input.FotoPaths)
             entry.FotoPaths.Add(foto);
+
+        entry.OriginalFotoPaths.Clear();
+        foreach (var originalFoto in input.OriginalFotoPaths)
+            entry.OriginalFotoPaths.Add(originalFoto);
 
         return entry;
     }

@@ -238,6 +238,7 @@ public sealed class ImportManualWorkflowControllerTests
             folderImports,
             folderImports,
             folderImports,
+            new SchachtProImportFake(),
             storedImportFiles,
             new FileStagingServiceFake(),
             new MediaDistributionServiceFake(),
@@ -426,6 +427,12 @@ public sealed class ImportManualWorkflowControllerTests
             Calls.Add(new StoredFileCall(projectPath, importKind, paths.ToArray()));
             return ResultToReturn;
         }
+    }
+
+    private sealed class SchachtProImportFake : ISchachtProImportService
+    {
+        public Result<ImportStats> ImportSchachtProArchive(string sproPath, Project project, ImportRunContext? ctx = null)
+            => SuccessStats();
     }
 
     private sealed class FileStagingServiceFake : IImportFileStagingService

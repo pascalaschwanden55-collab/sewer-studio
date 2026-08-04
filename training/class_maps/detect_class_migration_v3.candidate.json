@@ -2,13 +2,95 @@
   "version": 3,
   "target_class_map_version": 3,
   "target_class_map": "detect_class_map_v3.json",
-  "generated_utc": "2026-07-16T21:40:01.809Z",
+  "generated_utc": "2026-07-30T17:28:29.2638566Z",
   "vsa_manifest_hash": "6732ff859cc9ed919f08d045b81f6b8a82e15105cc9a29213e91cc5f64b0bd38",
   "source_hashes": {
     "teacher_annotations": "426fa361f707e99fe07671b333463d2970d172eee9f24c52ac78f809dfb45bc7",
     "legacy_class_map": "69b81a80062e9c54a107c8d68de21f3b6fb942621827c0045843e1a4bf83fcc5",
     "productive_yolo_names": "31a1157a8190440fe915ea817cadd83792b73622b6d608bf351670a16b0edebc",
     "vsa_manifest": "6732ff859cc9ed919f08d045b81f6b8a82e15105cc9a29213e91cc5f64b0bd38"
+  },
+  "personal_gold_approval": {
+    "schema_version": "1.0",
+    "gold_audit_sha256": "5d036fd74dbdc6e80dae1ca2600b648fc99073f9b8a0157bee5da1a6027a0987",
+    "training_samples_sha256": "fd5340ce35d5b317273e9d34e340d70e319448c78c23d640ec682b94fb9c6a1b",
+    "approved_by": "Besitzer",
+    "approved_utc": "2026-08-03T19:13:15.3021242Z",
+    "source_codes": [
+      "AEDXC",
+      "AEDXG",
+      "AEDXO",
+      "AEDXP",
+      "AEDXQ",
+      "AEDXU",
+      "BAAA",
+      "BAAB",
+      "BAB",
+      "BABAA",
+      "BABAB",
+      "BABAE",
+      "BABBA",
+      "BABBB",
+      "BABBC",
+      "BABBD",
+      "BABCA",
+      "BACA",
+      "BACB",
+      "BACC",
+      "BAFAE",
+      "BAFBE",
+      "BAFBZ",
+      "BAFCE",
+      "BAFCZ",
+      "BAFDE",
+      "BAFEE",
+      "BAFFE",
+      "BAFJE",
+      "BAFKE",
+      "BAFKZ",
+      "BAHC",
+      "BAIAB",
+      "BAIZ",
+      "BAJ",
+      "BAJA",
+      "BAJB",
+      "BAJC",
+      "BBAB",
+      "BBAC",
+      "BBBA",
+      "BBBB",
+      "BBBC",
+      "BBBZ",
+      "BBCA",
+      "BBCB",
+      "BBCC",
+      "BBCZ",
+      "BBFA",
+      "BBFC",
+      "BCAAA",
+      "BCAAB",
+      "BCABA",
+      "BCADA",
+      "BCADB",
+      "BCAEA",
+      "BCAEB",
+      "BCAFA",
+      "BCC",
+      "BCCAA",
+      "BCCAB",
+      "BCCAY",
+      "BCCBA",
+      "BCCBB",
+      "BCCBY",
+      "BCCYA",
+      "BCCYB",
+      "BCD",
+      "BCE",
+      "BDA",
+      "BDD",
+      "BDDA",
+      "BDDC"
+    ]
   },
   "sort_order": [
     "source_kind",
@@ -22,14 +104,14 @@
     "productive_yolo_name"
   ],
   "entry_counts": {
-    "total": 124,
+    "total": 143,
     "by_source_kind": {
       "annotation_override": 5,
       "legacy_class_map": 35,
       "productive_yolo_name": 10,
-      "teacher_vsa_code": 74
+      "teacher_vsa_code": 93
     },
-    "teacher_observed_total": 704
+    "teacher_observed_total": 748
   },
   "entries": [
     {
@@ -616,9 +698,20 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "AEDXG",
+      "observed_count": 1,
+      "proposed_action": "discard",
+      "proposed_target": null,
+      "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -660,9 +753,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -671,9 +764,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -682,9 +775,20 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "AEDXU",
+      "observed_count": 1,
+      "proposed_action": "discard",
+      "proposed_target": null,
+      "reason": "Rohrmaterialwechsel ist eine Zustandsangabe und keine Detect-Schadensklasse.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T16:47:52.0894310Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -726,9 +830,9 @@
       "proposed_action": "map",
       "proposed_target": "BAA_verformung",
       "reason": "Verformungs-Untercodes werden in der festen Detect-Klasse BAA zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -737,9 +841,9 @@
       "proposed_action": "map",
       "proposed_target": "BAA_verformung",
       "reason": "Verformungs-Untercodes werden in der festen Detect-Klasse BAA zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -748,9 +852,9 @@
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -759,9 +863,20 @@
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BABAB",
+      "observed_count": 4,
+      "proposed_action": "map",
+      "proposed_target": "BAB_riss",
+      "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -776,14 +891,25 @@
     },
     {
       "source_kind": "teacher_vsa_code",
+      "source_key": "BABAE",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BAB_riss",
+      "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
       "source_key": "BABBA",
       "observed_count": 11,
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -792,9 +918,9 @@
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -803,9 +929,20 @@
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BABBD",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BAB_riss",
+      "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -814,9 +951,20 @@
       "proposed_action": "map",
       "proposed_target": "BAB_riss",
       "reason": "Riss-Untercodes werden in der festen Detect-Klasse BAB zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T16:47:52.0894310Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BACA",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BAC_bruch",
+      "reason": "Bruch- und Einsturz-Untercodes werden in der festen Detect-Klasse BAC zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -825,9 +973,9 @@
       "proposed_action": "map",
       "proposed_target": "BAC_bruch",
       "reason": "Bruch- und Einsturz-Untercodes werden in der festen Detect-Klasse BAC zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -836,9 +984,9 @@
       "proposed_action": "map",
       "proposed_target": "BAC_bruch",
       "reason": "Bruch- und Einsturz-Untercodes werden in der festen Detect-Klasse BAC zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -853,14 +1001,47 @@
     },
     {
       "source_kind": "teacher_vsa_code",
+      "source_key": "BAFAE",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BAF_oberflaeche",
+      "reason": "Rauhe Rohrwandung gehört zur festen Detect-Klasse BAF.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BAFBE",
+      "observed_count": 8,
+      "proposed_action": "map",
+      "proposed_target": "BAF_oberflaeche",
+      "reason": "Abplatzung gehört zur festen Detect-Klasse BAF.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BAFBZ",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BAF_oberflaeche",
+      "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
       "source_key": "BAFCE",
       "observed_count": 26,
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -869,9 +1050,9 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-02T20:29:18.0643508Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -880,9 +1061,9 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -891,9 +1072,9 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -902,9 +1083,20 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BAFJE",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BAF_oberflaeche",
+      "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T16:47:52.0894310Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -913,9 +1105,9 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -924,9 +1116,9 @@
       "proposed_action": "map",
       "proposed_target": "BAF_oberflaeche",
       "reason": "Oberflächenschaden-Untercodes werden in der festen Detect-Klasse BAF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -946,9 +1138,20 @@
       "proposed_action": "map",
       "proposed_target": "BAH_schadanschluss",
       "reason": "Schadhafte Anschlüsse gehören zur festen Detect-Klasse BAH.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BAIAB",
+      "observed_count": 3,
+      "proposed_action": "map",
+      "proposed_target": "BAI_dichtung",
+      "reason": "Einragender Dichtring gehört zur festen Detect-Klasse BAI.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -957,9 +1160,9 @@
       "proposed_action": "map",
       "proposed_target": "BAI_dichtung",
       "reason": "Einragendes Dichtungsmaterial gehört zur festen Detect-Klasse BAI.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -968,9 +1171,9 @@
       "proposed_action": "map",
       "proposed_target": "BAJ_verbindung",
       "reason": "Verschobene Rohrverbindungen gehören zur festen Detect-Klasse BAJ.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -979,9 +1182,9 @@
       "proposed_action": "map",
       "proposed_target": "BAJ_verbindung",
       "reason": "Verschobene Rohrverbindungen gehören zur festen Detect-Klasse BAJ.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -990,9 +1193,9 @@
       "proposed_action": "map",
       "proposed_target": "BAJ_verbindung",
       "reason": "Verschobene Rohrverbindungen gehören zur festen Detect-Klasse BAJ.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1001,9 +1204,9 @@
       "proposed_action": "map",
       "proposed_target": "BAJ_verbindung",
       "reason": "Verschobene Rohrverbindungen gehören zur festen Detect-Klasse BAJ.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1034,9 +1237,9 @@
       "proposed_action": "map",
       "proposed_target": "BBA_wurzeln",
       "reason": "Wurzel-Untercodes werden in der festen Detect-Klasse BBA zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1045,9 +1248,20 @@
       "proposed_action": "map",
       "proposed_target": "BBA_wurzeln",
       "reason": "Wurzel-Untercodes werden in der festen Detect-Klasse BBA zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BBBA",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BBB_anhaftung",
+      "reason": "Inkrustation gehört zur festen Detect-Klasse BBB.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1056,9 +1270,31 @@
       "proposed_action": "map",
       "proposed_target": "BBB_anhaftung",
       "reason": "Anhaftende Stoffe gehören zur festen Detect-Klasse BBB.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BBBC",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BBB_anhaftung",
+      "reason": "Anhaftende-Stoffe-Untercodes werden in der festen Detect-Klasse BBB zusammengeführt.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T16:47:52.0894310Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BBBZ",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BBB_anhaftung",
+      "reason": "Andersartige anhaftende Stoffe gehoeren zur festen Detect-Klasse BBB.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-03T19:10:28.9936730Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1073,14 +1309,25 @@
     },
     {
       "source_kind": "teacher_vsa_code",
+      "source_key": "BBCA",
+      "observed_count": 5,
+      "proposed_action": "map",
+      "proposed_target": "BBC_ablagerung",
+      "reason": "Lose Sandablagerung gehört zur festen Detect-Klasse BBC.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
       "source_key": "BBCB",
       "observed_count": 2,
       "proposed_action": "map",
       "proposed_target": "BBC_ablagerung",
       "reason": "Ablagerungs-Untercodes werden in der festen Detect-Klasse BBC zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1089,9 +1336,9 @@
       "proposed_action": "map",
       "proposed_target": "BBC_ablagerung",
       "reason": "Ablagerungs-Untercodes werden in der festen Detect-Klasse BBC zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1100,9 +1347,9 @@
       "proposed_action": "map",
       "proposed_target": "BBC_ablagerung",
       "reason": "Ablagerungs-Untercodes werden in der festen Detect-Klasse BBC zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1122,9 +1369,20 @@
       "proposed_action": "map",
       "proposed_target": "BBF_infiltration",
       "reason": "Infiltrations-Untercodes werden in der festen Detect-Klasse BBF zusammengeführt.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BBFC",
+      "observed_count": 2,
+      "proposed_action": "map",
+      "proposed_target": "BBF_infiltration",
+      "reason": "Fliessende Infiltration gehört zur festen Detect-Klasse BBF.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1144,9 +1402,9 @@
       "proposed_action": "map",
       "proposed_target": "BCA_anschluss",
       "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1155,9 +1413,20 @@
       "proposed_action": "map",
       "proposed_target": "BCA_anschluss",
       "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BCABA",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BCA_anschluss",
+      "reason": "Sattelanschluss gehört zur festen Detect-Klasse BCA.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1166,9 +1435,20 @@
       "proposed_action": "map",
       "proposed_target": "BCA_anschluss",
       "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BCADB",
+      "observed_count": 1,
+      "proposed_action": "map",
+      "proposed_target": "BCA_anschluss",
+      "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T16:47:52.0894310Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1177,9 +1457,20 @@
       "proposed_action": "map",
       "proposed_target": "BCA_anschluss",
       "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
+    },
+    {
+      "source_kind": "teacher_vsa_code",
+      "source_key": "BCAEB",
+      "observed_count": 4,
+      "proposed_action": "map",
+      "proposed_target": "BCA_anschluss",
+      "reason": "Verschlossener eingespitzter Anschluss gehört zur festen Detect-Klasse BCA.",
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1188,9 +1479,9 @@
       "proposed_action": "map",
       "proposed_target": "BCA_anschluss",
       "reason": "Seitlicher Anschluss gehört zur festen Detect-Klasse BCA.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1320,9 +1611,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohranfang bleibt außerhalb des Schadensdetektors.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1331,9 +1622,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Rohrende bleibt außerhalb des Schadensdetektors.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1342,9 +1633,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Allgemeinzustand oder Fotobeispiel ist keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1364,9 +1655,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Wasserspiegel ist ein Hintergrund- oder cls-Merkmal und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1375,9 +1666,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Wasserspiegel ist ein Hintergrund- oder cls-Merkmal und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-08-01T13:42:20.5762180Z"
     },
     {
       "source_kind": "teacher_vsa_code",
@@ -1386,9 +1677,9 @@
       "proposed_action": "discard",
       "proposed_target": null,
       "reason": "Wasserspiegel ist ein Hintergrund- oder cls-Merkmal und keine Detect-Schadensklasse.",
-      "approval_status": "pending",
-      "approved_by": null,
-      "approved_utc": null
+      "approval_status": "approved",
+      "approved_by": "Besitzer",
+      "approved_utc": "2026-07-30T17:16:47.0031809Z"
     },
     {
       "source_kind": "teacher_vsa_code",

@@ -7,11 +7,16 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 /// Strikte FORMAT-Pruefung fuer SAM-RLE-Masken in der Application-Schicht (kein Decoder
 /// noetig — die Pixelzahl wird aus den Run-Tokens bestimmt). Deckt defekte Tokens,
 /// Dimensionsverletzungen und Leermasken ab. Die optionale Box-Pruefung arbeitet
-/// direkt auf den RLE-Runs und verlangt ein echtes Vordergrund-Pixelzentrum in der
-/// Hand-Box. Nur das Degraded-Flag bleibt beim Infrastructure-Validator.
+/// direkt auf den RLE-Runs und verlangt, dass mindestens 80 Prozent aller
+/// Vordergrundpixel innerhalb der Hand-Box liegen. Nur das Degraded-Flag bleibt
+/// beim Infrastructure-Validator.
 /// </summary>
 public static class SamMaskFormatValidator
 {
+    private const long MinimumContainmentNumerator = 4;
+    private const long MinimumContainmentDenominator = 5;
+    private const int MinimumContainmentPercent = 80;
+
     /// <summary>
     /// Prueft RLE-String und Bildmasse strikt. <paramref name="reason"/> liefert bei
     /// Ungueltigkeit den deutschen Ablehnungsgrund (leer bei Gueltigkeit).
@@ -25,11 +30,49 @@ public static class SamMaskFormatValidator
             out _,
             out _,
             out _,
+            out _,
             out reason);
 
     /// <summary>
-    /// Prueft zusaetzlich, ob mindestens ein echtes Vordergrundpixel mit seinem
-    /// Pixelzentrum innerhalb der normalisierten Hand-Box liegt.
+    /// Liefert die Vordergrundflaeche direkt aus der streng geprueften RLE.
+    /// Sidecar-Metadaten duerfen diese Zahl nicht ungeprueft vorgeben.
+    /// </summary>
+    public static bool TryGetForegroundPixelCount(
+        string? rle,
+        int? maskImageWidth,
+        int? maskImageHeight,
+        out int foregroundPixelCount,
+        out string reason)
+    {
+        foregroundPixelCount = 0;
+        if (!TryParse(
+                rle,
+                maskImageWidth,
+                maskImageHeight,
+                out _,
+                out _,
+                out _,
+                out _,
+                out var parsedForegroundPixelCount,
+                out reason))
+        {
+            return false;
+        }
+
+        if (parsedForegroundPixelCount > int.MaxValue)
+        {
+            reason = "Maskenflaeche ist zu gross.";
+            return false;
+        }
+
+        foregroundPixelCount = (int)parsedForegroundPixelCount;
+        return true;
+    }
+
+    /// <summary>
+    /// Prueft zusaetzlich, ob mindestens 80 Prozent aller echten Vordergrundpixel
+    /// mit ihrem Pixelzentrum innerhalb der normalisierten Hand-Box liegen.
+    /// Der bestehende Methodenname bleibt als oeffentliche Fassade erhalten.
     /// </summary>
     public static bool HasForegroundPixelInsideBox(
         string? rle,
@@ -46,6 +89,7 @@ public static class SamMaskFormatValidator
                 out var runs,
                 out var width,
                 out var height,
+                out var foregroundPixels,
                 out reason))
         {
             return false;
@@ -58,30 +102,51 @@ public static class SamMaskFormatValidator
         }
 
         long position = 0;
+        long foregroundPixelsInsideBox = 0;
         var currentIsMask = startValue != 0;
         foreach (var run in runs)
         {
-            if (currentIsMask
-                && run > 0
-                && RunIntersectsBox(
+            if (currentIsMask && run > 0)
+            {
+                foregroundPixelsInsideBox += CountRunPixelsInsideBox(
                     position,
                     position + run - 1L,
                     width,
                     minCol,
                     maxCol,
                     minRow,
-                    maxRow))
-            {
-                reason = string.Empty;
-                return true;
+                    maxRow);
             }
 
             position += run;
             currentIsMask = !currentIsMask;
         }
 
-        reason = "Maske gehoert nicht zur Hand-Box (kein Vordergrundpixel innerhalb der Box).";
-        return false;
+        if (foregroundPixelsInsideBox == 0)
+        {
+            reason =
+                $"Maske gehoert nicht zur Hand-Box (kein Vordergrundpixel innerhalb der Box; "
+                + $"mindestens {MinimumContainmentPercent} % erforderlich).";
+            return false;
+        }
+
+        var requiredInsidePixels =
+            (foregroundPixels / MinimumContainmentDenominator) * MinimumContainmentNumerator
+            + ((foregroundPixels % MinimumContainmentDenominator) * MinimumContainmentNumerator
+               + MinimumContainmentDenominator - 1)
+            / MinimumContainmentDenominator;
+        if (foregroundPixelsInsideBox < requiredInsidePixels)
+        {
+            var containmentPercent = (double)foregroundPixelsInsideBox / foregroundPixels * 100.0;
+            reason =
+                "Maske liegt zu weit ausserhalb der Hand-Box "
+                + $"({containmentPercent.ToString("0.0", CultureInfo.InvariantCulture)} % innerhalb; "
+                + $"mindestens {MinimumContainmentPercent} % erforderlich).";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
     }
 
     private static bool TryParse(
@@ -92,12 +157,14 @@ public static class SamMaskFormatValidator
         out int[] runs,
         out int width,
         out int height,
+        out long foregroundPixelCount,
         out string reason)
     {
         startValue = 0;
         runs = [];
         width = 0;
         height = 0;
+        foregroundPixelCount = 0;
 
         if (string.IsNullOrWhiteSpace(rle))
         {
@@ -127,7 +194,6 @@ public static class SamMaskFormatValidator
 
         runs = new int[parts.Length - 1];
         long runSum = 0;
-        long maskPixels = 0;
         var currentIsMask = startValue != 0;
         for (var i = 1; i < parts.Length; i++)
         {
@@ -140,7 +206,7 @@ public static class SamMaskFormatValidator
             runs[i - 1] = run;
             runSum += run;
             if (currentIsMask)
-                maskPixels += run;
+                foregroundPixelCount += run;
             currentIsMask = !currentIsMask;
         }
 
@@ -150,7 +216,7 @@ public static class SamMaskFormatValidator
             reason = $"Masken-RLE passt nicht zu den Bildmassen ({runSum} statt {expected} Pixel).";
             return false;
         }
-        if (maskPixels == 0)
+        if (foregroundPixelCount == 0)
         {
             reason = "Maske enthaelt keine Pixel (Leermaske).";
             return false;
@@ -217,7 +283,7 @@ public static class SamMaskFormatValidator
         return first <= last;
     }
 
-    private static bool RunIntersectsBox(
+    private static long CountRunPixelsInsideBox(
         long runStart,
         long runEnd,
         int imageWidth,
@@ -226,21 +292,30 @@ public static class SamMaskFormatValidator
         long minRow,
         long maxRow)
     {
-        var row = Math.Max(minRow, runStart / imageWidth);
-        if (row > maxRow)
-            return false;
+        var firstRow = Math.Max(minRow, runStart / imageWidth);
+        var lastRow = Math.Min(maxRow, runEnd / imageWidth);
+        if (firstRow > lastRow)
+            return 0;
 
-        var allowedStart = row * imageWidth + minCol;
-        var allowedEnd = row * imageWidth + maxCol;
-        if (allowedEnd < runStart)
+        if (firstRow == lastRow)
+            return CountRowIntersection(firstRow);
+
+        var inside = CountRowIntersection(firstRow) + CountRowIntersection(lastRow);
+        var completeRows = lastRow - firstRow - 1L;
+        if (completeRows > 0)
+            inside += completeRows * (maxCol - minCol + 1L);
+
+        return inside;
+
+        long CountRowIntersection(long row)
         {
-            row++;
-            if (row > maxRow)
-                return false;
-            allowedStart = row * imageWidth + minCol;
-            allowedEnd = row * imageWidth + maxCol;
+            var allowedStart = row * imageWidth + minCol;
+            var allowedEnd = row * imageWidth + maxCol;
+            var intersectionStart = Math.Max(runStart, allowedStart);
+            var intersectionEnd = Math.Min(runEnd, allowedEnd);
+            return intersectionStart <= intersectionEnd
+                ? intersectionEnd - intersectionStart + 1L
+                : 0L;
         }
-
-        return allowedStart <= runEnd && allowedEnd >= runStart;
     }
 }

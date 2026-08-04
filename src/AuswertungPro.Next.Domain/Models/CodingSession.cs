@@ -74,8 +74,26 @@ public sealed class OverlayGeometry
     public double? EllipseRadiusXMm { get; set; }  // Horizontaler Radius in mm (Ellipse-Tool)
     public double? EllipseRadiusYMm { get; set; }  // Vertikaler Radius in mm (Ellipse-Tool)
 
+    // Echte SAM-Maske der manuell gezogenen Box. Sie gehoert zur Geometrie und
+    // nicht zum KI-Vorschlag, damit eine Handcodierung eine Handcodierung bleibt.
+    public OverlaySamMask? SamMask { get; set; }
+
     // Referenz zum Snapshot-Bild (PNG mit Overlay eingebrannt)
     public string? SnapshotPath { get; set; }
+}
+
+/// <summary>
+/// Aufloesungsgebundene SAM-Segmentierung einer manuellen Overlay-Geometrie.
+/// Die formale RLE-Pruefung erfolgt beim Mapping in den Trainingsbestand.
+/// </summary>
+public sealed class OverlaySamMask
+{
+    public string MaskRle { get; set; } = string.Empty;
+    public int ImageWidth { get; set; }
+    public int ImageHeight { get; set; }
+    public int MaskAreaPixels { get; set; }
+    public double Confidence { get; set; }
+    public string? Label { get; set; }
 }
 
 /// <summary>

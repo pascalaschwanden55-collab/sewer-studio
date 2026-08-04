@@ -37,7 +37,7 @@ public sealed class LiveDetectionMarkSamMaskRenderWorkflowTests
     }
 
     [Fact]
-    public void Execute_shows_bend_marker_when_bend_contains_vanishing_point()
+    public void Execute_renders_exact_mask_instead_of_bend_oval_for_manual_preview()
     {
         var calls = new List<string>();
         var segmentation = Result(isBend: true, vanishX: 0.42, vanishY: 0.55);
@@ -46,24 +46,21 @@ public sealed class LiveDetectionMarkSamMaskRenderWorkflowTests
             new LiveDetectionMarkSamMaskRenderRequest(segmentation),
             new LiveDetectionMarkSamMaskRenderActions(
                 GetContentRect: () => new Rect(0, 0, 640, 480),
-                ContainsVanishingPoint: selected =>
+                ContainsVanishingPoint: _ =>
+                    throw new InvalidOperationException("Die Bogen-Geometrie darf die SAM-Vorschau nicht ersetzen."),
+                ShowBendMarker: (_, _, _) =>
+                    throw new InvalidOperationException("Kein Oval in der SAM-Vorschau erwartet."),
+                RenderMasks: (response, quantifications, rect) =>
                 {
-                    Assert.Same(segmentation, selected);
-                    calls.Add("contains");
-                    return true;
-                },
-                ShowBendMarker: (x, y, rect) =>
-                {
-                    Assert.Equal(0.42, x);
-                    Assert.Equal(0.55, y);
+                    Assert.Same(segmentation.Mask, Assert.Single(response.Masks));
+                    Assert.Same(segmentation.Quant, Assert.Single(quantifications));
                     Assert.Equal(480, rect.Height);
-                    calls.Add("bend");
+                    calls.Add("render");
                 },
-                RenderMasks: (_, _, _) => throw new InvalidOperationException("No mask render expected."),
                 TraceError: message => calls.Add($"trace:{message}")));
 
-        Assert.Equal(LiveDetectionMarkSamMaskRenderOutcome.BendMarkerShown, result.Outcome);
-        Assert.Equal(["contains", "bend"], calls);
+        Assert.Equal(LiveDetectionMarkSamMaskRenderOutcome.MaskRendered, result.Outcome);
+        Assert.Equal(["render"], calls);
     }
 
     [Fact]

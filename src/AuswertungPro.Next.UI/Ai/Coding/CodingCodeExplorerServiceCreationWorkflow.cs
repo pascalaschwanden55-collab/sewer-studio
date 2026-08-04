@@ -16,10 +16,19 @@ public static class CodingCodeExplorerServiceCreationWorkflow
     public static CodingCodeExplorerWorkflowService Create(
         Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
         ICodeUsageTracker codeUsage)
+        => Create(createViewModel, codeUsage, services: null);
+
+    public static CodingCodeExplorerWorkflowService Create(
+        Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
+        ICodeUsageTracker codeUsage,
+        ServiceProvider? services)
         => Create(
             createViewModel,
             new CodingCodeExplorerServiceCreationWorkflowActions(
-                CreateService: factory => CodingCodeExplorerWorkflowServiceFactory.Create(factory, codeUsage)));
+                CreateService: factory => CodingCodeExplorerWorkflowServiceFactory.Create(
+                    factory,
+                    codeUsage,
+                    services)));
 
     public static CodingCodeExplorerWorkflowService Create(
         Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,

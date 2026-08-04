@@ -84,6 +84,37 @@ public static class VsaCodeResolver
         return null;
     }
 
+    /// <summary>
+    /// True nur fuer einen exakt im aktiven Katalog vorhandenen, auswaehlbaren
+    /// VSA-Code. Anders als <see cref="LookupLabel"/> gibt es hier absichtlich
+    /// keinen Rueckfall auf Haupt- oder Gruppencodes: Ein erfundener Untercode
+    /// darf nie als Gold, KB- oder Teacher-Wahrheit gespeichert werden.
+    /// </summary>
+    public static bool IsExactSelectableCode(string? code)
+    {
+        var catalog = _catalogProvider;
+        if (catalog is null || string.IsNullOrWhiteSpace(code))
+            return false;
+
+        var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
+        if (!Regex.IsMatch(normalized, @"^[A-Z]{2,8}$")
+            || !catalog.TryGet(normalized, out var definition))
+        {
+            return false;
+        }
+
+        var definitionCode = definition.Code?
+            .Trim()
+            .Replace(".", "")
+            .ToUpperInvariant();
+        return string.Equals(
+                   normalized,
+                   definitionCode,
+                   StringComparison.Ordinal)
+               && definition.IsSelectable
+               && !definition.IsObservedExtension;
+    }
+
     public static bool IsStreckenschadenCode(string code)
     {
         if (string.IsNullOrWhiteSpace(code))

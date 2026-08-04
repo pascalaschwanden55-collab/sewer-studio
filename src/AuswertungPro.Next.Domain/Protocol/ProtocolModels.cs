@@ -18,6 +18,11 @@ public sealed class ProtocolEntry
     public string? Mpeg { get; set; }
     public TimeSpan? Zeit { get; set; }
     public List<string> FotoPaths { get; set; } = new();
+
+    // Unveraenderte Fotoquellen fuer Training und Nachvollziehbarkeit.
+    // FotoPaths darf weiterhin vermessene/gerenderte Anzeigebilder enthalten.
+    public List<string> OriginalFotoPaths { get; set; } = new();
+
     public ProtocolEntrySource Source { get; set; } = ProtocolEntrySource.Manual;
     public bool IsDeleted { get; set; }
 
@@ -26,6 +31,9 @@ public sealed class ProtocolEntry
 
     // KI-Metadaten (optional, fuer Human-in-the-loop)
     public ProtocolEntryAiMeta? Ai { get; set; }
+
+    // Trainings-Metadaten (optional, abwaertskompatibel)
+    public ProtocolEntryTrainingMeta? Training { get; set; }
 }
 
 public sealed class ProtocolEntryCodeMeta
@@ -50,6 +58,13 @@ public sealed class ProtocolEntryAiMeta
     public bool IsMeterEstimated { get; set; }
     public AiDecisionAudit? CentralDecision { get; set; }
     public DateTimeOffset SuggestedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class ProtocolEntryTrainingMeta
+{
+    public bool SkipAutomaticPersistence { get; set; }
+    public string? SkipReason { get; set; }
+    public List<string> PhotoAnnotationSampleIds { get; set; } = new();
 }
 
 public sealed class ProtocolChange

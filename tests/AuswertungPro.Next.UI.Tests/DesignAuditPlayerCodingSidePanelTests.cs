@@ -586,6 +586,24 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Equal(2, CountOccurrences(sidePanel, "ScrollViewer.CanContentScroll=\"False\""));
     }
 
+    [Fact]
+    public void Player_coding_event_lists_show_code_once_and_wrap_full_cleartext()
+    {
+        var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
+
+        Assert.Equal(2, CountOccurrences(
+            sidePanel,
+            "ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\""));
+        Assert.Equal(2, CountOccurrences(sidePanel, "Text=\"{Binding Entry.Code}\""));
+        Assert.DoesNotContain(
+            "Text=\"{Binding Entry.Code, Converter={StaticResource VsaCodeToText}}\"",
+            sidePanel,
+            StringComparison.Ordinal);
+        Assert.Equal(2, CountOccurrences(
+            sidePanel,
+            "ToolTip=\"{Binding Entry.Beschreibung}\""));
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var path = TestRepoPaths.RepoFile(new[] { "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());

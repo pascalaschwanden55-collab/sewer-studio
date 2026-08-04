@@ -107,6 +107,9 @@ internal static class TrainingYoloClassMapJsonReader
 
         var manifestHash = document.VsaManifestHash.Trim().ToLowerInvariant();
         var sourceHashes = ValidateSourceHashes(document.SourceHashes, manifestHash);
+        var personalGoldCodes = ValidatePersonalGoldApproval(
+            document.PersonalGoldApproval,
+            sourceHashes);
         ValidateOrderedValues(document.SortOrder, RequiredSortOrder, "sort_order");
         ValidateOrderedValues(
             document.ResolutionOrder,
@@ -187,6 +190,7 @@ internal static class TrainingYoloClassMapJsonReader
         }
 
         ValidateEntryCounts(document.EntryCounts, document.Entries);
+        ValidatePersonalGoldDecisions(personalGoldCodes, mappings);
 
         return new TrainingYoloClassMigrationFileDocument(
             document.Version,
@@ -198,7 +202,7 @@ internal static class TrainingYoloClassMapJsonReader
             mappings);
     }
 
-    private static IReadOnlyDictionary<string, string> ValidateSourceHashes(
+    private static Dictionary<string, string> ValidateSourceHashes(
         IReadOnlyDictionary<string, string>? sourceHashes,
         string manifestHash)
     {
@@ -233,6 +237,76 @@ internal static class TrainingYoloClassMapJsonReader
         }
 
         return normalized;
+    }
+
+    private static IReadOnlyList<string> ValidatePersonalGoldApproval(
+        PersonalGoldApprovalJson? approval,
+        IDictionary<string, string> sourceHashes)
+    {
+        if (approval is null)
+            return [];
+        if (!string.Equals(approval.SchemaVersion, "1.0", StringComparison.Ordinal))
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.schema_version' muss 1.0 sein.");
+        if (string.IsNullOrWhiteSpace(approval.ApprovedBy))
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.approved_by' fehlt.");
+        if (approval.ApprovedUtc is null || approval.ApprovedUtc.Value.Offset != TimeSpan.Zero)
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.approved_utc' braucht einen UTC-Zeitpunkt.");
+
+        var auditHash = approval.GoldAuditSha256?.Trim().ToLowerInvariant();
+        var samplesHash = approval.TrainingSamplesSha256?.Trim().ToLowerInvariant();
+        if (!IsSha256(auditHash) || !IsSha256(samplesHash))
+            throw new TrainingYoloClassMapException(
+                "Der persönliche Goldbeleg braucht gültige Audit- und Sample-SHA-256.");
+        if (approval.SourceCodes is null || approval.SourceCodes.Count == 0)
+            throw new TrainingYoloClassMapException(
+                "Der persönliche Goldbeleg enthält keine freigegebenen Quellcodes.");
+
+        if (approval.SourceCodes.Any(string.IsNullOrWhiteSpace))
+            throw new TrainingYoloClassMapException(
+                "Die Quellcodes im persönlichen Goldbeleg dürfen nicht leer sein.");
+        var codes = approval.SourceCodes
+            .Select(code => code!.Trim().ToUpperInvariant())
+            .ToArray();
+        if (codes.Distinct(StringComparer.Ordinal).Count() != codes.Length
+            || !codes.SequenceEqual(codes.OrderBy(code => code, StringComparer.Ordinal)))
+        {
+            throw new TrainingYoloClassMapException(
+                "Die Quellcodes im persönlichen Goldbeleg müssen eindeutig und sortiert sein.");
+        }
+
+        sourceHashes.Add("personal_gold_audit", auditHash!);
+        sourceHashes.Add("personal_gold_samples", samplesHash!);
+        return codes;
+    }
+
+    private static void ValidatePersonalGoldDecisions(
+        IReadOnlyList<string> sourceCodes,
+        IReadOnlyList<TrainingYoloClassMapping> mappings)
+    {
+        foreach (var sourceCode in sourceCodes)
+        {
+            var decisions = mappings
+                .Where(mapping =>
+                    string.Equals(
+                        mapping.SourceKind,
+                        TrainingYoloClassSourceKinds.TeacherVsaCode,
+                        StringComparison.Ordinal)
+                    && string.Equals(
+                        mapping.SourceKey,
+                        sourceCode,
+                        StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (decisions.Length != 1
+                || decisions[0].ApprovalStatus != TrainingYoloClassApprovalStatus.Approved
+                || decisions[0].Action == TrainingYoloClassAction.Review)
+            {
+                throw new TrainingYoloClassMapException(
+                    $"Persönlicher Goldcode '{sourceCode}' hat keine eindeutige freigegebene map-/discard-Entscheidung.");
+            }
+        }
     }
 
     private static void ValidateOrderedValues(
@@ -402,10 +476,19 @@ internal static class TrainingYoloClassMapJsonReader
         [property: JsonPropertyName("generated_utc")] DateTimeOffset? GeneratedUtc,
         [property: JsonPropertyName("vsa_manifest_hash")] string? VsaManifestHash,
         [property: JsonPropertyName("source_hashes")] Dictionary<string, string>? SourceHashes,
+        [property: JsonPropertyName("personal_gold_approval")] PersonalGoldApprovalJson? PersonalGoldApproval,
         [property: JsonPropertyName("sort_order")] List<string>? SortOrder,
         [property: JsonPropertyName("resolution_order")] List<string>? ResolutionOrder,
         [property: JsonPropertyName("entry_counts")] MigrationEntryCountsJson? EntryCounts,
         [property: JsonPropertyName("entries")] List<MigrationEntryJson>? Entries);
+
+    private sealed record PersonalGoldApprovalJson(
+        [property: JsonPropertyName("schema_version")] string? SchemaVersion,
+        [property: JsonPropertyName("gold_audit_sha256")] string? GoldAuditSha256,
+        [property: JsonPropertyName("training_samples_sha256")] string? TrainingSamplesSha256,
+        [property: JsonPropertyName("approved_by")] string? ApprovedBy,
+        [property: JsonPropertyName("approved_utc")] DateTimeOffset? ApprovedUtc,
+        [property: JsonPropertyName("source_codes")] List<string?>? SourceCodes);
 
     private sealed record MigrationEntryCountsJson(
         [property: JsonPropertyName("total")] int Total,

@@ -449,9 +449,7 @@ public sealed class KnowledgeBaseManager(
         // Die Retrieval-KB lernt dagegen den Text selbst und muss sie deshalb sperren.
         if (!GoldDescriptionPolicy.IsKnowledgeTextReady(sample.Beschreibung))
             return false;
-        if (string.IsNullOrWhiteSpace(sample.Code))
-            return false;
-        if (VsaCodeResolver.LookupLabel(sample.Code) is null)
+        if (!VsaCodeResolver.IsExactSelectableCode(sample.Code))
             return false;
         // Bewusste Entkopplung Retrieval <-> Training (Entscheid 2026-06-20):
         // Die Trainings-Recency-Schranke (InspectionDate >= 2022 + TrainingEligible) gilt NUR fuer

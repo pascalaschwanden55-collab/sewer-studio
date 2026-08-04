@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.UI.Ai.Training;
 using Microsoft.Extensions.Logging;
 
@@ -58,8 +59,8 @@ public sealed class ServiceProviderRegistrationTests
         // Entscheidung. Die Meldung nennt den Grund, statt nur eine nackte Zahl-Abweichung
         // zu zeigen (frueherer Kritikpunkt: nichtssagend).
         Assert.True(
-            registrations.Count == 130,
-            $"Erwartet 130 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 132,
+            $"Erwartet 132 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
@@ -89,6 +90,9 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.PersonalGoldInbox,
             registrations[typeof(IPersonalGoldInboxService)]);
+        Assert.Same(
+            services.TrainingPdfReviews,
+            registrations[typeof(ITrainingPdfReviewImportService)]);
         Assert.Same(
             services.TrainingExportRegistry,
             registrations[typeof(ITrainingExportRegistryStore)]);

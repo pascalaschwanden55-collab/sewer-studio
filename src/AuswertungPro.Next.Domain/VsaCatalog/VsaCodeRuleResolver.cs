@@ -9,8 +9,9 @@ namespace AuswertungPro.Next.Domain.VsaCatalog;
 public static class VsaCodeRuleResolver
 {
     /// <summary>
-    /// Ermittelt die effektive Q1-Regel fuer einen Code und optionalen Char1-Schluessel.
-    /// Wenn Q1.Pflicht == "V" und Q1PerChar1 befuellt, wird der char1-spezifische Wert verwendet.
+    /// Ermittelt die effektiven Q1-/Q2-Regeln fuer einen Code und optionalen
+    /// Char1-Schluessel. Eine Regel mit Pflicht="V" wird aus der passenden
+    /// Per-Char1-Tabelle aufgeloest.
     /// </summary>
     public static (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? c1Key)
     {
@@ -23,7 +24,13 @@ public static class VsaCodeRuleResolver
             q1 = rule.Q1PerChar1.TryGetValue(c1Key, out var perChar) ? perChar : null;
         }
 
-        return (q1, rule.Q2);
+        var q2 = rule.Q2;
+        if (q2 is { Pflicht: "V" } && rule.Q2PerChar1 is not null && c1Key is not null)
+        {
+            q2 = rule.Q2PerChar1.TryGetValue(c1Key, out var perChar) ? perChar : null;
+        }
+
+        return (q1, q2);
     }
 
     /// <summary>

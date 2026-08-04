@@ -126,6 +126,7 @@
                                              MaxHeight="400"
                                              VirtualizingPanel.IsVirtualizing="False"
                                              ScrollViewer.CanContentScroll="False"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              PreviewMouseRightButtonDown="CodingEvents_PreviewMouseRightButtonDown"
                                              MouseDoubleClick="CodingEvents_DoubleClick"
                                              SelectionChanged="CodingEvents_SelectionChanged">
@@ -167,7 +168,7 @@
                                                                     CornerRadius="6"
                                                                     Padding="{TemplateBinding Padding}"
                                                                     Cursor="Hand">
-                                                                <ContentPresenter/>
+                                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsSelected" Value="True">
@@ -199,7 +200,7 @@
                                                                  Width="7" Height="7"
                                                                  Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
-                                                                   Text="{Binding Entry.Code, Converter={StaticResource VsaCodeToText}}"
+                                                                   Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="11"
                                                                    VerticalAlignment="Top"
@@ -209,6 +210,7 @@
                                                                    FontSize="10"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextWrapping="Wrap"
+                                                                   ToolTip="{Binding Entry.Beschreibung}"
                                                                    VerticalAlignment="Top"/>
                                                         <Border x:Name="CodingMatchBadge"
                                                                 Grid.Column="3"
@@ -370,6 +372,7 @@
                                              MaxHeight="400"
                                              VirtualizingPanel.IsVirtualizing="False"
                                              ScrollViewer.CanContentScroll="False"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              IsHitTestVisible="True"
                                              MouseDoubleClick="ImportEvents_DoubleClick">
                                         <ListBox.ContextMenu>
@@ -405,7 +408,7 @@
                                                                     CornerRadius="6"
                                                                     Padding="{TemplateBinding Padding}"
                                                                     Cursor="Hand">
-                                                                <ContentPresenter/>
+                                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsSelected" Value="True">
@@ -437,7 +440,7 @@
                                                                 Background="{DynamicResource AccentBrush}"
                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
-                                                                   Text="{Binding Entry.Code, Converter={StaticResource VsaCodeToText}}"
+                                                                   Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="11"
                                                                    VerticalAlignment="Top"
@@ -447,6 +450,7 @@
                                                                    FontSize="10"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextWrapping="Wrap"
+                                                                   ToolTip="{Binding Entry.Beschreibung}"
                                                                    VerticalAlignment="Top"/>
                                                         <Border x:Name="CodingMatchBadge"
                                                                 Grid.Column="3"

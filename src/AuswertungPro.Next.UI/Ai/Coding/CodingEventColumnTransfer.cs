@@ -77,8 +77,10 @@ public static class CodingEventColumnTransfer
             Mpeg = e.Mpeg,
             Zeit = e.Zeit,
             FotoPaths = e.FotoPaths.ToList(),
+            OriginalFotoPaths = e.OriginalFotoPaths?.ToList() ?? [],
             Source = e.Source,
             CodeMeta = CloneCodeMeta(e.CodeMeta),
+            Training = ProtocolEntryCloner.CloneTrainingMeta(e.Training),
         };
 
     private static ProtocolEntryCodeMeta? CloneCodeMeta(ProtocolEntryCodeMeta? m)
@@ -108,7 +110,19 @@ public static class CodingEventColumnTransfer
             LevelSubMode = o.LevelSubMode,
             EllipseRadiusXMm = o.EllipseRadiusXMm,
             EllipseRadiusYMm = o.EllipseRadiusYMm,
+            SamMask = CloneSamMask(o.SamMask),
             SnapshotPath = o.SnapshotPath,
+        };
+
+    private static OverlaySamMask? CloneSamMask(OverlaySamMask? mask)
+        => mask is null ? null : new OverlaySamMask
+        {
+            MaskRle = mask.MaskRle,
+            ImageWidth = mask.ImageWidth,
+            ImageHeight = mask.ImageHeight,
+            MaskAreaPixels = mask.MaskAreaPixels,
+            Confidence = mask.Confidence,
+            Label = mask.Label
         };
 
     private static CodingEventAiContext? CloneAiContext(CodingEventAiContext? a)

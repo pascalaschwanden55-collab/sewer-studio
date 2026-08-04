@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.Preview;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 
@@ -24,7 +25,8 @@ public sealed class TrainingStudioViewModelTests
         Func<string, string?>? labelLookup = null,
         Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? ensureAiReady = null,
         Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>>? loadGoldProgress = null,
-        ITrainingPreviewDetectionService? previewDetection = null)
+        ITrainingPreviewDetectionService? previewDetection = null,
+        IGoldQualityReviewQueueUseCase? goldQualityReview = null)
         => new(
             wb,
             () => items ?? new[] { Foto() },
@@ -32,7 +34,8 @@ public sealed class TrainingStudioViewModelTests
             labelLookup ?? (c => c),
             ensureAiReady,
             loadGoldProgress,
-            previewDetection);
+            previewDetection,
+            goldQualityReview);
 
     [Fact]
     public async Task BoxDrawn_fuellt_Maske_Vorschlag_und_SelectedCode_auf_Top()
@@ -222,7 +225,27 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
-    public async Task Accept_speichert_ohne_Korrektur_und_geht_zum_naechsten_Item()
+    public async Task Speichern_startet_nicht_parallel_zur_allgemeinen_Foto_Pruefung()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        wb.SuggestPhotoGate = gate;
+
+        var photoCheck = vm.FotoMitKiPruefenCommand.ExecuteAsync(null);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Empty(wb.SavedDecisions);
+        Assert.Contains("KI-Schritt", vm.StatusText);
+
+        gate.SetResult();
+        await photoCheck;
+    }
+
+    [Fact]
+    public async Task Accept_speichert_ohne_Korrektur_und_laesst_das_Bild_fuer_die_Entscheidung_offen()
     {
         var wb = new FakeWorkbench();
         var items = new[] { Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg") };
@@ -236,8 +259,454 @@ public sealed class TrainingStudioViewModelTests
         Assert.False(decision.WasCorrected);
         Assert.Equal("BAB", decision.VsaCode);
         Assert.Equal("Pascal", decision.ConfirmedByUser);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Contains("Weiteres Ereignis", vm.StatusText);
+        Assert.Contains("Bild fertig", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Weiteres_Ereignis_speichert_ein_zweites_ManualCoding_Objekt_auf_demselben_PDF_Bild()
+    {
+        var pdfReference = new WorkbenchSourceSuggestion(
+            "BAIAB",
+            "Dichtring eingeragt oberhalb Rohrmitte",
+            "haltung.pdf",
+            new string('a', 64),
+            7,
+            "12",
+            "photo_id");
+        var first = Foto(@"C:\pdf\photo-12.png") with
+        {
+            MeterStart = 4.2,
+            MeterEnd = 8.4,
+            IsStreckenschaden = true,
+            SourceSuggestion = pdfReference,
+        };
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [first, Foto(@"C:\next.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.AddAnotherEventCommand.Execute(null);
+
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(@"C:\pdf\photo-12.png", vm.CurrentImagePath);
+        Assert.False(vm.HasSourceSuggestion);
+        Assert.Null(vm.CurrentBox);
+        Assert.Null(vm.Segmentation);
+        Assert.Null(vm.SelectedCode);
+        Assert.Equal(string.Empty, vm.Beschreibung);
+
+        var secondBox = new BoundingBox(0.25, 0.35, 0.15, 0.18);
+        await vm.BoxDrawnCommand.ExecuteAsync(secondBox);
+        vm.SelectedCode = "BABAA";
+        vm.Beschreibung = "Zweiter sichtbarer Riss im selben Foto";
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, wb.SavedItems.Count);
+        Assert.Same(first, wb.SavedItems[0]);
+        var additionalItem = wb.SavedItems[1];
+        Assert.Equal(first.FramePath, additionalItem.FramePath);
+        Assert.Equal(first.CaseId, additionalItem.CaseId);
+        Assert.Equal(first.MeterStart, additionalItem.MeterStart);
+        Assert.Equal(first.MeterStart, additionalItem.MeterEnd);
+        Assert.False(additionalItem.IsStreckenschaden);
+        Assert.Null(additionalItem.ExistingSampleId);
+        Assert.Null(additionalItem.SourceSuggestion);
+        Assert.Equal(new string('c', 64), additionalItem.ExpectedImageSha256);
+        Assert.Equal(2, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.True(vm.IsAwaitingImageCompletion);
+
+        vm.FinishImageCommand.Execute(null);
+
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(@"C:\next.jpg", vm.CurrentImagePath);
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(0, vm.SavedEventCountForCurrentImage);
+    }
+
+    [Fact]
+    public async Task Fertiges_Bild_kann_nicht_erneut_geoeffnet_oder_doppelt_gezaehlt_werden()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.FinishImageCommand.Execute(null);
+
+        await vm.PreviousItemCommand.ExecuteAsync(null);
+        var selected = await vm.SelectQueueItemAsync(0);
+
+        Assert.False(selected);
         Assert.Equal(1, vm.CurrentIndex);
         Assert.Equal(@"C:\b.jpg", vm.CurrentImagePath);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Single(wb.SavedDecisions);
+        Assert.Contains("abgeschlossen", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Fertiger_Normaler_Reparaturfall_bleibt_nach_dem_Weitersprung_gesperrt()
+    {
+        var repair = Foto(@"C:\repair.jpg") with
+        {
+            ExistingSampleId = "sample-1",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+        };
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb);
+        vm.LoadItems([repair, Foto(@"C:\next.jpg")]);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        await vm.PreviousItemCommand.ExecuteAsync(null);
+        var selected = await vm.SelectQueueItemAsync(0);
+
+        Assert.False(selected);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Single(wb.SavedDecisions);
+        Assert.Contains("abgeschlossen", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Neue_Warteschlange_hat_keine_Sperren_der_vorherigen_Liste()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.FinishImageCommand.Execute(null);
+
+        var loaded = vm.LoadItems([Foto(@"C:\neu.jpg")]);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.True(loaded);
+        Assert.Equal(@"C:\neu.jpg", vm.CurrentImagePath);
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(2, wb.SavedDecisions.Count);
+    }
+
+    [Fact]
+    public async Task Mehrere_PDF_Operateurbefunde_desselben_Fotos_werden_zuerst_einzeln_geprueft()
+    {
+        var firstReference = new WorkbenchSourceSuggestion(
+            "BAIAB", "Dichtring eingeragt", "haltung.pdf", new string('a', 64), 7, "12", "photo_id");
+        var secondReference = new WorkbenchSourceSuggestion(
+            "BABAA", "Riss sichtbar", "haltung.pdf", new string('a', 64), 7, "12", "photo_id");
+        var first = Foto(@"C:\pdf\photo-12.png") with { SourceSuggestion = firstReference };
+        var second = Foto(@"C:\pdf\photo-12.png") with { SourceSuggestion = secondReference };
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [first, second, Foto(@"C:\next.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(second.SourceSuggestion, vm.CurrentItem?.SourceSuggestion);
+        Assert.Equal(new string('c', 64), vm.CurrentItem?.ExpectedImageSha256);
+        Assert.Equal(1, vm.QueueDoneCount);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.3, 0.3, 0.2, 0.2));
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(2, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(1, vm.QueueDoneCount);
+    }
+
+    [Fact]
+    public async Task PDF_Referenzen_desselben_Fotos_bleiben_auch_nach_Thumbnail_Sprung_zusammen()
+    {
+        var firstReference = new WorkbenchSourceSuggestion(
+            "BAIAB", "Dichtring eingeragt", "haltung.pdf", new string('a', 64), 7, "12", "photo_id");
+        var secondReference = new WorkbenchSourceSuggestion(
+            "BABAA", "Riss sichtbar", "haltung.pdf", new string('a', 64), 7, "12", "photo_id");
+        var first = Foto(@"C:\pdf\photo-12.png") with { SourceSuggestion = firstReference };
+        var second = Foto(@"C:\pdf\photo-12.png") with { SourceSuggestion = secondReference };
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [first, second, Foto(@"C:\next.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        Assert.True(await vm.SelectQueueItemAsync(1));
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(first.SourceSuggestion, vm.CurrentItem?.SourceSuggestion);
+        Assert.Equal(1, vm.QueueDoneCount);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.3, 0.3, 0.2, 0.2));
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(2, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(0, vm.CurrentIndex);
+    }
+
+    [Fact]
+    public async Task Ereigniszaehler_vermischt_gleichen_Bildpfad_nicht_zwischen_Haltungen()
+    {
+        var first = Foto(@"C:\shared\gold.png") with { CaseId = "haltung-a" };
+        var second = Foto(@"C:\shared\gold.png") with { CaseId = "haltung-b" };
+        var vm = CreateVm(new FakeWorkbench(), [first, second]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.FinishImageCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(1, vm.QueueDoneCount);
+    }
+
+    [Fact]
+    public async Task Offene_Bildentscheidung_sperrt_Doppelspeichern_und_Thumbnailwechsel()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+        var selected = await vm.SelectQueueItemAsync(1);
+
+        Assert.False(selected);
+        Assert.Single(wb.SavedDecisions);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Contains("Bild fertig", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Pfeil_rechts_beendet_ein_Bild_nicht_still_im_Hintergrund()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        await vm.NextItemCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
+        Assert.Contains("ausdruecklich", vm.StatusText);
+        Assert.Contains("Bild fertig", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Offene_Bildentscheidung_sperrt_Codewahl_und_Modelltest()
+    {
+        var preview = new FakePreviewDetectionService();
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        var savedCode = vm.SelectedCode;
+
+        vm.SelectCodeCommand.Execute("BAF");
+        vm.ApplyCodeSelection("BBC", 3, 2, "Ablagerung");
+        await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+
+        Assert.Equal(savedCode, vm.SelectedCode);
+        Assert.Equal(0, preview.DetectCallCount);
+        Assert.Contains("Bild fertig", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Verwerfen_eines_begonnenen_Zusatzereignisses_kehrt_zur_Bildentscheidung_zurueck()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.AddAnotherEventCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.2, 0.3, 0.1, 0.1));
+
+        vm.DiscardCommand.Execute(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Null(vm.CurrentBox);
+        Assert.Single(wb.SavedDecisions);
+        Assert.Contains("bleibt erhalten", vm.StatusText);
+
+        vm.FinishImageCommand.Execute(null);
+
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(@"C:\b.jpg", vm.CurrentImagePath);
+    }
+
+    [Fact]
+    public async Task Begonnenes_Zusatzereignis_sperrt_Bild_und_Warteschlangenwechsel()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.AddAnotherEventCommand.Execute(null);
+
+        await vm.NextItemCommand.ExecuteAsync(null);
+        var selected = await vm.SelectQueueItemAsync(1);
+        var queueChanged = vm.LoadItems([Foto(@"C:\fremd.jpg")]);
+
+        Assert.False(selected);
+        Assert.False(queueChanged);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Contains("speichern oder verwerfen", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Gespeicherter_Entwurf_oeffnet_keine_Mehrfachentscheidung_und_zaehlt_nicht()
+    {
+        var wb = new FakeWorkbench
+        {
+            SaveResult = new WorkbenchSaveResult(
+                true,
+                "Entwurf gespeichert: Maske ist nicht goldfaehig.",
+                "draft-1",
+                "Entwurf",
+                null,
+                GoldApproved: false),
+        };
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(0, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Contains("Noch nicht als Gold", vm.StatusText);
+
+        vm.DiscardCommand.Execute(null);
+
+        Assert.Contains("Entwurf", vm.StatusText);
+        Assert.Contains("Unvollstaendige Goldframes", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Neuer_Entwurf_bleibt_an_dieselbe_SampleId_gebunden_und_kann_danach_Mehrfachobjekte_erfassen()
+    {
+        var wb = new FakeWorkbench();
+        wb.SaveResults.Enqueue(new WorkbenchSaveResult(
+            true,
+            "Entwurf gespeichert: Maske ist noch nicht goldfaehig.",
+            "draft-1",
+            "Entwurf",
+            null,
+            GoldApproved: false,
+            StoredImageSha256: new string('d', 64),
+            StoredConfirmedAtUtc: new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero)));
+        wb.SaveResults.Enqueue(new WorkbenchSaveResult(
+            true,
+            null,
+            "draft-1",
+            "Indexed",
+            "teacher-1",
+            GoldApproved: true,
+            StoredImageSha256: new string('d', 64)));
+        var vm = CreateVm(wb, [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Equal("draft-1", vm.CurrentItem?.ExistingSampleId);
+        Assert.Equal(new string('d', 64), vm.CurrentItem?.ExpectedImageSha256);
+        Assert.Equal(
+            new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero),
+            vm.CurrentItem?.ExpectedConfirmedAtUtc);
+        Assert.False(vm.IsAwaitingImageCompletion);
+
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.45, 0.45, 0.25, 0.25));
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, wb.SavedItems.Count);
+        Assert.Equal("draft-1", wb.SavedItems[1].ExistingSampleId);
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Equal(0, vm.QueueDoneCount);
+    }
+
+    [Fact]
+    public async Task Verwerfen_nach_persistiertem_Zusatzentwurf_erklaert_dass_der_Draft_erhalten_bleibt()
+    {
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        vm.AddAnotherEventCommand.Execute(null);
+        wb.SaveResult = new WorkbenchSaveResult(
+            true,
+            "Entwurf gespeichert.",
+            "draft-extra",
+            "Entwurf",
+            null,
+            GoldApproved: false,
+            StoredImageSha256: new string('c', 64),
+            StoredConfirmedAtUtc: new DateTimeOffset(2026, 8, 4, 9, 0, 0, TimeSpan.Zero));
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.2, 0.2, 0.1, 0.1));
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        vm.DiscardCommand.Execute(null);
+
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.SavedEventCountForCurrentImage);
+        Assert.Contains("Entwurf", vm.StatusText);
+        Assert.Contains("Unvollstaendige Goldframes", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Normal_geladener_Reparaturfall_mit_SampleId_bleibt_Einzelobjekt_und_springt_weiter()
+    {
+        var repair = Foto(@"C:\repair.jpg") with
+        {
+            ExistingSampleId = "sample-1",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+        };
+        var wb = new FakeWorkbench();
+        var vm = CreateVm(wb);
+        vm.LoadItems([repair, Foto(@"C:\next.jpg")]);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsAwaitingImageCompletion);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(@"C:\next.jpg", vm.CurrentImagePath);
     }
 
     [Fact]
@@ -272,7 +741,8 @@ public sealed class TrainingStudioViewModelTests
         Assert.True(decision.WasCorrected);
         Assert.Equal("BBA", decision.VsaCode);
         Assert.Contains("Lerndaten", vm.StatusText);
-        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.True(vm.IsAwaitingImageCompletion);
     }
 
     [Fact]
@@ -399,6 +869,26 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task Neue_Box_waehrend_laufendem_Speichern_wird_blockiert()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wb = new FakeWorkbench { SaveGate = gate };
+        var vm = CreateVm(wb);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        var segmentCallsBeforeSave = wb.SegmentCalls;
+
+        var saving = vm.AcceptCommand.ExecuteAsync(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.4, 0.4, 0.1, 0.1));
+
+        Assert.Equal(segmentCallsBeforeSave, wb.SegmentCalls);
+        Assert.Contains("Speichern laeuft", vm.StatusText);
+
+        gate.SetResult();
+        await saving;
+    }
+
+    [Fact]
     public async Task Standardmodell_bei_unqualifiziertem_Detektor_zeigt_Sperre_statt_Boxen()
     {
         // Phase 1: Das nachweislich kollabierte Altmodell darf keine blauen Boxen malen —
@@ -450,12 +940,14 @@ public sealed class TrainingStudioViewModelTests
             labelLookup: code => code == "BCC" ? "Bogen" : null,
             previewDetection: preview);
         vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
         vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
             item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
 
         await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
 
         Assert.Equal(1, preview.DetectCallCount);              // BCC-Pfad unveraendert
+        Assert.Equal("bcc_bogen_b50b37ab8a4f", preview.LastCandidateId);
         Assert.Single(vm.PreviewDetections);
     }
 
@@ -467,6 +959,7 @@ public sealed class TrainingStudioViewModelTests
         var preview = new FakePreviewDetectionService { Qualification = null };
         var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
         vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
         vm.SelectedPreviewModel = vm.PreviewModelOptions[0];
 
         await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
@@ -474,6 +967,9 @@ public sealed class TrainingStudioViewModelTests
         Assert.Equal(0, preview.DetectCallCount);
         Assert.Empty(vm.PreviewDetections);
         Assert.Contains("gesperrt", vm.PreviewDetectionSummary);
+        Assert.Contains(
+            vm.PreviewModelOptions,
+            item => item.CandidateId == "bcc_bogen_b50b37ab8a4f");
     }
 
     [Fact]
@@ -503,6 +999,461 @@ public sealed class TrainingStudioViewModelTests
 
         Assert.Equal("BCAAA", vm.SelectedCode);
         Assert.Equal("Persoenlich bestaetigter Anschluss", vm.Beschreibung);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_segmentiert_vorhandene_Box_automatisch()
+    {
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench);
+        var item = Foto(@"C:\gold.jpg") with
+        {
+            ExistingSampleId = "wb_alt",
+            ExistingCode = "BCAAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            ExistingBox = TestBox,
+        };
+
+        await vm.LoadSegmentationRepairItemsAsync([item]);
+
+        Assert.Equal(1, workbench.SegmentCalls);
+        Assert.Equal((BoundingBox?)TestBox, vm.CurrentBox);
+        Assert.NotNull(vm.Segmentation);
+        Assert.NotNull(vm.Suggestion);
+        Assert.Empty(workbench.SavedDecisions);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_meldet_sichtbare_Maske_ausserhalb_der_Box_sofort_und_beim_Speichern()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                MaskRle: "1,8000",
+                MaskImageWidth: 100,
+                MaskImageHeight: 80,
+                AreaPercent: 100,
+                StatusText: "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 8000),
+        };
+        var vm = CreateVm(workbench);
+        var item = Foto(@"C:\gold.jpg") with
+        {
+            ExistingSampleId = "wb_alt",
+            ExistingCode = "BAFCE",
+            ExistingBeschreibung = "Persoenlich bestaetigter Oberflaechenschaden",
+            ExistingBox = TestBox,
+        };
+
+        await vm.LoadSegmentationRepairItemsAsync([item]);
+
+        Assert.NotNull(vm.Segmentation);
+        Assert.Contains("sichtbar", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mindestens 80 %", vm.StatusText, StringComparison.Ordinal);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Empty(workbench.SavedDecisions);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Contains("mindestens 80 %", vm.StatusText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Maske fehlt", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_ohne_Box_zeigt_KI_Vorschlag_und_fordert_Box()
+    {
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench);
+
+        await vm.LoadSegmentationRepairItemsAsync(
+        [
+            Foto(@"C:\gold.jpg") with
+            {
+                ExistingSampleId = "wb_alt",
+                ExistingCode = "BCAAA",
+                ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            }
+        ]);
+
+        Assert.Equal(1, workbench.SuggestPhotoCalls);
+        Assert.Equal(0, workbench.SegmentCalls);
+        Assert.NotNull(vm.Suggestion);
+        Assert.Null(vm.CurrentBox);
+        Assert.Contains("Box", vm.StatusText);
+        Assert.Empty(workbench.SavedDecisions);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_speichert_ohne_gueltige_Maske_nicht_als_erledigt()
+    {
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench);
+        await vm.LoadSegmentationRepairItemsAsync(
+        [
+            Foto(@"C:\gold.jpg") with
+            {
+                ExistingSampleId = "wb_alt",
+                ExistingCode = "BCAAA",
+                ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            }
+        ]);
+        vm.CurrentBox = TestBox;
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Empty(workbench.SavedDecisions);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Contains("gültige", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_springt_ohne_Akzeptieren_nicht_weiter()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+        await vm.LoadSegmentationRepairItemsAsync(
+        [
+            Foto(@"C:\first.jpg") with { ExistingSampleId = "wb_first" },
+            Foto(@"C:\second.jpg") with { ExistingSampleId = "wb_second" },
+        ]);
+
+        await vm.NextItemCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\first.jpg", vm.CurrentImagePath);
+        Assert.Contains("Akzeptieren", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_laesst_sich_auch_per_Vorschaubild_nicht_ueberspringen()
+    {
+        var vm = CreateVm(new FakeWorkbench());
+        await vm.LoadSegmentationRepairItemsAsync(
+        [
+            Foto(@"C:\first.jpg") with { ExistingSampleId = "wb_first" },
+            Foto(@"C:\second.jpg") with { ExistingSampleId = "wb_second" },
+        ]);
+
+        var selected = await vm.SelectQueueItemAsync(1);
+
+        Assert.False(selected);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\first.jpg", vm.CurrentImagePath);
+        Assert.Contains("Akzeptieren", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Normale_Warteschlange_wechselt_per_Vorschaubild_das_Arbeitsbild()
+    {
+        var vm = CreateVm(
+            new FakeWorkbench(),
+            items: [Foto(@"C:\first.jpg"), Foto(@"C:\second.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+
+        var selected = await vm.SelectQueueItemAsync(1);
+
+        Assert.True(selected);
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(@"C:\second.jpg", vm.CurrentImagePath);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_bereitet_nach_Goldbestaetigung_das_naechste_Bild_vor()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 1),
+        };
+        var vm = CreateVm(workbench);
+        var first = Foto(@"C:\first.jpg") with
+        {
+            ExistingSampleId = "wb_first",
+            ExistingCode = "BCAAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            ExistingBox = TestBox,
+        };
+        var second = Foto(@"C:\second.jpg") with
+        {
+            ExistingSampleId = "wb_second",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+        };
+        await vm.LoadSegmentationRepairItemsAsync([first, second]);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Single(workbench.SavedDecisions);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(@"C:\second.jpg", vm.CurrentImagePath);
+        Assert.Equal(2, workbench.SegmentCalls);
+        Assert.NotNull(vm.Segmentation);
+    }
+
+    [Fact]
+    public async Task Letzter_Segmentierungsfall_wird_geschlossen_und_kann_nicht_doppelt_gezaehlt_werden()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 1),
+        };
+        var item = Foto(@"C:\only.jpg") with
+        {
+            ExistingSampleId = "wb_only",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+        };
+        var vm = CreateVm(workbench);
+        await vm.LoadSegmentationRepairItemsAsync([item]);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+        await vm.AcceptCommand.ExecuteAsync(null);
+        Assert.Contains("abgearbeitet", vm.StatusText);
+        var reopened = await vm.SelectQueueItemAsync(0);
+
+        Assert.Single(workbench.SavedDecisions);
+        Assert.False(reopened);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(1, vm.QueueTotalCount);
+        Assert.Equal(-1, vm.CurrentIndex);
+        Assert.Null(vm.CurrentImagePath);
+        Assert.Contains("abgeschlossen", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_springt_nicht_zu_bereits_abgeschlossenem_Bild_zurueck()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 1),
+        };
+        var first = Foto(@"C:\first.jpg") with
+        {
+            ExistingSampleId = "wb_first",
+            ExistingCode = "BCAAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            ExistingBox = TestBox,
+        };
+        var second = Foto(@"C:\second.jpg") with
+        {
+            ExistingSampleId = "wb_second",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+        };
+        var vm = CreateVm(workbench);
+        await vm.LoadSegmentationRepairItemsAsync([first, second]);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        await vm.PreviousItemCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, vm.CurrentIndex);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Equal(@"C:\second.jpg", vm.CurrentImagePath);
+        Assert.Contains("abgeschlossen", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Segmentierungs_Warteschlange_bleibt_bei_gespeichertem_Entwurf_auf_dem_Bild()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 1),
+            SaveResult = new WorkbenchSaveResult(
+                true,
+                "Entwurf gespeichert: Maskenmaße passen nicht zum echten Bild.",
+                "wb_first",
+                "Entwurf",
+                null,
+                GoldApproved: false),
+        };
+        var vm = CreateVm(workbench);
+        var first = Foto(@"C:\first.jpg") with
+        {
+            ExistingSampleId = "wb_first",
+            ExistingCode = "BCAAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Anschluss",
+            ExistingBox = TestBox,
+        };
+        var second = Foto(@"C:\second.jpg") with
+        {
+            ExistingSampleId = "wb_second",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+        };
+        await vm.LoadSegmentationRepairItemsAsync([first, second]);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Single(workbench.SavedDecisions);
+        Assert.Equal(0, vm.QueueDoneCount);
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\first.jpg", vm.CurrentImagePath);
+        Assert.Contains("bleibt", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Bildwechsel_bricht_laufende_Boxsegmentierung_ab_und_verwirft_spaetes_Ergebnis()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var workbench = new FakeWorkbench { SegmentGate = gate };
+        var vm = CreateVm(
+            workbench,
+            items: [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+
+        var segmentierung = vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.NextItemCommand.ExecuteAsync(null);
+        gate.SetResult();
+        await segmentierung;
+
+        Assert.Equal(@"C:\b.jpg", vm.CurrentImagePath);
+        Assert.Null(vm.CurrentBox);
+        Assert.Null(vm.Segmentation);
+        Assert.Null(vm.Suggestion);
+    }
+
+    [Fact]
+    public async Task Verwerfen_bricht_laufende_Boxsegmentierung_ab()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var workbench = new FakeWorkbench { SegmentGate = gate };
+        var vm = CreateVm(workbench);
+        vm.LoadQueueCommand.Execute(null);
+
+        var segmentierung = vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        vm.DiscardCommand.Execute(null);
+        gate.SetResult();
+        await segmentierung;
+
+        Assert.Null(vm.CurrentBox);
+        Assert.Null(vm.Segmentation);
+        Assert.Null(vm.Suggestion);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task Warteschlangenwechsel_waehrend_Speichern_bleibt_gesperrt_und_Save_schliesst_Reparaturfall()
+    {
+        var saveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var workbench = new FakeWorkbench
+        {
+            SegResult = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Maske erstellt.",
+                Degraded: false,
+                MaskAreaPixels: 1),
+            SaveGate = saveGate,
+        };
+        var vm = CreateVm(workbench);
+        var repair = Foto(@"C:\repair.jpg") with
+        {
+            ExistingSampleId = "wb_repair",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+        };
+        await vm.LoadSegmentationRepairItemsAsync([repair]);
+
+        var speichern = vm.AcceptCommand.ExecuteAsync(null);
+        await workbench.SaveStarted.Task;
+        var gewechselt = vm.LoadItems([Foto(@"C:\new.jpg")]);
+
+        Assert.False(gewechselt);
+        Assert.Equal(@"C:\repair.jpg", vm.CurrentImagePath);
+        saveGate.SetResult();
+        await speichern;
+
+        Assert.Null(vm.CurrentImagePath);
+        Assert.Equal(-1, vm.CurrentIndex);
+        Assert.Equal(1, vm.QueueDoneCount);
+        Assert.Contains("abgearbeitet", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Pdf_Operateurvorgabe_wird_vorausgefuellt_und_als_Sam_Hinweis_verwendet()
+    {
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench);
+        var source = new WorkbenchSourceSuggestion(
+            "BCAAA",
+            "Anschluss mit Formstueck bei 9 Uhr",
+            "haltung.pdf",
+            new string('a', 64),
+            PageNumber: 2,
+            PhotoId: "057",
+            MatchKind: "same_block");
+
+        vm.LoadItems([Foto(@"C:\pdf_review\foto.png") with { SourceSuggestion = source }]);
+        Assert.Contains("PDF-Referenz: BCAAA, Seite 2, Foto 057", vm.StatusText);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.Equal("BCAAA", vm.SelectedCode);
+        Assert.Equal("Anschluss mit Formstueck bei 9 Uhr", vm.Beschreibung);
+        Assert.Equal("BCAAA", workbench.LastSegmentCodeHint);
+    }
+
+    [Fact]
+    public async Task Pdf_Operateurcode_ist_beim_Speichern_die_Referenz_nicht_der_KI_Topcode()
+    {
+        var workbench = new FakeWorkbench
+        {
+            SugResult = new WorkbenchSuggestion(
+                [new WorkbenchCodeCandidate("BAB", 0.95, "cls")],
+                FrameUsable: true,
+                "ok",
+                IsBend: false)
+        };
+        var vm = CreateVm(workbench);
+        var source = new WorkbenchSourceSuggestion(
+            "BCAAA",
+            "Anschluss mit Formstueck bei 9 Uhr",
+            "haltung.pdf",
+            new string('b', 64),
+            PageNumber: 2,
+            PhotoId: "057",
+            MatchKind: "same_block");
+        vm.LoadItems([Foto() with { SourceSuggestion = source }]);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        var decision = Assert.Single(workbench.SavedDecisions);
+        Assert.Equal("BCAAA", decision.VsaCode);
+        Assert.False(decision.WasCorrected);
     }
 
     [Fact]
@@ -628,6 +1579,7 @@ public sealed class TrainingStudioViewModelTests
     public async Task StartAi_verwendet_den_Startworkflow_und_zeigt_das_Ergebnis()
     {
         var called = false;
+        var preview = new FakePreviewDetectionService();
         var vm = CreateVm(
             new FakeWorkbench(),
             ensureAiReady: (progress, _) =>
@@ -635,12 +1587,16 @@ public sealed class TrainingStudioViewModelTests
                 called = true;
                 progress.Report("Vision-KI startet...");
                 return Task.FromResult((true, "Vision-KI bereit. Foto laden und Box ziehen."));
-            });
+            },
+            previewDetection: preview);
 
         await vm.StartAiCommand.ExecuteAsync(null);
 
         Assert.True(called);
         Assert.Equal("Vision-KI bereit. Foto laden und Box ziehen.", vm.StatusText);
+        Assert.Contains(
+            vm.PreviewModelOptions,
+            item => item.CandidateId == "bcc_bogen_b50b37ab8a4f");
         Assert.False(vm.IsBusy);
     }
 
@@ -752,6 +1708,143 @@ public sealed class TrainingStudioViewModelTests
     }
 
     [Fact]
+    public async Task Bcc_Kandidaten_erscheinen_einzeln_ohne_automatische_Auswahl()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            Candidates =
+            [
+                new(
+                    "bcc_bogen_b50b37ab8a4f",
+                    "a" + new string('0', 63),
+                    Map50: 0.74,
+                    EpochsCompleted: 40,
+                    CreatedUtc: "2026-07-28T14:43:21Z"),
+                new(
+                    "bcc_bogen_af8020b688ac_v3_negatives",
+                    "b" + new string('0', 63),
+                    Map50: 0.95,
+                    EpochsCompleted: 40,
+                    CreatedUtc: "2026-07-25T16:48:28Z"),
+            ]
+        };
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        Assert.DoesNotContain(
+            vm.PreviewModelOptions,
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+
+        var candidates = vm.PreviewModelOptions
+            .Where(item => item.Kind == TrainingPreviewModelKind.BccTestCandidate)
+            .ToArray();
+        Assert.Equal(2, candidates.Length);
+        Assert.All(candidates, item =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(item.CandidateId));
+            Assert.False(string.IsNullOrWhiteSpace(item.CandidateSha256));
+        });
+        Assert.Equal(TrainingPreviewModelKind.ActiveStandard, vm.SelectedPreviewModel?.Kind);
+    }
+
+    [Fact]
+    public async Task Kandidaten_Refresh_behaelt_nur_exakte_Id_und_Sha()
+    {
+        var preview = new FakePreviewDetectionService();
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        preview.Candidates =
+        [
+            new(
+                "bcc_bogen_b50b37ab8a4f",
+                "b" + new string('0', 63),
+                Map50: 0.75,
+                EpochsCompleted: 41,
+                CreatedUtc: "2026-07-29T10:00:00Z")
+        ];
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+
+        Assert.Equal(TrainingPreviewModelKind.ActiveStandard, vm.SelectedPreviewModel?.Kind);
+
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+        preview.Candidates =
+        [
+            new(
+                "bcc_bogen_anderer_kandidat",
+                "c" + new string('0', 63),
+                Map50: 0.80,
+                EpochsCompleted: 40,
+                CreatedUtc: "2026-07-29T11:00:00Z")
+        ];
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+
+        Assert.Equal(TrainingPreviewModelKind.ActiveStandard, vm.SelectedPreviewModel?.Kind);
+    }
+
+    [Fact]
+    public async Task Kandidaten_Refresh_ueberschreibt_keine_neue_Benutzerauswahl()
+    {
+        var preview = new FakePreviewDetectionService();
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        preview.CatalogGate = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var refresh = vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        await preview.CatalogRequestStarted.Task;
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.ActiveStandard);
+        preview.CatalogGate.SetResult();
+        await refresh;
+
+        Assert.Equal(TrainingPreviewModelKind.ActiveStandard, vm.SelectedPreviewModel?.Kind);
+    }
+
+    [Fact]
+    public async Task Fehlender_Kandidatenkatalog_entfernt_alte_Kandidaten()
+    {
+        var preview = new FakePreviewDetectionService();
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+        preview.CatalogAvailable = false;
+        preview.CatalogError = "Katalog nicht lesbar";
+
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+
+        Assert.DoesNotContain(
+            vm.PreviewModelOptions,
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+        Assert.Equal(TrainingPreviewModelKind.ActiveStandard, vm.SelectedPreviewModel?.Kind);
+        Assert.Empty(vm.PreviewDetections);
+        Assert.Contains("Katalog nicht lesbar", vm.PreviewDetectionSummary);
+    }
+
+    [Fact]
+    public async Task Bcc_Testmodell_ohne_exakte_Id_und_Sha_bleibt_gesperrt()
+    {
+        var preview = new FakePreviewDetectionService();
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        vm.SelectedPreviewModel = new TrainingStudioPreviewModelOption(
+            TrainingPreviewModelKind.BccTestCandidate,
+            "Unvollstaendiger Kandidat");
+
+        await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, preview.DetectCallCount);
+        Assert.Empty(vm.PreviewDetections);
+        Assert.Contains("gesperrt", vm.PreviewDetectionSummary);
+    }
+
+    [Fact]
     public async Task Bcc_Testmodell_zeigt_nur_blaue_Vorschau_und_erzeugt_keine_Hand_Box()
     {
         var preview = new FakePreviewDetectionService();
@@ -760,6 +1853,7 @@ public sealed class TrainingStudioViewModelTests
             labelLookup: code => code == "BCC" ? "Bogen" : null,
             previewDetection: preview);
         vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
         vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
             item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
 
@@ -767,11 +1861,144 @@ public sealed class TrainingStudioViewModelTests
 
         var detection = Assert.Single(vm.PreviewDetections);
         Assert.Equal(TrainingPreviewModelKind.BccTestCandidate, preview.LastModelKind);
+        Assert.Equal("bcc_bogen_b50b37ab8a4f", preview.LastCandidateId);
+        Assert.Equal("a" + new string('0', 63), preview.LastCandidateSha256);
         Assert.Contains("BCC", detection.DisplayText);
         Assert.Contains("Bogen", detection.DisplayText);
         Assert.Null(vm.CurrentBox);
         Assert.Null(vm.Segmentation);
         Assert.Contains("nicht gespeichert", vm.PreviewDetectionSummary);
+    }
+
+    [Fact]
+    public async Task Bcc_Testmodell_meldet_unbrauchbares_Foto_ohne_Negativbefund()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            FrameUsable = false,
+            QualityReason = "zu dunkel",
+        };
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.PreviewDetections);
+        Assert.Contains("nicht geprueft", vm.PreviewDetectionSummary);
+        Assert.Contains("zu dunkel", vm.PreviewDetectionSummary);
+        Assert.DoesNotContain("kein Treffer", vm.PreviewDetectionSummary);
+    }
+
+    [Fact]
+    public async Task Laufender_Modelltest_sperrt_Boxlauf_auch_nach_Bildwechsel()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            DetectionGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(
+            workbench,
+            items: [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg")],
+            previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        var previewRun = vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+        await preview.DetectionStarted.Task;
+        vm.NextItemCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.Equal(0, workbench.SegmentCalls);
+        Assert.True(vm.IsBusy);
+        Assert.Contains("Modelltest", vm.StatusText);
+
+        preview.DetectionGate.SetResult();
+        await previewRun;
+
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task Laufender_Modelltest_sperrt_Speichern()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            DetectionGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench, previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        var previewRun = vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+        await preview.DetectionStarted.Task;
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Empty(workbench.SavedDecisions);
+        Assert.True(vm.IsBusy);
+        Assert.Contains("Modelltest", vm.StatusText);
+
+        preview.DetectionGate.SetResult();
+        await previewRun;
+    }
+
+    [Fact]
+    public async Task Laufende_Standardqualifikation_besitzt_den_Busy_Status()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            QualificationGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        var workbench = new FakeWorkbench();
+        var vm = CreateVm(workbench, previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+
+        var previewRun = vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+        await preview.QualificationStarted.Task;
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+
+        Assert.Equal(0, workbench.SegmentCalls);
+        Assert.True(vm.IsBusy);
+
+        preview.QualificationGate.SetResult();
+        await previewRun;
+    }
+
+    [Fact]
+    public async Task Kandidatenwechsel_verwirft_spaetes_Vorschauergebnis()
+    {
+        var preview = new FakePreviewDetectionService
+        {
+            DetectionGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        var vm = CreateVm(new FakeWorkbench(), previewDetection: preview);
+        vm.LoadQueueCommand.Execute(null);
+        await vm.RefreshPreviewModelsCommand.ExecuteAsync(null);
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.BccTestCandidate);
+
+        var run = vm.RunPreviewDetectionCommand.ExecuteAsync(null);
+        await preview.DetectionStarted.Task;
+        vm.SelectedPreviewModel = vm.PreviewModelOptions.Single(
+            item => item.Kind == TrainingPreviewModelKind.ActiveStandard);
+        preview.DetectionGate.SetResult();
+        await run;
+
+        Assert.Empty(vm.PreviewDetections);
+        Assert.Contains("Aktives Standardmodell", vm.PreviewDetectionSummary);
     }
 
     [Fact]
@@ -793,7 +2020,228 @@ public sealed class TrainingStudioViewModelTests
         Assert.Equal(@"C:\b.jpg", vm.CurrentImagePath);
     }
 
+    [Fact]
+    public async Task Pfeil_rechts_am_letzten_Thumbnail_fuehrt_zum_ersten_noch_offenen_Bild()
+    {
+        var vm = CreateVm(
+            new FakeWorkbench(),
+            items: [Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg"), Foto(@"C:\c.jpg")]);
+        vm.LoadQueueCommand.Execute(null);
+        Assert.True(await vm.SelectQueueItemAsync(2));
+
+        await vm.NextItemCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, vm.CurrentIndex);
+        Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
+        Assert.DoesNotContain("abgearbeitet", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Goldpruefung_zeigt_gespeicherte_Maske_und_laesst_SAM_unveraendert()
+    {
+        var workbench = new FakeWorkbench();
+        var segmentation = new WorkbenchSegmentation(
+            "0,4050,1,3949",
+            100,
+            80,
+            0.01,
+            "Gespeicherte Goldmaske",
+            Degraded: false,
+            MaskAreaPixels: 1);
+        var item = Foto(@"C:\gold-bab.jpg") with
+        {
+            ExistingSampleId = "gold-bab-1",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+            ExistingSegmentation = segmentation,
+            ExistingClockPosition = 9.5,
+            ExistingSeverity = 3,
+        };
+        var loader = new FakeGoldQualityReviewUseCase(
+            new GoldQualityReviewQueueResult(
+                [item, item with { FramePath = @"C:\gold-baf.jpg", ExistingSampleId = "gold-baf-1" }],
+                90,
+                12,
+                "session-1",
+                Resumed: true));
+        var vm = CreateVm(workbench, goldQualityReview: loader);
+
+        await vm.LoadGoldQualityReviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(12, vm.QueueDoneCount);
+        Assert.Equal(90, vm.QueueTotalCount);
+        Assert.Equal((BoundingBox?)TestBox, vm.CurrentBox);
+        Assert.Equal(segmentation, vm.Segmentation);
+        Assert.Equal("BABAA", vm.SelectedCode);
+        Assert.Equal(9.5, vm.ClockPosition);
+        Assert.Equal(3, vm.Severity);
+        Assert.Equal(0, workbench.SegmentCalls);
+        Assert.Equal(1, workbench.SuggestPhotoCalls);
+        Assert.NotNull(vm.Suggestion);
+        Assert.Contains("Gespeicherte Goldmaske", vm.StatusText);
+        Assert.False(await vm.SelectQueueItemAsync(1));
+        Assert.Equal(@"C:\gold-bab.jpg", vm.CurrentImagePath);
+    }
+
+    [Fact]
+    public async Task Offene_Mehrfachentscheidung_legt_keine_Goldpruefung_im_Hintergrund_an()
+    {
+        var loader = new FakeGoldQualityReviewUseCase(
+            new GoldQualityReviewQueueResult([], 90, 0, "session-1", Resumed: false));
+        var vm = CreateVm(new FakeWorkbench(), goldQualityReview: loader);
+        vm.LoadItems([Foto(@"C:\a.jpg")]);
+        await vm.BoxDrawnCommand.ExecuteAsync(TestBox);
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        await vm.LoadGoldQualityReviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, loader.ExecuteCalls);
+        Assert.True(vm.IsAwaitingImageCompletion);
+        Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
+        Assert.Contains("Bild fertig", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Goldpruefung_zaehlt_erst_nach_Goldbestaetigung_und_erkennt_Codekorrektur()
+    {
+        var workbench = new FakeWorkbench();
+        var item = Foto(@"C:\gold-bab.jpg") with
+        {
+            ExistingSampleId = "gold-bab-1",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+            ExistingSegmentation = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Gespeicherte Goldmaske",
+                Degraded: false,
+                MaskAreaPixels: 1),
+        };
+        var loader = new FakeGoldQualityReviewUseCase(
+            new GoldQualityReviewQueueResult([item], 90, 89, "session-1", Resumed: true));
+        var vm = CreateVm(workbench, goldQualityReview: loader);
+        await vm.LoadGoldQualityReviewCommand.ExecuteAsync(null);
+        vm.SelectedCode = "BAFAA";
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        var decision = Assert.Single(workbench.SavedDecisions);
+        Assert.True(decision.WasCorrected);
+        Assert.Equal("BAFAA", decision.VsaCode);
+        Assert.Equal(90, vm.QueueDoneCount);
+        Assert.Equal(90, vm.QueueTotalCount);
+        var completion = Assert.Single(loader.Completions);
+        Assert.Equal("gold-bab-1", completion.SampleId);
+        Assert.Equal(-1, vm.CurrentIndex);
+        Assert.Null(vm.CurrentImagePath);
+
+        await vm.AcceptCommand.ExecuteAsync(null);
+
+        Assert.Single(workbench.SavedDecisions);
+        Assert.Equal(90, vm.QueueDoneCount);
+    }
+
+    [Fact]
+    public async Task Goldpruefung_Fehler_belaesst_die_bisherige_Warteschlange()
+    {
+        var loader = new FakeGoldQualityReviewUseCase(
+            new InvalidOperationException("Schutzscan unvollstaendig"));
+        var vm = CreateVm(new FakeWorkbench(), goldQualityReview: loader);
+        vm.LoadItems([Foto(@"C:\bisher.jpg")]);
+
+        await vm.LoadGoldQualityReviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(@"C:\bisher.jpg", vm.CurrentImagePath);
+        Assert.Single(vm.Items);
+        Assert.Contains("bleibt erhalten", vm.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Laufende_Goldpruefung_sperrt_einen_Warteschlangenwechsel()
+    {
+        var item = Foto(@"C:\gold.jpg") with
+        {
+            ExistingSampleId = "gold-1",
+            ExistingCode = "BABAA",
+            ExistingBeschreibung = "Persoenlich bestaetigter Riss",
+            ExistingBox = TestBox,
+            ExistingSegmentation = new WorkbenchSegmentation(
+                "0,4050,1,3949",
+                100,
+                80,
+                0.01,
+                "Gespeicherte Goldmaske",
+                Degraded: false,
+                MaskAreaPixels: 1),
+        };
+        var loader = new FakeGoldQualityReviewUseCase(
+            new GoldQualityReviewQueueResult([item], 90, 0, "session-1", Resumed: false))
+        {
+            Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        var vm = CreateVm(new FakeWorkbench(), goldQualityReview: loader);
+        vm.LoadItems([Foto(@"C:\bisher.jpg")]);
+
+        var loading = vm.LoadGoldQualityReviewCommand.ExecuteAsync(null);
+        await loader.Started.Task;
+        var changed = vm.LoadItems([Foto(@"C:\fremd.jpg")]);
+
+        Assert.False(changed);
+        Assert.Equal(@"C:\bisher.jpg", vm.CurrentImagePath);
+        loader.Gate.SetResult();
+        await loading;
+        Assert.Equal(@"C:\gold.jpg", vm.CurrentImagePath);
+    }
+
     // ── Fake ───────────────────────────────────────────────────────────────
+
+    private sealed class FakeGoldQualityReviewUseCase : IGoldQualityReviewQueueUseCase
+    {
+        private readonly GoldQualityReviewQueueResult? _result;
+        private readonly Exception? _error;
+
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource? Gate { get; init; }
+
+        public List<GoldQualityReviewCompletionRequest> Completions { get; } = new();
+
+        public int ExecuteCalls { get; private set; }
+
+        public FakeGoldQualityReviewUseCase(GoldQualityReviewQueueResult result)
+            => _result = result;
+
+        public FakeGoldQualityReviewUseCase(Exception error)
+            => _error = error;
+
+        public async Task<GoldQualityReviewQueueResult> ExecuteAsync(
+            GoldQualityReviewQueueRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ExecuteCalls++;
+            Started.TrySetResult();
+            if (Gate is not null)
+                await Gate.Task;
+            if (_error is not null)
+                throw _error;
+            return _result!;
+        }
+
+        public Task MarkCompletedAsync(
+            GoldQualityReviewCompletionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Completions.Add(request);
+            return Task.CompletedTask;
+        }
+    }
 
     private sealed class FakeWorkbench : IAnnotationWorkbenchService
     {
@@ -802,19 +2250,31 @@ public sealed class TrainingStudioViewModelTests
         public WorkbenchSuggestion SugResult { get; set; } =
             new(new[] { new WorkbenchCodeCandidate("BAB", 0.9, "cls") }, FrameUsable: true, "ok", IsBend: false);
         public WorkbenchSaveResult SaveResult { get; set; } =
-            new(true, null, "wb_1", "Indexed", "t_1");
+            new(
+                true,
+                null,
+                "wb_1",
+                "Indexed",
+                "t_1",
+                GoldApproved: true,
+                StoredImageSha256: new string('c', 64));
+        public Queue<WorkbenchSaveResult> SaveResults { get; } = new();
         public WorkbenchSuggestion BauartResult { get; set; } =
             new(new[] { new WorkbenchCodeCandidate("BCAAA", 0.8, "bca") }, FrameUsable: true, "", IsBend: false);
         public bool BauartVerfuegbar { get; set; } = true;
         public bool BcaBauartVerfuegbar => BauartVerfuegbar;
 
         public List<WorkbenchDecision> SavedDecisions { get; } = new();
+        public List<WorkbenchItem> SavedItems { get; } = new();
         public List<CancellationToken> SegmentTokens { get; } = new();
+        public string? LastSegmentCodeHint { get; private set; }
         public int SegmentCalls { get; private set; }
         public int SuggestPhotoCalls { get; private set; }
         public TaskCompletionSource? SegmentGate { get; set; }
         public TaskCompletionSource? SuggestPhotoGate { get; set; }
         public TaskCompletionSource? SaveGate { get; set; }
+        public TaskCompletionSource SaveStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Exception? SuggestThrows { get; set; }
         public Exception? SaveThrows { get; set; }
 
@@ -822,6 +2282,7 @@ public sealed class TrainingStudioViewModelTests
         {
             SegmentCalls++;
             SegmentTokens.Add(ct);
+            LastSegmentCodeHint = codeHint;
             if (SegmentGate is not null)
                 await SegmentGate.Task.ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
@@ -851,44 +2312,115 @@ public sealed class TrainingStudioViewModelTests
         {
             if (SaveThrows is not null)
                 return await Task.FromException<WorkbenchSaveResult>(SaveThrows);
+            SaveStarted.TrySetResult();
             if (SaveGate is not null)
                 await SaveGate.Task.ConfigureAwait(false);
+            SavedItems.Add(item);
             SavedDecisions.Add(decision);
-            return SaveResult;
+            return SaveResults.Count > 0 ? SaveResults.Dequeue() : SaveResult;
         }
     }
 
     private sealed class FakePreviewDetectionService : ITrainingPreviewDetectionService
     {
         public TrainingPreviewModelKind? LastModelKind { get; private set; }
+        public string? LastCandidateId { get; private set; }
+        public string? LastCandidateSha256 { get; private set; }
         public int DetectCallCount { get; private set; }
         public TrainingDetectorQualification? Qualification { get; set; } =
             new(Qualified: true, Reason: null);
+        public TaskCompletionSource DetectionStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource? DetectionGate { get; set; }
+        public TaskCompletionSource CatalogRequestStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource? CatalogGate { get; set; }
+        public TaskCompletionSource QualificationStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource? QualificationGate { get; set; }
+        public bool CatalogAvailable { get; set; } = true;
+        public string? CatalogError { get; set; }
+        public bool FrameUsable { get; set; } = true;
+        public string? QualityReason { get; set; }
+        public IReadOnlyList<TrainingPreviewCandidateInfo> Candidates { get; set; } =
+        [
+            new(
+                "bcc_bogen_b50b37ab8a4f",
+                "a" + new string('0', 63),
+                Map50: 0.74,
+                EpochsCompleted: 40,
+                CreatedUtc: "2026-07-28T14:43:21Z")
+        ];
 
-        public Task<TrainingDetectorQualification?> GetDetectorQualificationAsync(
+        public async Task<TrainingDetectorQualification?> GetDetectorQualificationAsync(
             CancellationToken cancellationToken = default)
-            => Task.FromResult(Qualification);
+        {
+            if (QualificationGate is not null)
+            {
+                QualificationStarted.TrySetResult();
+                await QualificationGate.Task;
+            }
+            return Qualification;
+        }
+
+        public async Task<TrainingPreviewCandidateCatalogResult> GetBccCandidatesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (CatalogGate is not null)
+            {
+                CatalogRequestStarted.TrySetResult();
+                await CatalogGate.Task;
+            }
+            return new TrainingPreviewCandidateCatalogResult(
+                Available: CatalogAvailable,
+                Error: CatalogError,
+                Candidates);
+        }
 
         public Task<TrainingPreviewDetectionResult> DetectAsync(
             string framePath,
             TrainingPreviewModelKind modelKind,
             double confidenceThreshold = 0.25,
             CancellationToken cancellationToken = default)
+            => DetectCoreAsync(modelKind, candidateId: null, candidateSha256: null);
+
+        public Task<TrainingPreviewDetectionResult> DetectBccCandidateAsync(
+            string framePath,
+            string candidateId,
+            string candidateSha256,
+            double confidenceThreshold = 0.25,
+            CancellationToken cancellationToken = default)
+            => DetectCoreAsync(
+                TrainingPreviewModelKind.BccTestCandidate,
+                candidateId,
+                candidateSha256);
+
+        private async Task<TrainingPreviewDetectionResult> DetectCoreAsync(
+            TrainingPreviewModelKind modelKind,
+            string? candidateId,
+            string? candidateSha256)
         {
             DetectCallCount++;
             LastModelKind = modelKind;
+            LastCandidateId = candidateId;
+            LastCandidateSha256 = candidateSha256;
+            DetectionStarted.TrySetResult();
+            if (DetectionGate is not null)
+                await DetectionGate.Task;
             IReadOnlyList<TrainingPreviewDetection> detections =
             [
                 new(10, 20, 110, 140, "BCC_bogen", 0.91)
             ];
-            return Task.FromResult(new TrainingPreviewDetectionResult(
+            return new TrainingPreviewDetectionResult(
                 Available: true,
                 Error: null,
                 modelKind,
-                ModelName: "bcc_bogen_test",
-                ModelSha256: "abc",
+                ModelName: candidateId ?? "bcc_bogen_test",
+                ModelSha256: candidateSha256 ?? "abc",
                 detections,
-                InferenceTimeMs: 12));
+                InferenceTimeMs: 12,
+                FrameUsable,
+                QualityReason);
         }
     }
 }

@@ -48,6 +48,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IAsyncRelayCommand ImportWinCanCommand { get; }
     public IAsyncRelayCommand ImportIbakCommand { get; }
     public IAsyncRelayCommand ImportKinsCommand { get; }
+    public IAsyncRelayCommand ImportSchachtProCommand { get; }
     public IRelayCommand ExportImportSummaryCommand { get; }
     public IRelayCommand ReloadCatalogCommand { get; }
     public IRelayCommand CancelImportCommand { get; }
@@ -77,6 +78,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             sp.WinCanImport,
             sp.IbakImport,
             sp.KinsImport,
+            sp.SchachtProImport,
             sp.StoredImportFiles,
             sp.ImportFileStaging,
             sp.ImportMediaDistribution,
@@ -123,6 +125,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportWinCanCommand = new AsyncRelayCommand(ImportWinCanAsync, CanStartImport);
         ImportIbakCommand = new AsyncRelayCommand(ImportIbakAsync, CanStartImport);
         ImportKinsCommand = new AsyncRelayCommand(ImportKinsAsync, CanStartImport);
+        ImportSchachtProCommand = new AsyncRelayCommand(ImportSchachtProAsync, CanStartImport);
         ExportImportSummaryCommand = new RelayCommand(ExportImportSummary);
         ReloadCatalogCommand = new RelayCommand(ReloadCatalog);
         CancelImportCommand = new RelayCommand(CancelImport, () => CanCancel);
@@ -148,6 +151,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportWinCanCommand.NotifyCanExecuteChanged();
         ImportIbakCommand.NotifyCanExecuteChanged();
         ImportKinsCommand.NotifyCanExecuteChanged();
+        ImportSchachtProCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCanCancelChanged(bool value)
@@ -251,6 +255,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private Task ImportKinsAsync()
         => RunManualImportAsync(_manualWorkflowController.ImportKinsAsync);
+
+    private Task ImportSchachtProAsync()
+        => RunManualImportAsync(_manualWorkflowController.ImportSchachtProAsync);
 
     // ──── Post-Import Helpers ────
 

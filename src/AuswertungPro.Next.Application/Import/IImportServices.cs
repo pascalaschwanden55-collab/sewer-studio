@@ -36,3 +36,8 @@ public interface IKinsImportService
 {
     Result<ImportStats> ImportKinsExport(string exportRoot, Project project, ImportRunContext? ctx = null);
 }
+
+public interface ISchachtProImportService
+{
+    Result<ImportStats> ImportSchachtProArchive(string sproPath, Project project, ImportRunContext? ctx = null);
+}

@@ -14,6 +14,8 @@ public static class CodingProtocolEntryCopier
         target.Zeit = source.Zeit;
         target.CodeMeta = source.CodeMeta;
         target.FotoPaths = source.FotoPaths?.ToList() ?? new List<string>();
+        target.OriginalFotoPaths = source.OriginalFotoPaths?.ToList() ?? new List<string>();
+        target.Training = ProtocolEntryCloner.CloneTrainingMeta(source.Training);
     }
 
     public static void CopyValues(ProtocolEntry source, ProtocolEntry target)
@@ -29,5 +31,7 @@ public static class CodingProtocolEntryCopier
         target.CodeMeta = source.CodeMeta;
         target.Ai = source.Ai;
         target.FotoPaths = source.FotoPaths?.ToList() ?? new List<string>();
+        target.OriginalFotoPaths = source.OriginalFotoPaths?.ToList() ?? new List<string>();
+        target.Training = ProtocolEntryCloner.CloneTrainingMeta(source.Training);
     }
 }

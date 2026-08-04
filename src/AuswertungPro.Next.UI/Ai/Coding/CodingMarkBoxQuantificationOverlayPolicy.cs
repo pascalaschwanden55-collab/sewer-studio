@@ -31,4 +31,22 @@ public static class CodingMarkBoxQuantificationOverlayPolicy
             overlay.ClockFrom = clockPosition;
         }
     }
+
+    public static void ApplySegmentation(
+        OverlayGeometry overlay,
+        BoxSegmentationResult segmentation)
+    {
+        ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(segmentation);
+
+        overlay.SamMask = new OverlaySamMask
+        {
+            MaskRle = segmentation.Mask.MaskRle,
+            ImageWidth = segmentation.ImageWidth,
+            ImageHeight = segmentation.ImageHeight,
+            MaskAreaPixels = segmentation.Mask.MaskAreaPixels,
+            Confidence = segmentation.Mask.Confidence,
+            Label = segmentation.Mask.Label
+        };
+    }
 }

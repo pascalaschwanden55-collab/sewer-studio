@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -96,6 +97,30 @@ try
 
     if (options.YoloDetectOnly)
         return await RunYoloDetectOnlyAsync(options, cases, allCases).ConfigureAwait(false);
+
+    if (options.FullChain)
+    {
+        if (reviewedDataset is null || reviewedCases is null)
+            throw new ArgumentException("--full-chain verlangt --review-file.");
+
+        var fullChainSettings = config with
+        {
+            // Der Prueflauf ist eine ausdrueckliche KI-Aktion. Er darf nicht am
+            // allgemeinen App-Schalter scheitern, nachdem Modelle geprueft wurden.
+            Enabled = true,
+            OllamaBaseUri = baseUri,
+            VisionModel = model,
+            SidecarUrl = options.SidecarUrl ?? config.SidecarUrl,
+            OllamaRequestTimeout = timeout
+        };
+        return await RunFullChainAsync(
+                options,
+                reviewedDataset,
+                reviewedCases,
+                allCases.Count,
+                fullChainSettings)
+            .ConfigureAwait(false);
+    }
 
     Console.WriteLine($"Ollama:   {baseUri}");
     Console.WriteLine($"Modell:   {model}");
@@ -384,6 +409,148 @@ static void PrintReviewedDamageResult(
     Console.WriteLine("  QualityGate:        in diesem Bildlauf nicht gemessen");
     Console.WriteLine($"  Detail-CSV:         {csvPath}");
     Console.WriteLine($"  JSON:               {jsonPath}");
+}
+
+static async Task<int> RunFullChainAsync(
+    BenchmarkOptions options,
+    EvalReviewedDamageDatasetResult reviewedDataset,
+    IReadOnlyList<EvalReviewedDamageCase> reviewedCases,
+    int allCaseCount,
+    AiPlatformSettings settings)
+{
+    var catalogPath = ResolveCatalogPath();
+    var catalog = new ManifestCodeCatalogProvider(catalogPath);
+    if (catalog.LastLoadErrors.Count > 0)
+    {
+        throw new InvalidDataException(
+            "VSA-Katalog konnte nicht geladen werden: "
+            + string.Join("; ", catalog.LastLoadErrors));
+    }
+
+    Console.WriteLine($"Sidecar:  {settings.SidecarUrl}");
+    Console.WriteLine($"Vision:   {settings.VisionModel}");
+    Console.WriteLine($"Text:     {settings.TextModel}");
+    Console.WriteLine("YOLO:     Detect und cls bewusst ausgeschaltet");
+    Console.WriteLine("KB:       im isolierten Prueflauf ausgeschaltet");
+    Console.WriteLine();
+
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cts.Cancel();
+        Console.WriteLine("Abbruch angefordert...");
+    };
+
+    var execution = await EvalFullChainBenchmarkRunner.RunAsync(
+            reviewedCases,
+            settings,
+            catalog,
+            Console.WriteLine,
+            cts.Token)
+        .ConfigureAwait(false);
+    var score = EvalReviewedFullChainScorer.Evaluate(
+        reviewedCases,
+        execution.Predictions);
+    var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
+    var modelSlug = Slug(execution.VisionModel);
+    var csvPath = Path.Combine(
+        options.OutputDir,
+        $"eval_{stamp}_{modelSlug}_reviewed_full_chain.csv");
+    var jsonPath = Path.Combine(
+        options.OutputDir,
+        $"eval_{stamp}_{modelSlug}_reviewed_full_chain.json");
+
+    EvalReviewedFullChainScorer.WriteCsv(csvPath, score.Rows);
+    EvalReviewedFullChainScorer.WriteSummaryJson(jsonPath, score.Summary, new
+    {
+        created_at = DateTimeOffset.Now.ToString("O"),
+        eval_set_root = options.EvalSetRoot,
+        review_file = Path.GetFullPath(options.ReviewFile!),
+        review_schema_version = reviewedDataset.SchemaVersion,
+        source_candidates_sha256 = reviewedDataset.SourceCandidatesSha256,
+        completed_reviews = reviewedDataset.CompletedReviews,
+        frames_total = allCaseCount,
+        frames_run = reviewedCases.Count,
+        vision_model = execution.VisionModel,
+        text_model = execution.TextModel,
+        ollama_url = settings.OllamaBaseUri.ToString(),
+        sidecar_url = settings.SidecarUrl.ToString(),
+        sidecar_version = execution.SidecarVersion,
+        actual_detector_qualification = execution.ActualDetectorQualification,
+        detector_policy = "YOLO-Detect und YOLO-cls im Eval bewusst gesperrt",
+        detector_used = false,
+        kb_context_used = false,
+        pipe_diameter_mm = execution.PipeDiameterMm,
+        prediction_selection =
+            "Hoechste fachliche Stufe, danach hoechster QualityGate-Wert",
+        gate_measured = true,
+        gate_pass_definition = "nur Green",
+        manifest = TryReadManifestInfo(options.EvalSetRoot)
+    });
+
+    PrintFullChainResult(score.Summary, csvPath, jsonPath);
+    return 0;
+}
+
+static string ResolveCatalogPath()
+{
+    var outputPath = Path.Combine(
+        AppContext.BaseDirectory,
+        "Data",
+        "vsa_kek_2020_catalog_manifest.json");
+    if (File.Exists(outputPath))
+        return outputPath;
+
+    var sourcePath = Path.GetFullPath(Path.Combine(
+        Directory.GetCurrentDirectory(),
+        "src",
+        "AuswertungPro.Next.UI",
+        "Data",
+        "vsa_kek_2020_catalog_manifest.json"));
+    if (File.Exists(sourcePath))
+        return sourcePath;
+
+    throw new FileNotFoundException(
+        "Aktiver VSA-Katalog nicht gefunden.",
+        outputPath);
+}
+
+static void PrintFullChainResult(
+    EvalReviewedFullChainSummary summary,
+    string csvPath,
+    string jsonPath)
+{
+    var damage = summary.Damage;
+    Console.WriteLine();
+    Console.WriteLine("Ergebnis der vollstaendigen Pruefkette:");
+    Console.WriteLine(
+        $"  Schaden gefunden:       {damage.TruePositiveDamageFrames}/{damage.DamageFrames} " +
+        $"= {damage.DamageRecall:P1}");
+    Console.WriteLine(
+        $"  Code exakt:             {damage.ExactCodeCorrectFrames}/{damage.DamageFrames} " +
+        $"= {damage.ExactCodeAccuracy:P1}");
+    Console.WriteLine(
+        $"  Hauptcode richtig:      {damage.MainCodeCorrectFrames}/{damage.DamageFrames} " +
+        $"= {damage.MainCodeAccuracy:P1}");
+    Console.WriteLine(
+        $"  Fehlalarme:             {damage.FalsePositiveDamageFrames}/{damage.NoDamageFrames}");
+    Console.WriteLine(
+        $"  DINO/SAM/Qwen erreicht: {summary.DinoCalledFrames}/" +
+        $"{summary.SamCalledFrames}/{summary.QwenVisionCalledFrames}");
+    Console.WriteLine(
+        $"  QualityGate G/Y/R:      {summary.QualityGateGreenFrames}/" +
+        $"{summary.QualityGateYellowFrames}/{summary.QualityGateRedFrames}");
+    Console.WriteLine(
+        $"  Schaden + Gate gruen:   {summary.DamageFramesPassingGate}/{damage.DamageFrames}");
+    Console.WriteLine(
+        $"  Ereignis erkannt/gruen: {summary.PresenceEvents.AllEvents.DetectedEvents}/" +
+        $"{summary.PresenceEvents.AllEvents.GatePassedEvents}/" +
+        $"{summary.PresenceEvents.AllEvents.EventCount}");
+    Console.WriteLine(
+        $"  Technisch unvollstaendig: {summary.IncompleteFrames}");
+    Console.WriteLine($"  Detail-CSV:             {csvPath}");
+    Console.WriteLine($"  JSON:                   {jsonPath}");
 }
 
 static string ShortHint(string hint)
@@ -691,11 +858,14 @@ Misst ein eingefrorenes Eval-Set gegen das aktuelle Ollama-Vision-Modell.
 Beispiele:
   dotnet run --project tools/EvalSetBenchmark -- --max 5
   dotnet run --project tools/EvalSetBenchmark -- --eval-set C:\KI_BRAIN\eval_set --model qwen3-vl:8b-q8
+  dotnet run --project tools/EvalSetBenchmark -- --review-file C:\KI_BRAIN\eval_review\v1_event_metadata_review.json --full-chain
   dotnet run --project tools/EvalSetBenchmark -- --yolo-detect-only
 
 Optionen:
   --eval-set <pfad>     Standard: C:\KI_BRAIN\eval_set
   --review-file <pfad>  Menschliche Schadensreview; misst nur diese geprueften Bilder
+  --full-chain          Review durch DINO, SAM, Qwen und QualityGate pruefen;
+                        YOLO-Detect und YOLO-cls bleiben ausgeschaltet
   --out <ordner>        Standard: docs\benchmarks
   --model <name>        Standard: App-Konfiguration
   --ollama-url <url>    Standard: App-Konfiguration
@@ -809,6 +979,7 @@ internal sealed record BenchmarkOptions(
     bool UseOracleContext,
     bool UseYoloContext,
     bool UseYoloPresenceContext,
+    bool FullChain,
     bool YoloDetectOnly,
     bool YoloDetectEngine,
     int YoloTopK,
@@ -839,6 +1010,7 @@ internal sealed record BenchmarkOptions(
         var oracleContext = false;
         var yoloContext = false;
         var yoloPresenceContext = false;
+        var fullChain = false;
         var yoloDetectOnly = false;
         var yoloDetectEngine = false;
         var yoloTopK = 3;
@@ -897,6 +1069,9 @@ internal sealed record BenchmarkOptions(
                 case "--yolo-presence-context":
                     yoloPresenceContext = true;
                     break;
+                case "--full-chain":
+                    fullChain = true;
+                    break;
                 case "--yolo-detect-only":
                     yoloDetectOnly = true;
                     break;
@@ -954,6 +1129,18 @@ internal sealed record BenchmarkOptions(
             throw new ArgumentException("--oracle-context, --yolo-context und --yolo-presence-context koennen nicht gleichzeitig genutzt werden.");
         if (yoloDetectOnly && contextModeCount > 0)
             throw new ArgumentException("--yolo-detect-only kann nicht mit Qwen-Kontextmodi kombiniert werden.");
+        if (fullChain && string.IsNullOrWhiteSpace(reviewFile))
+            throw new ArgumentException("--full-chain verlangt --review-file.");
+        if (fullChain
+            && (contextModeCount > 0
+                || yoloDetectOnly
+                || !string.IsNullOrWhiteSpace(classifierDataset)
+                || routerPlan
+                || buildRouterDataset))
+        {
+            throw new ArgumentException(
+                "--full-chain kann nicht mit Testkontext, YOLO-Only, Coverage oder Router-Lauf kombiniert werden.");
+        }
         if (yoloTopK <= 0)
             throw new ArgumentException("--yolo-top-k muss groesser als 0 sein.");
         if (yoloMinConf < 0 || yoloMinConf > 1)
@@ -963,6 +1150,7 @@ internal sealed record BenchmarkOptions(
         if (maxPerClassPerSplit < 0)
             throw new ArgumentException("--max-per-class-split darf nicht negativ sein.");
         if (!string.IsNullOrWhiteSpace(reviewFile)
+            && !fullChain
             && (contextModeCount > 0
                 || yoloDetectOnly
                 || !string.IsNullOrWhiteSpace(classifierDataset)
@@ -985,6 +1173,7 @@ internal sealed record BenchmarkOptions(
             oracleContext,
             yoloContext,
             yoloPresenceContext,
+            fullChain,
             yoloDetectOnly,
             yoloDetectEngine,
             yoloTopK,

@@ -58,6 +58,98 @@ public sealed class VsaCodeRuleResolverTests
         Assert.Equal("O", q2!.Pflicht);
     }
 
+    [Theory]
+    [InlineData("BAB", "B", "mm", 1, 200)]
+    [InlineData("BAC", "A", "mm", 10, 1000)]
+    [InlineData("BAD", "C", "mm", 20, 1000)]
+    [InlineData("BAE", null, "mm", 5, 500)]
+    [InlineData("BAG", null, "%", 1, 100)]
+    [InlineData("BAI", "Z", "%", 1, 100)]
+    [InlineData("BAJ", "A", "mm", 0, 9999)]
+    [InlineData("BAJ", "C", "\u00b0", 1, 359)]
+    [InlineData("BAK", "B", "%", 0, 100)]
+    [InlineData("BAK", "F", "mm", 0, null)]
+    [InlineData("BAL", "G", "mm", 0, null)]
+    [InlineData("BBA", null, "%", 1, 100)]
+    [InlineData("BBC", null, "%", 0, 100)]
+    [InlineData("BBH", null, "Stk.", 0, 10000)]
+    [InlineData("BCA", "A", "mm", 0, 10000)]
+    [InlineData("BCC", "A", "\u00b0", 1, 359)]
+    [InlineData("BDD", null, "%", 0, 100)]
+    [InlineData("AEC", "B", "mm", 0, 4500)]
+    public void GetQuantRule_verwendet_die_WinCan_VSA_2019_Einheit_und_Grenzen(
+        string code,
+        string? char1,
+        string expectedUnit,
+        int? expectedMin,
+        int? expectedMax)
+    {
+        var (q1, _) = VsaCodeRuleResolver.GetQuantRule(code, char1);
+
+        Assert.NotNull(q1);
+        Assert.Equal(expectedUnit, q1!.Einheit);
+        Assert.Equal(
+            expectedMin.HasValue ? (double?)expectedMin.Value : null,
+            q1.Min);
+        Assert.Equal(
+            expectedMax.HasValue ? (double?)expectedMax.Value : null,
+            q1.Max);
+    }
+
+    [Fact]
+    public void GetQuantRule_zeigt_profilbreite_nur_wenn_das_Profil_sie_benoetigt()
+    {
+        var (_, eggWidth) = VsaCodeRuleResolver.GetQuantRule("AEC", "B");
+        var (_, circleWidth) = VsaCodeRuleResolver.GetQuantRule("AEC", "C");
+
+        Assert.NotNull(eggWidth);
+        Assert.Equal("mm", eggWidth!.Einheit);
+        Assert.Equal(0, eggWidth.Min);
+        Assert.Equal(4500, eggWidth.Max);
+        Assert.Null(circleWidth);
+    }
+
+    [Fact]
+    public void GetQuantRule_zeigt_keine_erfundene_Baulaengen_Quantifizierung()
+    {
+        var (q1, q2) = VsaCodeRuleResolver.GetQuantRule("AEF", null);
+
+        Assert.Null(q1);
+        Assert.Null(q2);
+    }
+
+    [Fact]
+    public void Alle_sichtbaren_quantifizierungsregeln_haben_einheit_und_gueltige_grenzen()
+    {
+        foreach (var (code, rule) in VsaCodeTree.QuantRules)
+        {
+            var fields = new List<QuantField>();
+            if (rule.Q1 is { Pflicht: not "V" } q1)
+                fields.Add(q1);
+            if (rule.Q1PerChar1 is not null)
+                fields.AddRange(rule.Q1PerChar1.Values.OfType<QuantField>());
+            if (rule.Q2 is { Pflicht: not "V" })
+                fields.Add(rule.Q2);
+            if (rule.Q2PerChar1 is not null)
+                fields.AddRange(rule.Q2PerChar1.Values.OfType<QuantField>());
+
+            foreach (var field in fields)
+            {
+                Assert.False(
+                    string.IsNullOrWhiteSpace(field.Einheit),
+                    $"{code}: Quantifizierung ohne sichtbare Einheit.");
+                Assert.Contains(
+                    field.Einheit,
+                    new[] { "mm", "%", "\u00b0", "Stk." });
+                Assert.True(
+                    !field.Min.HasValue
+                    || !field.Max.HasValue
+                    || field.Min <= field.Max,
+                    $"{code}: Minimum ist groesser als Maximum.");
+            }
+        }
+    }
+
     // ── GetClockRule ──────────────────────────────────────────────
 
     [Fact]
@@ -65,6 +157,12 @@ public sealed class VsaCodeRuleResolverTests
     {
         Assert.Equal("none", VsaCodeRuleResolver.GetClockRule("BCD").Mode);
         Assert.Equal("none", VsaCodeRuleResolver.GetClockRule("BCE").Mode);
+    }
+
+    [Fact]
+    public void GetClockRule_gibt_none_fuer_bogen()
+    {
+        Assert.Equal("none", VsaCodeRuleResolver.GetClockRule("BCC").Mode);
     }
 
     [Fact]

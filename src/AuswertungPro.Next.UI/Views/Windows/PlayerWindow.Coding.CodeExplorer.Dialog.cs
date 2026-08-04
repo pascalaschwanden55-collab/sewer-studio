@@ -16,16 +16,25 @@ public partial class PlayerWindow
 
     private CodingCodeExplorerManualEntryWorkflowActions CreateCodingCodeExplorerManualEntryActions()
         => new(
-            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(CreateVsaCodeExplorerViewModel, _protocolContext.CodeUsage),
+            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(
+                CreateVsaCodeExplorerViewModel,
+                _protocolContext.CodeUsage,
+                _protocolContext.LegacyServiceProvider),
             CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider);
 
     private CodingCodeExplorerSeedSelectionWorkflowActions CreateCodingCodeExplorerSeedSelectionActions()
         => new(
-            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(CreateVsaCodeExplorerViewModel, _protocolContext.CodeUsage));
+            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(
+                CreateVsaCodeExplorerViewModel,
+                _protocolContext.CodeUsage,
+                _protocolContext.LegacyServiceProvider));
 
     private CodingCodeExplorerEditWorkflowActions CreateCodingCodeExplorerEditActions()
         => new(
-            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(CreateVsaCodeExplorerViewModel, _protocolContext.CodeUsage),
+            CreateService: () => CodingCodeExplorerServiceCreationWorkflow.Create(
+                CreateVsaCodeExplorerViewModel,
+                _protocolContext.CodeUsage,
+                _protocolContext.LegacyServiceProvider),
             CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider,
             RunWithSuspendedOverlayInput: callback => _codingOverlayInputVisibilityController.Run(callback));
 }

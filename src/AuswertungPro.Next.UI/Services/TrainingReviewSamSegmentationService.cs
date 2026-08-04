@@ -97,11 +97,57 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
     {
         var request = CreateSamRequest(imageBytes, imageWidth, imageHeight, box, code, pipeDiameterMm);
         var response = await _client.SegmentSamAsync(request, ct).ConfigureAwait(false);
+        ValidateResponse(response, imageWidth, imageHeight);
         var quantified = MaskQuantificationService.QuantifyAll(
             response,
             pipeDiameterMm.GetValueOrDefault(DefaultPipeDiameterMm));
 
         return new TrainingReviewSamResult(response, quantified);
+    }
+
+    private static void ValidateResponse(
+        SamResponse response,
+        int sourceImageWidth,
+        int sourceImageHeight)
+    {
+        if (response.ImageWidth != sourceImageWidth
+            || response.ImageHeight != sourceImageHeight)
+        {
+            throw new InvalidDataException(
+                "SAM-Antwort passt nicht zu den Pixelmassen des Originalbilds "
+                + $"({response.ImageWidth}x{response.ImageHeight} statt "
+                + $"{sourceImageWidth}x{sourceImageHeight}).");
+        }
+
+        var expectedImageArea = checked(sourceImageWidth * sourceImageHeight);
+        foreach (var mask in response.Masks.Where(mask =>
+                     !string.IsNullOrWhiteSpace(mask.MaskRle)))
+        {
+            if (!SamMaskFormatValidator.TryGetForegroundPixelCount(
+                    mask.MaskRle,
+                    response.ImageWidth,
+                    response.ImageHeight,
+                    out var foregroundPixels,
+                    out var reason))
+            {
+                throw new InvalidDataException(
+                    $"SAM lieferte eine ungueltige Maske: {reason}");
+            }
+
+            if (mask.ImageAreaPixels != expectedImageArea)
+            {
+                throw new InvalidDataException(
+                    "SAM-Bildflaeche passt nicht zum Originalbild "
+                    + $"({mask.ImageAreaPixels} statt {expectedImageArea} Pixel).");
+            }
+
+            if (mask.MaskAreaPixels != foregroundPixels)
+            {
+                throw new InvalidDataException(
+                    "SAM-Maskenflaeche passt nicht zur RLE "
+                    + $"({mask.MaskAreaPixels} statt {foregroundPixels} Pixel).");
+            }
+        }
     }
 
     public static SamRequest CreateSamRequest(

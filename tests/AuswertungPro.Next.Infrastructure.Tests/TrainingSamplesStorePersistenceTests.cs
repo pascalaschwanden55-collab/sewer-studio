@@ -286,6 +286,65 @@ public sealed class TrainingSamplesStorePersistenceTests
         });
     }
 
+    [Fact]
+    public async Task TryAddNew_erkennt_legacy_Signatur_mit_gleicher_Box_als_Dublette()
+    {
+        await WithTempStore(async _ =>
+        {
+            var legacy = Sample(
+                "wb_legacy",
+                TrainingSample.BuildCanonicalSignature("H-TEST", "BAB", 1.0, 1.0));
+            SetBox(legacy, 0.5, 0.5, 0.2, 0.2);
+            await TrainingSamplesStore.SaveAsync([legacy]);
+
+            var duplicate = Sample(
+                "wb_neu",
+                TrainingSample.BuildCanonicalSignature(
+                    "H-TEST", "BAB", 1.0, 1.0, 0.5, 0.5, 0.2, 0.2));
+            SetBox(duplicate, 0.5, 0.5, 0.2, 0.2);
+
+            Assert.False(await TrainingSamplesStore.Current.TryAddNewAsync(duplicate));
+            Assert.Single(await TrainingSamplesStore.LoadAsync());
+        });
+    }
+
+    [Fact]
+    public async Task TryAddNew_erlaubt_zweite_Box_neben_legacy_Sample()
+    {
+        await WithTempStore(async _ =>
+        {
+            var legacy = Sample(
+                "wb_legacy",
+                TrainingSample.BuildCanonicalSignature("H-TEST", "BAB", 1.0, 1.0));
+            SetBox(legacy, 0.5, 0.5, 0.2, 0.2);
+            await TrainingSamplesStore.SaveAsync([legacy]);
+
+            var secondObject = Sample(
+                "wb_neu",
+                TrainingSample.BuildCanonicalSignature(
+                    "H-TEST", "BAB", 1.0, 1.0, 0.2, 0.2, 0.1, 0.1));
+            SetBox(secondObject, 0.2, 0.2, 0.1, 0.1);
+
+            Assert.True(await TrainingSamplesStore.Current.TryAddNewAsync(secondObject));
+            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+        });
+    }
+
+    private static void SetBox(
+        TrainingSample sample,
+        double x,
+        double y,
+        double width,
+        double height)
+    {
+        sample.MeterStart = 1.0;
+        sample.MeterEnd = 1.0;
+        sample.BboxXCenter = x;
+        sample.BboxYCenter = y;
+        sample.BboxWidth = width;
+        sample.BboxHeight = height;
+    }
+
     private static TrainingSample Sample(
         string id,
         string signature,

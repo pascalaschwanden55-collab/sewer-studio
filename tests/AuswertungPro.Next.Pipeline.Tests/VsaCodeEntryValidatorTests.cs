@@ -77,6 +77,16 @@ public sealed class VsaCodeEntryValidatorTests
         Assert.Null(VsaCodeEntryValidator.ValidateQuantField("100", rule));
     }
 
+    [Fact]
+    public void ValidateQuantField_nennt_einheit_bei_grenzfehler()
+    {
+        var rule = new QuantField { Einheit = "mm", Min = 0 };
+
+        Assert.Equal(
+            ">= 0 mm",
+            VsaCodeEntryValidator.ValidateQuantField("-1", rule));
+    }
+
     // ── IsValidClock ─────────────────────────────────────────────────
 
     [Fact]

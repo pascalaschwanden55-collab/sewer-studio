@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,6 +10,8 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
+using AuswertungPro.Next.Application.UseCases.TrainingStudioSegmentation;
 using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
@@ -26,6 +29,8 @@ public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
     private readonly WorkbenchQueueService _queueService;
+    private readonly ITrainingPdfReviewImportService _pdfReviewImport;
+    private readonly ITrainingPdfReviewBatchImportUseCase _pdfReviewBatchImport;
     private readonly IPersonalGoldAlbumService _goldAlbumService;
     private readonly IPersonalGoldInboxService _goldInboxService;
     private readonly IFolderOpenService? _folderOpen;
@@ -34,6 +39,10 @@ public partial class TrainingStudioWindow : Window
     private Point _dragStart;
     private bool _dragging;
     private Rectangle? _dragRect;
+    private bool _pdfImportInProgress;
+    private bool _syncingThumbnailSelection;
+    private CancellationTokenSource? _pdfImportCts;
+    private bool _isClosed;
 
     /// <summary>Parameterloser Ctor fuer den WPF-/Designer-Rueckfall.</summary>
     public TrainingStudioWindow() : this(services: null) { }
@@ -46,6 +55,8 @@ public partial class TrainingStudioWindow : Window
         _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
         var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(services);
         _queueService = dependencies.QueueService;
+        _pdfReviewImport = dependencies.PdfReviewImport;
+        _pdfReviewBatchImport = dependencies.PdfReviewBatchImport;
         _goldAlbumService = dependencies.GoldAlbum;
         _goldInboxService = dependencies.GoldInbox;
         _folderOpen = dependencies.FolderOpen;
@@ -57,7 +68,8 @@ public partial class TrainingStudioWindow : Window
             Environment.UserName,
             ensureAiReady: dependencies.EnsureAiReady,
             loadGoldProgress: dependencies.LoadGoldProgress,
-            previewDetection: dependencies.PreviewDetection);
+            previewDetection: dependencies.PreviewDetection,
+            goldQualityReview: dependencies.GoldQualityReview);
         DataContext = _vm;
 
         _vm.PropertyChanged += Vm_PropertyChanged;
@@ -65,6 +77,8 @@ public partial class TrainingStudioWindow : Window
         Loaded += TrainingStudioWindow_Loaded;
         Closed += (_, _) =>
         {
+            _isClosed = true;
+            _pdfImportCts?.Cancel();
             _vm.PropertyChanged -= Vm_PropertyChanged;
             // Gibt Workbench-SAM-Service + Vision-Client (eigener HttpClient) frei.
             _vm.Dispose();
@@ -93,6 +107,182 @@ public partial class TrainingStudioWindow : Window
 
         var items = WorkbenchQueueService.BuildPhotoItems(dlg.FileNames, DateTime.Now, _vm.PipeDiameterMm);
         _vm.LoadItems(items);
+    }
+
+    private async void LoadPdfProtocol_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportInProgress)
+        {
+            _vm.StatusText = "Das PDF-Protokoll wird bereits gelesen.";
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "PDF-Protokoll einer Haltung für den Prüfplatz wählen",
+            Filter = "PDF-Protokolle (*.pdf)|*.pdf",
+            CheckFileExists = true,
+            Multiselect = false,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        var importCts = new CancellationTokenSource();
+        BeginPdfImport(
+            importCts,
+            "PDF-Fotos und Operateurbefunde werden sicher zugeordnet …");
+        try
+        {
+            var result = await _pdfReviewImport.ImportAsync(
+                new TrainingPdfReviewImportRequest(
+                    dlg.FileName,
+                    _vm.PipeDiameterMm),
+                importCts.Token);
+            if (!_vm.LoadItems(result.Items))
+                return;
+            _vm.StatusText = TrainingStudioPdfImportPresentation.FormatSingle(result);
+        }
+        catch (OperationCanceledException) when (importCts.IsCancellationRequested)
+        {
+            if (!_isClosed)
+                _vm.StatusText = "PDF-Import abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "PDF-Protokoll konnte nicht für den Prüfplatz geladen werden: "
+                + UserError.DescribeAndReport(
+                    ex,
+                    $"Training-Studio PDF-Protokoll laden ({System.IO.Path.GetFileName(dlg.FileName)})");
+        }
+        finally
+        {
+            EndPdfImport(importCts);
+        }
+    }
+
+    private async void LoadPdfFolders_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportInProgress)
+        {
+            _vm.StatusText = "PDF-Protokolle werden bereits gelesen.";
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Ordner mit PDF-Protokollen wählen (Mehrfachauswahl möglich)",
+            Multiselect = true,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        var folders = dlg.FolderNames
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToArray();
+        if (folders.Length == 0)
+            return;
+
+        var importCts = new CancellationTokenSource();
+        BeginPdfImport(
+            importCts,
+            "Die gewählten Ordner werden nach PDF-Protokollen durchsucht …");
+        var progress = new Progress<TrainingPdfReviewBatchProgress>(value =>
+        {
+            if (!_isClosed)
+            {
+                _vm.StatusText =
+                    $"PDF {value.CurrentPdfNumber} von {value.DiscoveredPdfCount} wird gelesen: " +
+                    value.SourceDocumentName;
+            }
+        });
+
+        try
+        {
+            var result = await _pdfReviewBatchImport.ImportFoldersAsync(
+                new TrainingPdfReviewBatchImportRequest(
+                    folders,
+                    _vm.PipeDiameterMm),
+                progress,
+                importCts.Token);
+            if (!_vm.LoadItems(result.Items))
+                return;
+            _vm.StatusText = TrainingStudioPdfImportPresentation.FormatBatch(result);
+        }
+        catch (OperationCanceledException) when (importCts.IsCancellationRequested)
+        {
+            if (!_isClosed)
+                _vm.StatusText = "PDF-Ordnerimport abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "PDF-Ordner konnten nicht für den Prüfplatz geladen werden: "
+                + UserError.DescribeAndReport(
+                    ex,
+                    "Training-Studio PDF-Ordner laden");
+        }
+        finally
+        {
+            EndPdfImport(importCts);
+        }
+    }
+
+    private void BeginPdfImport(
+        CancellationTokenSource importCts,
+        string statusText)
+    {
+        _pdfImportCts = importCts;
+        _pdfImportInProgress = true;
+        SetPdfImportUiBusy(true);
+        _vm.StatusText = statusText;
+    }
+
+    private void EndPdfImport(CancellationTokenSource importCts)
+    {
+        if (ReferenceEquals(_pdfImportCts, importCts))
+        {
+            _pdfImportCts = null;
+            _pdfImportInProgress = false;
+            if (!_isClosed)
+                SetPdfImportUiBusy(false);
+        }
+
+        importCts.Dispose();
+    }
+
+    private void SetPdfImportUiBusy(bool isBusy)
+    {
+        PdfSourceToolbar.IsEnabled = !isBusy;
+        PdfReviewArea.IsEnabled = !isBusy;
+        PdfThumbnailQueue.IsEnabled = !isBusy;
+        PdfImportProgressPanel.Visibility = isBusy
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        PdfImportCancelButton.IsEnabled = isBusy;
+    }
+
+    private void CancelPdfImport_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportCts is null || _pdfImportCts.IsCancellationRequested)
+            return;
+
+        _pdfImportCts.Cancel();
+        PdfImportCancelButton.IsEnabled = false;
+        _vm.StatusText = "PDF-Import wird abgebrochen …";
+    }
+
+    private void TrainingStudioWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!_pdfImportInProgress)
+            return;
+
+        if (e.Key is Key.A or Key.K or Key.V or Key.Left or Key.Right)
+            e.Handled = true;
     }
 
     private void OpenGoldInbox_Click(object sender, RoutedEventArgs e)
@@ -126,7 +316,8 @@ public partial class TrainingStudioWindow : Window
             var items = WorkbenchQueueService.BuildGoldInboxItems(
                 snapshot.Images,
                 _vm.PipeDiameterMm);
-            _vm.LoadItems(items);
+            if (!_vm.LoadItems(items))
+                return;
             var issueText = snapshot.Issues.Count == 0
                 ? string.Empty
                 : $" · {snapshot.Issues.Count} Hinweise";
@@ -146,7 +337,8 @@ public partial class TrainingStudioWindow : Window
         try
         {
             var items = await _queueService.LoadReviewQueueAsync();
-            _vm.LoadItems(items);
+            if (!_vm.LoadItems(items))
+                return;
             if (items.Count == 0)
                 _vm.StatusText = "Keine offenen Review-Faelle (Yellow/Red, noch nicht beurteilt).";
         }
@@ -157,21 +349,66 @@ public partial class TrainingStudioWindow : Window
         }
     }
 
+    private async void PdfThumbnailQueue_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_syncingThumbnailSelection || _vm is null)
+            return;
+
+        var requestedIndex = PdfThumbnailQueue.SelectedIndex;
+        if (requestedIndex < 0 || requestedIndex == _vm.CurrentIndex)
+            return;
+
+        var selected = await _vm.SelectQueueItemAsync(requestedIndex);
+        if (selected || _isClosed)
+            return;
+
+        _syncingThumbnailSelection = true;
+        try
+        {
+            PdfThumbnailQueue.SelectedIndex = _vm.CurrentIndex;
+        }
+        finally
+        {
+            _syncingThumbnailSelection = false;
+        }
+    }
+
     private async void LoadIncompleteGoldQueue_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var items = await _queueService.LoadIncompletePersonalGoldQueueAsync(Environment.UserName);
-            _vm.LoadItems(items);
+            _vm.StatusText = "Bilder ohne gültige Segmentierung werden geprüft …";
+            var items = await _queueService.LoadSegmentationRepairQueueAsync(Environment.UserName);
+            if (!await _vm.LoadSegmentationRepairItemsAsync(items))
+                return;
             if (items.Count == 0)
-                _vm.StatusText = "Keine unvollständigen persönlichen Goldframes gefunden.";
-            else
-                _vm.StatusText = $"{items.Count} unvollständige Goldframes geladen.";
+                _vm.StatusText = "Keine lesbaren persönlichen Bilder ohne gültige Segmentierung gefunden.";
         }
         catch (Exception ex)
         {
-            _vm.StatusText = "Unvollständige Goldframes konnten nicht geladen werden: "
-                + UserError.DescribeAndReport(ex, "Training-Studio Gold-Warteschlange");
+            _vm.StatusText = "Segmentierungs-Warteschlange konnte nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Segmentierungs-Warteschlange");
+        }
+    }
+
+    private async void LoadAllIncompleteGoldQueue_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var items = await _queueService
+                .LoadIncompletePersonalGoldQueueAsync(Environment.UserName);
+            if (!_vm.LoadItems(items))
+                return;
+            _vm.StatusText = items.Count == 0
+                ? "Keine persönlichen Gold-Reparaturfälle gefunden."
+                : $"{items.Count} Gold-Reparaturfälle geladen. Nicht lesbare Bilder dienen nur der Diagnose.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "Gold-Reparaturfälle konnten nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio alle Gold-Reparaturfälle");
         }
     }
 
@@ -330,10 +567,14 @@ public partial class TrainingStudioWindow : Window
         // SAM-Maske zuerst zeichnen, damit die rote Auswahl immer oben sichtbar bleibt.
         if (_vm.Segmentation is not null)
         {
+            var maskValidation = TrainingStudioBoxAnalysisUseCase.ValidateSegmentation(
+                _vm.CurrentBox,
+                _vm.Segmentation);
             var result = TrainingStudioMaskOverlayRenderer.Render(
                 OverlayCanvas,
                 _vm.Segmentation,
-                area);
+                area,
+                maskValidation.IsValid);
             if (!result.Rendered && !string.IsNullOrWhiteSpace(result.ErrorMessage))
                 _vm.StatusText = result.ErrorMessage;
         }

@@ -49,13 +49,20 @@ public sealed class VsaCodeExplorerQuantPanelPresenterTests
     {
         var presentation = VsaCodeExplorerQuantPanelPresenter.Build(
             q1: null,
-            q2: new QuantField { Label = "Breite", Einheit = "%" });
+            q2: new QuantField
+            {
+                Label = "Breite",
+                Einheit = "%",
+                Min = 0,
+                Max = 100
+            });
 
         Assert.False(presentation.ShowNoQuant);
         Assert.False(presentation.Q1.ShowPanel);
         Assert.True(presentation.Q2.ShowPanel);
         Assert.Equal("Q2: Breite", presentation.Q2.LabelText);
         Assert.Equal("%", presentation.Q2.UnitText);
+        Assert.Equal("[0\u2013100]", presentation.Q2.RangeText);
     }
 
     [Theory]
@@ -72,7 +79,21 @@ public sealed class VsaCodeExplorerQuantPanelPresenterTests
         Assert.Equal(expected, presentation.Q1.RangeText);
         Assert.False(presentation.Q1.ShowRequiredBadge);
         Assert.Null(presentation.Q1.RequiredBadge);
-        Assert.Equal("Q1: ", presentation.Q1.LabelText);
-        Assert.Equal("", presentation.Q1.UnitText);
+        Assert.Equal("Q1: Quantifizierung", presentation.Q1.LabelText);
+        Assert.Equal("Einheit fehlt", presentation.Q1.UnitText);
+    }
+
+    [Theory]
+    [InlineData("mm")]
+    [InlineData("%")]
+    [InlineData("\u00b0")]
+    [InlineData("Stk.")]
+    public void Build_zeigt_fachliche_einheit_direkt_am_eingabefeld(string unit)
+    {
+        var presentation = VsaCodeExplorerQuantPanelPresenter.Build(
+            q1: new QuantField { Label = "Messwert", Einheit = unit },
+            q2: null);
+
+        Assert.Equal(unit, presentation.Q1.UnitText);
     }
 }

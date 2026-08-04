@@ -61,7 +61,7 @@ public static class VsaCodeTree
                     ["K"] = new() { "B", "C", "D" }
                 }
             },
-            ["BAG"] = new() { Label = "Einragender Anschluss", FinalCode = "BAG", Warn = "Transfer: BAGA" },
+            ["BAG"] = new() { Label = "Einragender Anschluss", FinalCode = "BAGA" },
             ["BAH"] = new()
             {
                 Label = "Schadhafter Anschluss",
@@ -173,9 +173,14 @@ public static class VsaCodeTree
                 Label = "Seitl. Anschluss",
                 Char1 = new()
                 {
-                    ["A"] = C("Formstueck"), ["B"] = C("Sattel geb."), ["C"] = C("Sattel eingesp."),
-                    ["D"] = C("gebohrt"), ["E"] = C("eingespitzt"), ["F"] = C("Spezial"),
-                    ["G"] = C("unbekannt"), ["Z"] = C("andersartig")
+                    ["A"] = C("Anschluss mit Formst\u00fcck"),
+                    ["B"] = C("Sattelanschluss gebohrt"),
+                    ["C"] = C("Sattelanschluss eingespitzt"),
+                    ["D"] = C("Anschluss gebohrt"),
+                    ["E"] = C("Anschluss eingespitzt"),
+                    ["F"] = C("Spezialanschluss"),
+                    ["G"] = C("Anschluss unbekannter Bauart"),
+                    ["Z"] = C("Andersartiger Anschluss")
                 },
                 Char2 = new() { ["A"] = "Offen", ["B"] = "Verschlossen" },
                 AllValid = true
@@ -193,8 +198,13 @@ public static class VsaCodeTree
             ["BCC"] = new()
             {
                 Label = "Bogen",
-                Char1 = new() { ["A"] = C("links"), ["B"] = C("rechts"), ["Y"] = C("vertikal") },
-                Char2 = new() { ["A"] = "oben", ["B"] = "unten", ["Y"] = "ohne Hoehe" },
+                Char1 = new()
+                {
+                    ["A"] = C("Bogen nach links"),
+                    ["B"] = C("Bogen nach rechts"),
+                    ["Y"] = C("Bogen vertikal")
+                },
+                Char2 = new() { ["A"] = "oben", ["B"] = "unten", ["Y"] = "ohne H\u00f6he" },
                 Invalid = new() { ["Y"] = new() { "Y" } }
             },
             ["BCD"] = new() { Label = "Rohranfang", FinalCode = "BCD", IsSteuer = true },
@@ -278,32 +288,35 @@ public static class VsaCodeTree
     // QUANT_RULES
     // ═══════════════════════════════════════════════════════════════
 
+    // Kanal-Picker-Matrix: Einheiten und Eingabebereiche sind gegen den lokal
+    // installierten WinCan-Katalog EN13508_VSA-2019_CH_DEU_SEC.xml abgeglichen.
+    // Die Manifest-Whitelist entscheidet weiterhin, welche Endcodes auswählbar sind.
     public static readonly Dictionary<string, QuantRule> QuantRules = new()
     {
-        ["BAA"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Reduzierung", Min = 0, Max = 100 } },
+        ["BAA"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Verformung" } },
         ["BAB"] = new()
         {
             Q1 = new() { Pflicht = "V" },
             Q1PerChar1 = new()
             {
                 ["A"] = null,
-                ["B"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite" },
-                ["C"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite", Hint = ">=5mm" }
+                ["B"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite", Min = 1, Max = 200 },
+                ["C"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite", Min = 1, Max = 200 }
             }
         },
-        ["BAC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Bruchlaenge", Hint = ">1000 = Strecke" } },
+        ["BAC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Bruchl\u00e4nge", Min = 10, Max = 1000 } },
         ["BAD"] = new()
         {
             Q1 = new() { Pflicht = "V" },
             Q1PerChar1 = new()
             {
                 ["A"] = null, ["B"] = null, ["D"] = null,
-                ["C"] = new() { Pflicht = "P", Einheit = "mm", Label = "Absackung", Min = 20, Hint = ">=20mm" }
+                ["C"] = new() { Pflicht = "P", Einheit = "mm", Label = "Absackung", Min = 20, Max = 1000 }
             }
         },
-        ["BAE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Tiefe Moertel", Min = 5, Hint = ">=5mm" } },
+        ["BAE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "M\u00f6rteltiefe", Min = 5, Max = 500 } },
         ["BAF"] = new() { Q1 = null },
-        ["BAG"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Einragung (%DN)", Min = 0, Max = 100 } },
+        ["BAG"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Einragende L\u00e4nge bezogen auf DN/H\u00f6he", Min = 1, Max = 100 } },
         ["BAH"] = new() { Q1 = null },
         ["BAI"] = new()
         {
@@ -311,7 +324,7 @@ public static class VsaCodeTree
             Q1PerChar1 = new()
             {
                 ["A"] = null,
-                ["Z"] = new() { Pflicht = "P", Einheit = "%", Label = "QS-Minderung", Min = 0, Max = 100 }
+                ["Z"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsminderung", Min = 1, Max = 100 }
             }
         },
         ["BAJ"] = new()
@@ -319,9 +332,9 @@ public static class VsaCodeTree
             Q1 = new() { Pflicht = "V" },
             Q1PerChar1 = new()
             {
-                ["A"] = new() { Pflicht = "P", Einheit = "mm", Label = "Abstand", Min = 15, Hint = ">=15mm" },
-                ["B"] = new() { Pflicht = "P", Einheit = "mm", Label = "Versatz" },
-                ["C"] = new() { Pflicht = "P", Einheit = "°", Label = "Achsabweichung", Min = 0, Max = 360 }
+                ["A"] = new() { Pflicht = "P", Einheit = "mm", Label = "Verbindungsabstand", Min = 0, Max = 9999 },
+                ["B"] = new() { Pflicht = "P", Einheit = "mm", Label = "Versatz", Min = 0, Max = 9999 },
+                ["C"] = new() { Pflicht = "P", Einheit = "\u00b0", Label = "Achsabweichung", Min = 1, Max = 359 }
             }
         },
         ["BAK"] = new()
@@ -329,42 +342,64 @@ public static class VsaCodeTree
             Q1 = new() { Pflicht = "V" },
             Q1PerChar1 = new()
             {
-                ["A"] = new() { Pflicht = "P", Einheit = "%", Label = "QS-Verringerung", Max = 100 },
-                ["D"] = new() { Pflicht = "P", Einheit = "%", Label = "QS-Verringerung", Max = 100 },
-                ["E"] = new() { Pflicht = "P", Einheit = "%", Label = "QS-Verringerung", Max = 100 },
-                ["F"] = new() { Pflicht = "P", Einheit = "mm", Label = "Tiefe Beule" },
-                ["I"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite" },
-                ["J"] = new() { Pflicht = "P", Einheit = "mm", Label = "Lochlaenge" }
+                ["A"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 },
+                ["B"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 },
+                ["C"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 },
+                ["D"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 },
+                ["E"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 },
+                ["F"] = new() { Pflicht = "P", Einheit = "mm", Label = "Beulentiefe", Min = 0 },
+                ["I"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite", Min = 0 },
+                ["J"] = new() { Pflicht = "P", Einheit = "mm", Label = "Lochl\u00e4nge", Min = 0 },
+                ["Z"] = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverringerung", Min = 0, Max = 100 }
             }
         },
-        ["BAL"] = new() { Q1 = null }, ["BAM"] = new() { Q1 = null },
+        ["BAL"] = new()
+        {
+            Q1 = new() { Pflicht = "V" },
+            Q1PerChar1 = new()
+            {
+                ["G"] = new() { Pflicht = "P", Einheit = "mm", Label = "Rissbreite", Min = 0 }
+            }
+        },
+        ["BAM"] = new() { Q1 = null },
         ["BAN"] = new() { Q1 = null }, ["BAO"] = new() { Q1 = null }, ["BAP"] = new() { Q1 = null },
-        ["BBA"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "QS-Verminderung", Max = 100 } },
-        ["BBB"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "QS-Verminderung", Max = 100 } },
-        ["BBC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Hoehe (%LH)", Max = 100 } },
-        ["BBD"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "QS-Minderung", Max = 100 } },
-        ["BBE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "QS-Minderung", Max = 100 } },
+        ["BBA"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverminderung", Min = 1, Max = 100 } },
+        ["BBB"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverminderung", Min = 1, Max = 100 } },
+        ["BBC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Ablagerungsh\u00f6he", Min = 0, Max = 100 } },
+        ["BBD"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverminderung", Min = 1, Max = 100 } },
+        ["BBE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Querschnittsverminderung", Min = 1, Max = 100 } },
         ["BBF"] = new() { Q1 = null }, ["BBG"] = new() { Q1 = null },
-        ["BBH"] = new() { Q1 = new() { Pflicht = "P", Einheit = "Stk", Label = "Anzahl Tiere", Min = 1 } },
+        ["BBH"] = new() { Q1 = new() { Pflicht = "P", Einheit = "Stk.", Label = "Anzahl Tiere", Min = 0, Max = 10000 } },
         ["BCA"] = new()
         {
-            Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Hoehe Anschluss" },
-            Q2 = new() { Pflicht = "O", Einheit = "mm", Label = "Breite (!=Hoehe)" }
+            Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Anschlussh\u00f6he", Min = 0, Max = 10000 },
+            Q2 = new() { Pflicht = "O", Einheit = "mm", Label = "Anschlussbreite (falls abweichend)", Min = 0, Max = 10000 }
         },
         ["BCB"] = new() { Q1 = null },
-        ["BCC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "°", Label = "Richtungsaenderung", Min = 0, Max = 360 } },
+        ["BCC"] = new() { Q1 = new() { Pflicht = "P", Einheit = "\u00b0", Label = "Richtungs\u00e4nderung", Min = 1, Max = 359 } },
         ["BCD"] = new() { Q1 = null }, ["BCE"] = new() { Q1 = null },
         ["BDA"] = new() { Q1 = null }, ["BDB"] = new() { Q1 = null }, ["BDC"] = new() { Q1 = null },
-        ["BDD"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Wasserspiegel (%lH)", Max = 100 } },
-        ["BDE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "WS Anschl. (%)", Max = 100 } },
+        ["BDD"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Wasserh\u00f6he", Min = 0, Max = 100 } },
+        ["BDE"] = new() { Q1 = new() { Pflicht = "P", Einheit = "%", Label = "Wasserh\u00f6he am Anschluss", Min = 0, Max = 100 } },
         ["BDF"] = new() { Q1 = null }, ["BDG"] = new() { Q1 = null },
         ["AEC"] = new()
         {
-            Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Hoehe neues Profil" },
-            Q2 = new() { Pflicht = "O", Einheit = "mm", Label = "Breite (!=Hoehe)" }
+            Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "H\u00f6he des neuen Profils", Min = 0, Max = 4500 },
+            Q2 = new() { Pflicht = "V" },
+            Q2PerChar1 = new()
+            {
+                ["A"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["B"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["C"] = null,
+                ["D"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["E"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["F"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["G"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 },
+                ["H"] = new() { Pflicht = "O", Einheit = "mm", Label = "Breite des neuen Profils", Min = 0, Max = 4500 }
+            }
         },
         ["AED"] = new() { Q1 = null },
-        ["AEF"] = new() { Q1 = new() { Pflicht = "P", Einheit = "mm", Label = "Neue Baulaenge" } },
+        ["AEF"] = new() { Q1 = null },
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -377,6 +412,7 @@ public static class VsaCodeTree
         ["BCA"] = new() { Mode = "single", Hint = "Anschlussmitte" },
         ["BAG"] = new() { Mode = "single", Hint = "Anschlussmitte" },
         ["BAH"] = new() { Mode = "single", Hint = "Anschlussmitte" },
+        ["BCC"] = new() { Mode = "none" },
         ["BCD"] = new() { Mode = "none" }, ["BCE"] = new() { Mode = "none" },
         ["BDA"] = new() { Mode = "none" }, ["BDB"] = new() { Mode = "none" },
         ["BDC"] = new() { Mode = "none" }, ["BDF"] = new() { Mode = "none" },

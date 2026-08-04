@@ -41,6 +41,10 @@ public sealed class LiveDetectionMarkSegmentationController : ILiveDetectionMark
     {
         ArgumentNullException.ThrowIfNull(overlay);
 
+        // Eine fehlgeschlagene Wiederholungssegmentierung darf nie die Maske
+        // eines frueheren Box-Zustands als aktuelles Trainingsergebnis behalten.
+        overlay.SamMask = null;
+
         var result = await LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync(
             new LiveDetectionMarkBoxSegmentationRequest(
                 HasBoxSegmentation: _bindings.HasBoxSegmentation(),
@@ -54,6 +58,9 @@ public sealed class LiveDetectionMarkSegmentationController : ILiveDetectionMark
                     overlay,
                     quantification),
                 TraceError: _bindings.TraceError));
+
+        if (result.Segmentation is not null)
+            CodingMarkBoxQuantificationOverlayPolicy.ApplySegmentation(overlay, result.Segmentation);
 
         return result.Segmentation;
     }

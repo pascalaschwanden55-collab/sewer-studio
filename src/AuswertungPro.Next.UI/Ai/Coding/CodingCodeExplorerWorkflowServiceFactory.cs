@@ -10,10 +10,16 @@ public static class CodingCodeExplorerWorkflowServiceFactory
     public static CodingCodeExplorerWorkflowService Create(
         Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
         ICodeUsageTracker? codeUsage = null)
+        => Create(createViewModel, codeUsage, services: null);
+
+    public static CodingCodeExplorerWorkflowService Create(
+        Func<ProtocolEntry, double?, TimeSpan?, VsaCodeExplorerViewModel> createViewModel,
+        ICodeUsageTracker? codeUsage,
+        ServiceProvider? services)
         => new(
             createViewModel,
             (viewModel, videoPath, currentVideoTime, owner, liveSnapshotProvider) =>
-                VsaCodeExplorerDialogServiceFactory.Create(codeUsage).Show(
+                VsaCodeExplorerDialogServiceFactory.Create(codeUsage, services).Show(
                     viewModel,
                     videoPath,
                     currentVideoTime,

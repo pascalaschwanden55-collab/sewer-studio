@@ -112,4 +112,32 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
             "PlayerWindow-Root soll Media-Host-Verkabelung ueber PlayerMediaRuntime kapseln:\n"
             + string.Join("\n", offenders));
     }
+
+    [Fact]
+    public void Coding_overlay_refreshes_native_video_aspect_before_mapping_the_viewport()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var runtimePath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntime.cs");
+        var resolverPath = Path.Combine(uiRoot, "Player", "PlayerVideoAspectResolver.cs");
+
+        Assert.True(File.Exists(resolverPath), "Die native Videogroesse braucht einen sicheren Resolver.");
+
+        var coding = File.ReadAllText(codingPath);
+        var runtime = File.ReadAllText(runtimePath);
+
+        var aspectRead = coding.IndexOf(
+            "_playerMediaRuntime.TryGetVideoAspect",
+            StringComparison.Ordinal);
+        var viewportMapping = coding.IndexOf(
+            "CodingOverlayViewportController.Update",
+            StringComparison.Ordinal);
+
+        Assert.True(
+            aspectRead >= 0 && aspectRead < viewportMapping,
+            "Das Video-Seitenverhaeltnis muss vor dem ersten Overlay-Mapping aktualisiert werden.");
+        Assert.Contains("_codingOverlayRenderState.SetVideoAspect", coding);
+        Assert.Contains("PlayerVideoAspectResolver.TryResolve", runtime);
+    }
 }

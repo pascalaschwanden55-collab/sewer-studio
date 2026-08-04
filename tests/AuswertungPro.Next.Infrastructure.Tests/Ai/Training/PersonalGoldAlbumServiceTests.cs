@@ -39,6 +39,29 @@ public sealed class PersonalGoldAlbumServiceTests
         Assert.False(Assert.Single(bca.Items).FileExists);
     }
 
+    [Fact]
+    public async Task LoadAsync_zeigt_bestaetigtes_Pdf_ohne_Maske_als_unvollstaendig()
+    {
+        var pdf = PersonalGold("pdf-1", "Pascal", "BABBC", @"C:\gold\pdf.jpg");
+        pdf.SourceType = SourceTypeNames.PdfPhoto;
+        pdf.SourceReferenceCode = "BABBC";
+        pdf.SourceReferenceDescription = "Riss, komplexe Rissbildung";
+        pdf.Notes =
+            "PDF-Operateurreferenz: haltung.pdf; " +
+            "SHA-256=8a7cfb71d1289694b8a650fe2c49357840fe1935ac120b8fb83d24f899c99c6f; " +
+            "Seite=3; Foto=42.jpg; Zuordnung=photo_id";
+        pdf.SamMaskRle = null;
+        var service = new PersonalGoldAlbumService(
+            new FakeSampleStore([pdf]),
+            _ => true);
+
+        var result = await service.LoadAsync("Pascal");
+
+        var item = Assert.Single(Assert.Single(result.Groups).Items);
+        Assert.False(item.IsFullGold);
+        Assert.Equal("Segmentierung fehlt", item.GeometryStatus);
+    }
+
     private static TrainingSample PersonalGold(
         string sampleId,
         string user,

@@ -41,6 +41,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
         var negativeImages = await BuildVerifiedNegativeImagesAsync(
                 registry,
                 inventory,
+                classMap,
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -67,6 +68,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
     private static async Task<IReadOnlyList<TrainingExportNegativeImage>> BuildVerifiedNegativeImagesAsync(
         TrainingExportRegistrySnapshot registry,
         TrainingDataInventoryRuntimeSnapshot inventory,
+        TrainingYoloClassMapSnapshot classMap,
         CancellationToken cancellationToken)
     {
         if (registry.NegativeImages.Count == 0)
@@ -88,11 +90,52 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
                 throw new TrainingExportPlanException(
                     $"Negativbild gehoert zum eingefrorenen Eval-/Abnahme-Set: {negative.Path}");
             }
+            if (negative.HoldingKey is not null
+                && EvalContaminationGuard.IsEvalHaltung(
+                    inventory.Protection.HoldingKeys,
+                    negative.HoldingKey))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild-Haltung gehoert zum eingefrorenen Eval-/Abnahme-Set: {negative.HoldingKey}");
+            }
+            if (negative.HoldingKey is not null)
+                ValidateStrictNegativeClassMapBinding(negative, classMap);
 
             result.Add(negative with { Sha256 = actualSha256 });
         }
 
         return result;
+    }
+
+    private static void ValidateStrictNegativeClassMapBinding(
+        TrainingExportNegativeImage negative,
+        TrainingYoloClassMapSnapshot classMap)
+    {
+        var activeClassIds = classMap.Classes
+            .OrderBy(item => item.Value)
+            .Select(item => item.Value)
+            .ToArray();
+        if (negative.ClassMapVersion != 3
+            || classMap.Version != 3
+            || classMap.ClassMapSha256 is null
+            || !string.Equals(
+                negative.ClassMapSha256,
+                classMap.ClassMapSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(
+                negative.VsaManifestHash,
+                classMap.VsaManifestHash,
+                StringComparison.Ordinal)
+            || activeClassIds.Length != 15
+            || !activeClassIds.SequenceEqual(Enumerable.Range(0, 15))
+            || !string.Equals(
+                classMap.OrderedClassNames[14],
+                "BCC_bogen",
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Das strikte Negativ-Set passt nicht zur aktuell aktiven Detect-Klassenkarte v3.");
+        }
     }
 
     private static void ValidateInventoryGate(TrainingDataInventoryRuntimeSnapshot inventory)

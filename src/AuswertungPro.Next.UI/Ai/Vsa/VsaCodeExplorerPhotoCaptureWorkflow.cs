@@ -24,7 +24,8 @@ public sealed record VsaCodeExplorerPhotoCaptureRequest(
     Func<string, string, TimeSpan, CancellationToken, Task<byte[]?>> ExtractFramePngAsync,
     Func<int, string> CreateTempPhotoPath,
     Func<string, byte[], CancellationToken, Task> WriteAllBytesAsync,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    IList<string>? OriginalPhotoPaths = null);
 
 public sealed record VsaCodeExplorerPhotoCaptureResult(
     VsaCodeExplorerPhotoCaptureOutcome Outcome,
@@ -37,6 +38,25 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
     public static Task<VsaCodeExplorerPhotoCaptureResult> CaptureWithDefaultsAsync(
         int photoIndex,
         IList<string> photoPaths,
+        Func<string?>? liveSnapshotProvider,
+        string? videoPath,
+        TimeSpan? currentVideoTime,
+        string? timeText,
+        CancellationToken cancellationToken)
+        => CaptureWithDefaultsAsync(
+            photoIndex,
+            photoPaths,
+            photoPaths,
+            liveSnapshotProvider,
+            videoPath,
+            currentVideoTime,
+            timeText,
+            cancellationToken);
+
+    public static Task<VsaCodeExplorerPhotoCaptureResult> CaptureWithDefaultsAsync(
+        int photoIndex,
+        IList<string> photoPaths,
+        IList<string> originalPhotoPaths,
         Func<string?>? liveSnapshotProvider,
         string? videoPath,
         TimeSpan? currentVideoTime,
@@ -55,7 +75,8 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
                 ExtractFramePngAsync: VideoFrameExtractor.TryExtractFramePngAsync,
                 CreateTempPhotoPath: CreateTempPhotoPath,
                 WriteAllBytesAsync: File.WriteAllBytesAsync,
-                CancellationToken: cancellationToken));
+                CancellationToken: cancellationToken,
+                OriginalPhotoPaths: originalPhotoPaths));
 
     public static async Task<VsaCodeExplorerPhotoCaptureResult> CaptureAsync(
         VsaCodeExplorerPhotoCaptureRequest request)
@@ -70,7 +91,11 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
 
         var liveSnapshotPath = request.LiveSnapshotProvider?.Invoke();
         if (!string.IsNullOrEmpty(liveSnapshotPath) && request.FileExists(liveSnapshotPath))
-            return Captured(request.PhotoPaths, request.PhotoIndex, liveSnapshotPath);
+            return Captured(
+                request.PhotoPaths,
+                request.OriginalPhotoPaths ?? request.PhotoPaths,
+                request.PhotoIndex,
+                liveSnapshotPath);
 
         if (string.IsNullOrWhiteSpace(request.VideoPath) || !request.FileExists(request.VideoPath))
             return MissingVideo();
@@ -92,7 +117,11 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
             bytes,
             request.CancellationToken).ConfigureAwait(false);
 
-        return Captured(request.PhotoPaths, request.PhotoIndex, tempPhotoPath);
+        return Captured(
+            request.PhotoPaths,
+            request.OriginalPhotoPaths ?? request.PhotoPaths,
+            request.PhotoIndex,
+            tempPhotoPath);
     }
 
     private static TimeSpan ResolveCaptureTime(TimeSpan? currentVideoTime, string? timeText)
@@ -113,18 +142,25 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
 
     private static VsaCodeExplorerPhotoCaptureResult Captured(
         IList<string> photoPaths,
+        IList<string> originalPhotoPaths,
         int photoIndex,
         string photoPath)
     {
-        while (photoPaths.Count <= photoIndex)
-            photoPaths.Add("");
-
-        photoPaths[photoIndex] = photoPath;
+        SetPhotoSlot(photoPaths, photoIndex, photoPath);
+        SetPhotoSlot(originalPhotoPaths, photoIndex, photoPath);
         return new VsaCodeExplorerPhotoCaptureResult(
             VsaCodeExplorerPhotoCaptureOutcome.Captured,
             photoPath,
             Message: "",
             Title: "");
+    }
+
+    private static void SetPhotoSlot(IList<string> photoPaths, int photoIndex, string photoPath)
+    {
+        while (photoPaths.Count <= photoIndex)
+            photoPaths.Add("");
+
+        photoPaths[photoIndex] = photoPath;
     }
 
     private static VsaCodeExplorerPhotoCaptureResult MissingVideo()

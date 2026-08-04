@@ -13,6 +13,26 @@ internal static class TrainingExportImageFormatValidator
     private const long MaximumPixels = 50_000_000;
 
     public static void Validate(byte[] bytes, string targetFileName)
+        => ValidateCore(bytes, targetFileName);
+
+    public static void Validate(
+        byte[] bytes,
+        string targetFileName,
+        int expectedWidth,
+        int expectedHeight)
+    {
+        var image = ValidateCore(bytes, targetFileName);
+        if (image.Width != expectedWidth || image.Height != expectedHeight)
+        {
+            throw Error(
+                $"Bildabmessungen {image.Width}x{image.Height} passen nicht zu " +
+                $"{expectedWidth}x{expectedHeight}.");
+        }
+    }
+
+    private static ImageInfo ValidateCore(
+        byte[] bytes,
+        string targetFileName)
     {
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetFileName);
@@ -35,6 +55,8 @@ internal static class TrainingExportImageFormatValidator
         {
             throw Error("Bildabmessungen sind ungueltig oder groesser als 50 Millionen Pixel.");
         }
+
+        return image;
     }
 
     private static ImageInfo? ReadImageInfo(ReadOnlySpan<byte> bytes)

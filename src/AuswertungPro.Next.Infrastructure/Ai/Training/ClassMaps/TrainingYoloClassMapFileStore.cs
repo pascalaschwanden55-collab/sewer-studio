@@ -30,8 +30,16 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
     {
         try
         {
+            var classMapSha256 = ComputeSha256(_classMapPath);
             var classMap = TrainingYoloClassMapJsonReader.ReadClassMap(_classMapPath);
             ValidateClassMap(classMap);
+            if (!classMapSha256.Equals(
+                    ComputeSha256(_classMapPath),
+                    StringComparison.Ordinal))
+            {
+                throw new TrainingYoloClassMapException(
+                    "Die Detect-Klassenkarte wurde waehrend des Lesens veraendert.");
+            }
 
             var actualManifestHash = ComputeSha256(_vsaManifestPath);
             if (!string.Equals(
@@ -74,7 +82,8 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
                 classMap.Classes,
                 migration.Mappings,
                 migration.SourceHashes,
-                migration.ResolutionOrder);
+                migration.ResolutionOrder,
+                classMapSha256);
         }
         catch (TrainingYoloClassMapException)
         {

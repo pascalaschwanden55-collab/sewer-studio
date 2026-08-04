@@ -44,7 +44,7 @@ public sealed class TrainingYoloExportCoordinatorTests
             Assert.Null(untouched.ExportedUtc);
             Assert.Equal(1, store.MergeCalls);
             Assert.Equal(
-                ["registry", "inventory", "class-map", "input", "plan", "execution", "completion", "persist"],
+                ["registry", "inventory", "registry", "class-map", "input", "plan", "execution", "completion", "persist"],
                 sequence);
             Assert.Equal(
                 [
@@ -117,7 +117,7 @@ public sealed class TrainingYoloExportCoordinatorTests
             Assert.Equal(0, store.SaveCalls);
             Assert.Equal(["sample-valid"], input.ApprovedSampleIds);
             Assert.Equal(
-                ["registry", "inventory", "class-map", "input", "plan", "execution", "completion", "persist"],
+                ["registry", "inventory", "registry", "class-map", "input", "plan", "execution", "completion", "persist"],
                 sequence);
         }
         finally

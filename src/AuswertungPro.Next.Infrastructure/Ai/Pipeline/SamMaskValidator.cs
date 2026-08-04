@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// wenn sie nicht degradiert, formal strikt lesbar, dimensionstreu, nicht leer und zur Hand-Box
 /// passend ist. Der Format-Teil (Tokens, Laufsumme, Leermaske) liegt in der Application-Schicht
 /// (<see cref="SamMaskFormatValidator"/>), damit auch der Player-Codiermodus ihn nutzen kann —
-/// dort liegt auch die gemeinsame Pruefung auf echte Vordergrundpixel innerhalb der Hand-Box.
+/// dort liegt auch die gemeinsame 80-Prozent-Pruefung fuer Vordergrundpixel in der Hand-Box.
 /// </summary>
 public static class SamMaskValidator
 {
@@ -34,11 +34,16 @@ public static class SamMaskValidator
             return false;
         }
 
-        return SamMaskFormatValidator.HasForegroundPixelInsideBox(
+        if (!SamMaskFormatValidator.HasForegroundPixelInsideBox(
             rle,
             maskImageWidth,
             maskImageHeight,
             box,
-            out reason);
+            out reason))
+        {
+            return false;
+        }
+
+        return true;
     }
 }

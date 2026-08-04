@@ -15,7 +15,15 @@ public sealed class LiveDetectionManualMarkEventAppenderTests
         var overlay = new OverlayGeometry
         {
             ToolType = OverlayToolType.Rectangle,
-            Points = [new NormalizedPoint(0.1, 0.2), new NormalizedPoint(0.3, 0.4)]
+            Points = [new NormalizedPoint(0.1, 0.2), new NormalizedPoint(0.3, 0.4)],
+            SamMask = new OverlaySamMask
+            {
+                MaskRle = "0,10,5,85",
+                ImageWidth = 10,
+                ImageHeight = 10,
+                MaskAreaPixels = 5,
+                Confidence = 0.9
+            }
         };
         var selectedEntry = new ProtocolEntry
         {
@@ -38,6 +46,7 @@ public sealed class LiveDetectionManualMarkEventAppenderTests
         Assert.Equal(7.5, ev.Entry.MeterStart);
         Assert.Equal(TimeSpan.FromSeconds(18), ev.Entry.Zeit);
         Assert.Same(overlay, ev.Overlay);
+        Assert.Same(overlay.SamMask, ev.Overlay!.SamMask);
         Assert.Null(ev.AiContext);
     }
 

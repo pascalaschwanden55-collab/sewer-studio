@@ -53,6 +53,48 @@ public sealed class CodingStretchDamageManualCloseApplierTests
         Assert.Equal(TimeSpan.FromSeconds(44), added.VideoTimestamp);
     }
 
+    [Fact]
+    public void Apply_keeps_start_photo_overlay_and_sam_mask_off_the_automatic_end_event()
+    {
+        var service = new RecordingCodingSessionService();
+        var startEvent = Event("BAJ", meterAtCapture: 2.3);
+        startEvent.Entry.FotoPaths.Add("start-original.png");
+        startEvent.Entry.FotoPaths.Add("start-overlay.png");
+        var startEntryId = startEvent.Entry.EntryId;
+        var samMask = new OverlaySamMask
+        {
+            MaskRle = "4 8 12",
+            ImageWidth = 640,
+            ImageHeight = 480,
+            MaskAreaPixels = 12,
+            Confidence = 0.95,
+            Label = "BAJ"
+        };
+        var overlay = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Rectangle,
+            SamMask = samMask
+        };
+        startEvent.Overlay = overlay;
+
+        var result = CodingStretchDamageManualCloseApplier.Apply(
+            startEvent,
+            currentMeter: 8.5,
+            currentVideoTime: TimeSpan.FromSeconds(44),
+            service);
+
+        Assert.Equal(startEntryId, startEvent.Entry.EntryId);
+        Assert.Equal(["start-original.png", "start-overlay.png"], startEvent.Entry.FotoPaths);
+        Assert.Same(overlay, startEvent.Overlay);
+        Assert.Same(samMask, startEvent.Overlay.SamMask);
+
+        var endEvent = Assert.Single(service.AddedEvents);
+        Assert.Same(endEvent, result.EndEvent);
+        Assert.NotEqual(startEvent.Entry.EntryId, endEvent.Entry.EntryId);
+        Assert.Empty(endEvent.Entry.FotoPaths);
+        Assert.Null(endEvent.Overlay);
+    }
+
     private static CodingEvent Event(string code, double meterAtCapture)
     {
         return new CodingEvent

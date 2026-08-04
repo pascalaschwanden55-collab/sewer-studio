@@ -35,6 +35,17 @@ public static class EvalContaminationGuard
     }
 
     /// <summary>
+    /// SHA-256-Hex (lowercase) bereits gebundener Bildbytes. Dieser Weg vermeidet,
+    /// dass eine veraenderbare Quelldatei zwischen Schutzpruefung und Speichern
+    /// nochmals geoeffnet werden muss.
+    /// </summary>
+    public static string ComputeBytesHash(byte[] imageBytes)
+    {
+        ArgumentNullException.ThrowIfNull(imageBytes);
+        return Convert.ToHexStringLower(SHA256.HashData(imageBytes));
+    }
+
+    /// <summary>
     /// True, wenn das Bild unter <paramref name="framePath"/> inhaltsgleich zu einem
     /// Eval-Set-Bild ist (Hash-Vergleich gegen <paramref name="evalImageHashes"/>).
     /// Leerer Hash-Satz oder fehlende Datei -> false (kein falscher Alarm).
@@ -46,6 +57,21 @@ public static class EvalContaminationGuard
 
         var hash = ComputeFileHash(framePath);
         return hash is not null && evalImageHashes.Contains(hash);
+    }
+
+    /// <summary>
+    /// Prueft eine bereits geladene Momentaufnahme. Eval-Pruefung und spaetere
+    /// Goldkopie koennen dadurch garantiert dieselben Bildbytes verwenden.
+    /// </summary>
+    public static bool IsEvalContaminated(
+        IReadOnlySet<string> evalImageHashes,
+        byte[] imageBytes)
+    {
+        ArgumentNullException.ThrowIfNull(imageBytes);
+        if (evalImageHashes is null || evalImageHashes.Count == 0)
+            return false;
+
+        return evalImageHashes.Contains(ComputeBytesHash(imageBytes));
     }
 
     private static readonly string[] ImageExtensions =
@@ -156,14 +182,25 @@ public static class EvalContaminationGuard
 
     /// <summary>
     /// True, wenn die Haltung des Samples (CaseId, normalisiert) zu einer reservierten
-    /// Eval-Haltung gehoert. Leerer Satz oder leere CaseId -> false (kein Alarm).
+    /// Eval-Haltung gehoert. Die umgekehrte Richtung desselben Schachtpaars wird ebenfalls
+    /// blockiert. Leerer Satz oder leere CaseId -> false (kein Alarm).
     /// </summary>
     public static bool IsEvalHaltung(IReadOnlySet<string> evalHaltungKeys, string? caseId)
     {
         if (evalHaltungKeys is null || evalHaltungKeys.Count == 0)
             return false;
         var key = NormalizeHaltungKey(caseId);
-        return key is not null && evalHaltungKeys.Contains(key);
+        if (key is null)
+            return false;
+        if (evalHaltungKeys.Contains(key))
+            return true;
+
+        var match = HaltungKeyPattern.Match(key);
+        if (!match.Success || !string.Equals(match.Value, key, StringComparison.Ordinal))
+            return false;
+        var parts = key.Split('-', '/');
+        return parts.Length == 2
+               && evalHaltungKeys.Contains($"{parts[1]}-{parts[0]}");
     }
 
     /// <summary>
@@ -269,6 +306,21 @@ public static class EvalContaminationGuard
         string? caseId)
     {
         if (IsEvalContaminated(evalImageHashes, framePath)) return ExportContaminationResult.EvalImageHash;
+        if (IsEvalHaltung(evalHaltungKeys, caseId)) return ExportContaminationResult.EvalHaltung;
+        return ExportContaminationResult.Clean;
+    }
+
+    /// <summary>
+    /// Kombinierte Export-Pruefung fuer eine gebundene Bild-Momentaufnahme.
+    /// Die Methode liest keinen Pfad und hasht exakt die uebergebenen Bytes.
+    /// </summary>
+    public static ExportContaminationResult ClassifyForExport(
+        IReadOnlySet<string> evalImageHashes,
+        IReadOnlySet<string> evalHaltungKeys,
+        byte[] imageBytes,
+        string? caseId)
+    {
+        if (IsEvalContaminated(evalImageHashes, imageBytes)) return ExportContaminationResult.EvalImageHash;
         if (IsEvalHaltung(evalHaltungKeys, caseId)) return ExportContaminationResult.EvalHaltung;
         return ExportContaminationResult.Clean;
     }

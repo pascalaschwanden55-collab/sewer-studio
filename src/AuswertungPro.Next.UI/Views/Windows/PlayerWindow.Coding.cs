@@ -48,6 +48,9 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateCodingOverlayViewport()
     {
+        if (_playerMediaRuntime.TryGetVideoAspect(out var videoAspect))
+            _codingOverlayRenderState.SetVideoAspect(videoAspect);
+
         var canvasSize = CodingOverlayInputControls.GetCanvasSize(CodingOverlayCanvas);
         var nextCanvasWidth = canvasSize.Width;
         var nextCanvasHeight = canvasSize.Height;

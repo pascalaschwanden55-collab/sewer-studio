@@ -61,6 +61,14 @@ public sealed class VsaKekManifestTruthTests
         AssertTitleContains(titles, "BBDZ", "Bodenmaterial dringt ein");
     }
 
+    [Fact]
+    public void Manifest_locks_polyethylene_material_code()
+    {
+        var titles = LoadManifestTitles();
+
+        AssertTitleContains(titles, "AEDXO", "Polyethylen");
+    }
+
     // Robustheits-Riegel: JEDER Code, den die KI-Befundliste als nackten Code
     // anzeigen kann, MUSS im Katalog einen deutschen Klartext haben (Titel != Code).
     // Quelle des Code-Raums:

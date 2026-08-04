@@ -11,6 +11,8 @@ using AuswertungPro.Next.Application.Ai.Training;        // ITrainingSampleStore
 using AuswertungPro.Next.Application.Ai.Training.Preview;
 using AuswertungPro.Next.Application.Ai.Workbench;       // IAnnotationWorkbenchService
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
+using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
 using AuswertungPro.Next.Infrastructure.Ai;              // OllamaClient, BcaFineCodeClassifier
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;       // ToOllamaConfig
@@ -18,6 +20,10 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;     // VisionPipelineClient
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;      // TeacherAnnotationStore, VsaYoloClassMap
 using AuswertungPro.Next.Infrastructure.Ai.Training;     // TrainingSamplesStore, DelegatingKnowledgeBaseIndexer
 using AuswertungPro.Next.Infrastructure.Ai.Training.Preview;
+using AuswertungPro.Next.Infrastructure.Ai.Training.PdfReview;
+using AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
+using AuswertungPro.Next.Infrastructure.Ai.Training.GoldQualityReview;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Inventory;
 using AuswertungPro.Next.UI.Ai.Training;                 // TrainingKnowledgeBaseIndexWorkflow
 
 namespace AuswertungPro.Next.UI.Services;
@@ -34,8 +40,11 @@ internal static class TrainingStudioWindowDependencyFactory
         IAnnotationWorkbenchService Workbench,
         ITrainingPreviewDetectionService PreviewDetection,
         WorkbenchQueueService QueueService,
+        ITrainingPdfReviewImportService PdfReviewImport,
+        ITrainingPdfReviewBatchImportUseCase PdfReviewBatchImport,
         IPersonalGoldAlbumService GoldAlbum,
         IPersonalGoldInboxService GoldInbox,
+        IGoldQualityReviewQueueUseCase GoldQualityReview,
         IFolderOpenService? FolderOpen,
         Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>> LoadGoldProgress,
         Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? EnsureAiReady);
@@ -46,10 +55,24 @@ internal static class TrainingStudioWindowDependencyFactory
         var workbench = Create(services, pipeline);
         var previewDetection = new TrainingPreviewDetectionService(pipeline);
         var queue = CreateQueueService(services);
+        var rawPdfReviewImport = services?.TrainingPdfReviewReader
+            ?? new TrainingPdfReviewImportService(
+                services?.KnowledgeRoot ?? KnowledgeBasePaths.GetRoot(),
+                new TrainingPdfJpegColorNormalizer());
+        var loadPdfProtection = CreatePdfProtectionLoader(services);
+        var pdfReviewImport = services?.TrainingPdfReviews
+            ?? new TrainingPdfReviewProtectedImportService(
+                rawPdfReviewImport,
+                loadPdfProtection);
+        var pdfReviewBatchImport = new TrainingPdfReviewBatchImportUseCase(
+            new TrainingPdfFolderDiscoveryService(),
+            rawPdfReviewImport,
+            loadPdfProtection);
         var goldAlbum = services?.PersonalGoldAlbum
             ?? new PersonalGoldAlbumService(TrainingSamplesStore.Current);
         var goldInbox = services?.PersonalGoldInbox
             ?? new PersonalGoldInboxFileService(KnowledgeBasePaths.GetRoot());
+        var goldQualityReview = CreateGoldQualityReview(services);
         var goldProgress = CreateGoldProgressLoader(services);
         if (services is null)
         {
@@ -57,8 +80,11 @@ internal static class TrainingStudioWindowDependencyFactory
                 workbench,
                 previewDetection,
                 queue,
+                pdfReviewImport,
+                pdfReviewBatchImport,
                 goldAlbum,
                 goldInbox,
+                goldQualityReview,
                 FolderOpen: null,
                 goldProgress,
                 EnsureAiReady: null);
@@ -84,8 +110,11 @@ internal static class TrainingStudioWindowDependencyFactory
             workbench,
             previewDetection,
             queue,
+            pdfReviewImport,
+            pdfReviewBatchImport,
             goldAlbum,
             goldInbox,
+            goldQualityReview,
             services.FolderOpen,
             goldProgress,
             async (progress, ct) =>
@@ -94,6 +123,43 @@ internal static class TrainingStudioWindowDependencyFactory
                 return (result.Ready, result.StatusText);
             });
     }
+
+    private static IGoldQualityReviewQueueUseCase CreateGoldQualityReview(
+        ServiceProvider? services)
+    {
+        var knowledgeRoot = services?.KnowledgeRoot ?? KnowledgeBasePaths.GetRoot();
+        var inventory = services?.TrainingDataInventory ?? new TrainingDataInventoryService();
+        var registry = services?.TrainingExportRegistry
+                       ?? new TrainingExportRegistryFileStore(
+                           Path.Combine(knowledgeRoot, "training", "export_registry_v1.json"),
+                           knowledgeRoot);
+        var snapshotProvider = new GoldQualityReviewSnapshotProvider(
+            inventory,
+            knowledgeRoot,
+            () => services?.Settings.EvalSetRoot ?? TrainingSamplesStore.EffectiveEvalSetRoot);
+        var sessionStore = new GoldQualityReviewSessionFileStore(knowledgeRoot);
+
+        return new GoldQualityReviewQueueUseCase(
+            snapshotProvider,
+            registry,
+            sessionStore,
+            TrainingImageFileProbe.CanDecode,
+            TrainingImageFileProbe.ReadDimensions,
+            EvalContaminationGuard.ComputeFileHash);
+    }
+
+    private static Func<TrainingPdfReviewProtectionSnapshot> CreatePdfProtectionLoader(
+        ServiceProvider? services)
+        => () =>
+        {
+            var root = services?.Settings.EvalSetRoot
+                       ?? TrainingSamplesStore.EffectiveEvalSetRoot;
+            return LoadPdfProtectionSnapshot(root);
+        };
+
+    internal static TrainingPdfReviewProtectionSnapshot LoadPdfProtectionSnapshot(
+        string? evalSetRoot)
+        => EvalContaminationSetProvider.LoadPdfProtectionSnapshot(evalSetRoot);
 
     internal static IAnnotationWorkbenchService Create(ServiceProvider? services)
         => Create(services, CreatePipelineClient(services));

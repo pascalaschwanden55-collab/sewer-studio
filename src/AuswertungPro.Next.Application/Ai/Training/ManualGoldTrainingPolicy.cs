@@ -7,31 +7,49 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 public static class ManualGoldTrainingPolicy
 {
     public const string ManualGoldRequiredReason = "personal-manual-gold-required";
+    public const string PdfGoldProvenanceRequiredReason = "personal-pdf-gold-provenance-required";
     public const string ConfirmedByOtherUserReason = "personal-manual-gold-confirmed-by-other-user";
     public const string GoldFrameRequiredReason = "personal-manual-gold-frame-required";
     public const string GoldGeometryRequiredReason = "personal-manual-gold-geometry-required";
+
+    /// <summary>
+    /// Erkennt eine persönliche Prüfentscheidung unabhängig davon, ob Bild, Box und
+    /// Segmentierung bereits vollständig sind. Dieses Prädikat ist nur für Album,
+    /// Fortschritt und Reparatur-Warteschlange bestimmt, nicht für Export oder KB.
+    /// </summary>
+    public static bool IsPersonallyReviewed(TrainingSample sample)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+
+        if (!HasPersonalConfirmation(sample))
+            return false;
+
+        if (IsSourceType(sample, SourceTypeNames.ManualCoding))
+            return true;
+
+        return IsSourceType(sample, SourceTypeNames.PdfPhoto)
+               && HasValidPdfReference(sample);
+    }
+
+    public static bool IsPersonallyReviewed(TrainingSample sample, string? confirmedByUser)
+        => IsPersonallyReviewed(sample)
+           && !string.IsNullOrWhiteSpace(confirmedByUser)
+           && string.Equals(
+               sample.ConfirmedByUser?.Trim(),
+               confirmedByUser.Trim(),
+               StringComparison.OrdinalIgnoreCase);
 
     public static bool IsManuallyConfirmed(TrainingSample sample)
     {
         ArgumentNullException.ThrowIfNull(sample);
 
-        return sample.Status == TrainingSampleStatus.Approved
-               && sample.HumanConfirmed == true
-               && sample.Corrected.HasValue
-               && !string.IsNullOrWhiteSpace(sample.ConfirmedByUser)
-               && sample.ConfirmedAtUtc.HasValue
-               && string.Equals(
-                   sample.SourceType,
-                   SourceTypeNames.ManualCoding,
-                   StringComparison.OrdinalIgnoreCase)
-               && (string.Equals(
-                       sample.MatchLevel,
-                       MatchLevelNames.ReviewApproved,
-                       StringComparison.Ordinal)
-                   || string.Equals(
-                       sample.MatchLevel,
-                       MatchLevelNames.ReviewCorrected,
-                       StringComparison.Ordinal));
+        if (!IsPersonallyReviewed(sample))
+            return false;
+
+        if (IsSourceType(sample, SourceTypeNames.ManualCoding))
+            return true;
+
+        return HasValidGoldGeometry(sample);
     }
 
     public static bool IsManuallyConfirmed(TrainingSample sample, string? confirmedByUser)
@@ -44,8 +62,8 @@ public static class ManualGoldTrainingPolicy
 
     /// <summary>
     /// Prueft die fuer Gold und YOLO erforderliche Hand-Box sowie das gespeicherte
-    /// SAM-Format. Mindestens ein echtes Vordergrundpixel muss innerhalb der
-    /// Hand-Box liegen; dieselbe zentrale Regel gilt beim Speichern und Wiederladen.
+    /// SAM-Format. Mindestens 80 Prozent aller Vordergrundpixel muessen innerhalb
+    /// der Hand-Box liegen; dieselbe zentrale Regel gilt beim Speichern und Wiederladen.
     /// </summary>
     public static bool HasValidGoldGeometry(TrainingSample sample)
     {
@@ -94,6 +112,22 @@ public static class ManualGoldTrainingPolicy
         if (!sample.HasBbox)
             return false;
 
+        if (!SamMaskFormatValidator.TryGetForegroundPixelCount(
+                sample.SamMaskRle,
+                sample.SamMaskImageWidth,
+                sample.SamMaskImageHeight,
+                out var foregroundPixelCount,
+                out _))
+        {
+            return false;
+        }
+
+        if (sample.SamMaskAreaPixels.HasValue
+            && sample.SamMaskAreaPixels.Value != foregroundPixelCount)
+        {
+            return false;
+        }
+
         return SamMaskFormatValidator.HasForegroundPixelInsideBox(
             sample.SamMaskRle,
             sample.SamMaskImageWidth,
@@ -112,8 +146,22 @@ public static class ManualGoldTrainingPolicy
     {
         ArgumentNullException.ThrowIfNull(sample);
 
-        if (!IsManuallyConfirmed(sample))
+        if (!HasPersonalConfirmation(sample))
             return new TrainingEligibilityResult(false, ManualGoldRequiredReason);
+
+        if (IsSourceType(sample, SourceTypeNames.PdfPhoto))
+        {
+            if (!HasValidPdfReference(sample))
+            {
+                return new TrainingEligibilityResult(
+                    false,
+                    PdfGoldProvenanceRequiredReason);
+            }
+        }
+        else if (!IsSourceType(sample, SourceTypeNames.ManualCoding))
+        {
+            return new TrainingEligibilityResult(false, ManualGoldRequiredReason);
+        }
 
         if (string.IsNullOrWhiteSpace(approvedBy)
             || !string.Equals(
@@ -132,4 +180,30 @@ public static class ManualGoldTrainingPolicy
 
         return new TrainingEligibilityResult(true, null);
     }
+
+    private static bool HasPersonalConfirmation(TrainingSample sample)
+        => sample.Status == TrainingSampleStatus.Approved
+           && sample.HumanConfirmed == true
+           && sample.Corrected.HasValue
+           && !string.IsNullOrWhiteSpace(sample.ConfirmedByUser)
+           && sample.ConfirmedAtUtc.HasValue
+           && (string.Equals(
+                   sample.MatchLevel,
+                   MatchLevelNames.ReviewApproved,
+                   StringComparison.Ordinal)
+               || string.Equals(
+                   sample.MatchLevel,
+                   MatchLevelNames.ReviewCorrected,
+                   StringComparison.Ordinal));
+
+    private static bool HasValidPdfReference(TrainingSample sample)
+        => PdfGoldProvenancePolicy.IsValid(sample.Notes)
+           && !string.IsNullOrWhiteSpace(sample.SourceReferenceCode)
+           && !string.IsNullOrWhiteSpace(sample.SourceReferenceDescription);
+
+    private static bool IsSourceType(TrainingSample sample, string sourceType)
+        => string.Equals(
+            sample.SourceType,
+            sourceType,
+            StringComparison.OrdinalIgnoreCase);
 }

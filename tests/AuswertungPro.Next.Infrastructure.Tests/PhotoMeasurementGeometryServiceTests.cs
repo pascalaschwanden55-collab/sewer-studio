@@ -565,6 +565,20 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildMarkRectangleGeometry_BegrenztDragEndeAufDasFoto()
+    {
+        var geometry = PhotoMeasurementGeometryService.BuildMarkRectangleGeometry(
+            new NormalizedPoint(0.2, 0.3),
+            new NormalizedPoint(1.4, -0.2));
+
+        Assert.NotNull(geometry);
+        Assert.Equal(0.2, geometry.Points[0].X, precision: 6);
+        Assert.Equal(0.0, geometry.Points[0].Y, precision: 6);
+        Assert.Equal(1.0, geometry.Points[2].X, precision: 6);
+        Assert.Equal(0.3, geometry.Points[2].Y, precision: 6);
+    }
+
+    [Fact]
     public void BuildLineGeometry_BerechnetMillimeterUndUhrlagen()
     {
         var calibration = new PipeCalibration

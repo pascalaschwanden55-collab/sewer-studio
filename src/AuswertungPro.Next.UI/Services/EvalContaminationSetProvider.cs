@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -35,16 +36,41 @@ public static class EvalContaminationSetProvider
         ValidateJsonFiles(fullRoot, "_manifest.json", requireCandidatesShape: false);
         ValidateJsonFiles(fullRoot, "_candidates.json", requireCandidatesShape: true);
 
-        var sets = new EvalContaminationSets(
+        var loadedSets = new EvalContaminationSets(
             EvalContaminationGuard.LoadEvalImageHashes(fullRoot),
             EvalContaminationGuard.LoadEvalHaltungKeys(fullRoot));
-        if (sets.ImageHashes.Count == 0 && sets.HaltungKeys.Count == 0)
+        if (loadedSets.ImageHashes.Count == 0 && loadedSets.HaltungKeys.Count == 0)
         {
             throw new InvalidDataException(
                 $"Der konfigurierte Eval-Schutzordner enthaelt keine lesbaren Schutzdaten: {fullRoot}");
         }
 
-        return sets;
+        // Der Snapshot ist die gemeinsame semantische Grenze: Nur echte
+        // SHA-256-Hashes und kanonische numerische Haltungskeys duerfen als
+        // Schutzdaten weitergereicht werden.
+        var validated = new TrainingPdfReviewProtectionSnapshot(
+            loadedSets.ImageHashes,
+            loadedSets.HaltungKeys);
+        return new EvalContaminationSets(
+            validated.ImageHashes,
+            validated.HoldingKeys);
+    }
+
+    public static TrainingPdfReviewProtectionSnapshot LoadPdfProtectionSnapshot(
+        string? evalSetRoot)
+    {
+        var sets = Load(evalSetRoot);
+        if (!string.IsNullOrWhiteSpace(evalSetRoot)
+            && sets.HaltungKeys.Count == 0)
+        {
+            throw new InvalidDataException(
+                "Der konfigurierte Eval-Schutz enthaelt keine gueltigen Haltungskennungen. " +
+                "PDF-Fotos duerfen ohne Haltungs-Schutz nicht importiert werden, weil ihre Bildfarben normalisiert werden koennen.");
+        }
+
+        return new TrainingPdfReviewProtectionSnapshot(
+            sets.ImageHashes,
+            sets.HaltungKeys);
     }
 
     private static void ValidateJsonFiles(
@@ -67,6 +93,11 @@ public static class EvalContaminationSetProvider
                 }
                 if (!requireCandidatesShape && node is not JsonObject)
                     throw new InvalidDataException("Erwartet wird ein JSON-Objekt.");
+
+                if (requireCandidatesShape)
+                    ValidateCandidateHoldingKeys(node);
+                else
+                    ValidateManifestImageHashes(node.AsObject());
             }
             catch (Exception ex) when (ex is not InvalidDataException
                                        || !ex.Message.Contains(path, StringComparison.OrdinalIgnoreCase))
@@ -75,6 +106,53 @@ public static class EvalContaminationSetProvider
                     $"Eval-Schutzdatei '{path}' ist nicht lesbar: {ex.Message}",
                     ex);
             }
+        }
+    }
+
+    private static void ValidateCandidateHoldingKeys(JsonNode node)
+    {
+        var candidates = node as JsonArray ?? node["candidates"]!.AsArray();
+        foreach (var candidate in candidates)
+        {
+            if (candidate is not JsonObject candidateObject
+                || candidateObject["haltung_key"] is not JsonValue holdingValue
+                || !holdingValue.TryGetValue<string>(out var holdingKey)
+                || string.IsNullOrWhiteSpace(holdingKey))
+            {
+                throw new InvalidDataException(
+                    "Jeder Eval-Kandidat braucht eine Haltungskennung als Text.");
+            }
+
+            _ = new TrainingPdfReviewProtectionSnapshot(
+                [],
+                [holdingKey]);
+        }
+    }
+
+    private static void ValidateManifestImageHashes(JsonObject manifest)
+    {
+        if (manifest["hashes"] is null)
+            return;
+        if (manifest["hashes"] is not JsonObject hashes)
+            throw new InvalidDataException("'hashes' muss ein JSON-Objekt sein.");
+
+        foreach (var property in hashes.Where(entry =>
+                     entry.Key.StartsWith(
+                         "images/",
+                         StringComparison.OrdinalIgnoreCase)))
+        {
+            if (property.Value is not JsonObject imageEntry
+                || imageEntry["sha256"] is not JsonValue shaValue
+                || !shaValue.TryGetValue<string>(out var sha256)
+                || string.IsNullOrWhiteSpace(sha256))
+            {
+                throw new InvalidDataException(
+                    $"Der Bildhash '{property.Key}' braucht einen SHA-256-Wert als Text.");
+            }
+
+            _ = new TrainingPdfReviewProtectionSnapshot(
+                [sha256],
+                []);
         }
     }
 }

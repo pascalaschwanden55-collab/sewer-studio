@@ -81,6 +81,17 @@ public sealed record YoloRequest(
     [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold
 );
 
+/// <summary>
+/// Getrennter BCC-Testrequest. Es werden nur eine Kandidaten-ID und der erwartete
+/// Gewicht-Hash uebertragen, niemals ein Modellpfad.
+/// </summary>
+public sealed record BccTestYoloRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold,
+    [property: JsonPropertyName("candidate_id")] string CandidateId,
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256
+);
+
 public sealed record YoloDetectionDto(
     [property: JsonPropertyName("x1")] double X1,
     [property: JsonPropertyName("y1")] double Y1,
@@ -110,7 +121,7 @@ public sealed record YoloResponse(
 
 /// <summary>
 /// Antwort des getrennten, nicht produktiven BCC-Trainingskandidaten.
-/// <see cref="Available"/> ist false, wenn kein sicher validierter Kandidat bereitsteht.
+/// <see cref="Available"/> ist false, wenn kein sicher pruefbarer Kandidat bereitsteht.
 /// </summary>
 public sealed record BccTestYoloResponse(
     [property: JsonPropertyName("available")] bool Available,
@@ -122,7 +133,24 @@ public sealed record BccTestYoloResponse(
     [property: JsonPropertyName("candidate_id")] string CandidateId,
     [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
     [property: JsonPropertyName("model_name")] string ModelName,
-    [property: JsonPropertyName("device")] string Device
+    [property: JsonPropertyName("device")] string Device,
+    [property: JsonPropertyName("frame_usable")] bool FrameUsable = true,
+    [property: JsonPropertyName("quality_reason")] string? QualityReason = null
+);
+
+/// <summary>Pfadfreie Metadaten eines manifest- und hashgeprueften BCC-Testkandidaten.</summary>
+public sealed record BccTestCandidateInfo(
+    [property: JsonPropertyName("candidate_id")] string CandidateId,
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
+    [property: JsonPropertyName("map50")] double Map50,
+    [property: JsonPropertyName("epochs_completed")] int EpochsCompleted,
+    [property: JsonPropertyName("created_utc")] string CreatedUtc
+);
+
+public sealed record BccTestCandidatesResponse(
+    [property: JsonPropertyName("available")] bool Available,
+    [property: JsonPropertyName("error")] string? Error,
+    [property: JsonPropertyName("candidates")] IReadOnlyList<BccTestCandidateInfo> Candidates
 );
 
 // ── YOLO Classify ─────────────────────────────────────────────────────────

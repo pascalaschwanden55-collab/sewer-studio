@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
@@ -6,6 +7,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -37,7 +39,7 @@ public sealed class AnnotationWorkbenchServiceTests
             // erste Maske OHNE RLE -> soll uebersprungen werden
             new SamMaskResult("BAB", 0.5, new double[] { 0, 0, 0, 0 }, "", 0, 0, 0, 0, 0, 0),
             // zweite Maske MIT RLE -> soll genommen werden (Flaeche 1500/500000 = 0,3 %)
-            new SamMaskResult("BAB", 0.9, new double[] { 400, 25, 600, 225 }, "0,500000", 1500, 500000, 200, 200, 500, 125),
+            new SamMaskResult("BAB", 0.9, new double[] { 400, 25, 600, 225 }, "0,100450,1500,398050", 1500, 500000, 200, 200, 500, 125),
         };
         var sam = new FakeSamSegmentationService
         {
@@ -49,10 +51,13 @@ public sealed class AnnotationWorkbenchServiceTests
 
         var seg = await service.SegmentAsync(Foto(), TestBox, codeHint: "BAB");
 
-        Assert.Equal("0,500000", seg.MaskRle);
+        Assert.Equal("0,100450,1500,398050", seg.MaskRle);
         Assert.Equal(1000, seg.MaskImageWidth);
         Assert.Equal(500, seg.MaskImageHeight);
         Assert.Equal(0.3, seg.AreaPercent!.Value, 3);
+        Assert.Equal(1500, seg.MaskAreaPixels);
+        Assert.Equal(0.9, seg.Confidence);
+        Assert.Equal("BAB", seg.Label);
         Assert.True(seg.Degraded);
         Assert.Contains("pruefen", seg.StatusText, StringComparison.OrdinalIgnoreCase);
         // Frame-Pfad, Code-Hinweis und Rohrdurchmesser werden durchgereicht.
@@ -312,12 +317,18 @@ public sealed class AnnotationWorkbenchServiceTests
             codeLabelLookup: code => code == "BAB" ? "Riss" : null);
 
         var item = new WorkbenchItem(@"C:\frames\f.jpg", "287425-81162", 12.5, 12.5, "287425-81162", @"C:\vid.mpg", 300);
-        var seg = GueltigeMaske;
+        var seg = GueltigeMaske with
+        {
+            MaskAreaPixels = 100,
+            Confidence = 0.88,
+            Label = "BAB",
+        };
         var decision = new WorkbenchDecision("BAB", WasCorrected: false, "Riss quer im Scheitel", ClockPosition: 12.0, Severity: 3, ConfirmedByUser: "Pascal");
 
         var result = await service.SaveAsync(item, TestBox, seg, decision);
 
         Assert.True(result.Saved);
+        Assert.True(result.GoldApproved);
         Assert.Null(result.RefusalReason);
         Assert.Equal("Indexed", result.KbIndexState);
         Assert.NotNull(result.SampleId);
@@ -341,6 +352,9 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.Equal(0.5, sample.BboxXCenter);
         Assert.Equal("0,250450,100,249450", sample.SamMaskRle);
         Assert.Equal(1000, sample.SamMaskImageWidth);
+        Assert.Equal(100, sample.SamMaskAreaPixels);
+        Assert.Equal(0.88, sample.SamMaskConfidence);
+        Assert.Equal("BAB", sample.SamMaskLabel);
 
         Assert.Equal(1, indexer.IndexCallCount);
         Assert.Equal(
@@ -369,6 +383,461 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_leitet_Maskenflaeche_aus_Rle_ab_statt_Sidecarwert_zu_vertrauen()
+    {
+        var sampleStore = new FakeSampleStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
+            exportFactory: () => new FakeExportService(),
+            isCodeKnown: _ => true);
+        var falscheMetadaten = GueltigeMaske with { MaskAreaPixels = 999_999 };
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            falscheMetadaten,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        Assert.Equal(100, Assert.Single(sampleStore.Store).SamMaskAreaPixels);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Maskenmasse_passen_nicht_zum_Goldbild_speichert_nur_Entwurf()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var teacherStore = new FakeTeacherStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: indexer,
+            teacherStore: teacherStore,
+            isCodeKnown: _ => true,
+            readImageDimensions: _ => (640, 480));
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        Assert.False(result.GoldApproved);
+        var draft = Assert.Single(sampleStore.Store);
+        Assert.Equal(TrainingSampleStatus.Draft, draft.Status);
+        Assert.False(draft.HasSamMask);
+        Assert.Equal(0, indexer.IndexCallCount);
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
+    public async Task SaveAsync_PdfVorschlag_speichert_PdfPhoto_Provenienz_und_belaesst_Handcodierung()
+    {
+        const string documentSha =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        var sampleStore = new FakeSampleStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: new FakeTrainingFrameStore(),
+            indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
+            teacherStore: new FakeTeacherStore(),
+            classMap: new FakeClassMap(),
+            exportFactory: () => new FakeExportService(),
+            isCodeKnown: _ => true);
+        var decision = new WorkbenchDecision(
+            "BAB",
+            WasCorrected: false,
+            "Riss quer im Scheitel",
+            ClockPosition: 12.0,
+            Severity: 3,
+            ConfirmedByUser: "Pascal");
+        var pdfItem = new WorkbenchItem(
+            @"C:\frames\pdf.jpg",
+            "pdf-haltung",
+            4.2,
+            4.2,
+            "pdf-haltung",
+            VideoPath: null,
+            PipeDiameterMm: 300,
+            SourceSuggestion: new WorkbenchSourceSuggestion(
+                "BAB",
+                "Riss quer im Scheitel",
+                "Haltung_123.pdf",
+                documentSha,
+                PageNumber: 7,
+                PhotoId: "IMG-0042",
+                MatchKind: "time_meter_text")
+            {
+                InspectionDate = new DateTime(2025, 11, 10),
+            })
+        {
+            InspectionDate = new DateTime(2025, 11, 10),
+        };
+        var manualItem = new WorkbenchItem(
+            @"C:\frames\manual.jpg",
+            "manual-haltung",
+            5.2,
+            5.2,
+            "manual-haltung",
+            VideoPath: null,
+            PipeDiameterMm: 300);
+
+        var pdfResult = await service.SaveAsync(pdfItem, TestBox, GueltigeMaske, decision);
+        var manualResult = await service.SaveAsync(manualItem, TestBox, GueltigeMaske, decision);
+
+        Assert.True(pdfResult.Saved, pdfResult.RefusalReason);
+        Assert.True(manualResult.Saved, manualResult.RefusalReason);
+        Assert.Collection(
+            sampleStore.TryAddCalls,
+            pdfSample =>
+            {
+                Assert.Equal(SourceTypeNames.PdfPhoto, pdfSample.SourceType);
+                Assert.Equal("BAB", pdfSample.SourceReferenceCode);
+                Assert.Equal("Riss quer im Scheitel", pdfSample.SourceReferenceDescription);
+                Assert.Equal(new DateTime(2025, 11, 10), pdfSample.InspectionDate);
+                Assert.Equal(
+                    "PDF-Operateurreferenz: Haltung_123.pdf; " +
+                    $"SHA-256={documentSha}; Seite=7; Foto=IMG-0042; Zuordnung=time_meter_text",
+                    pdfSample.Notes);
+            },
+            manualSample =>
+            {
+                Assert.Equal(SourceTypeNames.ManualCoding, manualSample.SourceType);
+                Assert.Equal(string.Empty, manualSample.Notes);
+            });
+    }
+
+    [Fact]
+    public async Task SaveAsync_PdfReparatur_ohne_gueltige_Pruefspur_wird_nicht_zu_ManualCoding()
+    {
+        var sampleStore = new FakeSampleStore();
+        sampleStore.Store.Add(new TrainingSample
+        {
+            SampleId = "pdf-alt",
+            CaseId = "case1",
+            Code = "BAB",
+            Beschreibung = "Riss quer im Scheitel",
+            SourceType = SourceTypeNames.PdfPhoto,
+            SourceReferenceCode = "BAB",
+            SourceReferenceDescription = "Riss quer im Scheitel",
+            Notes = "defekte PDF-Pruefspur",
+            Status = TrainingSampleStatus.Draft,
+        });
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            isCodeKnown: _ => true);
+        var item = Foto() with
+        {
+            ExistingSampleId = "pdf-alt",
+            ExistingCode = "BAB",
+            ExistingSourceType = SourceTypeNames.PdfPhoto,
+            ExistingNotes = "defekte PDF-Pruefspur",
+        };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("PDF-Pruefspur", result.RefusalReason);
+        Assert.Empty(sampleStore.TryAddCalls);
+        Assert.Equal(0, frameStore.StoreCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_ohne_Bearbeiter_lehnt_vor_jedem_Schreiben_ab()
+    {
+        var sampleStore = new FakeSampleStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            isCodeKnown: _ => true);
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "   "));
+
+        Assert.False(result.Saved);
+        Assert.Contains("Bestaetigung", result.RefusalReason);
+        Assert.Empty(sampleStore.TryAddCalls);
+        Assert.Empty(sampleStore.ReplaceCalls);
+        Assert.Equal(0, frameStore.StoreCalls);
+        Assert.Equal(0, frameStore.StoreBytesCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_erfundener_Untercode_wird_trotz_bekanntem_Hauptcode_abgelehnt()
+    {
+        var sampleStore = new FakeSampleStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            isCodeKnown: code => code == "BAB");
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BABZZ",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("Unbekannter VSA-Code", result.RefusalReason);
+        Assert.Empty(sampleStore.TryAddCalls);
+        Assert.Equal(0, frameStore.StoreCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_neue_PdfQuelle_mit_ungueltiger_Provenienz_lehnt_vor_jedem_Schreiben_ab()
+    {
+        const string documentSha =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        var sampleStore = new FakeSampleStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            isCodeKnown: _ => true);
+        var item = Foto() with
+        {
+            SourceSuggestion = new WorkbenchSourceSuggestion(
+                "BAB",
+                "Riss quer im Scheitel",
+                @"C:\Kundendaten\haltung.pdf",
+                documentSha,
+                PageNumber: 2,
+                PhotoId: "IMG-2",
+                MatchKind: "photo_id"),
+        };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("PDF-Pruefspur", result.RefusalReason);
+        Assert.Empty(sampleStore.TryAddCalls);
+        Assert.Equal(0, frameStore.StoreCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_PdfReparatur_bewahrt_Herkunft_und_Kontext_und_leitet_Korrektur_selbst_ab()
+    {
+        const string documentSha =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        var sourceNote =
+            "PDF-Operateurreferenz: haltung.pdf; " +
+            $"SHA-256={documentSha}; Seite=4; Foto=IMG-4; Zuordnung=photo_id";
+        var existing = new TrainingSample
+        {
+            SampleId = "pdf-repair",
+            CaseId = "case1",
+            Code = "BAB",
+            Beschreibung = "Riss quer im Scheitel",
+            SourceType = SourceTypeNames.PdfPhoto,
+            SourceReferenceCode = "BAB",
+            SourceReferenceDescription = "Riss quer im Scheitel",
+            Notes = sourceNote,
+            Status = TrainingSampleStatus.Draft,
+            HumanConfirmed = true,
+            Corrected = false,
+            ConfirmedByUser = "Pascal",
+            ConfirmedAtUtc = new DateTime(2026, 7, 20, 8, 0, 0, DateTimeKind.Utc),
+            MatchLevel = MatchLevelNames.ReviewApproved,
+            FramePath = @"C:\gold\pdf.jpg",
+            InspectionDate = new DateTime(2025, 11, 10),
+            TimeSeconds = 12.3,
+            DetectedMeter = 1.25,
+            MeterSource = "OSD",
+            FrameIndex = 42,
+            TechniqueGrade = "A",
+            EvidenceFramePath = @"C:\evidence\markiert.jpg",
+            TrainingEligible = true,
+            TrainingEligibilityReason = "vorhandener Kontext",
+        };
+        var sampleStore = new FakeSampleStore();
+        sampleStore.Store.Add(existing);
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
+            exportFactory: () => new FakeExportService(),
+            isCodeKnown: _ => true);
+        var item = WorkbenchQueueService.BuildIncompletePersonalGoldQueue(
+            [existing],
+            "Pascal",
+            _ => true).Single();
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BBA",
+                WasCorrected: false,
+                "Wurzeleinwuchs im Anschlussbereich",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        var repaired = Assert.Single(sampleStore.Store);
+        Assert.Equal(SourceTypeNames.PdfPhoto, repaired.SourceType);
+        Assert.Equal(sourceNote, repaired.Notes);
+        Assert.Equal("BAB", repaired.SourceReferenceCode);
+        Assert.Equal("Riss quer im Scheitel", repaired.SourceReferenceDescription);
+        Assert.True(repaired.Corrected);
+        Assert.Equal(MatchLevelNames.ReviewCorrected, repaired.MatchLevel);
+        Assert.Equal(new DateTime(2025, 11, 10), repaired.InspectionDate);
+        Assert.Equal(12.3, repaired.TimeSeconds);
+        Assert.Equal(1.25, repaired.DetectedMeter);
+        Assert.Equal("OSD", repaired.MeterSource);
+        Assert.Equal(42, repaired.FrameIndex);
+        Assert.Equal("A", repaired.TechniqueGrade);
+        Assert.Equal(@"C:\evidence\markiert.jpg", repaired.EvidenceFramePath);
+        Assert.True(repaired.TrainingEligible);
+        Assert.Equal("vorhandener Kontext", repaired.TrainingEligibilityReason);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Snapshot_verwendet_exakte_Bytes_ohne_den_Quellpfad_neu_zu_lesen()
+    {
+        var sourceBytes = new byte[] { 10, 20, 30, 40 };
+        var snapshot = WorkbenchImageSnapshot.Create(sourceBytes, ".jpg");
+        sourceBytes[0] = 99;
+        var sampleStore = new FakeSampleStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            readFileBytes: _ => throw new IOException("Quellpfad darf nicht neu gelesen werden."),
+            isCodeKnown: _ => true);
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"),
+            snapshot);
+
+        Assert.True(result.Saved, result.RefusalReason);
+        Assert.Equal(0, frameStore.StoreCalls);
+        Assert.Equal(1, frameStore.StoreBytesCalls);
+        Assert.Equal(new byte[] { 10, 20, 30, 40 }, frameStore.LastImageBytes);
+        Assert.Equal(".jpg", frameStore.LastExtension);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Snapshot_Evalhash_blockiert_vor_der_Goldkopie()
+    {
+        var snapshot = WorkbenchImageSnapshot.Create([10, 20, 30, 40], ".jpg");
+        using var evalSet = new TempEvalSet(imageHash: snapshot.Sha256);
+        var sampleStore = new FakeSampleStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            resolveEvalSetRoot: () => evalSet.Root,
+            readFileBytes: _ => throw new IOException("Quellpfad darf nicht neu gelesen werden."),
+            isCodeKnown: _ => true);
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"),
+            snapshot);
+
+        Assert.False(result.Saved);
+        Assert.Contains("Eval", result.RefusalReason);
+        Assert.Equal(0, frameStore.StoreCalls);
+        Assert.Equal(0, frameStore.StoreBytesCalls);
+        Assert.Empty(sampleStore.TryAddCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_uebernimmt_Streckenschadenflag_in_das_TrainingSample()
+    {
+        var sampleStore = new FakeSampleStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            isCodeKnown: _ => true);
+        var item = Foto() with { IsStreckenschaden = true };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Laengsriss ueber mehrere Meter",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        Assert.True(Assert.Single(sampleStore.TryAddCalls).IsStreckenschaden);
+    }
+
+    [Fact]
     public async Task SaveAsync_unvollstaendiges_Goldframe_ergaenzt_bestehendes_Sample_ohne_Duplikat()
     {
         var sampleStore = new FakeSampleStore();
@@ -378,13 +847,15 @@ public sealed class AnnotationWorkbenchServiceTests
             CaseId = "case1",
             Code = "BAB",
             Beschreibung = "Bereits persoenlich bestaetigter Riss",
-            Status = TrainingSampleStatus.Draft
+            Status = TrainingSampleStatus.Draft,
+            SourceType = SourceTypeNames.ManualCoding,
         });
         var service = CreateService(
             sampleStore: sampleStore,
             indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
             frameStore: new FakeTrainingFrameStore(),
-            isCodeKnown: _ => true);
+            isCodeKnown: _ => true,
+            readImageDimensions: _ => (100, 100));
         var item = Foto() with
         {
             ExistingSampleId = "wb_alt",
@@ -407,6 +878,146 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.Equal("0,5045,10,4945", repaired.SamMaskRle);
         Assert.True(repaired.HasBbox);
         Assert.True(repaired.HasSamMask);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Reparatur_schreibt_korrigierte_Uhrlage_und_Stufe_ins_Goldsample()
+    {
+        var existing = new TrainingSample
+        {
+            SampleId = "wb_alt",
+            CaseId = "case1",
+            Code = "BAB",
+            Beschreibung = "Bereits persoenlich bestaetigter Riss",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Code = "BAB",
+                Severity = "2",
+                Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["vsa.uhr.von"] = "3:00",
+                },
+            },
+        };
+        var sampleStore = new FakeSampleStore();
+        sampleStore.Store.Add(existing);
+        var teacherStore = new FakeTeacherStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
+            teacherStore: teacherStore,
+            exportFactory: () => new FakeExportService(),
+            isCodeKnown: _ => true);
+        var item = Foto() with
+        {
+            ExistingSampleId = "wb_alt",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = existing.Beschreibung,
+        };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                existing.Beschreibung,
+                ClockPosition: 9,
+                Severity: 4,
+                ConfirmedByUser: "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        var repaired = Assert.Single(sampleStore.ReplaceCalls);
+        Assert.Equal("9:00", repaired.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("4", repaired.CodeMeta.Severity);
+        Assert.Equal("3:00", existing.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("2", existing.CodeMeta.Severity);
+        var teacher = Assert.Single(teacherStore.Appended);
+        Assert.Equal(9, teacher.ClockPosition);
+        Assert.Equal(4, teacher.Severity);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Goldpruefung_blockiert_zwischenzeitlich_geaendertes_Sample()
+    {
+        var sampleStore = new FakeSampleStore();
+        sampleStore.Store.Add(new TrainingSample
+        {
+            SampleId = "wb_alt",
+            CaseId = "case1",
+            Code = "BAB",
+            Beschreibung = "Bereits persoenlich bestaetigter Riss",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            ConfirmedAtUtc = new DateTime(2026, 8, 3, 12, 0, 0, DateTimeKind.Utc),
+        });
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            isCodeKnown: _ => true);
+        var item = Foto() with
+        {
+            ExistingSampleId = "wb_alt",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Bereits persoenlich bestaetigter Riss",
+            ExpectedConfirmedAtUtc = new DateTimeOffset(2026, 8, 3, 11, 0, 0, TimeSpan.Zero),
+        };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision("BAB", false, item.ExistingBeschreibung!, null, null, "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("inzwischen", result.RefusalReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, frameStore.StoreCalls + frameStore.StoreBytesCalls);
+        Assert.Empty(sampleStore.ReplaceCalls);
+    }
+
+    [Fact]
+    public async Task SaveAsync_Goldpruefung_blockiert_geaenderte_Bildbytes_vor_jedem_Schreiben()
+    {
+        var originalBytes = new byte[] { 1, 2, 3 };
+        var changedBytes = new byte[] { 4, 5, 6 };
+        var sampleStore = new FakeSampleStore();
+        sampleStore.Store.Add(new TrainingSample
+        {
+            SampleId = "wb_alt",
+            CaseId = "case1",
+            Code = "BAB",
+            Beschreibung = "Bereits persoenlich bestaetigter Riss",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+        });
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            frameStore: frameStore,
+            readFileBytes: _ => changedBytes,
+            isCodeKnown: _ => true);
+        var item = Foto(@"C:\frames\f.jpg") with
+        {
+            ExistingSampleId = "wb_alt",
+            ExistingCode = "BAB",
+            ExistingBeschreibung = "Bereits persoenlich bestaetigter Riss",
+            ExpectedImageSha256 = Convert.ToHexStringLower(SHA256.HashData(originalBytes)),
+        };
+
+        var result = await service.SaveAsync(
+            item,
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision("BAB", false, item.ExistingBeschreibung!, null, null, "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("Bild wurde", result.RefusalReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, frameStore.StoreCalls + frameStore.StoreBytesCalls);
+        Assert.Empty(sampleStore.ReplaceCalls);
     }
 
     [Fact]
@@ -678,7 +1289,8 @@ public sealed class AnnotationWorkbenchServiceTests
             CaseId = "case1",
             Code = "BAB",
             Beschreibung = "Bereits persoenlich bestaetigter Riss",
-            Status = TrainingSampleStatus.Draft
+            Status = TrainingSampleStatus.Draft,
+            SourceType = SourceTypeNames.ManualCoding,
         });
         var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
         var teacherStore = new FakeTeacherStore();
@@ -771,7 +1383,10 @@ public sealed class AnnotationWorkbenchServiceTests
             Beschreibung = "Alter bestaetigter Riss",
             Signature = "case1|BAB|1.0|1.0|b:0.100,0.100,0.100,0.100",
             Status = TrainingSampleStatus.Draft,
+            SourceType = SourceTypeNames.ManualCoding,
             FramePath = @"C:\gold\alt.jpg",
+            Corrected = true,
+            MatchLevel = MatchLevelNames.ReviewCorrected,
         });
         var teacherStore = new FakeTeacherStore();
         teacherStore.Existing.Add(new TeacherAnnotation
@@ -801,6 +1416,8 @@ public sealed class AnnotationWorkbenchServiceTests
         var replace = Assert.Single(sampleStore.ReplaceCalls);
         Assert.Equal("wb_alt", replace.SampleId);
         Assert.Equal("BAB", replace.Code);
+        Assert.True(replace.Corrected);
+        Assert.Equal(MatchLevelNames.ReviewCorrected, replace.MatchLevel);
         Assert.Equal(
             TrainingSample.BuildCanonicalSignature(
                 "case1", "BAB", 1.0, 1.0,
@@ -872,6 +1489,7 @@ public sealed class AnnotationWorkbenchServiceTests
             Code = "BAB",
             Beschreibung = "Bereits persoenlich bestaetigter Riss",
             Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
             FramePath = @"C:\KI_BRAIN\gold_frames\BAB - Riss\alt.jpg",
         });
         var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
@@ -937,7 +1555,9 @@ public sealed class AnnotationWorkbenchServiceTests
         {
             SampleId = "wb_alt", CaseId = "case1", Code = "BAB",
             Beschreibung = "Bereits persoenlich bestaetigter Riss",
-            Status = TrainingSampleStatus.Approved, FramePath = @"C:\gold\alt.jpg",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            FramePath = @"C:\gold\alt.jpg",
         });
         var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
         var teacherStore = new FakeTeacherStore();
@@ -977,7 +1597,9 @@ public sealed class AnnotationWorkbenchServiceTests
         {
             SampleId = "wb_alt", CaseId = "case1", Code = "BAB",
             Beschreibung = "Bereits persoenlich bestaetigter Riss",
-            Status = TrainingSampleStatus.Approved, FramePath = @"C:\gold\alt.jpg",
+            Status = TrainingSampleStatus.Approved,
+            SourceType = SourceTypeNames.ManualCoding,
+            FramePath = @"C:\gold\alt.jpg",
         });
         var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
         var teacherStore = new FakeTeacherStore();
@@ -1071,6 +1693,12 @@ public sealed class AnnotationWorkbenchServiceTests
 
         Assert.True(erstes.Saved);
         Assert.True(zweites.Saved);
+        var expectedImageSha256 = Convert.ToHexStringLower(
+            SHA256.HashData(new byte[] { 1, 2, 3 }));
+        Assert.Equal(expectedImageSha256, erstes.StoredImageSha256);
+        Assert.Equal(expectedImageSha256, zweites.StoredImageSha256);
+        Assert.NotNull(erstes.StoredConfirmedAtUtc);
+        Assert.NotNull(zweites.StoredConfirmedAtUtc);
         Assert.NotEqual(erstes.SampleId, zweites.SampleId);
         Assert.Equal(2, sampleStore.Store.Count);
         // Die Signaturen unterscheiden sich im b:-Geometrie-Teil.
@@ -1115,7 +1743,8 @@ public sealed class AnnotationWorkbenchServiceTests
         Func<string, bool>? isCodeKnown = null,
         Func<string, string?>? codeLabelLookup = null,
         IProtocolAiService? protocolAi = null,
-        IReadOnlyList<string>? allowedCodes = null)
+        IReadOnlyList<string>? allowedCodes = null,
+        Func<string, (int Width, int Height)?>? readImageDimensions = null)
         => new(
             sam ?? new FakeSamSegmentationService(),
             client ?? new FakePipelineClient(),
@@ -1133,7 +1762,8 @@ public sealed class AnnotationWorkbenchServiceTests
             bcaClassifier: null,
             codeLabelLookup: codeLabelLookup,
             protocolAi: protocolAi,
-            resolveAllowedCodes: allowedCodes is null ? null : () => allowedCodes);
+            resolveAllowedCodes: allowedCodes is null ? null : () => allowedCodes,
+            readImageDimensions: readImageDimensions ?? (_ => (1000, 500)));
 
     // ── Fakes ──────────────────────────────────────────────────────────────
 
@@ -1271,8 +1901,11 @@ public sealed class AnnotationWorkbenchServiceTests
     {
         public string? StoredPath { get; init; } = @"C:\KI_BRAIN\gold_frames\gold_default.jpg";
         public int StoreCalls { get; private set; }
+        public int StoreBytesCalls { get; private set; }
         public string? LastSourcePath { get; private set; }
         public string? LastFramesDir { get; private set; }
+        public byte[]? LastImageBytes { get; private set; }
+        public string? LastExtension { get; private set; }
 
         public string GetFramesDir(string? customDir = null)
             => customDir ?? @"C:\KI_BRAIN\frames";
@@ -1302,7 +1935,13 @@ public sealed class AnnotationWorkbenchServiceTests
             string extension,
             string? framesDir = null,
             CancellationToken ct = default)
-            => throw new NotSupportedException();
+        {
+            StoreBytesCalls++;
+            LastImageBytes = (byte[])imageBytes.Clone();
+            LastExtension = extension;
+            LastFramesDir = framesDir;
+            return Task.FromResult(StoredPath);
+        }
     }
 
     private sealed class FakeIndexer : IKnowledgeBaseIndexer
@@ -1361,13 +2000,25 @@ public sealed class AnnotationWorkbenchServiceTests
     {
         public string Root { get; }
 
-        public TempEvalSet(string haltungKey)
+        public TempEvalSet(string? haltungKey = null, string? imageHash = null)
         {
             Root = Path.Combine(Path.GetTempPath(), "wb_evalset_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
-            File.WriteAllText(
-                Path.Combine(Root, "_candidates.json"),
-                "[{\"haltung_key\":\"" + haltungKey + "\"}]");
+            if (!string.IsNullOrWhiteSpace(haltungKey))
+            {
+                File.WriteAllText(
+                    Path.Combine(Root, "_candidates.json"),
+                    "[{\"haltung_key\":\"" + haltungKey + "\"}]");
+            }
+
+            if (!string.IsNullOrWhiteSpace(imageHash))
+            {
+                File.WriteAllText(
+                    Path.Combine(Root, "_manifest.json"),
+                    "{\"hashes\":{\"images/snapshot.jpg\":{\"sha256\":\""
+                    + imageHash
+                    + "\"}}}");
+            }
         }
 
         public void Dispose()

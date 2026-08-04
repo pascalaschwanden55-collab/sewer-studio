@@ -335,6 +335,12 @@
                 <Grid x:Name="PhotoContainer" SizeChanged="PhotoContainer_SizeChanged">
                     <Image x:Name="PhotoImage" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <!-- Reine Pruefvorschau: Diese Ebene wird nicht in das
+                         exportierte Overlay-Foto eingebrannt. -->
+                    <Canvas x:Name="SamMaskCanvas"
+                            Background="Transparent"
+                            IsHitTestVisible="False"
+                            ClipToBounds="True"/>
                     <Canvas x:Name="OverlayCanvas" Background="Transparent"
                             MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
                             MouseLeftButtonUp="Canvas_MouseLeftButtonUp"

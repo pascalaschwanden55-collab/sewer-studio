@@ -1,6 +1,6 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Inventory;
 
@@ -11,8 +11,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
 /// Haltungszuordnung. Unbekannte Felder, fehlende Sets und Hashabweichungen sind
 /// harte Fehler; es gibt keinen stillen Ersatzwert.
 /// </summary>
-public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistryStore
+public sealed partial class TrainingExportRegistryFileStore : ITrainingExportRegistryStore
 {
+    private const long MinimumTrainingNegativeBytes = 1024;
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly string _registryPath;
     private readonly string _knowledgeRoot;
@@ -30,6 +31,7 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
         try
         {
             var bytes = ReadStableBytes(_registryPath);
+            RejectDuplicateJsonProperties(bytes, "Das Exportregister");
             var document = JsonSerializer.Deserialize<TrainingExportRegistryFileDocument>(bytes, JsonOptions)
                            ?? throw new JsonException("Das Exportregister ist leer.");
             var registryHash = Convert.ToHexStringLower(SHA256.HashData(bytes));
@@ -150,21 +152,100 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
         var result = new List<TrainingExportNegativeImage>(negatives.Count);
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var manifestsByPath = new Dictionary<string, ValidatedNegativeSetManifest>(
+            StringComparer.OrdinalIgnoreCase);
+        var setIdsByRoot = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var registeredImageNamesBySet = new Dictionary<string, HashSet<string>>(
+            StringComparer.Ordinal);
+        var seenStrictPhysicalHoldings = new HashSet<string>(StringComparer.Ordinal);
+        bool? legacyMode = null;
         foreach (var entry in negatives)
         {
             if (string.IsNullOrWhiteSpace(entry.Path))
                 throw new TrainingExportPlanException("Ein Negativbild im Exportregister hat keinen Pfad.");
             RequireSha256(entry.Sha256, $"Negativ-Hash von '{entry.Path}'");
+            var binding = NormalizeNegativeBinding(entry);
+            if (legacyMode is not null && legacyMode.Value != binding.IsLegacy)
+            {
+                throw new TrainingExportPlanException(
+                    "Ein Exportregister darf Legacy-Negative und streng gebundene Negativsaetze nicht mischen.");
+            }
+            legacyMode = binding.IsLegacy;
+
+            if (ContainsTraversalSegment(entry.Path))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild-Pfad enthaelt einen Traversal-Abschnitt: {entry.Path}");
+            }
             var path = Path.IsPathFullyQualified(entry.Path)
                 ? Path.GetFullPath(entry.Path)
                 : Path.GetFullPath(entry.Path, _knowledgeRoot);
+            if (binding.IsLegacy)
+            {
+                ValidateLegacyNegativePath(path);
+            }
+            else
+            {
+                ValidateBoundNegativeSetPath(
+                    path,
+                    entry,
+                    binding,
+                    manifestsByPath,
+                    setIdsByRoot);
+            }
             if (!seenPaths.Add(path))
                 throw new TrainingExportPlanException($"Negativbild-Pfad '{entry.Path}' steht mehrfach im Exportregister.");
             var sha256 = entry.Sha256.Trim().ToLowerInvariant();
             if (!seenHashes.Add(sha256))
                 throw new TrainingExportPlanException($"Negativbild-Hash '{sha256}' steht mehrfach im Exportregister.");
+            if (!binding.IsLegacy)
+            {
+                if (!seenStrictPhysicalHoldings.Add(binding.PhysicalHoldingKey!))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Physische Haltung '{binding.PhysicalHoldingKey}' steht mehrfach in strikten Negativ-Sets.");
+                }
+                if (!registeredImageNamesBySet.TryGetValue(
+                        binding.NegativeSetId!,
+                        out var registeredImageNames))
+                {
+                    registeredImageNames = new HashSet<string>(StringComparer.Ordinal);
+                    registeredImageNamesBySet.Add(binding.NegativeSetId!, registeredImageNames);
+                }
+                registeredImageNames.Add(Path.GetFileName(path));
+            }
 
-            result.Add(new TrainingExportNegativeImage(path, sha256, entry.Split));
+            result.Add(new TrainingExportNegativeImage(path, sha256, entry.Split)
+            {
+                HoldingKey = binding.HoldingKey,
+                PhysicalHoldingKey = binding.PhysicalHoldingKey,
+                NegativeSourceType = binding.SourceType,
+                NegativeSetId = binding.NegativeSetId,
+                NegativeSetManifestSha256 = binding.NegativeSetManifestSha256,
+                QueueId = binding.QueueId,
+                ReviewSha256 = binding.ReviewSha256,
+                QueueManifestSha256 = binding.QueueManifestSha256,
+                CandidatesSha256 = binding.CandidatesSha256,
+                ClassMapVersion = binding.ClassMapVersion,
+                ClassMapSha256 = binding.ClassMapSha256,
+                VsaManifestHash = binding.VsaManifestHash,
+                ReviewItemId = binding.ReviewItemId,
+                ReviewDecision = binding.ReviewDecision
+            });
+        }
+
+        foreach (var manifest in manifestsByPath.Values)
+        {
+            var setId = manifest.Document.SetId;
+            var expectedImageNames = manifest.Document.Semantic.Images
+                .Select(image => image.FileName)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!registeredImageNamesBySet.TryGetValue(setId, out var registeredImageNames)
+                || !registeredImageNames.SetEquals(expectedImageNames))
+            {
+                throw new TrainingExportPlanException(
+                    $"Exportregister muss exakt alle Bilder des Negativ-Sets '{setId}' enthalten.");
+            }
         }
 
         return result
@@ -172,118 +253,698 @@ public sealed class TrainingExportRegistryFileStore : ITrainingExportRegistrySto
             .ToArray();
     }
 
-    private static byte[] ReadStableBytes(string path)
+    private void ValidateLegacyNegativePath(string imagePath)
     {
-        for (var attempt = 0; attempt < 2; attempt++)
+        var expectedRoot = Path.GetFullPath(Path.Combine(
+            _knowledgeRoot,
+            "training",
+            "negatives",
+            "bcc_pilot"));
+        var actualRoot = Path.GetDirectoryName(imagePath);
+        var fileName = Path.GetFileName(imagePath);
+        if (string.IsNullOrWhiteSpace(actualRoot)
+            || !PathsEqual(actualRoot, expectedRoot)
+            || string.IsNullOrWhiteSpace(fileName)
+            || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
-            var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
-            if (reparsePoint is not null)
-                throw new IOException($"Registerpfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
-
-            var before = new FileInfo(path);
-            before.Refresh();
-            if (!before.Exists)
-                throw new FileNotFoundException("Datei fehlt.", path);
-            byte[] bytes;
-            using (var stream = new FileStream(
-                       path,
-                       FileMode.Open,
-                       FileAccess.Read,
-                       FileShare.Read,
-                       bufferSize: 64 * 1024,
-                       FileOptions.SequentialScan))
-            {
-                using var buffer = new MemoryStream(checked((int)stream.Length));
-                stream.CopyTo(buffer);
-                bytes = buffer.ToArray();
-            }
-
-            var after = new FileInfo(path);
-            after.Refresh();
-            if (after.Exists
-                && before.Length == after.Length
-                && before.LastWriteTimeUtc == after.LastWriteTimeUtc
-                && bytes.LongLength == after.Length)
-            {
-                return bytes;
-            }
+            throw new TrainingExportPlanException(
+                $"Legacy-Negativbild liegt nicht direkt im erwarteten Pilotordner '{expectedRoot}'.");
         }
 
-        throw new IOException("Datei wurde waehrend des Lesens veraendert.");
-    }
-
-    private static void RequireSha256(string? value, string label)
-    {
-        var normalized = value?.Trim();
-        if (normalized is not { Length: 64 } || !normalized.All(Uri.IsHexDigit))
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
-    }
-
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions
+        var reparsePoint = TrainingInventoryPaths.FindReparsePoint(imagePath);
+        if (reparsePoint is not null)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            PropertyNameCaseInsensitive = false,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
+            throw new TrainingExportPlanException(
+                $"Legacy-Negativbild-Pfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+        }
+        if (!File.Exists(imagePath))
+            throw new TrainingExportPlanException($"Legacy-Negativbild fehlt: {imagePath}");
+    }
+
+    private void ValidateBoundNegativeSetPath(
+        string imagePath,
+        TrainingExportNegativeImageFileDocument entry,
+        NegativeBinding binding,
+        IDictionary<string, ValidatedNegativeSetManifest> manifestsByPath,
+        IDictionary<string, string> setIdsByRoot)
+    {
+        var setId = binding.NegativeSetId!;
+        var expectedSetRoot = Path.GetFullPath(Path.Combine(
+            _knowledgeRoot,
+            "training",
+            "negatives",
+            "sets",
+            $"bcc_hn_{setId[..12]}"));
+        var expectedImagesRoot = Path.Combine(expectedSetRoot, "images");
+        var actualImagesRoot = Path.GetDirectoryName(imagePath);
+        var fileName = Path.GetFileName(imagePath);
+        if (string.IsNullOrWhiteSpace(actualImagesRoot)
+            || !PathsEqual(actualImagesRoot, expectedImagesRoot)
+            || string.IsNullOrWhiteSpace(fileName)
+            || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new TrainingExportPlanException(
+                $"Gebundenes Negativbild liegt nicht im erwarteten Set-Ordner '{expectedImagesRoot}'.");
+        }
+
+        var reparsePoint = TrainingInventoryPaths.FindReparsePoint(imagePath);
+        if (reparsePoint is not null)
+        {
+            throw new TrainingExportPlanException(
+                $"Gebundener Negativbild-Pfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+        }
+
+        if (setIdsByRoot.TryGetValue(expectedSetRoot, out var previousSetId)
+            && !string.Equals(previousSetId, setId, StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                $"Mehrere Negativ-Set-IDs verwenden denselben Set-Ordner '{expectedSetRoot}'.");
+        }
+        setIdsByRoot.TryAdd(expectedSetRoot, setId);
+
+        var manifestPath = Path.Combine(expectedSetRoot, "_manifest.json");
+        if (!manifestsByPath.TryGetValue(manifestPath, out var manifest))
+        {
+            var manifestBytes = ReadStableBytes(manifestPath);
+            var actualManifestSha256 = Convert.ToHexStringLower(SHA256.HashData(manifestBytes));
+            manifest = ReadStrictNegativeSetManifest(
+                expectedSetRoot,
+                manifestBytes,
+                actualManifestSha256);
+            manifestsByPath.Add(manifestPath, manifest);
+        }
+        if (!manifest.Sha256.Equals(
+                binding.NegativeSetManifestSha256,
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                $"Negativ-Set '{setId}' stimmt nicht mit dem freigegebenen Manifest-Hash ueberein.");
+        }
+        if (!manifest.Document.SetId.Equals(setId, StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                $"Negativ-Set '{setId}' stimmt nicht mit der Set-ID im Manifest ueberein.");
+        }
+
+        ValidateBoundNegativeManifestEntry(
+            imagePath,
+            fileName,
+            entry,
+            binding,
+            manifest);
+    }
+
+    private static ValidatedNegativeSetManifest ReadStrictNegativeSetManifest(
+        string setRoot,
+        byte[] bytes,
+        string sha256)
+    {
+        RejectDuplicateJsonProperties(bytes, "Das Negativ-Set-Manifest");
+        var json = WithoutUtf8Bom(bytes);
+        var document = JsonSerializer.Deserialize<NegativeSetManifestFileDocument>(json, JsonOptions)
+                       ?? throw new JsonException("Das Negativ-Set-Manifest ist leer.");
+
+        if (document.Semantic is null
+            || document.Hashes is null
+            || !string.Equals(document.SchemaVersion, "1.0", StringComparison.Ordinal)
+            || !string.Equals(document.Purpose, "bcc_reviewed_negative_set", StringComparison.Ordinal)
+            || !string.Equals(document.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !string.Equals(document.Role, "training_negative_set", StringComparison.Ordinal)
+            || !document.Frozen
+            || !string.Equals(document.DatasetStatus, "ready_for_training", StringComparison.Ordinal)
+            || !string.Equals(document.HashAlgorithm, "sha256", StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(document.SetId))
+        {
+            throw new TrainingExportPlanException(
+                "Das Negativ-Set-Manifest ist nicht streng eingefroren und trainingsbereit.");
+        }
+        NormalizeNegativeSetId(document.SetId);
+        if (!DateTimeOffset.TryParse(document.CreatedUtc, out _)
+            || !document.CreatedUtc.EndsWith('Z'))
+        {
+            throw new TrainingExportPlanException(
+                "Das Negativ-Set-Manifest hat keinen gueltigen UTC-Erstellungszeitpunkt.");
+        }
+        ValidateNegativeSetSemanticShape(document.Semantic);
+        if (document.ImagesCount != document.Semantic.Images.Count
+            || document.HoldingsCount != document.Semantic.Images.Count
+            || document.HashesCount != document.Hashes.Count)
+        {
+            throw new TrainingExportPlanException(
+                "Die Bild-, Haltungs- oder Hashanzahl im Negativ-Set-Manifest ist widerspruechlich.");
+        }
+        foreach (var hashEntry in document.Hashes)
+        {
+            if (string.IsNullOrWhiteSpace(hashEntry.Key)
+                || hashEntry.Value is null
+                || hashEntry.Value.SizeBytes < 0)
+            {
+                throw new TrainingExportPlanException(
+                    "Das Negativ-Set-Manifest enthaelt einen ungueltigen Datei-Hashbeleg.");
+            }
+            RequireLowercaseSha256(
+                hashEntry.Value.Sha256,
+                $"Datei-Hashbeleg '{hashEntry.Key}'");
+        }
+
+        using var jsonDocument = JsonDocument.Parse(
+            json.ToArray(),
+            new JsonDocumentOptions
+            {
+                AllowTrailingCommas = JsonOptions.AllowTrailingCommas,
+                CommentHandling = JsonOptions.ReadCommentHandling
+            });
+        var semanticElement = jsonDocument.RootElement.GetProperty("semantic");
+        var semanticSha256 = HashCanonicalJson(semanticElement);
+        if (!semanticSha256.Equals(document.SetId, StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Die Negativ-Set-ID passt nicht zum semantischen Manifest-Beleg.");
+        }
+
+        var files = ReadAndVerifyNegativeSetFiles(setRoot, document);
+        var receipts = ValidateNegativeSetReceipts(document, files);
+        return new ValidatedNegativeSetManifest(sha256, document, files, receipts);
+    }
+
+    private static IReadOnlyDictionary<string, StableNegativeSetFile> ReadAndVerifyNegativeSetFiles(
+        string setRoot,
+        NegativeSetManifestFileDocument manifest)
+    {
+        var reparsePoint = TrainingInventoryPaths.FindReparsePoint(setRoot);
+        if (reparsePoint is not null)
+        {
+            throw new TrainingExportPlanException(
+                $"Negativ-Set-Struktur enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+        }
+
+        var rootEntries = Directory
+            .EnumerateFileSystemEntries(setRoot)
+            .Select(Path.GetFileName)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        var expectedRootEntries = new[] { "_manifest.json", "images", "receipts" }
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        if (!rootEntries.SequenceEqual(expectedRootEntries, StringComparer.Ordinal)
+            || !File.Exists(Path.Combine(setRoot, "_manifest.json"))
+            || !Directory.Exists(Path.Combine(setRoot, "images"))
+            || !Directory.Exists(Path.Combine(setRoot, "receipts")))
+        {
+            throw new TrainingExportPlanException(
+                "Die Negativ-Set-Wurzel muss exakt _manifest.json, images und receipts enthalten.");
+        }
+
+        var paths = EnumerateNegativeSetDataFiles(setRoot);
+        var expectedReceipts = new HashSet<string>(
+            [
+                "receipts/review.json",
+                "receipts/queue_manifest.json",
+                "receipts/queue_candidates.json",
+                "receipts/class_map.json"
+            ],
+            StringComparer.Ordinal);
+        var actualReceipts = paths.Keys
+            .Where(path => path.StartsWith("receipts/", StringComparison.Ordinal))
+            .ToHashSet(StringComparer.Ordinal);
+        if (!actualReceipts.SetEquals(expectedReceipts))
+        {
+            throw new TrainingExportPlanException(
+                "Das Negativ-Set muss exakt die vier gebundenen Receipt-Dateien enthalten.");
+        }
+        if (!paths.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(manifest.Hashes.Keys))
+        {
+            throw new TrainingExportPlanException(
+                "Die Hashliste des Negativ-Sets deckt die realen Bild- und Receipt-Dateien nicht exakt ab.");
+        }
+
+        var result = new Dictionary<string, StableNegativeSetFile>(StringComparer.Ordinal);
+        foreach (var item in paths.OrderBy(item => item.Key, StringComparer.Ordinal))
+        {
+            if (!manifest.Hashes.TryGetValue(item.Key, out var expected))
+                throw new TrainingExportPlanException($"Hashbeleg fehlt: {item.Key}");
+            var payload = ReadStableBytes(item.Value);
+            var actualSha256 = Convert.ToHexStringLower(SHA256.HashData(payload));
+            if (payload.LongLength != expected.SizeBytes
+                || !actualSha256.Equals(expected.Sha256, StringComparison.Ordinal))
+            {
+                throw new TrainingExportPlanException(
+                    $"Hash oder Groesse stimmt nicht mit dem Manifest ueberein: {item.Key}");
+            }
+            if (TrainingInventoryPaths.FindReparsePoint(item.Value) is { } afterReparsePoint)
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativ-Set-Datei wurde durch eine Verknuepfung ersetzt: {afterReparsePoint}");
+            }
+            result.Add(
+                item.Key,
+                new StableNegativeSetFile(item.Value, payload, actualSha256));
+        }
+
+        var afterPaths = EnumerateNegativeSetDataFiles(setRoot);
+        if (!afterPaths.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(result.Keys))
+        {
+            throw new TrainingExportPlanException(
+                "Die Dateien des Negativ-Sets wurden waehrend der Pruefung veraendert.");
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, string> EnumerateNegativeSetDataFiles(string setRoot)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var directoryName in new[] { "images", "receipts" })
+        {
+            var directory = Path.Combine(setRoot, directoryName);
+            var directoryAttributes = File.GetAttributes(directory);
+            if ((directoryAttributes & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativ-Set-Ordner ist eine Verknuepfung oder Junction: {directory}");
+            }
+            foreach (var path in Directory.EnumerateFileSystemEntries(directory))
+            {
+                var attributes = File.GetAttributes(path);
+                if ((attributes & FileAttributes.ReparsePoint) != 0
+                    || (attributes & FileAttributes.Directory) != 0)
+                {
+                    throw new TrainingExportPlanException(
+                        $"Negativ-Set enthaelt eine fremde oder unsichere Datei: {path}");
+                }
+                var fileName = Path.GetFileName(path);
+                if (string.IsNullOrWhiteSpace(fileName))
+                    throw new TrainingExportPlanException("Negativ-Set enthaelt einen leeren Dateinamen.");
+                var relativePath = $"{directoryName}/{fileName}";
+                if (!result.TryAdd(relativePath, Path.GetFullPath(path)))
+                    throw new TrainingExportPlanException($"Negativ-Set-Datei steht mehrfach: {relativePath}");
+            }
+        }
+        return result;
+    }
+
+    private static ValidatedNegativeSetReceipts ValidateNegativeSetReceipts(
+        NegativeSetManifestFileDocument manifest,
+        IReadOnlyDictionary<string, StableNegativeSetFile> files)
+    {
+        var semantic = manifest.Semantic;
+        var queueFile = files["receipts/queue_manifest.json"];
+        var candidatesFile = files["receipts/queue_candidates.json"];
+        var reviewFile = files["receipts/review.json"];
+        var classMapFile = files["receipts/class_map.json"];
+
+        if (!queueFile.Sha256.Equals(
+                semantic.Queue.QueueManifestSha256,
+                StringComparison.Ordinal)
+            || !candidatesFile.Sha256.Equals(
+                semantic.Queue.CandidatesSha256,
+                StringComparison.Ordinal)
+            || !reviewFile.Sha256.Equals(
+                semantic.Review.ReviewSha256,
+                StringComparison.Ordinal)
+            || !classMapFile.Sha256.Equals(
+                semantic.ClassMapSha256,
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Die vier Receipt-Dateien passen nicht zu den SHA-Bindungen im Negativ-Set.");
+        }
+
+        var classMap = DeserializeStrict<ClassMapReceiptFileDocument>(
+            classMapFile.Bytes,
+            "Der Klassenkarten-Receipt");
+        ValidateClassMapReceipt(classMap, semantic, classMapFile.Sha256);
+
+        var queue = DeserializeStrict<QueueManifestReceiptFileDocument>(
+            queueFile.Bytes,
+            "Der Queue-Manifest-Receipt");
+        ValidateQueueManifestReceipt(queue, queueFile.Bytes, semantic);
+
+        var candidates = DeserializeStrict<IReadOnlyList<QueueCandidateReceiptFileDocument>>(
+            candidatesFile.Bytes,
+            "Der Queue-Kandidaten-Receipt");
+        var candidatesById = ValidateQueueCandidatesReceipt(
+            candidates,
+            candidatesFile,
+            queue,
+            semantic);
+
+        var review = DeserializeStrict<ReviewReceiptFileDocument>(
+            reviewFile.Bytes,
+            "Der Review-Receipt");
+        var acceptedIds = ValidateReviewReceipt(
+            review,
+            queueFile.Sha256,
+            candidatesFile.Sha256,
+            classMapFile.Sha256,
+            queue.QueueId,
+            candidatesById.Keys,
+            semantic);
+
+        var queueItemsById = queue.Semantic.Items.ToDictionary(
+            item => item.Id,
+            StringComparer.Ordinal);
+        foreach (var image in semantic.Images)
+        {
+            var queueImagePath = $"images/{image.FileName}";
+            if (!files.TryGetValue(queueImagePath, out var imageFile))
+            {
+                throw new TrainingExportPlanException(
+                    $"Gebundenes Negativbild fehlt im verifizierten Set: {queueImagePath}");
+            }
+            ValidateNegativeImageBytes(imageFile.Bytes, image.ImageFormat, image.FileName);
+
+            if (!queueItemsById.TryGetValue(image.ReviewItemId, out var queueItem)
+                || !candidatesById.TryGetValue(image.ReviewItemId, out var candidate)
+                || !acceptedIds.Contains(image.ReviewItemId)
+                || !string.Equals(queueItem.ImageSha256, image.ImageSha256, StringComparison.Ordinal)
+                || !string.Equals(queueItem.HoldingKey, image.HoldingKey, StringComparison.Ordinal)
+                || !string.Equals(
+                    queueItem.PhysicalHoldingKey,
+                    image.PhysicalHoldingKey,
+                    StringComparison.Ordinal)
+                || !string.Equals(queueItem.SourceRef, image.SourceRef, StringComparison.Ordinal)
+                || !string.Equals(
+                    queueItem.InspectionDate,
+                    image.InspectionDate,
+                    StringComparison.Ordinal)
+                || queueItem.SizeBytes != image.SizeBytes
+                || !string.Equals(queueItem.ImageFormat, image.ImageFormat, StringComparison.Ordinal)
+                || !string.Equals(candidate.FramePath, image.FileName, StringComparison.Ordinal)
+                || !string.Equals(
+                    candidate.SourceSha256,
+                    image.ImageSha256,
+                    StringComparison.Ordinal))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild '{image.FileName}' ist nicht exakt an Queue, Kandidat und Review gebunden.");
+            }
+
+            if (!queue.Hashes.TryGetValue(queueImagePath, out var queueImageHash)
+                || !string.Equals(
+                    queueImageHash.Sha256,
+                    image.ImageSha256,
+                    StringComparison.Ordinal)
+                || queueImageHash.SizeBytes != image.SizeBytes)
+            {
+                throw new TrainingExportPlanException(
+                    $"Der Queue-Receipt bindet '{queueImagePath}' nicht bytegenau.");
+            }
+        }
+        if (!acceptedIds.SetEquals(
+                semantic.Images.Select(image => image.ReviewItemId)))
+        {
+            throw new TrainingExportPlanException(
+                "Das Negativ-Set muss exakt alle all_classes_clear-Entscheidungen enthalten.");
+        }
+
+        return new ValidatedNegativeSetReceipts(
+            queue.QueueId,
+            classMapFile.Sha256,
+            classMap.VsaManifestHash,
+            classMap.Version,
+            classMap.Classes);
+    }
+
+    private static void ValidateClassMapReceipt(
+        ClassMapReceiptFileDocument classMap,
+        NegativeSetSemanticFileDocument semantic,
+        string receiptSha256)
+    {
+        RequireLowercaseSha256(classMap.VsaManifestHash, "VSA-Hash im Klassenkarten-Receipt");
+        if (classMap.Version != 3
+            || !receiptSha256.Equals(semantic.ClassMapSha256, StringComparison.Ordinal)
+            || !classMap.VsaManifestHash.Equals(semantic.VsaManifestHash, StringComparison.Ordinal)
+            || classMap.Classes is null
+            || classMap.Classes.Count != 15)
+        {
+            throw new TrainingExportPlanException(
+                "Der Klassenkarten-Receipt passt nicht zur gebundenen Detect-Klassenkarte v3.");
+        }
+
+        var namesById = new Dictionary<int, string>();
+        foreach (var item in classMap.Classes)
+        {
+            if (string.IsNullOrWhiteSpace(item.Key)
+                || item.Value is < 0 or > 14
+                || !namesById.TryAdd(item.Value, item.Key))
+            {
+                throw new TrainingExportPlanException(
+                    "Der Klassenkarten-Receipt enthaelt ungueltige oder doppelte Klassen.");
+            }
+        }
+        var orderedNames = Enumerable.Range(0, 15)
+            .Select(id => namesById.TryGetValue(id, out var name) ? name : null)
+            .ToArray();
+        if (orderedNames.Any(name => name is null)
+            || !string.Equals(orderedNames[14], "BCC_bogen", StringComparison.Ordinal)
+            || !orderedNames.Cast<string>().SequenceEqual(
+                semantic.ClassNames,
+                StringComparer.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Der Klassenkarten-Receipt besitzt nicht die gebundene 15er-Klassenreihenfolge.");
+        }
+    }
+
+    private static void ValidateQueueManifestReceipt(
+        QueueManifestReceiptFileDocument queue,
+        byte[] queueBytes,
+        NegativeSetSemanticFileDocument negativeSemantic)
+    {
+        if (!string.Equals(queue.SchemaVersion, "1.0", StringComparison.Ordinal)
+            || !string.Equals(queue.Purpose, "bcc_hard_negative_review_queue", StringComparison.Ordinal)
+            || !string.Equals(queue.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !string.Equals(queue.Role, "training_candidate_review", StringComparison.Ordinal)
+            || !queue.Frozen
+            || !string.Equals(queue.DatasetStatus, "review_incomplete", StringComparison.Ordinal)
+            || !string.Equals(queue.HashAlgorithm, "sha256", StringComparison.Ordinal)
+            || queue.Semantic is null
+            || queue.SelectionReceipt is null
+            || queue.Hashes is null)
+        {
+            throw new TrainingExportPlanException(
+                "Der Queue-Manifest-Receipt ist nicht streng eingefroren.");
+        }
+        RequireLowercaseSha256(queue.QueueId, "Queue-ID im Queue-Receipt");
+        RequireLowercaseSha256(queue.ClassMapSha256, "Klassenkarten-Hash im Queue-Receipt");
+        RequireLowercaseSha256(queue.VsaManifestHash, "VSA-Hash im Queue-Receipt");
+        ValidateUtcTimestamp(queue.CreatedUtc, "Erstellungszeit im Queue-Receipt");
+
+        using var document = JsonDocument.Parse(WithoutUtf8Bom(queueBytes).ToArray());
+        var canonicalQueueId = HashCanonicalJson(
+            document.RootElement.GetProperty("semantic"));
+        if (!canonicalQueueId.Equals(queue.QueueId, StringComparison.Ordinal)
+            || !string.Equals(
+                queue.Semantic.SchemaVersion,
+                "1.0",
+                StringComparison.Ordinal)
+            || !string.Equals(
+                queue.Semantic.Purpose,
+                "bcc_hard_negative_review_queue",
+                StringComparison.Ordinal)
+            || !string.Equals(queue.Semantic.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !string.Equals(
+                queue.Semantic.Role,
+                "training_candidate_review",
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Die Queue-ID passt nicht zum kanonischen semantischen Queue-Beleg.");
+        }
+
+        if (queue.ClassMapVersion != negativeSemantic.ClassMapVersion
+            || queue.Semantic.ClassMapVersion != negativeSemantic.ClassMapVersion
+            || !string.Equals(
+                queue.ClassMapSha256,
+                negativeSemantic.ClassMapSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(
+                queue.Semantic.ClassMapSha256,
+                negativeSemantic.ClassMapSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(
+                queue.VsaManifestHash,
+                negativeSemantic.VsaManifestHash,
+                StringComparison.Ordinal)
+            || !string.Equals(
+                queue.Semantic.VsaManifestHash,
+                negativeSemantic.VsaManifestHash,
+                StringComparison.Ordinal)
+            || !queue.ClassNames.SequenceEqual(
+                negativeSemantic.ClassNames,
+                StringComparer.Ordinal)
+            || !queue.Semantic.ClassNames.SequenceEqual(
+                negativeSemantic.ClassNames,
+                StringComparer.Ordinal)
+            || !JsonEquivalent(queue.ProtectedSets, negativeSemantic.ProtectedSets)
+            || !JsonEquivalent(queue.Semantic.ProtectedSets, negativeSemantic.ProtectedSets)
+            || !JsonEquivalent(
+                queue.ProtectionSnapshot,
+                negativeSemantic.ProtectionSnapshot)
+            || !JsonEquivalent(
+                queue.Semantic.ProtectionSnapshot,
+                negativeSemantic.ProtectionSnapshot))
+        {
+            throw new TrainingExportPlanException(
+                "Queue, Klassenkarte, Schutzbestand und Negativ-Set widersprechen sich.");
+        }
+
+        var modelIds = ValidateQueueModelScope(queue.Semantic.ModelScope);
+        var items = queue.Semantic.Items;
+        if (items is null
+            || items.Count == 0
+            || queue.CandidatesCount != items.Count
+            || queue.ImagesCount != items.Count
+            || queue.HoldingsCount != items.Count
+            || queue.HashesCount != queue.Hashes.Count
+            || queue.SelectionReceipt.Models is null
+            || !JsonEquivalent(queue.SelectionReceipt.Models, queue.Semantic.ModelScope)
+            || !JsonEquivalent(queue.SelectionReceipt.Items, items))
+        {
+            throw new TrainingExportPlanException(
+                "Queue-Manifest, Auswahlbeleg und Bildanzahlen sind widerspruechlich.");
+        }
+        ValidateQueueItems(items, modelIds);
+    }
+
+    private static IReadOnlySet<string> ValidateQueueModelScope(
+        IReadOnlyList<QueueModelReceiptFileDocument>? modelScope)
+    {
+        if (modelScope is null || modelScope.Count == 0)
+        {
+            throw new TrainingExportPlanException(
+                "Der Queue-Beleg besitzt keine gebundenen Auswahlmodelle.");
+        }
+
+        var modelIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var model in modelScope)
+        {
+            if (model is null
+                || string.IsNullOrWhiteSpace(model.CandidateId)
+                || !modelIds.Add(model.CandidateId))
+            {
+                throw new TrainingExportPlanException(
+                    "Der Queue-Beleg besitzt doppelte oder leere Modell-IDs.");
+            }
+            RequireLowercaseSha256(
+                model.CandidateManifestSha256,
+                $"Kandidatenmanifest-Hash von '{model.CandidateId}'");
+            RequireLowercaseSha256(
+                model.WeightsSha256,
+                $"Gewichte-Hash von '{model.CandidateId}'");
+            RequireLowercaseSha256(
+                model.DatasetPlanId,
+                $"Datensatzplan-ID von '{model.CandidateId}'");
+            RequireLowercaseSha256(
+                model.DatasetManifestSha256,
+                $"Datensatzmanifest-Hash von '{model.CandidateId}'");
+        }
+
+        return modelIds;
+    }
+
+    private static void ValidateQueueItems(
+        IReadOnlyList<QueueItemReceiptFileDocument> items,
+        IReadOnlySet<string> modelIds)
+    {
+        var itemIds = new HashSet<string>(StringComparer.Ordinal);
+        var imageHashes = new HashSet<string>(StringComparer.Ordinal);
+        var physicalHoldings = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in items)
+        {
+            if (item is null || string.IsNullOrWhiteSpace(item.Id))
+                throw new TrainingExportPlanException("Der Queue-Beleg enthaelt eine leere Bild-ID.");
+
+            var imageSha256 = RequireLowercaseSha256(
+                item.ImageSha256,
+                $"Queue-Bildhash von '{item.Id}'");
+            var sourceRef = RequireLowercaseSha256(
+                item.SourceRef,
+                $"Queue-Quellbeleg von '{item.Id}'");
+            if (string.IsNullOrWhiteSpace(item.HoldingKey)
+                || string.IsNullOrWhiteSpace(item.PhysicalHoldingKey))
+            {
+                throw new TrainingExportPlanException(
+                    $"Queue-Bildbeleg '{item.Id}' besitzt keine gueltige Haltung.");
+            }
+            var holdingKey = NormalizeStrictHoldingKey(item.HoldingKey);
+            var imageFormat = item.ImageFormat?.ToLowerInvariant();
+            if (!itemIds.Add(item.Id)
+                || !string.Equals(item.Id, $"bcc-hn-{imageSha256[..16]}", StringComparison.Ordinal)
+                || !string.Equals(item.HoldingKey, holdingKey, StringComparison.Ordinal)
+                || !string.Equals(
+                    item.PhysicalHoldingKey,
+                    PhysicalHoldingKey(holdingKey),
+                    StringComparison.Ordinal)
+                || !imageHashes.Add(imageSha256)
+                || !physicalHoldings.Add(item.PhysicalHoldingKey)
+                || !string.Equals(item.SourceRef, sourceRef, StringComparison.Ordinal)
+                || !DateOnly.TryParseExact(
+                    item.InspectionDate,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out _)
+                || item.SizeBytes < MinimumTrainingNegativeBytes
+                || imageFormat is not ("jpg" or "jpeg" or "png")
+                || !string.Equals(item.ImageFormat, imageFormat, StringComparison.Ordinal))
+            {
+                throw new TrainingExportPlanException(
+                    $"Queue-Bildbeleg '{item.Id}' ist ungueltig.");
+            }
+
+            if (item.Predictions is null || item.Predictions.Count != modelIds.Count)
+            {
+                throw new TrainingExportPlanException(
+                    $"Queue-Bild '{item.Id}' besitzt keine vollstaendige Modellvorhersage.");
+            }
+            var predictedModelIds = new HashSet<string>(StringComparer.Ordinal);
+            var triggered = false;
+            foreach (var prediction in item.Predictions)
+            {
+                if (prediction is null
+                    || string.IsNullOrWhiteSpace(prediction.ModelId)
+                    || !modelIds.Contains(prediction.ModelId)
+                    || !predictedModelIds.Add(prediction.ModelId)
+                    || prediction.BccDetectionCount < 0
+                    || (prediction.MaxBccConfidence is { } confidence
+                        && (!double.IsFinite(confidence) || confidence is < 0 or > 1))
+                    || (prediction.PredictedBcc && prediction.BccDetectionCount < 1))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Queue-Vorhersage fuer '{item.Id}' ist ungueltig.");
+                }
+                triggered |= prediction.PredictedBcc;
+            }
+            if (!predictedModelIds.SetEquals(modelIds) || !triggered)
+            {
+                throw new TrainingExportPlanException(
+                    $"Queue-Bild '{item.Id}' ist nicht an einen BCC-Modelltrigger gebunden.");
+            }
+        }
+    }
+
+    private static void ValidateNegativeImageBytes(
+        ReadOnlySpan<byte> bytes,
+        string imageFormat,
+        string fileName)
+    {
+        var validSignature = imageFormat switch
+        {
+            "jpg" or "jpeg" => bytes.Length >= 3
+                               && bytes[0] == 0xff
+                               && bytes[1] == 0xd8
+                               && bytes[2] == 0xff,
+            "png" => bytes.Length >= 8
+                     && bytes[..8].SequenceEqual(
+                         new byte[] { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a }),
+            _ => false
         };
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
-        return options;
+        if (bytes.Length < MinimumTrainingNegativeBytes || !validSignature)
+        {
+            throw new TrainingExportPlanException(
+                $"Negativbild '{fileName}' ist zu klein oder besitzt keine passende JPEG-/PNG-Signatur.");
+        }
     }
 
-    private sealed class TrainingExportRegistryFileDocument
-    {
-        [JsonRequired]
-        public required string SchemaVersion { get; init; }
-
-        [JsonRequired]
-        public TrainingExportRegistryApprovalStatus ApprovalStatus { get; init; }
-
-        public string? ApprovedBy { get; init; }
-
-        public DateTimeOffset? ApprovedUtc { get; init; }
-
-        public IReadOnlyList<string> ApprovedSampleIds { get; init; }
-            = Array.Empty<string>();
-
-        [JsonRequired]
-        public IReadOnlyDictionary<string, TrainingExportHoldingRole> HoldingRoles { get; init; }
-            = new Dictionary<string, TrainingExportHoldingRole>();
-
-        [JsonRequired]
-        public IReadOnlyList<TrainingExportProtectedSetFileDocument> ProtectedSets { get; init; }
-            = Array.Empty<TrainingExportProtectedSetFileDocument>();
-
-        /// <summary>Optionale, menschlich kuratierte Negativbilder (additiv; fehlt bei Alt-Registrys).</summary>
-        public IReadOnlyList<TrainingExportNegativeImageFileDocument>? NegativeImages { get; init; }
-    }
-
-    private sealed class TrainingExportNegativeImageFileDocument
-    {
-        [JsonRequired]
-        public required string Path { get; init; }
-
-        [JsonRequired]
-        public required string Sha256 { get; init; }
-
-        /// <summary>Optionaler Split-Hinweis (train/validation); null = Planer entscheidet deterministisch.</summary>
-        public TrainingExportTarget? Split { get; init; }
-    }
-
-    private sealed class TrainingExportProtectedSetFileDocument
-    {
-        [JsonRequired]
-        public required string SetId { get; init; }
-
-        [JsonRequired]
-        public TrainingExportProtectedSetRole Role { get; init; }
-
-        [JsonRequired]
-        public required string RootPath { get; init; }
-
-        [JsonRequired]
-        public required string ManifestSha256 { get; init; }
-    }
 }

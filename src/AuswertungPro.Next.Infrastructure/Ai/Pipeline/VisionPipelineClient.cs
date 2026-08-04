@@ -160,7 +160,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     }
 
     /// <summary>
-    /// Nur-lesende Vorschau mit einem validierten, nicht produktiven BCC-Kandidaten.
+    /// Nur-lesende Vorschau mit einem manifest- und hashgeprueften BCC-Kandidaten.
     /// Der Sidecar waehlt das Modell selbst; der Client uebergibt keinen Dateipfad.
     /// </summary>
     public async Task<BccTestYoloResponse> DetectBccTestYoloAsync(
@@ -174,6 +174,37 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
                 ct)
             .ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Nur-lesende Vorschau mit einem exakt per ID und SHA-256 angehefteten Kandidaten.
+    /// Ein Modellpfad ist nicht Teil dieses Vertrags.
+    /// </summary>
+    public async Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+        BccTestYoloRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!IsSafeCandidateId(request.CandidateId)
+            || !IsSha256(request.CandidateSha256))
+        {
+            throw new ArgumentException(
+                "Fuer den BCC-Modelltest sind eine exakte Kandidaten-ID und ein SHA-256 erforderlich.",
+                nameof(request));
+        }
+
+        return await PostInferenceAsync<BccTestYoloRequest, BccTestYoloResponse>(
+                "/detect/yolo/bcc-test",
+                "YOLO-Test",
+                request,
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    public Task<BccTestCandidatesResponse> GetBccTestCandidatesAsync(
+        CancellationToken ct = default)
+        => GetAsync<BccTestCandidatesResponse>(
+            "/detect/yolo/bcc-test/candidates",
+            ct);
 
     /// <summary>
     /// Grounding DINO open-vocabulary detection.
@@ -200,6 +231,57 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     }
 
     // ── Internal ──────────────────────────────────────────────────────────
+
+    private static bool IsSafeCandidateId(string? value)
+    {
+        if (string.IsNullOrEmpty(value)
+            || value.Length > 128
+            || !char.IsAsciiLetterOrDigit(value[0]))
+        {
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiLetterOrDigit(character)
+                && character is not '_' and not '-')
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static bool IsSha256(string? value)
+        => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+
+    /// <summary>
+    /// Liest eine kleine Sidecar-Metadatenantwort mit derselben Token-Grenze.
+    /// </summary>
+    private async Task<TResponse> GetAsync<TResponse>(
+        string endpoint,
+        CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri(endpoint));
+        AddSidecarTokenHeader(req);
+        using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            if (IsClientSidecarRequestError(resp.StatusCode))
+                throw new SidecarBadRequestException(endpoint, resp.StatusCode, body);
+
+            throw new HttpRequestException(
+                $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}",
+                inner: null,
+                statusCode: resp.StatusCode);
+        }
+
+        return JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Failed to deserialize response from {endpoint}");
+    }
 
     /// <summary>
     /// Inferenzaufrufe (YOLO/DINO/SAM/cls) mit Per-Request-Cap (Paket 3/C):

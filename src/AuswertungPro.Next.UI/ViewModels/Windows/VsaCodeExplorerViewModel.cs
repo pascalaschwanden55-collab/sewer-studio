@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.UseCases.PhotoAnnotations;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -58,6 +59,14 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
     // -- Foto --
     public ObservableCollection<string> FotoPaths { get; } = new();
+    public ObservableCollection<string> OriginalFotoPaths { get; } = new();
+
+    /// <summary>
+    /// Echter Haltungs-/DN-Kontext fuer persoenliche Foto-Goldbeispiele.
+    /// Nur der Codiermodus setzt diesen Kontext; allgemeine Katalogdialoge bleiben
+    /// dadurch frei von Trainings-Nebenwirkungen.
+    /// </summary>
+    public PhotoAnnotationSessionContext? PhotoAnnotationContext { get; set; }
 
     // -- Validation --
     [ObservableProperty] private string _validationMessage = "";
@@ -116,6 +125,15 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
             foreach (var foto in existingEntry.FotoPaths)
                 FotoPaths.Add(foto);
+            var originalFotoPaths = existingEntry.OriginalFotoPaths ?? [];
+            for (var i = 0; i < existingEntry.FotoPaths.Count; i++)
+            {
+                var originalFoto = originalFotoPaths.Count > i
+                                   && !string.IsNullOrWhiteSpace(originalFotoPaths[i])
+                    ? originalFotoPaths[i]
+                    : existingEntry.FotoPaths[i];
+                OriginalFotoPaths.Add(originalFoto);
+            }
 
             // Vorhandene Code-Meta auslesen
             if (existingEntry.CodeMeta is not null)
@@ -154,7 +172,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 SelectedCodeKey = tile.Key;
                 if (tile.IsFinal)
                 {
-                    ShowFinalResult(tile.Key, null, null);
+                    var codeDef = GetCurrentVsaCodeDef();
+                    var finalMainCode = codeDef?.FinalCode ?? tile.Key;
+                    if (_catalog.IsSelectableCode(finalMainCode))
+                        ShowFinalResult(finalMainCode, null, null);
                     return;
                 }
                 NavigateToLevel(2);
@@ -166,7 +187,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 {
                     var cd = GetCurrentVsaCodeDef();
                     var prefix = cd?.XPrefix == true ? "X" : "";
-                    ShowFinalResult($"{SelectedCodeKey}{prefix}{tile.Key}", tile.Key, null);
+                    var finalChar1Code = $"{SelectedCodeKey}{prefix}{tile.Key}";
+                    if (_catalog.IsSelectableCode(finalChar1Code))
+                        ShowFinalResult(finalChar1Code, tile.Key, null);
                     return;
                 }
                 NavigateToLevel(3);
@@ -176,7 +199,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 SelectedChar2Key = tile.Key;
                 var cd2 = GetCurrentVsaCodeDef();
                 var prefix2 = cd2?.XPrefix == true ? "X" : "";
-                ShowFinalResult($"{SelectedCodeKey}{prefix2}{SelectedChar1Key}{tile.Key}", SelectedChar1Key, tile.Key);
+                var finalCode = $"{SelectedCodeKey}{prefix2}{SelectedChar1Key}{tile.Key}";
+                if (_catalog.IsSelectableCode(finalCode))
+                    ShowFinalResult(finalCode, SelectedChar1Key, tile.Key);
                 break;
         }
     }
@@ -248,6 +273,12 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         if (!TryResolveCodePath(rawCode, out var groupKey, out var codeKey, out var c1Key, out var c2Key, out var level, out var finalCode))
             return false;
+
+        if (!string.IsNullOrWhiteSpace(finalCode)
+            && !_catalog.IsSelectableCode(finalCode))
+        {
+            return false;
+        }
 
         SelectedGroupKey = groupKey;
         SelectedCodeKey = codeKey;
@@ -326,8 +357,19 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 {
                     foreach (var (key, cd) in group.Codes)
                     {
+                        if (cd.FinalCode is not null
+                            && !_catalog.IsSelectableCode(cd.FinalCode))
+                        {
+                            continue;
+                        }
+
                         var (q1, _) = _catalog.GetQuantRule(key, null);
-                        CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForCode(key, cd, q1, group.Color)));
+                        CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForCode(
+                            key,
+                            cd,
+                            q1,
+                            group.Color,
+                            catalogLabel: _catalog.LookupExactLabel(key))));
                     }
                 }
                 break;
@@ -341,8 +383,22 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                     {
                         var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
                         var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
+                        var fullCode = BuildChar1Code(SelectedCodeKey!, cd.XPrefix, key);
+                        if (!hasC2 && !_catalog.IsSelectableCode(fullCode))
+                            continue;
+
                         CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForChar1(
-                            key, charDef, SelectedCodeKey!, cd.XPrefix, hasC2, q1, CurrentGroupColor)));
+                            key,
+                            charDef,
+                            SelectedCodeKey!,
+                            cd.XPrefix,
+                            hasC2,
+                            q1,
+                            CurrentGroupColor,
+                            catalogLabel: hasC2
+                                ? _catalog.LookupNavigationLabel(fullCode)
+                                : _catalog.LookupExactLabel(fullCode),
+                            parentCatalogLabel: _catalog.LookupExactLabel(SelectedCodeKey!))));
                     }
                 }
                 break;
@@ -359,8 +415,24 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                         foreach (var (key, label) in c2Options)
                         {
                             var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
+                            var char1Code = BuildChar1Code(
+                                SelectedCodeKey!,
+                                cd.XPrefix,
+                                SelectedChar1Key);
+                            var fullCode = $"{char1Code}{key}";
+                            if (!_catalog.IsSelectableCode(fullCode))
+                                continue;
+
                             CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForChar2(
-                                key, label, SelectedCodeKey!, SelectedChar1Key, cd.XPrefix, invalid, CurrentGroupColor)));
+                                key,
+                                label,
+                                SelectedCodeKey!,
+                                SelectedChar1Key,
+                                cd.XPrefix,
+                                invalid,
+                                CurrentGroupColor,
+                                catalogLabel: _catalog.LookupExactLabel(fullCode),
+                                parentCatalogLabel: _catalog.LookupNavigationLabel(char1Code))));
                         }
                     }
                 }
@@ -375,26 +447,49 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
     private void ShowFinalResult(string code, string? c1Key, string? c2Key)
     {
+        if (!_catalog.IsSelectableCode(code))
+        {
+            ShowResultPanel = false;
+            FinalCode = string.Empty;
+            FinalLabel = string.Empty;
+            FinalSublabel = null;
+            Q1Rule = null;
+            Q2Rule = null;
+            Validate();
+            return;
+        }
+
         FinalCode = code;
         var cd = GetCurrentVsaCodeDef();
-        FinalLabel = cd?.Label ?? "";
-
-        if (c1Key is not null && cd?.Char1 is not null && cd.Char1.TryGetValue(c1Key, out var c1Def))
+        var exactCodeDef = _catalog.LookupExactCodeDef(code);
+        if (exactCodeDef is not null)
         {
-            FinalSublabel = c1Def.Label;
-            if (c2Key is not null)
-            {
-                var c2Options = _catalog.GetChar2Options(cd, c1Key);
-                if (c2Options is not null && c2Options.TryGetValue(c2Key, out var c2Label))
-                    FinalSublabel = $"{c1Def.Label} - {c2Label}";
-            }
+            FinalLabel = exactCodeDef.Label;
+            FinalSublabel = null;
         }
         else
         {
-            FinalSublabel = null;
+            FinalLabel = cd?.Label ?? "";
+
+            if (c1Key is not null
+                && cd?.Char1 is not null
+                && cd.Char1.TryGetValue(c1Key, out var c1Def))
+            {
+                FinalSublabel = c1Def.Label;
+                if (c2Key is not null)
+                {
+                    var c2Options = _catalog.GetChar2Options(cd, c1Key);
+                    if (c2Options is not null && c2Options.TryGetValue(c2Key, out var c2Label))
+                        FinalSublabel = $"{c1Def.Label} - {c2Label}";
+                }
+            }
+            else
+            {
+                FinalSublabel = null;
+            }
         }
 
-        WarnMessage = cd?.Warn;
+        WarnMessage = exactCodeDef?.Warn ?? cd?.Warn;
 
         // Quant + Clock Regeln aktualisieren
         var (q1, q2) = _catalog.GetQuantRule(SelectedCodeKey ?? code, c1Key);
@@ -519,8 +614,36 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
     public ProtocolEntry BuildProtocolEntry()
     {
+        EnsureSelectableFinalCode();
+
         // Delegiert an ProtocolEntryFromVsaSelectionBuilder (reine Logik, kein UI-Bezug)
-        var input = new VsaSelectionInput
+        return ProtocolEntryFromVsaSelectionBuilder.Build(
+            BuildSelectionInput(),
+            _existingEntry);
+    }
+
+    /// <summary>
+    /// Baut eine noch nicht an den bestehenden Protokolleintrag gebundene Vorschau.
+    /// Der asynchrone Foto-Goldspeicher kann damit fehlschlagen, ohne einen editierten
+    /// Eintrag bereits vorzeitig zu veraendern.
+    /// </summary>
+    public ProtocolEntry BuildProtocolEntryPreview()
+    {
+        EnsureSelectableFinalCode();
+        return ProtocolEntryFromVsaSelectionBuilder.Build(BuildSelectionInput());
+    }
+
+    private void EnsureSelectableFinalCode()
+    {
+        if (!_catalog.IsSelectableCode(FinalCode))
+        {
+            throw new InvalidOperationException(
+                $"Der VSA-Code '{FinalCode}' ist im aktiven Katalog nicht zur Auswahl freigegeben.");
+        }
+    }
+
+    private VsaSelectionInput BuildSelectionInput()
+        => new()
         {
             FinalCode = FinalCode,
             FinalLabel = FinalLabel,
@@ -538,10 +661,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             StreckenschadenTyp = StreckenschadenTyp,
             Bemerkungen = Bemerkungen,
             FotoPaths = FotoPaths.ToList(),
-            CurrentVsaCodeDef = GetCurrentVsaCodeDef()
+            OriginalFotoPaths = OriginalFotoPaths.ToList(),
+            CurrentVsaCodeDef = _catalog.LookupExactCodeDef(FinalCode)
+                                ?? GetCurrentVsaCodeDef()
         };
-        return ProtocolEntryFromVsaSelectionBuilder.Build(input, _existingEntry);
-    }
 
     // =================================================================
     // Multi-Column Navigation (WinCan-Stil)
@@ -574,10 +697,17 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         foreach (var (key, cd) in group.Codes)
         {
+            if (cd.FinalCode is not null
+                && !_catalog.IsSelectableCode(cd.FinalCode))
+            {
+                continue;
+            }
+
             var (q1, _) = _catalog.GetQuantRule(key, null);
             CodeTiles.Add(ToTileItem(VsaTileDataFactory.ForCode(
                 key, cd, q1, group.Color,
-                isSelected: string.Equals(key, SelectedCodeKey, StringComparison.Ordinal))));
+                isSelected: string.Equals(key, SelectedCodeKey, StringComparison.Ordinal),
+                catalogLabel: _catalog.LookupExactLabel(key))));
         }
     }
 
@@ -591,9 +721,17 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         {
             var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
             var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
+            var fullCode = BuildChar1Code(SelectedCodeKey!, cd.XPrefix, key);
+            if (!hasC2 && !_catalog.IsSelectableCode(fullCode))
+                continue;
+
             Char1Tiles.Add(ToTileItem(VsaTileDataFactory.ForChar1(
                 key, charDef, SelectedCodeKey!, cd.XPrefix, hasC2, q1, CurrentGroupColor,
-                isSelected: string.Equals(key, SelectedChar1Key, StringComparison.Ordinal))));
+                isSelected: string.Equals(key, SelectedChar1Key, StringComparison.Ordinal),
+                catalogLabel: hasC2
+                    ? _catalog.LookupNavigationLabel(fullCode)
+                    : _catalog.LookupExactLabel(fullCode),
+                parentCatalogLabel: _catalog.LookupExactLabel(SelectedCodeKey!))));
         }
     }
 
@@ -609,11 +747,24 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         foreach (var (key, label) in c2Options)
         {
             var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
+            var char1Code = BuildChar1Code(
+                SelectedCodeKey!,
+                cd.XPrefix,
+                SelectedChar1Key);
+            var fullCode = $"{char1Code}{key}";
+            if (!_catalog.IsSelectableCode(fullCode))
+                continue;
+
             Char2Tiles.Add(ToTileItem(VsaTileDataFactory.ForChar2(
                 key, label, SelectedCodeKey!, SelectedChar1Key, cd.XPrefix, invalid, CurrentGroupColor,
-                isSelected: string.Equals(key, SelectedChar2Key, StringComparison.Ordinal))));
+                isSelected: string.Equals(key, SelectedChar2Key, StringComparison.Ordinal),
+                catalogLabel: _catalog.LookupExactLabel(fullCode),
+                parentCatalogLabel: _catalog.LookupNavigationLabel(char1Code))));
         }
     }
+
+    private static string BuildChar1Code(string codeKey, bool xPrefix, string char1Key)
+        => $"{codeKey}{(xPrefix ? "X" : "")}{char1Key}";
 
     /// <summary>Gruppe waehlen (Multi-Column Modus).</summary>
     public void SelectGroup(string key)
@@ -644,6 +795,19 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     {
         if (string.Equals(SelectedCodeKey, key, StringComparison.Ordinal))
             return;
+
+        if (SelectedGroupKey is null
+            || !_catalog.Groups.TryGetValue(SelectedGroupKey, out var selectedGroup)
+            || !selectedGroup.Codes.TryGetValue(key, out var selectedCodeDef))
+        {
+            return;
+        }
+
+        if (selectedCodeDef.FinalCode is not null
+            && !_catalog.IsSelectableCode(selectedCodeDef.FinalCode))
+        {
+            return;
+        }
 
         SelectedCodeKey = key;
         SelectedChar1Key = null;
@@ -676,6 +840,15 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         if (string.Equals(SelectedChar1Key, key, StringComparison.Ordinal))
             return;
 
+        var selectedCodeDef = GetCurrentVsaCodeDef();
+        var selectedHasC2 = selectedCodeDef is not null
+                            && _catalog.GetChar2Options(selectedCodeDef, key) is not null;
+        var selectedFullCode = selectedCodeDef is null
+            ? string.Empty
+            : BuildChar1Code(SelectedCodeKey!, selectedCodeDef.XPrefix, key);
+        if (!selectedHasC2 && !_catalog.IsSelectableCode(selectedFullCode))
+            return;
+
         SelectedChar1Key = key;
         SelectedChar2Key = null;
 
@@ -704,15 +877,19 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     /// <summary>Char2 waehlen (Multi-Column Modus).</summary>
     public void SelectChar2(string key)
     {
+        var cd = GetCurrentVsaCodeDef();
+        var prefix = cd?.XPrefix == true ? "X" : "";
+        var finalCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
+        if (!_catalog.IsSelectableCode(finalCode))
+            return;
+
         SelectedChar2Key = key;
         PopulateChar2Column();
 
-        var cd = GetCurrentVsaCodeDef();
-        var prefix = cd?.XPrefix == true ? "X" : "";
         var invalidCombo = cd is not null
             && SelectedChar1Key is not null
             && _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
-        ShowFinalResult($"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}", SelectedChar1Key, key);
+        ShowFinalResult(finalCode, SelectedChar1Key, key);
         if (invalidCombo)
         {
             var invalidMsg = "Kombination im Katalog als ungueltig markiert - manuelle Pruefung erforderlich.";
@@ -733,6 +910,11 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         if (!_catalog.Groups.TryGetValue(SelectedGroupKey, out var grp)) return null;
         return grp.Codes.TryGetValue(SelectedCodeKey, out var cd) ? cd : null;
     }
+
+    public string? LookupCodeLabel(string code)
+        => _catalog.IsSelectableCode(code)
+            ? _catalog.LookupExactLabel(code)
+            : null;
 
     /// <summary>Konvertiert VsaTileData (Application-Schicht) in das UI-interne TileItem.</summary>
     private static TileItem ToTileItem(VsaTileData data) => new()

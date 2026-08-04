@@ -11,7 +11,7 @@ public static class ProtocolEntryCloner
 {
     /// <summary>
     /// Erstellt einen tiefen Klon eines ProtocolEntry-Objekts inklusive
-    /// CodeMeta-, Ai- und FotoPaths-Kopien.
+    /// CodeMeta-, Ai- und beider Fotopfadlisten.
     /// </summary>
     public static ProtocolEntry CloneLegacyProtocolEntry(ProtocolEntry source)
     {
@@ -26,6 +26,7 @@ public static class ProtocolEntryCloner
             Mpeg = source.Mpeg,
             Zeit = source.Zeit,
             FotoPaths = new List<string>(source.FotoPaths),
+            OriginalFotoPaths = new List<string>(source.OriginalFotoPaths ?? []),
             Source = source.Source,
             IsDeleted = source.IsDeleted,
             CodeMeta = source.CodeMeta is null
@@ -53,7 +54,22 @@ public static class ProtocolEntryCloner
                     IsMeterEstimated = source.Ai.IsMeterEstimated,
                     CentralDecision = AiDecisionAuditCloner.Clone(source.Ai.CentralDecision),
                     SuggestedAt = source.Ai.SuggestedAt
-                }
+                },
+            Training = CloneTrainingMeta(source.Training)
         };
     }
+
+    /// <summary>
+    /// Erstellt eine unabhaengige Kopie der optionalen Trainings-Metadaten.
+    /// </summary>
+    public static ProtocolEntryTrainingMeta? CloneTrainingMeta(ProtocolEntryTrainingMeta? source)
+        => source is null
+            ? null
+            : new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = source.SkipAutomaticPersistence,
+                SkipReason = source.SkipReason,
+                PhotoAnnotationSampleIds = new List<string>(
+                    source.PhotoAnnotationSampleIds ?? [])
+            };
 }

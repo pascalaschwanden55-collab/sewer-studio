@@ -34,6 +34,7 @@ public sealed class VsaCodePathResolverTests
         };
         // BCD hat FinalCode (kein weiteres Navigieren)
         var bcd = new VsaCodeDef { Label = "Rohranfang", FinalCode = "BCD" };
+        var bag = new VsaCodeDef { Label = "Einragender Anschluss", FinalCode = "BAGA" };
 
         var group = new GroupDef(
             "Strukturschaden",
@@ -43,7 +44,8 @@ public sealed class VsaCodePathResolverTests
             {
                 ["BAA"] = baa,
                 ["BAC"] = bac,
-                ["BCD"] = bcd
+                ["BCD"] = bcd,
+                ["BAG"] = bag
             });
 
         return new Dictionary<string, GroupDef> { ["BA"] = group };
@@ -131,6 +133,28 @@ public sealed class VsaCodePathResolverTests
         Assert.Null(c2);
         Assert.Equal(1, lvl);
         Assert.Equal("BCD", final);
+    }
+
+    [Fact]
+    public void TryResolveCodePath_findet_abweichenden_finalcode_baga()
+    {
+        var resolver = CreateResolver();
+        var ok = resolver.TryResolveCodePath(
+            "BAGA",
+            out var grp,
+            out var code,
+            out var c1,
+            out var c2,
+            out var lvl,
+            out var final);
+
+        Assert.True(ok);
+        Assert.Equal("BA", grp);
+        Assert.Equal("BAG", code);
+        Assert.Null(c1);
+        Assert.Null(c2);
+        Assert.Equal(1, lvl);
+        Assert.Equal("BAGA", final);
     }
 
     [Fact]

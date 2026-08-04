@@ -14,7 +14,13 @@ public sealed class CodingEventColumnTransferTests
         => new()
         {
             MeterAtCapture = meter,
-            Entry = new ProtocolEntry { Code = code, Beschreibung = code + " Text", FotoPaths = { "a.png" } }
+            Entry = new ProtocolEntry
+            {
+                Code = code,
+                Beschreibung = code + " Text",
+                FotoPaths = { "overlay.png" },
+                OriginalFotoPaths = { "original.png" }
+            }
         };
 
     [Fact]
@@ -48,6 +54,8 @@ public sealed class CodingEventColumnTransferTests
         Assert.Equal("BCD", copy.Entry.Code);
         Assert.Equal(original.Entry.FotoPaths, copy.Entry.FotoPaths);
         Assert.NotSame(original.Entry.FotoPaths, copy.Entry.FotoPaths); // eigene Liste
+        Assert.Equal(original.Entry.OriginalFotoPaths, copy.Entry.OriginalFotoPaths);
+        Assert.NotSame(original.Entry.OriginalFotoPaths, copy.Entry.OriginalFotoPaths);
     }
 
     [Fact]
@@ -65,10 +73,24 @@ public sealed class CodingEventColumnTransferTests
                     Code = "BAB",
                     Parameters = { ["Uhrlage"] = "12" },
                 },
+                Training = new ProtocolEntryTrainingMeta
+                {
+                    SkipAutomaticPersistence = true,
+                    PhotoAnnotationSampleIds = ["photo-sample-1"]
+                }
             },
             Overlay = new OverlayGeometry
             {
                 Points = { new NormalizedPoint { X = 0.1, Y = 0.2 } },
+                SamMask = new OverlaySamMask
+                {
+                    MaskRle = "0,10,5,85",
+                    ImageWidth = 10,
+                    ImageHeight = 10,
+                    MaskAreaPixels = 5,
+                    Confidence = 0.9,
+                    Label = "manuell"
+                }
             },
             AiContext = new CodingEventAiContext { SuggestedCode = "BAB", Confidence = 0.9 },
         };
@@ -79,17 +101,26 @@ public sealed class CodingEventColumnTransferTests
         Assert.NotEqual(original.Overlay!.GeometryId, clone.Overlay!.GeometryId);
         Assert.NotSame(original.Overlay.Points, clone.Overlay.Points);
         Assert.Equal(0.1, clone.Overlay.Points[0].X);
+        Assert.NotSame(original.Overlay.SamMask, clone.Overlay.SamMask);
+        Assert.Equal("0,10,5,85", clone.Overlay.SamMask!.MaskRle);
         // CodeMeta: eigenes Parameter-Dictionary (Wert gleich, Referenz verschieden).
         Assert.NotSame(original.Entry.CodeMeta!.Parameters, clone.Entry.CodeMeta!.Parameters);
         Assert.Equal("12", clone.Entry.CodeMeta.Parameters["Uhrlage"]);
+        Assert.NotSame(original.Entry.Training, clone.Entry.Training);
+        Assert.True(clone.Entry.Training!.SkipAutomaticPersistence);
+        Assert.Equal(["photo-sample-1"], clone.Entry.Training.PhotoAnnotationSampleIds);
         // AiContext: eigene Instanz (Wert kopiert).
         Assert.NotSame(original.AiContext, clone.AiContext);
         Assert.Equal("BAB", clone.AiContext!.SuggestedCode);
 
         // Gegenprobe: Mutation an der Kopie faerbt nicht auf das Original ab.
         clone.Overlay.Points[0].X = 0.99;
+        clone.Overlay.SamMask!.MaskRle = "0,100";
         clone.Entry.CodeMeta.Parameters["Uhrlage"] = "6";
+        clone.Entry.Training.PhotoAnnotationSampleIds.Add("photo-sample-2");
         Assert.Equal(0.1, original.Overlay.Points[0].X);
+        Assert.Equal("0,10,5,85", original.Overlay.SamMask!.MaskRle);
         Assert.Equal("12", original.Entry.CodeMeta.Parameters["Uhrlage"]);
+        Assert.Single(original.Entry.Training!.PhotoAnnotationSampleIds);
     }
 }

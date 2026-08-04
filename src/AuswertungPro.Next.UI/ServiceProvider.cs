@@ -33,6 +33,7 @@ using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
+using AuswertungPro.Next.Infrastructure.Import.SchachtPro;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Maintenance;
@@ -54,6 +55,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.ClassMaps;
+using AuswertungPro.Next.Infrastructure.Ai.Training.PdfReview;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Reports;
 
@@ -72,6 +74,7 @@ using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 
 namespace AuswertungPro.Next.UI
 {
@@ -192,6 +195,7 @@ namespace AuswertungPro.Next.UI
         public IIbakFdbConnectionOptions IbakConnections { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
+        public ISchachtProImportService SchachtProImport { get; }
         public IKinsDvdTextEnricher KinsDvdTextEnrichment { get; }
         public IKinsDbfWhitelistEnricher KinsDbfWhitelistEnrichment { get; }
         public IKinsGesamtprotokollLocator KinsGesamtprotokolle { get; }
@@ -271,6 +275,8 @@ namespace AuswertungPro.Next.UI
         public ITrainingSampleStore TrainingSamples { get; }
         public IPersonalGoldAlbumService PersonalGoldAlbum { get; }
         public IPersonalGoldInboxService PersonalGoldInbox { get; }
+        public ITrainingPdfReviewImportService TrainingPdfReviews { get; }
+        internal ITrainingPdfReviewImportService TrainingPdfReviewReader { get; }
         public ITrainingFrameStore TrainingFrames { get; }
         public ITrainingPreviewFrameExtractor TrainingPreviewFrames { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
@@ -397,6 +403,13 @@ namespace AuswertungPro.Next.UI
             PersonalGoldInbox = new PersonalGoldInboxFileService(
                 KnowledgeRoot,
                 VsaCodeResolver.LookupLabel);
+            TrainingPdfReviewReader = new TrainingPdfReviewImportService(
+                KnowledgeRoot,
+                new TrainingPdfJpegColorNormalizer());
+            TrainingPdfReviews = new TrainingPdfReviewProtectedImportService(
+                TrainingPdfReviewReader,
+                () => EvalContaminationSetProvider.LoadPdfProtectionSnapshot(
+                    settings.EvalSetRoot));
             TrainingFrames = new TrainingFrameFileStore();
             TrainingPreviewFrames = new TrainingPreviewFrameExtractionService(TrainingFrames);
             CodingFramePhotos = new CodingFramePhotoFileStore();
@@ -477,6 +490,7 @@ namespace AuswertungPro.Next.UI
             IbakConnections = new IbakFdbConnectionOptionsService();
             IbakImport = new IbakExportImportService(IbakConnections, Protocols);
             KinsImport = new KinsImportService(WinCanImport, IbakImport, Protocols);
+            SchachtProImport = new SchachtProImportService();
             KinsDvdTextEnrichment = new KinsDvdTextEnrichmentService();
             KinsDbfWhitelistEnrichment = new KinsDbfWhitelistEnrichmentService();
             KinsGesamtprotokolle = new KinsGesamtprotokollFileLocator();

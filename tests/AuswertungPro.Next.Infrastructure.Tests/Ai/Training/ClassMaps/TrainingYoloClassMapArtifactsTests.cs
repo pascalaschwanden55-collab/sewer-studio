@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Training.ClassMaps;
 public sealed class TrainingYoloClassMapArtifactsTests
 {
     [Fact]
-    public void Versionierte_Vorlagen_sind_vollstaendig_und_nur_BCC_ist_fuer_den_Pilot_freigegeben()
+    public void Versionierte_Vorlagen_enthalten_die_freigegebenen_persoenlichen_Goldentscheidungen()
     {
         var classMapPath = TestRepoPaths.RepoFile(
             "training", "class_maps", "detect_class_map_v3.json");
@@ -24,7 +24,13 @@ public sealed class TrainingYoloClassMapArtifactsTests
         Assert.Equal(
             YoloDetectClassMapV3.Classes.OrderBy(item => item.Value),
             snapshot.Classes.OrderBy(item => item.Value));
-        Assert.Equal(4, snapshot.MigrationSourceHashes.Count);
+        Assert.Equal(6, snapshot.MigrationSourceHashes.Count);
+        Assert.Equal(
+            "5d036fd74dbdc6e80dae1ca2600b648fc99073f9b8a0157bee5da1a6027a0987",
+            snapshot.MigrationSourceHashes["personal_gold_audit"]);
+        Assert.Equal(
+            "fd5340ce35d5b317273e9d34e340d70e319448c78c23d640ec682b94fb9c6a1b",
+            snapshot.MigrationSourceHashes["personal_gold_samples"]);
         Assert.Equal(
             new[]
             {
@@ -43,30 +49,116 @@ public sealed class TrainingYoloClassMapArtifactsTests
 
         using var migration = JsonDocument.Parse(File.ReadAllText(migrationPath));
         var entries = migration.RootElement.GetProperty("entries").EnumerateArray().ToArray();
-        Assert.Equal(124, entries.Length);
-        Assert.Equal(74, CountKind(entries, "teacher_vsa_code"));
+        Assert.Equal(143, entries.Length);
+        Assert.Equal(93, CountKind(entries, "teacher_vsa_code"));
         Assert.Equal(35, CountKind(entries, "legacy_class_map"));
         Assert.Equal(10, CountKind(entries, "productive_yolo_name"));
         Assert.Equal(5, CountKind(entries, "annotation_override"));
         Assert.Equal(
-            704,
+            748,
             entries
                 .Where(entry => GetString(entry, "source_kind") == "teacher_vsa_code")
                 .Sum(entry => entry.GetProperty("observed_count").GetInt32()));
         var approved = entries
             .Where(entry => GetString(entry, "approval_status") == "approved")
             .ToArray();
-        Assert.Equal(10, approved.Length);
+        Assert.Equal(74, approved.Length);
         Assert.All(approved, entry =>
         {
-            Assert.StartsWith("BCC", GetString(entry, "source_key"));
-            Assert.Equal("map", GetString(entry, "proposed_action"));
-            Assert.Equal("BCC_bogen", GetString(entry, "proposed_target"));
+            Assert.NotEqual("review", GetString(entry, "proposed_action"));
             Assert.Equal("Besitzer", GetString(entry, "approved_by"));
+            Assert.False(string.IsNullOrWhiteSpace(GetString(entry, "approved_utc")));
         });
         Assert.Equal(
-            114,
+            69,
             entries.Count(entry => GetString(entry, "approval_status") == "pending"));
+
+        var expectedMappings = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["BAAA"] = "BAA_verformung",
+            ["BAAB"] = "BAA_verformung",
+            ["BAB"] = "BAB_riss",
+            ["BABAA"] = "BAB_riss",
+            ["BABAB"] = "BAB_riss",
+            ["BABAE"] = "BAB_riss",
+            ["BABBA"] = "BAB_riss",
+            ["BABBB"] = "BAB_riss",
+            ["BABBC"] = "BAB_riss",
+            ["BABBD"] = "BAB_riss",
+            ["BABCA"] = "BAB_riss",
+            ["BACA"] = "BAC_bruch",
+            ["BACB"] = "BAC_bruch",
+            ["BACC"] = "BAC_bruch",
+            ["BAFAE"] = "BAF_oberflaeche",
+            ["BAFBE"] = "BAF_oberflaeche",
+            ["BAFBZ"] = "BAF_oberflaeche",
+            ["BAFCE"] = "BAF_oberflaeche",
+            ["BAFCZ"] = "BAF_oberflaeche",
+            ["BAFDE"] = "BAF_oberflaeche",
+            ["BAFEE"] = "BAF_oberflaeche",
+            ["BAFFE"] = "BAF_oberflaeche",
+            ["BAFJE"] = "BAF_oberflaeche",
+            ["BAFKE"] = "BAF_oberflaeche",
+            ["BAFKZ"] = "BAF_oberflaeche",
+            ["BAHC"] = "BAH_schadanschluss",
+            ["BAIAB"] = "BAI_dichtung",
+            ["BAIZ"] = "BAI_dichtung",
+            ["BAJ"] = "BAJ_verbindung",
+            ["BAJA"] = "BAJ_verbindung",
+            ["BAJB"] = "BAJ_verbindung",
+            ["BAJC"] = "BAJ_verbindung",
+            ["BBAB"] = "BBA_wurzeln",
+            ["BBAC"] = "BBA_wurzeln",
+            ["BBBA"] = "BBB_anhaftung",
+            ["BBBB"] = "BBB_anhaftung",
+            ["BBBC"] = "BBB_anhaftung",
+            ["BBBZ"] = "BBB_anhaftung",
+            ["BBCA"] = "BBC_ablagerung",
+            ["BBCB"] = "BBC_ablagerung",
+            ["BBCC"] = "BBC_ablagerung",
+            ["BBCZ"] = "BBC_ablagerung",
+            ["BBFA"] = "BBF_infiltration",
+            ["BBFC"] = "BBF_infiltration",
+            ["BCAAA"] = "BCA_anschluss",
+            ["BCAAB"] = "BCA_anschluss",
+            ["BCABA"] = "BCA_anschluss",
+            ["BCADA"] = "BCA_anschluss",
+            ["BCADB"] = "BCA_anschluss",
+            ["BCAEA"] = "BCA_anschluss",
+            ["BCAEB"] = "BCA_anschluss",
+            ["BCAFA"] = "BCA_anschluss",
+            ["BCC"] = "BCC_bogen",
+            ["BCCAA"] = "BCC_bogen",
+            ["BCCAB"] = "BCC_bogen",
+            ["BCCAY"] = "BCC_bogen",
+            ["BCCBA"] = "BCC_bogen",
+            ["BCCBB"] = "BCC_bogen",
+            ["BCCBY"] = "BCC_bogen",
+            ["BCCYA"] = "BCC_bogen",
+            ["BCCYB"] = "BCC_bogen"
+        };
+        foreach (var expected in expectedMappings)
+        {
+            var resolution = snapshot.ResolveRequired(
+                expected.Key,
+                sourceKind: TrainingYoloClassSourceKinds.TeacherVsaCode);
+            Assert.True(resolution.ShouldExport);
+            Assert.Equal(expected.Value, resolution.TargetKey);
+        }
+
+        foreach (var discardedCode in new[]
+                 {
+                     "AEDXC", "AEDXG", "AEDXO", "AEDXP", "AEDXQ", "AEDXU",
+                     "BCD", "BCE", "BDA", "BDD", "BDDA", "BDDC"
+                 })
+        {
+            var resolution = snapshot.ResolveRequired(
+                discardedCode,
+                sourceKind: TrainingYoloClassSourceKinds.TeacherVsaCode);
+            Assert.False(resolution.ShouldExport);
+            Assert.Null(resolution.TargetKey);
+            Assert.Null(resolution.ClassId);
+        }
     }
 
     [Fact]
