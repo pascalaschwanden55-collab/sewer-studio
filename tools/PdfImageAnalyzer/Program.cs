@@ -17,8 +17,9 @@ if (args.Length == 0)
 
 // JSON-Modus (additiv): maschinenlesbare Bildliste mit Rohbyte-SHA-256.
 // Dient dem Gold-Bildbeleg (bytegleicher Abgleich Goldbild vs. PDF-Strom).
-if (args[0] == "--json")
+if (args[0] == "--json" || args[0] == "--normalize-json")
 {
+    var withNormalization = args[0] == "--normalize-json";
     var records = new List<Dictionary<string, object?>>();
     foreach (var pdfPath in args.Skip(1))
     {
@@ -46,6 +47,38 @@ if (args[0] == "--json")
                         csComponents = img.ColorSpaceDetails?.NumberOfColorComponents;
                     }
                     catch { }
+
+                    string? normalizedSha = null;
+                    string? normalizationStatus = null;
+                    if (withNormalization && raw.Length > 0
+                        && PdfImageAnalyzer.PdfJpegColorNormalizer.HasCompleteJpegEnvelope(raw))
+                    {
+                        if (PdfImageAnalyzer.PdfJpegColorNormalizer.TryCreateRequest(
+                                img, raw, out var request))
+                        {
+                            if (request is null)
+                            {
+                                normalizationStatus = "blocked_fail_closed";
+                            }
+                            else if (PdfImageAnalyzer.PdfJpegColorNormalizer.TryNormalizeToRgbPng(
+                                         request, out var png)
+                                     && png.Length > 0)
+                            {
+                                normalizedSha = Convert.ToHexString(
+                                    System.Security.Cryptography.SHA256.HashData(png)).ToLowerInvariant();
+                                normalizationStatus = "normalized";
+                            }
+                            else
+                            {
+                                normalizationStatus = "failed";
+                            }
+                        }
+                        else
+                        {
+                            normalizationStatus = "not_required";
+                        }
+                    }
+
                     records.Add(new()
                     {
                         ["pdf"] = pdfPath,
@@ -63,6 +96,8 @@ if (args[0] == "--json")
                         ["jpegEnvelope"] = raw.Length >= 4
                                            && raw[0] == 0xff && raw[1] == 0xd8
                                            && raw[^2] == 0xff && raw[^1] == 0xd9,
+                        ["normalizedSha256"] = normalizedSha,
+                        ["normalizationStatus"] = normalizationStatus,
                     });
                 }
             }
