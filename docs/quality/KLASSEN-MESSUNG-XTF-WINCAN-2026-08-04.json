@@ -1,0 +1,361 @@
+{
+ "schema_version": "class-candidates-v2",
+ "quellen": {
+  "xtf_verschieden": 75,
+  "db3_datenfuehrend": 412
+ },
+ "max_per_holding": 2,
+ "klassen": {
+  "BCA": {
+   "befunde_gesamt": 1784,
+   "befunde_xtf": 1252,
+   "befunde_db3": 532,
+   "mit_fotoverweis": 2553,
+   "haltungen_mit_foto": 507,
+   "dekodierbar": 2534,
+   "filter": {
+    "dekodierbar": 2534,
+    "in_gold": 268,
+    "ueber_limit_haltung": 654,
+    "geschuetzt": 299,
+    "byte_dublette": 624,
+    "bild_fehlt": 19
+   },
+   "haltungen_final": 364,
+   "kandidaten_anzahl": 689,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 1645,
+    "1920x1080": 598,
+    "768x576": 164,
+    "720x576": 127
+   }
+  },
+  "BAB": {
+   "befunde_gesamt": 634,
+   "befunde_xtf": 356,
+   "befunde_db3": 278,
+   "mit_fotoverweis": 778,
+   "haltungen_mit_foto": 210,
+   "dekodierbar": 760,
+   "filter": {
+    "dekodierbar": 760,
+    "ueber_limit_haltung": 170,
+    "geschuetzt": 103,
+    "in_gold": 71,
+    "byte_dublette": 162,
+    "bild_fehlt": 18
+   },
+   "haltungen_final": 150,
+   "kandidaten_anzahl": 254,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 476,
+    "1920x1080": 142,
+    "768x576": 127,
+    "720x576": 14,
+    "800x608": 1
+   }
+  },
+  "BAC": {
+   "befunde_gesamt": 369,
+   "befunde_xtf": 222,
+   "befunde_db3": 147,
+   "mit_fotoverweis": 461,
+   "haltungen_mit_foto": 145,
+   "dekodierbar": 450,
+   "filter": {
+    "dekodierbar": 450,
+    "ueber_limit_haltung": 35,
+    "geschuetzt": 28,
+    "in_gold": 45,
+    "byte_dublette": 165,
+    "bild_fehlt": 11
+   },
+   "haltungen_final": 106,
+   "kandidaten_anzahl": 177,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 232,
+    "1920x1080": 150,
+    "768x576": 55,
+    "720x576": 13
+   }
+  },
+  "BAA": {
+   "befunde_gesamt": 652,
+   "befunde_xtf": 508,
+   "befunde_db3": 144,
+   "mit_fotoverweis": 435,
+   "haltungen_mit_foto": 173,
+   "dekodierbar": 422,
+   "filter": {
+    "dekodierbar": 422,
+    "in_gold": 10,
+    "geschuetzt": 26,
+    "ueber_limit_haltung": 39,
+    "byte_dublette": 151,
+    "bild_fehlt": 13
+   },
+   "haltungen_final": 144,
+   "kandidaten_anzahl": 196,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 333,
+    "1920x1080": 38,
+    "768x576": 32,
+    "720x576": 17,
+    "840x576": 1,
+    "629x629": 1
+   }
+  },
+  "BAF": {
+   "befunde_gesamt": 1122,
+   "befunde_xtf": 618,
+   "befunde_db3": 504,
+   "mit_fotoverweis": 733,
+   "haltungen_mit_foto": 235,
+   "dekodierbar": 719,
+   "filter": {
+    "dekodierbar": 719,
+    "in_gold": 57,
+    "ueber_limit_haltung": 96,
+    "geschuetzt": 98,
+    "byte_dublette": 221,
+    "bild_fehlt": 14
+   },
+   "haltungen_final": 159,
+   "kandidaten_anzahl": 247,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "1920x1080": 298,
+    "788x576": 288,
+    "768x576": 101,
+    "720x576": 32
+   }
+  },
+  "BAH": {
+   "befunde_gesamt": 373,
+   "befunde_xtf": 142,
+   "befunde_db3": 231,
+   "mit_fotoverweis": 243,
+   "haltungen_mit_foto": 100,
+   "dekodierbar": 234,
+   "filter": {
+    "dekodierbar": 234,
+    "in_gold": 37,
+    "geschuetzt": 55,
+    "byte_dublette": 57,
+    "ueber_limit_haltung": 15,
+    "bild_fehlt": 9
+   },
+   "haltungen_final": 49,
+   "kandidaten_anzahl": 70,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 134,
+    "1920x1080": 94,
+    "768x576": 5,
+    "720x576": 1
+   }
+  },
+  "BAI": {
+   "befunde_gesamt": 263,
+   "befunde_xtf": 122,
+   "befunde_db3": 141,
+   "mit_fotoverweis": 311,
+   "haltungen_mit_foto": 104,
+   "dekodierbar": 303,
+   "filter": {
+    "dekodierbar": 303,
+    "ueber_limit_haltung": 18,
+    "in_gold": 54,
+    "geschuetzt": 74,
+    "byte_dublette": 58,
+    "bild_fehlt": 8
+   },
+   "haltungen_final": 68,
+   "kandidaten_anzahl": 99,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 197,
+    "1920x1080": 52,
+    "768x576": 51,
+    "720x576": 2,
+    "800x608": 1
+   }
+  },
+  "BAJ": {
+   "befunde_gesamt": 1682,
+   "befunde_xtf": 1009,
+   "befunde_db3": 673,
+   "mit_fotoverweis": 1686,
+   "haltungen_mit_foto": 433,
+   "dekodierbar": 1665,
+   "filter": {
+    "dekodierbar": 1665,
+    "ueber_limit_haltung": 207,
+    "byte_dublette": 587,
+    "geschuetzt": 193,
+    "in_gold": 154,
+    "bild_fehlt": 21
+   },
+   "haltungen_final": 323,
+   "kandidaten_anzahl": 524,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 840,
+    "1920x1080": 578,
+    "768x576": 215,
+    "720x576": 29,
+    "800x608": 2,
+    "844x608": 1
+   }
+  },
+  "BBA": {
+   "befunde_gesamt": 129,
+   "befunde_xtf": 70,
+   "befunde_db3": 59,
+   "mit_fotoverweis": 150,
+   "haltungen_mit_foto": 37,
+   "dekodierbar": 145,
+   "filter": {
+    "dekodierbar": 145,
+    "byte_dublette": 56,
+    "ueber_limit_haltung": 7,
+    "in_gold": 36,
+    "geschuetzt": 19,
+    "bild_fehlt": 5
+   },
+   "haltungen_final": 19,
+   "kandidaten_anzahl": 27,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 78,
+    "1920x1080": 52,
+    "720x576": 8,
+    "768x576": 5,
+    "800x608": 2
+   }
+  },
+  "BBB": {
+   "befunde_gesamt": 549,
+   "befunde_xtf": 378,
+   "befunde_db3": 171,
+   "mit_fotoverweis": 478,
+   "haltungen_mit_foto": 139,
+   "dekodierbar": 468,
+   "filter": {
+    "dekodierbar": 468,
+    "in_gold": 35,
+    "ueber_limit_haltung": 36,
+    "byte_dublette": 194,
+    "geschuetzt": 47,
+    "bild_fehlt": 10
+   },
+   "haltungen_final": 99,
+   "kandidaten_anzahl": 156,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 228,
+    "1920x1080": 218,
+    "720x576": 13,
+    "768x576": 9
+   }
+  },
+  "BBC": {
+   "befunde_gesamt": 705,
+   "befunde_xtf": 441,
+   "befunde_db3": 264,
+   "mit_fotoverweis": 473,
+   "haltungen_mit_foto": 200,
+   "dekodierbar": 459,
+   "filter": {
+    "dekodierbar": 459,
+    "ueber_limit_haltung": 21,
+    "geschuetzt": 44,
+    "in_gold": 34,
+    "byte_dublette": 136,
+    "bild_fehlt": 14
+   },
+   "haltungen_final": 149,
+   "kandidaten_anzahl": 224,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 237,
+    "1920x1080": 153,
+    "768x576": 47,
+    "720x576": 22
+   }
+  },
+  "BBD": {
+   "befunde_gesamt": 2,
+   "befunde_xtf": 2,
+   "befunde_db3": 0,
+   "mit_fotoverweis": 1,
+   "haltungen_mit_foto": 1,
+   "dekodierbar": 1,
+   "filter": {
+    "dekodierbar": 1
+   },
+   "haltungen_final": 1,
+   "kandidaten_anzahl": 1,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "768x576": 1
+   }
+  },
+  "BBF": {
+   "befunde_gesamt": 510,
+   "befunde_xtf": 277,
+   "befunde_db3": 233,
+   "mit_fotoverweis": 625,
+   "haltungen_mit_foto": 124,
+   "dekodierbar": 607,
+   "filter": {
+    "dekodierbar": 607,
+    "ueber_limit_haltung": 75,
+    "in_gold": 92,
+    "geschuetzt": 78,
+    "byte_dublette": 239,
+    "bild_fehlt": 18
+   },
+   "haltungen_final": 77,
+   "kandidaten_anzahl": 123,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "1920x1080": 412,
+    "788x576": 153,
+    "768x576": 27,
+    "720x576": 15
+   }
+  },
+  "BCC": {
+   "befunde_gesamt": 1572,
+   "befunde_xtf": 1228,
+   "befunde_db3": 344,
+   "mit_fotoverweis": 1208,
+   "haltungen_mit_foto": 474,
+   "dekodierbar": 1196,
+   "filter": {
+    "dekodierbar": 1196,
+    "ueber_limit_haltung": 184,
+    "geschuetzt": 103,
+    "in_gold": 113,
+    "byte_dublette": 217,
+    "bild_fehlt": 12
+   },
+   "haltungen_final": 374,
+   "kandidaten_anzahl": 579,
+   "leitungsinspektionen": 0,
+   "aufloesungen": {
+    "788x576": 547,
+    "768x576": 506,
+    "1920x1080": 88,
+    "720x576": 46,
+    "844x608": 5,
+    "800x608": 4
+   }
+  }
+ }
+}
