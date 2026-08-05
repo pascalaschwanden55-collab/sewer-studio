@@ -77,6 +77,13 @@ NEGATIVE_REVIEW_DECISIONS = (
     "mapped_object_visible",
     "exclude_uncertain",
 )
+# Protokollbasierte Negativsaetze (Geschwister-Vertrag ohne Modellbindung).
+PROTO_SET_PURPOSE = "proto_reviewed_negative_set"
+PROTO_QUEUE_PURPOSE = "proto_hard_negative_review_queue"
+PROTO_PILOT = "protokoll_negative"
+PROTO_ITEM_ID_PREFIX = "proto-hn-"
+PROTO_IMAGE_ID_PREFIX = "proto-neg-"
+PROTO_ENDPOINT_PREFIX = re.compile(r"^\d{1,2}\.(.{4,})$")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_CLASS_MAP_PATH = (
     REPOSITORY_ROOT / "training" / "class_maps" / "detect_class_map_v3.json"
@@ -880,6 +887,25 @@ def _validate_class_map_receipt(
     return version, expected_sha, vsa_hash, ordered_names
 
 
+def _proto_physical_holding_key(value: Any) -> str:
+    """Geschuetzte Normalisierung fuer Protokoll-Haltungen: Bereichspraefix
+    nur bei >= 4 Restzeichen entfernen (797.02 bleibt ein echter Knoten),
+    richtungsunabhaengig; ohne A-B-Form Faellt auf die Rohschreibweise."""
+    text = str(value or "").strip()
+    match = HOLDING_KEY_PATTERN.search(text)
+    if match is None:
+        return text.casefold()
+    parts = re.split(r"[-/]", match.group(0), maxsplit=1)
+    if len(parts) != 2:
+        return text.casefold()
+
+    def guarded(part: str) -> str:
+        prefix_match = PROTO_ENDPOINT_PREFIX.match(part)
+        return prefix_match.group(1) if prefix_match else part
+
+    return "|".join(sorted((guarded(parts[0]).casefold(), guarded(parts[1]).casefold())))
+
+
 def _read_reviewed_negative_set(
     knowledge_root: Path,
     requested: Path,
@@ -887,6 +913,11 @@ def _read_reviewed_negative_set(
     set_root = _safe_negative_set_root(knowledge_root, requested)
     manifest_path = set_root / "_manifest.json"
     manifest_bytes = manifest_path.read_bytes()
+    peek = _strict_json_bytes(manifest_bytes, "Negativsatz-Manifest")
+    if isinstance(peek, dict) and peek.get("purpose") == PROTO_SET_PURPOSE:
+        return _read_proto_reviewed_negative_set(
+            knowledge_root, set_root, manifest_path, manifest_bytes
+        )
     manifest = _require_exact_fields(
         _strict_json_bytes(manifest_bytes, "Negativsatz-Manifest"),
         {
@@ -1642,6 +1673,593 @@ def _read_reviewed_negative_set(
         raise ValueError(
             "Klassenkarte oder VSA-Manifest wurde waehrend der Pruefung geaendert."
         )
+    return output_images, provenance
+
+
+def _read_proto_reviewed_negative_set(
+    knowledge_root: Path,
+    set_root: Path,
+    manifest_path: Path,
+    manifest_bytes: bytes,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Strenge Pruefung eines protokollbasierten Negativsatzes (proto_hn_*).
+
+    Gleiche Bindungstiefe wie der BCC-Pfad, aber mit dem ehrlichen
+    Geschwister-Vertrag: keine gebundenen Auswahlmodelle, kein Modelltrigger,
+    protokollbasierte Auswahl. Das BCC-Verfahren bleibt unveraendert.
+    """
+    manifest = _require_exact_fields(
+        _strict_json_bytes(manifest_bytes, "Negativsatz-Manifest"),
+        {
+            "schema_version",
+            "purpose",
+            "set_id",
+            "pilot",
+            "role",
+            "created_utc",
+            "frozen",
+            "dataset_status",
+            "hash_algorithm",
+            "images_count",
+            "holdings_count",
+            "hashes_count",
+            "hashes",
+            "semantic",
+        },
+        "Negativsatz-Manifest",
+    )
+    if (
+        manifest.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
+        or manifest.get("purpose") != PROTO_SET_PURPOSE
+        or manifest.get("pilot") != PROTO_PILOT
+        or manifest.get("role") != NEGATIVE_SET_ROLE
+        or manifest.get("frozen") is not True
+        or manifest.get("dataset_status") != "ready_for_training"
+        or manifest.get("hash_algorithm") != "sha256"
+        or not isinstance(manifest.get("created_utc"), str)
+        or not str(manifest.get("created_utc")).endswith("Z")
+    ):
+        raise ValueError("Der Proto-Negativsatz ist nicht streng eingefroren und trainingsbereit.")
+
+    semantic = _require_exact_fields(
+        manifest.get("semantic"),
+        {
+            "schema_version",
+            "purpose",
+            "pilot",
+            "role",
+            "queue",
+            "review",
+            "class_map_version",
+            "class_map_sha256",
+            "class_map_receipt_path",
+            "vsa_manifest_hash",
+            "class_names",
+            "protected_sets",
+            "protection_snapshot",
+            "split_rule",
+            "images",
+        },
+        "Semantischer Proto-Negativsatz-Beleg",
+    )
+    if (
+        semantic.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
+        or semantic.get("purpose") != PROTO_SET_PURPOSE
+        or semantic.get("pilot") != PROTO_PILOT
+        or semantic.get("role") != NEGATIVE_SET_ROLE
+    ):
+        raise ValueError("Manifest und semantischer Proto-Beleg widersprechen sich.")
+    set_id = _require_sha256(manifest.get("set_id"), "Proto-Negativsatz-ID")
+    if hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest() != set_id:
+        raise ValueError("Die Proto-Negativsatz-ID passt nicht zum semantischen Beleg.")
+    if set_root.name != f"proto_hn_{set_id[:12]}":
+        raise ValueError("Der Proto-Negativsatz-Ordner passt nicht zur Satz-ID.")
+
+    files, receipts = _verify_negative_set_files(set_root, manifest)
+    queue_binding = _require_exact_fields(
+        semantic.get("queue"),
+        {
+            "queue_id",
+            "queue_manifest_sha256",
+            "queue_manifest_receipt_path",
+            "candidates_sha256",
+            "candidates_receipt_path",
+        },
+        "Proto-Queue-Bindung",
+    )
+    review_binding = _require_exact_fields(
+        semantic.get("review"),
+        {
+            "purpose",
+            "review_sha256",
+            "receipt_path",
+            "reviewed_images",
+            "decision_counts",
+        },
+        "Proto-Review-Bindung",
+    )
+    if (
+        queue_binding.get("queue_manifest_receipt_path") != "receipts/queue_manifest.json"
+        or queue_binding.get("candidates_receipt_path") != "receipts/queue_candidates.json"
+        or review_binding.get("receipt_path") != "receipts/review.json"
+        or semantic.get("class_map_receipt_path") != "receipts/class_map.json"
+    ):
+        raise ValueError("Der Proto-Negativsatz verweist nicht auf die festen Belegpfade.")
+
+    queue_manifest_bytes = receipts["receipts/queue_manifest.json"]
+    candidates_bytes = receipts["receipts/queue_candidates.json"]
+    review_bytes = receipts["receipts/review.json"]
+    class_map_bytes = receipts["receipts/class_map.json"]
+    queue_manifest_sha = _require_sha256(queue_binding.get("queue_manifest_sha256"), "Queue-Manifest-Hash")
+    candidates_sha = _require_sha256(queue_binding.get("candidates_sha256"), "Kandidaten-Hash")
+    review_sha = _require_sha256(review_binding.get("review_sha256"), "Review-Hash")
+    if hashlib.sha256(queue_manifest_bytes).hexdigest() != queue_manifest_sha:
+        raise ValueError("Der Queue-Manifest-Beleg passt nicht zum Proto-Satz.")
+    if hashlib.sha256(candidates_bytes).hexdigest() != candidates_sha:
+        raise ValueError("Der Kandidaten-Beleg passt nicht zum Proto-Satz.")
+    if hashlib.sha256(review_bytes).hexdigest() != review_sha:
+        raise ValueError("Der Review-Beleg passt nicht zum Proto-Satz.")
+    class_map_version, class_map_sha, vsa_hash, class_names = (
+        _validate_class_map_receipt(class_map_bytes, semantic)
+    )
+
+    queue_manifest = _require_exact_fields(
+        _strict_json_bytes(queue_manifest_bytes, "Queue-Manifest-Beleg"),
+        {
+            "schema_version",
+            "purpose",
+            "queue_id",
+            "pilot",
+            "role",
+            "created_utc",
+            "frozen",
+            "dataset_status",
+            "warning",
+            "review_target",
+            "class_map_version",
+            "class_map_sha256",
+            "vsa_manifest_hash",
+            "class_names",
+            "protected_sets",
+            "protection_snapshot",
+            "selection_rule",
+            "sources",
+            "candidates_count",
+            "images_count",
+            "holdings_count",
+            "hash_algorithm",
+            "hashes_count",
+            "hashes",
+            "semantic",
+            "selection_receipt",
+        },
+        "Queue-Manifest-Beleg",
+    )
+    queue_id = _require_sha256(queue_binding.get("queue_id"), "Proto-Queue-ID")
+    queue_semantic = _require_exact_fields(
+        queue_manifest.get("semantic"),
+        {
+            "schema_version",
+            "purpose",
+            "pilot",
+            "role",
+            "class_map_version",
+            "class_map_sha256",
+            "vsa_manifest_hash",
+            "class_names",
+            "protected_sets",
+            "protection_snapshot",
+            "selection_rule",
+            "sources",
+            "items",
+        },
+        "Semantischer Proto-Queue-Beleg",
+    )
+    if (
+        queue_manifest.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
+        or queue_manifest.get("purpose") != PROTO_QUEUE_PURPOSE
+        or queue_manifest.get("queue_id") != queue_id
+        or queue_manifest.get("pilot") != PROTO_PILOT
+        or queue_manifest.get("role") != NEGATIVE_QUEUE_ROLE
+        or queue_manifest.get("frozen") is not True
+        or queue_manifest.get("hash_algorithm") != "sha256"
+        or hashlib.sha256(_canonical_json_bytes(queue_semantic)).hexdigest() != queue_id
+        or queue_semantic.get("purpose") != PROTO_QUEUE_PURPOSE
+        or queue_semantic.get("pilot") != PROTO_PILOT
+        or queue_semantic.get("role") != NEGATIVE_QUEUE_ROLE
+    ):
+        raise ValueError("Der Proto-Queue-Beleg ist nicht fest an die Queue-ID gebunden.")
+    for field, expected in (
+        ("class_map_version", class_map_version),
+        ("class_map_sha256", class_map_sha),
+        ("vsa_manifest_hash", vsa_hash),
+        ("class_names", class_names),
+        ("protected_sets", semantic.get("protected_sets")),
+        ("protection_snapshot", semantic.get("protection_snapshot")),
+    ):
+        if queue_manifest.get(field) != expected or queue_semantic.get(field) != expected:
+            raise ValueError(f"Proto-Queue und Negativsatz widersprechen sich bei {field}.")
+
+    selection_rule = queue_semantic.get("selection_rule")
+    if (
+        not isinstance(selection_rule, dict)
+        or selection_rule.get("one_image_per_physical_holding") is not True
+        or selection_rule.get("model_involved") is not False
+        or selection_rule.get("requires_current_model_bcc_trigger") is True
+    ):
+        raise ValueError("Die Proto-Auswahlregel muss modellfrei und haltungseinheitlich sein.")
+
+    queue_hashes = queue_manifest.get("hashes")
+    if not isinstance(queue_hashes, dict) or _require_count(
+        queue_manifest.get("hashes_count"), "Queue hashes_count"
+    ) != len(queue_hashes):
+        raise ValueError("Der Proto-Queue-Beleg besitzt keine gueltige Hashliste.")
+    candidate_hash_entry = _require_exact_fields(
+        queue_hashes.get("_candidates.json"),
+        {"sha256", "size_bytes"},
+        "Queue-Kandidaten-Hash",
+    )
+    if (
+        _require_sha256(candidate_hash_entry.get("sha256"), "Queue-Kandidaten-Hash") != candidates_sha
+        or _require_count(candidate_hash_entry.get("size_bytes"), "Queue-Kandidaten-Groesse")
+        != len(candidates_bytes)
+    ):
+        raise ValueError("Die Proto-Queue bindet den Kandidaten-Beleg nicht bytegenau.")
+
+    selection_receipt = _require_exact_fields(
+        queue_manifest.get("selection_receipt"),
+        {"items"},
+        "Proto-Queue-Auswahlbeleg",
+    )
+    if selection_receipt.get("models"):
+        raise ValueError("Eine Proto-Queue darf keine gebundenen Auswahlmodelle tragen.")
+    queue_items = queue_semantic.get("items")
+    if not isinstance(queue_items, list) or selection_receipt.get("items") != queue_items:
+        raise ValueError("Semantischer Proto-Beleg und Auswahlbeleg widersprechen sich.")
+
+    queue_by_id: dict[str, Mapping[str, Any]] = {}
+    queue_image_hashes_seen: set[str] = set()
+    queue_physical_seen: set[str] = set()
+    for raw_item in queue_items:
+        item = _require_exact_fields(
+            raw_item,
+            {
+                "item_id",
+                "image_sha256",
+                "holding_key",
+                "code",
+                "gruppe",
+                "quelle",
+                "quell_datei",
+                "leitungsinspektion",
+                "size_bytes",
+                "image_format",
+                "target_file_name",
+            },
+            "Proto-Queue-Bildbeleg",
+        )
+        item_id = str(item.get("item_id") or "")
+        queue_image_sha = _require_sha256(item.get("image_sha256"), f"Proto-Queue-Bildhash {item_id}")
+        queue_size = _require_count(item.get("size_bytes"), f"Proto-Queue-Bildgroesse {item_id}")
+        queue_format = str(item.get("image_format") or "").casefold()
+        physical = _proto_physical_holding_key(item.get("holding_key"))
+        if (
+            not item_id
+            or item_id in queue_by_id
+            or item_id != f"{PROTO_ITEM_ID_PREFIX}{queue_image_sha[:20]}"
+            or queue_image_sha in queue_image_hashes_seen
+            or physical in queue_physical_seen
+            or queue_size < MIN_TRAINING_NEGATIVE_BYTES
+            or queue_format not in {"jpg", "jpeg", "png"}
+            or item.get("target_file_name") != f"img_{queue_image_sha}.{queue_format}"
+        ):
+            raise ValueError(f"Proto-Queue-Bildbeleg {item_id} ist ungueltig.")
+        queue_image_hashes_seen.add(queue_image_sha)
+        queue_physical_seen.add(physical)
+        queue_by_id[item_id] = item
+
+    candidates = _strict_json_bytes(candidates_bytes, "Queue-Kandidaten-Beleg")
+    if not isinstance(candidates, list):
+        raise ValueError("Der Queue-Kandidaten-Beleg ist kein JSON-Array.")
+    candidates_by_id: dict[str, Mapping[str, Any]] = {}
+    for raw_candidate in candidates:
+        candidate = _require_exact_fields(
+            raw_candidate,
+            {"id", "frame_path", "category", "status", "source_sha256"},
+            "Queue-Kandidat",
+        )
+        candidate_id = str(candidate.get("id") or "")
+        if not candidate_id or candidate_id in candidates_by_id:
+            raise ValueError("Der Kandidaten-Beleg enthaelt doppelte oder leere IDs.")
+        if (
+            candidate.get("category") != "all_class_background_review"
+            or candidate.get("status") != "pending_review"
+        ):
+            raise ValueError("Ein Queue-Kandidat besitzt einen ungueltigen Reviewstatus.")
+        candidates_by_id[candidate_id] = candidate
+    if (
+        set(candidates_by_id) != set(queue_by_id)
+        or _require_count(queue_manifest.get("candidates_count"), "candidates_count") != len(candidates)
+        or _require_count(queue_manifest.get("images_count"), "Queue images_count") != len(candidates)
+        or _require_count(queue_manifest.get("holdings_count"), "Queue holdings_count") != len(candidates)
+    ):
+        raise ValueError("Proto-Queue-Manifest, Auswahlbeleg und Kandidatenliste sind unvollstaendig.")
+    expected_queue_hash_paths = {"_candidates.json"}
+    for candidate_id, candidate in candidates_by_id.items():
+        queue_item = queue_by_id[candidate_id]
+        queue_image_sha = str(queue_item["image_sha256"])
+        queue_format = str(queue_item["image_format"]).casefold()
+        expected_file_name = f"img_{queue_image_sha}.{queue_format}"
+        if (
+            candidate.get("frame_path") != expected_file_name
+            or candidate.get("source_sha256") != queue_image_sha
+        ):
+            raise ValueError(f"Queue-Kandidat {candidate_id} passt nicht zum Auswahlbeleg.")
+        relative_queue_image = f"images/{expected_file_name}"
+        expected_queue_hash_paths.add(relative_queue_image)
+        queue_image_hash = _require_exact_fields(
+            queue_hashes.get(relative_queue_image),
+            {"sha256", "size_bytes"},
+            f"Queue-Bildhash {relative_queue_image}",
+        )
+        if (
+            _require_sha256(queue_image_hash.get("sha256"), f"Queue-Bildhash {relative_queue_image}")
+            != queue_image_sha
+            or _require_count(queue_image_hash.get("size_bytes"), f"Queue-Bildgroesse {relative_queue_image}")
+            != queue_item["size_bytes"]
+        ):
+            raise ValueError(f"Queue-Hashliste bindet {candidate_id} nicht bytegenau.")
+    if set(queue_hashes) != expected_queue_hash_paths:
+        raise ValueError("Queue-Kandidaten und Queue-Hashliste sind nicht deckungsgleich.")
+
+    review = _require_exact_fields(
+        _strict_json_bytes(review_bytes, "Review-Beleg"),
+        {
+            "schema_version",
+            "purpose",
+            "queue_id",
+            "queue_manifest_sha256",
+            "candidates_sha256",
+            "class_map_sha256",
+            "reviewer",
+            "updated_at_utc",
+            "decisions",
+        },
+        "Review-Beleg",
+    )
+    if (
+        review.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
+        or review.get("purpose") != NEGATIVE_REVIEW_PURPOSE
+        or review_binding.get("purpose") != NEGATIVE_REVIEW_PURPOSE
+        or review.get("queue_id") != queue_id
+        or review.get("queue_manifest_sha256") != queue_manifest_sha
+        or review.get("candidates_sha256") != candidates_sha
+        or review.get("class_map_sha256") != class_map_sha
+        or not str(review.get("reviewer") or "").strip()
+    ):
+        raise ValueError("Review, Proto-Queue und Klassenkarte sind nicht fest verbunden.")
+    decisions = review.get("decisions")
+    if not isinstance(decisions, dict) or set(decisions) != set(candidates_by_id):
+        raise ValueError("Das Review ist nicht vollstaendig oder enthaelt fremde Bild-IDs.")
+    decision_counts = {decision: 0 for decision in NEGATIVE_REVIEW_DECISIONS}
+    accepted_ids: set[str] = set()
+    for item_id, raw_decision in decisions.items():
+        decision = _require_exact_fields(
+            raw_decision,
+            {"decision", "comment", "reviewed_at_utc"},
+            f"Review-Entscheidung {item_id}",
+        )
+        value = decision.get("decision")
+        if (
+            value not in decision_counts
+            or not isinstance(decision.get("comment"), str)
+            or not isinstance(decision.get("reviewed_at_utc"), str)
+            or not str(decision.get("reviewed_at_utc")).endswith("Z")
+        ):
+            raise ValueError(f"Review-Entscheidung {item_id} ist nicht erlaubt.")
+        decision_counts[str(value)] += 1
+        if value == "all_classes_clear":
+            accepted_ids.add(item_id)
+    bound_decision_counts = review_binding.get("decision_counts")
+    if not isinstance(bound_decision_counts, dict) or set(bound_decision_counts) != set(
+        NEGATIVE_REVIEW_DECISIONS
+    ):
+        raise ValueError("Der Proto-Satz besitzt ungueltige Review-Anzahlen.")
+    normalized_bound_counts = {
+        decision: _require_count(bound_decision_counts[decision], f"Review-Anzahl {decision}")
+        for decision in NEGATIVE_REVIEW_DECISIONS
+    }
+    if (
+        _require_count(review_binding.get("reviewed_images"), "reviewed_images") != len(decisions)
+        or normalized_bound_counts != decision_counts
+    ):
+        raise ValueError("Review-Anzahlen und Proto-Negativsatz widersprechen sich.")
+
+    semantic_images = semantic.get("images")
+    if not isinstance(semantic_images, list) or not semantic_images:
+        raise ValueError("Der Proto-Negativsatz enthaelt keine freigegebenen Bilder.")
+    if (
+        _require_count(manifest.get("images_count"), "images_count") != len(semantic_images)
+        or _require_count(manifest.get("holdings_count"), "holdings_count") != len(semantic_images)
+    ):
+        raise ValueError("Die Bild-/Haltungsanzahl im Proto-Negativsatz ist falsch.")
+
+    output_images: list[dict[str, Any]] = []
+    seen_review_ids: set[str] = set()
+    seen_hashes: set[str] = set()
+    physical_keys: list[str] = []
+    split_by_physical: dict[str, str] = {}
+    referenced_image_paths: set[str] = set()
+    for raw_image in semantic_images:
+        image = _require_exact_fields(
+            raw_image,
+            {
+                "id",
+                "file_name",
+                "image_sha256",
+                "size_bytes",
+                "image_format",
+                "holding_key",
+                "physical_holding_key",
+                "split",
+                "review_item_id",
+                "review_decision",
+                "quelle",
+            },
+            "Proto-Negativsatz-Bild",
+        )
+        image_sha = _require_sha256(image.get("image_sha256"), "Proto-Negativbildhash")
+        file_name = str(image.get("file_name") or "")
+        image_format = str(image.get("image_format") or "").casefold()
+        review_item_id = str(image.get("review_item_id") or "")
+        holding_key = str(image.get("holding_key") or "")
+        physical = str(image.get("physical_holding_key") or "")
+        split = str(image.get("split") or "")
+        if physical != _proto_physical_holding_key(holding_key):
+            raise ValueError("Haltung und physische Haltung im Proto-Satz widersprechen sich.")
+        if (
+            image.get("id") != f"{PROTO_IMAGE_ID_PREFIX}{image_sha}"
+            or file_name != f"img_{image_sha}.{image_format}"
+            or image_format not in {"jpg", "jpeg", "png"}
+            or split not in {"train", "validation"}
+            or image.get("review_decision") != "all_classes_clear"
+            or review_item_id not in accepted_ids
+        ):
+            raise ValueError("Proto-Negativbild ist nicht als klassenfreies Trainingsbild gebunden.")
+        if review_item_id in seen_review_ids or image_sha in seen_hashes or physical in split_by_physical:
+            raise ValueError("Proto-Negativsatz enthaelt doppelte Bilder oder Haltungen.")
+        seen_review_ids.add(review_item_id)
+        seen_hashes.add(image_sha)
+        physical_keys.append(physical)
+        split_by_physical[physical] = split
+
+        relative_image = f"images/{file_name}"
+        referenced_image_paths.add(relative_image)
+        image_path = files.get(relative_image)
+        if image_path is None:
+            raise ValueError(f"Gebundenes Proto-Negativbild fehlt: {relative_image}")
+        size_bytes = _require_count(image.get("size_bytes"), "Proto-Negativbild-Groesse")
+        with image_path.open("rb") as stream:
+            signature = stream.read(8)
+        valid_signature = (
+            image_format in {"jpg", "jpeg"} and signature.startswith(b"\xff\xd8\xff")
+        ) or (
+            image_format == "png" and signature == b"\x89PNG\r\n\x1a\n"
+        )
+        if (
+            size_bytes < MIN_TRAINING_NEGATIVE_BYTES
+            or not valid_signature
+            or image_path.stat().st_size != size_bytes
+            or _sha256_file(image_path) != image_sha
+            or image_path.suffix.casefold() != f".{image_format}"
+        ):
+            raise ValueError("Proto-Negativbild passt nicht zum semantischen Bildbeleg.")
+
+        queue_item = queue_by_id.get(review_item_id)
+        candidate = candidates_by_id.get(review_item_id)
+        if queue_item is None or candidate is None:
+            raise ValueError("Proto-Negativbild ist nicht in Queue und Kandidatenliste enthalten.")
+        for field in ("image_sha256", "holding_key", "size_bytes", "image_format", "quelle"):
+            if image.get(field) != queue_item.get(field):
+                raise ValueError(f"Proto-Negativbild und Queue widersprechen sich bei {field}.")
+        if (
+            candidate.get("frame_path") != file_name
+            or candidate.get("source_sha256") != image_sha
+        ):
+            raise ValueError("Proto-Negativbild und Kandidaten-Beleg widersprechen sich.")
+        queue_image_hash = _require_exact_fields(
+            queue_hashes.get(relative_image),
+            {"sha256", "size_bytes"},
+            f"Queue-Bildhash {relative_image}",
+        )
+        if (
+            _require_sha256(queue_image_hash.get("sha256"), f"Queue-Bildhash {relative_image}")
+            != image_sha
+            or _require_count(queue_image_hash.get("size_bytes"), f"Queue-Bildgroesse {relative_image}")
+            != size_bytes
+        ):
+            raise ValueError("Der Queue-Beleg bindet das Proto-Negativbild nicht bytegenau.")
+
+        output_images.append(
+            {
+                "path": _stored_path(knowledge_root, image_path),
+                "sha256": image_sha,
+                "split": split,
+                "source_type": "reviewed_negative_set",
+                "holding_key": holding_key,
+                "physical_holding_key": physical,
+                "set_id": set_id,
+                "set_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                "queue_id": queue_id,
+                "queue_manifest_sha256": queue_manifest_sha,
+                "candidates_sha256": candidates_sha,
+                "review_sha256": review_sha,
+                "class_map_version": class_map_version,
+                "class_map_sha256": class_map_sha,
+                "vsa_manifest_hash": vsa_hash,
+                "review_item_id": review_item_id,
+                "review_decision": "all_classes_clear",
+            }
+        )
+
+    actual_image_paths = {relative for relative in files if relative.startswith("images/")}
+    if actual_image_paths != referenced_image_paths:
+        raise ValueError("Bilder, Hashliste und semantischer Proto-Beleg sind nicht deckungsgleich.")
+    if seen_review_ids != accepted_ids:
+        raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
+    expected_splits, validation_count = _negative_split_map(physical_keys)
+    if any(
+        split_by_physical[physical] != expected_split
+        for physical, expected_split in expected_splits.items()
+    ):
+        raise ValueError("Der Proto-Negativsatz besitzt einen manipulierten Split.")
+    split_rule = _require_exact_fields(
+        semantic.get("split_rule"),
+        {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count"},
+        "Proto-Splitregel",
+    )
+    if (
+        split_rule.get("name") != "stable_rank_v1"
+        or split_rule.get("salt") != NEGATIVE_SPLIT_SALT
+        or split_rule.get("one_image_per_physical_holding") is not True
+        or _require_count(split_rule.get("validation_count"), "validation_count") != validation_count
+        or _require_count(split_rule.get("train_count"), "train_count")
+        != len(output_images) - validation_count
+    ):
+        raise ValueError("Die Proto-Splitregel ist ungueltig.")
+
+    output_images.sort(key=lambda item: str(item["sha256"]))
+    manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
+    provenance = {
+        "set_id": set_id,
+        "root_path": _stored_path(knowledge_root, set_root),
+        "manifest_sha256": manifest_sha,
+        "queue_id": queue_id,
+        "queue_manifest_sha256": queue_manifest_sha,
+        "candidates_sha256": candidates_sha,
+        "review_sha256": review_sha,
+        "class_map_version": class_map_version,
+        "class_map_sha256": class_map_sha,
+        "vsa_manifest_hash": vsa_hash,
+        "images": len(output_images),
+        "train_images": len(output_images) - validation_count,
+        "validation_images": validation_count,
+    }
+    if manifest_path.read_bytes() != manifest_bytes:
+        raise ValueError("Das Proto-Manifest wurde waehrend der Pruefung geaendert.")
+    manifest_hashes = manifest["hashes"]
+    for relative, path in files.items():
+        hash_entry = manifest_hashes[relative]
+        if (
+            path.stat().st_size != hash_entry["size_bytes"]
+            or _sha256_file(path) != hash_entry["sha256"]
+        ):
+            raise ValueError(f"Proto-Satz-Datei wurde waehrend der Pruefung geaendert: {relative}")
+    if (
+        _sha256_file(ACTIVE_CLASS_MAP_PATH) != class_map_sha
+        or _sha256_file(ACTIVE_VSA_MANIFEST_PATH) != vsa_hash
+    ):
+        raise ValueError("Klassenkarte oder VSA-Manifest wurde waehrend der Pruefung geaendert.")
     return output_images, provenance
 
 

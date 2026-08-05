@@ -179,16 +179,34 @@ class ProtoHardNegativeTests(unittest.TestCase):
         self.assertEqual(queue_id, manifest["queue_id"])
         self.assertIs(manifest["selection_rule"]["model_involved"], False)
 
+    def _write_bound_review(self, queue_root: Path, decisions: dict, name: str = "review.json") -> Path:
+        queue_manifest = json.loads((queue_root / "_manifest.json").read_text(encoding="utf-8"))
+        import hashlib as _hashlib
+        review_path = self.root / name
+        review_path.write_text(json.dumps({
+            "schema_version": "1.0",
+            "purpose": "bcc_hard_negative_review",
+            "queue_id": queue_manifest["queue_id"],
+            "queue_manifest_sha256": _hashlib.sha256(
+                (queue_root / "_manifest.json").read_bytes()).hexdigest(),
+            "candidates_sha256": _hashlib.sha256(
+                (queue_root / "_candidates.json").read_bytes()).hexdigest(),
+            "class_map_sha256": queue_manifest["class_map_sha256"],
+            "reviewer": "test",
+            "updated_at_utc": "2026-08-05T00:00:00Z",
+            "decisions": decisions,
+        }), encoding="utf-8")
+        return review_path
+
     def test_publish_set_nur_all_classes_clear(self):
         queue_root = self._publish_test_queue()
-        review_path = self.root / "review.json"
         candidates = json.loads((queue_root / "_candidates.json").read_text(encoding="utf-8"))
         decisions = {
             candidates[0]["id"]: {"decision": "all_classes_clear"},
             candidates[1]["id"]: {"decision": "mapped_object_visible"},
         }
-        review_path.write_text(json.dumps({"decisions": decisions}), encoding="utf-8")
-        plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path)
+        review_path = self._write_bound_review(queue_root, decisions)
+        plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
         self.assertEqual(len(plan["items"]), 1)
         self.assertEqual(plan["items"][0]["item_id"], candidates[0]["id"])
         set_root = MODULE.publish_set(plan)
@@ -199,10 +217,9 @@ class ProtoHardNegativeTests(unittest.TestCase):
 
     def test_publish_set_sperrt_unvollstaendige_review(self):
         queue_root = self._publish_test_queue()
-        review_path = self.root / "review.json"
-        review_path.write_text(json.dumps({"decisions": {}}), encoding="utf-8")
+        review_path = self._write_bound_review(queue_root, {})
         with self.assertRaises(ValueError):
-            MODULE.build_set_plan(self.knowledge, queue_root, review_path)
+            MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
 
     def test_split_regel_80_20_und_eine_haltung_pro_bild(self):
         photos = [self._add_photo(f"s{i}.jpg", 60 + i) for i in range(10)]
@@ -212,13 +229,11 @@ class ProtoHardNegativeTests(unittest.TestCase):
         plan = MODULE.build_queue_plan(self.knowledge, selected, self.class_map)
         queue_root = MODULE.publish_queue(plan)
         candidates = json.loads((queue_root / "_candidates.json").read_text(encoding="utf-8"))
-        review_path = self.root / "review.json"
-        review_path.write_text(json.dumps({
-            "decisions": {c["id"]: {"decision": "all_classes_clear"} for c in candidates}
-        }), encoding="utf-8")
-        set_plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path)
+        review_path = self._write_bound_review(
+            queue_root, {c["id"]: {"decision": "all_classes_clear"} for c in candidates})
+        set_plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
         splits = [item["split"] for item in set_plan["items"]]
-        self.assertEqual(splits.count("val"), 2)
+        self.assertEqual(splits.count("validation"), 2)
         self.assertEqual(splits.count("train"), 8)
         haltungen = [item["holding_key"] for item in set_plan["items"]]
         self.assertEqual(len(set(haltungen)), len(haltungen))

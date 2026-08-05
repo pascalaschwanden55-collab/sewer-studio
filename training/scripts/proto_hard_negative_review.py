@@ -55,6 +55,11 @@ from collect_class_candidates import (
 )
 from repair_gold_holding_ids import _is_link_or_reparse, _sha256_file
 from repair_pdf_gold_holding_ids import comparison_key, load_protection_keys
+from gold_stock_audit import (
+    NEGATIVE_SPLIT_SALT,
+    _negative_split_map,
+    _proto_physical_holding_key,
+)
 
 SCHEMA_VERSION = "1.0"
 QUEUE_PURPOSE = "proto_hard_negative_review_queue"
@@ -64,7 +69,6 @@ PILOT_NAME = "protokoll_negative"
 QUEUE_ROLE = "training_candidate_review"
 SET_ROLE = "training_negative_set"
 SELECTION_SALT = "proto-hard-negative-review-v1"
-SPLIT_SALT = "proto-hard-negative-split-v1"
 REVIEW_TARGET = "Keine sichtbare Instanz irgendeiner gebundenen Detect-Klasse"
 DETECT_CLASSES = frozenset(ALL_CLASSES)
 
@@ -466,22 +470,31 @@ def publish_queue(plan: dict) -> Path:
 # Negativsatz-Veroeffentlichung (nur all_classes_clear)
 # ---------------------------------------------------------------------------
 
-def _load_review_decisions(review_path: Path) -> dict[str, str]:
-    document = json.loads(review_path.read_bytes().decode("utf-8-sig"))
-    decisions = document.get("decisions")
-    if not isinstance(decisions, dict):
-        raise ValueError("Die Review-Datei enthaelt keine Entscheidungen.")
-    result: dict[str, str] = {}
-    for item_id, entry in decisions.items():
-        decision = (entry or {}).get("decision") if isinstance(entry, dict) else entry
-        result[str(item_id)] = str(decision or "")
-    return result
-
-
-def build_set_plan(knowledge_root: Path, queue_root: Path, review_path: Path) -> dict:
+def build_set_plan(
+    knowledge_root: Path,
+    queue_root: Path,
+    review_path: Path,
+    class_map_path: Path,
+) -> dict:
     queue_manifest = json.loads((queue_root / "_manifest.json").read_bytes().decode("utf-8-sig"))
     candidates = json.loads((queue_root / "_candidates.json").read_bytes().decode("utf-8-sig"))
-    decisions = _load_review_decisions(review_path)
+    review_document = json.loads(review_path.read_bytes().decode("utf-8-sig"))
+    # Die Review muss an genau diese Warteschlange gebunden sein.
+    if str(review_document.get("queue_id") or "") != str(queue_manifest.get("queue_id") or ""):
+        raise ValueError("Die Review gehoert zu einer anderen Warteschlange.")
+    if str(review_document.get("queue_manifest_sha256") or "") != _sha256_file(queue_root / "_manifest.json"):
+        raise ValueError("Die Review passt nicht zum Warteschlangen-Manifest.")
+    if str(review_document.get("candidates_sha256") or "") != _sha256_file(queue_root / "_candidates.json"):
+        raise ValueError("Die Review passt nicht zur Kandidatenliste.")
+    if str(review_document.get("class_map_sha256") or "") != str(queue_manifest.get("class_map_sha256") or ""):
+        raise ValueError("Die Review passt nicht zur gebundenen Klassenkarte.")
+    decisions_raw = review_document.get("decisions")
+    if not isinstance(decisions_raw, dict):
+        raise ValueError("Die Review-Datei enthaelt keine Entscheidungen.")
+    decisions: dict[str, str] = {}
+    for item_id, entry in decisions_raw.items():
+        decision = (entry or {}).get("decision") if isinstance(entry, dict) else entry
+        decisions[str(item_id)] = str(decision or "")
     pending = [c["id"] for c in candidates if c["id"] not in decisions]
     if pending:
         raise ValueError(f"Review unvollstaendig: {len(pending)} Bilder ohne Entscheidung.")
@@ -489,6 +502,10 @@ def build_set_plan(knowledge_root: Path, queue_root: Path, review_path: Path) ->
                         if d not in ("all_classes_clear", "mapped_object_visible", "exclude_uncertain")})
     if ungueltig:
         raise ValueError(f"Unbekannte Review-Entscheidungen: {ungueltig}")
+    decision_counts = {
+        name: sum(1 for d in decisions.values() if d == name)
+        for name in ("all_classes_clear", "mapped_object_visible", "exclude_uncertain")
+    }
 
     receipt_items = {item["item_id"]: item for item in queue_manifest["semantic"]["items"]}
     clear_items = []
@@ -511,28 +528,32 @@ def build_set_plan(knowledge_root: Path, queue_root: Path, review_path: Path) ->
     if not clear_items:
         raise ValueError("Kein all_classes_clear im Review — kein Negativsatz zu bauen.")
 
-    ranked = sorted(clear_items, key=lambda item: hashlib.sha256(
-        f"{SPLIT_SALT}|{item['holding_key']}".encode()).hexdigest())
-    validation_count = max(1, round(len(ranked) * 0.2))
-    for index, item in enumerate(ranked):
-        item["split"] = "val" if index < validation_count else "train"
-    if len({item["holding_key"] for item in ranked}) != len(ranked):
-        raise ValueError("Der Negativsatz enthaelt eine Haltung doppelt.")
+    for item in clear_items:
+        item["physical"] = _proto_physical_holding_key(item["holding_key"])
+    split_map, validation_count = _negative_split_map([i["physical"] for i in clear_items])
+    for item in clear_items:
+        item["split"] = split_map[item["physical"]]
 
     queue_manifest_sha = _sha256_file(queue_root / "_manifest.json")
     candidates_sha = _sha256_file(queue_root / "_candidates.json")
     review_sha = _sha256_file(review_path)
+    class_map_sha = str(queue_manifest["class_map_sha256"])
+    if _sha256_file(class_map_path) != class_map_sha:
+        raise ValueError("Die uebergebene Klassenkarte passt nicht zur Warteschlange.")
     semantic_images = [{
-        "sha256": item["image_sha256"],
+        "id": f"proto-neg-{item['image_sha256']}",
+        "file_name": item["target_file_name"],
+        "image_sha256": item["image_sha256"],
         "size_bytes": item["size_bytes"],
         "image_format": item["image_format"],
         "holding_key": item["holding_key"],
-        "physical_holding_key": item["holding_key"],
+        "physical_holding_key": item["physical"],
         "split": item["split"],
         "review_item_id": item["item_id"],
         "review_decision": "all_classes_clear",
         "quelle": item["quelle"],
-    } for item in ranked]
+    } for item in clear_items]
+    train_count = len(clear_items) - validation_count
     semantic = {
         "schema_version": SCHEMA_VERSION,
         "purpose": SET_PURPOSE,
@@ -541,23 +562,30 @@ def build_set_plan(knowledge_root: Path, queue_root: Path, review_path: Path) ->
         "queue": {
             "queue_id": queue_manifest["queue_id"],
             "queue_manifest_sha256": queue_manifest_sha,
+            "queue_manifest_receipt_path": "receipts/queue_manifest.json",
             "candidates_sha256": candidates_sha,
+            "candidates_receipt_path": "receipts/queue_candidates.json",
         },
         "review": {
             "purpose": REVIEW_PURPOSE,
             "review_sha256": review_sha,
+            "receipt_path": "receipts/review.json",
             "reviewed_images": len(decisions),
+            "decision_counts": decision_counts,
         },
         "class_map_version": queue_manifest["class_map_version"],
-        "class_map_sha256": queue_manifest["class_map_sha256"],
+        "class_map_sha256": class_map_sha,
+        "class_map_receipt_path": "receipts/class_map.json",
         "vsa_manifest_hash": queue_manifest["vsa_manifest_hash"],
         "class_names": list(queue_manifest["class_names"]),
+        "protected_sets": list(queue_manifest["protected_sets"]),
+        "protection_snapshot": dict(queue_manifest["protection_snapshot"]),
         "split_rule": {
             "name": "stable_rank_v1",
-            "salt": SPLIT_SALT,
+            "salt": NEGATIVE_SPLIT_SALT,
             "one_image_per_physical_holding": True,
             "validation_count": validation_count,
-            "train_count": len(ranked) - validation_count,
+            "train_count": train_count,
         },
         "images": semantic_images,
     }
@@ -566,15 +594,16 @@ def build_set_plan(knowledge_root: Path, queue_root: Path, review_path: Path) ->
         "knowledge_root": knowledge_root,
         "queue_root": queue_root,
         "review_path": review_path,
+        "class_map_path": class_map_path,
         "created_utc": datetime.now(timezone.utc),
-        "items": ranked,
+        "items": clear_items,
         "semantic": semantic,
         "set_id": set_id,
         "target_root": (knowledge_root / "training" / "negatives" / "sets" / f"proto_hn_{set_id[:12]}"),
         "queue_manifest_sha256": queue_manifest_sha,
         "candidates_sha256": candidates_sha,
         "review_sha256": review_sha,
-        "class_map_version": queue_manifest["class_map_version"],
+        "class_map_sha256": class_map_sha,
     }
 
 
@@ -604,6 +633,7 @@ def publish_set(plan: dict) -> Path:
             (plan["review_path"], "review.json", plan["review_sha256"]),
             (plan["queue_root"] / "_manifest.json", "queue_manifest.json", plan["queue_manifest_sha256"]),
             (plan["queue_root"] / "_candidates.json", "queue_candidates.json", plan["candidates_sha256"]),
+            (plan["class_map_path"], "class_map.json", plan["class_map_sha256"]),
         ):
             if _sha256_file(source_path) != expected:
                 raise ValueError(f"Beleg wurde veraendert: {source_path}")
@@ -663,7 +693,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.publish_set is not None:
             if args.review is None:
                 raise ValueError("--publish-set verlangt --review <pfad>")
-            plan = build_set_plan(args.knowledge_root, args.publish_set, args.review)
+            plan = build_set_plan(args.knowledge_root, args.publish_set, args.review, args.class_map)
             target = publish_set(plan)
             print(f"Negativsatz veroeffentlicht: {target}")
             print(f"Bilder: {len(plan['items'])} "
