@@ -182,6 +182,11 @@ class ProtoHardNegativeTests(unittest.TestCase):
     def _write_bound_review(self, queue_root: Path, decisions: dict, name: str = "review.json") -> Path:
         queue_manifest = json.loads((queue_root / "_manifest.json").read_text(encoding="utf-8"))
         import hashlib as _hashlib
+        full_decisions = {
+            k: {"decision": (v["decision"] if isinstance(v, dict) else v),
+                "comment": "", "reviewed_at_utc": "2026-08-05T00:00:00Z"}
+            for k, v in decisions.items()
+        }
         review_path = self.root / name
         review_path.write_text(json.dumps({
             "schema_version": "1.0",
@@ -194,7 +199,7 @@ class ProtoHardNegativeTests(unittest.TestCase):
             "class_map_sha256": queue_manifest["class_map_sha256"],
             "reviewer": "test",
             "updated_at_utc": "2026-08-05T00:00:00Z",
-            "decisions": decisions,
+            "decisions": full_decisions,
         }), encoding="utf-8")
         return review_path
 
@@ -237,6 +242,60 @@ class ProtoHardNegativeTests(unittest.TestCase):
         self.assertEqual(splits.count("train"), 8)
         haltungen = [item["holding_key"] for item in set_plan["items"]]
         self.assertEqual(len(set(haltungen)), len(haltungen))
+
+    def _write_samples(self, samples):
+        (self.knowledge / "training_samples.json").write_text(
+            json.dumps(samples), encoding="utf-8")
+
+    def test_gold_ausrichtung_erzwingt_gleiche_rolle(self):
+        # Gold-Haltung 500-600 liegt als Sample vor; ihre Gold-Rolle wird
+        # gegen den stabilen Negativ-Rang erzwungen.
+        self._write_samples([{
+            "SampleId": "wb_gold1", "CaseId": "500-600", "Code": "BAHCA",
+            "Signature": "500-600|BAHCA|0.0|0.0",
+        }])
+        self._add_photo("g1.jpg", 70)
+        self._add_photo("g2.jpg", 71)
+        selected, _ = self._select([
+            _befund("BCDYA", "g1.jpg", "500-600"),
+            _befund("AEDXA", "g2.jpg", "700-800"),
+        ])
+        plan = MODULE.build_queue_plan(self.knowledge, selected, self.class_map)
+        queue_root = MODULE.publish_queue(plan)
+        candidates = json.loads((queue_root / "_candidates.json").read_text(encoding="utf-8"))
+        review_path = self._write_bound_review(
+            queue_root, {c["id"]: {"decision": "all_classes_clear"} for c in candidates})
+        set_plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
+        import gold_stock_audit
+        gold_role = gold_stock_audit.split_role("haltung:500-600")
+        erwartet = "train" if gold_role == "train" else "validation"
+        item = next(i for i in set_plan["items"] if i["holding_key"] == "500-600")
+        basis, _ = gold_stock_audit._negative_split_map([i["physical"] for i in set_plan["items"]])
+        if basis[item["physical"]] == erwartet:
+            self.assertEqual(set_plan["semantic"]["split_rule"]["name"], "stable_rank_v1")
+        else:
+            self.assertEqual(item["split"], erwartet)
+            regel = set_plan["semantic"]["split_rule"]
+            self.assertEqual(regel["name"], "stable_rank_v1_gold_aligned")
+            self.assertEqual(len(regel["gold_alignments"]), 1)
+            self.assertEqual(regel["gold_alignments"][0]["physical_holding_key"], item["physical"])
+
+    def test_publizierter_satz_besteht_audit_validierung(self):
+        import gold_stock_audit
+        queue_root = self._publish_test_queue()
+        candidates = json.loads((queue_root / "_candidates.json").read_text(encoding="utf-8"))
+        review_path = self._write_bound_review(
+            queue_root, {c["id"]: {"decision": "all_classes_clear"} for c in candidates})
+        self._write_samples([])
+        set_plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
+        set_root = MODULE.publish_set(set_plan)
+        images, provenance = gold_stock_audit._read_reviewed_negative_set(self.knowledge, set_root)
+        self.assertEqual(len(images), 2)
+        self.assertEqual(provenance["images"], 2)
+        self.assertEqual(
+            {img["split"] for img in images} | {"train"},
+            {img["split"] for img in images},
+        )
 
 
 if __name__ == "__main__":

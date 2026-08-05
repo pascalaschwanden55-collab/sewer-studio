@@ -57,6 +57,7 @@ from repair_gold_holding_ids import _is_link_or_reparse, _sha256_file
 from repair_pdf_gold_holding_ids import comparison_key, load_protection_keys
 from gold_stock_audit import (
     NEGATIVE_SPLIT_SALT,
+    _gold_split_roles_by_physical,
     _negative_split_map,
     _proto_physical_holding_key,
 )
@@ -534,6 +535,26 @@ def build_set_plan(
     for item in clear_items:
         item["split"] = split_map[item["physical"]]
 
+    # Gold-Ausrichtung: Negativ-Splits folgen bei gemeinsamen Haltungen dem
+    # Gold-Split (gold train -> train, gold val/test -> validation), damit die
+    # interne Validierung kein bereits bekanntes Rohr als Fehlalarm-Massstab nutzt.
+    gold_roles = _gold_split_roles_by_physical(knowledge_root)
+    gold_alignments: list[dict] = []
+    for item in clear_items:
+        gold_role = gold_roles.get(item["physical"])
+        if gold_role is None:
+            continue
+        expected = "train" if gold_role == "train" else "validation"
+        if item["split"] != expected:
+            gold_alignments.append({
+                "physical_holding_key": item["physical"],
+                "gold_role": gold_role,
+                "forced_split": expected,
+            })
+            item["split"] = expected
+    if gold_alignments:
+        validation_count = sum(1 for i in clear_items if i["split"] == "validation")
+
     queue_manifest_sha = _sha256_file(queue_root / "_manifest.json")
     candidates_sha = _sha256_file(queue_root / "_candidates.json")
     review_sha = _sha256_file(review_path)
@@ -554,6 +575,17 @@ def build_set_plan(
         "quelle": item["quelle"],
     } for item in clear_items]
     train_count = len(clear_items) - validation_count
+    split_rule: dict = {
+        "name": "stable_rank_v1_gold_aligned" if gold_alignments else "stable_rank_v1",
+        "salt": NEGATIVE_SPLIT_SALT,
+        "one_image_per_physical_holding": True,
+        "validation_count": validation_count,
+        "train_count": train_count,
+    }
+    if gold_alignments:
+        split_rule["gold_alignments"] = sorted(
+            gold_alignments, key=lambda a: a["physical_holding_key"]
+        )
     semantic = {
         "schema_version": SCHEMA_VERSION,
         "purpose": SET_PURPOSE,
@@ -580,13 +612,7 @@ def build_set_plan(
         "class_names": list(queue_manifest["class_names"]),
         "protected_sets": list(queue_manifest["protected_sets"]),
         "protection_snapshot": dict(queue_manifest["protection_snapshot"]),
-        "split_rule": {
-            "name": "stable_rank_v1",
-            "salt": NEGATIVE_SPLIT_SALT,
-            "one_image_per_physical_holding": True,
-            "validation_count": validation_count,
-            "train_count": train_count,
-        },
+        "split_rule": split_rule,
         "images": semantic_images,
     }
     set_id = hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest()

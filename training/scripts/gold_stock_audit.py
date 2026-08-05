@@ -906,6 +906,24 @@ def _proto_physical_holding_key(value: Any) -> str:
     return "|".join(sorted((guarded(parts[0]).casefold(), guarded(parts[1]).casefold())))
 
 
+def _gold_split_roles_by_physical(knowledge_root: Path) -> dict[str, str]:
+    """Gold-Split-Rollen je physischer Proto-Haltung (fuer die Gold-Ausrichtung
+    von Negativsatz-Splits). Haltungen ohne belastbare Identitaet fehlen."""
+    samples_path = knowledge_root / "training_samples.json"
+    roles: dict[str, str] = {}
+    try:
+        samples = json.loads(samples_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return roles
+    for sample in samples:
+        case_id = str(sample.get("CaseId") or "")
+        normalized = normalize_holding_key(case_id)
+        if not normalized:
+            continue
+        roles[_proto_physical_holding_key(case_id)] = split_role(f"haltung:{normalized}")
+    return roles
+
+
 def _read_reviewed_negative_set(
     knowledge_root: Path,
     requested: Path,
@@ -2207,20 +2225,58 @@ def _read_proto_reviewed_negative_set(
         raise ValueError("Bilder, Hashliste und semantischer Proto-Beleg sind nicht deckungsgleich.")
     if seen_review_ids != accepted_ids:
         raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
-    expected_splits, validation_count = _negative_split_map(physical_keys)
+    split_rule_raw = semantic.get("split_rule")
+    if not isinstance(split_rule_raw, dict):
+        raise ValueError("Die Proto-Splitregel fehlt.")
+    split_name = split_rule_raw.get("name")
+    if split_name == "stable_rank_v1":
+        split_rule = _require_exact_fields(
+            split_rule_raw,
+            {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count"},
+            "Proto-Splitregel",
+        )
+        expected_splits, validation_count = _negative_split_map(physical_keys)
+        aligned_splits = expected_splits
+    elif split_name == "stable_rank_v1_gold_aligned":
+        split_rule = _require_exact_fields(
+            split_rule_raw,
+            {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count", "gold_alignments"},
+            "Proto-Splitregel (gold-aligned)",
+        )
+        base_splits, _base_count = _negative_split_map(physical_keys)
+        gold_roles = _gold_split_roles_by_physical(knowledge_root)
+        aligned_splits = dict(base_splits)
+        alignments = split_rule.get("gold_alignments")
+        if not isinstance(alignments, list):
+            raise ValueError("Die Gold-Ausrichtung der Proto-Splitregel fehlt.")
+        for alignment in alignments:
+            alignment = _require_exact_fields(
+                alignment,
+                {"physical_holding_key", "gold_role", "forced_split"},
+                "Gold-Ausrichtung",
+            )
+            physical = str(alignment.get("physical_holding_key") or "")
+            gold_role = str(alignment.get("gold_role") or "")
+            forced = str(alignment.get("forced_split") or "")
+            if physical not in split_by_physical:
+                raise ValueError("Gold-Ausrichtung verweist auf eine fremde Haltung.")
+            if gold_roles.get(physical) != gold_role or gold_role not in {"train", "val", "test"}:
+                raise ValueError("Gold-Ausrichtung widerspricht dem aktuellen Gold-Split.")
+            expected_forced = "train" if gold_role == "train" else "validation"
+            if forced != expected_forced:
+                raise ValueError("Gold-Ausrichtung verwendet eine falsche Zielrolle.")
+            aligned_splits[physical] = forced
+        validation_count = sum(1 for role in aligned_splits.values() if role == "validation")
+        expected_splits = aligned_splits
+    else:
+        raise ValueError("Unbekannte Proto-Splitregel.")
     if any(
         split_by_physical[physical] != expected_split
         for physical, expected_split in expected_splits.items()
     ):
         raise ValueError("Der Proto-Negativsatz besitzt einen manipulierten Split.")
-    split_rule = _require_exact_fields(
-        semantic.get("split_rule"),
-        {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count"},
-        "Proto-Splitregel",
-    )
     if (
-        split_rule.get("name") != "stable_rank_v1"
-        or split_rule.get("salt") != NEGATIVE_SPLIT_SALT
+        split_rule.get("salt") != NEGATIVE_SPLIT_SALT
         or split_rule.get("one_image_per_physical_holding") is not True
         or _require_count(split_rule.get("validation_count"), "validation_count") != validation_count
         or _require_count(split_rule.get("train_count"), "train_count")
