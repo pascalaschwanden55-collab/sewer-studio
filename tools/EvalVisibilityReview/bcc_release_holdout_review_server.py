@@ -939,7 +939,7 @@ def _validate_hard_negative_queue(
             verified = verified_by_id.get(item_id)
             if verified is None:
                 raise ValueError(f"Auswahlbild {index} ist nicht gebunden.")
-            physical = _physical_holding_key(item.get("holding_key"))
+            physical = _proto_physical_holding_key(item.get("holding_key"))
             if physical in seen_physical_holdings:
                 raise ValueError("Die Pruefliste enthaelt mehrere Bilder derselben Haltung.")
             seen_physical_holdings.add(physical)
@@ -1297,6 +1297,27 @@ def _physical_holding_key(value: object) -> str:
         raise ValueError("Keine belastbare physische Haltung.")
     left, right = normalized.split("-", maxsplit=1)
     return "|".join(sorted((left.casefold(), right.casefold())))
+
+
+_PROTO_ENDPOINT_PREFIX = re.compile(r"^\d{1,2}\.(.{4,})$")
+
+
+def _proto_physical_holding_key(value: object) -> str:
+    """Geschuetzte Normalisierung fuer Protokoll-Haltungen: Bereichspraefix
+    (``NN.``) nur entfernen, wenn der Rest >= 4 Zeichen hat — sonst wuerden
+    echte Knoten wie ``797.02`` zu ``02`` verschmolzen. Richtungsunabhaengig;
+    Faellt ohne A-B-Form auf die Rohschreibweise zurueck."""
+    text = str(value or "").strip()
+    match = re.search(r"\d[\d.]*[-/]\d[\d.]*", text)
+    if match is None:
+        return text.casefold()
+    left, right = re.split(r"[-/]", match.group(0), maxsplit=1)
+
+    def guarded(part: str) -> str:
+        prefix_match = _PROTO_ENDPOINT_PREFIX.match(part)
+        return prefix_match.group(1) if prefix_match else part
+
+    return "|".join(sorted((guarded(left).casefold(), guarded(right).casefold())))
 
 
 def _image_content_type(suffix: str) -> str:
