@@ -223,6 +223,12 @@ internal sealed class NegativeSetSemanticFileDocument
     [JsonRequired]
     public required NegativeSetSplitRuleFileDocument SplitRule { get; init; }
 
+    /// <summary>Nur proto-Vertrag: akzeptierte, aber nicht normalisierbare Review-IDs (bcc: muss fehlen).</summary>
+    public IReadOnlyList<string>? ExcludedNotNormalizable { get; init; }
+
+    /// <summary>Nur proto-Vertrag: akzeptierte, aber eval-geschuetzte Review-IDs (bcc: muss fehlen).</summary>
+    public IReadOnlyList<string>? ExcludedEvalProtected { get; init; }
+
     [JsonRequired]
     public required IReadOnlyList<NegativeSetImageFileDocument> Images { get; init; }
 }
@@ -291,6 +297,21 @@ internal sealed class NegativeSetSplitRuleFileDocument
 
     [JsonRequired]
     public int TrainCount { get; init; }
+
+    /// <summary>Nur proto-Vertrag (stable_rank_v1_gold_aligned): erzwungene Splits aus der Gold-Ausrichtung.</summary>
+    public IReadOnlyList<NegativeSetGoldAlignmentFileDocument>? GoldAlignments { get; init; }
+}
+
+internal sealed class NegativeSetGoldAlignmentFileDocument
+{
+    [JsonRequired]
+    public required string PhysicalHoldingKey { get; init; }
+
+    [JsonRequired]
+    public required string GoldRole { get; init; }
+
+    [JsonRequired]
+    public required string ForcedSplit { get; init; }
 }
 
 internal sealed class NegativeSetImageFileDocument
@@ -325,53 +346,61 @@ internal sealed class NegativeSetImageFileDocument
     [JsonRequired]
     public required string ReviewDecision { get; init; }
 
-    [JsonRequired]
-    public required string SourceRef { get; init; }
+    /// <summary>Nur bcc-Vertrag; beim proto-Vertrag muss das Feld fehlen.</summary>
+    public string? SourceRef { get; init; }
 
-    [JsonRequired]
-    public required string InspectionDate { get; init; }
+    /// <summary>Nur bcc-Vertrag; beim proto-Vertrag muss das Feld fehlen.</summary>
+    public string? InspectionDate { get; init; }
+
+    /// <summary>Nur proto-Vertrag (xtf/db3); beim bcc-Vertrag muss das Feld fehlen.</summary>
+    public string? Quelle { get; init; }
 }
 
 internal sealed class NegativeSetProtectedSetFileDocument
 {
-    [JsonRequired]
-    public required string SetId { get; init; }
+    // bcc-Form: set_id/manifest_status/manifest_sha256/candidates_sha256.
+    // Die vertragsspezifische Pflichtpruefung erfolgt im Store (proto nutzt art/pfad).
+    public string? SetId { get; init; }
 
-    [JsonRequired]
-    public required string ManifestStatus { get; init; }
+    public string? ManifestStatus { get; init; }
 
-    [JsonRequired]
     public string? ManifestSha256 { get; init; }
 
-    [JsonRequired]
-    public required string CandidatesSha256 { get; init; }
+    public string? CandidatesSha256 { get; init; }
+
+    // proto-Form: art/pfad.
+    public string? Art { get; init; }
+
+    public string? Pfad { get; init; }
 }
 
 internal sealed class NegativeSetProtectionSnapshotFileDocument
 {
-    [JsonRequired]
-    public required string TrainingSamplesSha256 { get; init; }
+    // bcc-Form (8 Belegfelder); Pflichtpruefung vertragsspezifisch im Store.
+    public string? TrainingSamplesSha256 { get; init; }
 
-    [JsonRequired]
-    public required string ExportRegistrySha256 { get; init; }
+    public string? ExportRegistrySha256 { get; init; }
 
-    [JsonRequired]
-    public int KnownImageHashes { get; init; }
+    public int? KnownImageHashes { get; init; }
 
-    [JsonRequired]
-    public required string KnownImageHashesSha256 { get; init; }
+    public string? KnownImageHashesSha256 { get; init; }
 
-    [JsonRequired]
-    public int KnownHoldingAliases { get; init; }
+    public int? KnownHoldingAliases { get; init; }
 
-    [JsonRequired]
-    public required string KnownHoldingAliasesSha256 { get; init; }
+    public string? KnownHoldingAliasesSha256 { get; init; }
 
-    [JsonRequired]
-    public required string CandidateScopeSha256 { get; init; }
+    public string? CandidateScopeSha256 { get; init; }
 
-    [JsonRequired]
-    public required string BaseModelSha256 { get; init; }
+    public string? BaseModelSha256 { get; init; }
+
+    // proto-Form.
+    public int? SchluesselGesamt { get; init; }
+
+    public IReadOnlyDictionary<string, int>? QuellenAnteile { get; init; }
+
+    public bool? OhneDiagnoseWarteschlangen { get; init; }
+
+    public bool? ByteSchutz { get; init; }
 }
 
 internal sealed class QueueManifestReceiptFileDocument
@@ -487,8 +516,8 @@ internal sealed class QueueSemanticReceiptFileDocument
     [JsonRequired]
     public required NegativeSetProtectionSnapshotFileDocument ProtectionSnapshot { get; init; }
 
-    [JsonRequired]
-    public required IReadOnlyList<QueueModelReceiptFileDocument> ModelScope { get; init; }
+    /// <summary>Nur bcc-Vertrag: gebundene Auswahlmodelle; beim proto-Vertrag muss das Feld fehlen oder leer sein.</summary>
+    public IReadOnlyList<QueueModelReceiptFileDocument>? ModelScope { get; init; }
 
     [JsonRequired]
     public required JsonElement SelectionRule { get; init; }
@@ -502,8 +531,8 @@ internal sealed class QueueSemanticReceiptFileDocument
 
 internal sealed class QueueSelectionReceiptFileDocument
 {
-    [JsonRequired]
-    public required IReadOnlyList<QueueModelReceiptFileDocument> Models { get; init; }
+    /// <summary>Nur bcc-Vertrag; beim proto-Vertrag muss das Feld fehlen (nur items).</summary>
+    public IReadOnlyList<QueueModelReceiptFileDocument>? Models { get; init; }
 
     [JsonRequired]
     public required IReadOnlyList<QueueItemReceiptFileDocument> Items { get; init; }
@@ -511,8 +540,9 @@ internal sealed class QueueSelectionReceiptFileDocument
 
 internal sealed class QueueItemReceiptFileDocument
 {
-    [JsonRequired]
-    public required string Id { get; init; }
+    // bcc-Form: id/physical_holding_key/source_ref/inspection_date/predictions.
+    // Die vertragsspezifische Pflichtpruefung erfolgt im Store (proto nutzt item_id u.a.).
+    public string? Id { get; init; }
 
     [JsonRequired]
     public required string ImageSha256 { get; init; }
@@ -520,14 +550,11 @@ internal sealed class QueueItemReceiptFileDocument
     [JsonRequired]
     public required string HoldingKey { get; init; }
 
-    [JsonRequired]
-    public required string PhysicalHoldingKey { get; init; }
+    public string? PhysicalHoldingKey { get; init; }
 
-    [JsonRequired]
-    public required string SourceRef { get; init; }
+    public string? SourceRef { get; init; }
 
-    [JsonRequired]
-    public required string InspectionDate { get; init; }
+    public string? InspectionDate { get; init; }
 
     [JsonRequired]
     public long SizeBytes { get; init; }
@@ -535,8 +562,22 @@ internal sealed class QueueItemReceiptFileDocument
     [JsonRequired]
     public required string ImageFormat { get; init; }
 
-    [JsonRequired]
-    public required IReadOnlyList<QueuePredictionReceiptFileDocument> Predictions { get; init; }
+    public IReadOnlyList<QueuePredictionReceiptFileDocument>? Predictions { get; init; }
+
+    // proto-Form: item_id/code/gruppe/quelle/quell_datei/leitungsinspektion/target_file_name.
+    public string? ItemId { get; init; }
+
+    public string? Code { get; init; }
+
+    public string? Gruppe { get; init; }
+
+    public string? Quelle { get; init; }
+
+    public string? QuellDatei { get; init; }
+
+    public bool? Leitungsinspektion { get; init; }
+
+    public string? TargetFileName { get; init; }
 }
 
 internal sealed class QueueModelReceiptFileDocument

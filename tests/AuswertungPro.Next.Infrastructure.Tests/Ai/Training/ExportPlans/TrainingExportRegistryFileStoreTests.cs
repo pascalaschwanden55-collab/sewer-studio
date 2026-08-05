@@ -562,6 +562,189 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
     }
 
     [Fact]
+    public void ReadBundle_akzeptiert_proto_gebundenen_Negativsatz_mit_Gold_Ausrichtung()
+    {
+        var protoSet = CreateProtoNegativeSet();
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(protoSet));
+
+        var bundle = new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle();
+
+        Assert.Equal(protoSet.Images.Count, bundle.Snapshot.NegativeImages.Count);
+        Assert.All(bundle.Snapshot.NegativeImages, negative =>
+        {
+            Assert.Equal(protoSet.SetId, negative.NegativeSetId);
+            Assert.Equal(protoSet.ManifestSha256, negative.NegativeSetManifestSha256);
+            Assert.Equal(protoSet.QueueId, negative.QueueId);
+            Assert.Equal("reviewed_negative_set", negative.NegativeSourceType);
+            Assert.Equal("all_classes_clear", negative.ReviewDecision);
+        });
+        // Gold-Ausrichtung: genau die val-forcierte Haltung landet in validation.
+        var validationNegative = Assert.Single(
+            bundle.Snapshot.NegativeImages,
+            negative => negative.SplitHint == TrainingExportTarget.Validation);
+        var expectedValidation = Assert.Single(protoSet.Images, image => image.Split == "validation");
+        Assert.Equal(expectedValidation.PhysicalHoldingKey, validationNegative.PhysicalHoldingKey);
+        Assert.Equal(
+            protoSet.Images.Count - 1,
+            bundle.Snapshot.NegativeImages.Count(
+                negative => negative.SplitHint == TrainingExportTarget.Train));
+    }
+
+    [Fact]
+    public void ReadBundle_blockiert_proto_Satz_mit_fremdem_Ordner_Praefix()
+    {
+        var protoSet = CreateProtoNegativeSet();
+        var wrongFolder = $"x_hn_{protoSet.SetId[..12]}";
+        Directory.Move(
+            protoSet.SetRoot,
+            Path.Combine(Path.GetDirectoryName(protoSet.SetRoot)!, wrongFolder));
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(
+            protoSet,
+            $"training/negatives/sets/{wrongFolder}"));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("Set-Ordner", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReadBundle_blockiert_proto_Satz_ausserhalb_des_Sets_Ordners()
+    {
+        var protoSet = CreateProtoNegativeSet();
+        var wrongPrefix = $"training/negatives/proto_hn_{protoSet.SetId[..12]}";
+        Directory.Move(protoSet.SetRoot, Path.Combine(_root, "training", "negatives", $"proto_hn_{protoSet.SetId[..12]}"));
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(protoSet, wrongPrefix));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("Set-Ordner", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReadBundle_blockiert_proto_Satz_Ordner_ohne_Set_Id_Endung()
+    {
+        var protoSet = CreateProtoNegativeSet();
+        var wrongSuffix = new string(protoSet.SetId[0] == 'a' ? 'b' : 'a', 12);
+        var wrongFolder = $"proto_hn_{wrongSuffix}";
+        Directory.Move(
+            protoSet.SetRoot,
+            Path.Combine(Path.GetDirectoryName(protoSet.SetRoot)!, wrongFolder));
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(
+            protoSet,
+            $"training/negatives/sets/{wrongFolder}"));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("Set-Ordner", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReadBundle_blockiert_proto_Queue_mit_Modellbindung()
+    {
+        var protoSet = CreateProtoNegativeSet(includeQueueModelScope: true);
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(protoSet));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("Modellbindung", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReadBundle_akzeptiert_echten_eingefrorenen_proto_Satz()
+    {
+        // Nachweis an den echten, eingefrorenen Artefakten (read-only). Liegen nur auf dem
+        // Auswertungsrechner vor; andernfalls laeuft der Test leer durch.
+        const string knowledgeRoot = @"C:\KI_BRAIN";
+        const string setFolder = "proto_hn_fefb59779b86";
+        var manifestPath = Path.Combine(
+            knowledgeRoot,
+            "training",
+            "negatives",
+            "sets",
+            setFolder,
+            "_manifest.json");
+        if (!File.Exists(manifestPath))
+            return;
+
+        using var manifest = JsonDocument.Parse(File.ReadAllBytes(manifestPath));
+        var semantic = manifest.RootElement.GetProperty("semantic");
+        var setId = manifest.RootElement.GetProperty("set_id").GetString()!;
+        var manifestSha256 = Hash(manifestPath);
+        var queue = semantic.GetProperty("queue");
+        var queueId = queue.GetProperty("queue_id").GetString()!;
+        var queueManifestSha256 = queue.GetProperty("queue_manifest_sha256").GetString()!;
+        var candidatesSha256 = queue.GetProperty("candidates_sha256").GetString()!;
+        var reviewSha256 = semantic.GetProperty("review").GetProperty("review_sha256").GetString()!;
+        var classMapVersion = semantic.GetProperty("class_map_version").GetInt32();
+        var classMapSha256 = semantic.GetProperty("class_map_sha256").GetString()!;
+        var vsaManifestHash = semantic.GetProperty("vsa_manifest_hash").GetString()!;
+        var entries = semantic.GetProperty("images").EnumerateArray().Select(image => $$"""
+            {
+              "path": "training/negatives/sets/{{setFolder}}/images/{{image.GetProperty("file_name").GetString()}}",
+              "sha256": "{{image.GetProperty("image_sha256").GetString()}}",
+              "split": "{{image.GetProperty("split").GetString()}}",
+              "source_type": "reviewed_negative_set",
+              "holding_key": "{{image.GetProperty("holding_key").GetString()}}",
+              "physical_holding_key": "{{image.GetProperty("physical_holding_key").GetString()}}",
+              "set_id": "{{setId}}",
+              "set_manifest_sha256": "{{manifestSha256}}",
+              "queue_id": "{{queueId}}",
+              "queue_manifest_sha256": "{{queueManifestSha256}}",
+              "candidates_sha256": "{{candidatesSha256}}",
+              "review_sha256": "{{reviewSha256}}",
+              "class_map_version": {{classMapVersion}},
+              "class_map_sha256": "{{classMapSha256}}",
+              "vsa_manifest_hash": "{{vsaManifestHash}}",
+              "review_item_id": "{{image.GetProperty("review_item_id").GetString()}}",
+              "review_decision": "{{image.GetProperty("review_decision").GetString()}}"
+            }
+            """);
+        var negativesJson = $"[{string.Join(",", entries)}]";
+        Directory.CreateDirectory(_root);
+        var registryPath = Path.Combine(_root, "export_registry_v1.json");
+        File.WriteAllText(
+            registryPath,
+            $$"""
+              {
+                "schema_version": "1.0",
+                "approval_status": "approved",
+                "approved_by": "Test User",
+                "approved_utc": "2026-08-05T19:00:00Z",
+                "approved_sample_ids": [],
+                "negative_images": {{negativesJson}},
+                "holding_roles": {
+                  "100-200": "train"
+                },
+                "protected_sets": [
+                  {
+                    "set_id": "proto-real",
+                    "role": "development_validation",
+                    "root_path": "training/negatives/sets/{{setFolder}}",
+                    "manifest_sha256": "{{manifestSha256}}"
+                  }
+                ]
+              }
+              """);
+
+        var bundle = new TrainingExportRegistryFileStore(registryPath, knowledgeRoot).ReadBundle();
+
+        var imageCount = semantic.GetProperty("images").GetArrayLength();
+        Assert.Equal(imageCount, bundle.Snapshot.NegativeImages.Count);
+        Assert.All(bundle.Snapshot.NegativeImages, negative =>
+        {
+            Assert.Equal(setId, negative.NegativeSetId);
+            Assert.Equal(manifestSha256, negative.NegativeSetManifestSha256);
+            Assert.Equal(queueId, negative.QueueId);
+            Assert.Equal("reviewed_negative_set", negative.NegativeSourceType);
+            Assert.Equal("all_classes_clear", negative.ReviewDecision);
+        });
+    }
+
+    [Fact]
     public void ReadBundle_blockiert_Legacy_Negativbild_aus_falschem_Ordner()
     {
         var paths = CreateFiles(negativesJson: $$"""
@@ -1251,6 +1434,429 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
             reviewDecision);
     }
 
+    /// <summary>
+    /// Baut einen vollstaendigen proto-Negativsatz (proto-Vertrag: Pilot protokoll_negative,
+    /// proto-neg-/proto-hn-IDs, quelle statt source_ref, Auschlusslisten, Gold-Ausrichtung).
+    /// Fuenf Set-Bilder; zwei weitere akzeptierte Queue-Items stehen auf den Auschlusslisten.
+    /// </summary>
+    private BoundProtoNegativeSet CreateProtoNegativeSet(bool includeQueueModelScope = false)
+    {
+        var holdings = new[] { "100-200", "300-400", "500-600", "700-800", "900-1000" };
+        var imageFills = new byte[] { 0x21, 0x22, 0x23, 0x24, 0x25 };
+        var vsaManifestHash = new string('d', 64);
+        var classNames = Enumerable.Range(0, 14)
+            .Select(index => $"class_{index}")
+            .Append("BCC_bogen")
+            .ToArray();
+        var classNamesJson = JsonSerializer.Serialize(classNames);
+        var classesJson = string.Join(
+            ",",
+            classNames.Select((name, id) => $"\"{name}\":{id}"));
+        var protectedSetsJson = """[{"art": "eval_set", "pfad": "eval_set"}]""";
+        var protectionSnapshotJson = """
+            {
+              "schluessel_gesamt": 7,
+              "quellen_anteile": {"eval_set": 5, "negatives": 2},
+              "ohne_diagnose_warteschlangen": true,
+              "byte_schutz": true
+            }
+            """;
+        var classMapJson = $$"""
+            {
+              "version": 3,
+              "vsa_manifest_hash": "{{vsaManifestHash}}",
+              "classes": { {{classesJson}} }
+            }
+            """;
+        var classMapBytes = System.Text.Encoding.UTF8.GetBytes(classMapJson);
+        var classMapSha256 = Hash(classMapBytes);
+
+        // Basis-Rang (stable_rank_v1) exakt wie im Store: Salt-Hash, dann ordinal.
+        var physicalKeys = holdings
+            .Select(holding => holding.Split('-'))
+            .Select(parts => string.CompareOrdinal(parts[0], parts[1]) <= 0
+                ? $"{parts[0]}|{parts[1]}"
+                : $"{parts[1]}|{parts[0]}")
+            .ToArray();
+        var rankedHoldings = physicalKeys
+            .OrderBy(
+                physical => Hash(System.Text.Encoding.UTF8.GetBytes(
+                    $"bcc-hard-negative-split-v1|{physical}")),
+                StringComparer.Ordinal)
+            .ThenBy(physical => physical, StringComparer.Ordinal)
+            .ToArray();
+        var baseValidation = rankedHoldings
+            .Take(Math.Max(1, (rankedHoldings.Length + 2) / 5))
+            .ToHashSet(StringComparer.Ordinal);
+        // Gold-Ausrichtung: Basis-validation -> train, ein Basis-train -> validation.
+        var goldTrain = rankedHoldings.First(baseValidation.Contains);
+        var goldVal = rankedHoldings.First(physical => !baseValidation.Contains(physical));
+        string AppliedSplit(string physical)
+            => physical == goldTrain
+                ? "train"
+                : physical == goldVal || baseValidation.Contains(physical)
+                    ? "validation"
+                    : "train";
+        var validationCount = physicalKeys.Count(physical => AppliedSplit(physical) == "validation");
+
+        var setImages = new List<(string FileName, string Sha256, byte[] Bytes, string Holding, string Physical, string Split, string ReviewItemId)>();
+        for (var i = 0; i < holdings.Length; i++)
+        {
+            var bytes = CreatePngSignatureBytes(imageFills[i]);
+            var sha = Hash(bytes);
+            setImages.Add((
+                $"img_{sha}.png",
+                sha,
+                bytes,
+                holdings[i],
+                physicalKeys[i],
+                AppliedSplit(physicalKeys[i]),
+                $"proto-hn-{sha[..20]}"));
+        }
+
+        // Akzeptierte, aber ausgeschlossene Review-Items (nur in Queue/Kandidaten/Review).
+        var excludedImages = new List<(string Sha256, string Holding, string ReviewItemId)>();
+        foreach (var (fill, holding) in new[] { (0x91, "110-210"), (0x92, "310-410") })
+        {
+            var sha = Hash(CreatePngSignatureBytes((byte)fill));
+            excludedImages.Add((sha, holding, $"proto-hn-{sha[..20]}"));
+        }
+
+        string QueueItemJson(string sha, string holding, long sizeBytes)
+            => $$"""
+                {
+                  "item_id": "proto-hn-{{sha[..20]}}",
+                  "image_sha256": "{{sha}}",
+                  "holding_key": "{{holding}}",
+                  "code": "BDA",
+                  "gruppe": "rohranfang_ende",
+                  "quelle": "xtf",
+                  "quell_datei": "D:/Test/quelle.xtf",
+                  "leitungsinspektion": true,
+                  "size_bytes": {{sizeBytes}},
+                  "image_format": "png",
+                  "target_file_name": "img_{{sha}}.png"
+                }
+                """;
+        var allQueueItems = setImages
+            .Select(image => (image.Sha256, image.Holding, Size: image.Bytes.LongLength))
+            .Concat(excludedImages.Select(image => (image.Sha256, image.Holding, Size: 2048L)))
+            .ToArray();
+        var queueItemsJson = string.Join(
+            ",",
+            allQueueItems.Select(item => QueueItemJson(item.Sha256, item.Holding, item.Size)));
+        var candidateItemsJson = string.Join(
+            ",",
+            allQueueItems.Select(item => $$"""
+                {
+                  "id": "proto-hn-{{item.Sha256[..20]}}",
+                  "frame_path": "img_{{item.Sha256}}.png",
+                  "category": "all_class_background_review",
+                  "status": "pending_review",
+                  "source_sha256": "{{item.Sha256}}"
+                }
+                """));
+        var candidatesJson = $"[{candidateItemsJson}]";
+        var candidatesBytes = System.Text.Encoding.UTF8.GetBytes(candidatesJson);
+        var candidatesSha256 = Hash(candidatesBytes);
+        var modelScopeJson = $$"""
+            [{
+              "candidate_id": "test-model",
+              "candidate_manifest_sha256": "{{new string('a', 64)}}",
+              "weights_sha256": "{{new string('b', 64)}}",
+              "dataset_plan_id": "{{new string('c', 64)}}",
+              "dataset_manifest_sha256": "{{new string('4', 64)}}"
+            }]
+            """;
+        var modelScopeSection = includeQueueModelScope
+            ? $", \"model_scope\": {modelScopeJson}"
+            : string.Empty;
+        var queueSemanticJson = $$"""
+            {
+              "schema_version": "1.0",
+              "purpose": "proto_hard_negative_review_queue",
+              "pilot": "protokoll_negative",
+              "role": "training_candidate_review",
+              "class_map_version": 3,
+              "class_map_sha256": "{{classMapSha256}}",
+              "vsa_manifest_hash": "{{vsaManifestHash}}",
+              "class_names": {{classNamesJson}},
+              "protected_sets": {{protectedSetsJson}},
+              "protection_snapshot": {{protectionSnapshotJson}},
+              "selection_rule": {
+                "one_image_per_physical_holding": true,
+                "model_involved": false,
+                "selection_basis": "protokoll_operateurcodes_nicht_detect"
+              },
+              "sources": ["xtf"],
+              "items": [{{queueItemsJson}}]{{modelScopeSection}}
+            }
+            """;
+        var queueId = HashCanonicalJson(queueSemanticJson);
+        var queueHashesJson = string.Join(
+            ",",
+            allQueueItems
+                .Select(item => $$"""
+                    "images/img_{{item.Sha256}}.png": {
+                      "sha256": "{{item.Sha256}}",
+                      "size_bytes": {{item.Size}}
+                    }
+                    """)
+                .Prepend($$"""
+                    "_candidates.json": {
+                      "sha256": "{{candidatesSha256}}",
+                      "size_bytes": {{candidatesBytes.LongLength}}
+                    }
+                    """));
+        var queueManifestJson = $$"""
+            {
+              "schema_version": "1.0",
+              "purpose": "proto_hard_negative_review_queue",
+              "queue_id": "{{queueId}}",
+              "pilot": "protokoll_negative",
+              "role": "training_candidate_review",
+              "created_utc": "2026-08-05T10:00:00Z",
+              "frozen": true,
+              "dataset_status": "review_incomplete",
+              "warning": "NUR all_classes_clear DARF SPAETER ALS TRAININGSNEGATIV VEROEFFENTLICHT WERDEN",
+              "review_target": "Keine sichtbare Instanz irgendeiner gebundenen Detect-Klasse",
+              "class_map_version": 3,
+              "class_map_sha256": "{{classMapSha256}}",
+              "vsa_manifest_hash": "{{vsaManifestHash}}",
+              "class_names": {{classNamesJson}},
+              "protected_sets": {{protectedSetsJson}},
+              "protection_snapshot": {{protectionSnapshotJson}},
+              "selection_rule": {
+                "one_image_per_physical_holding": true,
+                "model_involved": false,
+                "selection_basis": "protokoll_operateurcodes_nicht_detect"
+              },
+              "sources": ["xtf"],
+              "candidates_count": {{allQueueItems.Length}},
+              "images_count": {{allQueueItems.Length}},
+              "holdings_count": {{allQueueItems.Length}},
+              "hash_algorithm": "sha256",
+              "hashes_count": {{allQueueItems.Length + 1}},
+              "hashes": {
+                {{queueHashesJson}}
+              },
+              "semantic": {{queueSemanticJson}},
+              "selection_receipt": {
+                "items": [{{queueItemsJson}}]
+              }
+            }
+            """;
+        var queueManifestBytes = System.Text.Encoding.UTF8.GetBytes(queueManifestJson);
+        var queueManifestSha256 = Hash(queueManifestBytes);
+        var reviewDecisionsJson = string.Join(
+            ",",
+            allQueueItems.Select(item => $$"""
+                "proto-hn-{{item.Sha256[..20]}}": {
+                  "decision": "all_classes_clear",
+                  "comment": "",
+                  "reviewed_at_utc": "2026-08-05T11:00:00Z"
+                }
+                """));
+        var reviewJson = $$"""
+            {
+              "schema_version": "1.0",
+              "purpose": "bcc_hard_negative_review",
+              "queue_id": "{{queueId}}",
+              "queue_manifest_sha256": "{{queueManifestSha256}}",
+              "candidates_sha256": "{{candidatesSha256}}",
+              "class_map_sha256": "{{classMapSha256}}",
+              "reviewer": "Test User",
+              "updated_at_utc": "2026-08-05T11:00:00Z",
+              "decisions": {
+                {{reviewDecisionsJson}}
+              }
+            }
+            """;
+        var reviewBytes = System.Text.Encoding.UTF8.GetBytes(reviewJson);
+        var reviewSha256 = Hash(reviewBytes);
+
+        var semanticImagesJson = string.Join(
+            ",",
+            setImages.Select(image => $$"""
+                {
+                  "id": "proto-neg-{{image.Sha256}}",
+                  "file_name": "{{image.FileName}}",
+                  "image_sha256": "{{image.Sha256}}",
+                  "size_bytes": {{image.Bytes.LongLength}},
+                  "image_format": "png",
+                  "holding_key": "{{image.Holding}}",
+                  "physical_holding_key": "{{image.Physical}}",
+                  "split": "{{image.Split}}",
+                  "review_item_id": "{{image.ReviewItemId}}",
+                  "review_decision": "all_classes_clear",
+                  "quelle": "xtf"
+                }
+                """));
+        var goldAlignmentsJson = $$"""
+            [
+              {
+                "physical_holding_key": "{{goldTrain}}",
+                "gold_role": "train",
+                "forced_split": "train"
+              },
+              {
+                "physical_holding_key": "{{goldVal}}",
+                "gold_role": "val",
+                "forced_split": "validation"
+              }
+            ]
+            """;
+        var semanticJson = $$"""
+            {
+              "schema_version": "1.0",
+              "purpose": "proto_reviewed_negative_set",
+              "pilot": "protokoll_negative",
+              "role": "training_negative_set",
+              "queue": {
+                "queue_id": "{{queueId}}",
+                "queue_manifest_sha256": "{{queueManifestSha256}}",
+                "queue_manifest_receipt_path": "receipts/queue_manifest.json",
+                "candidates_sha256": "{{candidatesSha256}}",
+                "candidates_receipt_path": "receipts/queue_candidates.json"
+              },
+              "review": {
+                "purpose": "bcc_hard_negative_review",
+                "review_sha256": "{{reviewSha256}}",
+                "receipt_path": "receipts/review.json",
+                "reviewed_images": {{allQueueItems.Length}},
+                "decision_counts": {
+                  "all_classes_clear": {{allQueueItems.Length}},
+                  "mapped_object_visible": 0,
+                  "exclude_uncertain": 0
+                }
+              },
+              "class_map_version": 3,
+              "class_map_sha256": "{{classMapSha256}}",
+              "class_map_receipt_path": "receipts/class_map.json",
+              "vsa_manifest_hash": "{{vsaManifestHash}}",
+              "class_names": {{classNamesJson}},
+              "protected_sets": {{protectedSetsJson}},
+              "protection_snapshot": {{protectionSnapshotJson}},
+              "split_rule": {
+                "name": "stable_rank_v1_gold_aligned",
+                "salt": "bcc-hard-negative-split-v1",
+                "one_image_per_physical_holding": true,
+                "validation_count": {{validationCount}},
+                "train_count": {{setImages.Count - validationCount}},
+                "gold_alignments": {{goldAlignmentsJson}}
+              },
+              "excluded_not_normalizable": ["{{excludedImages[0].ReviewItemId}}"],
+              "excluded_eval_protected": ["{{excludedImages[1].ReviewItemId}}"],
+              "images": [{{semanticImagesJson}}]
+            }
+            """;
+        var setId = HashCanonicalJson(semanticJson);
+        var setRoot = Directory.CreateDirectory(Path.Combine(
+            _root,
+            "training",
+            "negatives",
+            "sets",
+            $"proto_hn_{setId[..12]}")).FullName;
+        var imagesRoot = Directory.CreateDirectory(Path.Combine(setRoot, "images")).FullName;
+        var receiptsRoot = Directory.CreateDirectory(Path.Combine(setRoot, "receipts")).FullName;
+        foreach (var image in setImages)
+            File.WriteAllBytes(Path.Combine(imagesRoot, image.FileName), image.Bytes);
+        File.WriteAllBytes(Path.Combine(receiptsRoot, "queue_manifest.json"), queueManifestBytes);
+        File.WriteAllBytes(Path.Combine(receiptsRoot, "queue_candidates.json"), candidatesBytes);
+        File.WriteAllBytes(Path.Combine(receiptsRoot, "review.json"), reviewBytes);
+        File.WriteAllBytes(Path.Combine(receiptsRoot, "class_map.json"), classMapBytes);
+
+        var receiptHashes = new[]
+        {
+            ("receipts/queue_manifest.json", queueManifestSha256, queueManifestBytes.LongLength),
+            ("receipts/queue_candidates.json", candidatesSha256, candidatesBytes.LongLength),
+            ("receipts/review.json", reviewSha256, reviewBytes.LongLength),
+            ("receipts/class_map.json", classMapSha256, classMapBytes.LongLength)
+        };
+        var hashesJson = string.Join(
+            ",",
+            setImages
+                .Select(image => $$"""
+                    "images/{{image.FileName}}": {
+                      "sha256": "{{image.Sha256}}",
+                      "size_bytes": {{image.Bytes.LongLength}}
+                    }
+                    """)
+                .Concat(receiptHashes.Select(item => $$"""
+                    "{{item.Item1}}": {
+                      "sha256": "{{item.Item2}}",
+                      "size_bytes": {{item.Item3}}
+                    }
+                    """)));
+        var manifestJson = $$"""
+            {
+              "schema_version": "1.0",
+              "purpose": "proto_reviewed_negative_set",
+              "set_id": "{{setId}}",
+              "pilot": "protokoll_negative",
+              "role": "training_negative_set",
+              "created_utc": "2026-08-05T12:00:00Z",
+              "frozen": true,
+              "dataset_status": "ready_for_training",
+              "hash_algorithm": "sha256",
+              "images_count": {{setImages.Count}},
+              "holdings_count": {{setImages.Count}},
+              "hashes_count": {{setImages.Count + receiptHashes.Length}},
+              "hashes": {
+                {{hashesJson}}
+              },
+              "semantic": {{semanticJson}}
+            }
+            """;
+        var manifestPath = Path.Combine(setRoot, "_manifest.json");
+        File.WriteAllText(manifestPath, manifestJson);
+        return new BoundProtoNegativeSet(
+            setId,
+            setRoot,
+            Hash(manifestPath),
+            queueId,
+            queueManifestSha256,
+            candidatesSha256,
+            reviewSha256,
+            classMapSha256,
+            vsaManifestHash,
+            setImages
+                .Select(image => new ProtoNegativeImage(
+                    image.FileName,
+                    image.Sha256,
+                    image.Holding,
+                    image.Physical,
+                    image.Split,
+                    image.ReviewItemId))
+                .ToArray());
+    }
+
+    private static string ProtoNegativesJson(BoundProtoNegativeSet protoSet, string? pathPrefix = null)
+    {
+        var prefix = pathPrefix ?? $"training/negatives/sets/proto_hn_{protoSet.SetId[..12]}";
+        return $"[{string.Join(",", protoSet.Images.Select(image => $$"""
+            {
+              "path": "{{prefix}}/images/{{image.FileName}}",
+              "sha256": "{{image.ImageSha256}}",
+              "split": "{{image.Split}}",
+              "source_type": "reviewed_negative_set",
+              "holding_key": "{{image.HoldingKey}}",
+              "physical_holding_key": "{{image.PhysicalHoldingKey}}",
+              "set_id": "{{protoSet.SetId}}",
+              "set_manifest_sha256": "{{protoSet.ManifestSha256}}",
+              "queue_id": "{{protoSet.QueueId}}",
+              "queue_manifest_sha256": "{{protoSet.QueueManifestSha256}}",
+              "candidates_sha256": "{{protoSet.CandidatesSha256}}",
+              "review_sha256": "{{protoSet.ReviewSha256}}",
+              "class_map_version": 3,
+              "class_map_sha256": "{{protoSet.ClassMapSha256}}",
+              "vsa_manifest_hash": "{{protoSet.VsaManifestHash}}",
+              "review_item_id": "{{image.ReviewItemId}}",
+              "review_decision": "all_classes_clear"
+            }
+            """))}]";
+    }
+
     private static string BoundNegativeJson(
         BoundNegativeSet negativeSet,
         string? path = null,
@@ -1426,6 +2032,26 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
         string VsaManifestHash,
         string ReviewItemId,
         string ReviewDecision);
+
+    private sealed record ProtoNegativeImage(
+        string FileName,
+        string ImageSha256,
+        string HoldingKey,
+        string PhysicalHoldingKey,
+        string Split,
+        string ReviewItemId);
+
+    private sealed record BoundProtoNegativeSet(
+        string SetId,
+        string SetRoot,
+        string ManifestSha256,
+        string QueueId,
+        string QueueManifestSha256,
+        string CandidatesSha256,
+        string ReviewSha256,
+        string ClassMapSha256,
+        string VsaManifestHash,
+        IReadOnlyList<ProtoNegativeImage> Images);
 
     private sealed record NegativeManifestOverrides(
         string? ManifestSetId = null,

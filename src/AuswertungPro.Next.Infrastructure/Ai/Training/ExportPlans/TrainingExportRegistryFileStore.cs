@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
@@ -13,7 +12,14 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
 /// </summary>
 public sealed partial class TrainingExportRegistryFileStore : ITrainingExportRegistryStore
 {
-    private const long MinimumTrainingNegativeBytes = 1024;
+    internal const long MinimumTrainingNegativeBytes = 1024;
+    private const string BccSetPurpose = "bcc_reviewed_negative_set";
+    private const string ProtoSetPurpose = "proto_reviewed_negative_set";
+    private const string BccQueuePurpose = "bcc_hard_negative_review_queue";
+    private const string ProtoQueuePurpose = "proto_hard_negative_review_queue";
+    private const string BccPilot = "BCC_bogen";
+    private const string ProtoPilot = "protokoll_negative";
+    private const string NegativeSplitSalt = "bcc-hard-negative-split-v1";
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly string _registryPath;
     private readonly string _knowledgeRoot;
@@ -289,23 +295,33 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
         IDictionary<string, string> setIdsByRoot)
     {
         var setId = binding.NegativeSetId!;
-        var expectedSetRoot = Path.GetFullPath(Path.Combine(
+        // Der Set-Ordner wird aus dem registrierten Bildpfad gelesen und danach streng
+        // geprueft: direktes Kind von training/negatives/sets ueber die images/-Ebene,
+        // erlaubtes Praefix (bcc_hn_/proto_hn_) und Endung auf die ersten 12 Zeichen der Set-ID.
+        var setsRoot = Path.GetFullPath(Path.Combine(
             _knowledgeRoot,
             "training",
             "negatives",
-            "sets",
-            $"bcc_hn_{setId[..12]}"));
-        var expectedImagesRoot = Path.Combine(expectedSetRoot, "images");
+            "sets"));
         var actualImagesRoot = Path.GetDirectoryName(imagePath);
+        var setRoot = actualImagesRoot is null ? null : Path.GetDirectoryName(actualImagesRoot);
+        var setParent = setRoot is null ? null : Path.GetDirectoryName(setRoot);
+        var setFolderName = setRoot is null ? null : Path.GetFileName(setRoot);
         var fileName = Path.GetFileName(imagePath);
         if (string.IsNullOrWhiteSpace(actualImagesRoot)
-            || !PathsEqual(actualImagesRoot, expectedImagesRoot)
+            || !string.Equals(Path.GetFileName(actualImagesRoot), "images", StringComparison.Ordinal)
+            || setRoot is null
+            || setParent is null
+            || !PathsEqual(setParent, setsRoot)
+            || !IsAllowedNegativeSetFolderName(setFolderName, setId)
             || string.IsNullOrWhiteSpace(fileName)
             || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
             throw new TrainingExportPlanException(
-                $"Gebundenes Negativbild liegt nicht im erwarteten Set-Ordner '{expectedImagesRoot}'.");
+                $"Gebundenes Negativbild liegt nicht in einem erlaubten Set-Ordner unter '{setsRoot}'.");
         }
+
+        var expectedSetRoot = Path.GetFullPath(setRoot);
 
         var reparsePoint = TrainingInventoryPaths.FindReparsePoint(imagePath);
         if (reparsePoint is not null)
@@ -364,11 +380,15 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
         var document = JsonSerializer.Deserialize<NegativeSetManifestFileDocument>(json, JsonOptions)
                        ?? throw new JsonException("Das Negativ-Set-Manifest ist leer.");
 
+        var isProto = IsProtoSet(document.Purpose);
         if (document.Semantic is null
             || document.Hashes is null
             || !string.Equals(document.SchemaVersion, "1.0", StringComparison.Ordinal)
-            || !string.Equals(document.Purpose, "bcc_reviewed_negative_set", StringComparison.Ordinal)
-            || !string.Equals(document.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !(isProto || string.Equals(document.Purpose, BccSetPurpose, StringComparison.Ordinal))
+            || !string.Equals(
+                document.Pilot,
+                isProto ? ProtoPilot : BccPilot,
+                StringComparison.Ordinal)
             || !string.Equals(document.Role, "training_negative_set", StringComparison.Ordinal)
             || !document.Frozen
             || !string.Equals(document.DatasetStatus, "ready_for_training", StringComparison.Ordinal)
@@ -547,6 +567,7 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
         IReadOnlyDictionary<string, StableNegativeSetFile> files)
     {
         var semantic = manifest.Semantic;
+        var isProto = IsProtoSet(semantic.Purpose);
         var queueFile = files["receipts/queue_manifest.json"];
         var candidatesFile = files["receipts/queue_candidates.json"];
         var reviewFile = files["receipts/review.json"];
@@ -601,7 +622,7 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
             semantic);
 
         var queueItemsById = queue.Semantic.Items.ToDictionary(
-            item => item.Id,
+            item => QueueItemKey(item, isProto),
             StringComparer.Ordinal);
         foreach (var image in semantic.Images)
         {
@@ -617,16 +638,6 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
                 || !candidatesById.TryGetValue(image.ReviewItemId, out var candidate)
                 || !acceptedIds.Contains(image.ReviewItemId)
                 || !string.Equals(queueItem.ImageSha256, image.ImageSha256, StringComparison.Ordinal)
-                || !string.Equals(queueItem.HoldingKey, image.HoldingKey, StringComparison.Ordinal)
-                || !string.Equals(
-                    queueItem.PhysicalHoldingKey,
-                    image.PhysicalHoldingKey,
-                    StringComparison.Ordinal)
-                || !string.Equals(queueItem.SourceRef, image.SourceRef, StringComparison.Ordinal)
-                || !string.Equals(
-                    queueItem.InspectionDate,
-                    image.InspectionDate,
-                    StringComparison.Ordinal)
                 || queueItem.SizeBytes != image.SizeBytes
                 || !string.Equals(queueItem.ImageFormat, image.ImageFormat, StringComparison.Ordinal)
                 || !string.Equals(candidate.FramePath, image.FileName, StringComparison.Ordinal)
@@ -634,6 +645,31 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
                     candidate.SourceSha256,
                     image.ImageSha256,
                     StringComparison.Ordinal))
+            {
+                throw new TrainingExportPlanException(
+                    $"Negativbild '{image.FileName}' ist nicht exakt an Queue, Kandidat und Review gebunden.");
+            }
+
+            // bcc bindet Queue-Item und Satzbild zusaetzlich ueber Haltung, Quellbeleg und
+            // Inspektionsdatum; proto ueber den Zieldateinamen (die Queue fuehrt Rohschluessel).
+            if (isProto)
+            {
+                if (!string.Equals(queueItem.TargetFileName, image.FileName, StringComparison.Ordinal))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Negativbild '{image.FileName}' ist nicht exakt an Queue, Kandidat und Review gebunden.");
+                }
+            }
+            else if (!string.Equals(queueItem.HoldingKey, image.HoldingKey, StringComparison.Ordinal)
+                     || !string.Equals(
+                         queueItem.PhysicalHoldingKey,
+                         image.PhysicalHoldingKey,
+                         StringComparison.Ordinal)
+                     || !string.Equals(queueItem.SourceRef, image.SourceRef, StringComparison.Ordinal)
+                     || !string.Equals(
+                         queueItem.InspectionDate,
+                         image.InspectionDate,
+                         StringComparison.Ordinal))
             {
                 throw new TrainingExportPlanException(
                     $"Negativbild '{image.FileName}' ist nicht exakt an Queue, Kandidat und Review gebunden.");
@@ -650,8 +686,31 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
                     $"Der Queue-Receipt bindet '{queueImagePath}' nicht bytegenau.");
             }
         }
-        if (!acceptedIds.SetEquals(
-                semantic.Images.Select(image => image.ReviewItemId)))
+        // bcc: der Satz enthaelt exakt alle all_classes_clear-Entscheidungen.
+        // proto: der Satz enthaelt exakt die all_classes_clear-Entscheidungen ohne die
+        // ausgeschlossenen (nicht normalisierbaren / eval-geschuetzten) Review-IDs.
+        if (isProto)
+        {
+            var excluded = semantic.ExcludedNotNormalizable!
+                .Concat(semantic.ExcludedEvalProtected!)
+                .ToArray();
+            if (excluded.Length != excluded.Distinct(StringComparer.Ordinal).Count()
+                || excluded.Any(id => !acceptedIds.Contains(id)))
+            {
+                throw new TrainingExportPlanException(
+                    "Die Auschlusslisten des Negativ-Sets passen nicht zu den Review-Entscheidungen.");
+            }
+            var expectedImageIds = acceptedIds
+                .Except(excluded, StringComparer.Ordinal)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!expectedImageIds.SetEquals(semantic.Images.Select(image => image.ReviewItemId)))
+            {
+                throw new TrainingExportPlanException(
+                    "Das Negativ-Set muss exakt alle all_classes_clear-Entscheidungen ohne Auschlusslisten enthalten.");
+            }
+        }
+        else if (!acceptedIds.SetEquals(
+                     semantic.Images.Select(image => image.ReviewItemId)))
         {
             throw new TrainingExportPlanException(
                 "Das Negativ-Set muss exakt alle all_classes_clear-Entscheidungen enthalten.");
@@ -711,9 +770,12 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
         byte[] queueBytes,
         NegativeSetSemanticFileDocument negativeSemantic)
     {
+        var isProto = IsProtoSet(negativeSemantic.Purpose);
+        var expectedQueuePurpose = isProto ? ProtoQueuePurpose : BccQueuePurpose;
+        var expectedPilot = isProto ? ProtoPilot : BccPilot;
         if (!string.Equals(queue.SchemaVersion, "1.0", StringComparison.Ordinal)
-            || !string.Equals(queue.Purpose, "bcc_hard_negative_review_queue", StringComparison.Ordinal)
-            || !string.Equals(queue.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !string.Equals(queue.Purpose, expectedQueuePurpose, StringComparison.Ordinal)
+            || !string.Equals(queue.Pilot, expectedPilot, StringComparison.Ordinal)
             || !string.Equals(queue.Role, "training_candidate_review", StringComparison.Ordinal)
             || !queue.Frozen
             || !string.Equals(queue.DatasetStatus, "review_incomplete", StringComparison.Ordinal)
@@ -740,9 +802,9 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
                 StringComparison.Ordinal)
             || !string.Equals(
                 queue.Semantic.Purpose,
-                "bcc_hard_negative_review_queue",
+                expectedQueuePurpose,
                 StringComparison.Ordinal)
-            || !string.Equals(queue.Semantic.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !string.Equals(queue.Semantic.Pilot, expectedPilot, StringComparison.Ordinal)
             || !string.Equals(
                 queue.Semantic.Role,
                 "training_candidate_review",
@@ -789,7 +851,22 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
                 "Queue, Klassenkarte, Schutzbestand und Negativ-Set widersprechen sich.");
         }
 
-        var modelIds = ValidateQueueModelScope(queue.Semantic.ModelScope);
+        // bcc verlangt eine volle Modellbindung; proto verbietet sie (reine Protokoll-Queue).
+        IReadOnlySet<string>? modelIds = null;
+        if (isProto)
+        {
+            if (queue.Semantic.ModelScope is { Count: > 0 }
+                || queue.SelectionReceipt.Models is not null)
+            {
+                throw new TrainingExportPlanException(
+                    "Die proto-Queue darf keine Modellbindung enthalten.");
+            }
+        }
+        else
+        {
+            modelIds = NegativeSetContractValidator.ValidateModelScope(queue.Semantic.ModelScope);
+        }
+
         var items = queue.Semantic.Items;
         if (items is null
             || items.Count == 0
@@ -797,132 +874,40 @@ public sealed partial class TrainingExportRegistryFileStore : ITrainingExportReg
             || queue.ImagesCount != items.Count
             || queue.HoldingsCount != items.Count
             || queue.HashesCount != queue.Hashes.Count
-            || queue.SelectionReceipt.Models is null
-            || !JsonEquivalent(queue.SelectionReceipt.Models, queue.Semantic.ModelScope)
+            || (!isProto
+                && !JsonEquivalent(queue.SelectionReceipt.Models, queue.Semantic.ModelScope))
             || !JsonEquivalent(queue.SelectionReceipt.Items, items))
         {
             throw new TrainingExportPlanException(
                 "Queue-Manifest, Auswahlbeleg und Bildanzahlen sind widerspruechlich.");
         }
-        ValidateQueueItems(items, modelIds);
-    }
-
-    private static IReadOnlySet<string> ValidateQueueModelScope(
-        IReadOnlyList<QueueModelReceiptFileDocument>? modelScope)
-    {
-        if (modelScope is null || modelScope.Count == 0)
+        if (isProto)
         {
-            throw new TrainingExportPlanException(
-                "Der Queue-Beleg besitzt keine gebundenen Auswahlmodelle.");
+            NegativeSetContractValidator.ValidateProtoItems(items);
         }
-
-        var modelIds = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var model in modelScope)
+        else
         {
-            if (model is null
-                || string.IsNullOrWhiteSpace(model.CandidateId)
-                || !modelIds.Add(model.CandidateId))
-            {
-                throw new TrainingExportPlanException(
-                    "Der Queue-Beleg besitzt doppelte oder leere Modell-IDs.");
-            }
-            RequireLowercaseSha256(
-                model.CandidateManifestSha256,
-                $"Kandidatenmanifest-Hash von '{model.CandidateId}'");
-            RequireLowercaseSha256(
-                model.WeightsSha256,
-                $"Gewichte-Hash von '{model.CandidateId}'");
-            RequireLowercaseSha256(
-                model.DatasetPlanId,
-                $"Datensatzplan-ID von '{model.CandidateId}'");
-            RequireLowercaseSha256(
-                model.DatasetManifestSha256,
-                $"Datensatzmanifest-Hash von '{model.CandidateId}'");
-        }
-
-        return modelIds;
-    }
-
-    private static void ValidateQueueItems(
-        IReadOnlyList<QueueItemReceiptFileDocument> items,
-        IReadOnlySet<string> modelIds)
-    {
-        var itemIds = new HashSet<string>(StringComparer.Ordinal);
-        var imageHashes = new HashSet<string>(StringComparer.Ordinal);
-        var physicalHoldings = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var item in items)
-        {
-            if (item is null || string.IsNullOrWhiteSpace(item.Id))
-                throw new TrainingExportPlanException("Der Queue-Beleg enthaelt eine leere Bild-ID.");
-
-            var imageSha256 = RequireLowercaseSha256(
-                item.ImageSha256,
-                $"Queue-Bildhash von '{item.Id}'");
-            var sourceRef = RequireLowercaseSha256(
-                item.SourceRef,
-                $"Queue-Quellbeleg von '{item.Id}'");
-            if (string.IsNullOrWhiteSpace(item.HoldingKey)
-                || string.IsNullOrWhiteSpace(item.PhysicalHoldingKey))
-            {
-                throw new TrainingExportPlanException(
-                    $"Queue-Bildbeleg '{item.Id}' besitzt keine gueltige Haltung.");
-            }
-            var holdingKey = NormalizeStrictHoldingKey(item.HoldingKey);
-            var imageFormat = item.ImageFormat?.ToLowerInvariant();
-            if (!itemIds.Add(item.Id)
-                || !string.Equals(item.Id, $"bcc-hn-{imageSha256[..16]}", StringComparison.Ordinal)
-                || !string.Equals(item.HoldingKey, holdingKey, StringComparison.Ordinal)
-                || !string.Equals(
-                    item.PhysicalHoldingKey,
-                    PhysicalHoldingKey(holdingKey),
-                    StringComparison.Ordinal)
-                || !imageHashes.Add(imageSha256)
-                || !physicalHoldings.Add(item.PhysicalHoldingKey)
-                || !string.Equals(item.SourceRef, sourceRef, StringComparison.Ordinal)
-                || !DateOnly.TryParseExact(
-                    item.InspectionDate,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out _)
-                || item.SizeBytes < MinimumTrainingNegativeBytes
-                || imageFormat is not ("jpg" or "jpeg" or "png")
-                || !string.Equals(item.ImageFormat, imageFormat, StringComparison.Ordinal))
-            {
-                throw new TrainingExportPlanException(
-                    $"Queue-Bildbeleg '{item.Id}' ist ungueltig.");
-            }
-
-            if (item.Predictions is null || item.Predictions.Count != modelIds.Count)
-            {
-                throw new TrainingExportPlanException(
-                    $"Queue-Bild '{item.Id}' besitzt keine vollstaendige Modellvorhersage.");
-            }
-            var predictedModelIds = new HashSet<string>(StringComparer.Ordinal);
-            var triggered = false;
-            foreach (var prediction in item.Predictions)
-            {
-                if (prediction is null
-                    || string.IsNullOrWhiteSpace(prediction.ModelId)
-                    || !modelIds.Contains(prediction.ModelId)
-                    || !predictedModelIds.Add(prediction.ModelId)
-                    || prediction.BccDetectionCount < 0
-                    || (prediction.MaxBccConfidence is { } confidence
-                        && (!double.IsFinite(confidence) || confidence is < 0 or > 1))
-                    || (prediction.PredictedBcc && prediction.BccDetectionCount < 1))
-                {
-                    throw new TrainingExportPlanException(
-                        $"Queue-Vorhersage fuer '{item.Id}' ist ungueltig.");
-                }
-                triggered |= prediction.PredictedBcc;
-            }
-            if (!predictedModelIds.SetEquals(modelIds) || !triggered)
-            {
-                throw new TrainingExportPlanException(
-                    $"Queue-Bild '{item.Id}' ist nicht an einen BCC-Modelltrigger gebunden.");
-            }
+            NegativeSetContractValidator.ValidateBccItems(items, modelIds!);
         }
     }
+
+    /// <summary>True beim proto-Negativsatz-Vertrag (Pilot protokoll_negative).</summary>
+    private static bool IsProtoSet(string? purpose)
+        => string.Equals(purpose, ProtoSetPurpose, StringComparison.Ordinal);
+
+    /// <summary>Schluessel eines Queue-Items je nach Vertrag (bcc: id, proto: item_id).</summary>
+    private static string QueueItemKey(QueueItemReceiptFileDocument item, bool isProto)
+        => (isProto ? item.ItemId : item.Id)!;
+
+    /// <summary>
+    /// Erlaubte Set-Ordnernamen: Praefix aus der Positivliste (bcc_hn_/proto_hn_) und
+    /// Endung auf die ersten 12 Zeichen der Set-ID.
+    /// </summary>
+    private static bool IsAllowedNegativeSetFolderName(string? folderName, string setId)
+        => !string.IsNullOrWhiteSpace(folderName)
+           && folderName.EndsWith(setId[..12], StringComparison.Ordinal)
+           && (folderName.StartsWith("bcc_hn_", StringComparison.Ordinal)
+               || folderName.StartsWith("proto_hn_", StringComparison.Ordinal));
 
     private static void ValidateNegativeImageBytes(
         ReadOnlySpan<byte> bytes,

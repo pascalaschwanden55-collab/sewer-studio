@@ -51,7 +51,10 @@ public sealed partial class TrainingExportRegistryFileStore
                 $"Quellhash von Queue-Kandidat '{candidate.Id}'");
         }
 
-        var itemIds = queue.Semantic.Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        var isProto = IsProtoSet(negativeSemantic.Purpose);
+        var itemIds = queue.Semantic.Items
+            .Select(item => QueueItemKey(item, isProto))
+            .ToHashSet(StringComparer.Ordinal);
         var expectedQueueHashPaths = candidates
             .Select(candidate => $"images/{candidate.FramePath}")
             .Append("_candidates.json")
@@ -168,9 +171,13 @@ public sealed partial class TrainingExportRegistryFileStore
 
     private static void ValidateNegativeSetSemanticShape(NegativeSetSemanticFileDocument semantic)
     {
+        var isProto = IsProtoSet(semantic.Purpose);
         if (!string.Equals(semantic.SchemaVersion, "1.0", StringComparison.Ordinal)
-            || !string.Equals(semantic.Purpose, "bcc_reviewed_negative_set", StringComparison.Ordinal)
-            || !string.Equals(semantic.Pilot, "BCC_bogen", StringComparison.Ordinal)
+            || !(isProto || string.Equals(semantic.Purpose, BccSetPurpose, StringComparison.Ordinal))
+            || !string.Equals(
+                semantic.Pilot,
+                isProto ? ProtoPilot : BccPilot,
+                StringComparison.Ordinal)
             || !string.Equals(semantic.Role, "training_negative_set", StringComparison.Ordinal)
             || semantic.Queue is null
             || semantic.Review is null
@@ -223,10 +230,13 @@ public sealed partial class TrainingExportRegistryFileStore
                 "Queue, Review, Klassenkarte oder Splitregel im Negativ-Set-Manifest ist ungueltig.");
         }
 
+        NegativeSetContractValidator.ValidateContractSpecificShape(semantic, isProto);
+
         var seenFileNames = new HashSet<string>(StringComparer.Ordinal);
         var seenImageHashes = new HashSet<string>(StringComparer.Ordinal);
         var seenPhysicalHoldings = new HashSet<string>(StringComparer.Ordinal);
         var seenReviewItems = new HashSet<string>(StringComparer.Ordinal);
+        var imageIdPrefix = isProto ? "proto-neg-" : "bcc-neg-";
         foreach (var image in semantic.Images)
         {
             if (image is null)
@@ -238,7 +248,7 @@ public sealed partial class TrainingExportRegistryFileStore
             var expectedFileName = $"img_{image.ImageSha256}.{image.ImageFormat}";
             if (string.IsNullOrWhiteSpace(image.FileName)
                 || Path.GetFileName(image.FileName) != image.FileName
-                || !string.Equals(image.Id, $"bcc-neg-{image.ImageSha256}", StringComparison.Ordinal)
+                || !string.Equals(image.Id, $"{imageIdPrefix}{image.ImageSha256}", StringComparison.Ordinal)
                 || !string.Equals(image.FileName, expectedFileName, StringComparison.Ordinal)
                 || image.ImageFormat is not ("jpg" or "jpeg" or "png")
                 || image.SizeBytes < MinimumTrainingNegativeBytes
@@ -252,7 +262,26 @@ public sealed partial class TrainingExportRegistryFileStore
                 throw new TrainingExportPlanException(
                     "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
             }
-            RequireLowercaseSha256(image.SourceRef, "Quellbeleg im Negativ-Set-Manifest");
+            if (isProto)
+            {
+                // proto: quelle (xtf/db3) statt source_ref/inspection_date.
+                if (image.SourceRef is not null
+                    || image.InspectionDate is not null
+                    || string.IsNullOrWhiteSpace(image.Quelle))
+                {
+                    throw new TrainingExportPlanException(
+                        "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
+                }
+            }
+            else
+            {
+                RequireLowercaseSha256(image.SourceRef, "Quellbeleg im Negativ-Set-Manifest");
+                if (image.InspectionDate is null || image.Quelle is not null)
+                {
+                    throw new TrainingExportPlanException(
+                        "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
+                }
+            }
             var holdingKey = NormalizeStrictHoldingKey(image.HoldingKey);
             if (!string.Equals(image.HoldingKey, holdingKey, StringComparison.Ordinal)
                 || !string.Equals(
@@ -265,7 +294,7 @@ public sealed partial class TrainingExportRegistryFileStore
             }
         }
 
-        const string splitSalt = "bcc-hard-negative-split-v1";
+        const string splitSalt = NegativeSplitSalt;
         var rankedPhysicalHoldings = semantic.Images
             .Select(image => image.PhysicalHoldingKey)
             .OrderBy(
@@ -280,15 +309,77 @@ public sealed partial class TrainingExportRegistryFileStore
         var validationHoldings = rankedPhysicalHoldings
             .Take(validationCount)
             .ToHashSet(StringComparer.Ordinal);
-        if (!string.Equals(semantic.SplitRule.Name, "stable_rank_v1", StringComparison.Ordinal)
+        if (!isProto)
+        {
+            if (!string.Equals(semantic.SplitRule.Name, "stable_rank_v1", StringComparison.Ordinal)
+                || !string.Equals(semantic.SplitRule.Salt, splitSalt, StringComparison.Ordinal)
+                || semantic.SplitRule.GoldAlignments is not null
+                || semantic.SplitRule.ValidationCount != validationCount
+                || semantic.SplitRule.TrainCount != semantic.Images.Count - validationCount
+                || semantic.Images.Any(image =>
+                    image.Split
+                    != (validationHoldings.Contains(image.PhysicalHoldingKey)
+                        ? TrainingExportTarget.Validation
+                        : TrainingExportTarget.Train)))
+            {
+                throw new TrainingExportPlanException(
+                    "Die Splitregel im Negativ-Set-Manifest passt nicht zu den Bildern.");
+            }
+            return;
+        }
+
+        // proto: stable_rank_v1_gold_aligned — Basis-Rang wie bcc, danach Gold-Ausrichtungen.
+        if (!string.Equals(semantic.SplitRule.Name, "stable_rank_v1_gold_aligned", StringComparison.Ordinal)
             || !string.Equals(semantic.SplitRule.Salt, splitSalt, StringComparison.Ordinal)
-            || semantic.SplitRule.ValidationCount != validationCount
-            || semantic.SplitRule.TrainCount != semantic.Images.Count - validationCount
-            || semantic.Images.Any(image =>
-                image.Split
-                != (validationHoldings.Contains(image.PhysicalHoldingKey)
+            || semantic.SplitRule.GoldAlignments is null)
+        {
+            throw new TrainingExportPlanException(
+                "Die Splitregel im Negativ-Set-Manifest passt nicht zu den Bildern.");
+        }
+        var knownHoldings = semantic.Images
+            .Select(image => image.PhysicalHoldingKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var forcedSplits = new Dictionary<string, TrainingExportTarget>(StringComparer.Ordinal);
+        foreach (var alignment in semantic.SplitRule.GoldAlignments)
+        {
+            if (alignment is null
+                || string.IsNullOrWhiteSpace(alignment.PhysicalHoldingKey)
+                || !knownHoldings.Contains(alignment.PhysicalHoldingKey)
+                || alignment.GoldRole is not ("train" or "val" or "test"))
+            {
+                throw new TrainingExportPlanException(
+                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungueltig.");
+            }
+            var expectedForcedSplit = alignment.GoldRole == "train" ? "train" : "validation";
+            if (!string.Equals(alignment.ForcedSplit, expectedForcedSplit, StringComparison.Ordinal)
+                || !forcedSplits.TryAdd(
+                    alignment.PhysicalHoldingKey,
+                    alignment.GoldRole == "train"
+                        ? TrainingExportTarget.Train
+                        : TrainingExportTarget.Validation))
+            {
+                throw new TrainingExportPlanException(
+                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungueltig.");
+            }
+        }
+        var appliedValidationCount = 0;
+        foreach (var image in semantic.Images)
+        {
+            var appliedSplit = forcedSplits.TryGetValue(image.PhysicalHoldingKey, out var forcedSplit)
+                ? forcedSplit
+                : validationHoldings.Contains(image.PhysicalHoldingKey)
                     ? TrainingExportTarget.Validation
-                    : TrainingExportTarget.Train)))
+                    : TrainingExportTarget.Train;
+            if (image.Split != appliedSplit)
+            {
+                throw new TrainingExportPlanException(
+                    "Die Splitregel im Negativ-Set-Manifest passt nicht zu den Bildern.");
+            }
+            if (appliedSplit == TrainingExportTarget.Validation)
+                appliedValidationCount++;
+        }
+        if (semantic.SplitRule.ValidationCount != appliedValidationCount
+            || semantic.SplitRule.TrainCount != semantic.Images.Count - appliedValidationCount)
         {
             throw new TrainingExportPlanException(
                 "Die Splitregel im Negativ-Set-Manifest passt nicht zu den Bildern.");
@@ -505,7 +596,7 @@ public sealed partial class TrainingExportRegistryFileStore
         return value;
     }
 
-    private static string NormalizeStrictHoldingKey(string value)
+    internal static string NormalizeStrictHoldingKey(string value)
     {
         var holdingKey = EvalContaminationGuard.NormalizeHaltungKey(value);
         if (string.IsNullOrWhiteSpace(holdingKey))
@@ -523,7 +614,7 @@ public sealed partial class TrainingExportRegistryFileStore
         return holdingKey;
     }
 
-    private static string PhysicalHoldingKey(string holdingKey)
+    internal static string PhysicalHoldingKey(string holdingKey)
     {
         var parts = holdingKey.Split('-', StringSplitOptions.None);
         return StringComparer.Ordinal.Compare(parts[0], parts[1]) <= 0
@@ -688,7 +779,7 @@ public sealed partial class TrainingExportRegistryFileStore
             throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
     }
 
-    private static string RequireLowercaseSha256(string? value, string label)
+    internal static string RequireLowercaseSha256(string? value, string label)
     {
         if (value is not { Length: 64 }
             || value.Any(character =>
