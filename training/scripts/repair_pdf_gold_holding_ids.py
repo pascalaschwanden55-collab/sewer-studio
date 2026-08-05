@@ -148,14 +148,20 @@ def load_protection_keys(knowledge_root: Path) -> dict[str, set[str]]:
                 for key in _register_holding_keys(item):
                     add(key, source)
 
-    for manifest in sorted((knowledge_root / "training" / "negatives").glob("**/manifest.json")):
+    for manifest in sorted((knowledge_root / "training" / "negatives").glob("**/*.json")):
+        if manifest.name not in ("manifest.json", "_manifest.json"):
+            continue
         try:
             document = json.loads(manifest.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        for item in document.get("images") or document.get("items") or []:
+        semantic = document.get("semantic") if isinstance(document.get("semantic"), dict) else {}
+        items = (document.get("images") or document.get("items")
+                 or semantic.get("images") or semantic.get("items") or [])
+        for item in items:
             if isinstance(item, dict):
-                add(comparison_key(item.get("holding_key")), f"negatives:{manifest.parent.name}")
+                key = comparison_key(item.get("holding_key") or item.get("physical_holding_key"))
+                add(key, f"negatives:{manifest.parent.name}")
 
     reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
     if reports:

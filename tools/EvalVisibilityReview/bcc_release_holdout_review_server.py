@@ -25,6 +25,8 @@ REVIEW_PURPOSE = "bcc_release_holdout_review"
 HOLDOUT_PURPOSE = "bcc_release_holdout"
 HARD_NEGATIVE_REVIEW_PURPOSE = "bcc_hard_negative_review"
 HARD_NEGATIVE_QUEUE_PURPOSE = "bcc_hard_negative_review_queue"
+PROTO_NEGATIVE_QUEUE_PURPOSE = "proto_hard_negative_review_queue"
+PROTO_NEGATIVE_PILOT = "protokoll_negative"
 HOLDOUT_NAME = "SewerStudio BCC Release Holdout"
 LEGACY_V1_HOLDOUT_ID = (
     "64d06094c921e90440e96823d3fc8d5ec0275c6465840201a4092f1285fe5c2e"
@@ -663,10 +665,14 @@ def _validate_hard_negative_queue(
         raise ValueError("Die Hard-Negative-Pruefliste ist ungueltig.")
     if manifest.get("schema_version") != "1.0":
         raise ValueError("Das Hard-Negative-Manifest hat ein falsches Schema.")
-    if manifest.get("purpose") != HARD_NEGATIVE_QUEUE_PURPOSE:
+    queue_purpose = manifest.get("purpose")
+    if queue_purpose not in (HARD_NEGATIVE_QUEUE_PURPOSE, PROTO_NEGATIVE_QUEUE_PURPOSE):
         raise ValueError("Das Manifest ist keine Hard-Negative-Pruefliste.")
-    if manifest.get("pilot") != HOLDOUT_PILOT:
-        raise ValueError("Die Pruefliste gehoert nicht zum BCC-Pilot.")
+    is_proto_queue = queue_purpose == PROTO_NEGATIVE_QUEUE_PURPOSE
+    expected_pilot = PROTO_NEGATIVE_PILOT if is_proto_queue else HOLDOUT_PILOT
+    if manifest.get("pilot") != expected_pilot:
+        raise ValueError("Die Pruefliste gehoert nicht zum deklarierten Piloten.")
+    queue_prefix = "proto_hn_" if is_proto_queue else "bcc_hn_"
     if manifest.get("role") != "training_candidate_review":
         raise ValueError("Die Pruefliste hat eine ungueltige Rolle.")
     if manifest.get("frozen") is not True:
@@ -674,7 +680,7 @@ def _validate_hard_negative_queue(
     if str(manifest.get("hash_algorithm") or "").casefold() != "sha256":
         raise ValueError("Die Pruefliste verwendet nicht SHA-256.")
     queue_id = _require_sha256(manifest.get("queue_id"), "Prueflisten-ID")
-    if queue_root.name != f"bcc_hn_{queue_id[:12]}":
+    if queue_root.name != f"{queue_prefix}{queue_id[:12]}":
         raise ValueError("Der Ordner passt nicht zur Prueflisten-ID.")
     semantic = manifest.get("semantic")
     if not isinstance(semantic, dict):
@@ -719,9 +725,19 @@ def _validate_hard_negative_queue(
     _require_sha256(semantic.get("class_map_sha256"), "Klassenkarten-SHA")
     _require_sha256(semantic.get("vsa_manifest_hash"), "VSA-Manifest-SHA")
     selection_rule = semantic.get("selection_rule")
-    if (
-        not isinstance(selection_rule, dict)
-        or selection_rule.get("one_image_per_physical_holding") is not True
+    if not isinstance(selection_rule, dict):
+        raise ValueError("Die Hard-Negative-Auswahlregel ist ungueltig.")
+    if is_proto_queue:
+        if (
+            selection_rule.get("one_image_per_physical_holding") is not True
+            or selection_rule.get("requires_current_model_bcc_trigger") is True
+            or selection_rule.get("model_involved") is not False
+            or selection_rule.get("review_target")
+            != "Keine sichtbare Instanz irgendeiner gebundenen Detect-Klasse"
+        ):
+            raise ValueError("Die Protokoll-Negative-Auswahlregel ist ungueltig.")
+    elif (
+        selection_rule.get("one_image_per_physical_holding") is not True
         or selection_rule.get("requires_current_model_bcc_trigger") is not True
         or selection_rule.get("review_target")
         != "Keine sichtbare Instanz irgendeiner gebundenen Detect-Klasse"
@@ -859,20 +875,26 @@ def _validate_hard_negative_queue(
     receipt_items = receipt.get("items")
     if not isinstance(receipt_items, list):
         raise ValueError("Der Auswahlbeleg besitzt keine Bilder.")
+    id_field = "item_id" if is_proto_queue else "id"
     receipt_ids = {
-        str(item.get("id") or "")
+        str(item.get(id_field) or "")
         for item in receipt_items
         if isinstance(item, dict)
     }
     if len(receipt_ids) != len(receipt_items) or receipt_ids != seen_ids:
         raise ValueError("Auswahlbeleg und Pruefbilder stimmen nicht ueberein.")
-    if (
-        receipt.get("models") != semantic.get("model_scope")
-        or receipt_items != semantic.get("items")
-    ):
+    if receipt_items != semantic.get("items"):
         raise ValueError("Auswahlbeleg und semantischer Beleg widersprechen sich.")
-    models = receipt.get("models")
-    if not isinstance(models, list) or not models:
+    if is_proto_queue:
+        # Protokollbasierte Auswahl: bewusst KEINE gebundenen Modelle.
+        if receipt.get("models") or semantic.get("model_scope"):
+            raise ValueError("Die Protokoll-Pruefliste darf keine gebundenen Modelle tragen.")
+        models = []
+    else:
+        if receipt.get("models") != semantic.get("model_scope"):
+            raise ValueError("Auswahlbeleg und semantischer Beleg widersprechen sich.")
+        models = receipt.get("models")
+    if not is_proto_queue and (not isinstance(models, list) or not models):
         raise ValueError("Der Auswahlbeleg besitzt keine gebundenen Modelle.")
     model_ids: set[str] = set()
     for index, model in enumerate(models):
@@ -898,6 +920,46 @@ def _validate_hard_negative_queue(
     }
     seen_physical_holdings: set[str] = set()
     for index, item in enumerate(receipt_items):
+        if is_proto_queue:
+            if not isinstance(item, dict) or set(item) != {
+                "item_id",
+                "image_sha256",
+                "holding_key",
+                "code",
+                "gruppe",
+                "quelle",
+                "quell_datei",
+                "leitungsinspektion",
+                "size_bytes",
+                "image_format",
+                "target_file_name",
+            }:
+                raise ValueError(f"Auswahlbild {index} hat fehlende oder fremde Felder.")
+            item_id = str(item.get("item_id") or "")
+            verified = verified_by_id.get(item_id)
+            if verified is None:
+                raise ValueError(f"Auswahlbild {index} ist nicht gebunden.")
+            physical = _physical_holding_key(item.get("holding_key"))
+            if physical in seen_physical_holdings:
+                raise ValueError("Die Pruefliste enthaelt mehrere Bilder derselben Haltung.")
+            seen_physical_holdings.add(physical)
+            if (
+                _require_sha256(
+                    item.get("image_sha256"),
+                    f"Bild-SHA von Auswahlbild {index}",
+                )
+                != verified.sha256
+                or _required_integer(
+                    item.get("size_bytes"),
+                    f"Bildgroesse von Auswahlbild {index}",
+                )
+                != verified.size_bytes
+                or str(item.get("image_format") or "").casefold()
+                != verified.path.suffix.casefold().lstrip(".")
+                or str(item.get("target_file_name") or "") != verified.path.name
+            ):
+                raise ValueError(f"Auswahlbild {index} stimmt nicht mit den Bildbytes.")
+            continue
         if not isinstance(item, dict) or set(item) != {
             "id",
             "image_sha256",
