@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import re
 import sys
@@ -74,6 +75,8 @@ class EvaluationContext:
     vsa_manifest_sha256: str
     classes: tuple[str, ...]
     images: tuple[review_server.VerifiedImage, ...]
+    development_comparison: bool = False
+    reference_binding: dict | None = None
 
     def bindings(self) -> dict[str, object]:
         return {
@@ -142,6 +145,7 @@ def load_context(
     knowledge_root: Path,
     holdout_root: Path,
     candidate_root: Path,
+    development_comparison: bool = False,
 ) -> EvaluationContext:
     knowledge = Path(os.path.abspath(knowledge_root))
     holdout = Path(os.path.abspath(holdout_root))
@@ -166,7 +170,17 @@ def load_context(
         "vsa_manifest_hash": binding.vsa_manifest_hash,
     }
     if actual_binding != expected_binding:
-        raise ValueError("Kandidat und eingefrorener Holdout sind nicht exakt gebunden.")
+        if not development_comparison:
+            raise ValueError("Kandidat und eingefrorener Holdout sind nicht exakt gebunden.")
+        # Entwicklungsvergleich: nur ein ausdruecklich nicht freigegebener
+        # Kandidat darf gegen einen fremd gebundenen Holdout gemessen werden.
+        candidate_manifest_doc = json.loads(
+            (candidate / "candidate_manifest.json").read_bytes().decode("utf-8-sig")
+        )
+        if str(candidate_manifest_doc.get("candidate_status")) != "not_deployed":
+            raise ValueError(
+                "Entwicklungsvergleich verlangt einen Kandidaten mit Status not_deployed."
+            )
     base_models_root = PROJECT_ROOT / "sidecar" / "models"
     if not _is_path_below(binding.base_model_path, base_models_root):
         raise ValueError("Das gebundene Basismodell liegt ausserhalb sidecar/models.")
@@ -182,7 +196,15 @@ def load_context(
 
     candidate_manifest = candidate / "candidate_manifest.json"
     weights_path = candidate / "best.pt"
-    if (
+    if actual_binding != expected_binding and development_comparison:
+        # Entwicklungsvergleich: Integritaet des Kandidaten gegen sein eigenes
+        # Manifest (validate_candidate hat die Gewichtsbindung bereits geprueft).
+        if (
+            sha256_file(candidate_manifest) != binding.manifest_sha256
+            or sha256_file(weights_path) != binding.weights_sha256
+        ):
+            raise ValueError("Kandidatenmanifest oder Gewicht wurde veraendert.")
+    elif (
         sha256_file(candidate_manifest) != snapshot.candidate_manifest_sha256
         or sha256_file(weights_path) != snapshot.candidate_weights_sha256
     ):
@@ -210,6 +232,11 @@ def load_context(
         vsa_manifest_sha256=snapshot.vsa_manifest_sha256,
         classes=classes,
         images=snapshot.images,
+        development_comparison=development_comparison and actual_binding != expected_binding,
+        reference_binding=(
+            expected_binding if development_comparison and actual_binding != expected_binding
+            else None
+        ),
     )
 
 
@@ -434,6 +461,16 @@ def build_report(
         ),
         "status": evaluation_status,
         "evaluation_role": "diagnostic_only",
+        "development_comparison": (
+            {
+                "enabled": True,
+                "note": "Entwicklungsvergleich mit einem nicht zum Holdout gehoerenden "
+                        "Kandidaten (Status not_deployed); keine Abnahme.",
+                "reference_binding": dict(context.reference_binding or {}),
+            }
+            if context.development_comparison
+            else {"enabled": False}
+        ),
         "bindings": {
             **context.bindings(),
             "review_sha256": review_sha256,
@@ -506,6 +543,7 @@ def _assert_inputs_unchanged(
         context.knowledge_root,
         context.holdout_root,
         context.candidate_root,
+        development_comparison=context.development_comparison,
     )
     if current != context:
         raise ValueError("Kandidat oder Holdout wurde waehrend der Diagnose veraendert.")
@@ -527,6 +565,12 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--review", type=Path, required=True)
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--development-comparison",
+        action="store_true",
+        help="Entwicklungsvergleich: misst auch einen nicht zum Holdout gehoerenden "
+             "Kandidaten (nur Status not_deployed), niemals eine Abnahme.",
+    )
     args = parser.parse_args(argv)
     if DEVICE_PATTERN.fullmatch(args.device) is None:
         parser.error("--device muss cpu oder cuda[:N] sein.")
@@ -536,7 +580,12 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
     try:
-        context = load_context(args.knowledge_root, args.holdout, args.candidate)
+        context = load_context(
+            args.knowledge_root,
+            args.holdout,
+            args.candidate,
+            development_comparison=args.development_comparison,
+        )
         snapshots = load_image_snapshots(context)
         print(
             f"Labelblinde Inferenz bereit: {len(snapshots)} eingefrorene Bilder, "

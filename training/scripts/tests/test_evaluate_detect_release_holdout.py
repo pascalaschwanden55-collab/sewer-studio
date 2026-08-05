@@ -331,6 +331,62 @@ class EvaluateDetectReleaseHoldoutTests(unittest.TestCase):
         self.assertFalse(report["release_assessment"]["auto_activation_allowed"])
         self.assertFalse(report["release_assessment"]["model_activated"])
         self.assertFalse(report["release_assessment"]["model_pointer_changed"])
+        self.assertEqual({"enabled": False}, report["development_comparison"])
+
+    def test_bericht_markiert_entwicklungsvergleich_mit_referenzbindung(self) -> None:
+        evaluation_context = context(POSITIVE_ID, NEGATIVE_ID, EXCLUDED_ID)
+        evaluation_context = MODULE.EvaluationContext(
+            **{
+                **evaluation_context.__dict__,
+                "development_comparison": True,
+                "reference_binding": {
+                    "candidate_id": "detect_gold_referenz",
+                    "manifest_sha256": "b" * 64,
+                    "weights_sha256": "c" * 64,
+                },
+            }
+        )
+        selection = MODULE.build_scoring_selection(
+            evaluation_context,
+            decisions(),
+            [
+                image_prediction(POSITIVE_ID, detection("p-positive", 0)),
+                image_prediction(NEGATIVE_ID),
+                image_prediction(EXCLUDED_ID),
+            ],
+        )
+        report = MODULE.build_report(
+            evaluation_context,
+            {
+                "dataset_status": "ready_for_detect_evaluation",
+                "class_coverage": [],
+                "requirements": {},
+                "shortfalls": [],
+                "positive_physical_holdings": 1,
+                "negative_physical_holdings": 1,
+            },
+            MODULE.scoring.score_predictions(
+                selection.truths, selection.predictions, {0: CLASSES[0], 1: CLASSES[1]}
+            ),
+            MODULE.compute_negative_false_alarm_metrics(
+                selection.negative_image_ids, selection.predictions, CLASSES
+            ),
+            selection,
+            review_sha256="8" * 64,
+            ledger_sha256="9" * 64,
+            prediction_receipt_sha256="a" * 64,
+            created_utc="2026-08-03T12:00:00Z",
+            protocol={"device": "cpu"},
+            runtime_versions={"python": "test"},
+        )
+
+        self.assertTrue(report["development_comparison"]["enabled"])
+        self.assertEqual(
+            "detect_gold_referenz",
+            report["development_comparison"]["reference_binding"]["candidate_id"],
+        )
+        self.assertEqual("diagnostic_only", report["evaluation_role"])
+        self.assertFalse(report["release_assessment"]["release_qualified"])
 
     def test_status_und_review_bytes_muessen_dieselbe_fassung_sein(self) -> None:
         review_bytes = b"review-v1"
