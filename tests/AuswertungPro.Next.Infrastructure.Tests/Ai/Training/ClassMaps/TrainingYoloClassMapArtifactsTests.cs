@@ -26,10 +26,10 @@ public sealed class TrainingYoloClassMapArtifactsTests
             snapshot.Classes.OrderBy(item => item.Value));
         Assert.Equal(6, snapshot.MigrationSourceHashes.Count);
         Assert.Equal(
-            "82adb52afe9814ecea12e77005ce87eed107dceabdd01814fc83352a39a45fd3",
+            "64ce89b57abfb5d1334d69d86a07c22a163729cadd80e816559b88ad5dc66c55",
             snapshot.MigrationSourceHashes["personal_gold_audit"]);
         Assert.Equal(
-            "56f5ae04e7444d8e0b8d42a678b5228e73397bffe10dcd645db304423dc04fcb",
+            "ae8e0855cb4199ea8c9b107c6e33e286d725f6d5f67fd63d917c665e63afadd1",
             snapshot.MigrationSourceHashes["personal_gold_samples"]);
         Assert.Equal(
             new[]

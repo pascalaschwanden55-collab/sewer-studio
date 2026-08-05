@@ -97,7 +97,8 @@ def load_candidate_holdings(measurement_path: Path) -> dict[str, tuple[str, str]
     return result
 
 
-def build_plan(knowledge_root: Path, measurement_path: Path) -> dict:
+def build_plan(knowledge_root: Path, measurement_path: Path,
+               explicit_repairs: list[dict] | None = None) -> dict:
     samples_path = knowledge_root / "training_samples.json"
     teacher_path = knowledge_root / "teacher_annotations.json"
     database_path = knowledge_root / "KnowledgeBase.db"
@@ -126,13 +127,27 @@ def build_plan(knowledge_root: Path, measurement_path: Path) -> dict:
         if str(s.get("Signature") or "")
     }
 
+    explicit_by_id: dict[str, dict] = {}
+    if explicit_repairs is not None:
+        for entry in explicit_repairs:
+            explicit_by_id[str(entry["sample_id"])] = entry
+    samples_by_id = {str(s.get("SampleId")): s for s in samples}
+
     repairs: list[InboxRepair] = []
     decontaminations: list[str] = []
     skipped: dict[str, int] = {}
-    targets = [s for s in samples
-               if str(s.get("CaseId") or "").casefold().startswith("gold_inbox_")]
+    if explicit_repairs is not None:
+        targets = []
+        for entry in explicit_repairs:
+            sample = samples_by_id.get(str(entry["sample_id"]))
+            if sample is None:
+                raise ValueError(f"Explizites Repair-Ziel fehlt: {entry['sample_id']}")
+            targets.append(sample)
+    else:
+        targets = [s for s in samples
+                   if str(s.get("CaseId") or "").casefold().startswith("gold_inbox_")]
     if not targets:
-        raise ValueError("Keine gold_inbox-Samples gefunden.")
+        raise ValueError("Keine Reparaturziele gefunden.")
 
     connection = sqlite3.connect(f"file:{database_path.as_posix()}?mode=ro", uri=True)
     try:
@@ -153,11 +168,18 @@ def build_plan(knowledge_root: Path, measurement_path: Path) -> dict:
             frame = str(sample.get("FramePath") or "")
             name = Path(frame).stem
             sha = name.removeprefix("gold_")
-        hit = holdings.get(sha)
-        if hit is None:
-            skipped["kein_kandidaten_treffer"] = skipped.get("kein_kandidaten_treffer", 0) + 1
-            continue
-        new_case, quelle = hit
+        if explicit_repairs is not None:
+            entry = explicit_by_id[sample_id]
+            new_case = str(entry["new_case_id"]).strip()
+            quelle = str(entry.get("beleg") or "explizit")
+            if comparison_key(new_case) is None:
+                raise ValueError(f"Explizite Zielhaltung ist nicht belastbar: {new_case}")
+        else:
+            hit = holdings.get(sha)
+            if hit is None:
+                skipped["kein_kandidaten_treffer"] = skipped.get("kein_kandidaten_treffer", 0) + 1
+                continue
+            new_case, quelle = hit
         schutz = protection.get(comparison_key(new_case))
         if schutz:
             decontaminations.append(sample_id)
@@ -323,10 +345,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--knowledge-root", type=Path, default=Path(r"C:\KI_BRAIN"))
     parser.add_argument("--measurement", type=Path, default=DEFAULT_MEASUREMENT)
+    parser.add_argument("--repairs-file", type=Path, default=None,
+                        help="Explizite Reparaturliste (JSON: sample_id, new_case_id, beleg)")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args(argv)
     try:
-        plan = build_plan(args.knowledge_root, args.measurement)
+        explicit = None
+        if args.repairs_file is not None:
+            explicit = json.loads(args.repairs_file.read_text(encoding="utf-8-sig"))
+            if not isinstance(explicit, list) or not explicit:
+                raise ValueError("Die explizite Reparaturliste ist leer oder ungueltig.")
+        plan = build_plan(args.knowledge_root, args.measurement, explicit)
         print(f"Modus: {'AUSFUEHRUNG' if args.execute else 'PRUEFLAUF'}")
         print(f"gold_inbox-Samples: {plan['targets']} | Reparaturen: {len(plan['repairs'])} "
           f"| Dekontaminationen: {len(plan['decontaminations'])} | offen: {plan['skipped']}")
