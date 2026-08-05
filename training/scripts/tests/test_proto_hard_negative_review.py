@@ -69,6 +69,8 @@ class ProtoHardNegativeTests(unittest.TestCase):
         self.images.mkdir()
         self.knowledge = self.root / "wissen"
         (self.knowledge / "training").mkdir(parents=True)
+        # Mindestens ein geschuetzter Bestand, sonst fail-closed.
+        (self.knowledge / "eval_set").mkdir()
         self.class_map = MODULE.load_class_map(CLASS_MAP, VSA_MANIFEST)
 
     def tearDown(self):
@@ -124,6 +126,31 @@ class ProtoHardNegativeTests(unittest.TestCase):
             [_befund("BCDYA", "p.jpg", "400-300")], index, set(), schutz)
         self.assertEqual(len(selected), 0)
         self.assertEqual(stats.get("geschuetzt"), 1)
+
+    def test_byte_schutz_sperrt_eval_bytes_bei_unbekannter_haltung(self):
+        # Genau der durchgerutschte Fall: Bytes liegen im Eval-Bestand,
+        # die Haltung ist nicht als A-B-Schluessel lesbar.
+        eval_dir = self.knowledge / "eval_set" / "subsets" / "holdout_x"
+        eval_dir.mkdir(parents=True)
+        eval_bild = self.images / "eval.jpg"
+        _photo(eval_bild, 77)
+        import shutil as _shutil
+        _shutil.copy2(eval_bild, eval_dir / "eval.jpg")
+        protected, counts = MODULE.load_protected_image_hashes(self.knowledge)
+        self.assertEqual(counts["eval_set"], 1)
+        index = {p.name.casefold(): [p] for p in self.images.iterdir()}
+        selected, stats = MODULE.select_candidates(
+            [_befund("BCDYA", "eval.jpg", "unbekannt")], index, set(), {}, protected)
+        self.assertEqual(len(selected), 0)
+        self.assertEqual(stats.get("byte_geschuetzt"), 1)
+
+    def test_leere_protected_sets_sperren_den_plan_fail_closed(self):
+        leeres_wissen = self.root / "leer"
+        (leeres_wissen / "training").mkdir(parents=True)
+        self._add_photo("x.jpg", 88)
+        selected, _ = self._select([_befund("BCDYA", "x.jpg", "111-222")])
+        with self.assertRaises(ValueError):
+            MODULE.build_queue_plan(leeres_wissen, selected, self.class_map)
 
     def _publish_test_queue(self):
         self._add_photo("q1.jpg", 40)

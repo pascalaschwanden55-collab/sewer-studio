@@ -113,15 +113,81 @@ def _quota_group(code3: str) -> str:
     return QUOTA_GROUPS[-1][0]
 
 
+IMAGE_HASH_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
+
+def load_protected_image_hashes(knowledge_root: Path) -> tuple[set[str], dict[str, int]]:
+    """Byte-Hashes aller Bilder in Eval-, Negativ- und Goldbestaenden.
+
+    Schliesst Luecken des Haltungsschluessels: Ein Bild, dessen Bytes in einem
+    geschuetzten Bestand liegen, wird gesperrt — auch wenn seine Haltung
+    unbekannt oder falsch geschrieben ist. Die aus Gold abgeleiteten
+    Diagnose-Warteschlangen (detect_gold_failure_review) gehoeren bewusst
+    NICHT dazu; eval_review wird nur nach Holdout-Artefakten durchsucht.
+    """
+    roots = (
+        ("eval_set", knowledge_root / "eval_set"),
+        ("eval_review", knowledge_root / "eval_review"),
+        ("training_negatives", knowledge_root / "training" / "negatives"),
+        ("gold_frames", knowledge_root / "gold_frames"),
+    )
+    hashes: set[str] = set()
+    counts: dict[str, int] = {}
+    for label, root in roots:
+        if not root.is_dir() or _is_link_or_reparse(root):
+            counts[label] = 0
+            continue
+        count = 0
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if not _is_link_or_reparse(Path(dirpath) / d)]
+            for name in filenames:
+                if Path(name).suffix.casefold() not in IMAGE_HASH_SUFFIXES:
+                    continue
+                path = Path(dirpath) / name
+                if _is_link_or_reparse(path):
+                    continue
+                hashes.add(_sha256_file(path))
+                count += 1
+        counts[label] = count
+    return hashes, counts
+
+
+def snapshot_protected_sets(knowledge_root: Path) -> list[dict]:
+    """Explizite, nicht-leere Liste der geschuetzten Bestaende fuer das Manifest."""
+    sets: list[dict] = []
+    eval_set = knowledge_root / "eval_set"
+    if eval_set.is_dir():
+        sets.append({"art": "eval_set", "pfad": "eval_set"})
+        for subset in sorted((eval_set / "subsets").glob("*")):
+            if subset.is_dir():
+                sets.append({"art": "eval_set_subset", "pfad": f"eval_set/subsets/{subset.name}"})
+    for extra, art in (
+        ("eval_review", "eval_review_holdout"),
+        ("training/negatives", "training_negatives"),
+        ("gold_frames", "gold_frames"),
+    ):
+        if (knowledge_root / extra).is_dir():
+            sets.append({"art": art, "pfad": extra})
+    reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json")) \
+        if (knowledge_root / "training" / "reports").is_dir() else []
+    if reports:
+        sets.append({"art": "gold_audit_testrollen", "pfad": f"training/reports/{reports[-1].name}"})
+    return sets
+
+
 def select_candidates(
     befunde: list[dict],
     image_index: dict[str, list[Path]],
     gold_keys: set,
     protection: dict,
+    protected_hashes: set | None = None,
     quotas: dict[str, int] | None = None,
 ) -> tuple[list[dict], dict]:
     """Waehlt Nicht-Detect-Kandidaten nach Quote, ein Bild je physischer Haltung
-    ueber die ganze Warteschlange. Deterministisch (stabiler Hash-Rang)."""
+    ueber die ganze Warteschlange. Deterministisch (stabiler Hash-Rang).
+    Zusaetzlich Byte-Schutz: Bilder, deren Bytes in Eval-/Negativ-/Gold-
+    Bestaenden liegen, werden unabhaengig von der Haltung gesperrt."""
+    protected_hashes = protected_hashes or set()
     quota_by_group = quotas or {name: quota for name, _codes, quota in QUOTA_GROUPS}
     stats: dict[str, int] = {}
     pool: list[dict] = []
@@ -140,6 +206,9 @@ def select_candidates(
             stats["nicht_dekodierbar"] = stats.get("nicht_dekodierbar", 0) + 1
             continue
         byte_hash = _sha256_file(bild)
+        if byte_hash in protected_hashes:
+            stats["byte_geschuetzt"] = stats.get("byte_geschuetzt", 0) + 1
+            continue
         if byte_hash in seen_bytes:
             stats["byte_dublette"] = stats.get("byte_dublette", 0) + 1
             continue
@@ -261,10 +330,17 @@ def build_queue_plan(
         for source in sources:
             art = source.split(":", 1)[0]
             quellen[art] = quellen.get(art, 0) + 1
+    protected_sets = snapshot_protected_sets(knowledge_root)
+    if not protected_sets:
+        raise ValueError(
+            "protected_sets waere leer — fail-closed: ein ungeschuetzter Lauf "
+            "darf nicht wie ein geschuetzter aussehen."
+        )
     protection_snapshot = {
         "schluessel_gesamt": len(protection),
         "quellen_anteile": quellen,
         "ohne_diagnose_warteschlangen": True,
+        "byte_schutz": True,
     }
     sources = sorted({item.quelle for item in items})
     semantic = {
@@ -276,7 +352,7 @@ def build_queue_plan(
         "class_map_sha256": class_map["sha256"],
         "vsa_manifest_hash": class_map["vsa_manifest_hash"],
         "class_names": list(class_map["ordered_names"]),
-        "protected_sets": [],
+        "protected_sets": protected_sets,
         "protection_snapshot": protection_snapshot,
         "sources": sources,
         "selection_rule": {
@@ -358,7 +434,7 @@ def publish_queue(plan: dict) -> Path:
             "class_map_sha256": plan["class_map"]["sha256"],
             "vsa_manifest_hash": plan["class_map"]["vsa_manifest_hash"],
             "class_names": list(plan["class_map"]["ordered_names"]),
-            "protected_sets": [],
+            "protected_sets": plan["semantic"]["protected_sets"],
             "protection_snapshot": plan["protection_snapshot"],
             "selection_rule": semantic["selection_rule"],
             "sources": plan["sources"],
@@ -605,8 +681,19 @@ def main(argv: list[str] | None = None) -> int:
         gold_keys = {comparison_key(s.get("CaseId")) for s in samples}
         gold_keys.discard(None)
         protection = load_protection_keys(args.knowledge_root)
+        pro_quelle: dict[str, int] = {}
+        for sources in protection.values():
+            for source in sources:
+                art = source.split(":", 1)[0]
+                pro_quelle[art] = pro_quelle.get(art, 0) + 1
+        print(f"Haltungs-Schutzschluessel: {len(protection)} "
+              f"(je Quelle: {pro_quelle})")
+        print("Berechne Byte-Schutz-Hashes (eval/negativ/gold) ...")
+        protected_hashes, hash_counts = load_protected_image_hashes(args.knowledge_root)
+        print(f"Byte-Schutz: {len(protected_hashes)} Bilder gesperrt (je Bestand: {hash_counts})")
 
-        selected, stats = select_candidates(befunde, image_index, gold_keys, protection)
+        selected, stats = select_candidates(
+            befunde, image_index, gold_keys, protection, protected_hashes)
         print("=== Auswahl ===")
         for key in sorted(stats):
             print(f"  {key}: {stats[key]}")
