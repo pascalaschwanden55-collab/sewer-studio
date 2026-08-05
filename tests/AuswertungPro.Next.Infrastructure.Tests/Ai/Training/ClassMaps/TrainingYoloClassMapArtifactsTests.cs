@@ -26,10 +26,10 @@ public sealed class TrainingYoloClassMapArtifactsTests
             snapshot.Classes.OrderBy(item => item.Value));
         Assert.Equal(6, snapshot.MigrationSourceHashes.Count);
         Assert.Equal(
-            "5d036fd74dbdc6e80dae1ca2600b648fc99073f9b8a0157bee5da1a6027a0987",
+            "b92d1e51cc9f0b5ea76ab87997a54c698bf970d8f91e00dc47dc47067a476cfd",
             snapshot.MigrationSourceHashes["personal_gold_audit"]);
         Assert.Equal(
-            "fd5340ce35d5b317273e9d34e340d70e319448c78c23d640ec682b94fb9c6a1b",
+            "56f5ae04e7444d8e0b8d42a678b5228e73397bffe10dcd645db304423dc04fcb",
             snapshot.MigrationSourceHashes["personal_gold_samples"]);
         Assert.Equal(
             new[]
@@ -49,20 +49,20 @@ public sealed class TrainingYoloClassMapArtifactsTests
 
         using var migration = JsonDocument.Parse(File.ReadAllText(migrationPath));
         var entries = migration.RootElement.GetProperty("entries").EnumerateArray().ToArray();
-        Assert.Equal(143, entries.Length);
-        Assert.Equal(93, CountKind(entries, "teacher_vsa_code"));
+        Assert.Equal(146, entries.Length);
+        Assert.Equal(96, CountKind(entries, "teacher_vsa_code"));
         Assert.Equal(35, CountKind(entries, "legacy_class_map"));
         Assert.Equal(10, CountKind(entries, "productive_yolo_name"));
         Assert.Equal(5, CountKind(entries, "annotation_override"));
         Assert.Equal(
-            748,
+            778,
             entries
                 .Where(entry => GetString(entry, "source_kind") == "teacher_vsa_code")
                 .Sum(entry => entry.GetProperty("observed_count").GetInt32()));
         var approved = entries
             .Where(entry => GetString(entry, "approval_status") == "approved")
             .ToArray();
-        Assert.Equal(74, approved.Length);
+        Assert.Equal(78, approved.Length);
         Assert.All(approved, entry =>
         {
             Assert.NotEqual("review", GetString(entry, "proposed_action"));
@@ -70,7 +70,7 @@ public sealed class TrainingYoloClassMapArtifactsTests
             Assert.False(string.IsNullOrWhiteSpace(GetString(entry, "approved_utc")));
         });
         Assert.Equal(
-            69,
+            68,
             entries.Count(entry => GetString(entry, "approval_status") == "pending"));
 
         var expectedMappings = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -100,7 +100,9 @@ public sealed class TrainingYoloClassMapArtifactsTests
             ["BAFJE"] = "BAF_oberflaeche",
             ["BAFKE"] = "BAF_oberflaeche",
             ["BAFKZ"] = "BAF_oberflaeche",
+            ["BAFDZ"] = "BAF_oberflaeche",
             ["BAHC"] = "BAH_schadanschluss",
+            ["BAHD"] = "BAH_schadanschluss",
             ["BAIAB"] = "BAI_dichtung",
             ["BAIZ"] = "BAI_dichtung",
             ["BAJ"] = "BAJ_verbindung",
@@ -121,6 +123,7 @@ public sealed class TrainingYoloClassMapArtifactsTests
             ["BBFC"] = "BBF_infiltration",
             ["BCAAA"] = "BCA_anschluss",
             ["BCAAB"] = "BCA_anschluss",
+            ["BCACA"] = "BCA_anschluss",
             ["BCABA"] = "BCA_anschluss",
             ["BCADA"] = "BCA_anschluss",
             ["BCADB"] = "BCA_anschluss",
@@ -148,7 +151,7 @@ public sealed class TrainingYoloClassMapArtifactsTests
 
         foreach (var discardedCode in new[]
                  {
-                     "AEDXC", "AEDXG", "AEDXO", "AEDXP", "AEDXQ", "AEDXU",
+                     "AEDXC", "AEDXG", "AEDXO", "AEDXP", "AEDXQ", "AEDXU", "AEDXK",
                      "BCD", "BCE", "BDA", "BDD", "BDDA", "BDDC"
                  })
         {

@@ -59,7 +59,8 @@ from gold_stock_audit import (
     NEGATIVE_SPLIT_SALT,
     _gold_split_roles_by_physical,
     _negative_split_map,
-    _proto_physical_holding_key,
+    _physical_holding_key,
+    normalize_holding_key,
 )
 
 SCHEMA_VERSION = "1.0"
@@ -109,6 +110,41 @@ def load_class_map(path: Path, vsa_manifest_path: Path) -> dict:
         "vsa_manifest_hash": vsa_hash,
         "ordered_names": ordered,
     }
+
+
+def _canonical_eval_holding_keys(knowledge_root: Path) -> set[str]:
+    """Kanonisch normalisierte Haltungsschluessel aller Eval-/Schutzbestaende
+    (beide Schreibweisen: `links-rechts` und `links|rechts`)."""
+    protected: set[str] = set()
+
+    def add(raw) -> None:
+        normalized = normalize_holding_key(raw)
+        if normalized:
+            protected.add(normalized)
+            protected.add(_physical_holding_key(normalized))
+
+    eval_set = knowledge_root / "eval_set"
+    for candidates_path in sorted(eval_set.glob("**/_candidates.json")):
+        try:
+            document = json.loads(candidates_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        items = document.get("candidates") if isinstance(document, dict) else document
+        for entry in items or []:
+            if isinstance(entry, dict):
+                add(entry.get("haltung_key"))
+                add(entry.get("physical_holding_key"))
+
+    reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
+    if reports:
+        try:
+            audit = json.loads(reports[-1].read_text(encoding="utf-8"))
+            for gruppe in audit.get("split", {}).get("gruppen", []):
+                if gruppe.get("rolle") == "test":
+                    add(str(gruppe.get("gruppe") or "").removeprefix("haltung:"))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return protected
 
 
 def _quota_group(code3: str) -> str:
@@ -529,10 +565,39 @@ def build_set_plan(
     if not clear_items:
         raise ValueError("Kein all_classes_clear im Review — kein Negativsatz zu bauen.")
 
+    # Nur Haltungen mit belastbarer (normalisierbarer) Identitaet duerfen in
+    # den Trainingssatz; der Exportweg normalisiert kanonisch.
+    usable_items = []
+    nicht_normierbar: list[str] = []
     for item in clear_items:
-        item["physical"] = _proto_physical_holding_key(item["holding_key"])
-    split_map, validation_count = _negative_split_map([i["physical"] for i in clear_items])
-    for item in clear_items:
+        normalized = normalize_holding_key(item["holding_key"])
+        if normalized is None:
+            nicht_normierbar.append(item["item_id"])
+            continue
+        item["holding_key"] = normalized
+        item["physical"] = _physical_holding_key(normalized)
+        usable_items.append(item)
+    if not usable_items:
+        raise ValueError("Kein verwertbares all_classes_clear mit belastbarer Haltung.")
+
+    # Kanonischer Eval-Schutz: Haltungen, die nach der kanonischen
+    # Normalisierung einem Eval-/Holdout-/Testbestand angehoeren, werden
+    # ausgeschlossen (die Sammlung nutzt bewusst die schaerfere,
+    # praefix-schonende Schreibweise — der Export spricht kanonisch).
+    eval_protected = _canonical_eval_holding_keys(knowledge_root)
+    excluded_eval: list[str] = []
+    final_items = []
+    for item in usable_items:
+        if item["holding_key"] in eval_protected or item["physical"] in eval_protected:
+            excluded_eval.append(item["item_id"])
+        else:
+            final_items.append(item)
+    usable_items = final_items
+    if not usable_items:
+        raise ValueError("Kein verwertbares all_classes_clear nach Eval-Schutz.")
+
+    split_map, validation_count = _negative_split_map([i["physical"] for i in usable_items])
+    for item in usable_items:
         item["split"] = split_map[item["physical"]]
 
     # Gold-Ausrichtung: Negativ-Splits folgen bei gemeinsamen Haltungen dem
@@ -540,7 +605,7 @@ def build_set_plan(
     # interne Validierung kein bereits bekanntes Rohr als Fehlalarm-Massstab nutzt.
     gold_roles = _gold_split_roles_by_physical(knowledge_root)
     gold_alignments: list[dict] = []
-    for item in clear_items:
+    for item in usable_items:
         gold_role = gold_roles.get(item["physical"])
         if gold_role is None:
             continue
@@ -553,7 +618,7 @@ def build_set_plan(
             })
             item["split"] = expected
     if gold_alignments:
-        validation_count = sum(1 for i in clear_items if i["split"] == "validation")
+        validation_count = sum(1 for i in usable_items if i["split"] == "validation")
 
     queue_manifest_sha = _sha256_file(queue_root / "_manifest.json")
     candidates_sha = _sha256_file(queue_root / "_candidates.json")
@@ -573,8 +638,8 @@ def build_set_plan(
         "review_item_id": item["item_id"],
         "review_decision": "all_classes_clear",
         "quelle": item["quelle"],
-    } for item in clear_items]
-    train_count = len(clear_items) - validation_count
+    } for item in usable_items]
+    train_count = len(usable_items) - validation_count
     split_rule: dict = {
         "name": "stable_rank_v1_gold_aligned" if gold_alignments else "stable_rank_v1",
         "salt": NEGATIVE_SPLIT_SALT,
@@ -614,6 +679,8 @@ def build_set_plan(
         "protection_snapshot": dict(queue_manifest["protection_snapshot"]),
         "split_rule": split_rule,
         "images": semantic_images,
+        "excluded_not_normalizable": sorted(nicht_normierbar),
+        "excluded_eval_protected": sorted(excluded_eval),
     }
     set_id = hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest()
     return {
@@ -622,10 +689,11 @@ def build_set_plan(
         "review_path": review_path,
         "class_map_path": class_map_path,
         "created_utc": datetime.now(timezone.utc),
-        "items": clear_items,
+        "items": usable_items,
         "semantic": semantic,
         "set_id": set_id,
         "target_root": (knowledge_root / "training" / "negatives" / "sets" / f"proto_hn_{set_id[:12]}"),
+        "nicht_normierbar_ausgeschlossen": nicht_normierbar,
         "queue_manifest_sha256": queue_manifest_sha,
         "candidates_sha256": candidates_sha,
         "review_sha256": review_sha,

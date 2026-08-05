@@ -920,7 +920,7 @@ def _gold_split_roles_by_physical(knowledge_root: Path) -> dict[str, str]:
         normalized = normalize_holding_key(case_id)
         if not normalized:
             continue
-        roles[_proto_physical_holding_key(case_id)] = split_role(f"haltung:{normalized}")
+        roles[_physical_holding_key(normalized)] = split_role(f"haltung:{normalized}")
     return roles
 
 
@@ -1757,6 +1757,8 @@ def _read_proto_reviewed_negative_set(
             "protection_snapshot",
             "split_rule",
             "images",
+            "excluded_not_normalizable",
+            "excluded_eval_protected",
         },
         "Semantischer Proto-Negativsatz-Beleg",
     )
@@ -2133,7 +2135,7 @@ def _read_proto_reviewed_negative_set(
         holding_key = str(image.get("holding_key") or "")
         physical = str(image.get("physical_holding_key") or "")
         split = str(image.get("split") or "")
-        if physical != _proto_physical_holding_key(holding_key):
+        if physical != _physical_holding_key(holding_key):
             raise ValueError("Haltung und physische Haltung im Proto-Satz widersprechen sich.")
         if (
             image.get("id") != f"{PROTO_IMAGE_ID_PREFIX}{image_sha}"
@@ -2177,9 +2179,11 @@ def _read_proto_reviewed_negative_set(
         candidate = candidates_by_id.get(review_item_id)
         if queue_item is None or candidate is None:
             raise ValueError("Proto-Negativbild ist nicht in Queue und Kandidatenliste enthalten.")
-        for field in ("image_sha256", "holding_key", "size_bytes", "image_format", "quelle"):
+        for field in ("image_sha256", "size_bytes", "image_format", "quelle"):
             if image.get(field) != queue_item.get(field):
                 raise ValueError(f"Proto-Negativbild und Queue widersprechen sich bei {field}.")
+        if normalize_holding_key(queue_item.get("holding_key")) != image.get("holding_key"):
+            raise ValueError("Proto-Negativbild und Queue widersprechen sich bei holding_key.")
         if (
             candidate.get("frame_path") != file_name
             or candidate.get("source_sha256") != image_sha
@@ -2224,7 +2228,62 @@ def _read_proto_reviewed_negative_set(
     if actual_image_paths != referenced_image_paths:
         raise ValueError("Bilder, Hashliste und semantischer Proto-Beleg sind nicht deckungsgleich.")
     if seen_review_ids != accepted_ids:
-        raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
+        # Dokumentierte Ausnahmen: klassenfreie Bilder ohne belastbare
+        # Haltungsidentitaet oder mit kanonisch geschuetzter Eval-Haltung
+        # werden ausgeschlossen, muessen aber vollzaehlig und begruendet sein.
+        excluded = semantic.get("excluded_not_normalizable")
+        excluded_eval = semantic.get("excluded_eval_protected")
+        if not isinstance(excluded, list) or not isinstance(excluded_eval, list):
+            raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
+        excluded_ids = {str(value) for value in excluded}
+        excluded_eval_ids = {str(value) for value in excluded_eval}
+        if seen_review_ids | excluded_ids | excluded_eval_ids != accepted_ids:
+            raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
+        eval_keys = set()
+        for candidates_path in sorted((knowledge_root / "eval_set").glob("**/_candidates.json")):
+            try:
+                document = json.loads(candidates_path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            items = document.get("candidates") if isinstance(document, dict) else document
+            for entry in items or []:
+                if isinstance(entry, dict):
+                    for raw in (entry.get("haltung_key"), entry.get("physical_holding_key")):
+                        normalized = normalize_holding_key(raw)
+                        if normalized:
+                            eval_keys.add(normalized)
+                            eval_keys.add(_physical_holding_key(normalized))
+        reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
+        if reports:
+            try:
+                latest = json.loads(reports[-1].read_text(encoding="utf-8"))
+                for gruppe in latest.get("split", {}).get("gruppen", []):
+                    if gruppe.get("rolle") == "test":
+                        normalized = normalize_holding_key(
+                            str(gruppe.get("gruppe") or "").removeprefix("haltung:"))
+                        if normalized:
+                            eval_keys.add(normalized)
+                            eval_keys.add(_physical_holding_key(normalized))
+            except (OSError, json.JSONDecodeError):
+                pass
+        for excluded_id in excluded_ids:
+            queue_item = queue_by_id.get(excluded_id)
+            if (
+                excluded_id not in accepted_ids
+                or queue_item is None
+                or normalize_holding_key(queue_item.get("holding_key")) is not None
+            ):
+                raise ValueError("Ein ausgeschlossenes Proto-Bild besitzt eine belastbare Haltung oder fehlt im Review.")
+        for excluded_id in excluded_eval_ids:
+            queue_item = queue_by_id.get(excluded_id)
+            normalized = queue_item is not None and normalize_holding_key(queue_item.get("holding_key"))
+            if (
+                excluded_id not in accepted_ids
+                or not normalized
+                or (normalized not in eval_keys
+                    and _physical_holding_key(normalized) not in eval_keys)
+            ):
+                raise ValueError("Ein eval-ausgeschlossenes Proto-Bild ist nicht im geschuetzten Bestand.")
     split_rule_raw = semantic.get("split_rule")
     if not isinstance(split_rule_raw, dict):
         raise ValueError("Die Proto-Splitregel fehlt.")
