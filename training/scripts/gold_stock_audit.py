@@ -60,7 +60,8 @@ PDF_GOLD_PROVENANCE_PATTERN = re.compile(
     r"SHA-256=(?P<sha256>[0-9A-Fa-f]{64}); "
     r"Seite=(?P<page>[1-9][0-9]*); "
     r"Foto=(?P<photo>[^;\r\n]+); "
-    r"Zuordnung=(?P<match_kind>[a-z_]+)\Z",
+    r"Zuordnung=(?P<match_kind>[a-z_]+)"
+    r"(?:; CaseId [^;\r\n]+ -> [^;\r\n]+ \([^;\r\n]+\))*\Z",
     re.ASCII,
 )
 PDF_GOLD_MATCH_KINDS = ("same_block", "photo_id", "time_meter_text")

@@ -61,6 +61,34 @@ public sealed class ManualGoldTrainingPolicyTests
         Assert.Equal("same_block", provenance.MatchKind);
     }
 
+    [Fact]
+    public void TryParse_akzeptiert_dokumentierte_Reparatur_Suffixe()
+    {
+        var sample = PdfGold("same_block", "-");
+        sample.Notes +=
+            "; CaseId 9109-10 -> 9109-10.8433 (PDF-Bildbeleg gruppe_1_mit_bildbeleg, 2026-08-04)";
+
+        var parsed = PdfGoldProvenancePolicy.TryParse(sample.Notes, out var provenance);
+
+        Assert.True(parsed);
+        Assert.Equal("20231123_06.887943-90327.pdf", provenance.SourceDocumentName);
+        Assert.Equal("same_block", provenance.MatchKind);
+    }
+
+    [Theory]
+    [InlineData("; CaseId ohne-beleg")]
+    [InlineData("; CaseId a -> b")]
+    [InlineData("; Reparatur=ungeprueft")]
+    public void TryParse_sperrt_unbekannte_Suffixe(string suffix)
+    {
+        var sample = PdfGold("same_block", "-");
+        sample.Notes += suffix;
+
+        var parsed = PdfGoldProvenancePolicy.TryParse(sample.Notes, out _);
+
+        Assert.False(parsed);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

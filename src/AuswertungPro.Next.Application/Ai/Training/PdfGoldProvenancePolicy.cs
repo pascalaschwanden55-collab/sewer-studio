@@ -84,7 +84,7 @@ public static partial class PdfGoldProvenancePolicy
            && !value.Any(char.IsControl);
 
     [GeneratedRegex(
-        @"\APDF-Operateurreferenz: (?<document>[^;\r\n]+); SHA-256=(?<sha256>[0-9A-Fa-f]{64}); Seite=(?<page>[1-9][0-9]*); Foto=(?<photo>[^;\r\n]+); Zuordnung=(?<matchKind>[a-z_]+)\z",
+        @"\APDF-Operateurreferenz: (?<document>[^;\r\n]+); SHA-256=(?<sha256>[0-9A-Fa-f]{64}); Seite=(?<page>[1-9][0-9]*); Foto=(?<photo>[^;\r\n]+); Zuordnung=(?<matchKind>[a-z_]+)(; CaseId [^;\r\n]+ -> [^;\r\n]+ \([^;\r\n]+\))*\z",
         RegexOptions.CultureInvariant)]
     private static partial Regex ProvenanceRegex();
 }

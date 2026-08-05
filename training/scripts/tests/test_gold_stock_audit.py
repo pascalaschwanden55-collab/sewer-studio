@@ -661,6 +661,41 @@ class GoldStockAuditTests(unittest.TestCase):
                 )
             )
 
+    def test_pdf_pruefspur_mit_reparatur_suffix_bleibt_gueltig(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            frames, eval_images, negatives, registry = self._make_root(root)
+            frame = self._image(frames, "pdf-repair.png")
+            gueltig = self._pdf_notes() + (
+                "; CaseId 9109-10 -> 9109-10.8433 "
+                "(PDF-Bildbeleg gruppe_1_mit_bildbeleg, 2026-08-04)"
+            )
+            doppelt = gueltig + (
+                "; CaseId alt-1 -> neu-1 (Kandidaten-Byte-Match xtf, 2026-08-05)"
+            )
+            ungueltig = self._pdf_notes() + "; CaseId ohne-beleg"
+            samples = [
+                self._sample("pdf-rep-ok", frame)
+                | {"SourceType": "PdfPhoto", "Notes": gueltig,
+                   "SourceReferenceCode": "BCCBY",
+                   "SourceReferenceDescription": "Bogen nach rechts"},
+                self._sample("pdf-rep-ok2", frame)
+                | {"SourceType": "PdfPhoto", "Notes": doppelt,
+                   "SourceReferenceCode": "BCCBY",
+                   "SourceReferenceDescription": "Bogen nach rechts"},
+                self._sample("pdf-rep-bad", frame)
+                | {"SourceType": "PdfPhoto", "Notes": ungueltig,
+                   "SourceReferenceCode": "BCCBY",
+                   "SourceReferenceDescription": "Bogen nach rechts"},
+            ]
+
+            audit = self._audit(root, samples, eval_images, negatives, registry)
+
+            verwendbar = {value["sample_id"] for value in audit["samples"]}
+            self.assertIn("pdf-rep-ok", verwendbar)
+            self.assertIn("pdf-rep-ok2", verwendbar)
+            self.assertNotIn("pdf-rep-bad", verwendbar)
+
     def test_pdf_foto_ohne_Operateur_Code_oder_Text_bleibt_gesperrt(self) -> None:
         base = {
             "HumanConfirmed": True,
