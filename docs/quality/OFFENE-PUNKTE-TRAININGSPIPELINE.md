@@ -32,3 +32,11 @@ Erledigt 2026-08-04/05 (zur Nachverfolgung):
 - 9 ManualCoding-Samples mit Alt-CaseIds repariert (Byte-Beweis über
   Provenienz-PDF), darunter die beiden `1-1`-Degenerationen
 - Provenance-Suffix-Regel beidseitig präzisiert
+
+Erledigt 2026-08-06:
+- Benchmark-Erweiterung `detect_benchmark_extension_v1` (17 Bilder:
+  14 BAH-Testrolle + 3 BAJ-Reservierung), blind reviewt, 16/17 positiv.
+  Neue Sollabdeckung: BAH 21 Boxen/≥11 Haltungen, BAJ 20, BAI 26, BCA 53 —
+  alle Kandidatenklassen über der 20er-Regel.
+- BAH-Verfügbarkeit belegt: 151 Haltungen (65 Gold, 47 Benchmark, 39 frei)
+  — Ziel 50–70 erreichbar, Quelle nur PDF-Kanal.
