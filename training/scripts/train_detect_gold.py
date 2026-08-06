@@ -896,6 +896,9 @@ def train(
     epochs: int,
     patience: int,
     candidate_tag: str | None,
+    batch: int = 3,
+    workers: int = 0,
+    cache: str | bool = False,
 ) -> Path:
     if base_weights.is_symlink():
         raise ValueError(f"Basisgewicht ist eine Verknuepfung: {base_weights}")
@@ -906,6 +909,14 @@ def train(
         raise ValueError("epochs muss mindestens 1 sein.")
     if patience < 0:
         raise ValueError("patience darf nicht negativ sein.")
+    # Die Stapelgroesse veraendert nur die Trainingsdynamik, nicht die Daten.
+    # Eine obere Grenze verhindert, dass ein Tippfehler den VRAM sprengt.
+    if batch < 1 or batch > 64:
+        raise ValueError("batch muss zwischen 1 und 64 liegen.")
+    if workers < 0 or workers > 32:
+        raise ValueError("workers muss zwischen 0 und 32 liegen.")
+    if cache not in (False, "ram", "disk"):
+        raise ValueError("cache erlaubt nur False, 'ram' oder 'disk'.")
     normalized_tag = (candidate_tag or "").strip().lower()
     if normalized_tag and not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,31}", normalized_tag):
         raise ValueError("candidate-tag darf nur a-z, 0-9, _ und - enthalten.")
@@ -936,13 +947,13 @@ def train(
             data=str(runtime_yaml),
             epochs=epochs,
             imgsz=1280,
-            batch=3,
-            workers=0,
+            batch=batch,
+            workers=workers,
             patience=patience,
             device=0,
             seed=42,
             deterministic=True,
-            cache=False,
+            cache=cache,
             close_mosaic=5,
             flipud=0.0,
             fliplr=0.0,
@@ -990,7 +1001,9 @@ def train(
             "epochs_completed": _completed_epochs(candidate_root / "run" / "results.csv"),
             "patience": patience,
             "image_size": 1280,
-            "batch": 3,
+            "batch": batch,
+            "workers": workers,
+            "cache": cache,
             "seed": 42,
             "deterministic": True,
             "free_vram_mb_at_start": free_vram,
@@ -1027,6 +1040,33 @@ def main() -> int:
         help=(
             "Early-Stopping-Geduld in Epochen. 0 bleibt als ausdrueckliche "
             "Ultralytics-Option erlaubt."
+        ),
+    )
+    parser.add_argument(
+        "--batch",
+        type=int,
+        default=3,
+        help=(
+            "Stapelgroesse. Der Standard 3 stammt vom kleinen BCC-Pilot und "
+            "nutzt eine 32-GB-Karte nur zu einem Drittel aus."
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help=(
+            "Parallele Ladeprozesse. 0 laesst den Hauptprozess jedes Bild "
+            "selbst dekodieren und ist meist der eigentliche Engpass."
+        ),
+    )
+    parser.add_argument(
+        "--cache",
+        choices=("off", "ram", "disk"),
+        default="off",
+        help=(
+            "Bildzwischenspeicher. 'ram' vermeidet das erneute Dekodieren in "
+            "jeder Epoche. Veraendert die Daten nicht."
         ),
     )
     parser.add_argument(
@@ -1067,6 +1107,9 @@ def main() -> int:
         arguments.epochs,
         arguments.patience,
         arguments.candidate_tag,
+        batch=arguments.batch,
+        workers=arguments.workers,
+        cache=False if arguments.cache == "off" else arguments.cache,
     )
     print(f"Detect-Gold-Kandidat fertig (nicht aktiviert): {candidate}")
     return 0

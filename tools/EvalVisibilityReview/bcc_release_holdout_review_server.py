@@ -1690,73 +1690,141 @@ HARD_NEGATIVE_INDEX_HTML = r"""<!doctype html>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; background: #111827; color: #f3f4f6; }
-    main { width: min(1180px, calc(100% - 32px)); margin: 18px auto; }
+    main { width: min(1320px, calc(100% - 32px)); margin: 14px auto; }
     header, .card { background: #1f2937; border: 1px solid #374151;
-      border-radius: 12px; padding: 16px; }
+      border-radius: 12px; padding: 14px; }
     header { display: flex; gap: 16px; justify-content: space-between;
-      align-items: center; margin-bottom: 16px; }
-    h1 { margin: 0; font-size: 1.25rem; }
+      align-items: center; margin-bottom: 12px; }
+    h1 { margin: 0; font-size: 1.2rem; }
     .muted { color: #aeb8c8; }
-    .warning { margin: 0 0 14px; padding: 11px; border: 1px solid #f59e0b;
-      border-radius: 8px; color: #fde68a; background: #2a2112; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px;
-      gap: 16px; }
-    img { display: block; width: 100%; max-height: 72vh; object-fit: contain;
+    #progress { font-size: 1.15rem; font-weight: 700; }
+    .warning { margin: 0 0 12px; padding: 11px 13px; border: 1px solid #f59e0b;
+      border-radius: 8px; color: #fde68a; background: #2a2112; font-size: 1rem; }
+    .warning b { color: #fff; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 14px; align-items: start; }
+    img { display: block; width: 100%; max-height: 60vh; object-fit: contain;
       background: #030712; border-radius: 8px; }
-    textarea { width: 100%; min-height: 88px; box-sizing: border-box;
-      margin-top: 12px; padding: 10px; color: inherit; background: #111827;
-      border: 1px solid #4b5563; border-radius: 8px; resize: vertical; }
-    button { width: 100%; margin-top: 9px; padding: 11px; border: 0;
-      border-radius: 8px; cursor: pointer; font-weight: 700; }
+    textarea { width: 100%; min-height: 52px; box-sizing: border-box;
+      margin-top: 10px; padding: 8px; color: inherit; background: #111827;
+      border: 1px solid #4b5563; border-radius: 8px; resize: vertical;
+      font-size: 0.9rem; }
+    button { width: 100%; margin-top: 9px; padding: 13px 11px; border: 0;
+      border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem;
+      text-align: left; line-height: 1.3; }
+    button .sub { display: block; font-weight: 400; font-size: 0.82rem;
+      opacity: 0.85; margin-top: 2px; }
     .clear { background: #10b981; color: #052e20; }
     .bcc { background: #ef4444; color: #fff; }
     .other { background: #8b5cf6; color: #fff; }
     .exclude { background: #f59e0b; color: #3b2100; }
-    .navigation { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .navigation button { background: #4b5563; color: #fff; }
+    .navigation { display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      margin-top: 10px; }
+    .navigation button { background: #4b5563; color: #fff; text-align: center;
+      font-size: 0.9rem; padding: 9px; margin-top: 0; }
     .active { outline: 3px solid #fff; }
-    #status { min-height: 1.5em; margin-top: 12px; color: #fbbf24; }
-    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+    #status { min-height: 1.4em; margin-top: 10px; color: #fbbf24; }
+    .liste { margin-top: 12px; display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .liste h3 { margin: 0 0 6px; font-size: 0.9rem; color: #93c5fd;
+      text-transform: none; }
+    .liste ul { margin: 0; padding-left: 16px; font-size: 0.86rem;
+      line-height: 1.45; }
+    .liste li b { color: #fff; }
+    .hinweis { color: #34d399; font-weight: 700; }
+    .egal { margin-top: 10px; padding: 9px 12px; border-radius: 8px;
+      background: #172033; border: 1px solid #334155; font-size: 0.86rem;
+      color: #cbd5e1; }
+    .egal b { color: #fff; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .liste { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
 <main>
   <header>
     <div>
-      <h1>BCC Hard-Negative · Blind-Prüfung</h1>
-      <div class="muted">Reviewer: __REVIEWER__</div>
+      <h1>Negativ-Prüfung · blind</h1>
+      <div class="muted">Prüfer: __REVIEWER__ &nbsp;·&nbsp; Tasten 1 / 2 / 3, Pfeil links / rechts</div>
     </div>
     <div id="progress">Lade …</div>
   </header>
   <p class="warning">
-    „Sauberer Hintergrund“ nur wählen, wenn weder BCC noch eine andere der
-    15 trainierten Klassen sichtbar ist.
+    Die Frage lautet nur: <b>Ist eine der 15 trainierten Klassen im Bild zu sehen?</b>
+    Alle 15 stehen unter dem Bild.<br>
+    Achtung — <b>ein sauberer Anschluss und ein normaler Bogen zählen auch.</b>
+    „Nichts davon sichtbar“ heisst: keine Öffnung, kein Bogen, kein Schaden.
   </p>
   <section class="layout">
     <div class="card">
       <img id="image" alt="Zu prüfendes Kanalbild">
+      <div class="liste">
+        <div>
+          <h3>Schäden am Rohr</h3>
+          <ul>
+            <li><b>BAA</b> Verformung, eingedrückt</li>
+            <li><b>BAB</b> Riss</li>
+            <li><b>BAC</b> Bruch, Einsturz, Loch</li>
+            <li><b>BAF</b> Oberfläche rau, angegriffen</li>
+            <li><b>BAI</b> Dichtung ragt herein</li>
+            <li><b>BAJ</b> Verbindung versetzt, klaffend</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Betriebliche Störungen</h3>
+          <ul>
+            <li><b>BBA</b> Wurzeln</li>
+            <li><b>BBB</b> Anhaftungen, Fett, Inkrustation</li>
+            <li><b>BBC</b> Ablagerung, Sand, Kies</li>
+            <li><b>BBD</b> Eindringender Boden</li>
+            <li><b>BBF</b> Infiltration, eindringendes Wasser</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Anschluss und Bogen</h3>
+          <ul>
+            <li><b>BCA</b> Seitlicher Anschluss
+              <span class="hinweis">— auch wenn intakt!</span></li>
+            <li><b>BCC</b> Bogen
+              <span class="hinweis">— auch wenn normal!</span></li>
+            <li><b>BAH</b> Schadhafter Anschluss</li>
+            <li><b>SONST</b> sonstiger Schaden</li>
+          </ul>
+        </div>
+      </div>
+      <div class="egal">
+        <b>Stört nicht — darf im Bild sein:</b> Rohranfang, Rohrende,
+        Wasserspiegel, Rohrprofil- oder Materialwechsel, Schacht,
+        der eingeblendete Text.
+      </div>
     </div>
     <aside class="card">
-      <div class="muted">Bild-ID</div>
-      <div id="caseId">–</div>
-      <textarea id="comment" maxlength="2000"
-        placeholder="Optionaler Kommentar"></textarea>
       <button class="clear" data-decision="all_classes_clear"
         onclick='saveDecision("all_classes_clear")'>
-        1 · Sauberer Hintergrund
+        1 · Nichts davon sichtbar
+        <span class="sub">Nur Rohrwand — wird Trainingsnegativ</span>
       </button>
       <button class="other" data-decision="mapped_object_visible"
         onclick='saveDecision("mapped_object_visible")'>
-        2 · Trainierte Klasse sichtbar
+        2 · Etwas aus der Liste sichtbar
+        <span class="sub">Auch bei intaktem Anschluss oder Bogen</span>
       </button>
       <button class="exclude" data-decision="exclude_uncertain"
-        onclick='saveDecision("exclude_uncertain")'>3 · Unklar / ausschliessen</button>
+        onclick='saveDecision("exclude_uncertain")'>
+        3 · Unklar — ausschliessen
+        <span class="sub">Unscharf, zu dunkel, nicht beurteilbar</span>
+      </button>
       <div class="navigation">
-        <button onclick="move(-1)">← Vorheriges</button>
-        <button onclick="move(1)">Nächstes →</button>
+        <button onclick="move(-1)">← Zurück</button>
+        <button onclick="move(1)">Weiter →</button>
       </div>
       <div id="status"></div>
-      <p class="muted">Tasten: 1 / 2 / 3, Pfeil links / rechts</p>
+      <textarea id="comment" maxlength="2000"
+        placeholder="Kommentar (optional)"></textarea>
+      <p class="muted" style="margin-bottom:0">Bild-ID</p>
+      <div id="caseId" class="muted" style="font-size:0.8rem">–</div>
     </aside>
   </section>
 </main>

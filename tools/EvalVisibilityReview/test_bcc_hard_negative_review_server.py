@@ -93,6 +93,18 @@ class BccHardNegativeReviewStoreTests(unittest.TestCase):
 
     def test_pruefoberflaeche_erklaert_alle_klassen_und_zeigt_keine_signale(self) -> None:
         self.assertIn("15 trainierten Klassen", HARD_NEGATIVE_INDEX_HTML)
+        # Die Oberflaeche muss jede der 15 Klassen einzeln benennen, sonst kann
+        # der Pruefer nicht wissen, wogegen er entscheidet.
+        for code in (
+            "BAA", "BAB", "BAC", "BAF", "BAH", "BAI", "BAJ",
+            "BBA", "BBB", "BBC", "BBD", "BBF", "BCA", "BCC", "SONST",
+        ):
+            with self.subTest(klasse=code):
+                self.assertIn(f"<b>{code}</b>", HARD_NEGATIVE_INDEX_HTML)
+        # Anschluss und Bogen zaehlen auch ohne Schaden — das ist die haeufigste
+        # Fehlerquelle und muss ausdruecklich dastehen.
+        self.assertIn("auch wenn intakt", HARD_NEGATIVE_INDEX_HTML)
+        self.assertIn("auch wenn normal", HARD_NEGATIVE_INDEX_HTML)
         self.assertIn("all_classes_clear", HARD_NEGATIVE_INDEX_HTML)
         self.assertNotIn("max_confidence", HARD_NEGATIVE_INDEX_HTML)
         self.assertNotIn("model_id", HARD_NEGATIVE_INDEX_HTML)

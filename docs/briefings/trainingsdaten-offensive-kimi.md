@@ -88,12 +88,16 @@ fast keine Labelzeit.
 ### Bestand B: `D:\Videoprojekte`
 
 - 50 komplette Projekte (WinCan-Exporte, IBAK/KIAS, KINS)
-- **108 XTF-Dateien** (INTERLIS 2.3, Modell `VSA_KEK_2020_LV95`),
-  75 inhaltlich verschieden, alle fehlerfrei lesbar
-- 1291 Schadensbefunde der Detect-Klassen aus 190 Haltungen
-  - 100 % mit Meterstand (`Distanz`)
-  - 93,5 % mit Uhrlage (`SchadenlageAnfang`/`Ende`)
-  - 1290 von 1291 mit echtem Video-Timecode (`Videozaehlerstand`, `HH:MM:SS:FF`)
+- **108 XTF-Dateien**, 75 inhaltlich verschieden, alle fehlerfrei lesbar
+- **Achtung: es gibt ZWEI Modellvarianten.** `VSA_KEK_2020_LV95` (neu) und
+  `VSA_KEK` (älter). Ein Parser, der nur auf das 2020er-Präfix prüft, übersieht
+  rund 86 % der Befunde stillschweigend. Elemente modellunabhängig ansprechen:
+  `<[A-Za-z_0-9.]*KEK\.Kanalschaden`, nicht `<VSA_KEK_2020_LV95.KEK.Kanalschaden`.
+- **19'069 zuordenbare Schadensbefunde aus 1244 verschiedenen Haltungen**
+  (modellunabhängig gemessen, 2026-08-04)
+- Die früher genannten Anteile für Meterstand, Uhrlage und Video-Timecode
+  (100 % / 93,5 % / 99,9 %) wurden nur auf der 2020er-Teilmenge gemessen und
+  gelten für den Gesamtbestand als **ungeprüft**. Vor der Nutzung neu messen.
 - 28 datenführende WinCan-Projektdatenbanken (`*.db3`, SQLite)
 - 2368 Videos, 31'167 Bilder — davon ~13'140 echte Rohrinnenaufnahmen
 - **99,6 % der Bilder sind exakt einem Code zuordenbar** (belegt, nicht geschätzt)
@@ -128,16 +132,47 @@ nur Videos), die 297 `.mdb` (reine Nachschlagelisten ohne Fotoverknüpfung).
 
 ## Erreichbarkeit je Klasse (kombiniert, konservativ)
 
-Erreichbar auf ~100 Haltungen: BCC, BCA, BAJ, BAF, BBC, BAB, BBB, BAH, BAA,
-BAC, BBF, BAI — also **11 bis 12 Klassen**.
+Stand 2026-08-04, nach der modellunabhängigen Neumessung des XTF-Bestands:
 
-Nicht erreichbar:
-- **BBA_wurzeln**: nur 18 Befunde in allen 108 XTF, kombiniert höchstens
-  ~50 Haltungen. Braucht eine andere Quelle oder gezielte Befahrungen.
-- **BBD_boden**: kommt praktisch nicht vor (0 in 1647 PDF-Protokollen,
-  1 im XTF-Bestand), hat auch heute 0 Goldsamples.
+| Klasse | heute im Gold | XTF-Haltungen | PDF-Haltungen (Bestand A) |
+|---|---:|---:|---:|
+| BCC_bogen | 99 | 410 | 398 |
+| BCA_anschluss | 77 | 377 | 323 |
+| BAJ_verbindung | 35 | 356 | 303 |
+| BAF_oberflaeche | 43 | 235 | 279 |
+| BBC_ablagerung | 19 | 170 | 167 |
+| BAA_verformung | 25 | 166 | 119 |
+| BBB_anhaftung | 13 | 160 | 151 |
+| BAB_riss | 41 | 152 | 156 |
+| BBF_infiltration | 16 | 125 | 79 |
+| BAC_bruch | 23 | 114 | 115 |
+| BAH_schadanschluss | 4 | 74 | 122 |
+| BAI_dichtung | 9 | 73 | 63 |
+| BBA_wurzeln | 9 | 29 | 37 |
+| BBD_boden | 0 | 2 | 0 |
 
-→ Plane realistisch mit einem **12-Klassen-Modell**.
+Die beiden Bestände überschneiden sich bei 622 Haltungen — nicht addieren.
+
+**Zwölf Klassen sind damit klar erreichbar**, auch die bisherigen Sorgenkinder
+BAH, BAI, BBF und BBB.
+
+Nicht erreichbar bleibt:
+- **BBD_boden**: 2 Haltungen im XTF, 0 in 1647 PDF-Protokollen, 0 im heutigen
+  Gold. Diese Klasse ist mit dem vorhandenen Material nicht belegbar.
+
+Grenzfall:
+- **BBA_wurzeln**: 29 XTF- und 37 PDF-Haltungen. Bei starker Überschneidung
+  bleiben rund 40–50 — das Ziel 100 ist unsicher, aber die Klasse ist nicht
+  aussichtslos wie zuvor angenommen.
+
+→ Plane mit einem **12- bis 13-Klassen-Modell** ohne BBD.
+
+**Wichtige Einschränkung:** Das sind Haltungen, in denen ein Operateur den Code
+geschrieben hat. Wie viele davon ein brauchbares Foto mitliefern, ist die
+eigentliche Frage. Erste Messung für BAH: 373 Befunde → 243 mit Fotoverweis →
+234 physisch dekodierbar → nach Abzug von Gold, Schutz und Dubletten
+**49 verschiedene Haltungen** mit 70 Kandidatenbildern. Für die anderen Klassen
+steht diese Messung noch aus.
 
 ## HARTE REGELN — nicht verhandelbar
 
