@@ -899,6 +899,7 @@ def train(
     batch: int = 3,
     workers: int = 0,
     cache: str | bool = False,
+    seed: int = 42,
 ) -> Path:
     if base_weights.is_symlink():
         raise ValueError(f"Basisgewicht ist eine Verknuepfung: {base_weights}")
@@ -917,6 +918,8 @@ def train(
         raise ValueError("workers muss zwischen 0 und 32 liegen.")
     if cache not in (False, "ram", "disk"):
         raise ValueError("cache erlaubt nur False, 'ram' oder 'disk'.")
+    if seed < 0:
+        raise ValueError("seed darf nicht negativ sein.")
     normalized_tag = (candidate_tag or "").strip().lower()
     if normalized_tag and not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,31}", normalized_tag):
         raise ValueError("candidate-tag darf nur a-z, 0-9, _ und - enthalten.")
@@ -951,7 +954,7 @@ def train(
             workers=workers,
             patience=patience,
             device=0,
-            seed=42,
+            seed=seed,
             deterministic=True,
             cache=cache,
             close_mosaic=5,
@@ -1004,7 +1007,7 @@ def train(
             "batch": batch,
             "workers": workers,
             "cache": cache,
-            "seed": 42,
+            "seed": seed,
             "deterministic": True,
             "free_vram_mb_at_start": free_vram,
             "results": _json_safe(getattr(result, "results_dict", None)),
@@ -1070,6 +1073,16 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help=(
+            "Trainings-Seed (deterministic=True). Standard 42 bleibt "
+            "unveraendert; andere Werte erzeugen Seed-Serien fuer "
+            "Rauschmessungen."
+        ),
+    )
+    parser.add_argument(
         "--candidate-tag",
         help="Optionaler Zusatz fuer einen getrennten Wiederholungskandidaten.",
     )
@@ -1110,6 +1123,7 @@ def main() -> int:
         batch=arguments.batch,
         workers=arguments.workers,
         cache=False if arguments.cache == "off" else arguments.cache,
+        seed=arguments.seed,
     )
     print(f"Detect-Gold-Kandidat fertig (nicht aktiviert): {candidate}")
     return 0
