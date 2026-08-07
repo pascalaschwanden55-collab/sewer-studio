@@ -391,7 +391,7 @@ def _scan_negative_pool(
             if (
                 not entry.is_dir()
                 or _is_reparse_point(entry)
-                or not re.fullmatch(r"bcc_hn_[0-9a-f]{12}", entry.name)
+                or not re.fullmatch(r"(?:bcc_hn|proto_hn)_[0-9a-f]{12}", entry.name)
             ):
                 raise ValueError(
                     f"Unerwarteter Eintrag im Negativsatz-Ordner: {entry}"
