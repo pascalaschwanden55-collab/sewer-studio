@@ -65,11 +65,14 @@ Drei Beobachtungen dazu:
    codiert hat.** Für einen Vorschlags-Assistenten ist das ambivalent: fachlich
    wertvoll (das Modell findet mehr als das Protokoll), aber ein Vertrauens-
    risiko, wenn es unkommentiert bleibt.
-2. **Zeitlicher Dedup allein reicht nicht.** Die Kamera durchfährt Stellen
-   mehrfach (Erkennen, Zurückfahren, nochmal anfahren). Beispiel 36053-36052:
-   neun Gruppen bei LZ2 6,9–7,4 m sind ein und dieselbe Stelle. Ein
-   meterbasierter Dedup über den OSD-Meterstand würde das kollabieren, braucht
-   aber OCR — oder die Positionsquelle aus dem WinCan-Projekt.
+2. **Der zeitliche Dedup dieses Skripts ist ein Artefakt der Messung, nicht des
+   Programms.** Die Kamera durchfährt Stellen mehrfach (Erkennen, Zurückfahren,
+   nochmal anfahren); im Skript zählt jede Passage als eigene Gruppe (neun
+   Gruppen bei LZ2 6,9–7,4 m in 36053-36052 sind ein und dieselbe Stelle). Die
+   produktive Kette hat das längst gelöst: `TemporalFindingDeduplicator` mit
+   `MeterMergeGapMaxMeters = 1,0`, gespeist aus der OSD-Metrierung
+   (`VideoFullAnalysisService.cs:144`). Die hier gemeldeten 8 Gruppen je
+   Haltung lägen im echten Pfad deutlich tiefer.
 3. **Drei Gruppen sind Videobeginn** (Blick vom Schacht ins Rohr) und gratis
    vermeidbar: erste Sekunden bzw. Meter < 0,2 auslassen.
 
@@ -97,14 +100,32 @@ auch feinere Abtastung (2–4 fps) oder ganze Projektbestände zu.
 ## Konsequenz für den Einbau
 
 1. **conf 0,10 bleibt der Video-Arbeitspunkt** (10/10 vs. 8/10 bei 0,25).
-2. **Vertragsbefund:** Der Sidecar-Kandidatenpfad `/detect/yolo/bcc-test`
-   erzwingt die freigegebene 15er-Klassenkarte und filtert fest auf ID 14
-   (`bcc_test_wrapper.py:305`). Der Ein-Klassen-Kandidat (`{0: BCC_bogen}`)
-   passt nicht durch. Der Einbau braucht eine eigene, eng gefasste
-   Vertragserweiterung (Ein-Klassen-Pilot, gleiche Hash-/Manifest-Prüfung).
-   conf wird bereits pro Request übergeben (Default 0,25) — der Arbeitspunkt
-   0,10 ist sauber setzbar.
-3. **Vor der Aktivierung:** Schacht-Trimmung und eine Entscheidung zum
-   Meter-Dedup. Und die Kommunikation an den Operateur: Vorschläge ohne
-   Protokoll-Bezug sind überwiegend echte, uncodierte Bögen — das muss im UI
-   so heissen, sonst wird der Assistent als fehlerhaft wahrgenommen.
+2. **Vertragsbefund und Weg zum Einbau:** Der Sidecar-Kandidatenpfad
+   `/detect/yolo/bcc-test` erzwingt die freigegebene 15er-Klassenkarte und
+   filtert fest auf ID 14 (`bcc_test_wrapper.py:305`). Der gemessene
+   Ein-Klassen-Kandidat (`{0: BCC_bogen}`) passt nicht durch. **Erste Wahl ist
+   ein Neutraining als `nc: 15` mit voller Klassenkarte, aber nur BCC-Boxen**
+   (dieselben Bilder, Labels 0 → 14 gemappt): Der Wächter bleibt unangetastet,
+   der Kandidat erfüllt Manifest-, Hash- und Klassenkarten-Prüfung von
+   allein. Kosten: rund 4 h GPU; das Ergebnis ist ein neues Artefakt und
+   bekommt denselben knappen Nachweis (Schwellenlauf gegen
+   `detect_benchmark_v1`) wie das Ausgangsmodell. Eine Vertragserweiterung des
+   fail-closed Pfads ist zweite Wahl und bleibt zurückgestellt. conf wird pro
+   Request übergeben (Default 0,25) — der Arbeitspunkt 0,10 ist sauber
+   setzbar.
+3. **Vor der Aktivierung:** Schacht-Trimmung (gratis). Meter-Dedup existiert
+   produktiv bereits, siehe Beobachtung 2. Und die Kommunikation an den
+   Operateur: Vorschläge ohne Protokoll-Bezug sind überwiegend echte,
+   uncodierte Bögen — das muss im UI so heissen, sonst wird der Assistent als
+   fehlerhaft wahrgenommen.
+
+## Offene Prüfung — entscheidet über Weiterführung
+
+Die Einstufung der 39 Gruppen als „echte, nur nicht codierte Bögen" stammt
+aus einer KI-Sichtprüfung und ist grosszügig ausgelegt („dunkle Öffnung
+voraus"). **Sie muss von einem Kanalinspekteur bestätigt werden** — die Frames
+liegen unter `C:\KI_BRAIN\training\diagnostics\bcc_video_messung_20260807\
+spotchecks\` (Dateien ohne `_TREFFER`). Bestätigt sich der Befund, beträgt die
+echte Fehlalarmlast 3–4 je Haltung und der Assistent ist brauchbar. Zerfällt
+er, sind es 8 je Haltung, und die Fehlalarme müssen zuerst runter. Bis zu
+dieser Antwort ist das Neutraining vorbereitet, aber nicht gestartet.
