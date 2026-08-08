@@ -143,7 +143,13 @@ def extrahiere_frames(video: Path, ziel: Path) -> list[Path]:
     return sorted(ziel.glob("f*.jpg"))
 
 
-def messe_video(ziel: dict, model, out_dir: Path, temp_root: Path) -> dict:
+def messe_video(
+    ziel: dict,
+    model,
+    out_dir: Path,
+    temp_root: Path,
+    class_id: int | None = None,
+) -> dict:
     from PIL import Image  # lokal, damit --help ohne venv-Deps funktioniert
 
     video = Path(ziel["video"])
@@ -173,7 +179,11 @@ def messe_video(ziel: dict, model, out_dir: Path, temp_root: Path) -> dict:
         sekunde = int(frame.stem[1:]) - 1  # f000001.jpg == Sekunde 0
         with Image.open(frame) as img:
             img.load()
-            results = model.predict(source=img, conf=0.10, imgsz=1280, verbose=False)
+            # Ein Mehrklassenmodell wird auf dieselbe Klasse eingeengt, die der
+            # Sidecar-Vertrag fest durchlaesst (ID 14 BCC_bogen).
+            results = model.predict(
+                source=img, conf=0.10, imgsz=1280, verbose=False,
+                classes=None if class_id is None else [class_id])
         boxes = results[0].boxes if results else None
         if boxes is not None and len(boxes) > 0:
             positive[sekunde] = round(float(max(b.conf[0].cpu().item() for b in boxes)), 4)
@@ -253,6 +263,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path(
         r"C:\KI_BRAIN\training\diagnostics\bcc_video_messung_20260807"))
     parser.add_argument("--max-videos", type=int, default=8)
+    parser.add_argument(
+        "--class-id", type=int, default=None,
+        help="Nur diese Klassen-ID werten (Mehrklassenmodell; Sidecar-Vertrag: 14).")
     args = parser.parse_args(argv)
 
     daten = json.loads(args.messung.read_text(encoding="utf-8"))
@@ -275,7 +288,8 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(dir=args.out, prefix="tmp_") as temp_root:
         for ziel in ziele:
             print(f"\n=== {ziel['haltung']} ===")
-            ergebnis = messe_video(ziel, model, args.out, Path(temp_root))
+            ergebnis = messe_video(
+                ziel, model, args.out, Path(temp_root), args.class_id)
             ergebnisse.append(ergebnis)
             print(f"  dauer={ergebnis['dauer_s']}s frames={ergebnis['frames']} "
                   f"inferenz={ergebnis['inferenz_s']}s ({ergebnis['fps_inferenz']} fps)")
@@ -289,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         "schema_version": "bcc-video-messung-v1",
         "weights": str(args.weights),
         "conf": 0.10,
+        "class_id": args.class_id,
         "imgsz": 1280,
         "sample_fps": SAMPLE_FPS,
         "merge_gap_s": MERGE_GAP_SECONDS,
