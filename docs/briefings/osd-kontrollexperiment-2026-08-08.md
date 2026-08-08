@@ -92,6 +92,12 @@ Zweifelsschwelle, also lief V3 — und V3 fällt **gleich** (−2 bei 0,25,
 unverändert bei 0,10/0,50). Der Dip ist allgemeine Pixelempfindlichkeit,
 kein Lesen. **Das Modell liest den OSD-Text nicht.**
 
+**Geltungsbereich:** gemessen auf Haltungen, die das Modell nie trainiert
+hat. Ob Abkürzungen über den OSD **innerhalb** des Trainingsbestands die
+interne Validation aufblähen, prüft dieser Versuch nicht — dafür bräuchte es
+denselben Lauf auf Trainingsbildern. Für die Massensammlung und alle
+Aussagen über neue Haltungen reicht der Befund.
+
 Konsequenz: keine Maskierung, keine OSD-Augmentation, kein Eingriff in die
 Bilder vor dem Training. Die Frage ist geschlossen; die BAH-Sammlung und alle
 künftigen Trainings laufen auf den Originalbildern.
