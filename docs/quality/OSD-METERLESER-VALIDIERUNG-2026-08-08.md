@@ -16,19 +16,33 @@ Haltung). Hier steht, was die Validierung ergab und was noch aussteht.
   `wahrheit.txt` ausfüllen). **Die KI-Vorprüfung ersetzt das nicht** — sie hat
   nur verhindert, dass ein defekter Leser zur Prüfung geht.
 
-## Ergebnis der KI-Vorprüfung (95 Frames, davon 94 lesbar)
+## Ergebnis — bindend, gegen menschliche Wahrheit (2026-08-08, abgeschlossen)
 
-Zwei getrennte Grössen, nie verrechnet:
+Pascal hat alle 95 Frames abgelesen (94 davon lesbar, 1 unleserlich). Der
+Neulauf des heutigen Lesers (Formvalidator + Sequenzprüfung) dagegen:
 
 | Stil | Richtigkeit | Abdeckung |
 |---|---|---|
-| dunkel-auf-Kasten (dominant) | **67/67** | 91 % |
-| dunkel-auf-Video (Göschenen) | **4/4** | 31 % |
+| dunkel-auf-Kasten (dominant) | **67/67 = 100 %** | 91 % |
+| dunkel-auf-Video (Göschenen) | **4/4 = 100 %** | 31 % |
 | hell-auf-Video | — | 0 % (immer None) |
-| **gesamt** | **71/71** | **75 %** |
+| **gesamt** | **71/71 = 100 %** | **76 %** |
 
-Null falsche Werte. Obere Vertrauensgrenze der Fehlerquote bei 71 Antworten:
-~4 % (Drittelregel) — deshalb bleibt die menschliche Ablesung Pflicht.
+Je Haltung: fünf bei 93–100 % Abdeckung, die zwei Göschenen-Haltungen bei
+17 % (2/12) und 23 % (3/13). **Null falsche Werte.** Die Richtigkeit ist
+kein Thema mehr; offen bleibt nur die Abdeckung auf dem Göschenen-Stil.
+
+Zwei Prüfungen tragen das Ergebnis zusätzlich:
+
+- **Die C#-Portierung der Python-Funktion ist gegen alle 95 Lesungen
+  identisch** — Abweichung null, sobald gegen die aktuelle Funktion
+  verglichen wird.
+- **Lektion zur Datenhaltung:** Eine frühere Meldung „1 Fehler in 72"
+  stammte aus einer gespeicherten Ergebnisdatei, die Spalten aus
+  verschiedenen Läufen mischte (Roh None, Sequenz 3,0 — unmöglich aus einem
+  Lauf). `leser_ergebnisse.json` wird seither nur noch in einem konsistenten
+  Durchgang geschrieben. Gegen veraltete Dateien rechnen erzeugt Fehler,
+  die es im Code nicht gibt.
 
 ## Warum die Richtigkeit hoch ist: der Formvalidator
 
@@ -42,8 +56,8 @@ weg) und kauft Sicherheit: Wo der Leser antwortet, stimmt die Antwort.
 
 ## Offene Punkte für die Integration
 
-1. **Menschliche Ablesung** der 95 Frames (`wahrheit.txt`, Kontaktblätter
-   liegen bereit). Erst danach gelten die Zahlen.
+1. ~~Menschliche Ablesung~~ — **erledigt** (Pascal, 2026-08-08; Zahlen oben
+   sind damit bindend).
 2. **Göschenen-Abdeckung (31 %):** Die Segmentierung liefert fast immer die
    richtigen Zeichen, aber mit Rauschpunkten dazwischen — der Validator lehnt
    dann ab. Ein Format-Lock pro Video („diese Haltung ist Vierziffern-Layout",
