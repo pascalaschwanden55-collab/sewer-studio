@@ -127,10 +127,14 @@ def boxen_aus_maske(maske, stil: str) -> list[tuple[int, int, int, int]]:
     return boxen
 
 
-def parse_meter(roh: str) -> float | None:
-    """Formatwissen nutzen: 'LZ2: 14.1m', 'LZ2: 0.4m', '0.10'. Genau eine
-    Nachkommastelle. Praefix 'LZ2' wird zeichenweise abgelegt (L, dann Z/2,
-    dann ':'); verbleibende Mehrdeutigkeit liefert None statt eines Werts."""
+def parse_meter(roh: str, stil: str = "dunkel") -> float | None:
+    """Formatwissen nutzen: 'LZ2: 14.1m', 'LZ2: 0.4m', '0000.30 m'.
+
+    Fail-closed per Formvalidator: Nach dem Praefix muss der Kern vollstaendig
+    einer der bekannten Formen genuegen — sonst None. Die punktlose Form
+    ('01' -> 0.1) gilt nur im Ein-Dezimalen-Layout (dunkel); im Vierziffern-
+    Layout waere sie eine Ratelei (aus '0000.30' wird sonst '3.0').
+    """
     kern = roh.split("m")[0]
     if kern.startswith("L"):
         kern = kern[1:]
@@ -141,22 +145,18 @@ def parse_meter(roh: str) -> float | None:
     elif ":" in kern:
         kern = kern.split(":", 1)[1]
     kern = kern.strip("LZ: ?.")
-    if not kern:
+    if not kern or any(c.isalpha() for c in kern):
         return None
-    if any(c.isalpha() for c in kern):
-        return None  # Buchstabenrest = fehlklassifizierte Glyphe -> ehrlich None
-    if "." in kern:
-        kopf, _, rest = kern.rpartition(".")
-        dezimal = "".join(c for c in rest if c.isdigit())[:2]
-        ganzzahl = "".join(c for c in kopf if c.isdigit())
-        if not ganzzahl or not dezimal:
-            return None
-        wert = float(f"{int(ganzzahl)}.{dezimal}")
+
+    treffer = re.fullmatch(r"(\d{1,3})[.?](\d)", kern)          # 14.1 / 2?1
+    if treffer is None:
+        treffer = re.fullmatch(r"(\d{4})[.?](\d{1,2})", kern)   # 0007.00
+    if treffer is not None:
+        wert = float(f"{int(treffer.group(1))}.{treffer.group(2)}")
     else:
-        ziffern = "".join(c for c in kern if c.isdigit())
-        if not 2 <= len(ziffern) <= 3:
+        if stil != "dunkel" or re.fullmatch(r"\d{2,3}", kern) is None:
             return None
-        wert = float(f"{ziffern[:-1]}.{ziffern[-1]}")
+        wert = float(f"{kern[:-1]}.{kern[-1]}")
     return wert if 0.0 <= wert <= 400.0 else None
 
 
@@ -219,13 +219,10 @@ def lese_meter(pfad: Path, templates, debug_dir: Path | None = None):
     konfidenzen = []
     for (x0, y0, x1, y1) in boxen:
         glyph = maske[y0:y1, x0:x1].astype("float32")
-        if stil == "dunkel_video":
-            import cv2
-            glyph = cv2.dilate(glyph, np.ones((2, 2), "float32"))
         zeichen, wert = klassifiziere(glyph, templates)
         zeichenfolge += zeichen or "?"
         konfidenzen.append(round(wert, 3))
-    treffer = parse_meter(zeichenfolge)
+    treffer = parse_meter(zeichenfolge, stil)
     meter = treffer
 
     if debug_dir is not None:
