@@ -13,9 +13,20 @@ Von Pascal am 2026-08-08 festgelegt:
 
 | Frage | Entscheidung |
 |---|---|
-| Wo erscheint die Liste? | Eigenes Fenster, vor dem Codieren |
+| Wo erscheint die Liste? | **Im Training Studio**, als eigener Bereich |
 | Wann läuft der Durchgang? | Auf Knopfdruck, ein Video |
-| Was tut ein Klick? | Video springt an die Stelle |
+| Was tut ein Klick? | Zeigt Spitzenbild und kurzen Clip der Stelle |
+
+Das Training Studio ist der richtige Ort: Es kennt die gepinnten Kandidaten
+bereits, prüft ID und Gewicht-Hash und hat den Weg zur KI-Bereitschaft. Das
+Codierfenster bleibt unberührt und unüberladen.
+
+Die Folge davon: Das Training Studio spielt keine Videos, der Klick kann also
+nicht in den Player springen. Er zeigt stattdessen Spitzenbild und Clip — genau
+die Bedienung des Browser-Prüfplatzes, mit der Pascal am 2026-08-08 gearbeitet
+hat. Das vermeidet zugleich eine Verbindung zwischen zwei Fenstern, die im
+Player-Code teuer würde. Ein Sprung lässt sich später nachrüsten; der Weg
+zurück wäre Umbau.
 
 Bewusst **nicht** gewählt: Vorbelegung des Codes im Codierdialog. Bei conf 0,50
 ist jeder zweite schwache Vorschlag falsch; eine Vorbelegung verleitet zum
@@ -57,9 +68,8 @@ Codierweg werden nicht umgebaut.
 |---|---|---|
 | `BendSuggestionScanWorkflow` | Application/UseCases | Busy, Fortschritt, Abbruch, Fehlermeldung. Keine Datei- und keine Modelllogik. |
 | `ICodingSuggestionExposure` / `CodingSuggestionExposure` | Application / Infrastructure | Sitzungsgedächtnis der angesehenen Haltungen |
-| `BendSuggestionListViewModel` | UI | Liste, Auswahl, Sprungbefehl, Zustandstexte |
-| `BendSuggestionListWindow` | UI (XAML) | Fenster mit Videowahl, Startknopf, Liste |
-| Menüpunkt „Bogen-Vorschläge" | UI | Einstieg |
+| `BendSuggestionListViewModel` | UI | Liste, Auswahl, Anzeige von Bild und Clip |
+| Bereich im `TrainingStudioWindow` | UI (XAML) | Videowahl, Startknopf, Liste, Vorschau |
 
 Vorhanden und unverändert genutzt: `IBendSuggestionScanService`,
 `BendSuggestionScanUseCase`, `BendSuggestionAggregator`,
@@ -68,15 +78,15 @@ Vorhanden und unverändert genutzt: `IBendSuggestionScanService`,
 
 ## 4. Ablauf
 
-```
-Fenster öffnen
-  → Video wählen (oder aus der aktuellen Haltung übernehmen)
+```text
+Training Studio öffnen, Bereich "Bogen-Vorschläge"
+  → Video wählen
   → "Durchgang starten"
       → IBendSuggestionScanService.ScanAsync
       → Fortschritt, Abbrechen möglich
   → Liste erscheint; Haltung wird im Sitzungsgedächtnis vermerkt
-  → Klick auf eine Zeile → Player springt an die Stelle
-  → Pascal codiert wie immer selbst
+  → Klick auf eine Zeile → Spitzenbild und kurzer Clip der Stelle
+  → Pascal codiert danach im Player wie immer selbst
 ```
 
 ## 5. Was die Liste zeigt
@@ -111,13 +121,15 @@ die Laufzeit. Ein blinder Fleck darf sich nicht als sauberes Rohr tarnen.
   der Haltungsnummer, Rücksetzung bei Programmstart.
 - `CodingEventToSampleMapper`: Ereignis ohne KI-Kontext in einer angesehenen
   Haltung ergibt `SuggestionShown`; in einer nicht angesehenen `Independent`.
-- ViewModel: Ortstext für gelesenen, geschätzten und fehlenden Meterstand.
+- ViewModel: Ortstext für gelesenen, geschätzten und fehlenden Meterstand;
+  Auswahl einer Zeile zeigt Bild und Clip der richtigen Stelle.
 
 ## 8. Nicht in diesem Schritt
 
 - Stapellauf über ein ganzes Projekt
 - Vorbelegung des Codes
 - Anzeige im Player während des Codierens
+- Sprung des Players an die Stelle (spaeter nachruestbar)
 - Meterstand auf HD-Material
 
 ## 9. Offene Abhängigkeit
