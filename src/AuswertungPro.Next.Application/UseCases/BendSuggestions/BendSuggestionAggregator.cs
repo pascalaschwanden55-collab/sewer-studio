@@ -90,6 +90,16 @@ public sealed record BendSuggestionOptions
     /// <summary>Schachteinfahrt: der Blick ins Rohr sieht aus wie ein Bogen.</summary>
     public double MinMeter { get; init; } = 0.2;
 
+    /// <summary>
+    /// Groesster moeglicher Meterstand dieser Haltung, sofern bekannt. Ein
+    /// gelesener Wert darueber ist eine Fehllesung und wird wie ein fehlender
+    /// behandelt — er ordnet noch ueber die Zeit zu, verschiebt aber keinen Ort.
+    /// Am 2026-08-08 meldete der OSD-Leser 133,08 m in einer Haltung von keinen
+    /// 20 m; die Zahlenform allein reicht als Pruefung nicht. Null = unbekannt,
+    /// dann wird nichts verworfen: Wer die Laenge nicht kennt, darf nicht raten.
+    /// </summary>
+    public double? MaxPlausibleMeter { get; init; }
+
     /// <summary>Schacht-Trimmung ohne Meterstand.</summary>
     public double SkipFirstSeconds { get; init; } = 3.0;
 }
@@ -119,6 +129,7 @@ public static class BendSuggestionAggregator
         var relevant = detections
             .Where(detection => detection is not null)
             .Where(detection => detection.Confidence >= floor)
+            .Select(detection => DropImplausibleMeter(detection, options))
             .Where(detection => !IsShaftEntry(detection, options))
             .OrderBy(detection => detection.TimeSeconds)
             .ToList();
@@ -146,6 +157,25 @@ public static class BendSuggestionAggregator
             .OrderBy(suggestion => suggestion.MeterStart ?? double.MaxValue)
             .ThenBy(suggestion => suggestion.PeakTimeSeconds)
             .ToList();
+    }
+
+    /// <summary>
+    /// Verwirft eine erkennbare Fehllesung, bevor sie irgendetwas beeinflusst.
+    /// Sie gilt danach als unlesbar: Das Bild ordnet noch ueber die Zeit zu,
+    /// verschiebt aber keinen Ort und erscheint nicht in der Meterangabe.
+    /// </summary>
+    private static BendFrameDetection DropImplausibleMeter(
+        BendFrameDetection detection,
+        BendSuggestionOptions options)
+    {
+        if (detection.Meter is not { } meter)
+            return detection;
+
+        var implausible = meter < 0.0
+            || (options.MaxPlausibleMeter is { } max && meter > max);
+        return implausible
+            ? detection with { Meter = null, MeterIsEstimated = false }
+            : detection;
     }
 
     /// <summary>Nur ein gelesener Meterstand ist als Ort belastbar.</summary>

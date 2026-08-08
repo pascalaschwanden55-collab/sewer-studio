@@ -95,6 +95,50 @@ public sealed class BendSuggestionAggregatorTests
     }
 
     [Fact]
+    public void Ein_unmoeglicher_Meterstand_wird_nicht_als_Ort_verwendet()
+    {
+        // Am 2026-08-08 meldete der OSD-Leser 133,08 m in einer Haltung von keinen
+        // 20 m. Die Zahlenform allein reicht als Pruefung nicht — ein falscher
+        // Meterstand ist fuer die Zusammenfassung schlimmer als ein fehlender.
+        var grenzen = GemesseneGrenzen() with { MaxPlausibleMeter = 20.0 };
+
+        var vorschlaege = BendSuggestionAggregator.Aggregate(
+            [
+                new BendFrameDetection(20, 7.0, 0.60),
+                new BendFrameDetection(21, 133.08, 0.65),
+                new BendFrameDetection(22, 7.1, 0.60)
+            ],
+            grenzen);
+
+        // Der unmoegliche Wert ordnet ueber die Zeit zu und verschiebt den Ort nicht.
+        var einziger = Assert.Single(vorschlaege);
+        Assert.Equal(3, einziger.FrameCount);
+        Assert.Equal(7.0, einziger.MeterStart!.Value, 3);
+        Assert.Equal(7.1, einziger.MeterEnd!.Value, 3);
+    }
+
+    [Fact]
+    public void Ein_negativer_Meterstand_gilt_ebenfalls_als_unlesbar()
+    {
+        var grenzen = GemesseneGrenzen() with { MaxPlausibleMeter = 20.0 };
+
+        var vorschlaege = BendSuggestionAggregator.Aggregate(
+            [new BendFrameDetection(20, -3.0, 0.90)], grenzen);
+
+        var einziger = Assert.Single(vorschlaege);
+        Assert.Null(einziger.MeterStart);
+    }
+
+    [Fact]
+    public void Ohne_bekannte_Haltungslaenge_wird_kein_Meterstand_verworfen()
+    {
+        // Die Grenze ist freiwillig: Wer die Laenge nicht kennt, darf nicht raten.
+        var vorschlaege = Aggregiere(new BendFrameDetection(20, 133.08, 0.90));
+
+        Assert.Equal(133.08, Assert.Single(vorschlaege).MeterStart!.Value, 3);
+    }
+
+    [Fact]
     public void Ein_geschaetzter_Meterstand_darf_nicht_wie_ein_gelesener_zaehlen()
     {
         // VideoFullAnalysisService schaetzt den Meter linear aus der Zeit, wenn das
