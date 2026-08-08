@@ -124,10 +124,14 @@ SEITE = """<!doctype html><meta charset="utf-8"><title>Meterstaende ablesen</tit
 <style>
  body{background:#14161a;color:#e8eaed;font-family:Segoe UI,sans-serif;margin:0;padding:16px}
  h1{font-size:18px;margin:0 0 2px} .sub{color:#9aa0a6;font-size:13px;margin-bottom:10px}
- .rahmen{overflow:hidden;border-radius:6px;background:#000;max-height:64vh;cursor:zoom-in}
+ /* Das Bild muss VOLLSTAENDIG sichtbar sein: Der Meterstand steht unten im
+    Bild, ein abgeschnittener Rand macht die ganze Ablesung unmoeglich. */
+ .rahmen{overflow:hidden;border-radius:6px;background:#000;cursor:zoom-in;
+         display:flex;justify-content:center;align-items:center}
  .rahmen.gross{cursor:zoom-out}
- img{display:block;width:100%;transition:transform .12s;transform-origin:var(--ox,50%) var(--oy,50%)}
- .gross img{transform:scale(3.2)}
+ img{display:block;max-width:100%;max-height:70vh;
+     transition:transform .12s;transform-origin:var(--ox,50%) var(--oy,50%)}
+ .gross img{transform:scale(3.6)}
  .zeile{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
  input{background:#20242a;border:1px solid #3a4048;color:#e8eaed;border-radius:5px;
        padding:12px 14px;font-size:22px;width:190px;text-align:center}
