@@ -1,5 +1,24 @@
 # BCC-Einzelklasse, Paket 4: erste Video-Messung — 2026-08-07
 
+> **Zwei Aussagen dieses Berichts sind widerlegt (Stand 2026-08-08).**
+> Die menschliche Blindprüfung aller 64 Meldungen liegt vor
+> (`C:\KI_BRAIN\eval_review\bcc_video_fehlalarm_review.json`):
+>
+> 1. Die KI-Sichtprüfung stufte **39 der 64** Meldungen als echte, nur nicht
+>    codierte Bögen ein. Bestätigt wurden **15**, davon nur 13 aus diesen 39.
+>    Treffgenauigkeit der Sichtprüfung: **33 %**. Sie ist als Beleg ungültig.
+> 2. `conf 0,10` ist **nicht** der richtige Arbeitspunkt. Er war allein aus dem
+>    Recall abgeleitet, weil die Fehlalarmseite nicht gemessen war. Mit den
+>    Urteilen ergibt sich **conf 0,50**: 7 von 10 protokollierten Bögen bei
+>    58,6 % statt 36,8 % Treffgenauigkeit und weniger als einem Drittel der
+>    Fehlalarme (12 statt 43). Quelle: `schwellenkurve.json` im selben
+>    Diagnoseordner.
+>
+> Die Abschnitte „Positive Gruppen und Sichtprüfung" und „Konsequenz für den
+> Einbau, Punkt 1" sind dadurch überholt. Recall-Zahlen, Laufzeit und die
+> Beobachtung zum Meter-Dedup bleiben gültig.
+> Nachfolger: `BCC-ARBEITSPUNKT-2026-08-08.md`.
+
 Der erste Lauf des BCC-Kandidaten über vollständige Inspektionsvideos war als
 Messung deklariert, nicht als Betrieb. Dieser Bericht hält die Zahlen fest.
 
