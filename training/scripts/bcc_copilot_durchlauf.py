@@ -39,6 +39,9 @@ SCHACHT_S = 3.0
 # fertige Stelle — sonst zerlegt ein Konfidenzeinbruch (0,6 - 0,4 - 0,7) eine
 # Stelle in zwei Vorschlaege. Am 2026-08-08 auf zwei Haltungen gemessen.
 BODEN_CONF = 0.10
+# Groesster Abstand zwischen zwei gelesenen Klammerwerten beim Luecken-
+# fuellen. Darueber sind es keine Luecken mehr, sondern Wuesten.
+LUECKE_MAX_S = 10.0
 
 
 def sha256(pfad: Path) -> str:
@@ -117,27 +120,62 @@ def bilder_holen(ffmpeg: Path, video: Path, ziel: Path, fps: float) -> list[tupl
     return bilder
 
 
+def luecken_fuellen(
+    lesungen: list[tuple[float, float | None]],
+) -> list[tuple[float, float | None, bool]]:
+    """Bildet MeterSequenceGapFiller nach.
+
+    Drei harte Klammern: nur zwischen GELESENEN Werten (eine Schaetzung darf nie
+    selbst Klammer sein), nur ueber kurze Luecken, und nie ueber einen
+    Richtungswechsel — faellt der Meterstand zwischen zwei Messungen, ist die
+    Kamera zurueckgefahren und ein Zwischenwert waere falsch.
+    """
+    geordnet = sorted(lesungen, key=lambda p: p[0])
+    ergebnis: list[tuple[float, float | None, bool]] = [(z, m, False) for z, m in geordnet]
+
+    letzte = -1
+    for index, (zeit, meter) in enumerate(geordnet):
+        if meter is None:
+            continue
+        if letzte >= 0 and index - letzte > 1:
+            links_zeit, links_meter = geordnet[letzte]
+            spanne = zeit - links_zeit
+            if 0.0 < spanne <= LUECKE_MAX_S and meter >= links_meter:
+                for zwischen in range(letzte + 1, index):
+                    anteil = (geordnet[zwischen][0] - links_zeit) / spanne
+                    wert = links_meter + (meter - links_meter) * anteil
+                    ergebnis[zwischen] = (geordnet[zwischen][0], wert, True)
+        letzte = index
+
+    return ergebnis
+
+
 def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[dict]:
     """Bildet BendSuggestionAggregator nach: Meter entscheidet, Zeit ordnet zu."""
     boden = min(BODEN_CONF, minimum)
     relevant = [t for t in treffer if t["conf"] >= boden]
+    # Nur ein GELESENER Meterstand ist als Ort belastbar.
+    for t in relevant:
+        t["ort_meter"] = None if t.get("geschaetzt") else t["meter"]
     # Schacht-Trimmung: mit Meterstand entscheidet der Meter, sonst die Anfangszeit.
     relevant = [
         t for t in relevant
-        if (t["meter"] >= MIN_METER if t["meter"] is not None else t["zeit"] >= SCHACHT_S)
+        if (t["ort_meter"] >= MIN_METER if t["ort_meter"] is not None else t["zeit"] >= SCHACHT_S)
     ]
     relevant.sort(key=lambda t: t["zeit"])
 
     gruppen: list[dict] = []
     for t in relevant:
         ziel = None
-        if t["meter"] is not None:
-            passend = [(g, abstand(g["meter_min"], g["meter_max"], t["meter"]))
+        if t["ort_meter"] is not None:
+            passend = [(g, abstand(g["meter_min"], g["meter_max"], t["ort_meter"]))
                        for g in gruppen if g["meter_min"] is not None]
             passend = [(g, d) for g, d in passend if d <= METER_LUECKE_M]
             if passend:
                 ziel = min(passend, key=lambda p: p[1])[0]
         else:
+            # Ohne belastbaren Meter kommt JEDE Gruppe in Frage, auch eine ueber
+            # Meter gebildete — eine Luecke darf eine Stelle nicht aufspalten.
             passend = [(g, abstand(g["zeit_min"], g["zeit_max"], t["zeit"])) for g in gruppen]
             passend = [(g, d) for g, d in passend if d <= ZEIT_LUECKE_S]
             if passend:
@@ -145,15 +183,18 @@ def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[di
 
         if ziel is None:
             gruppen.append({
-                "meter_min": t["meter"], "meter_max": t["meter"],
+                "meter_min": t["ort_meter"], "meter_max": t["ort_meter"],
+                "meter_geschaetzt": bool(t.get("geschaetzt")),
                 "zeit_min": t["zeit"], "zeit_max": t["zeit"],
                 "peak_zeit": t["zeit"], "max_conf": t["conf"], "bilder": 1,
             })
             continue
 
-        if t["meter"] is not None:
-            ziel["meter_min"] = t["meter"] if ziel["meter_min"] is None else min(ziel["meter_min"], t["meter"])
-            ziel["meter_max"] = t["meter"] if ziel["meter_max"] is None else max(ziel["meter_max"], t["meter"])
+        if t["ort_meter"] is not None:
+            ziel["meter_min"] = t["ort_meter"] if ziel["meter_min"] is None else min(ziel["meter_min"], t["ort_meter"])
+            ziel["meter_max"] = t["ort_meter"] if ziel["meter_max"] is None else max(ziel["meter_max"], t["ort_meter"])
+        elif t.get("geschaetzt"):
+            ziel["meter_geschaetzt"] = True
         ziel["zeit_min"] = min(ziel["zeit_min"], t["zeit"])
         ziel["zeit_max"] = max(ziel["zeit_max"], t["zeit"])
         if t["conf"] > ziel["max_conf"]:
@@ -216,7 +257,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     import time
     from ultralytics import YOLO
-    from osd_meter_leser import lese_meter, rendere_templates
+    from osd_meter_leser import lese_meter, plausibilisiere_sequenz, rendere_templates
 
     gestartet = time.perf_counter()
     bilder = bilder_holen(ffmpeg, args.video, lauf / "frames", args.fps)
@@ -224,23 +265,33 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     modell = YOLO(str(punkt["gewicht"]))
     templates = rendere_templates()
-    treffer: list[dict] = []
-    gelesen = 0
-    for nummer, zeit, pfad in bilder:
+    roh_meter: list[tuple[float, float | None]] = []
+    conf_je_zeit: dict[float, float] = {}
+    for _nummer, zeit, pfad in bilder:
         ergebnis = modell.predict(source=str(pfad), conf=min(BODEN_CONF, punkt["min"]), imgsz=1280,
                                   classes=[14], device=0, verbose=False)[0]
-        meter = lese_meter(pfad, templates)["meter"]
-        if meter is not None:
-            gelesen += 1
-        if ergebnis.boxes is None or len(ergebnis.boxes) == 0:
-            continue
-        treffer.append({"zeit": zeit, "meter": meter,
-                        "conf": float(max(b.conf[0].item() for b in ergebnis.boxes))})
+        roh_meter.append((zeit, lese_meter(pfad, templates)["meter"]))
+        if ergebnis.boxes is not None and len(ergebnis.boxes) > 0:
+            conf_je_zeit[zeit] = float(max(b.conf[0].item() for b in ergebnis.boxes))
+
+    # Erst die Sequenz plausibilisieren (unmoegliche Werte raus), dann kurze
+    # Luecken fuellen. Gefuellte Werte ordnen zu, setzen aber keinen Ort.
+    geprueft = plausibilisiere_sequenz(roh_meter)
+    gelesen = sum(1 for _, m in geprueft if m is not None)
+    gefuellt_meter = luecken_fuellen(geprueft)
+
+    treffer = [
+        {"zeit": zeit, "meter": meter, "geschaetzt": geschaetzt, "conf": conf_je_zeit[zeit]}
+        for zeit, meter, geschaetzt in gefuellt_meter
+        if zeit in conf_je_zeit
+    ]
 
     stellen = zusammenfassen(treffer, punkt["min"], punkt["stark"])
     dauer = time.perf_counter() - gestartet
     abdeckung = gelesen / max(1, len(bilder))
-    print(f"Meterstand gelesen auf {gelesen}/{len(bilder)} Bildern ({abdeckung:.0%})")
+    ergaenzt = sum(1 for _, m, g in gefuellt_meter if g and m is not None)
+    print(f"Meterstand gelesen auf {gelesen}/{len(bilder)} Bildern ({abdeckung:.0%})"
+          + (f", {ergaenzt} kurze Luecken gefuellt" if ergaenzt else ""))
     print(f"{len(stellen)} Vorschlaege in {dauer:.0f} s")
 
     for index, stelle in enumerate(stellen, start=1):
