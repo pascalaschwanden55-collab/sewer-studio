@@ -318,4 +318,55 @@ public sealed class CodingEventToSampleMapperTests
 
         Assert.Equal("H1|BCA|12.3|12.3", s.Signature);
     }
+
+    [Fact]
+    public void Ohne_KiKontext_gilt_das_Sample_als_unabhaengig_codiert()
+    {
+        // Nur solche Samples duerfen spaeter ein Modell messen.
+        var ev = new CodingEvent
+        {
+            Entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry { Code = "BAJC" },
+            MeterAtCapture = 3.0,
+            AiContext = null
+        };
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null, null);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.Independent,
+            s.SuggestionProvenance?.Origin);
+        Assert.True(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(s));
+    }
+
+    [Fact]
+    public void Mit_KiKontext_wird_der_sichtbare_Vorschlag_festgehalten()
+    {
+        var ev = BuildEvent(CodingUserDecision.Accepted);
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null, null);
+
+        var herkunft = s.SuggestionProvenance;
+        Assert.Equal(TrainingSampleSuggestionOrigin.SuggestionShown, herkunft?.Origin);
+        Assert.Equal("BCA", herkunft?.SuggestedCode);
+        Assert.Equal(0.8, herkunft?.SuggestedConfidence);
+        Assert.False(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(s));
+    }
+
+    [Fact]
+    public void Das_vorschlagende_Modell_wird_mitgeschrieben()
+    {
+        // Ohne Modellbindung laesst sich spaeter nicht sagen, welches Modell
+        // welche Daten beeinflusst hat.
+        var ev = BuildEvent(CodingUserDecision.Accepted);
+        ev.AiContext!.SuggestedByModelId = "bcc_nc15_seed44_20260808";
+        ev.AiContext!.SuggestedByModelSha256 = new string('a', 64);
+
+        var s = CodingEventToSampleMapper.FromCodingEvent(ev, "H1", null, null);
+
+        Assert.Equal("bcc_nc15_seed44_20260808", s.SuggestionProvenance?.ModelId);
+        Assert.Equal(new string('a', 64), s.SuggestionProvenance?.ModelSha256);
+        Assert.Contains(
+            "bcc_nc15_seed44_20260808",
+            SuggestionProvenancePolicy.DescribeMeasurementBias(s));
+    }
 }

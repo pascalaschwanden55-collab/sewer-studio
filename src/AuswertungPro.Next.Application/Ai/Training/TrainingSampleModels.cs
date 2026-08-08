@@ -57,6 +57,39 @@ public static class SourceTypeNames
     public const string ImportedProtocol = "ImportedProtocol";
 }
 
+/// <summary>
+/// Woher die menschliche Entscheidung stammt: mit oder ohne sichtbaren
+/// Modellvorschlag. <see cref="Unknown"/> ist der Standard und gilt fuer den
+/// gesamten Altbestand — unbekannt zaehlt bewusst nicht als unabhaengig.
+/// </summary>
+public enum TrainingSampleSuggestionOrigin
+{
+    Unknown = 0,
+    Independent = 1,
+    SuggestionShown = 2
+}
+
+/// <summary>
+/// Haelt fest, ob dem Menschen beim Codieren ein Modellvorschlag sichtbar war
+/// und von welchem Modell er stammte. Ein Copilot verzerrt die Daten, die er
+/// selbst erzeugt; ohne diese Angabe laesst sich spaeter nicht mehr trennen,
+/// was der Mensch selbst gefunden und was er nur bestaetigt hat.
+/// </summary>
+public sealed class TrainingSampleSuggestionProvenance
+{
+    public TrainingSampleSuggestionOrigin Origin { get; set; }
+
+    /// <summary>ID des gepinnten Kandidaten, der den Vorschlag erzeugt hat.</summary>
+    public string? ModelId { get; set; }
+
+    /// <summary>SHA-256 des Gewichts — bindet den Vorschlag an genau ein Artefakt.</summary>
+    public string? ModelSha256 { get; set; }
+
+    public string? SuggestedCode { get; set; }
+
+    public double? SuggestedConfidence { get; set; }
+}
+
 public sealed class TrainingSample
 {
     public string SampleId { get; set; } = string.Empty;
@@ -92,6 +125,13 @@ public sealed class TrainingSample
 
     /// <summary>Herkunft des Samples, siehe SourceTypeNames.</summary>
     public string? SourceType { get; set; }
+
+    /// <summary>
+    /// War beim Codieren ein Modellvorschlag sichtbar? Fehlt das Feld, gilt die
+    /// Herkunft als unbekannt und das Sample taugt nicht zum Messen.
+    /// Siehe <see cref="SuggestionProvenancePolicy"/>.
+    /// </summary>
+    public TrainingSampleSuggestionProvenance? SuggestionProvenance { get; set; }
 
     /// <summary>
     /// Urspruenglicher Code einer externen, bereits codierten Referenz.

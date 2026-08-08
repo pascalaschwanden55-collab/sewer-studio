@@ -75,6 +75,9 @@ public static class CodingEventToSampleMapper
             EvidenceFramePath = evidenceFramePath,
             Status = status,
             SourceType = sourceType,
+            // War beim Codieren ein Modellvorschlag sichtbar? Nur ohne Vorschlag
+            // entstandene Samples duerfen spaeter ein Modell messen.
+            SuggestionProvenance = BuildSuggestionProvenance(ev),
             KiCode = isAiSuggestion ? ev.AiContext!.SuggestedCode : null,
             MatchLevel = isPersonalAcceptance
                 ? decision == CodingUserDecision.AcceptedWithEdit
@@ -206,6 +209,31 @@ public static class CodingEventToSampleMapper
         return bboxCenter
             ? (isX ? minX + width / 2.0 : minY + height / 2.0)
             : (isX ? width : height);
+    }
+
+    /// <summary>
+    /// Der KI-Kontext ist der Beleg dafuer, dass ein Vorschlag sichtbar war;
+    /// fehlt er, hat der Mensch ohne Modellhilfe entschieden.
+    /// </summary>
+    private static TrainingSampleSuggestionProvenance BuildSuggestionProvenance(CodingEvent ev)
+    {
+        var ai = ev.AiContext;
+        if (ai is null)
+        {
+            return new TrainingSampleSuggestionProvenance
+            {
+                Origin = TrainingSampleSuggestionOrigin.Independent
+            };
+        }
+
+        return new TrainingSampleSuggestionProvenance
+        {
+            Origin = TrainingSampleSuggestionOrigin.SuggestionShown,
+            ModelId = ai.SuggestedByModelId,
+            ModelSha256 = ai.SuggestedByModelSha256,
+            SuggestedCode = ai.SuggestedCode,
+            SuggestedConfidence = ai.Confidence
+        };
     }
 
     private static string DetermineMatchLevel(CodingEventAiContext ai)

@@ -331,6 +331,87 @@ public sealed class TrainingSamplesStorePersistenceTests
     }
 
     [Fact]
+    public async Task Die_Herkunft_eines_Vorschlags_ueberlebt_das_Speichern_und_Laden()
+    {
+        // Ein Feld, das beim Schreiben verloren geht, taeuscht Nachvollziehbarkeit
+        // vor: Die Herkunft laesst sich nachtraeglich nicht rekonstruieren.
+        await WithTempStore(async _ =>
+        {
+            var beeinflusst = Sample("mit-vorschlag", "sig-1");
+            beeinflusst.Code = "BAJC";
+            beeinflusst.SuggestionProvenance = new TrainingSampleSuggestionProvenance
+            {
+                Origin = TrainingSampleSuggestionOrigin.SuggestionShown,
+                ModelId = "bcc_nc15_seed44_20260808",
+                ModelSha256 = new string('a', 64),
+                SuggestedCode = "BCCYB",
+                SuggestedConfidence = 0.57
+            };
+
+            var eigen = Sample("ohne-vorschlag", "sig-2");
+            eigen.SuggestionProvenance = new TrainingSampleSuggestionProvenance
+            {
+                Origin = TrainingSampleSuggestionOrigin.Independent
+            };
+
+            await TrainingSamplesStore.SaveAsync([beeinflusst, eigen]);
+            var geladen = await TrainingSamplesStore.LoadAsync();
+
+            var wieder = Assert.Single(geladen, s => s.SampleId == "mit-vorschlag");
+            Assert.Equal(
+                TrainingSampleSuggestionOrigin.SuggestionShown,
+                wieder.SuggestionProvenance?.Origin);
+            Assert.Equal("bcc_nc15_seed44_20260808", wieder.SuggestionProvenance?.ModelId);
+            Assert.Equal("BCCYB", wieder.SuggestionProvenance?.SuggestedCode);
+            Assert.Equal(0.57, wieder.SuggestionProvenance?.SuggestedConfidence);
+            Assert.False(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(wieder));
+            // Abweichender Code gegenueber dem Vorschlag: das ist eine Korrektur.
+            Assert.True(SuggestionProvenancePolicy.CarriesNewInformation(wieder));
+
+            var selbst = Assert.Single(geladen, s => s.SampleId == "ohne-vorschlag");
+            Assert.True(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(selbst));
+        });
+    }
+
+    [Fact]
+    public async Task Eine_echte_Altdatei_ohne_Herkunftsfeld_laedt_und_gilt_als_unbekannt()
+    {
+        // Der gesamte bestehende Goldbestand wurde ohne dieses Feld geschrieben.
+        // Er muss weiter laden — und darf dabei nie stillschweigend als
+        // unabhaengig codiert gelten, sonst waere jede Messung wertlos.
+        await WithTempStore(async path =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(
+                path,
+                """
+                [
+                  {
+                    "SampleId": "alt",
+                    "CaseId": "H-ALT",
+                    "Code": "BAB",
+                    "Beschreibung": "Riss laengs",
+                    "MeterStart": 1.0,
+                    "MeterEnd": 1.0,
+                    "Signature": "sig-alt",
+                    "Status": 1
+                  }
+                ]
+                """);
+
+            var geladen = Assert.Single(await TrainingSamplesStore.LoadAsync());
+
+            Assert.Equal("alt", geladen.SampleId);
+            Assert.Null(geladen.SuggestionProvenance);
+            Assert.Equal(
+                TrainingSampleSuggestionOrigin.Unknown,
+                SuggestionProvenancePolicy.ResolveOrigin(geladen));
+            Assert.False(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(geladen));
+            Assert.False(SuggestionProvenancePolicy.CarriesNewInformation(geladen));
+        });
+    }
+
+    [Fact]
     public async Task Ersetzung_wiederholt_sich_wenn_ein_Leser_die_Zieldatei_kurz_haelt()
     {
         // Windows verweigert eine atomare Ersetzung, solange ein anderer Leser die

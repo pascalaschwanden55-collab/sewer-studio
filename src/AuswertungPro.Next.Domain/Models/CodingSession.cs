@@ -147,6 +147,16 @@ public sealed class CodingEventAiContext
 {
     public string? SuggestedCode { get; set; }
     public double Confidence { get; set; }
+
+    /// <summary>
+    /// Gepinnte Kennung des Modells, das diesen Vorschlag erzeugt hat. Ohne sie
+    /// laesst sich spaeter nicht sagen, welches Modell welche Daten beeinflusst
+    /// hat. Null = unbekannt (Altbestand).
+    /// </summary>
+    public string? SuggestedByModelId { get; set; }
+
+    /// <summary>SHA-256 des vorschlagenden Gewichts, bindet an genau ein Artefakt.</summary>
+    public string? SuggestedByModelSha256 { get; set; }
     public string? Reason { get; set; }
     public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
 
