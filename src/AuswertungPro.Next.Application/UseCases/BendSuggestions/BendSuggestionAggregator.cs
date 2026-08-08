@@ -43,17 +43,29 @@ public sealed record BendSuggestion(
     bool MeterIsEstimated = false);
 
 /// <summary>
-/// Regeln der Zusammenfassung. Die Vorgaben sind gemessen, nicht geschaetzt:
-/// Arbeitspunkt und Meterabstand stammen aus der Videomessung vom 2026-08-07
-/// und der menschlichen Blindpruefung aller 64 Meldungen.
+/// Regeln der Zusammenfassung.
+///
+/// Die beiden Konfidenzgrenzen haben BEWUSST keinen Standardwert: Sie gehoeren zum
+/// einzelnen Gewicht, nicht zum Verfahren. Gemessen am 2026-08-08 auf denselben
+/// Videos, drei Modelle aus identischen Daten und Einstellungen, nur der
+/// Zufallsstartwert unterschiedlich — bei conf 0,50 fand Seed 44 sieben von zehn
+/// Boegen, Seed 46 ebenfalls sieben, Seed 45 nur zwei. Seine Konfidenzen liegen
+/// systematisch tiefer; bei 0,25 verhaelt er sich wie die anderen bei 0,50.
+///
+/// Ein fest verdrahteter Wert wuerde beim naechsten Modellwechsel still auf ein
+/// Drittel der Treffer fallen, ohne dass jemand etwas aendert. Der Arbeitspunkt
+/// muss deshalb je Kandidat kalibriert und mitgeliefert werden.
+///
+/// Die uebrigen Werte sind Eigenschaften des Verfahrens, nicht des Modells, und
+/// behalten ihre Vorgabe.
 /// </summary>
 public sealed record BendSuggestionOptions
 {
-    /// <summary>Arbeitspunkt: halbe Fehlalarmlast bei gleichem Recall wie 0,25.</summary>
-    public double MinConfidence { get; init; } = 0.50;
+    /// <summary>Kalibrierter Arbeitspunkt DIESES Gewichts.</summary>
+    public required double MinConfidence { get; init; }
 
-    /// <summary>Oberhalb dieser Grenze gab es in der Messung keinen Fehlalarm.</summary>
-    public double StrongConfidence { get; init; } = 0.70;
+    /// <summary>Grenze, ab der ein Vorschlag als stark gilt — ebenfalls je Gewicht.</summary>
+    public required double StrongConfidence { get; init; }
 
     /// <summary>Wie der produktive TemporalFindingDeduplicator: 1,0 m.</summary>
     public double MeterMergeGapMaxMeters { get; init; } = 1.0;

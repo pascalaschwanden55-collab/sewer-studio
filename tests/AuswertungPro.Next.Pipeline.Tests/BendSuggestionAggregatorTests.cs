@@ -170,7 +170,7 @@ public sealed class BendSuggestionAggregatorTests
     [Fact]
     public void Ohne_Treffer_entsteht_kein_Vorschlag()
     {
-        Assert.Empty(BendSuggestionAggregator.Aggregate(null, new BendSuggestionOptions()));
+        Assert.Empty(BendSuggestionAggregator.Aggregate(null, GemesseneGrenzen()));
         Assert.Empty(Aggregiere());
     }
 
@@ -185,6 +185,30 @@ public sealed class BendSuggestionAggregatorTests
         Assert.Equal(12.0, vorschlaege[1].MeterStart!.Value, 3);
     }
 
+    [Fact]
+    public void Der_Arbeitspunkt_gehoert_zum_Gewicht_und_hat_keinen_Standardwert()
+    {
+        // Gemessen am 2026-08-08: drei Modelle aus identischen Daten, nur der
+        // Zufallsstartwert unterschiedlich. Bei conf 0,50 fanden Seed 44 und 46 je
+        // sieben von zehn Boegen, Seed 45 nur zwei — seine Konfidenzen liegen
+        // systematisch tiefer. Ein fest verdrahteter Wert wuerde beim naechsten
+        // Modellwechsel still einbrechen. Dieser Test haelt fest, dass die Grenzen
+        // angegeben werden MUESSEN; ohne sie kompiliert kein Aufrufer.
+        var typ = typeof(BendSuggestionOptions);
+        foreach (var name in new[] { nameof(BendSuggestionOptions.MinConfidence), nameof(BendSuggestionOptions.StrongConfidence) })
+        {
+            var eigenschaft = typ.GetProperty(name);
+            Assert.NotNull(eigenschaft);
+            Assert.Contains(
+                eigenschaft!.GetCustomAttributes(inherit: false),
+                attribut => attribut.GetType().Name == "RequiredMemberAttribute");
+        }
+    }
+
+    /// <summary>Der kalibrierte Arbeitspunkt des gemessenen Kandidaten.</summary>
+    private static BendSuggestionOptions GemesseneGrenzen() =>
+        new() { MinConfidence = 0.50, StrongConfidence = 0.70 };
+
     private static IReadOnlyList<BendSuggestion> Aggregiere(params BendFrameDetection[] treffer)
-        => BendSuggestionAggregator.Aggregate(treffer, new BendSuggestionOptions());
+        => BendSuggestionAggregator.Aggregate(treffer, GemesseneGrenzen());
 }
