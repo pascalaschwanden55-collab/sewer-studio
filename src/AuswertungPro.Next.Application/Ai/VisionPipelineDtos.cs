@@ -89,7 +89,8 @@ public sealed record BccTestYoloRequest(
     [property: JsonPropertyName("image_base64")] string ImageBase64,
     [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold,
     [property: JsonPropertyName("candidate_id")] string CandidateId,
-    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
+    [property: JsonPropertyName("meter_format")] string? MeterFormat = null
 );
 
 public sealed record YoloDetectionDto(
@@ -135,7 +136,8 @@ public sealed record BccTestYoloResponse(
     [property: JsonPropertyName("model_name")] string ModelName,
     [property: JsonPropertyName("device")] string Device,
     [property: JsonPropertyName("frame_usable")] bool FrameUsable = true,
-    [property: JsonPropertyName("quality_reason")] string? QualityReason = null
+    [property: JsonPropertyName("quality_reason")] string? QualityReason = null,
+    [property: JsonPropertyName("meter_value")] double? MeterValue = null
 );
 
 /// <summary>Pfadfreie Metadaten eines manifest- und hashgeprueften BCC-Testkandidaten.</summary>

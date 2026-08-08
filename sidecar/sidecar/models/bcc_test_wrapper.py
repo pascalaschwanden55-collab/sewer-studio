@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -23,10 +24,13 @@ from pathlib import Path
 
 import numpy as np
 
+from .. import osd_meter
 from ..config import settings
 from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
 from ..schemas.detection import BccTestYoloResponse, YoloDetection
 from . import yolo_wrapper
+
+logger = logging.getLogger(__name__)
 
 
 class BccTestCandidateError(RuntimeError):
@@ -378,15 +382,33 @@ def _extract_bcc_detections(results: object) -> list[YoloDetection]:
     return detections
 
 
+def _lese_meter_sicher(image, meter_format: str | None) -> float | None:
+    """Rohe OSD-Meterlesung desselben Bildes.
+
+    Rein lesend und zustandslos pro Bild; die Sequenz-Plausibilitaet gehoert
+    dem Aufrufer (Thin-AI: C# entscheidet). Ein Lesefehler darf die Erkennung
+    nie gefaehrden — der Wert ist dann eben nicht lesbar (None).
+    """
+
+    try:
+        return osd_meter.lese_meter(
+            image, osd_meter.get_templates(), format=meter_format)["meter"]
+    except Exception:
+        logger.warning("OSD-Meterlesung fehlgeschlagen", exc_info=True)
+        return None
+
+
 def detect(
     image_base64: str,
     confidence_threshold: float,
     candidate_id: str | None = None,
     candidate_sha256: str | None = None,
+    meter_format: str | None = None,
 ) -> BccTestYoloResponse:
     """Fuehrt nur auf ausdruecklichen Aufruf eine BCC-Kandidaten-Erkennung aus."""
 
     image = yolo_wrapper.decode_image(image_base64)
+    meter_value = _lese_meter_sicher(image, meter_format)
     usable, quality_reason = yolo_wrapper._is_frame_usable(image)
     candidate = select_candidate(candidate_id, candidate_sha256)
     device = _resolve_device()
@@ -403,6 +425,7 @@ def detect(
             device=device,
             frame_usable=False,
             quality_reason=quality_reason,
+            meter_value=meter_value,
         )
 
     with _predict_lock:
@@ -439,4 +462,5 @@ def detect(
         candidate_sha256=candidate.weights_sha256,
         model_name=candidate.candidate_id,
         device=device,
+        meter_value=meter_value,
     )

@@ -615,7 +615,15 @@ zuerst die pfadfreie, manifest- und hashgepruefte Liste ueber
 `GET /detect/yolo/bcc-test/candidates` ab. Der Benutzer waehlt im bestehenden
 Modellfeld genau einen Kandidaten. `POST /detect/yolo/bcc-test` erhaelt nur dessen
 ID und erwartete SHA-256, niemals einen Modellpfad. Antwort-ID und -Hash muessen
-exakt zur Auswahl passen; sonst werden alle Boxen verworfen. Der Sidecar akzeptiert
+exakt zur Auswahl passen; sonst werden alle Boxen verworfen. Zusaetzlich liest der
+Endpunkt pro Anfrage den OSD-Meterstand desselben Bildes
+(`sidecar/sidecar/osd_meter.py`, der validierte Ziffernleser; der Prototyp
+`training/scripts/osd_meter_leser.py` delegiert dorthin) und liefert ihn als
+additives `meter_value` (None = nicht lesbar, niemals 0,0). Das optionale
+Request-Feld `meter_format` erzwingt das Zahlenlayout (`ein_dezimal` /
+`vierziffern`, Default auto); die Lesung ist roh und zustandslos —
+Sequenz-Plausibilitaet und Lueckenfuellen bleiben C#-Sache
+(`MeterSequencePlausibility`, `MeterSequenceGapFiller`). Der Sidecar akzeptiert
 nur direkte, unverknuepfte Unterordner mit `not_deployed`, Pilot `BCC_bogen`,
 mindestens 30 Bildern und passender Gewicht-SHA. Die freigegebene
 15er-Klassenkarte wird beim Modellladen fuer alle IDs und Namen exakt geprueft.

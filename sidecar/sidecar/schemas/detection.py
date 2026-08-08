@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -27,6 +29,9 @@ class BccTestYoloRequest(BaseModel):
         default=None,
         pattern=r"^[0-9a-fA-F]{64}$",
     )
+    # Optionaler Format-Lock fuer die OSD-Meterlesung desselben Bildes.
+    # Werte spiegeln sidecar.osd_meter.FORMATE; None = auto (bisheriges Verhalten).
+    meter_format: Literal["auto", "ein_dezimal", "vierziffern"] | None = None
 
     @model_validator(mode="after")
     def validate_candidate_pin(self) -> "BccTestYoloRequest":
@@ -79,6 +84,8 @@ class BccTestYoloResponse(BaseModel):
     device: str = ""
     frame_usable: bool = True
     quality_reason: str | None = None
+    # Rohe OSD-Meterlesung desselben Bildes; None = nicht lesbar, niemals "0,0".
+    meter_value: float | None = None
 
 
 class BccTestCandidateInfo(BaseModel):

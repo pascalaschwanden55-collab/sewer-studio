@@ -78,6 +78,7 @@ def detect_yolo_bcc_test(req: BccTestYoloRequest) -> BccTestYoloResponse:
             confidence_threshold=req.confidence_threshold,
             candidate_id=req.candidate_id,
             candidate_sha256=req.candidate_sha256,
+            meter_format=req.meter_format,
         )
     except bcc_test_wrapper.BccTestCandidateError as exc:
         logger.warning("BCC-Testmodell nicht verfuegbar: %s", exc)

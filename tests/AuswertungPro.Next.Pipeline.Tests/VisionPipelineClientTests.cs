@@ -512,6 +512,42 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task DetectBccTestYoloAsync_maps_meter_value_and_sends_meter_format()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "is_relevant": true,
+            "detections": [],
+            "frame_class": "relevant",
+            "inference_time_ms": 12.5,
+            "candidate_id": "bcc_bogen_b50b37ab8a4f",
+            "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "model_name": "bcc_bogen_b50b37ab8a4f",
+            "device": "cpu",
+            "meter_value": 14.1
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        var response = await client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+            "abc",
+            0.25,
+            "bcc_bogen_b50b37ab8a4f",
+            new string('a', 64),
+            "vierziffern"));
+
+        Assert.True(response.Available);
+        Assert.Equal(14.1, response.MeterValue);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        Assert.Equal("vierziffern", request.RootElement.GetProperty("meter_format").GetString());
+    }
+
+    [Fact]
     public async Task DetectBccTestYoloAsync_rejects_missing_exact_pin_before_post()
     {
         var handler = new CaptureHandler("""{"available":true,"detections":[]}""");

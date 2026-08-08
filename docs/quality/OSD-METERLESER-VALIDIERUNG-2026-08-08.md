@@ -85,3 +85,74 @@ Der Copilot-Lauf lieferte vier Defekte mit Wahrheitswerten. Zwei Lehren daraus:
   den keine Plausibilitätsprüfung mehr fängt. Die Regel wurde nach dem
   Gegenbeweis ausgebaut und kommt nicht wieder. Die Göschenen-Abdeckung
   bleibt ehrlich niedrig, statt falsch hoch.
+
+## Nachtrag 2026-08-08 (abends): Format-Parameter und Sidecar-Feld umgesetzt
+
+- Der Leser hat den Format-Lock: `parse_meter`/`lese_meter` akzeptieren
+  `format=` (`auto` wie bisher, `ein_dezimal`, `vierziffern`; unbekannt ist
+  ein Fehler, kein stiller Rückfall). Die Leser-Logik liegt jetzt in
+  `sidecar/sidecar/osd_meter.py`; dieser Prototyp delegiert dorthin, damit
+  Diagnose und Sidecar eine Quelle teilen. Portierung gegen alle 95
+  Validierungsframes erneut geprüft: **95/95 identisch** (Rohfolge, Wert,
+  Stil).
+- `POST /detect/yolo/bcc-test` liefert die rohe Einzelbild-Lesung als
+  additives `meter_value` (None = nicht lesbar) und akzeptiert
+  `meter_format`. C#-Vertrag: `BccTestYoloRequest.MeterFormat` /
+  `BccTestYoloResponse.MeterValue`.
+- Offen bleibt die Integrationslogik: den Lock pro Video aus erfolgreichen
+  Frames lernen und über `ResolveMeter` in `BendSuggestionScanService`
+  einhängen (C#).
+
+## Nachtrag 2026-08-08 (HD-Material): ein verwechselter Buchstabe, Faktor zehn
+
+Befund auf 1080p-Material (feinere, weichere Striche als SD): Der
+Klassifikator verwechselt das `Z` der `LZ`-Beschriftung mit `1`. Aus
+`LZ 3.2m` wird `L132`, und der Parser las die vermeintliche Eins als erste
+Ziffer: **13,2 statt 3,2**. Alle sieben gemessenen Werte lagen exakt eine
+Zehnerpotenz zu hoch (`L132`→3,2; `L107`→0,7; `L145`→4,5). Die
+Sequenzprüfung fängt das nicht: Die Nachbarn sind gemeinsam verschoben und
+damit untereinander verträglich.
+
+Behoben am Parser (der robuste der zwei diskutierten Wege): Nach einem `L`
+darf nur das `Z` folgen — oder sein bekanntes verlesenes `2`. Jede andere
+Ziffer ist eine Verlesung und wird verworfen (None), statt geraten. Die
+Regel fängt den Fehler auch, wenn die Vorlagen irgendwann wieder kippen.
+Verifikation: 95/95 Validierungsframes weiterhin identisch; die drei
+HD-Rohfolgen sind als Regressionstests verankert.
+
+Folge für den Assistenten: Auf HD-Material liefert der Leser jetzt None —
+der Durchlauf zeigt dort Sekunden statt erfundener Meter. Das ist genau die
+geforderte Regel: Ein Wert, der immer um zehn danebenliegt, ist schlimmer
+als keiner. **Offen:** die HD-Abdeckung selbst heben (Vorlagen für die
+feinere Schriftgrösse am Klassifikator) — bewusst zurückgestellt, weil ohne
+eingefrorenen HD-Prüfbestand nicht verifizierbar.
+
+## Nachtrag 2026-08-08 (spät): Prüfbestände eingefroren, Messung dagegen
+
+Drei getrennte, an Bildbytes und menschliche Ablesung gebundene Bestände —
+Monotonie ohne Umnummerieren: `osd_sd_v1` (95 Bilder, 7 Haltungen),
+`osd_hd_v1` (30 Bilder, 5 Haltungen), `osd_hd2_v1` (72 Bilder, 12 Haltungen).
+Eine Messung läuft über alle drei; `osd_hd_v1` bleibt unangetastet.
+
+Gemessener Stand des Lesers (mit beiden Parser-Regeln) gegen die Wahrheit:
+
+| Bestand | Abdeckung | richtig | falsch |
+|---|---:|---:|---:|
+| osd_sd_v1 | 71/94 = 76 % | 71 | **0** |
+| osd_hd_v1 | 0/29 = 0 % | 0 | **0** |
+| osd_hd2_v1 | 3/71 = 4 % | 2 | **1** |
+
+Die Faktor-zehn-Fehler sind vollständig verschwunden (None statt falsch).
+Der eine Restfehler (`f0046`: 11,7 statt 13,7) ist eine einzelne
+Ziffernverwechslung 3→1 — Sache des Klassifikators oder der Sequenzschicht,
+nicht der Präfixregeln.
+
+Zweite Parser-Regel (Pascal, vier Zeilen): Führende Störzeichen vor der
+Beschriftung werden bis Fenster 4 abgeschnitten (`2L111`, `??L122`,
+`???.L10.1` — der Erkenner setzt auf HD-Schrift gelegentlich Zeichen VOR
+das L; sonst lief die Präfixregel ins Leere). Bewusst nur vorn gesucht:
+Ein L weiter hinten gehört nicht zur Beschriftung.
+
+Damit ist der Weg für HD vorbereitet und messbar: HD-Vorlagen im
+Klassifikator, geprüft gegen `osd_hd_v1` + `osd_hd2_v1`, mit `osd_sd_v1`
+als Sperre gegen Rückschritt (95/95 muss identisch bleiben).

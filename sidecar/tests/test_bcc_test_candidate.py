@@ -461,11 +461,13 @@ def test_bcc_test_route_ist_getrennt_vom_produktiven_yolo(monkeypatch):
         confidence_threshold: float,
         candidate_id: str | None = None,
         candidate_sha256: str | None = None,
+        meter_format: str | None = None,
     ):
         called["image"] = image_base64
         called["threshold"] = confidence_threshold
         called["candidate_id"] = candidate_id
         called["candidate_sha256"] = candidate_sha256
+        called["meter_format"] = meter_format
         return BccTestYoloResponse(
             available=True,
             is_relevant=True,
@@ -485,6 +487,7 @@ def test_bcc_test_route_ist_getrennt_vom_produktiven_yolo(monkeypatch):
             candidate_sha256="a" * 64,
             model_name="bcc_full40",
             device="cuda:0",
+            meter_value=14.1,
         )
 
     monkeypatch.setattr(bcc_test_wrapper, "detect", fake_detect)
@@ -496,6 +499,7 @@ def test_bcc_test_route_ist_getrennt_vom_produktiven_yolo(monkeypatch):
             "confidence_threshold": 0.3,
             "candidate_id": "bcc_bogen_aaaaaaaaaaaa_neu",
             "candidate_sha256": "a" * 64,
+            "meter_format": "vierziffern",
         },
     )
 
@@ -503,11 +507,13 @@ def test_bcc_test_route_ist_getrennt_vom_produktiven_yolo(monkeypatch):
     payload = response.json()
     assert payload["candidate_id"] == "bcc_full40"
     assert payload["detections"][0]["class_name"] == "BCC_bogen"
+    assert payload["meter_value"] == 14.1
     assert called == {
         "image": "abc",
         "threshold": 0.3,
         "candidate_id": "bcc_bogen_aaaaaaaaaaaa_neu",
         "candidate_sha256": "a" * 64,
+        "meter_format": "vierziffern",
     }
 
 
