@@ -52,3 +52,22 @@ weg) und kauft Sicherheit: Wo der Leser antwortet, stimmt die Antwort.
 3. **Verdrahtung (Relay):** gelesene Werte mit `MeterIsEstimated=false`,
    Lückenfüller (Median über ±3 s, nur wo None steht — nie als Glättung) mit
    `true`. Der Aggregator fasst nur über gelesene Meter zusammen.
+
+## Nachtrag: Defektbericht und Sequenz-Plausibilität
+
+Der Copilot-Lauf lieferte vier Defekte mit Wahrheitswerten. Zwei Lehren daraus:
+
+- **133,08 m auf einer < 20-m-Haltung** zeigte die Lücke des Formvalidators:
+  `0133.08` ist formal gültig. Antwort ist `plausibilisiere_sequenz()` im
+  Leser: pro Video wird ein Wert verworfen, wenn er über der robusten
+  Videodecke (max(4×Median, 30 m)) liegt oder mit **allen** zeitnahen
+  Nachbarn unverträglich ist (Sprung > 5 m/s). Verworfen heisst None — wie
+  ein unlesbarer Frame. Die Frame-Ebene bleibt zustandslos; Plausibilität
+  gehört der Sequenz. Die gleiche Prüfung gegen die bekannte Haltungslänge
+  läuft zusätzlich im Verbraucher (dort, wo die Länge bekannt ist).
+- **Ein Rettungsversuch ist am Validator gescheitert — absichtlich.** Eine
+  Sechs-Ziffern-Regel für das Vierziffern-Layout hätte `0.00.300` als
+  `0003.00` gelesen statt `0000.30` → 3,0 statt 0,3: ein falscher Wert,
+  den keine Plausibilitätsprüfung mehr fängt. Die Regel wurde nach dem
+  Gegenbeweis ausgebaut und kommt nicht wieder. Die Göschenen-Abdeckung
+  bleibt ehrlich niedrig, statt falsch hoch.

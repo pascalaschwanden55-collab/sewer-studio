@@ -160,6 +160,42 @@ def parse_meter(roh: str, stil: str = "dunkel") -> float | None:
     return wert if 0.0 <= wert <= 400.0 else None
 
 
+def plausibilisiere_sequenz(
+    lesungen: list[tuple[float, float | None]],
+    max_m_pro_s: float = 5.0,
+    fenster_s: float = 10.0,
+) -> list[tuple[float, float | None]]:
+    """Sequenz-Plausibilitaet pro Video: Ein Wert, der mit keinem Nachbarn in
+    der Zeit vertraeglich ist (Kamera faehrt nicht 130 m in einer Sekunde),
+    oder der ueber der robusten Videoschlange liegt, wird None — genau wie ein
+    unlesbarer Frame. Ein-Frame-Lesung ist zustandslos; die Plausibilitaet
+    gehoert der Sequenz.
+
+    lesungen: [(sekunde, meter|None)] aufsteigend. Rueckgabe: gleiche Form.
+    """
+    punkte = [(s, m) for s, m in lesungen if m is not None]
+    if len(punkte) < 2:
+        return list(lesungen)
+    werte = sorted(m for _, m in punkte)
+    median = werte[len(werte) // 2]
+    decke = max(4.0 * median, 30.0)  # Haltungslaenge bleibt unbekannt — grosszuegig
+
+    def verdaechtig(index: int, sekunde: float, meter: float) -> bool:
+        if meter > decke:
+            return True
+        nachbarn = [
+            (s2, m2) for j, (s2, m2) in enumerate(punkte)
+            if j != index and 0 < abs(sekunde - s2) <= fenster_s]
+        if not nachbarn:
+            return False  # ohne zeitnahen Kontext wird nichts verworfen
+        return all(abs(meter - m2) > max_m_pro_s * abs(sekunde - s2)
+                   for s2, m2 in nachbarn)
+
+    zu_none = {
+        s for i, (s, m) in enumerate(punkte) if m is not None and verdaechtig(i, s, m)}
+    return [(s, None if s in zu_none else m) for s, m in lesungen]
+
+
 def rendere_templates() -> dict[str, list[np.ndarray]]:
     templates: dict[str, list[np.ndarray]] = {}
     for schrift in (r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\arial.ttf"):
