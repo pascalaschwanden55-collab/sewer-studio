@@ -67,7 +67,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--min-breite", type=int, default=1280)
     parser.add_argument("--saat", type=int, default=20260808)
     parser.add_argument("--ffmpeg", type=Path, default=FFMPEG_STANDARD)
+    parser.add_argument(
+        "--ausschliessen", type=Path, default=None,
+        help="Manifest eines bestehenden Bestands; dessen Haltungen werden uebergangen.")
     args = parser.parse_args(argv)
+
+    # Bereits gepruefte Haltungen nicht erneut ziehen: Ein breiterer Bestand ist
+    # mehr wert als ein tieferer auf denselben fuenf Videos.
+    bekannt: set[str] = set()
+    if args.ausschliessen is not None:
+        if not args.ausschliessen.is_file():
+            raise SystemExit(f"Manifest fehlt: {args.ausschliessen}")
+        manifest = json.loads(args.ausschliessen.read_text(encoding="utf-8-sig"))
+        bekannt = {str(e.get("haltung") or "") for e in manifest.get("eintraege") or []}
+        print(f"  {len(bekannt)} bereits gepruefte Haltungen werden uebergangen")
 
     ffmpeg = args.ffmpeg if args.ffmpeg.is_file() else None
     if ffmpeg is None:
@@ -83,6 +96,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     for video in alle:
         if len(gewaehlt) >= args.videos:
             break
+        if video.parent.name in bekannt:
+            continue
         daten = videodaten(ffprobe, video)
         if daten is None:
             continue
