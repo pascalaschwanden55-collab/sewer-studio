@@ -77,7 +77,9 @@ public sealed class BendSuggestionScanUseCaseTests
         var einziger = Assert.Single(ergebnis.Suggestions);
         Assert.Equal(0.85, einziger.MaxConfidence, 3);
         Assert.Equal(BendSuggestionStrength.Strong, einziger.Strength);
-        Assert.Equal(2, einziger.FrameCount);
+        // Auch das schwache erste Bild gehoert zur Stelle: Der Arbeitspunkt gilt
+        // fuer die Stelle als ganze, nicht fuer das einzelne Bild.
+        Assert.Equal(3, einziger.FrameCount);
     }
 
     [Fact]

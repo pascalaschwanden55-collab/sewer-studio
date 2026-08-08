@@ -61,8 +61,22 @@ public sealed record BendSuggestion(
 /// </summary>
 public sealed record BendSuggestionOptions
 {
-    /// <summary>Kalibrierter Arbeitspunkt DIESES Gewichts.</summary>
+    /// <summary>
+    /// Kalibrierter Arbeitspunkt DIESES Gewichts. Er gilt fuer die Stelle als
+    /// ganze, nicht fuer das einzelne Bild — siehe <see cref="FloorConfidence"/>.
+    /// </summary>
     public required double MinConfidence { get; init; }
+
+    /// <summary>
+    /// Aufnahmegrenze fuer das einzelne Bild. Eine Stelle wird ueber mehrere Bilder
+    /// gesehen, und die Konfidenz schwankt dabei; wer vor dem Zusammenfassen am
+    /// Arbeitspunkt filtert, zerlegt eine Stelle mit einem Einbruch (0,6 – 0,4 –
+    /// 0,7) in zwei Vorschlaege. Gemessen am 2026-08-08: auf zwei Haltungen mit
+    /// schlechter Meterlesung stieg die Meldungszahl dadurch statt zu sinken.
+    /// Unterhalb dieser Grenze wird gar nicht gesammelt, damit ein Rauschtreffer
+    /// eine echte Stelle nicht unnoetig in die Laenge zieht.
+    /// </summary>
+    public double FloorConfidence { get; init; } = 0.10;
 
     /// <summary>Grenze, ab der ein Vorschlag als stark gilt — ebenfalls je Gewicht.</summary>
     public required double StrongConfidence { get; init; }
@@ -99,9 +113,12 @@ public static class BendSuggestionAggregator
         if (detections is null)
             return Array.Empty<BendSuggestion>();
 
+        // Am Boden sammeln, nicht am Arbeitspunkt: Der Arbeitspunkt entscheidet
+        // erst ueber die fertige Stelle.
+        var floor = Math.Min(options.FloorConfidence, options.MinConfidence);
         var relevant = detections
             .Where(detection => detection is not null)
-            .Where(detection => detection.Confidence >= options.MinConfidence)
+            .Where(detection => detection.Confidence >= floor)
             .Where(detection => !IsShaftEntry(detection, options))
             .OrderBy(detection => detection.TimeSeconds)
             .ToList();
@@ -124,6 +141,7 @@ public static class BendSuggestionAggregator
         // Nach Meter geordnet, wie der Mensch die Haltung abfaehrt. Vorschlaege ohne
         // Ortsangabe sind am wenigsten verwertbar und stehen deshalb am Ende.
         return groups
+            .Where(group => group.MaxConfidence >= options.MinConfidence)
             .Select(group => group.ToSuggestion(options))
             .OrderBy(suggestion => suggestion.MeterStart ?? double.MaxValue)
             .ThenBy(suggestion => suggestion.PeakTimeSeconds)

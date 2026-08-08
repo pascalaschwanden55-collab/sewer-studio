@@ -35,6 +35,10 @@ METER_LUECKE_M = 1.0
 ZEIT_LUECKE_S = 3.0
 MIN_METER = 0.2
 SCHACHT_S = 3.0
+# Aufnahmegrenze fuer das einzelne Bild. Der Arbeitspunkt gilt erst fuer die
+# fertige Stelle — sonst zerlegt ein Konfidenzeinbruch (0,6 - 0,4 - 0,7) eine
+# Stelle in zwei Vorschlaege. Am 2026-08-08 auf zwei Haltungen gemessen.
+BODEN_CONF = 0.10
 
 
 def sha256(pfad: Path) -> str:
@@ -115,7 +119,8 @@ def bilder_holen(ffmpeg: Path, video: Path, ziel: Path, fps: float) -> list[tupl
 
 def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[dict]:
     """Bildet BendSuggestionAggregator nach: Meter entscheidet, Zeit ordnet zu."""
-    relevant = [t for t in treffer if t["conf"] >= minimum]
+    boden = min(BODEN_CONF, minimum)
+    relevant = [t for t in treffer if t["conf"] >= boden]
     # Schacht-Trimmung: mit Meterstand entscheidet der Meter, sonst die Anfangszeit.
     relevant = [
         t for t in relevant
@@ -156,6 +161,8 @@ def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[di
             ziel["peak_zeit"] = t["zeit"]
         ziel["bilder"] += 1
 
+    # Erst jetzt entscheidet der Arbeitspunkt — ueber die Stelle als ganze.
+    gruppen = [g for g in gruppen if g["max_conf"] >= minimum]
     for g in gruppen:
         g["stufe"] = "stark" if g["max_conf"] >= stark else "schwach"
     gruppen.sort(key=lambda g: (g["meter_min"] if g["meter_min"] is not None else 1e9, g["peak_zeit"]))
@@ -220,7 +227,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     treffer: list[dict] = []
     gelesen = 0
     for nummer, zeit, pfad in bilder:
-        ergebnis = modell.predict(source=str(pfad), conf=punkt["min"], imgsz=1280,
+        ergebnis = modell.predict(source=str(pfad), conf=min(BODEN_CONF, punkt["min"]), imgsz=1280,
                                   classes=[14], device=0, verbose=False)[0]
         meter = lese_meter(pfad, templates)["meter"]
         if meter is not None:
