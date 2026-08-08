@@ -29,7 +29,7 @@ public sealed class BendSuggestionScanUseCaseTests
             calibration: null,
             Aktionen(
                 extract: _ => { extrahiert = true; return Task.FromResult(Bilder(3)); },
-                detect: (_, _) => Task.FromResult<double?>(0.9)),
+                detect: (_, _) => Task.FromResult(BendFrameResult.Detected(0.9))),
             CancellationToken.None);
 
         Assert.False(ergebnis.IsUsable);
@@ -47,7 +47,7 @@ public sealed class BendSuggestionScanUseCaseTests
             Kalibrierung(),
             Aktionen(
                 extract: _ => Task.FromResult(Bilder(4)),
-                detect: (bild, _) => { gefragt.Add(bild.Index); return Task.FromResult<double?>(null); }),
+                detect: (bild, _) => { gefragt.Add(bild.Index); return Task.FromResult(BendFrameResult.NoBend); }),
             CancellationToken.None);
 
         Assert.True(ergebnis.IsUsable);
@@ -65,12 +65,12 @@ public sealed class BendSuggestionScanUseCaseTests
             Aktionen(
                 extract: _ => Task.FromResult(Bilder(4)),
                 // Bild 1 unter dem Arbeitspunkt, Bild 2 und 3 darueber und benachbart.
-                detect: (bild, _) => Task.FromResult<double?>(bild.Index switch
+                detect: (bild, _) => Task.FromResult(bild.Index switch
                 {
-                    1 => 0.30,
-                    2 => 0.55,
-                    3 => 0.85,
-                    _ => null
+                    1 => BendFrameResult.Detected(0.30),
+                    2 => BendFrameResult.Detected(0.55),
+                    3 => BendFrameResult.Detected(0.85),
+                    _ => BendFrameResult.NoBend
                 })),
             CancellationToken.None);
 
@@ -95,7 +95,7 @@ public sealed class BendSuggestionScanUseCaseTests
                     extract: _ => Task.FromResult(Bilder(3)),
                     detect: (bild, _) => bild.Index == 2
                         ? throw new InvalidOperationException("Sidecar nicht erreichbar")
-                        : Task.FromResult<double?>(null)),
+                        : Task.FromResult(BendFrameResult.NoBend)),
                 CancellationToken.None));
     }
 
@@ -109,7 +109,7 @@ public sealed class BendSuggestionScanUseCaseTests
             Kalibrierung(),
             Aktionen(
                 extract: _ => Task.FromResult(Bilder(1)),
-                detect: (_, _) => Task.FromResult<double?>(0.9)),
+                detect: (_, _) => Task.FromResult(BendFrameResult.Detected(0.9))),
             CancellationToken.None);
 
         Assert.Equal(Id, ergebnis.CandidateId);
@@ -134,7 +134,7 @@ public sealed class BendSuggestionScanUseCaseTests
             Kalibrierung(),
             Aktionen(
                 extract: _ => Task.FromResult(Bilder(1)),
-                detect: (_, _) => Task.FromResult<double?>(null)) with { Now = uhr.Dequeue },
+                detect: (_, _) => Task.FromResult(BendFrameResult.NoBend)) with { Now = uhr.Dequeue },
             CancellationToken.None);
 
         Assert.Equal(TimeSpan.FromSeconds(90), ergebnis.Duration);
@@ -152,7 +152,7 @@ public sealed class BendSuggestionScanUseCaseTests
                 Kalibrierung(),
                 Aktionen(
                     extract: _ => Task.FromResult(Bilder(3)),
-                    detect: (_, _) => Task.FromResult<double?>(null)),
+                    detect: (_, _) => Task.FromResult(BendFrameResult.NoBend)),
                 quelle.Token));
     }
 
@@ -168,18 +168,40 @@ public sealed class BendSuggestionScanUseCaseTests
         var ohne = await BendSuggestionScanUseCase.ExecuteAsync(
             Auftrag(), Kalibrierung(),
             Aktionen(_ => Task.FromResult<IReadOnlyList<VideoSequenceFrame>>(frueh),
-                     (_, _) => Task.FromResult<double?>(0.95)),
+                     (_, _) => Task.FromResult(BendFrameResult.Detected(0.95))),
             CancellationToken.None);
         var mit = await BendSuggestionScanUseCase.ExecuteAsync(
             Auftrag(), Kalibrierung(),
             Aktionen(_ => Task.FromResult<IReadOnlyList<VideoSequenceFrame>>(spaet),
-                     (_, _) => Task.FromResult<double?>(0.95)),
+                     (_, _) => Task.FromResult(BendFrameResult.Detected(0.95))),
             CancellationToken.None);
 
         Assert.Empty(ohne.Suggestions);
         Assert.Single(mit.Suggestions);
         // Das Bild wurde trotzdem ausgewertet — verworfen wurde erst der Vorschlag.
         Assert.Equal(1, ohne.FramesAnalyzed);
+    }
+
+    [Fact]
+    public async Task Ein_nicht_ausgewertetes_Bild_gilt_nie_als_kein_Bogen()
+    {
+        // Der Sidecar meldet ueber frame_usable, wenn ein Bild qualitaetsbedingt
+        // nicht bewertet wurde. Das ist ein blinder Fleck, kein Negativbefund —
+        // er wird gezaehlt und ausgewiesen.
+        var ergebnis = await BendSuggestionScanUseCase.ExecuteAsync(
+            Auftrag(),
+            Kalibrierung(),
+            Aktionen(
+                extract: _ => Task.FromResult(Bilder(4)),
+                detect: (bild, _) => Task.FromResult(bild.Index <= 2
+                    ? BendFrameResult.NotAssessed("zu dunkel")
+                    : BendFrameResult.NoBend)),
+            CancellationToken.None);
+
+        Assert.True(ergebnis.IsUsable);
+        Assert.Equal(4, ergebnis.FramesAnalyzed);
+        Assert.Equal(2, ergebnis.FramesNotAssessed);
+        Assert.Empty(ergebnis.Suggestions);
     }
 
     private static BendSuggestionScanRequest Auftrag() => new()
@@ -200,7 +222,7 @@ public sealed class BendSuggestionScanUseCaseTests
 
     private static BendSuggestionScanActions Aktionen(
         Func<CancellationToken, Task<IReadOnlyList<VideoSequenceFrame>>> extract,
-        Func<VideoSequenceFrame, CancellationToken, Task<double?>> detect)
+        Func<VideoSequenceFrame, CancellationToken, Task<BendFrameResult>> detect)
         => new(extract, detect);
 
     /// <summary>
