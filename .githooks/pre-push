@@ -14,20 +14,42 @@ git lfs pre-push "$@" || exit $?
 repo_root=$(git rev-parse --show-toplevel) || exit 1
 cd "$repo_root" || exit 1
 
+# Ein Gate-Lauf: Testprojekt bauen und testen. Bei Rot wird zwischen einem
+# echten Testfehler und einer gesperrten Datei unterschieden — MSB3021/MSB3027
+# heisst: ein laufendes Werkzeug (z. B. der MCP-Server) haelt seine exe und
+# blockiert den Build. Das sieht im Log wie ein Codefehler aus, ist aber ein
+# Dateikonflikt. Die Meldung muss das klar benennen, sonst wird am falschen
+# Ort gesucht.
+run_gate() {
+  projekt="$1"
+  name="$2"
+  log=$(mktemp) || exit 1
+  dotnet test "$projekt" -v minimal --no-restore >"$log" 2>&1
+  status=$?
+  cat "$log"
+  if [ "$status" -eq 0 ]; then
+    rm -f "$log"
+    return 0
+  fi
+  if grep -qE 'MSB30(21|27)' "$log"; then
+    gesperrt=$(grep -oE '"[^"]*\.(exe|dll)"' "$log" | tr -d '"' | head -n 1)
+    programm=$(basename "${gesperrt:-unbekannt}" .exe)
+    printf >&2 "\n%s\n" "Push abgebrochen — das ist KEIN Codefehler."
+    printf >&2 "%s\n"   "Eine Datei wird von einem laufenden Programm gesperrt und blockiert den Build:"
+    printf >&2 "  %s\n" "${gesperrt:-Pfad nicht ermittelbar}"
+    printf >&2 "%s\n"   "Beende das Programm und pushe erneut, z. B.:"
+    printf >&2 "  powershell -Command \"Stop-Process -Name '%s' -Force\"\n\n" "$programm"
+  else
+    printf >&2 "\nPush abgebrochen: %s-Tests sind rot.\n\n" "$name"
+  fi
+  rm -f "$log"
+  return 1
+}
+
 printf "\nSewerStudio Schnelltest vor Push...\n"
-dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -v minimal --no-restore || {
-  printf >&2 "\nPush abgebrochen: Infrastructure-Tests sind rot.\n"
-  exit 1
-}
 
-dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -v minimal --no-restore || {
-  printf >&2 "\nPush abgebrochen: Pipeline-Tests sind rot.\n"
-  exit 1
-}
-
-dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -v minimal --no-restore || {
-  printf >&2 "\nPush abgebrochen: UI-Tests sind rot.\n"
-  exit 1
-}
+run_gate tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj Infrastructure || exit 1
+run_gate tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj Pipeline || exit 1
+run_gate tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj UI || exit 1
 
 printf "\nSewerStudio Schnelltest bestanden.\n"

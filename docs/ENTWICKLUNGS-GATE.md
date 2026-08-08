@@ -24,6 +24,15 @@ nicht — deshalb steht sie hier dokumentiert.
 
 Ist eine der drei Test-Sammlungen rot, bricht der Push ab.
 
+## Dateisperre ist kein Codefehler
+
+Bricht der Build mit MSB3021/MSB3027, sperrt ein laufendes Werkzeug (z. B. der
+MCP-Server oder eine Dateivorschau) seine eigene exe und blockiert den Build.
+Das Log sieht dann aus wie ein Compilefehler — ist aber ein Dateikonflikt.
+Der Hook meldet das seit 2026-08-08 ausdrücklich: mit dem gesperrten Pfad und
+dem Vorschlag, das Programm zu beenden und erneut zu pushen. Erst wenn keine
+Sperrmeldung im Log steht, gilt: Tests sind rot.
+
 ## Grenzen (bewusst)
 
 - Der Hook ist mit `git push --no-verify` umgehbar — er ist eine Bequemlichkeits-
