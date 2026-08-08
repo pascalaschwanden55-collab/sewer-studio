@@ -330,6 +330,83 @@ public sealed class TrainingSamplesStorePersistenceTests
         });
     }
 
+    [Fact]
+    public async Task Ersetzung_wiederholt_sich_wenn_ein_Leser_die_Zieldatei_kurz_haelt()
+    {
+        // Windows verweigert eine atomare Ersetzung, solange ein anderer Leser die
+        // Zieldatei offen hat — unabhaengig vom Freigabemodus. Der Spiegeldienst
+        // liest die 18 MB grosse Trainingsdatei nach jedem Speichern; genau dabei
+        // ist am 2026-08-07 der Codiermodus mit "Access to the path is denied"
+        // abgebrochen. Ein voruebergehend gesperrtes Ziel ist kein Datenfehler.
+        var versuche = 0;
+        var wartezeiten = new List<int>();
+
+        await TrainingSampleFileStore.ReplaceAtomicallyAsync(
+            "quelle.tmp",
+            "ziel.json",
+            move: (_, _) =>
+            {
+                versuche++;
+                if (versuche < 3)
+                    throw new UnauthorizedAccessException("Access to the path is denied.");
+            },
+            delay: milliseconds =>
+            {
+                wartezeiten.Add(milliseconds);
+                return Task.CompletedTask;
+            });
+
+        Assert.Equal(3, versuche);
+        Assert.Equal(2, wartezeiten.Count);
+        Assert.All(wartezeiten, wartezeit => Assert.True(wartezeit > 0));
+    }
+
+    [Fact]
+    public async Task Ersetzung_meldet_den_Fehler_wenn_die_Sperre_bleibt()
+    {
+        // Eine dauerhaft gesperrte Datei bleibt ein echter Fehler: Der Speichervorgang
+        // darf niemals stillschweigend gelingen, ohne dass die Datei ersetzt wurde.
+        var versuche = 0;
+
+        var fehler = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => TrainingSampleFileStore.ReplaceAtomicallyAsync(
+                "quelle.tmp",
+                "ziel.json",
+                move: (_, _) =>
+                {
+                    versuche++;
+                    throw new UnauthorizedAccessException("Access to the path is denied.");
+                },
+                delay: _ => Task.CompletedTask));
+
+        Assert.Contains("denied", fehler.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(versuche > 3, $"Es wurde nur {versuche} Mal versucht.");
+    }
+
+    [Fact]
+    public async Task SaveAsync_gelingt_waehrend_ein_Leser_die_Datei_kurz_offen_haelt()
+    {
+        await WithTempStore(async path =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1")]);
+
+            // Der Leser haelt die Datei so, wie es der Spiegeldienst waehrend des
+            // Hashens tut, und gibt sie danach wieder frei.
+            using var leser = new FileStream(
+                path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var freigabe = Task.Run(async () =>
+            {
+                await Task.Delay(250);
+                leser.Dispose();
+            });
+
+            await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1"), Sample("zweit", "sig-2")]);
+            await freigabe;
+
+            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+        });
+    }
+
     private static void SetBox(
         TrainingSample sample,
         double x,

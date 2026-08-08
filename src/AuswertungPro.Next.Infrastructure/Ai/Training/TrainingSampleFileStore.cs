@@ -417,7 +417,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                 }
             }
 
-            File.Move(tempPath, path, overwrite: true);
+            await ReplaceAtomicallyAsync(tempPath, path).ConfigureAwait(false);
             CleanupBadFiles(path);
         }
         catch
@@ -430,6 +430,51 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                 },
                 "Trainingsdaten: Temp-Datei nach Speicherfehler loeschen");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Wartezeiten in Millisekunden zwischen zwei Ersetzungsversuchen (rund 4,5 s gesamt).
+    /// </summary>
+    private static readonly int[] ReplaceRetryDelaysMs = [50, 100, 200, 400, 800, 1000, 1000, 1000];
+
+    /// <summary>
+    /// Ersetzt die Zieldatei atomar und wiederholt den Schritt bei einer voruebergehenden
+    /// Sperre. Windows verweigert eine Ersetzung, solange ein anderer Leser die Zieldatei
+    /// geoeffnet haelt — der eigene Spiegeldienst, ein Virenscanner oder eine
+    /// Dateivorschau reichen dafuer. Der Freigabemodus des Lesers hilft dabei nicht.
+    /// Da die neue Datei zu diesem Zeitpunkt bereits vollstaendig geschrieben und
+    /// geprueft ist, ist Warten die richtige Antwort; ein Abbruch wuerde den ganzen
+    /// Speichervorgang verwerfen. Bleibt die Sperre bestehen, wird der Fehler gemeldet.
+    /// </summary>
+    internal static async Task ReplaceAtomicallyAsync(
+        string tempPath,
+        string targetPath,
+        Action<string, string>? move = null,
+        Func<int, Task>? delay = null)
+    {
+        move ??= static (source, target) => File.Move(source, target, overwrite: true);
+        delay ??= static milliseconds => Task.Delay(milliseconds);
+
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                move(tempPath, targetPath);
+                if (attempt > 0)
+                {
+                    BestEffort.ReportWarning(
+                        $"Trainingsdaten: Zieldatei war kurz gesperrt, Ersetzung nach "
+                        + $"{attempt + 1} Versuchen erfolgreich ({Path.GetFileName(targetPath)}).");
+                }
+
+                return;
+            }
+            catch (Exception ex) when (attempt < ReplaceRetryDelaysMs.Length
+                                       && ex is UnauthorizedAccessException or IOException)
+            {
+                await delay(ReplaceRetryDelaysMs[attempt]).ConfigureAwait(false);
+            }
         }
     }
 
