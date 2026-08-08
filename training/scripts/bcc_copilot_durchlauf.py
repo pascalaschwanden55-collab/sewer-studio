@@ -167,15 +167,17 @@ def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[di
     gruppen: list[dict] = []
     for t in relevant:
         ziel = None
-        if t["ort_meter"] is not None:
+        verortet = [g for g in gruppen if g["meter_min"] is not None]
+        if t["ort_meter"] is not None and verortet:
+            # Es gibt verortete Stellen: Dann entscheidet ausschliesslich der Meter.
             passend = [(g, abstand(g["meter_min"], g["meter_max"], t["ort_meter"]))
-                       for g in gruppen if g["meter_min"] is not None]
+                       for g in verortet]
             passend = [(g, d) for g, d in passend if d <= METER_LUECKE_M]
             if passend:
                 ziel = min(passend, key=lambda p: p[1])[0]
         else:
-            # Ohne belastbaren Meter kommt JEDE Gruppe in Frage, auch eine ueber
-            # Meter gebildete — eine Luecke darf eine Stelle nicht aufspalten.
+            # Ohne belastbaren Meter — oder solange keine Stelle einen Ort hat —
+            # ordnet die Zeit zu. Eine Luecke darf eine Stelle nicht aufspalten.
             passend = [(g, abstand(g["zeit_min"], g["zeit_max"], t["zeit"])) for g in gruppen]
             passend = [(g, d) for g, d in passend if d <= ZEIT_LUECKE_S]
             if passend:
@@ -183,18 +185,19 @@ def zusammenfassen(treffer: list[dict], minimum: float, stark: float) -> list[di
 
         if ziel is None:
             gruppen.append({
-                "meter_min": t["ort_meter"], "meter_max": t["ort_meter"],
-                "meter_geschaetzt": bool(t.get("geschaetzt")),
+                "meter_min": t["meter"] if t["conf"] >= minimum else None,
+                "meter_max": t["meter"] if t["conf"] >= minimum else None,
+                "meter_geschaetzt": bool(t.get("geschaetzt")) and t["conf"] >= minimum,
                 "zeit_min": t["zeit"], "zeit_max": t["zeit"],
                 "peak_zeit": t["zeit"], "max_conf": t["conf"], "bilder": 1,
             })
             continue
 
-        if t["ort_meter"] is not None:
-            ziel["meter_min"] = t["ort_meter"] if ziel["meter_min"] is None else min(ziel["meter_min"], t["ort_meter"])
-            ziel["meter_max"] = t["ort_meter"] if ziel["meter_max"] is None else max(ziel["meter_max"], t["ort_meter"])
-        elif t.get("geschaetzt"):
-            ziel["meter_geschaetzt"] = True
+        if t["meter"] is not None and t["conf"] >= minimum:
+            ziel["meter_min"] = t["meter"] if ziel["meter_min"] is None else min(ziel["meter_min"], t["meter"])
+            ziel["meter_max"] = t["meter"] if ziel["meter_max"] is None else max(ziel["meter_max"], t["meter"])
+            if t.get("geschaetzt"):
+                ziel["meter_geschaetzt"] = True
         ziel["zeit_min"] = min(ziel["zeit_min"], t["zeit"])
         ziel["zeit_max"] = max(ziel["zeit_max"], t["zeit"])
         if t["conf"] > ziel["max_conf"]:

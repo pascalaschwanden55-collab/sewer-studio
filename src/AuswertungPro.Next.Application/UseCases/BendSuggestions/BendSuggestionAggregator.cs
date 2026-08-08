@@ -142,11 +142,11 @@ public static class BendSuggestionAggregator
             var target = FindGroup(groups, detection, options);
             if (target is null)
             {
-                groups.Add(new Group(detection));
+                groups.Add(new Group(detection, options));
                 continue;
             }
 
-            target.Add(detection);
+            target.Add(detection, options);
         }
 
         // Nach Meter geordnet, wie der Mensch die Haltung abfaehrt. Vorschlaege ohne
@@ -201,20 +201,31 @@ public static class BendSuggestionAggregator
     {
         if (ReliableMeter(detection) is { } meter)
         {
-            return groups
-                .Where(group => group.HasMeter)
-                .Select(group => (group, distance: group.DistanceTo(meter)))
-                .Where(pair => pair.distance <= options.MeterMergeGapMaxMeters)
-                .OrderBy(pair => pair.distance)
-                .Select(pair => pair.group)
-                .FirstOrDefault();
+            var located = groups.Where(group => group.HasMeterRange).ToList();
+            if (located.Count > 0)
+            {
+                // Es gibt verortete Stellen: Dann entscheidet ausschliesslich der
+                // Meterstand. Ein Sprung ueber den Abstand ist eine andere Stelle,
+                // auch wenn er zeitlich unmittelbar folgt.
+                return located
+                    .Select(group => (group, distance: group.DistanceTo(meter)))
+                    .Where(pair => pair.distance <= options.MeterMergeGapMaxMeters)
+                    .OrderBy(pair => pair.distance)
+                    .Select(pair => pair.group)
+                    .FirstOrDefault();
+            }
+
+            // Noch keine Stelle hat einen Ort — etwa weil bisher nur schwache
+            // Bilder gesammelt wurden. Dann ordnet die Zeit zu, damit dieses Bild
+            // die begonnene Stelle verortet statt eine zweite zu eroeffnen.
         }
 
-        // Ohne belastbaren Meterstand bleibt nur die Zeit. Es kommt JEDE Gruppe in
-        // Frage, auch eine ueber Meter gebildete: Der OSD-Leser deckt rund drei
-        // Viertel der Bilder ab, und eine Luecke mitten in einer Stelle darf sie
-        // nicht in zwei Vorschlaege spalten. Der Meterstand dieses Bildes bleibt
-        // dabei ungenutzt — er entscheidet nichts, er ordnet nur zu.
+        // Kein Meterbereich passt — oder der Meterstand ist unbekannt. Dann
+        // entscheidet die Zeit, und es kommt JEDE Gruppe in Frage: Der OSD-Leser
+        // deckt je nach Anzeigestil nur einen Teil der Bilder ab, und eine Luecke
+        // mitten in einer Stelle darf sie nicht in zwei Vorschlaege spalten. Der
+        // Meterstand dieses Bildes bleibt dabei ungenutzt — er entscheidet nichts,
+        // er ordnet nur zu.
         return groups
             .Select(group => (group, distance: group.TimeDistanceTo(detection.TimeSeconds)))
             .Where(pair => pair.distance <= options.TimeMergeGapMaxSeconds)
@@ -229,19 +240,21 @@ public static class BendSuggestionAggregator
         private double? _meterMax;
         private bool _anyMeterEstimated;
 
-        internal Group(BendFrameDetection first)
+        internal Group(BendFrameDetection first, BendSuggestionOptions options)
         {
-            HasMeter = ReliableMeter(first).HasValue;
             FirstTimeSeconds = first.TimeSeconds;
             LastTimeSeconds = first.TimeSeconds;
             PeakTimeSeconds = first.TimeSeconds;
             MaxConfidence = first.Confidence;
             FrameCount = 1;
-            TakeMeter(first);
+            TakeMeter(first, options);
         }
 
-        /// <summary>True, wenn diese Stelle ueber gelesene Meterstaende gebildet wurde.</summary>
-        internal bool HasMeter { get; }
+        /// <summary>
+        /// True, sobald mindestens ein Bild ab dem Arbeitspunkt einen gelesenen
+        /// Meterstand beigesteuert hat. Nur dann hat diese Stelle einen Ort.
+        /// </summary>
+        internal bool HasMeterRange => _meterMin.HasValue;
 
         internal double FirstTimeSeconds { get; }
 
@@ -267,9 +280,9 @@ public static class BendSuggestionAggregator
             return meter > max ? meter - max : 0.0;
         }
 
-        internal void Add(BendFrameDetection detection)
+        internal void Add(BendFrameDetection detection, BendSuggestionOptions options)
         {
-            TakeMeter(detection);
+            TakeMeter(detection, options);
             LastTimeSeconds = Math.Max(LastTimeSeconds, detection.TimeSeconds);
             if (detection.Confidence > MaxConfidence)
             {
@@ -283,10 +296,18 @@ public static class BendSuggestionAggregator
         /// <summary>
         /// Ein geschaetzter Meterstand taugt nicht zum Zusammenfassen, bleibt aber als
         /// grobe Lage erhalten — der Mensch soll wissen, wo ungefaehr zu schauen ist.
+        ///
+        /// Schwache Bilder unterhalb des Arbeitspunkts zaehlen dagegen gar nicht in
+        /// den gemeldeten Bereich. Sonst waechst eine Stelle Meter fuer Meter mit:
+        /// Beim ersten echten Lauf am 2026-08-08 entstand daraus ein Vorschlag ueber
+        /// 0,20 bis 3,40 m — ein Fuenftel der Haltung. Sie duerfen zuordnen, aber
+        /// den Ort nicht setzen.
         /// </summary>
-        private void TakeMeter(BendFrameDetection detection)
+        private void TakeMeter(BendFrameDetection detection, BendSuggestionOptions options)
         {
             if (detection.Meter is not { } meter)
+                return;
+            if (detection.Confidence < options.MinConfidence)
                 return;
 
             _meterMin = _meterMin is { } min ? Math.Min(min, meter) : meter;

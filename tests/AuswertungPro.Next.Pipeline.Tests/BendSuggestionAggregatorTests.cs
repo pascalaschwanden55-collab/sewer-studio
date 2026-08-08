@@ -25,7 +25,9 @@ public sealed class BendSuggestionAggregatorTests
         var einziger = Assert.Single(vorschlaege);
         Assert.Equal(2, einziger.FrameCount);
         Assert.Equal(0.51, einziger.MaxConfidence, 3);
-        Assert.Equal(5.0, einziger.MeterStart!.Value, 3);
+        // Der Ort kommt allein vom Bild ab dem Arbeitspunkt — das schwache Bild
+        // gehoert zur Stelle, bestimmt aber nicht, wo sie liegt.
+        Assert.Equal(5.1, einziger.MeterStart!.Value, 3);
         Assert.Equal(5.1, einziger.MeterEnd!.Value, 3);
     }
 
@@ -191,6 +193,37 @@ public sealed class BendSuggestionAggregatorTests
         var einziger = Assert.Single(vorschlaege);
         Assert.Equal(3, einziger.FrameCount);
         Assert.Equal(0.70, einziger.MaxConfidence, 3);
+    }
+
+    [Fact]
+    public void Schwache_Bilder_verlaengern_den_gemeldeten_Meterbereich_nicht()
+    {
+        // Beim ersten echten Lauf am 2026-08-08 wuchs eine Stelle auf 0,20-3,40 m
+        // an — ein Fuenftel der Haltung. Jedes schwache Bild verlaengerte die
+        // Gruppe um einen Meter, das naechste haengte sich wieder einen Meter
+        // weiter an. Schwache Belege duerfen zuordnen, aber den Ort nicht setzen.
+        var vorschlaege = Aggregiere(
+            new BendFrameDetection(20, 6.6, 0.85),
+            new BendFrameDetection(21, 7.0, 0.20),
+            new BendFrameDetection(22, 7.5, 0.15));
+
+        var einziger = Assert.Single(vorschlaege);
+        Assert.Equal(3, einziger.FrameCount);
+        Assert.Equal(6.6, einziger.MeterStart!.Value, 3);
+        Assert.Equal(6.6, einziger.MeterEnd!.Value, 3);
+    }
+
+    [Fact]
+    public void Der_Meterbereich_umfasst_alle_Bilder_ab_dem_Arbeitspunkt()
+    {
+        var vorschlaege = Aggregiere(
+            new BendFrameDetection(20, 6.6, 0.85),
+            new BendFrameDetection(21, 7.0, 0.60),
+            new BendFrameDetection(22, 7.4, 0.20));
+
+        var einziger = Assert.Single(vorschlaege);
+        Assert.Equal(6.6, einziger.MeterStart!.Value, 3);
+        Assert.Equal(7.0, einziger.MeterEnd!.Value, 3);
     }
 
     [Fact]
