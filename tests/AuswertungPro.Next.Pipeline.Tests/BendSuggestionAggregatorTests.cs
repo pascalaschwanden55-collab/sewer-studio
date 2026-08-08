@@ -130,6 +130,33 @@ public sealed class BendSuggestionAggregatorTests
     }
 
     [Fact]
+    public void Eine_Meterluecke_mitten_in_einer_Stelle_spaltet_sie_nicht_auf()
+    {
+        // Der OSD-Leser deckt rund drei Viertel der Bilder ab. Ein Bild ohne
+        // Meterstand mitten in einer Stelle darf keine zweite Meldung erzeugen —
+        // genau die Doppelmeldung, die der Meter-Dedup verhindern soll.
+        var vorschlaege = Aggregiere(
+            new BendFrameDetection(20, 7.0, 0.60),
+            new BendFrameDetection(21, null, 0.65),
+            new BendFrameDetection(22, 7.1, 0.60));
+
+        var einziger = Assert.Single(vorschlaege);
+        Assert.Equal(3, einziger.FrameCount);
+        Assert.Equal(7.0, einziger.MeterStart!.Value, 3);
+        Assert.Equal(7.1, einziger.MeterEnd!.Value, 3);
+    }
+
+    [Fact]
+    public void Ein_Bild_ohne_Meterstand_weit_weg_bleibt_eine_eigene_Stelle()
+    {
+        var vorschlaege = Aggregiere(
+            new BendFrameDetection(20, 7.0, 0.60),
+            new BendFrameDetection(200, null, 0.65));
+
+        Assert.Equal(2, vorschlaege.Count);
+    }
+
+    [Fact]
     public void Ohne_Meterstand_faellt_die_Zusammenfassung_auf_die_Zeit_zurueck()
     {
         var vorschlaege = Aggregiere(

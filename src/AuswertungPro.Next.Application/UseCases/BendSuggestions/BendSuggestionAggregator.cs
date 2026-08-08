@@ -162,13 +162,17 @@ public static class BendSuggestionAggregator
                 .FirstOrDefault();
         }
 
-        // Ohne Meterstand bleibt nur die Zeit. Nur die zuletzt gefuellte Gruppe
-        // ohne Meter kommt in Frage — sonst wuerden entfernte Stellen verschmelzen.
-        var last = groups.LastOrDefault(group => !group.HasMeter);
-        return last is not null
-            && detection.TimeSeconds - last.LastTimeSeconds <= options.TimeMergeGapMaxSeconds
-                ? last
-                : null;
+        // Ohne belastbaren Meterstand bleibt nur die Zeit. Es kommt JEDE Gruppe in
+        // Frage, auch eine ueber Meter gebildete: Der OSD-Leser deckt rund drei
+        // Viertel der Bilder ab, und eine Luecke mitten in einer Stelle darf sie
+        // nicht in zwei Vorschlaege spalten. Der Meterstand dieses Bildes bleibt
+        // dabei ungenutzt — er entscheidet nichts, er ordnet nur zu.
+        return groups
+            .Select(group => (group, distance: group.TimeDistanceTo(detection.TimeSeconds)))
+            .Where(pair => pair.distance <= options.TimeMergeGapMaxSeconds)
+            .OrderBy(pair => pair.distance)
+            .Select(pair => pair.group)
+            .FirstOrDefault();
     }
 
     private sealed class Group
@@ -180,6 +184,7 @@ public static class BendSuggestionAggregator
         internal Group(BendFrameDetection first)
         {
             HasMeter = ReliableMeter(first).HasValue;
+            FirstTimeSeconds = first.TimeSeconds;
             LastTimeSeconds = first.TimeSeconds;
             PeakTimeSeconds = first.TimeSeconds;
             MaxConfidence = first.Confidence;
@@ -190,7 +195,17 @@ public static class BendSuggestionAggregator
         /// <summary>True, wenn diese Stelle ueber gelesene Meterstaende gebildet wurde.</summary>
         internal bool HasMeter { get; }
 
+        internal double FirstTimeSeconds { get; }
+
         internal double LastTimeSeconds { get; private set; }
+
+        /// <summary>Abstand zum bereits beobachteten Zeitbereich dieser Stelle.</summary>
+        internal double TimeDistanceTo(double timeSeconds)
+        {
+            if (timeSeconds < FirstTimeSeconds)
+                return FirstTimeSeconds - timeSeconds;
+            return timeSeconds > LastTimeSeconds ? timeSeconds - LastTimeSeconds : 0.0;
+        }
         internal double PeakTimeSeconds { get; private set; }
         internal double MaxConfidence { get; private set; }
         internal int FrameCount { get; private set; }
