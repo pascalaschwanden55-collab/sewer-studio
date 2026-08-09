@@ -243,8 +243,12 @@
   fehlenden Verwechslungsliste aufgehoben und darf nicht verwendet werden.
 - `yolo_wrapper._pil_rgb_to_ultralytics_bgr` wandelt dekodierte PIL-RGB-Bilder vor
   jeder Ultralytics-NumPy-Inferenz explizit in zusammenhaengendes BGR um. Detect,
-  Legacy-Classification und beide Holdout-Auswerter verwenden denselben Helfer;
-  Rot und Blau duerfen nicht erneut still vertauscht werden.
+  Legacy-Classification, beide Holdout-Auswerter und seit 2026-08-09 auch der
+  BCC-Test-Endpunkt verwenden denselben Helfer; Rot und Blau duerfen nicht erneut
+  still vertauscht werden. Der BCC-Endpunkt hatte die Umkehrung verpasst — erst
+  die Copilot-Abnahme (C# gegen Prototyp) machte das sichtbar: 7 statt 4 Stellen,
+  systematisch verschobene Konfidenzen. Mit dem Helfer sind die Einzelbildfolgen
+  beider Wege exakt gleich (226 Treffer, null Abweichungen).
 - SAM-Video-Regel (Goldgewinnung): SAM 2.1 kann Masken durch Videos propagieren,
   darf aber nur als Pruefwerkzeug fuer den Menschen dienen, nicht als automatische
   Goldfabrik. Propagierte Nachbarframes sind stark voneinander abhaengige

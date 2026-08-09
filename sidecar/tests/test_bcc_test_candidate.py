@@ -324,6 +324,61 @@ def test_detect_markiert_unbrauchbares_foto_als_nicht_geprueft(monkeypatch):
     assert response.detections == []
 
 
+def test_detect_reicht_das_bild_als_bgr_an_ultralytics_weiter(monkeypatch):
+    """Rot und Blau duerfen bei der Inferenz nie vertauscht werden (2026-08-02).
+
+    Ultralytics liest NumPy-Eingaben als BGR; das decodierte PIL-Bild ist RGB.
+    Der Test faengt die Eingabe am Modell ab und prueft die Kanalreihenfolge.
+    """
+    import numpy as np
+    from PIL import Image
+
+    from sidecar.models import bcc_test_wrapper
+
+    bild = Image.new("RGB", (16, 16), (255, 0, 0))  # reines Rot
+    candidate = bcc_test_wrapper.BccCandidate(
+        candidate_id="bcc_bogen_test",
+        weights_path=Path("best.pt"),
+        weights_sha256="a" * 64,
+        map50=0.7,
+        epochs_completed=40,
+        created_utc="2026-07-28T14:43:21Z",
+    )
+    gefangen: dict = {}
+
+    class FakeModell:
+        def predict(self, source=None, **_kwargs):
+            gefangen["source"] = source
+            return []
+
+    class _Lease:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(bcc_test_wrapper.yolo_wrapper, "decode_image", lambda _value: bild)
+    monkeypatch.setattr(
+        bcc_test_wrapper.yolo_wrapper, "_is_frame_usable", lambda _image: (True, "ok"))
+    monkeypatch.setattr(bcc_test_wrapper, "select_candidate", lambda *_args: candidate)
+    monkeypatch.setattr(bcc_test_wrapper, "_resolve_device", lambda: "cpu")
+    monkeypatch.setattr(bcc_test_wrapper, "_discard_stale_candidate", lambda *_args: None)
+    monkeypatch.setattr(
+        bcc_test_wrapper.gpu_manager, "busy_slot", lambda *_args, **_kw: _Lease())
+    monkeypatch.setattr(
+        bcc_test_wrapper, "_ensure_candidate_model", lambda *_args: FakeModell())
+
+    bcc_test_wrapper.detect("abc", 0.25)
+
+    quelle = gefangen["source"]
+    assert isinstance(quelle, np.ndarray)
+    # BGR: der Rotkanal liegt hinten, nicht vorn.
+    assert int(quelle[0, 0, 0]) == 0
+    assert int(quelle[0, 0, 2]) == 255
+    assert bool(quelle.flags["C_CONTIGUOUS"])
+
+
 def test_bcc_ausgabe_filtert_ungepruefte_klassen_0_bis_13():
     from sidecar.models import bcc_test_wrapper
 

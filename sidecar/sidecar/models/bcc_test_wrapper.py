@@ -442,8 +442,11 @@ def detect(
                 # entladen -> kontrollierter 503 statt AttributeError/500.
                 raise ModelUnloadedError(ModelSlot.YOLO_TEST.value)
             started = time.perf_counter()
+            # Ultralytics behandelt NumPy-Eingaben als BGR; ein PIL-RGB-Array
+            # wuerde Rot und Blau still vertauschen (belegt 2026-08-02). Der
+            # gemeinsame Helfer gilt auch hier.
             results = model.predict(
-                source=np.array(image),
+                source=yolo_wrapper._pil_rgb_to_ultralytics_bgr(image),
                 conf=confidence_threshold,
                 imgsz=settings.yolo_imgsz,
                 verbose=False,
