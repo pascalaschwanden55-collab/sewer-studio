@@ -40,9 +40,22 @@ Zu tun:
 1. `BendFrameDetector` gibt den Meterwert der Antwort mit zurück (heute wirft er
    ihn weg). Zusätzliches Feld am Rückgabetyp, additiv.
 2. `BendSuggestionScanService` reicht ihn als `resolveMeter` durch.
-3. Auf die Rohfolge **erst** `MeterSequencePlausibility`, **dann**
-   `MeterSequenceGapFiller` anwenden — nicht umgekehrt. Beide sind Sequenzlogik
-   und brauchen alle Bilder, nicht nur die mit Treffer.
+3. **Der eigentliche Eingriff:** `BendSuggestionScanUseCase` ruft `ResolveMeter`
+   heute erst **hinter** der Treffer-Prüfung auf (`BendSuggestionScanUseCase.cs`,
+   nach `if (outcome.Outcome != BendFrameOutcome.Detected) continue;`). Die
+   Meterfolge bestünde damit nur aus Treffer-Bildern — die Sequenzprüfung hätte
+   keine Nachbarn und liefe wirkungslos, das Lückenfüllen fände keine Klammern.
+
+   Der UseCase muss die Meterfolge über **alle** Bilder aufbauen, wie es der
+   Prototyp tut (`roh_meter` je Bild → `plausibilisiere_sequenz` →
+   `luecken_fuellen`), und erst danach den Treffern ihren Meterwert zuordnen.
+   Reihenfolge zwingend: **erst** `MeterSequencePlausibility`, **dann**
+   `MeterSequenceGapFiller` — ein unmöglicher Wert darf nie Klammer einer
+   Interpolation werden.
+
+   Der Meterstand kommt dabei aus derselben Sidecar-Antwort wie die Erkennung.
+   Ein zusätzlicher Aufruf je Bild ist nicht nötig und wäre die doppelte
+   Laufzeit.
 
 **Abnahme:** Ein Durchgang über eine SD-Haltung liefert dieselben Stellen wie
 das Prototypskript (`training/scripts/bcc_copilot_durchlauf.py`). Weicht etwas
@@ -58,8 +71,13 @@ Vorschlag. Das Wissen „dort hat die KI nichts gemeldet" wirkt genauso wie ein
 sichtbarer Rahmen.
 
 1. `ICodingSuggestionExposure` (Application/UseCases/BendSuggestions):
-   `void MarkExposed(string haltung)` und `bool WasExposed(string haltung)`.
-   Haltungsnummern normalisieren wie sonst im Projekt.
+   `void MarkExposed(string caseId)` und `bool WasExposed(string caseId)`.
+
+   **Schlüssel ist die `caseId`, die `CodingEventToSampleMapper.FromCodingEvent`
+   ohnehin schon bekommt** — dieselbe Zeichenkette, die am Sample landet. Damit
+   entfällt die Frage nach dem richtigen Normalisierer: Beide Seiten benutzen
+   denselben Wert, und eine Abweichung kann gar nicht entstehen. Der Vergleich
+   ist dann nur noch `StringComparison.OrdinalIgnoreCase` plus Trimmen.
 2. `CodingSuggestionExposure` (Infrastructure): Gedächtnis nur für den
    Programmlauf, threadsicher. Kein Speichern auf Platte — ein Neustart setzt
    zurück. Das ist bewusst optimistisch; die Alternative wäre, jede Haltung
