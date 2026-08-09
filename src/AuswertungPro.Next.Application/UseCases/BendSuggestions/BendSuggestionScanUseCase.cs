@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Media;
@@ -24,18 +25,24 @@ public enum BendFrameOutcome
 }
 
 /// <summary>Ergebnis eines einzelnen Bildes.</summary>
+/// <param name="Meter">
+/// Roher OSD-Meterstand desselben Bildes (Beiprodukt der Sidecar-Antwort);
+/// null = nicht lesbar. Der Einzelwert ist hier ungeprueft — die Folge aller
+/// Bilder wird erst im UseCase plausibilisiert und lueckengefuellt.
+/// </param>
 public sealed record BendFrameResult(
     BendFrameOutcome Outcome,
     double Confidence = 0.0,
-    string? Reason = null)
+    string? Reason = null,
+    double? Meter = null)
 {
     public static BendFrameResult NoBend { get; } = new(BendFrameOutcome.NoBend);
 
-    public static BendFrameResult Detected(double confidence)
-        => new(BendFrameOutcome.Detected, confidence);
+    public static BendFrameResult Detected(double confidence, double? meter = null)
+        => new(BendFrameOutcome.Detected, confidence, null, meter);
 
-    public static BendFrameResult NotAssessed(string? reason)
-        => new(BendFrameOutcome.NotAssessed, 0.0, reason);
+    public static BendFrameResult NotAssessed(string? reason, double? meter = null)
+        => new(BendFrameOutcome.NotAssessed, 0.0, reason, meter);
 }
 
 /// <summary>Auftrag fuer den Vorabdurchlauf ueber ein Video.</summary>
@@ -56,19 +63,25 @@ public sealed record BendSuggestionScanRequest
 /// <param name="ExtractFrames">Holt die Bildfolge in einem Durchgang.</param>
 /// <param name="DetectBendConfidence">
 /// Fragt das gepinnte Modell zu einem Bild. Ein technischer Fehler muss
-/// geworfen werden und darf nie als "kein Bogen" erscheinen.
-/// </param>
-/// <param name="ResolveMeter">
-/// Optionaler Meterstand je Bild. Fehlt er, fasst der Aggregator ueber die Zeit
-/// zusammen — mit der hoeheren Fehlalarmlast, die dabei gemessen wurde.
+/// geworfen werden und darf nie als "kein Bogen" erscheinen. Das Ergebnis
+/// traegt den rohen OSD-Meterstand des Bildes (null = nicht lesbar); die
+/// Folge wird hier erst plausibilisiert und dann lueckengefuellt.
 /// </param>
 public sealed record BendSuggestionScanActions(
     Func<CancellationToken, Task<IReadOnlyList<VideoSequenceFrame>>> ExtractFrames,
-    Func<VideoSequenceFrame, CancellationToken, Task<BendFrameResult>> DetectBendConfidence,
-    Func<VideoSequenceFrame, CancellationToken, Task<(double? Meter, bool IsEstimated)>>? ResolveMeter = null)
+    Func<VideoSequenceFrame, CancellationToken, Task<BendFrameResult>> DetectBendConfidence)
 {
     /// <summary>Uhr fuer die Laufzeitmessung; im Test ersetzbar.</summary>
     public Func<DateTimeOffset> Now { get; init; } = () => DateTimeOffset.UtcNow;
+
+    /// <summary>Fortschritt (verarbeitet, gesamt); optional, rein nach aussen.</summary>
+    public Action<int, int>? ReportProgress { get; init; }
+
+    /// <summary>
+    /// Diagnose/Abnahme: meldet die fertigen Einzelbild-Treffer nach Plausibilitaet
+    /// und Lueckenfuellung, bevor der Aggregator sie zusammenfasst. Optional.
+    /// </summary>
+    public Action<IReadOnlyList<BendFrameDetection>>? ReportDetections { get; init; }
 }
 
 /// <summary>Ergebnis eines Vorabdurchlaufs.</summary>
@@ -82,7 +95,8 @@ public sealed record BendSuggestionScanResult(
     string CandidateId,
     string WeightSha256,
     double MinConfidence,
-    double StrongConfidence);
+    double StrongConfidence,
+    string WorkpointSource = "");
 
 /// <summary>
 /// Vorabdurchlauf eines Videos: Bilder holen, je Bild das gepinnte Modell fragen,
@@ -123,8 +137,13 @@ public static class BendSuggestionScanUseCase
         var frames = await actions.ExtractFrames(cancellationToken).ConfigureAwait(false)
             ?? Array.Empty<VideoSequenceFrame>();
 
-        var detections = new List<BendFrameDetection>();
+        // Die Meterfolge gehoert allen Bildern, nicht nur den Treffern: Auch ein
+        // Bild ohne Bogen (oder ein nicht ausgewertetes) kann einen lesbaren
+        // Meterstand tragen, und die Sequenzpruefung braucht diese Nachbarn.
+        var rohMeter = new List<MeterReading>();
+        var treffer = new List<(double Zeit, double Konfidenz)>();
         var notAssessed = 0;
+        var verarbeitet = 0;
         foreach (var frame in frames)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -133,6 +152,9 @@ public static class BendSuggestionScanUseCase
             // und "nichts gesehen" sind verschiedene Aussagen.
             var outcome = await actions.DetectBendConfidence(frame, cancellationToken)
                 .ConfigureAwait(false);
+            verarbeitet++;
+            actions.ReportProgress?.Invoke(verarbeitet, frames.Count);
+            rohMeter.Add(new MeterReading(frame.TimeSeconds, outcome.Meter));
             if (outcome.Outcome == BendFrameOutcome.NotAssessed)
             {
                 // Nicht ausgewertet ist kein "kein Bogen" — es wird gezaehlt und
@@ -144,12 +166,27 @@ public static class BendSuggestionScanUseCase
             if (outcome.Outcome != BendFrameOutcome.Detected)
                 continue;
 
-            var (meter, isEstimated) = actions.ResolveMeter is null
-                ? (null, false)
-                : await actions.ResolveMeter(frame, cancellationToken).ConfigureAwait(false);
-            detections.Add(new BendFrameDetection(
-                frame.TimeSeconds, meter, outcome.Confidence, isEstimated));
+            treffer.Add((frame.TimeSeconds, outcome.Confidence));
         }
+
+        // Erst plausibilisieren (unmoegliche Werte raus), dann kurze Luecken
+        // fuellen — niemals umgekehrt: Eine Schaetzung darf nie selbst Klammer
+        // einer Lueckenfuellung sein. Gefuellte Werte ordnen zu, setzen aber
+        // keinen Ort (IsEstimated).
+        var geprueft = MeterSequencePlausibility.Check(rohMeter, new MeterPlausibilityOptions());
+        var gefuellt = MeterSequenceGapFiller.Fill(geprueft, new MeterGapFillOptions())
+            .ToDictionary(reading => reading.TimeSeconds);
+
+        var detections = treffer
+            .Select(trefferBild =>
+            {
+                var reading = gefuellt[trefferBild.Zeit];
+                return new BendFrameDetection(
+                    trefferBild.Zeit, reading.Meter, trefferBild.Konfidenz, reading.IsEstimated);
+            })
+            .ToList();
+
+        actions.ReportDetections?.Invoke(detections);
 
         var suggestions = BendSuggestionAggregator.Aggregate(detections, options);
         return new BendSuggestionScanResult(
@@ -162,6 +199,7 @@ public static class BendSuggestionScanUseCase
             request.CandidateId,
             request.WeightSha256,
             options.MinConfidence,
-            options.StrongConfidence);
+            options.StrongConfidence,
+            calibration?.Source ?? "");
     }
 }

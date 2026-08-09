@@ -33,6 +33,8 @@ public enum BendSuggestionStrength
 /// True, wenn die Meterangabe geschaetzt ist. Sie bleibt als grobe Lage brauchbar,
 /// darf aber nicht als gemessene Position dargestellt werden.
 /// </param>
+/// <param name="TimeStartSeconds">Beginn der Stelle in der Videozeit (fuer Clip und Einordnung).</param>
+/// <param name="TimeEndSeconds">Ende der Stelle in der Videozeit.</param>
 public sealed record BendSuggestion(
     double? MeterStart,
     double? MeterEnd,
@@ -40,7 +42,9 @@ public sealed record BendSuggestion(
     double MaxConfidence,
     int FrameCount,
     BendSuggestionStrength Strength,
-    bool MeterIsEstimated = false);
+    bool MeterIsEstimated = false,
+    double TimeStartSeconds = 0.0,
+    double TimeEndSeconds = 0.0);
 
 /// <summary>
 /// Regeln der Zusammenfassung.
@@ -325,6 +329,8 @@ public static class BendSuggestionAggregator
             MaxConfidence >= options.StrongConfidence
                 ? BendSuggestionStrength.Strong
                 : BendSuggestionStrength.Weak,
-            _anyMeterEstimated);
+            _anyMeterEstimated,
+            FirstTimeSeconds,
+            LastTimeSeconds);
     }
 }

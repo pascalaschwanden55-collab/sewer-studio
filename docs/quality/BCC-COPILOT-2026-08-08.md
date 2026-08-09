@@ -128,13 +128,42 @@ Menschlich abgelesene Wahrheitswerte aus dem Prueflauf:
 
 ## 6. Was noch fehlt
 
-- Sidecar-Anbindung in C# (der Durchgang laeuft bisher ueber das Prototypskript)
+- ~~Sidecar-Anbindung in C#~~ — **erledigt 2026-08-09** (siehe Nachtrag unten)
 - Anzeige der Vorschlagsliste im Programm (Variante B: Vorabdurchlauf, nicht
   live im Player — bei jedem zweiten falschen Vorschlag zerstoert eine
   Live-Einblendung das Vertrauen, von dem der Assistent lebt)
 - Nachtrainieren → messen → nur bei Verbesserung tauschen. Ohne diesen Teil ist
   das Sammeln folgenlos: Das Modell wird durch Bestaetigungen nicht besser, es
-  hat feste Gewichte.
+  hat feste Gewichte. — **erledigt 2026-08-08:** `ModelPromotionPolicy`
+  (Commit `b65f07baf`), drei Sperren, 15 Tests an den echten Zahlen.
+
+## Nachtrag 2026-08-09: C#-Durchlauf abgenommen, BGR-Fehler im Test-Endpunkt
+
+Die Abnahme (C#-Dienst gegen Prototyp, Haltung 36053-36052) deckte zwei Dinge
+auf:
+
+1. **Der BCC-Test-Endpunkt inferierte mit vertauschten Farbkanaelen** — er
+   uebergab das PIL-RGB-Array direkt, Ultralytics liest NumPy aber als BGR
+   (derselbe Fehler wie im aufgehobenen Lauf vom 2026-08-02, diesmal im
+   anderen Wrapper). Folge damals sichtbar als 7 statt 4 Stellen mit
+   systematisch verschobenen Konfidenzen. Behoben durch den gemeinsamen
+   Helfer `_pil_rgb_to_ultralytics_bgr`; Regressionstest am Modell-Eingang
+   verankert. **Alle Fototest-Eindruecke des Training Studios vor diesem
+   Fix entstanden mit vertauschten Kanaelen.**
+2. Mit dem Fix sind die Einzelbildfolgen beider Wege **exakt gleich**: 226
+   Treffer, null Abweichungen in Zeit, Meter, Schaetzflag und Konfidenz;
+   beide fassen zu denselben fuenf Stellen zusammen (feldgleich). Die vier
+   Stellen des Vortags waren ein Artefakt des alten Lesers: verworfene
+   Fehllesungen hatten 0,2–0,4 und 1,4–3,4 kuenstlich verbunden. Der neue
+   Soll liegt als Repo-Fixture
+   `tests/Fixtures/BendSuggestions/soll_36053-36052_vorschlaege.json`;
+   der Abnahme-Test (`BendSuggestionLiveAcceptanceTests`, maschinengebunden)
+   prueft dagegen.
+
+Zusaetzlich steht jetzt die Fortschritts-/Diagnoseschnittstelle:
+`ScanAsync` meldet Fortschritt (`IProgress<BendSuggestionScanProgress>`) und
+kann die fertige Einzelbildfolge vor der Zusammenfassung ausgeben
+(`reportDetections`) — genau der Hebel, der den Vergleich oben ermoeglichte.
 
 ## 7. Einordnung
 

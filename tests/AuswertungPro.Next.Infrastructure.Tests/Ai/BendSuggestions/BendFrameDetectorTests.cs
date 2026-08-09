@@ -104,6 +104,23 @@ public sealed class BendFrameDetectorTests
         Assert.False(string.IsNullOrWhiteSpace(gesehen.ImageBase64));
     }
 
+    [Fact]
+    public async Task Der_rohe_Meterstand_der_Antwort_wird_mitgegeben()
+    {
+        // meter_value ist Beiprodukt derselben Antwort; die Folge wird erst im
+        // UseCase plausibilisiert und gefuellt. Hier zaehlt nur die Durchreichung.
+        var treffer = await Frage(Antwort(detections: [Box("BCC_bogen", 0.86)], meterValue: 12.3));
+        var keinBogen = await Frage(Antwort(detections: [], meterValue: 12.3));
+        var nichtAusgewertet = await Frage(Antwort(
+            detections: [], frameUsable: false, qualityReason: "zu dunkel", meterValue: 12.3));
+        var unlesbar = await Frage(Antwort(detections: [Box("BCC_bogen", 0.86)]));
+
+        Assert.Equal(12.3, treffer.Meter);
+        Assert.Equal(12.3, keinBogen.Meter);
+        Assert.Equal(12.3, nichtAusgewertet.Meter);
+        Assert.Null(unlesbar.Meter);
+    }
+
     private static Task<BendFrameResult> Frage(BccTestYoloResponse antwort)
         => new BendFrameDetector(Id, Sha, 0.10, (_, _) => Task.FromResult(antwort))
             .DetectAsync([1, 2, 3], CancellationToken.None);
@@ -118,11 +135,13 @@ public sealed class BendFrameDetectorTests
         bool frameUsable = true,
         string? qualityReason = null,
         string? candidateId = null,
-        string? sha = null)
+        string? sha = null,
+        double? meterValue = null)
         => new(
             available, error, IsRelevant: detections.Count > 0, detections,
             FrameClass: "relevant", InferenceTimeMs: 12.0,
             CandidateId: candidateId ?? Id, CandidateSha256: sha ?? Sha,
             ModelName: "bcc", Device: "cuda:0",
-            FrameUsable: frameUsable, QualityReason: qualityReason);
+            FrameUsable: frameUsable, QualityReason: qualityReason,
+            MeterValue: meterValue);
 }

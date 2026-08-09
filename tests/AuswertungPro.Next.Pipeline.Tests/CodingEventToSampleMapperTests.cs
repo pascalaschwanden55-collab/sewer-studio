@@ -2,6 +2,7 @@ using System;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.BendSuggestions;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -21,6 +22,123 @@ public sealed class CodingEventToSampleMapperTests
         var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId: "case-1", framePath: null);
 
         Assert.Equal(TrainingSampleStatus.New, sample.Status);
+    }
+
+    [Fact]
+    public void Angesehene_Haltung_ohne_KiKontext_gilt_als_SuggestionShown()
+    {
+        // Die Liste war sichtbar: Die Entscheidung ist auch ohne Ereignis-Rahmen
+        // beeinflusst — "dort hat die KI nichts gemeldet" wirkt wie ein Rahmen.
+        var exposure = new CodingSuggestionExposure();
+        exposure.MarkExposed("case-1");
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev, caseId: "case-1", framePath: null, suggestionExposure: exposure);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.SuggestionShown,
+            sample.SuggestionProvenance!.Origin);
+    }
+
+    [Fact]
+    public void Nicht_angesehene_Haltung_ohne_KiKontext_bleibt_Independent()
+    {
+        var exposure = new CodingSuggestionExposure();
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev, caseId: "case-1", framePath: null, suggestionExposure: exposure);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.Independent,
+            sample.SuggestionProvenance!.Origin);
+    }
+
+    [Fact]
+    public void Fremde_Haltung_im_Gedaechtnis_beruehrt_diese_Haltung_nicht()
+    {
+        // Eine andere angesehene Haltung darf diese Codierung nicht anfaerben.
+        var exposure = new CodingSuggestionExposure();
+        exposure.MarkExposed("36053-36052");
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev, caseId: "10261-10262", framePath: null, suggestionExposure: exposure);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.Independent,
+            sample.SuggestionProvenance!.Origin);
+    }
+
+    [Fact]
+    public void Die_Haltungsnormalisierung_gilt_auch_im_Gedaechtnis()
+    {
+        // Mit Bereichs-Praefix vermerkt, kanonisch abgefragt — dasselbe Schacht-Paar.
+        var exposure = new CodingSuggestionExposure();
+        exposure.MarkExposed("07.1028055-10.1064892");
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev, caseId: "1028055-1064892", framePath: null, suggestionExposure: exposure);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.SuggestionShown,
+            sample.SuggestionProvenance!.Origin);
+    }
+
+    [Fact]
+    public void Ohne_Gedaechtnis_bleibt_alles_wie_bisher()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId: "case-1", framePath: null);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.Independent,
+            sample.SuggestionProvenance!.Origin);
+    }
+
+    [Fact]
+    public void Mit_KiKontext_bleibt_es_unabhaengig_vom_Gedaechtnis_SuggestionShown()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Accepted },
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId: "case-1", framePath: null);
+
+        Assert.Equal(
+            TrainingSampleSuggestionOrigin.SuggestionShown,
+            sample.SuggestionProvenance!.Origin);
     }
 
     [Fact]

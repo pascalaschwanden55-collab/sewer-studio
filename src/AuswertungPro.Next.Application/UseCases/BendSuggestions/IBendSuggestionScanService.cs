@@ -1,5 +1,8 @@
 namespace AuswertungPro.Next.Application.UseCases.BendSuggestions;
 
+/// <summary>Fortschritt des Durchlaufs: verarbeitete Bilder von insgesamt.</summary>
+public sealed record BendSuggestionScanProgress(int Processed, int Total);
+
 /// <summary>
 /// Vorabdurchlauf eines Videos: liefert die Liste verdaechtiger Stellen zum
 /// menschlichen Bestaetigen oder Korrigieren.
@@ -13,5 +16,7 @@ public interface IBendSuggestionScanService
 {
     Task<BendSuggestionScanResult> ScanAsync(
         BendSuggestionScanRequest request,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        IProgress<BendSuggestionScanProgress>? progress = null,
+        Action<IReadOnlyList<BendFrameDetection>>? reportDetections = null);
 }

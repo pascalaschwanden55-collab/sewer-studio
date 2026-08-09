@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -31,7 +32,8 @@ public static class CodingEventToSampleMapper
         DateTime? inspectionDate = null,
         string? confirmedByUser = null,
         DateTime? confirmedAtUtc = null,
-        string? evidenceFramePath = null)
+        string? evidenceFramePath = null,
+        ICodingSuggestionExposure? suggestionExposure = null)
     {
         var decision = ev.AiContext?.Decision ?? ev.ReviewContext?.Decision;
         var status = decision.HasValue
@@ -76,8 +78,12 @@ public static class CodingEventToSampleMapper
             Status = status,
             SourceType = sourceType,
             // War beim Codieren ein Modellvorschlag sichtbar? Nur ohne Vorschlag
-            // entstandene Samples duerfen spaeter ein Modell messen.
-            SuggestionProvenance = BuildSuggestionProvenance(ev),
+            // entstandene Samples duerfen spaeter ein Modell messen. Zusaetzlich
+            // zum Ereignis-KI-Kontext zaehlt das Sitzungsgedaechtnis: War die
+            // Vorschlagsliste dieser Haltung angesehen, ist auch eine Codierung
+            // ohne Rahmen beeinflusst ("dort hat die KI nichts gemeldet").
+            SuggestionProvenance = BuildSuggestionProvenance(
+                ev, suggestionExposure?.WasExposed(caseId) == true),
             KiCode = isAiSuggestion ? ev.AiContext!.SuggestedCode : null,
             MatchLevel = isPersonalAcceptance
                 ? decision == CodingUserDecision.AcceptedWithEdit
@@ -213,16 +219,22 @@ public static class CodingEventToSampleMapper
 
     /// <summary>
     /// Der KI-Kontext ist der Beleg dafuer, dass ein Vorschlag sichtbar war;
-    /// fehlt er, hat der Mensch ohne Modellhilfe entschieden.
+    /// fehlt er, hat der Mensch ohne Modellhilfe entschieden — es sei denn, die
+    /// Vorschlagsliste dieser Haltung war in diesem Programmlauf angesehen
+    /// (<paramref name="haltungExposed"/>): Dann ist auch die Entscheidung an
+    /// einer Stelle ohne Rahmen beeinflusst und zaehlt als SuggestionShown.
     /// </summary>
-    private static TrainingSampleSuggestionProvenance BuildSuggestionProvenance(CodingEvent ev)
+    private static TrainingSampleSuggestionProvenance BuildSuggestionProvenance(
+        CodingEvent ev, bool haltungExposed)
     {
         var ai = ev.AiContext;
         if (ai is null)
         {
             return new TrainingSampleSuggestionProvenance
             {
-                Origin = TrainingSampleSuggestionOrigin.Independent
+                Origin = haltungExposed
+                    ? TrainingSampleSuggestionOrigin.SuggestionShown
+                    : TrainingSampleSuggestionOrigin.Independent
             };
         }
 

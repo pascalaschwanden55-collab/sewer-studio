@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "zweck": "Vorabdurchlauf: Bogen-Vorschlaege zum Bestaetigen oder Korrigieren",
+  "haltung": "36053-36052",
+  "video": "D:\\Videoprojekte\\Erstfeld_Jagdmatt_38454_0426\\Erstfeld_Jagdmatt_38454_0426_Export\\Film\\H_36053-36052.mpg",
+  "kandidat": "bcc_nc15_seed46_20260808",
+  "gewicht_sha256": "8ad82c1b0186ec02126a18f095d551d7a083faa90855350b22a6e893ac860114",
+  "min_confidence": 0.5,
+  "strong_confidence": 0.8,
+  "arbeitspunkt_beleg": "Videomessung 2026-08-08: 8 Haltungen, 10 protokollierte Boegen, Klassenfilter 14, plus 64 menschliche Blindurteile aus bcc_video_fehlalarm_review.json",
+  "bilder": 1109,
+  "meter_abdeckung": 0.9089,
+  "laufzeit_s": 47.4,
+  "vorschlaege": [
+    {
+      "meter_min": 0.2,
+      "meter_max": 0.4,
+      "meter_geschaetzt": true,
+      "zeit_min": 35.0,
+      "zeit_max": 112.0,
+      "peak_zeit": 52.0,
+      "max_conf": 0.8732926249504089,
+      "bilder": 36,
+      "stufe": "stark",
+      "nummer": 1,
+      "clip": "vorschlag_001.mp4"
+    },
+    {
+      "meter_min": 1.4,
+      "meter_max": 3.4,
+      "meter_geschaetzt": false,
+      "zeit_min": 114.0,
+      "zeit_max": 1020.0,
+      "peak_zeit": 283.0,
+      "max_conf": 0.8095105886459351,
+      "bilder": 79,
+      "stufe": "stark",
+      "nummer": 2,
+      "clip": "vorschlag_002.mp4"
+    },
+    {
+      "meter_min": 6.7,
+      "meter_max": 7.45,
+      "meter_geschaetzt": true,
+      "zeit_min": 458.0,
+      "zeit_max": 620.0,
+      "peak_zeit": 460.0,
+      "max_conf": 0.8523260354995728,
+      "bilder": 46,
+      "stufe": "stark",
+      "nummer": 3,
+      "clip": "vorschlag_003.mp4"
+    },
+    {
+      "meter_min": 9.1,
+      "meter_max": 9.4,
+      "meter_geschaetzt": false,
+      "zeit_min": 716.0,
+      "zeit_max": 778.0,
+      "peak_zeit": 729.0,
+      "max_conf": 0.8305742144584656,
+      "bilder": 19,
+      "stufe": "stark",
+      "nummer": 4,
+      "clip": "vorschlag_004.mp4"
+    },
+    {
+      "meter_min": 13.6,
+      "meter_max": 14.1,
+      "meter_geschaetzt": false,
+      "zeit_min": 989.0,
+      "zeit_max": 1058.0,
+      "peak_zeit": 995.0,
+      "max_conf": 0.8563690781593323,
+      "bilder": 35,
+      "stufe": "stark",
+      "nummer": 5,
+      "clip": "vorschlag_005.mp4"
+    }
+  ]
+}

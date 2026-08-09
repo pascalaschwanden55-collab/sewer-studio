@@ -118,6 +118,23 @@ public sealed class BendSuggestionScanServiceTests : IDisposable
         Assert.True(zweiter.IsUsable);
     }
 
+    [Fact]
+    public async Task Der_Meterstand_der_Antwort_wird_zum_Ort_des_Vorschlags()
+    {
+        // Ende-zu-Ende-Verdrahtung: meter_value aus der Sidecar-Antwort durch
+        // Detektor, Folge und Aggregator bis in den sichtbaren Vorschlag.
+        var dienst = Erzeuge(
+            kalibrierung: Kalibrierung(),
+            extract: _ => Task.FromResult(Bilder(2)),
+            antwort: _ => Antwort(0.9, meterValue: 12.3));
+
+        var ergebnis = await dienst.ScanAsync(Auftrag(), CancellationToken.None);
+
+        var vorschlag = Assert.Single(ergebnis.Suggestions);
+        Assert.Equal(12.3, vorschlag.MeterStart);
+        Assert.False(vorschlag.MeterIsEstimated);
+    }
+
     private BendSuggestionScanRequest Auftrag() => new()
     {
         VideoPath = Path.Combine(_root, "video.mpg"),
@@ -149,11 +166,12 @@ public sealed class BendSuggestionScanServiceTests : IDisposable
         return bilder;
     }
 
-    private static BccTestYoloResponse Antwort(double konfidenz) => new(
+    private static BccTestYoloResponse Antwort(double konfidenz, double? meterValue = null) => new(
         Available: true, Error: null, IsRelevant: true,
         Detections: [new YoloDetectionDto(0, 0, 10, 10, "BCC_bogen", konfidenz)],
         FrameClass: "relevant", InferenceTimeMs: 10.0,
-        CandidateId: Id, CandidateSha256: Sha, ModelName: "bcc", Device: "cuda:0");
+        CandidateId: Id, CandidateSha256: Sha, ModelName: "bcc", Device: "cuda:0",
+        MeterValue: meterValue);
 
     private BendSuggestionScanService Erzeuge(
         BendSuggestionCalibration? kalibrierung,

@@ -79,8 +79,12 @@ public sealed class BendFrameDetector
                 "Das Gewicht der Antwort weicht vom angefragten ab.");
         }
 
+        // Der rohe OSD-Meterstand desselben Bildes (null = nicht lesbar). Er wird
+        // nur durchgereicht; die Folge wird im UseCase plausibilisiert und gefuellt.
+        var meter = response.MeterValue;
+
         if (!response.FrameUsable)
-            return BendFrameResult.NotAssessed(response.QualityReason);
+            return BendFrameResult.NotAssessed(response.QualityReason, meter);
 
         var best = (response.Detections ?? [])
             .Where(detection => string.Equals(
@@ -89,6 +93,8 @@ public sealed class BendFrameDetector
             .DefaultIfEmpty(double.NaN)
             .Max();
 
-        return double.IsNaN(best) ? BendFrameResult.NoBend : BendFrameResult.Detected(best);
+        return double.IsNaN(best)
+            ? new BendFrameResult(BendFrameOutcome.NoBend, Meter: meter)
+            : BendFrameResult.Detected(best, meter);
     }
 }

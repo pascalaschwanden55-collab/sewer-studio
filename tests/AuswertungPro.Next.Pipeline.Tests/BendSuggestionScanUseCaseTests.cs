@@ -204,6 +204,43 @@ public sealed class BendSuggestionScanUseCaseTests
         Assert.Empty(ergebnis.Suggestions);
     }
 
+    [Fact]
+    public async Task Die_Meterfolge_wird_erst_plausibilisiert_dann_gefuellt()
+    {
+        // Beleg vom 2026-08-08: Der Leser meldete 133,08 m in einer Haltung von
+        // keinen 20 m. Die Sequenzpruefung muss diesen Wert verwerfen — sie
+        // braucht dafuer die Folge ALLER Bilder, nicht nur die der Treffer.
+        // Die Luecken zwischen den gelesenen 10,0 und 10,6 werden danach als
+        // Schaetzung gefuellt: Sie ordnen zu, setzen aber keinen Ort.
+        var meterJeIndex = new Dictionary<int, double?>
+        {
+            [1] = 10.0,
+            [2] = 133.08,   // Fehllesung, unvertraeglich mit allen Nachbarn
+            [3] = null,
+            [4] = 10.6,
+            [5] = null,
+        };
+        var ergebnis = await BendSuggestionScanUseCase.ExecuteAsync(
+            Auftrag(),
+            Kalibrierung(),
+            Aktionen(
+                extract: _ => Task.FromResult(Bilder(5)),
+                detect: (bild, _) => Task.FromResult(
+                    BendFrameResult.Detected(0.9, meterJeIndex[bild.Index]))),
+            CancellationToken.None);
+
+        // Ohne die Plausibilitaetspruefung oeffnete 133,08 eine eigene Stelle
+        // (Meterabstand weit ueber der Zusammenfassungsgrenze von 1 m).
+        var einziger = Assert.Single(ergebnis.Suggestions);
+        Assert.Equal(10.0, einziger.MeterStart);
+        Assert.True(einziger.MeterEnd.HasValue);
+        Assert.Equal(10.6, einziger.MeterEnd!.Value, 3);
+        Assert.Equal(5, einziger.FrameCount);
+        // Gefuellte Luecken lagen im Bereich — der Vorschlag wird als teilweise
+        // geschaetzt gekennzeichnet statt als rein gelesen.
+        Assert.True(einziger.MeterIsEstimated);
+    }
+
     private static BendSuggestionScanRequest Auftrag() => new()
     {
         VideoPath = @"D:\Videos\H_1-2.mpg",

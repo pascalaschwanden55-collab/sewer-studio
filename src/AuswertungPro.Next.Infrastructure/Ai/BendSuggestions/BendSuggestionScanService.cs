@@ -13,10 +13,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.BendSuggestions;
 /// (<see cref="BendSuggestionScanUseCase"/>, <see cref="BendSuggestionAggregator"/>);
 /// hier ist nur die Verdrahtung.
 ///
-/// Ein Meterstand wird derzeit nicht geliefert — dafuer gibt es in C# noch keinen
-/// guenstigen OSD-Leser. Die Zusammenfassung faellt dann auf die Zeitregel zurueck,
-/// mit der hoeheren Fehlalarmlast, die dabei gemessen wurde (2,8 statt 1,0 je
-/// Haltung). Sobald eine Meterquelle vorhanden ist, wird sie hier eingehaengt.
+/// Der Meterstand kommt seit e9f3d44ed als `meter_value` in derselben
+/// Sidecar-Antwort mit — ein Aufruf je Bild statt eines zweiten Systems. Die
+/// Folge aller Bilder wird im UseCase erst plausibilisiert
+/// (<see cref="MeterSequencePlausibility"/>) und dann lueckengefuellt
+/// (<see cref="MeterSequenceGapFiller"/>); nur so hat die Pruefung Nachbarn.
 /// </summary>
 public sealed class BendSuggestionScanService : IBendSuggestionScanService
 {
@@ -25,27 +26,26 @@ public sealed class BendSuggestionScanService : IBendSuggestionScanService
     private readonly Func<BccTestYoloRequest, CancellationToken, Task<BccTestYoloResponse>> _ask;
     private readonly Func<string> _resolveFfmpegPath;
     private readonly Func<string> _resolveWorkRoot;
-    private readonly Func<VideoSequenceFrame, CancellationToken, Task<(double? Meter, bool IsEstimated)>>? _resolveMeter;
 
     public BendSuggestionScanService(
         IBendSuggestionCalibrationStore calibrations,
         IVideoFrameSequenceExtractor extractor,
         Func<BccTestYoloRequest, CancellationToken, Task<BccTestYoloResponse>> ask,
         Func<string> resolveFfmpegPath,
-        Func<string> resolveWorkRoot,
-        Func<VideoSequenceFrame, CancellationToken, Task<(double? Meter, bool IsEstimated)>>? resolveMeter = null)
+        Func<string> resolveWorkRoot)
     {
         _calibrations = calibrations ?? throw new ArgumentNullException(nameof(calibrations));
         _extractor = extractor ?? throw new ArgumentNullException(nameof(extractor));
         _ask = ask ?? throw new ArgumentNullException(nameof(ask));
         _resolveFfmpegPath = resolveFfmpegPath ?? throw new ArgumentNullException(nameof(resolveFfmpegPath));
         _resolveWorkRoot = resolveWorkRoot ?? throw new ArgumentNullException(nameof(resolveWorkRoot));
-        _resolveMeter = resolveMeter;
     }
 
     public async Task<BendSuggestionScanResult> ScanAsync(
         BendSuggestionScanRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<BendSuggestionScanProgress>? progress = null,
+        Action<IReadOnlyList<BendFrameDetection>>? reportDetections = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -73,8 +73,14 @@ public sealed class BendSuggestionScanService : IBendSuggestionScanService
                     .DetectAsync(
                         await File.ReadAllBytesAsync(frame.FilePath, token).ConfigureAwait(false),
                         token)
-                    .ConfigureAwait(false),
-                ResolveMeter: _resolveMeter);
+                    .ConfigureAwait(false))
+            {
+                ReportProgress = progress is null
+                    ? null
+                    : (verarbeitet, gesamt) => progress.Report(
+                        new BendSuggestionScanProgress(verarbeitet, gesamt)),
+                ReportDetections = reportDetections
+            };
 
             return await BendSuggestionScanUseCase
                 .ExecuteAsync(request, calibration, actions, cancellationToken)

@@ -241,6 +241,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--ffmpeg", type=Path, default=None)
     parser.add_argument("--ziel", type=Path,
                         default=Path(r"C:\KI_BRAIN\training\diagnostics\bcc_copilot_durchlaeufe"))
+    parser.add_argument("--dump", type=Path, default=None,
+                        help="Diagnose: die fertige Einzelbildfolge (vor der Zusammenfassung) als JSON")
     args = parser.parse_args(argv)
 
     if not args.video.is_file():
@@ -288,6 +290,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         for zeit, meter, geschaetzt in gefuellt_meter
         if zeit in conf_je_zeit
     ]
+    if args.dump:
+        args.dump.parent.mkdir(parents=True, exist_ok=True)
+        args.dump.write_text(json.dumps(treffer, indent=1), encoding="utf-8")
 
     stellen = zusammenfassen(treffer, punkt["min"], punkt["stark"])
     dauer = time.perf_counter() - gestartet
