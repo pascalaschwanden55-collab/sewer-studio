@@ -45,6 +45,7 @@ using AuswertungPro.Next.Infrastructure.Settings;
 using AuswertungPro.Next.Infrastructure.Telemetry;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.BendSuggestions;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -75,6 +76,7 @@ using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 
 namespace AuswertungPro.Next.UI
 {
@@ -87,6 +89,9 @@ namespace AuswertungPro.Next.UI
         // thread-sicher und soll nicht bei jedem Import neu erzeugt werden.
         private readonly HttpClient _importAiHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
         private readonly Lazy<ReviewQueueService> _trainingReviewQueue;
+        // Langlebiger Sidecar-Client fuer den Bogen-Vorschlagsdurchlauf (je Bild ein Aufruf).
+        // Wird erst beim ersten Durchgang gebaut und lebt den ganzen Programmlauf.
+        private readonly Lazy<VisionPipelineClient> _bendSuggestionClient;
 
         #region Infrastruktur / Querschnitt
         // Basis-Einstellungen, Logging und Fehlercode-Generator
@@ -264,6 +269,11 @@ namespace AuswertungPro.Next.UI
         public IPipelineEnvironmentOptions PipelineEnvironment { get; }
         public ICodingFramePhotoStore CodingFramePhotos { get; }
         public ICodingDefectPreviewRenderer CodingDefectPreviews { get; }
+        public IBendSuggestionScanService BendSuggestionScan { get; }
+        // Sitzungsgedaechtnis der angesehenen Vorschlagslisten — bewusst Singleton: Das
+        // Gedaechtnis muss den ganzen Programmlauf leben, ein Neustart setzt es zurueck.
+        public ICodingSuggestionExposure CodingSuggestionExposure { get; }
+        public IVideoClipExtractor VideoClipExtraction { get; }
         public ITelemetryPathResolver TelemetryPaths { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
         public IPipelineTraceWriter PipelineTrace { get; }
@@ -620,6 +630,26 @@ namespace AuswertungPro.Next.UI
                 SidecarTelemetry,
                 sidecarRestart);
             SanierungOptimizations = new Infrastructure.Ai.Sanierung.AiSanierungOptimizationFactory();
+            // Bogen-Vorschlaege (Auftrag Paket 4): derselbe Sidecar-Weg wie die uebrigen
+            // Pipeline-Clients — URL, Token und Telemetrie kommen aus derselben Konfiguration.
+            _bendSuggestionClient = new Lazy<VisionPipelineClient>(() =>
+            {
+                var bendCfg = PipelineCfg;
+                return new VisionPipelineClient(
+                    bendCfg.SidecarUrl,
+                    httpClient: null,
+                    bendCfg.SidecarToken,
+                    SidecarTelemetry,
+                    ownedTimeout: TimeSpan.FromSeconds(Math.Max(30, bendCfg.SidecarTimeoutSec)));
+            });
+            BendSuggestionScan = new BendSuggestionScanService(
+                new BendSuggestionCalibrationFileStore(),
+                new VideoFrameSequenceExtractor(),
+                (anfrage, abbruch) => _bendSuggestionClient.Value.DetectBccTestYoloAsync(anfrage, abbruch),
+                FfmpegExecutables.ResolveFfmpeg,
+                () => Path.Combine(Path.GetTempPath(), "auswertungpro-bogen-scan"));
+            CodingSuggestionExposure = new CodingSuggestionExposure();
+            VideoClipExtraction = new VideoClipExtractionService(ProcessOutputs);
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
             CodeSelectionCatalog = new AuswertungPro.Next.Application.Protocol.VsaCodeTreeSelectionCatalog(

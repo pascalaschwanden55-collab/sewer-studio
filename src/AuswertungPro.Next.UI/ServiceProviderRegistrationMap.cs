@@ -62,6 +62,7 @@ using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 
 namespace AuswertungPro.Next.UI;
 
@@ -94,6 +95,9 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IFfmpegExecutableLocator)] = services.FfmpegExecutables,
             [typeof(IProcessOutputReader)] = services.ProcessOutputs,
             [typeof(IVideoFrameExtractor)] = services.VideoFrameExtraction,
+            [typeof(IVideoClipExtractor)] = services.VideoClipExtraction,
+            [typeof(IBendSuggestionScanService)] = services.BendSuggestionScan,
+            [typeof(ICodingSuggestionExposure)] = services.CodingSuggestionExposure,
             [typeof(ITrainingFfmpegPathResolver)] = services.TrainingFfmpegPaths,
             [typeof(ISidecarScriptLocator)] = services.SidecarScripts,
             [typeof(ISidecarTokenResolver)] = services.SidecarTokens,

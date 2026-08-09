@@ -132,12 +132,19 @@ die Laufzeit. Ein blinder Fleck darf sich nicht als sauberes Rohr tarnen.
 - Sprung des Players an die Stelle (spaeter nachruestbar)
 - Meterstand auf HD-Material
 
-## 9. Offene Abhängigkeit
+## 9. Offene Punkte
 
-Der C#-Weg liefert derzeit **keinen Meterstand** — der Sidecar-Vertrag trägt
-`meter_value` seit `e9f3d44ed`, aber `BendSuggestionScanService` hängt die
-Meterquelle noch nicht ein. Ohne sie fällt die Zusammenfassung auf die Zeitregel
-zurück, mit der gemessenen höheren Fehlalarmlast (2,8 statt 1,0 je Haltung).
-
-Das ist vor dem Fenster zu erledigen, sonst ist die Liste im Programm schlechter
-als die des Prototyps.
+- ~~Meterquelle im C#-Weg~~ — **erledigt 2026-08-09** (`a160b49c5`): `meter_value`
+  aus der Sidecar-Antwort, Folge ueber alle Bilder, erst Plausibilitaet, dann
+  Lueckenfuellen. Abgenommen gegen den Prototypen (226 Einzeltreffer ohne
+  Abweichung, fuenf Stellen feldgleich; Fixture
+  `tests/Fixtures/BendSuggestions/soll_36053-36052_vorschlaege.json`).
+- **Clip-Zwischendateien bleiben liegen** (`auswertungpro_clip_*.mp4` im
+  Temp-Ordner), weil das MediaElement die Datei offen haelt. Bei vielen
+  Durchlaeufen fuellt sich der Temp-Ordner — ein Durchgang ueber ein
+  Neun-Minuten-Video sind rund 550 Bilder plus Clips. Aufräumstrategie ist
+  ein Follow-up (z. B. Loeschen beim naechsten Fensterstart oder nach dem
+  Schliessen des Fensters).
+- **Sichtpruefung des Bereichs** am laufenden Fenster (Dark-Theme des
+  DataGrid, Lesbarkeit der Grenzen-Zeile, Clip-Abspielung): keine
+  Testabdeckung moeglich, gehoert dem Menschen.

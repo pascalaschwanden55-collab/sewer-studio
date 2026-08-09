@@ -28,6 +28,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ── Kopfzeile: Quellen + Fortschritt ───────────────────────────── -->
@@ -452,8 +453,93 @@
                 </ListBox>
         </Border>
 
+        <!-- ── Bogen-Vorschläge (Video-Durchlauf, Auftrag Paket 3) ────────── -->
+        <Expander x:Name="BendSuggestionSection" Grid.Row="3" Margin="0,8,0,0"
+                  IsExpanded="False"
+                  Background="{DynamicResource CardBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}">
+            <Expander.Header>
+                <TextBlock FontWeight="Bold" Text="Bogen-Vorschläge (Video-Durchlauf)"/>
+            </Expander.Header>
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="10" MaxHeight="380">
+                <StackPanel>
+                    <WrapPanel VerticalAlignment="Center">
+                        <Button Content="Video wählen…" Style="{StaticResource ToolbarButton}"
+                                Click="ChooseBendSuggestionVideo_Click"/>
+                        <Button Content="Durchgang starten" Style="{StaticResource PrimaryButton}"
+                                Command="{Binding StartScanCommand}" Margin="6,0,0,0"/>
+                        <Button Content="Abbrechen" Style="{StaticResource ToolbarButtonDanger}"
+                                Command="{Binding CancelScanCommand}"
+                                IsEnabled="{Binding IsBusy}" Margin="6,0,0,0"/>
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}">
+                            <Run Text="Haltung:"/>
+                            <Run Text="{Binding Haltung, TargetNullValue='—'}"/>
+                            <Run Text="{Binding VideoPath, StringFormat=' · {0}', TargetNullValue=''}"/>
+                        </TextBlock>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <!-- Grenzen, die sichtbar ins Fenster gehören (Auftrag) — konstant, kein Tooltip -->
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="11"
+                               Foreground="{DynamicResource WarningBrush}"
+                               Text="Nur Bögen — eine leere Liste ist ein gültiges Ergebnis. Jeder zweite schwache Vorschlag ist falsch. Auf HD-Material gibt es keine Meterangabe (Sekunden statt Meter)."/>
+                    <TextBlock Text="{Binding HeaderText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding ResultInfoText}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <DataGrid Grid.Column="0"
+                                  ItemsSource="{Binding Suggestions}"
+                                  SelectedItem="{Binding SelectedSuggestion}"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  SelectionMode="Single" SelectionUnit="FullRow"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="Transparent" MaxHeight="200" Margin="0,0,8,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*"/>
+                                <DataGridTextColumn Header="Stufe" Binding="{Binding StufeText}" Width="70">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <!-- stark war in der Messung 6/6 richtig, schwach 7/9 —
+                                                     der Unterschied muss sichtbar sein -->
+                                                <DataTrigger Binding="{Binding Strength}" Value="Strong">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Strength}" Value="Weak">
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Konfidenz" Binding="{Binding KonfidenzText}" Width="80"/>
+                                <DataGridTextColumn Header="Bilder" Binding="{Binding FrameCount}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="4" Padding="4">
+                            <StackPanel>
+                                <Image Source="{Binding PeakImage}" MaxHeight="160" Stretch="Uniform"/>
+                                <MediaElement Source="{Binding ClipPath}" MaxHeight="160" Stretch="Uniform"
+                                              LoadedBehavior="Play" UnloadedBehavior="Play" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Expander>
+
         <!-- ── Statuszeile ────────────────────────────────────────────────── -->
-        <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+        <Border Grid.Row="4" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
                 Padding="12,6" Margin="0,8,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>

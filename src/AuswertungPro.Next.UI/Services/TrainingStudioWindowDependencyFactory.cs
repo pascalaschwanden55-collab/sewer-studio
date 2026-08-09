@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai;                 // IVisionPipelineClient, PipelineConfig, ISidecarTelemetryWriter
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;   // IRetrievalService
@@ -11,12 +12,16 @@ using AuswertungPro.Next.Application.Ai.Training;        // ITrainingSampleStore
 using AuswertungPro.Next.Application.Ai.Training.Preview;
 using AuswertungPro.Next.Application.Ai.Workbench;       // IAnnotationWorkbenchService
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Media;              // IVideoFrameExtractor, IVideoClipExtractor
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
 using AuswertungPro.Next.Infrastructure.Ai;              // OllamaClient, BcaFineCodeClassifier
+using AuswertungPro.Next.Infrastructure.Ai.BendSuggestions;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;       // ToOllamaConfig
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;     // VisionPipelineClient, SidecarTelemetryWriter
+using AuswertungPro.Next.Infrastructure.Ai.Shared;       // FfmpegLocator
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;      // TeacherAnnotationStore, VsaYoloClassMap
 using AuswertungPro.Next.Infrastructure.Ai.Training;     // TrainingSamplesStore, DelegatingKnowledgeBaseIndexer
 using AuswertungPro.Next.Infrastructure.Ai.Training.Preview;
@@ -24,7 +29,9 @@ using AuswertungPro.Next.Infrastructure.Ai.Training.PdfReview;
 using AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Infrastructure.Ai.Training.GoldQualityReview;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Inventory;
+using AuswertungPro.Next.Infrastructure.Media;           // VideoFrameSequenceExtractor
 using AuswertungPro.Next.UI.Ai.Training;                 // TrainingKnowledgeBaseIndexWorkflow
+using AuswertungPro.Next.UI.ViewModels.BendSuggestions;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -47,9 +54,12 @@ internal static class TrainingStudioWindowDependencyFactory
         IGoldQualityReviewQueueUseCase GoldQualityReview,
         IFolderOpenService? FolderOpen,
         Func<CancellationToken, Task<IReadOnlyList<PersonalGoldMainCodeStatus>>> LoadGoldProgress,
-        Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? EnsureAiReady);
+        Func<IProgress<string>, CancellationToken, Task<(bool Ready, string StatusText)>>? EnsureAiReady,
+        BendSuggestionListViewModel BendSuggestions);
 
-    internal static Dependencies CreateDependencies(ServiceProvider? services)
+    internal static Dependencies CreateDependencies(
+        ServiceProvider? services,
+        Action<Action>? marshalToUi = null)
     {
         var pipeline = CreatePipelineClient(services);
         var workbench = Create(services, pipeline);
@@ -74,6 +84,7 @@ internal static class TrainingStudioWindowDependencyFactory
             ?? new PersonalGoldInboxFileService(KnowledgeBasePaths.GetRoot());
         var goldQualityReview = CreateGoldQualityReview(services);
         var goldProgress = CreateGoldProgressLoader(services);
+        var bendSuggestions = CreateBendSuggestionListViewModel(services, pipeline, marshalToUi);
         if (services is null)
         {
             return new Dependencies(
@@ -87,7 +98,8 @@ internal static class TrainingStudioWindowDependencyFactory
                 goldQualityReview,
                 FolderOpen: null,
                 goldProgress,
-                EnsureAiReady: null);
+                EnsureAiReady: null,
+                BendSuggestions: bendSuggestions);
         }
 
         var readiness = new TrainingStudioAiReadinessWorkflow(
@@ -121,7 +133,47 @@ internal static class TrainingStudioWindowDependencyFactory
             {
                 var result = await readiness.EnsureReadyAsync(progress, ct);
                 return (result.Ready, result.StatusText);
-            });
+            },
+            BendSuggestions: bendSuggestions);
+    }
+
+    /// <summary>
+    /// Baut das Bogen-Vorschlags-ViewModel (Auftrag Paket 3/4). Mit Provider kommen die
+    /// registrierten Singletons zum Zug — das Exposure-Gedaechtnis muss denselben
+    /// Programmlauf ueberdauern. Der Designer-Rueckfall (services = null) komponiert lokal
+    /// aus dem Fenster-eigenen Pipeline-Client, wie die uebrigen Dienste hier.
+    /// </summary>
+    internal static BendSuggestionListViewModel CreateBendSuggestionListViewModel(
+        ServiceProvider? services,
+        IVisionPipelineClient pipeline,
+        Action<Action>? marshalToUi)
+    {
+        ArgumentNullException.ThrowIfNull(pipeline);
+        Func<string> resolveFfmpeg = () => services?.FfmpegExecutables.ResolveFfmpeg()
+            ?? FfmpegLocator.ResolveFfmpeg();
+
+        IBendSuggestionScanService scan = services?.BendSuggestionScan
+            ?? new BendSuggestionScanService(
+                new BendSuggestionCalibrationFileStore(),
+                new VideoFrameSequenceExtractor(),
+                pipeline.DetectBccTestYoloAsync,
+                resolveFfmpeg,
+                () => Path.Combine(Path.GetTempPath(), "auswertungpro-bogen-scan"));
+        ICodingSuggestionExposure exposure = services?.CodingSuggestionExposure
+            ?? new CodingSuggestionExposure();
+        IVideoFrameExtractor frames = services?.VideoFrameExtraction
+            ?? new VideoFrameExtractionService(ProcessOutputReader.Current);
+        IVideoClipExtractor clips = services?.VideoClipExtraction
+            ?? new VideoClipExtractionService(ProcessOutputReader.Current);
+
+        return new BendSuggestionListViewModel(
+            scan,
+            exposure,
+            frames,
+            clips,
+            resolveFfmpeg,
+            marshalToUi,
+            log: text => services?.Logger.LogInformation("{Meldung}", text));
     }
 
     private static IGoldQualityReviewQueueUseCase CreateGoldQualityReview(

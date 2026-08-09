@@ -2,10 +2,12 @@ using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.UI.Ai.Training;
 using Microsoft.Extensions.Logging;
@@ -58,9 +60,11 @@ public sealed class ServiceProviderRegistrationTests
         // Bewusster Tripwire: die Zahl zwingt bei jedem neuen/entfernten Dienst zu einer
         // Entscheidung. Die Meldung nennt den Grund, statt nur eine nackte Zahl-Abweichung
         // zu zeigen (frueherer Kritikpunkt: nichtssagend).
+        // 132 -> 135: Bogen-Vorschlaege (Auftrag Paket 4): IBendSuggestionScanService,
+        // ICodingSuggestionExposure, IVideoClipExtractor.
         Assert.True(
-            registrations.Count == 132,
-            $"Erwartet 132 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 135,
+            $"Erwartet 135 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
@@ -123,6 +127,15 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.TrainingYoloExportCoordinator,
             services.TrainingYoloExport.Coordinator);
+        Assert.Same(
+            services.BendSuggestionScan,
+            registrations[typeof(IBendSuggestionScanService)]);
+        Assert.Same(
+            services.CodingSuggestionExposure,
+            registrations[typeof(ICodingSuggestionExposure)]);
+        Assert.Same(
+            services.VideoClipExtraction,
+            registrations[typeof(IVideoClipExtractor)]);
         // Echte Invariante statt tautologischem GetService-Selbstvergleich: jeder registrierte
         // Wert muss tatsaechlich eine Instanz seines Vertragstyps sein. Das faengt eine vertippte
         // Zuordnung [typeof(IFoo)] = services.Bar ab, die der Compiler nicht bemerkt (der

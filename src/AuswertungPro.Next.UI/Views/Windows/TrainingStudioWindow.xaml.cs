@@ -16,6 +16,7 @@ using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfen
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.ViewModels.BendSuggestions;  // BendSuggestionListViewModel
 using AuswertungPro.Next.UI.ViewModels.Windows;      // VsaCodeExplorerViewModel
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -28,6 +29,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
+    private readonly BendSuggestionListViewModel _bendVm;
     private readonly WorkbenchQueueService _queueService;
     private readonly ITrainingPdfReviewImportService _pdfReviewImport;
     private readonly ITrainingPdfReviewBatchImportUseCase _pdfReviewBatchImport;
@@ -53,13 +55,19 @@ public partial class TrainingStudioWindow : Window
         WindowStateManager.Track(this);
 
         _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
-        var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(services);
+        // Der Bogen-Vorschlags-Workflow meldet von Threadpool-Threads — alles Gebundene
+        // laeuft ueber den Dispatcher zurueck auf den UI-Thread.
+        var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(
+            services,
+            aktion => Dispatcher.Invoke(aktion));
         _queueService = dependencies.QueueService;
         _pdfReviewImport = dependencies.PdfReviewImport;
         _pdfReviewBatchImport = dependencies.PdfReviewBatchImport;
         _goldAlbumService = dependencies.GoldAlbum;
         _goldInboxService = dependencies.GoldInbox;
         _folderOpen = dependencies.FolderOpen;
+        _bendVm = dependencies.BendSuggestions;
+        BendSuggestionSection.DataContext = _bendVm;
         // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
         // der synchrone loadQueue-Delegate bleibt leer.
         _vm = new TrainingStudioViewModel(
@@ -80,9 +88,31 @@ public partial class TrainingStudioWindow : Window
             _isClosed = true;
             _pdfImportCts?.Cancel();
             _vm.PropertyChanged -= Vm_PropertyChanged;
+            // Bricht Scan- und Vorschaularbeit des Bogen-Bereichs ab.
+            _bendVm.Dispose();
             // Gibt Workbench-SAM-Service + Vision-Client (eigener HttpClient) frei.
             _vm.Dispose();
         };
+    }
+
+    // ── Bogen-Vorschläge: nur die Dateiwahl, die Fachlogik liegt im ViewModel ──
+
+    private void ChooseBendSuggestionVideo_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Video einer Haltung für die Bogen-Vorschläge wählen",
+            Filter = "Videos (*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv)|*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv|Alle Dateien (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        _bendVm.SetVideo(dlg.FileName);
     }
 
     private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)
