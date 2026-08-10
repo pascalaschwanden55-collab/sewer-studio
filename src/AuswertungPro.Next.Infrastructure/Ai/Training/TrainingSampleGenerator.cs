@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -122,7 +123,7 @@ public sealed class TrainingSampleGenerator
         }
 
         // OSD-Zeitreihe nur mit Video + AI
-        IReadOnlyList<(double TimeSeconds, double Meter)> timeline = [];
+        IReadOnlyList<FilledMeterReading> timeline = [];
         if (hasVideo)
         {
             timeline = await _meterTimeline.BuildTimelineAsync(
@@ -192,11 +193,12 @@ public sealed class TrainingSampleGenerator
 
                 if (timeline.Count > 0)
                 {
-                    detectedMeter = MeterTimelineService.InterpolateMeter(timeline, t);
-                    if (detectedMeter.HasValue)
+                    var (osdMeter, osdIsEstimated) = MeterTimelineService.InterpolateMeter(timeline, t);
+                    if (osdMeter.HasValue)
                     {
-                        meterSource = "osd";
-                        odsDelta = Math.Abs(detectedMeter.Value - meter);
+                        meterSource = osdIsEstimated ? "osd_geschaetzt" : "osd"; // "osd" nur fuer wirklich gelesene Werte (AP-3); Altbestand bleibt unveraendert
+                        detectedMeter = osdMeter;
+                        odsDelta = Math.Abs(osdMeter.Value - meter);
                         hasOsdMismatch = odsDelta.Value > _settings.OsdMismatchThresholdMeters;
                     }
                 }

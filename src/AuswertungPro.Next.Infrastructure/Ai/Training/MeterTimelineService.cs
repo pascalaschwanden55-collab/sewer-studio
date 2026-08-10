@@ -5,14 +5,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Baut eine OSD-Meter-Zeitreihe aus einem Video auf.
+/// Bewusst nicht versiegelt: Tests haengen eine feste Folge ueber
+/// <see cref="BuildTimelineAsync"/> ein (siehe dort).
 /// </summary>
-public sealed class MeterTimelineService
+public class MeterTimelineService
 {
     private readonly AiRuntimeSettings _cfg;
     private readonly OsdMeterDetectionService? _osd;
@@ -25,37 +28,61 @@ public sealed class MeterTimelineService
         _concurrency = Math.Max(1, concurrency);
     }
 
-    public static double? InterpolateMeter(
-        IReadOnlyList<(double TimeSeconds, double Meter)> timeline,
+    /// <summary>
+    /// Interpoliert den Meterstand zu einem Zeitpunkt. Ehrlichkeit vor Dichte:
+    /// Ausserhalb gelesener Klammern und ueber ungefuellten Luecken gibt es keinen
+    /// Wert — und ein interpolierter Wert aus geschaetzten Endpunkten bleibt als
+    /// geschaetzt gekennzeichnet (<c>IsEstimated</c>). Keine Rand-Extrapolation mehr.
+    /// </summary>
+    public static (double? Meter, bool IsEstimated) InterpolateMeter(
+        IReadOnlyList<FilledMeterReading> timeline,
         double timeSeconds)
     {
-        if (timeline.Count == 0) return null;
-        if (timeline.Count == 1) return timeline[0].Meter;
-
-        for (var i = 0; i < timeline.Count - 1; i++)
+        for (var index = 0; index < timeline.Count - 1; index++)
         {
-            var (t0, m0) = timeline[i];
-            var (t1, m1) = timeline[i + 1];
-            if (timeSeconds >= t0 && timeSeconds <= t1)
-            {
-                var frac = (t1 == t0) ? 0.0 : (timeSeconds - t0) / (t1 - t0);
-                return m0 + frac * (m1 - m0);
-            }
+            var links = timeline[index];
+            var rechts = timeline[index + 1];
+            if (timeSeconds < links.TimeSeconds || timeSeconds > rechts.TimeSeconds)
+                continue;
+
+            if (links.Meter is not { } m0 || rechts.Meter is not { } m1)
+                return (null, false);
+
+            var spanne = rechts.TimeSeconds - links.TimeSeconds;
+            var anteil = spanne <= 0.0 ? 0.0 : (timeSeconds - links.TimeSeconds) / spanne;
+            return (m0 + anteil * (m1 - m0), links.IsEstimated || rechts.IsEstimated);
         }
 
-        return timeSeconds <= timeline[0].TimeSeconds
-            ? timeline[0].Meter
-            : timeline[^1].Meter;
+        return (null, false);
     }
 
-    public async Task<IReadOnlyList<(double TimeSeconds, double Meter)>> BuildTimelineAsync(
+    /// <summary>
+    /// Bereinigt die rohe Lesefolge: erst Sequenz-Plausibilitaet (unmoegliche Werte
+    /// raus), dann kurze Luecken fuellen — mit allen drei Klammern, die aus echten
+    /// Fehlern gelernt wurden (Lueckenlaenge, Richtungswechsel, Schaetzkennzeichnung).
+    /// Ersetzt die fruehere Glattung, die bei komplett unlesbarem OSD eine Reihe
+    /// aus Null-Metern erfand — eine erfundene Null sieht aus wie eine Messung.
+    /// </summary>
+    public static IReadOnlyList<FilledMeterReading> BereinigeTimeline(
+        IReadOnlyList<(double TimeSeconds, double? Meter)> roh)
+    {
+        var lesungen = roh
+            .Select(punkt => new MeterReading(punkt.TimeSeconds, punkt.Meter))
+            .ToList();
+        var geprueft = MeterSequencePlausibility.Check(lesungen, new MeterPlausibilityOptions());
+        return MeterSequenceGapFiller.Fill(geprueft, new MeterGapFillOptions());
+    }
+
+    // virtual, damit Tests eine feste Timeline einhaengen koennen (AP-3-Pflichttest:
+    // die Quellen-Zuordnung im Generator wird sonst nur durch Lesen belegt).
+    public virtual async Task<IReadOnlyList<FilledMeterReading>> BuildTimelineAsync(
         string videoPath,
         double videoDurationSeconds,
         double stepSeconds = 5.0,
         CancellationToken ct = default)
     {
         if (!_cfg.Enabled || _osd is null)
-            return Array.Empty<(double, double)>();
+            return Array.Empty<FilledMeterReading>();
 
         var ffmpeg = _cfg.FfmpegPath ?? "ffmpeg";
         var frames = new List<(int Index, FrameData Frame)>();
@@ -102,6 +129,6 @@ public sealed class MeterTimelineService
             .Select(kv => (kv.Value.Time, kv.Value.Meter))
             .ToList();
 
-        return OsdMeterDetectionService.SmoothMeterTimeline(raw);
+        return BereinigeTimeline(raw);
     }
 }
