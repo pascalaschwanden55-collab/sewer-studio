@@ -383,9 +383,17 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             }
         }
 
-        BestEffort.ReportWarning(
-            "[TrainingSampleFileStore] KRITISCH: Kein lesbares Backup gefunden, starte leer");
-        return [];
+        // Kein lesbarer Stand mehr: Hier darf NICHT eine leere Liste zurueckgegeben
+        // werden. Die Hauptdatei existierte (sonst waere dieser Pfad nie erreicht
+        // worden) — leer weiterzugeben liesse den naechsten Speichervorgang den
+        // vorhandenen Bestand mit fast nichts ueberschreiben. Unlesbar ist ein
+        // Fehler, nicht ein Erstlauf. Dieselbe Unterscheidung gilt fuer die
+        // Kostendateien (CostStoreFileProbe): fehlend = leer, unlesbar = Fehler.
+        throw new InvalidOperationException(
+            $"Die Trainingsdaten sind nicht lesbar, und keine Sicherungskopie ist "
+            + $"lesbar ({path}). Der vorhandene Bestand wurde NICHT veraendert — "
+            + $"es wird nichts gespeichert. Letzter Lesefehler: {error.Message}",
+            error);
     }
 
     private async Task SaveInternalAsync(List<TrainingSample> samples)
