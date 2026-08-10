@@ -115,6 +115,28 @@ public partial class TrainingStudioWindow : Window
         _bendVm.SetVideo(dlg.FileName);
     }
 
+    private void OpenBendSuggestionPreview_Click(object sender, RoutedEventArgs e)
+        => OpenBendSuggestionPreview();
+
+    private void BendSuggestionGrid_MouseDoubleClick(
+        object sender, System.Windows.Input.MouseButtonEventArgs e)
+        => OpenBendSuggestionPreview();
+
+    /// <summary>
+    /// Grossansicht des gewaehlten Vorschlags: Der Daumen im Bereich taugt nicht
+    /// zur Beurteilung (Sichtpruefung 2026-08-09). Reine Anzeige, kein Player-Sprung.
+    /// </summary>
+    private void OpenBendSuggestionPreview()
+    {
+        var auswahl = _bendVm.SelectedSuggestion;
+        if (auswahl is null || _bendVm.PeakImage is null)
+            return;
+
+        var fenster = new BendSuggestionPreviewWindow { Owner = this };
+        fenster.SetContent(auswahl.OrtText, _bendVm.PeakImage, _bendVm.ClipPath);
+        fenster.Show();
+    }
+
     private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= TrainingStudioWindow_Loaded;

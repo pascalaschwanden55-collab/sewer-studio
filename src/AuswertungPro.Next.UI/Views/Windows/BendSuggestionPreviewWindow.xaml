@@ -1,0 +1,27 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.BendSuggestionPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Bogen-Vorschlag" Height="860" Width="1180"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgLightBrush}">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TitelText" Grid.Row="0" FontWeight="SemiBold" FontSize="15"
+                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+        <!-- Das Spitzenbild gross: Beurteilen braucht Pixel, kein Daumen. -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="4">
+            <Image x:Name="GrossBild" Stretch="Uniform"/>
+        </Border>
+
+        <MediaElement x:Name="ClipAnzeige" Grid.Row="2" Height="280" Margin="0,10,0,0"
+                      Stretch="Uniform" LoadedBehavior="Play" UnloadedBehavior="Play"/>
+    </Grid>
+</Window>

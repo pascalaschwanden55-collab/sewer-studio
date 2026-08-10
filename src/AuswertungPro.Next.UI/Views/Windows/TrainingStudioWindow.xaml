@@ -462,7 +462,7 @@
                 <TextBlock FontWeight="Bold" Text="Bogen-Vorschläge (Video-Durchlauf)"/>
             </Expander.Header>
             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="10" MaxHeight="380">
+                    CornerRadius="6" Padding="10" MaxHeight="560">
                 <StackPanel>
                     <WrapPanel VerticalAlignment="Center">
                         <Button Content="Video wählen…" Style="{StaticResource ToolbarButton}"
@@ -500,8 +500,10 @@
                                   SelectedItem="{Binding SelectedSuggestion}"
                                   AutoGenerateColumns="False" IsReadOnly="True"
                                   SelectionMode="Single" SelectionUnit="FullRow"
+                                  MouseDoubleClick="BendSuggestionGrid_MouseDoubleClick"
+                                  ToolTip="Doppelklick öffnet die Grossansicht mit Bild und Clip."
                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                  Background="Transparent" MaxHeight="200" Margin="0,0,8,0">
+                                  Background="Transparent" MaxHeight="320" Margin="0,0,8,0">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*"/>
                                 <DataGridTextColumn Header="Stufe" Binding="{Binding StufeText}" Width="70">
@@ -528,9 +530,12 @@
                         <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="4">
                             <StackPanel>
-                                <Image Source="{Binding PeakImage}" MaxHeight="160" Stretch="Uniform"/>
-                                <MediaElement Source="{Binding ClipPath}" MaxHeight="160" Stretch="Uniform"
+                                <Image Source="{Binding PeakImage}" MaxHeight="240" Stretch="Uniform"/>
+                                <MediaElement Source="{Binding ClipPath}" MaxHeight="200" Stretch="Uniform"
                                               LoadedBehavior="Play" UnloadedBehavior="Play" Margin="0,6,0,0"/>
+                                <Button Content="Gross anzeigen…" Style="{StaticResource ToolbarButton}"
+                                        Click="OpenBendSuggestionPreview_Click" Margin="0,6,0,0"
+                                        ToolTip="Oeffnet Spitzenbild und Clip in Fenstergroesse."/>
                             </StackPanel>
                         </Border>
                     </Grid>
