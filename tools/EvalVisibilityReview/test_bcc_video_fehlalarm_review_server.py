@@ -137,6 +137,21 @@ class FehlalarmReviewStoreTests(unittest.TestCase):
     def test_erlaubte_urteile_sind_genau_drei(self) -> None:
         self.assertEqual(("bogen", "kein_bogen", "unsicher"), URTEILE)
 
+    def test_neue_queue_bindet_die_clip_bytes(self) -> None:
+        queue = json.loads((self.queue_root / "queue.json").read_text(encoding="utf-8"))
+        queue["schema_version"] = 2
+        for fall in queue["faelle"]:
+            import hashlib
+            clip = self.queue_root / "clips" / fall["clip"]
+            fall["clip_sha256"] = hashlib.sha256(clip.read_bytes()).hexdigest()
+        (self.queue_root / "queue.json").write_text(json.dumps(queue), encoding="utf-8")
+        self.assertEqual(2, self._store().stand()["gesamt"])
+
+        erster_clip = self.queue_root / "clips" / queue["faelle"][0]["clip"]
+        erster_clip.write_bytes(b"veraendert")
+        with self.assertRaises(SystemExit):
+            self._store()
+
 
 if __name__ == "__main__":
     unittest.main()

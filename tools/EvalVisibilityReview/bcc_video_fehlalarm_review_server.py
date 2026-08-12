@@ -47,6 +47,13 @@ class FehlalarmReviewStore:
         self.faelle = list(self.queue.get("faelle") or [])
         if not self.faelle:
             raise SystemExit("Die Warteschlange enthaelt keine Faelle.")
+        if int(self.queue.get("schema_version") or 1) >= 2:
+            for fall in self.faelle:
+                clip = self.queue_root / "clips" / str(fall.get("clip") or "")
+                erwartet = str(fall.get("clip_sha256") or "")
+                if not erwartet or not clip.is_file() or _sha256(clip) != erwartet:
+                    raise SystemExit(
+                        f"Clip fehlt oder wurde veraendert: {fall.get('fall_id', '?')}")
         self.urteile: dict[str, dict] = {}
         self._laden()
 

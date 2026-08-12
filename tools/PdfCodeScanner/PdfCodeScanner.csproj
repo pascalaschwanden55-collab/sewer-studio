@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
