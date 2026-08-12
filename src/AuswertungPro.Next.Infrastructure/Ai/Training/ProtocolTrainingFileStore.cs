@@ -104,16 +104,21 @@ public sealed class ProtocolTrainingFileStore : IProtocolTrainingStore
 
             var json = File.ReadAllText(path);
             var data = JsonSerializer.Deserialize<ProtocolTrainingData>(json, JsonOptions)
-                       ?? new ProtocolTrainingData();
+                       ?? throw new JsonException(
+                           "Protokoll-Trainingsdaten muessen als JSON-Objekt gespeichert sein.");
             data.Samples ??= new List<ProtocolTrainingSampleData>();
             return data;
         }
         catch (Exception ex)
         {
-            BestEffort.ReportWarning(
-                $"Protokoll-Trainingsdaten konnten nicht gelesen werden ({path}): " +
-                $"{ex.GetType().Name}: {ex.Message}");
-            return new ProtocolTrainingData();
+            // Unlesbar ist ein Fehler, kein Erstlauf: Eine voruebergehende Sperre
+            // darf den Bestand nicht durch den naechsten Speichervorgang loeschen.
+            // Dieselbe Regel wie beim Gold-Store (AP-1): fehlend = leer,
+            // unlesbar = Fehler.
+            throw new InvalidOperationException(
+                $"Die Protokoll-Trainingsdaten sind nicht lesbar ({path}). Der "
+                + $"vorhandene Bestand wurde NICHT veraendert — es wird nichts "
+                + $"gespeichert. {ex.GetType().Name}: {ex.Message}", ex);
         }
     }
 

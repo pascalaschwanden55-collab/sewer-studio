@@ -600,15 +600,12 @@ namespace AuswertungPro.Next.UI
                 getTarget: () =>
                 {
                     var restartPlatform = AiSettings.Load(AppSettingsAiSettingsProvider.ToSource(settings));
-                    var restartToken = SidecarTokens.Resolve(restartPlatform.SidecarToken);
                     return new Application.Ai.Startup.SidecarRestartTarget(
                         SidecarUrl: restartPlatform.SidecarUrl,
-                        Headers: restartToken is null
-                            ? null
-                            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                [SidecarTokenResolver.HeaderName] = restartToken
-                            },
+                        Headers: AiStartupService.BuildSidecarHeaders(
+                            restartPlatform.SidecarUrl,
+                            restartPlatform.SidecarToken,
+                            SidecarTokens),
                         ScriptPath: SidecarScripts.FindDefaultSidecarScript(),
                         PowerShellExe: SidecarScripts.ResolvePowerShellExe(),
                         EnvironmentVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

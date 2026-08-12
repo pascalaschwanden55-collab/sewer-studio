@@ -309,6 +309,7 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `VideoFullAnalysisService`      → Vollanalyse-/Fallback-Pfad mit eigener Dedup-Logik
 - `SingleFrameMultiModelService`  → Live-Einzelframe YOLO/DINO/SAM
 - `VisionPipelineClient`          → C#-HTTP-Client zum Sidecar
+- `SidecarEndpointPolicy`         → gemeinsame Token-Grenze fuer Haupt-, Start- und Neustartpfad: `X-Sidecar-Token` wird ausschliesslich an Loopback-Endpunkte gesendet; bei LAN-/Remote-URLs bleibt der Header leer
 - `QualityGateService`            → Green/Yellow/Red aus verfuegbaren Evidence-Signalen
 - `FullProtocolGenerationService` → KI-Befunde zu Protokolleintraegen mappen
 - `IOfferPdfExportService`         → Vertrag (Application/Output): kapselt Vorlagen-/Logo-Pfadbau + PDF-Renderer; ViewModels newen keinen Renderer mehr
@@ -1159,6 +1160,22 @@ Vorschlag sofort; eine alte Maske darf nie zusammen mit einer neuen Box erschein
 - Bestehende `fewshot_examples.json` und `fewshot_images` sind Legacy-Daten. Sie werden
   nicht veraendert und bleiben fuer alte Wissenssicherungen im Dateikatalog enthalten.
   Diese Dateien nie wieder als Prompt- oder Trainingsquelle anschliessen.
+
+## Schutz persistenter KI-Dateien
+
+`TeacherAnnotationFileStore`, `ProtocolTrainingFileStore` und
+`AiOptimizationSessionFileStore` unterscheiden strikt zwischen Erstlauf und
+Lesefehler: Eine fehlende Datei bedeutet leer; eine vorhandene, aber unlesbare oder
+strukturell ungueltige JSON-Datei bricht den Vorgang ab. Danach wird nichts
+gespeichert und der vorhandene Bestand bleibt unveraendert. Der Teacher-Store legt
+bei ungueltigem JSON zusaetzlich eine `.corrupt`-Kopie zur Beweissicherung an.
+
+`tools/SelfTrainingHarness` startet nicht, solange `SewerStudio.exe` laeuft. Vor
+einem Harness-Lauf wird der Trainings-Store bytegenau gesichert. Die automatische
+Wiederherstellung erfolgt nur, wenn SewerStudio auch waehrend und nach dem Lauf
+nicht beobachtet wurde und der letzte Harness-Stand weiterhin denselben SHA-256
+besitzt. Bei einer parallelen Aenderung bleibt der aktuelle Store unangetastet und
+die eindeutige Harness-Sicherung fuer die manuelle Pruefung erhalten.
 
 ## Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
 

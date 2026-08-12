@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
     <ProjectReference Include="..\..\tools\VsaShadowReport.Core\VsaShadowReport.Core.csproj" />
+    <ProjectReference Include="..\..\tools\SelfTrainingHarness\SelfTrainingHarness.csproj" />
   </ItemGroup>
 
   <ItemGroup>

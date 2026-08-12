@@ -69,7 +69,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         // BaseAddress auf einem GETEILTEN HttpClient (VideoAnalysisPipelineService nutzt fuer
         // mehrere Clients dieselbe Instanz) wirft InvalidOperationException, sobald der Client
         // schon einen Request gesendet hat -> der Multi-Model-Hauptpfad bricht ab. (Audit R1)
-        _sendSidecarToken = IsLoopbackUri(baseUri);
+        _sendSidecarToken = SidecarEndpointPolicy.IsLoopback(baseUri);
         _sidecarToken = _sendSidecarToken
             ? SidecarTokenResolver.Resolve(sidecarToken)
             : null;
@@ -528,17 +528,6 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     {
         if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
             request.Headers.TryAddWithoutValidation(SidecarTokenResolver.HeaderName, _sidecarToken);
-    }
-
-    private static bool IsLoopbackUri(Uri uri)
-    {
-        if (uri.IsLoopback)
-            return true;
-
-        var host = uri.Host.Trim();
-        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
     }
 
 }

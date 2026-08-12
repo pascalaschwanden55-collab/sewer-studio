@@ -86,17 +86,20 @@ public sealed class ProtocolTrainingStoreTests
     }
 
     [Fact]
-    public void LoadRecent_ReturnsEmptyListForCorruptFile()
+    public void LoadRecent_CorruptFile_FailsClosedAndKeepsOriginal()
     {
         WithTempAppData(() =>
         {
             var path = Path.Combine(KnowledgeBasePaths.GetRoot(), "protocol_training.json");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, "{ keine gueltige JSON-Datei");
+            const string corruptJson = "{ keine gueltige JSON-Datei";
+            File.WriteAllText(path, corruptJson);
 
-            var samples = ProtocolTrainingStore.LoadRecent(10);
+            var error = Assert.Throws<InvalidOperationException>(
+                () => ProtocolTrainingStore.LoadRecent(10));
 
-            Assert.Empty(samples);
+            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Equal(corruptJson, File.ReadAllText(path));
         });
     }
 

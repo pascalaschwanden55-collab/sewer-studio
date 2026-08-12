@@ -130,23 +130,30 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
         {
             var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
             return JsonSerializer.Deserialize<List<TeacherAnnotation>>(json, JsonOptions)
-                   ?? new List<TeacherAnnotation>();
+                   ?? throw new JsonException(
+                       "Lehrer-Annotationen muessen als JSON-Liste gespeichert sein.");
         }
         catch (JsonException ex)
         {
-            BestEffort.ReportWarning(
-                $"Lehrer-Annotationen sind beschädigt ({path}): {ex.Message}");
+            // Beweissicherung vor dem Wurf — danach wird nichts mehr geschrieben.
             BestEffort.Try(
                 () => File.Copy(path, path + ".corrupt", overwrite: true),
                 "Lehrer-Annotationen: korrupte Datei sichern");
-            return new List<TeacherAnnotation>();
+            throw new InvalidOperationException(
+                $"Die Lehrer-Annotationen sind beschaedigt ({path}); der Bestand wurde "
+                + $"NICHT veraendert — eine Sicherungskopie liegt als .corrupt daneben, "
+                + $"und es wird nichts gespeichert. {ex.Message}", ex);
         }
         catch (Exception ex)
         {
-            BestEffort.ReportWarning(
-                $"Lehrer-Annotationen konnten nicht gelesen werden ({path}): " +
-                $"{ex.GetType().Name}: {ex.Message}");
-            return new List<TeacherAnnotation>();
+            // Unlesbar ist ein Fehler, kein Erstlauf: Eine voruebergehende Sperre darf
+            // den Bestand nicht durch den naechsten Speichervorgang loeschen. Dieselbe
+            // Regel wie beim Gold-Store (AP-1) und den Kostendateien (CostStoreFileProbe):
+            // fehlend = leer, unlesbar = Fehler.
+            throw new InvalidOperationException(
+                $"Die Lehrer-Annotationen sind nicht lesbar ({path}). Der vorhandene "
+                + $"Bestand wurde NICHT veraendert — es wird nichts gespeichert. "
+                + $"{ex.GetType().Name}: {ex.Message}", ex);
         }
     }
 

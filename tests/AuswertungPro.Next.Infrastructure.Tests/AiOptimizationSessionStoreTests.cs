@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class AiOptimizationSessionStoreTests
 {
     [Fact]
-    public async Task Store_PreservesReplacementFilterBackupAndCorruptFallback()
+    public async Task Store_PreservesReplacementFilterAndBackup()
     {
         var previous = Environment.GetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar);
         var root = Path.Combine(
@@ -45,13 +45,67 @@ public sealed class AiOptimizationSessionStoreTests
             Assert.Equal("Neu", Assert.Single(holding).FinalAppliedMeasure);
             Assert.True(File.Exists(path + ".bak"));
             Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
-
-            await File.WriteAllTextAsync(path, "{ keine gueltige JSON-Datei");
-            Assert.Empty(await AiOptimizationSessionStore.LoadAllAsync());
         }
         finally
         {
             Environment.SetEnvironmentVariable(AppDataPathResolver.AppDataDirEnvVar, previous);
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Theory]
+    [InlineData("{ keine gueltige JSON-Datei")]
+    [InlineData("null")]
+    public async Task SaveAsync_CorruptExistingFile_FailsClosedAndKeepsOriginal(string corruptJson)
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "sewer-ai-optimization-session-corrupt-tests",
+            Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(root, "sessions.json");
+        Directory.CreateDirectory(root);
+        await File.WriteAllTextAsync(path, corruptJson);
+        var store = new AiOptimizationSessionFileStore(path);
+
+        try
+        {
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.SaveAsync(new AiOptimizationSession { HaltungId = "H-001" }));
+
+            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Equal(corruptJson, await File.ReadAllTextAsync(path));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task SaveAsync_LockedExistingFile_FailsClosedAndKeepsOriginal()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "sewer-ai-optimization-session-lock-tests",
+            Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(root, "sessions.json");
+        var store = new AiOptimizationSessionFileStore(path);
+
+        try
+        {
+            await store.SaveAsync(new AiOptimizationSession { HaltungId = "H-001" });
+            var original = await File.ReadAllBytesAsync(path);
+
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    store.SaveAsync(new AiOptimizationSession { HaltungId = "H-002" }));
+            }
+
+            Assert.Equal(original, await File.ReadAllBytesAsync(path));
+        }
+        finally
+        {
             try { Directory.Delete(root, recursive: true); } catch { }
         }
     }

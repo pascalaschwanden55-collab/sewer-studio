@@ -91,14 +91,20 @@ public sealed class AiOptimizationSessionFileStore : IAiOptimizationSessionStore
                 return [];
 
             var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<List<AiOptimizationSession>>(json) ?? [];
+            return JsonSerializer.Deserialize<List<AiOptimizationSession>>(json)
+                   ?? throw new JsonException(
+                       "KI-Sanierungssitzungen muessen als JSON-Liste gespeichert sein.");
         }
         catch (Exception ex)
         {
-            BestEffort.ReportWarning(
-                $"KI-Sanierungssitzungen konnten nicht gelesen werden ({path}): " +
-                $"{ex.GetType().Name}: {ex.Message}");
-            return [];
+            // Unlesbar ist ein Fehler, kein Erstlauf: Eine voruebergehende Sperre
+            // darf den Bestand nicht durch den naechsten Speichervorgang loeschen.
+            // Dieselbe Regel wie beim Gold-Store (AP-1): fehlend = leer,
+            // unlesbar = Fehler.
+            throw new InvalidOperationException(
+                $"Die KI-Sanierungssitzungen sind nicht lesbar ({path}). Der "
+                + $"vorhandene Bestand wurde NICHT veraendert — es wird nichts "
+                + $"gespeichert. {ex.GetType().Name}: {ex.Message}", ex);
         }
     }
 }

@@ -80,20 +80,46 @@ public sealed class TeacherAnnotationStoreTests
         });
     }
 
-    [Fact]
-    public async Task Load_CorruptFile_BacksUpAndStartsEmpty()
+    [Theory]
+    [InlineData("{ das ist kein gueltiges json ")]
+    [InlineData("null")]
+    public async Task AppendAsync_CorruptExistingFile_FailsClosedAndKeepsOriginal(string corruptJson)
     {
-        // R6: eine kaputte JSON-Datei darf das Laden nicht werfen lassen und nicht still
-        // verschwinden — sie wird nach .corrupt gesichert, der Store startet leer.
+        // Unlesbar ist kein leerer Erstlauf: Die Mutation muss abbrechen und den
+        // vorhandenen Inhalt samt forensischer Kopie unveraendert lassen.
         await WithTempKnowledgeRoot(async () =>
         {
             var store = Path.Combine(KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
-            await File.WriteAllTextAsync(store, "{ das ist kein gueltiges json ");
+            await File.WriteAllTextAsync(store, corruptJson);
 
-            var list = await TeacherAnnotationStore.LoadAsync();   // darf NICHT werfen
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => TeacherAnnotationStore.AppendAsync(Make("neu")));
 
-            Assert.Empty(list);
-            Assert.True(File.Exists(store + ".corrupt"));   // korrupte Datei gesichert
+            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Equal(corruptJson, await File.ReadAllTextAsync(store));
+            Assert.True(File.Exists(store + ".corrupt"));
+        });
+    }
+
+    [Fact]
+    public async Task FileStore_LockedExistingFile_FailsClosedAndKeepsOriginal()
+    {
+        await WithTempKnowledgeRoot(async () =>
+        {
+            var store = new TeacherAnnotationFileStore(KnowledgeBasePaths.GetRoot());
+            await store.AppendAsync(Make("alt-1"), Make("alt-2"));
+            var path = store.StoragePath;
+            var original = await File.ReadAllBytesAsync(path);
+
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => store.AppendAsync(Make("neu")));
+                await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => store.DeleteAsync("alt-1"));
+            }
+
+            Assert.Equal(original, await File.ReadAllBytesAsync(path));
         });
     }
 

@@ -138,7 +138,10 @@ public static class AiStartupService
 
         AiRuntimeStatusTracker.MarkStarting(modelLabel);
 
-        var sidecarHeaders = BuildSidecarHeaders(platform.SidecarToken, sidecarTokens);
+        var sidecarHeaders = BuildSidecarHeaders(
+            platform.SidecarUrl,
+            platform.SidecarToken,
+            sidecarTokens);
         var script = sidecarScriptPath ?? sidecarScripts.FindDefaultSidecarScript();
         var psExe = sidecarScripts.ResolvePowerShellExe();
 
@@ -184,10 +187,14 @@ public static class AiStartupService
 
     // ------------------------------------------------------------------ Hilfsmethoden
 
-    private static IReadOnlyDictionary<string, string>? BuildSidecarHeaders(
+    internal static IReadOnlyDictionary<string, string>? BuildSidecarHeaders(
+        Uri sidecarUrl,
         string? configuredToken,
         ISidecarTokenResolver sidecarTokens)
     {
+        if (!SidecarEndpointPolicy.IsLoopback(sidecarUrl))
+            return null;
+
         var token = sidecarTokens.Resolve(configuredToken);
         return token is null
             ? null
