@@ -235,6 +235,19 @@ public sealed class SettingsPageLayoutTests
         Assert.DoesNotContain("MinWidth=\"400\"", xaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SettingsPage_formularstile_behalten_die_themegerechten_steuerelemente()
+    {
+        var xaml = ReadSettingsPage();
+
+        AssertStyleKeepsTheme(xaml, "SettingsTextInput", "TextBox");
+        AssertStyleKeepsTheme(xaml, "SettingsComboInput", "ComboBox");
+        AssertStyleKeepsTheme(xaml, "SettingsBrowseButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsActionButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsWideActionButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsFieldCheckBox", "CheckBox");
+    }
+
     private static string[] ReadTabHeaders(string xaml)
         => Regex.Matches(xaml, "<TabItem Header=\"([^\"]+)\"", RegexOptions.CultureInvariant)
             .Select(match => match.Groups[1].Value)
@@ -285,6 +298,20 @@ public sealed class SettingsPageLayoutTests
         }
 
         return count;
+    }
+
+    private static void AssertStyleKeepsTheme(string xaml, string styleKey, string controlType)
+    {
+        var declaration = Regex.Match(
+            xaml,
+            $"<Style\\s+x:Key=\"{styleKey}\"(?<attributes>[^>]*)>",
+            RegexOptions.CultureInvariant);
+
+        Assert.True(declaration.Success, $"Der Stil {styleKey} fehlt.");
+        Assert.Contains(
+            $"BasedOn=\"{{StaticResource {{x:Type {controlType}}}}}\"",
+            declaration.Groups["attributes"].Value,
+            StringComparison.Ordinal);
     }
 
     private static string ReadSettingsPage()

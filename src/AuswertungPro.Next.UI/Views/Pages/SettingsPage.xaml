@@ -28,27 +28,39 @@
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
-        <Style x:Key="SettingsTextInput" TargetType="{x:Type TextBox}">
+        <Style x:Key="SettingsTextInput"
+               TargetType="{x:Type TextBox}"
+               BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="SettingsComboInput" TargetType="{x:Type ComboBox}">
+        <Style x:Key="SettingsComboInput"
+               TargetType="{x:Type ComboBox}"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="MinWidth" Value="220"/>
         </Style>
-        <Style x:Key="SettingsBrowseButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsBrowseButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="44"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsActionButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsActionButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="160"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsWideActionButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsWideActionButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="190"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsFieldCheckBox" TargetType="{x:Type CheckBox}">
+        <Style x:Key="SettingsFieldCheckBox"
+               TargetType="{x:Type CheckBox}"
+               BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
