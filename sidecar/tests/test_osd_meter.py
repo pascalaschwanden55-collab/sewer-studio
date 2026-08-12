@@ -1,8 +1,8 @@
 """Tests fuer sidecar.osd_meter: Formvalidator, Format-Lock, Ganzbild-Lesung.
 
-Beleglage siehe docs/quality/OSD-METERLESER-VALIDIERUNG-2026-08-08.md:
-71/71 gelieferte Werte richtig; die gescheiterte Sechs-Ziffern-Ratelei
-('0.00.300' -> 3.0) kommt nicht wieder — sie ist hier als Test verankert.
+Beleglage siehe docs/quality/OSD-METERLESER-VALIDIERUNG-2026-08-08.md.
+Die gescheiterte Sechs-Ziffern-Ratelei ('0.00.300' -> 3.0) kommt nicht wieder;
+sie ist hier als Test verankert.
 """
 
 from __future__ import annotations
@@ -60,6 +60,12 @@ def test_parse_meter_lz_praefix_bleibt_unveraendert_lesbar():
     assert osd_meter.parse_meter("L232") == pytest.approx(3.2)
 
 
+def test_parse_meter_lz_praefix_mit_plus_und_fuehrenden_nullen():
+    assert osd_meter.parse_meter("LZ1: +0000.80 m") == pytest.approx(0.8)
+    assert osd_meter.parse_meter("L21:+0010.40m") == pytest.approx(10.4)
+    assert osd_meter.parse_meter("+0001.20", format="vierziffern") == pytest.approx(1.2)
+
+
 def test_format_vierziffern_laesst_nur_die_vierziffern_form_durch():
     assert osd_meter.parse_meter(
         "LZ2: 0000.30 m", format="vierziffern") == pytest.approx(0.30)
@@ -113,6 +119,40 @@ def test_lese_meter_vierziffern_mit_und_ohne_lock():
         bild, _templates, format="vierziffern")["meter"] == pytest.approx(0.30)
 
 
+def test_lese_meter_nutzt_engen_vierziffern_rueckfall(monkeypatch):
+    monkeypatch.setattr(
+        osd_meter, "_lese_vierziffern_mit_tesseract",
+        lambda _bild: (0.8, "LZ1:+0000.80m"))
+    ergebnis = osd_meter.lese_meter(
+        Image.new("RGB", (640, 480), (120, 120, 120)), _templates)
+    assert ergebnis["meter"] == pytest.approx(0.8)
+    assert ergebnis["leseweg"] == "tesseract_vierziffern"
+
+
+def test_ein_dezimal_format_ruft_vierziffern_rueckfall_nicht_auf(monkeypatch):
+    def nicht_aufrufen(_bild):
+        raise AssertionError("Vierziffern-Rueckfall wurde unerwartet aufgerufen")
+
+    monkeypatch.setattr(osd_meter, "_lese_vierziffern_mit_tesseract", nicht_aufrufen)
+    ergebnis = osd_meter.lese_meter(
+        Image.new("RGB", (640, 480), (120, 120, 120)), _templates,
+        format="ein_dezimal")
+    assert ergebnis["meter"] is None
+
+
+def test_vierziffern_rueckfall_startet_nur_bei_schmaler_zeichenzeile():
+    import numpy as np
+
+    leer = np.zeros((80, 240), dtype="uint8")
+    zeile = leer.copy()
+    for x in range(20, 180, 14):
+        zeile[30:46, x:x + 6] = 255
+    voll = np.full((80, 240), 255, dtype="uint8")
+    assert not osd_meter._ist_vierziffern_kandidat(leer)
+    assert osd_meter._ist_vierziffern_kandidat(zeile)
+    assert not osd_meter._ist_vierziffern_kandidat(voll)
+
+
 def test_request_akzeptiert_genau_die_bekannten_formate():
     # Drift-Schutz: Schema-Literal und osd_meter.FORMATE bleiben gleich.
     assert set(osd_meter.FORMATE) == {"auto", "ein_dezimal", "vierziffern"}
@@ -149,3 +189,87 @@ def test_wrapper_meterlesung_laesst_die_erkennung_nie_ausfallen():
     # nicht zum Abbruch — auf dem HTTP-Weg verhindert das Schema diesen Fall.
     bild = _osd_bild("LZ2: 14.1m")
     assert bcc_test_wrapper._lese_meter_sicher(bild, "sechsziffern") is None
+
+
+def test_bruchstueck_ohne_beschriftung_wird_nicht_geliefert():
+    """Nackte Ziffern duerfen keinen Meterstand ergeben.
+
+    Auf 897 beschrifteten Archivbildern waren 58 von 61 solcher Lesungen grob
+    falsch: Ohne Beschriftung und Einheit steht die Stellenzahl nicht fest und
+    der Dezimalpunkt wird geraten (`0,58` wurde zu `5,80`).
+    """
+    from sidecar.osd_meter import _zeichenfolge_ist_vollstaendig
+
+    for bruchstueck in (":?40?.", ":?63.", "058", "266", "2?73", "m.94.", ""):
+        assert not _zeichenfolge_ist_vollstaendig(bruchstueck), bruchstueck
+
+
+def test_vollstaendige_lesung_bleibt_gueltig():
+    """Beschriftung plus Einheit genuegt; ein Stoerzeichen danach schadet nicht.
+
+    `L:::0007.00m.7` ist eine richtige Goldlesung von 7,00 m. Eine Pruefung auf
+    das Zeilenende hatte genau diesen belegten Wert verworfen.
+    """
+    from sidecar.osd_meter import _zeichenfolge_ist_vollstaendig
+
+    for vollstaendig in ("LZ2:6?7m", "LZ2:11?2m", ":27?9m", "L:::0007.00m.7"):
+        assert _zeichenfolge_ist_vollstaendig(vollstaendig), vollstaendig
+
+
+def test_beschriftung_ohne_trenner_vor_zahl_ist_mehrdeutig():
+    """`L211.7m1.` verlor in HD2 die erste Ziffer: 13,7 wurde zu 11,7 m."""
+    from sidecar.osd_meter import _zeichenfolge_ist_vollstaendig
+
+    assert not _zeichenfolge_ist_vollstaendig("L211.7m1.")
+
+
+def test_zwei_dezimal_verlangt_die_einheit():
+    """Ohne gelesenes "m" darf kein Wert entstehen.
+
+    Die Einheit ist die einzige Sperre gegen Datumsbruchstuecke. Ein
+    angeschnittenes Datumsfeld liefert Texte wie ".10.24" oder "16.24"; ohne
+    Einheitspflicht waeren das die Meterstaende 10,24 m und 16,24 m. Am
+    2026-08-09 auf 897 Archivbildern belegt.
+    """
+    from sidecar.osd_meter import _parse_zwei_dezimal
+
+    for datum in (".10.24", "16.24", "06.24", "05.09", "07.11.23", "05.09.2023"):
+        assert _parse_zwei_dezimal(datum) is None, datum
+
+
+def test_zwei_dezimal_liest_punkt_und_komma():
+    """Beide Schreibweisen kommen im Archiv vor."""
+    from sidecar.osd_meter import _parse_zwei_dezimal
+
+    assert _parse_zwei_dezimal("0.20m") == pytest.approx(0.20)
+    assert _parse_zwei_dezimal("1,54m") == pytest.approx(1.54)
+    assert _parse_zwei_dezimal("22,20 m") == pytest.approx(22.20)
+
+
+def test_zwei_dezimal_faengt_kein_bruchstueck():
+    """Vollstring-Anker: Zusatzzeichen vor oder nach der Zahl sind verdaechtig."""
+    from sidecar.osd_meter import _parse_zwei_dezimal
+
+    for muell in ("020m", "0.2m", "0.203m", "1234.56m", "", "m", "0.20"):
+        assert _parse_zwei_dezimal(muell) is None, muell
+
+
+def test_zwei_dezimal_bleibt_im_plausiblen_bereich():
+    from sidecar.osd_meter import _parse_zwei_dezimal
+
+    assert _parse_zwei_dezimal("400.00m") == pytest.approx(400.0)
+    assert _parse_zwei_dezimal("999.99m") is None
+
+
+def test_schwellenband_liegt_tief():
+    """Ab etwa 0,48 des 95. Perzentils kippt die punktierte Null zur Acht.
+
+    Gemessen am 2026-08-09 ueber elf Anteile auf drei Bildern: 0,20 wurde zu
+    020, 22,20 zu 22,28 und 0,30 zu 0,38. Ein hoeheres Band gab dem Fehler die
+    Mehrheit im Quorum.
+    """
+    from sidecar.osd_meter import ZWEI_DEZIMAL_ANTEILE, ZWEI_DEZIMAL_QUORUM
+
+    assert max(ZWEI_DEZIMAL_ANTEILE) <= 0.46
+    assert len(ZWEI_DEZIMAL_ANTEILE) == 5
+    assert ZWEI_DEZIMAL_QUORUM == 3

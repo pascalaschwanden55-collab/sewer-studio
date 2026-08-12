@@ -156,3 +156,52 @@ Ein L weiter hinten gehört nicht zur Beschriftung.
 Damit ist der Weg für HD vorbereitet und messbar: HD-Vorlagen im
 Klassifikator, geprüft gegen `osd_hd_v1` + `osd_hd2_v1`, mit `osd_sd_v1`
 als Sperre gegen Rückschritt (95/95 muss identisch bleiben).
+
+## Nachtrag 2026-08-09: enger Rueckfall fuer Praefix und fuehrende Nullen
+
+Die 40er-Layoutsichtung zeigte 12 Bilder, bei denen Lage, Polaritaet und Farbe
+zum Leser passen und nur die Schreibweise `LZ... + 0000.00 m` abweicht. Die
+erste Gegenprobe widerlegte jedoch die reine Parser-Hypothese: Der Parser kannte
+Praefix und Vierziffern bereits, las auf den echten Bildern aber 0/12. Ursache
+war die Geraeteschrift mit dunklem Rand; Maskenwahl und Arial-Vorlagen zerlegten
+sie falsch.
+
+`sidecar/sidecar/osd_meter.py` besitzt deshalb additiv einen engen Tesseract-
+Rueckfall. Er startet nur nach gescheiterter oder unvollstaendiger
+Vorlagenlesung, prueft beide unteren Ecken und beide Polaritaeten und akzeptiert
+ausschliesslich ein vollstaendiges Vierziffern-Format. Tesseract wird nur
+verwendet, wenn es lokal bereits installiert ist; fehlt es oder laeuft es in
+einen Fehler, bleibt das Ergebnis `None`. Es wird kein Paket installiert und
+kein unbekanntes Format geraten.
+
+Messung des Stands, SHA-gebunden in `prefix_fallback_bericht.json`:
+
+| Bestand | Ergebnis |
+|---|---:|
+| Zielstil der 40er-Sichtung | 8/12 gelesen, 8/8 passend zum schwachen PDF-Label |
+| Neuer Rueckfallweg in allen 40 Bildern | 12 gelesen, 12/12 passend zum schwachen PDF-Label |
+| Gesamter Leser in allen 40 Bildern | 13 geliefert, 12 passend, 1 falsch oder nicht pruefbar |
+| `osd_sd_v1` Gold | 82 geliefert, 82 richtig, 0 falsch |
+| `osd_hd_v1` Gold | 0 geliefert |
+| `osd_hd2_v1` Gold | 0 geliefert, 0 falsch |
+
+Der einzelne HD2-Fehler wurde als `f0046.jpg`, Haltung `35722-35724`, Soll
+13,7 m, gelesen 11,7 m identifiziert. Er stammte aus dem Vorlagenweg
+(`L211.7m1.`), nicht aus Tesseract. Eine enge Sicherheitsregel verwirft nun
+Folgen, in denen nach `L2` oder `LZ2` sofort eine weitere Ziffer statt eines
+Trenners steht. Der HD2-Fehlwert verschwindet; die 82 richtigen SD-Goldwerte
+bleiben unveraendert.
+
+Der aktuelle Leser wurde ausserdem auf der festen Archivauswahl neu gerechnet.
+Von 86 Eintraegen besitzen 83 ein eindeutiges Video; alle 83 wurden ohne
+technischen Abbruch verarbeitet. Je Video wurden 20 gleichmaessige Stellen
+angefahren. Ergebnis: SD 262/1187 Bilder = 22,1 %, HD 14/452 = 3,1 %. Nur der
+von der 40er-Kalibrierung getrennte Anteil ergibt SD 235/1108 = 21,2 % und HD
+14/354 = 4,0 %. Der Bericht bindet Leser- und Quellen-SHA; Videos sind ueber
+Pfad, Groesse und Aenderungszeit gebunden, nicht ueber einen Vollhash.
+
+Die Archivlabels bleiben wegen PDF-/Video-Zuordnungsrauschen schwach und sind
+keine Freigabe. Der aktuelle Kandidat liefert im SD-Goldbestand 82/82 richtig;
+in HD und HD2 liefert er keinen Wert und damit auch keinen bekannten Fehlwert.
+Die niedrige unabhaengige Abdeckung und der eine unklare 40er-Fall verhindern
+weiterhin eine Freigabe. Der Stand bleibt `diagnostic_not_deployed`.

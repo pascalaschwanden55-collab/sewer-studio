@@ -3,12 +3,15 @@
 Liest den Meterstand aus der OSD-Ecke (z. B. „LZ2: 14.1m", „LZ2: 0000.30 m"):
 Glyphen segmentieren (helle/dunkle Kleinkomponenten), dann Ziffern per
 Template-Matching gegen gerenderte Referenzglyphen klassifizieren.
+Der enge Vierziffern-Rueckfall nutzt ein bereits installiertes Tesseract, wenn
+die Vorlagenlesung scheitert; er installiert nichts und bleibt optional.
 
 Heimat der Leser-Logik ist dieses Modul — der Prototyp
 `training/scripts/osd_meter_leser.py` delegiert hierher, damit Diagnose und
-Sidecar nicht auseinanderlaufen. Validiert am 2026-08-08 gegen 95 menschlich
-abgelesene Frames: 71/71 gelieferte Werte richtig (100 %), Abdeckung 76 %
-(dominanter Stil 91 %, Vierziffern-Layout 31 %).
+Sidecar nicht auseinanderlaufen. Der aktuelle Diagnosekandidat vom 2026-08-09
+liefert im menschlich gelabelten SD-Goldbestand 82/82 Werte richtig. Im
+HD- und HD2-Goldbestand liefert er keinen Wert. Die Archivabdeckung ist noch
+zu niedrig; deshalb bleibt er ausdruecklich `diagnostic_not_deployed`.
 
 Der optionale Format-Lock (`format=`) erzwingt das Zahlenlayout eines Videos.
 Gelernt und gesetzt wird er vom Aufrufer (Integrationslogik), nie geraten —
@@ -18,6 +21,9 @@ die gescheiterte Sechs-Ziffern-Ratelei vom 2026-08-08 kommt nicht wieder.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +33,17 @@ from PIL import Image, ImageDraw, ImageFont
 ZONEN = {
     "unten_rechts": (0.62, 0.84, 1.00, 1.00),
 }
+
+# Zonen des Tesseract-Rueckfalls, in dieser Reihenfolge versucht. Aus der
+# menschlichen Sichtung von 40 Haltungen: 38-mal unten rechts, 2-mal unten
+# links, 0-mal oben. Unten rechts bleibt deshalb der erste Versuch.
+# Nur unten rechts. Die zweite Zone unten links wurde am 2026-08-09 wieder
+# entfernt: Dort steht in vielen Videos das Aufnahmedatum, und Tesseract las
+# dann "05.09.2023" statt des Meterstands. Die 2 von 40 Haltungen mit dem
+# Meterstand unten links wiegen dieses Risiko nicht auf.
+TESSERACT_ZONEN = (
+    (0.62, 0.84, 1.00, 1.00),
+)
 HELLIGKEIT = 150
 GLYPHE_MIN_H, GLYPHE_MAX_H = 8, 40
 TEMPLATE_H = 28
@@ -43,6 +60,8 @@ FORMAT_AUTO = "auto"
 FORMAT_EIN_DEZIMAL = "ein_dezimal"
 FORMAT_VIERZIFFERN = "vierziffern"
 FORMATE = (FORMAT_AUTO, FORMAT_EIN_DEZIMAL, FORMAT_VIERZIFFERN)
+
+TESSERACT_WHITELIST = "LZ0123456789:+-.m"
 
 
 def glyphenmaske(bild: Image.Image) -> tuple["object", str]:
@@ -141,7 +160,8 @@ def boxen_aus_maske(maske, stil: str) -> list[tuple[int, int, int, int]]:
     return boxen
 
 
-def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None) -> float | None:
+def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None,
+                erlaube_zwei_dezimal: bool = False) -> float | None:
     """Formatwissen nutzen: 'LZ2: 14.1m', 'LZ2: 0.4m', '0000.30 m'.
 
     Fail-closed per Formvalidator: Nach dem Praefix muss der Kern vollstaendig
@@ -179,6 +199,7 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None) -> fl
     if 0 < l_stelle <= LABEL_SUCHFENSTER:
         kern = kern[l_stelle:]
 
+    hatte_label = kern.startswith("L")
     if kern.startswith("L"):
         kern = kern[1:]
         # "LZ"/"LZ2" ist eine Beschriftung, keine Zahl: Nach dem L darf nur das
@@ -190,13 +211,20 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None) -> fl
         # gemeinsam verschoben sind). Verwerfen, nicht raten.
         if kern[:1].isdigit() and kern[:1] != "2":
             return None
-    if kern[:1] in ("Z", "2"):
+    # Ein fuehrendes Z (oder sein verlesenes "2") gehoert nur dann zur
+    # Beschriftung, wenn es auch einen Beschriftungskontext gibt: entweder ein
+    # bereits abgetrenntes "L" ("L232" = LZ + 32 = 3,2) oder ein unmittelbar
+    # folgender Doppelpunkt. Ohne diese Bedingung verlor jede Zahl OHNE
+    # Beschriftung, die mit 2 beginnt, ihre erste Stelle: "22.20" wurde zu 2,20.
+    # Sichtbar wurde das erst mit der Form "zwei Nachkommastellen"; vorher fiel
+    # eine solche Zahl schon eine Stufe frueher durch.
+    if kern[:1] in ("Z", "2") and (hatte_label or ":" in kern[1:3]):
         kern = kern[1:]
     if kern.startswith(":"):
         kern = kern[1:]
     elif ":" in kern:
         kern = kern.split(":", 1)[1]
-    kern = kern.strip("LZ: ?.")
+    kern = kern.strip("LZ: ?. +")
     if not kern or any(c.isalpha() for c in kern):
         return None
 
@@ -205,6 +233,19 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None) -> fl
         treffer = re.fullmatch(r"(\d{1,3})[.?](\d)", kern)          # 14.1 / 2?1
     if treffer is None and format in (FORMAT_AUTO, FORMAT_VIERZIFFERN):
         treffer = re.fullmatch(r"(\d{4})[.?](\d{1,2})", kern)       # 0007.00
+    if treffer is None and erlaube_zwei_dezimal:
+        # Zwei Nachkommastellen: '0.20', '1.54', '22.20'. Diese Form fehlte, und
+        # genau daran scheiterten alle vier Bilder, die am 2026-08-09 mit blossem
+        # Auge geprueft wurden (1,54 m und 22,20 m auf 88218-88316, 0,20 m auf
+        # 7623-7622, 0,30 m im Graukasten).
+        #
+        # Ausdruecklich NUR fuer OCR-Text freigeschaltet. Auf dem Vorlagenweg
+        # kostete sie drei belegte Goldwerte: `LZ2:1?61m` wurde zu 1,61 statt
+        # 1,9, `L.Z:031.10m.` zu 31,1 statt 1,4. Der Zeichenerkenner verliert
+        # dort Stellen, und die zusaetzliche Form gab dem Ergebnis einen Weg
+        # nach draussen. Der Dezimalpunkt muss echt sein: ein `?` ist ein nicht
+        # erkanntes Zeichen, kein Punkt.
+        treffer = re.fullmatch(r"(\d{1,3})\.(\d{2})", kern)         # 1.54 / 22.20
     if treffer is not None:
         wert = float(f"{int(treffer.group(1))}.{treffer.group(2)}")
     else:
@@ -216,6 +257,318 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None) -> fl
             return None
         wert = float(f"{kern[:-1]}.{kern[-1]}")
     return wert if 0.0 <= wert <= 400.0 else None
+
+
+@lru_cache(maxsize=1)
+def _tesseract_pfad() -> str | None:
+    """Vorhandenes lokales Tesseract finden; niemals etwas installieren."""
+    return shutil.which("tesseract")
+
+
+def _zeichenfolge_ist_vollstaendig(zeichenfolge: str) -> bool:
+    """Traegt die Vorlagenlesung Beschriftung UND Einheit?
+
+    Die Einblendung lautet vollstaendig `LZ2: 14.1m`. Erkennt der Vorlagenweg
+    Anker und Einheit, steht die Stellenzahl fest und der Dezimalpunkt ist
+    gesetzt. Fehlen beide und es bleiben nackte Ziffern wie `058` oder `2?73`,
+    muss die Stellenzahl geraten werden — genau dort entstehen die Fehler
+    `0,58 -> 5,80` und `2,73 -> 7,30`.
+
+    Die Einheit muss nur VORKOMMEN, nicht am Ende stehen: Der Zeichenerkenner
+    haengt gelegentlich ein Stoerzeichen an (`L:::0007.00m.7` ist eine richtige
+    Lesung von 7,00 m). Eine Pruefung auf das Zeilenende verwarf genau diesen
+    belegten Goldwert.
+
+    Nach dem erkannten Label `L2`/`LZ2` muss dagegen ein Trenner stehen. Folgt
+    sofort eine weitere Ziffer, ist nicht erkennbar, ob die erste Wertziffer
+    verloren ging. Beleg: `L211.7m1.` wurde als 11,7 m geliefert, im Bild stehen
+    aber 13,7 m. Dieser Fall muss unlesbar bleiben statt geraten zu werden.
+    """
+    zeichenfolge = zeichenfolge or ""
+    if "m" not in zeichenfolge:
+        return False
+    if re.search(r"L(?:Z2|2)\d", zeichenfolge):
+        return False
+    return LABEL_ZEICHEN in zeichenfolge or ":" in zeichenfolge
+
+
+def _ist_vierziffern_kandidat(binaer: np.ndarray) -> bool:
+    """Nur eine schmale helle Zeichenzeile darf den Prozessstart ausloesen."""
+    import cv2
+
+    heller_anteil = float((binaer > 0).mean())
+    if not 0.015 <= heller_anteil <= 0.4:
+        return False
+    anzahl, _labels, stats, _zentren = cv2.connectedComponentsWithStats(
+        (binaer > 0).astype("uint8"), 8)
+    zeichen = sum(
+        1 for i in range(1, anzahl)
+        if 6 <= stats[i, 3] <= 40 and 2 <= stats[i, 2] <= 30 and stats[i, 4] >= 3)
+    return 8 <= zeichen <= 30
+
+
+def _tesseract_aufrufen(executable: str, binaer: np.ndarray,
+                        whitelist: str | None = None,
+                        skalieren: bool = True) -> str:
+    """Ein Tesseract-Lauf auf einer fertigen Schwarz-Weiss-Zeile.
+
+    `skalieren=False` fuer Aufrufer, die schon selbst vergroessert haben —
+    sonst wird zweimal skaliert.
+    """
+    import cv2
+
+    if skalieren:
+        binaer = cv2.resize(binaer, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+    ok, png = cv2.imencode(".png", binaer)
+    if not ok:
+        return ""
+
+    startinfo = None
+    if hasattr(subprocess, "STARTUPINFO"):
+        startinfo = subprocess.STARTUPINFO()
+        startinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    try:
+        ergebnis = subprocess.run(
+            [executable, "stdin", "stdout", "--psm", "7", "-l", "eng",
+             "-c", f"tessedit_char_whitelist={whitelist or TESSERACT_WHITELIST}"],
+            input=png.tobytes(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=2.0, check=False, startupinfo=startinfo,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if ergebnis.returncode != 0:
+        return ""
+    return " ".join(ergebnis.stdout.decode("utf-8", errors="ignore").split())
+
+
+def _zeilenkandidaten(ausschnitt: np.ndarray) -> list[np.ndarray]:
+    """Schwarz-weisse Zeichenzeilen aus einem Zonenausschnitt, Text immer weiss.
+
+    Beide Polaritaeten, weil das Archiv beide kennt: Auf 40 menschlich
+    gesichteten Haltungen standen 18-mal helle Zeichen auf dunklem Grund und
+    18-mal dunkle Zeichen auf hellem Kasten. Eine feste Helligkeitsschwelle
+    sieht immer nur die eine Haelfte.
+    """
+    import cv2
+
+    if ausschnitt.size == 0:
+        return []
+    grau = cv2.cvtColor(ausschnitt, cv2.COLOR_RGB2GRAY)
+    kandidaten = []
+    # 1) heller Text auf dunklem Grund (bisheriger Weg, unveraendert)
+    _s, hell = cv2.threshold(grau, 180, 255, cv2.THRESH_BINARY)
+    kandidaten.append(hell)
+    # 2) dunkler Text auf hellem Kasten — invertiert, Schwelle aus dem Bild
+    #    selbst (Otsu), weil die Kastenhelligkeit je Geraet schwankt.
+    _s, dunkel = cv2.threshold(grau, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    kandidaten.append(dunkel)
+    return [k for k in kandidaten if _ist_vierziffern_kandidat(k)]
+
+
+def _lese_vierziffern_mit_tesseract(bild: Image.Image) -> tuple[float | None, str]:
+    """Enger Rueckfallweg fuer die vollstaendige Form `LZ1: + 0000.00 m`.
+
+    Tesseract sieht die echte Geraeteschrift besser als die Arial-Vorlagen. Nur
+    ein vollstaendiges Vierziffern-Ergebnis wird akzeptiert; alles andere bleibt
+    "nicht gelesen". Fehlt Tesseract, laeuft der bisherige Leser unveraendert
+    weiter.
+
+    Versucht werden beide Polaritaeten und beide unteren Ecken. Abgebrochen
+    wird beim ersten vollstaendigen Ergebnis, damit im Regelfall genau ein
+    Prozess startet.
+    """
+    executable = _tesseract_pfad()
+    if executable is None:
+        return None, ""
+
+    arr = np.asarray(bild.convert("RGB"))
+    h, w = arr.shape[:2]
+    letzter_text = ""
+    for zone in TESSERACT_ZONEN:
+        x0, y0, x1, y1 = zone
+        ausschnitt = arr[round(y0 * h):round(y1 * h), round(x0 * w):round(x1 * w)]
+        for binaer in _zeilenkandidaten(ausschnitt):
+            text = _tesseract_aufrufen(executable, binaer)
+            if not text:
+                continue
+            letzter_text = text
+            # Bewusst fest `vierziffern`. Eine Lockerung auf `auto` mit der
+            # Zwei-Dezimal-Form wurde am 2026-08-09 gemessen und wieder
+            # entfernt: Sie brachte 8 zusaetzliche Werte, davon 6 grob falsch,
+            # und oeffnete zugleich den Weg, ein Datum ("05.09.2023") als
+            # Meterstand zu lesen.
+            meter = parse_meter(text, stil="hell", format=FORMAT_VIERZIFFERN)
+            if meter is not None:
+                return meter, text
+    return None, letzter_text
+
+
+# --- Zusatzweg: zwei Nachkommastellen auf hellem OSD-Kasten -----------------
+#
+# Vier der fuenf am 2026-08-09 einzeln untersuchten Archivstile sind derselbe
+# Fall: dunkle Ziffern auf hellem Kasten unten rechts, Form `NN.NN m` oder
+# `NN,NN m`. Sie scheitern alle an derselben Stelle — an der EINEN globalen
+# Otsu-Schwelle. Liegt sie zu hoch, verschmilzt der Mittelpunkt der punktierten
+# Geraetenull mit ihrem Ring, und Tesseract liest daraus eine 6 oder 8. Genau
+# daher stammen die mit dem Auge bestaetigten Grobfehler 0,20 -> 8,26,
+# 0,00 -> 8,00, 0,43 -> 6,43 und 9,00 -> 9,06.
+#
+# Dieser Weg ist ausdruecklich ADDITIV. Er laeuft nur, wenn Vorlagenweg UND
+# Vierziffern-Rueckfall nichts liefern. Als Ersatz gemessen kostete jedes
+# Rezept 10 bis 11 belegte Goldwerte, und zwar strukturell: Der SD-Goldbestand
+# traegt `LZ2: 0000.30 m`, und eine Form mit hoechstens drei Vorkommastellen
+# kann eine vierstellige Zahl nie treffen.
+# Schwellenband, gemessen am 2026-08-09 ueber elf Anteile auf drei Bildern:
+# Der richtige Wert steht durchgaengig im TIEFEN Band. Ab etwa 0,48 kippt die
+# punktierte Geraetenull zur Acht (0,20 -> 020, 22,20 -> 22,28, 0,30 -> 0,38).
+# Ein hoeher liegendes Band gab dem Fehler sogar die Mehrheit.
+ZWEI_DEZIMAL_ANTEILE = (0.30, 0.34, 0.38, 0.42, 0.46)
+ZWEI_DEZIMAL_QUORUM = 3
+ZWEI_DEZIMAL_WHITELIST = "0123456789.,m"
+# Vollstring-Anker MIT Einheitspflicht. Die Einheit ist die einzige Sperre
+# gegen Datumsbruchstuecke: Ein angeschnittenes Datumsfeld liefert Texte wie
+# `.10.24`, `16.24` oder `06.24`, die ohne diese Pflicht als Meterstaende
+# 10,24 / 16,24 / 6,24 durchgingen. Das Komma gehoert dazu, weil eine
+# Geraetefamilie `22,20 m` schreibt.
+ZWEI_DEZIMAL_FORM = re.compile(r"(\d{1,3})[.,](\d{2})\s*m")
+
+
+def _zwei_dezimal_masken(ausschnitt: np.ndarray) -> list[np.ndarray]:
+    """Schwellenfaecher statt einer Schwelle, Text jeweils weiss.
+
+    Die Schwellen sind Anteile des 95. Perzentils der Zone, nicht feste
+    Grauwerte — die Kastenhelligkeit schwankt je Geraet und Bildinhalt. Bei den
+    niedrigen Schwellen ist der Mittelpunkt der punktierten Null gar nicht erst
+    Vordergrund; genau darauf beruht das Quorum weiter unten.
+    """
+    import cv2
+
+    if ausschnitt.size == 0:
+        return []
+    grau = cv2.cvtColor(ausschnitt, cv2.COLOR_RGB2GRAY)
+    bezug = float(np.percentile(grau, 95))
+    if bezug < 60.0:
+        return []
+    masken = []
+    for anteil in ZWEI_DEZIMAL_ANTEILE:
+        schwelle = int(round(bezug * anteil))
+        if not 1 <= schwelle <= 254:
+            continue
+        _s, maske = cv2.threshold(grau, schwelle, 255, cv2.THRESH_BINARY_INV)
+        masken.append(maske)
+    return masken
+
+
+def _zwei_dezimal_zeile(maske: np.ndarray) -> np.ndarray | None:
+    """Isoliert die Zeichenzeile und wirft alles andere weg.
+
+    Ohne diesen Schritt liefern Rohrkante und Textur Phantomzeichen. Behalten
+    wird nur, was in Groesse und Zeilenlage zusammenpasst.
+    """
+    import cv2
+
+    anzahl, marken, stats, _zentren = cv2.connectedComponentsWithStats(
+        (maske > 0).astype("uint8"), 8)
+    kandidaten = [
+        i for i in range(1, anzahl)
+        if 6 <= stats[i, 3] <= 40 and 2 <= stats[i, 2] <= 30 and stats[i, 4] >= 3
+    ]
+    if len(kandidaten) < 3:
+        return None
+    mitten = sorted(stats[i, 1] + stats[i, 3] / 2 for i in kandidaten)
+    median = mitten[len(mitten) // 2]
+    zeile = [i for i in kandidaten if abs(stats[i, 1] + stats[i, 3] / 2 - median) <= 8]
+    if len(zeile) < 3:
+        return None
+
+    # Der Dezimalpunkt ist kleiner als jedes Zeichen und faellt durch die
+    # Groessenpruefung. Ohne ihn wird aus "0.20" die Zahl "020" und aus
+    # "22,20" die Zahl "2220" — beides fiel dann zu Recht durch den Parser.
+    # Behalten wird ein kleiner Fleck nur, wenn er auf der Zeile sitzt und
+    # dicht neben einem echten Zeichen steht. Der Innenpunkt der punktierten
+    # Geraetenull wird dabei nicht mitgenommen: Er liegt VOLLSTAENDIG in der
+    # Box seines Zeichens, ein echter Dezimalpunkt liegt zwischen zwei Zeichen.
+    def liegt_in_zeichen(i: int) -> bool:
+        x, y, bw, bh = stats[i, 0], stats[i, 1], stats[i, 2], stats[i, 3]
+        for j in zeile:
+            zx, zy, zbw, zbh = stats[j, 0], stats[j, 1], stats[j, 2], stats[j, 3]
+            if zx <= x and zy <= y and x + bw <= zx + zbw and y + bh <= zy + zbh:
+                return True
+        return False
+
+    unterkante = max(stats[i, 1] + stats[i, 3] for i in zeile)
+    satzzeichen = [
+        i for i in range(1, anzahl)
+        if i not in zeile
+        and 1 <= stats[i, 2] <= 5 and 1 <= stats[i, 3] <= 6 and 2 <= stats[i, 4] <= 20
+        # auf der Grundlinie, nicht irgendwo im Bild
+        and abs(stats[i, 1] + stats[i, 3] - unterkante) <= 4
+        and any(abs(stats[i, 0] - stats[j, 0]) <= 25 for j in zeile)
+        and not liegt_in_zeichen(i)
+    ]
+
+    rein = np.zeros_like(maske)
+    for i in zeile + satzzeichen:
+        rein[marken == i] = 255
+    return rein
+
+
+def _parse_zwei_dezimal(text: str) -> float | None:
+    """Nur `NN.NN m` / `NN,NN m` auf der ganzen Zeile — sonst nichts.
+
+    Bewusst ein eigener, enger Parser statt einer Lockerung von `parse_meter`:
+    Die dortige Zwei-Dezimal-Form ohne Einheitspflicht las am 2026-08-09
+    Datumsbruchstuecke als Meterstaende.
+    """
+    treffer = ZWEI_DEZIMAL_FORM.fullmatch(" ".join((text or "").split()))
+    if treffer is None:
+        return None
+    wert = float(f"{int(treffer.group(1))}.{treffer.group(2)}")
+    return wert if 0.0 <= wert <= 400.0 else None
+
+
+def _lese_zwei_dezimal_mit_tesseract(bild: Image.Image) -> tuple[float | None, str]:
+    """Zusatzweg fuer den hellen OSD-Kasten. Nur bei Quorum ein Ergebnis.
+
+    Gueltig ist nur ein Wert, den mindestens drei der fuenf Schwellen gleich
+    lesen. Das ist die Sperre gegen den Punktnull-Fehler: Er tritt nur in einem
+    Teil des Schwellenbands auf und findet dort keine Mehrheit.
+    """
+    executable = _tesseract_pfad()
+    if executable is None:
+        return None, ""
+
+    import cv2
+
+    arr = np.asarray(bild.convert("RGB"))
+    h, w = arr.shape[:2]
+    x0, y0, x1, y1 = TESSERACT_ZONEN[0]
+    ausschnitt = arr[round(y0 * h):round(y1 * h), round(x0 * w):round(x1 * w)]
+
+    stimmen: dict[float, int] = {}
+    letzter_text = ""
+    for maske in _zwei_dezimal_masken(ausschnitt):
+        zeile = _zwei_dezimal_zeile(maske)
+        if zeile is None:
+            continue
+        gross = cv2.resize(zeile, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        gross = cv2.copyMakeBorder(gross, 14, 14, 14, 14, cv2.BORDER_CONSTANT, value=0)
+        text = _tesseract_aufrufen(executable, gross,
+                                   whitelist=ZWEI_DEZIMAL_WHITELIST, skalieren=False)
+        if not text:
+            continue
+        letzter_text = text
+        wert = _parse_zwei_dezimal(text)
+        if wert is not None:
+            stimmen[wert] = stimmen.get(wert, 0) + 1
+
+    if not stimmen:
+        return None, letzter_text
+    wert, anzahl = max(stimmen.items(), key=lambda p: (p[1], -p[0]))
+    if anzahl < ZWEI_DEZIMAL_QUORUM:
+        return None, letzter_text
+    return wert, letzter_text
 
 
 def plausibilisiere_sequenz(
@@ -336,6 +689,37 @@ def lese_meter(
         zeichenfolge += zeichen or "?"
         konfidenzen.append(round(wert, 3))
     meter = parse_meter(zeichenfolge, stil, format)
+    leseweg = "vorlagen" if meter is not None else None
+    tesseract_text = ""
+    if meter is None and format != FORMAT_EIN_DEZIMAL:
+        meter, tesseract_text = _lese_vierziffern_mit_tesseract(bild)
+        if meter is not None:
+            leseweg = "tesseract_vierziffern"
+    elif (meter is not None
+          and format != FORMAT_EIN_DEZIMAL
+          and not _zeichenfolge_ist_vollstaendig(zeichenfolge)):
+        # Bruchstueck-Lesung: Der Vorlagenweg hat Ziffern erkannt, aber weder
+        # Beschriftung noch Einheit. Dann steht die Stellenzahl nicht fest und
+        # der Dezimalpunkt wird geraten — auf 897 beschrifteten Archivbildern
+        # waren 58 von 61 solcher Werte grob falsch (5 % richtig), gegen 67 %
+        # bei vollstaendigem Muster. Deshalb hier nachfragen und lieber nichts
+        # liefern als raten. Eine vollstaendige Lesung wird nie angetastet:
+        # Der gepruefte Goldbestand laeuft ausschliesslich ueber diesen Zweig.
+        ersatz, tesseract_text = _lese_vierziffern_mit_tesseract(bild)
+        meter = ersatz
+        leseweg = "tesseract_vierziffern" if ersatz is not None else None
+
+    if meter is None and format in (None, FORMAT_AUTO):
+        # Letzter Weg: heller OSD-Kasten mit zwei Nachkommastellen. Strikt
+        # additiv — er laeuft nur, wenn beide Wege davor nichts geliefert
+        # haben, und er feuert auf allen 94 menschlich abgelesenen Goldbildern
+        # null Mal. Ein Format-Lock sperrt ihn, denn er kennt nur diese eine
+        # Form.
+        zwei, zwei_text = _lese_zwei_dezimal_mit_tesseract(bild)
+        if zwei is not None:
+            meter = zwei
+            leseweg = "tesseract_zwei_dezimal"
+            tesseract_text = zwei_text or tesseract_text
 
     if debug_dir is not None and debug_name is not None:
         debug_dir.mkdir(parents=True, exist_ok=True)
@@ -351,4 +735,6 @@ def lese_meter(
         "stil": stil,
         "glyphen": len(boxen),
         "konfidenz_min": min(konfidenzen) if konfidenzen else None,
+        "leseweg": leseweg,
+        "tesseract_text": tesseract_text,
     }

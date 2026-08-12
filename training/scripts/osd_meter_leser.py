@@ -10,6 +10,8 @@ Bilder oeffnen, Ergebnisse ausgeben, optional Debug-Overlays schreiben.
 Zeichenfolge je Bild nach <out>/debug/.
 --format erzwingt das Zahlenlayout (Format-Lock): ein_dezimal | vierziffern.
 Ohne Angabe gilt auto (beide bekannten Formen, bisheriges Verhalten).
+Ein lokal vorhandenes Tesseract dient nur als enger Rueckfall fuer die
+vollstaendige Vierziffern-Form; fehlt es, bleibt der bisherige Weg erhalten.
 """
 
 from __future__ import annotations
