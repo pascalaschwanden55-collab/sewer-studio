@@ -557,11 +557,20 @@
                         </Ellipse>
                         <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}"/>
                     </Grid>
+                    <!-- Breite begrenzt und abgeschnitten: Die Meldung bei
+                         eingeschraenkter KI ist mehrere Zeilen lang und schob
+                         sonst alle Knoepfe rechts davon aus dem Fenster
+                         (gemeldet 2026-08-11). Der volle Text bleibt ueber den
+                         Mauszeiger und ueber "Details" erreichbar. -->
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
+                               MaxWidth="190" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                Text="Künstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="TxtCodingAiStage" FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}"
+                               MaxWidth="240" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                     <!-- Pipeline-Kontrollsicherung: ausklappbare Detailanzeige -->
