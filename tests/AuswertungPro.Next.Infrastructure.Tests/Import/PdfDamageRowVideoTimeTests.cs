@@ -133,3 +133,50 @@ public sealed class PdfDamageRowVideoTimeLayoutTests
         Assert.Equal("Anschluss eingespitzt, offen bei 1 Uhr", row.Description);
     }
 }
+
+/// <summary>
+/// Im Fretz-Layout steht die Meterspalte der FOLGENDEN Zeilen als eigene Zeile
+/// im extrahierten Text. Sie wurde als Fortsetzung an die Beschreibung
+/// angehaengt: "Bogen nach links 9.20". An 24 Kundenprotokollen gemessen:
+/// 29 von 165 Befunden betroffen, danach 0.
+/// </summary>
+public sealed class PdfDamageRowSpaltenrestTests
+{
+    private static readonly PdfParser Parser = new();
+
+    [Fact]
+    public void Reine_meterspalten_landen_nicht_in_der_beschreibung()
+    {
+        var text = string.Join("\n",
+            "  9.00   BCCAY  Bogen nach links",
+            "  9.20",
+            " 12.30   BAB    Riss");
+
+        var rows = Parser.ParseDamageRows(text);
+
+        Assert.Equal("Bogen nach links", rows.First(r => r.Code == "BCCAY").Description);
+    }
+
+    [Fact]
+    public void Auch_ein_nachfolgender_code_wird_nicht_angehaengt()
+    {
+        var text = string.Join("\n",
+            "  0.00   AEDXH  Rohrmaterialwechsel: Faserzement",
+            "  0.00 BCD");
+
+        Assert.Equal("Rohrmaterialwechsel: Faserzement",
+            Assert.Single(Parser.ParseDamageRows(text)).Description);
+    }
+
+    [Fact]
+    public void Eine_echte_fortsetzung_bleibt_erhalten()
+    {
+        // Enthaelt echte Woerter — muss angehaengt werden.
+        var text = string.Join("\n",
+            "  5.50   BAB   Riss im Scheitel",
+            "        ueber zwei Rohrverbindungen");
+
+        Assert.Equal("Riss im Scheitel ueber zwei Rohrverbindungen",
+            Assert.Single(Parser.ParseDamageRows(text)).Description);
+    }
+}

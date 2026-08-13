@@ -241,6 +241,27 @@ internal static class PrimaryDamageRowParser
                 return false; // Echte Beobachtung, kein Noise
             return true;
         }
+
+        // Reine Spaltenreste: nur Meterwerte und/oder Codes, kein echtes Wort.
+        // Im Fretz-Layout steht die Meterspalte der FOLGENDEN Zeilen als eigene
+        // Zeile im extrahierten Text und wurde bisher als Fortsetzung angehaengt.
+        // Am 2026-08-13 an 24 Kundenprotokollen gemessen: 29 von 165 Befunden
+        // trugen so etwas wie "Bogen nach links 9.20" oder
+        // "Rohrmaterialwechsel: Faserzement 0.00 BCD".
+        if (BesteHtNurAusSpaltenresten(t))
+            return true;
+
         return false;
     }
+
+    /// <summary>
+    /// Wahr, wenn die Zeile ausschliesslich aus Meterwerten und/oder VSA-Codes
+    /// besteht. Eine inhaltliche Fortsetzung enthaelt immer ein echtes Wort und
+    /// bleibt damit erhalten.
+    /// </summary>
+    private static bool BesteHtNurAusSpaltenresten(string zeile)
+        => Regex.IsMatch(
+            zeile,
+            @"^(?:\d{1,4}[.,]\d{1,3}|[A-Z]{2,6}(?:\.[A-Z]{1,2})*)"
+            + @"(?:\s+(?:\d{1,4}[.,]\d{1,3}|[A-Z]{2,6}(?:\.[A-Z]{1,2})*))*$");
 }
