@@ -158,21 +158,50 @@ internal static class PrimaryDamageRowParser
         code = string.IsNullOrWhiteSpace(c2) ? c1 : $"{c1} {c2}";
 
         var rohBeschreibung = TakeFirstColumn(m.Groups["desc"].Value);
-        // Der Zeitstempel hinter der Beschreibung wird ohnehin abgeschnitten —
-        // hier wird er vorher noch gelesen statt nur entfernt.
         videoTime = m.Groups["time"].Success
             ? ProtocolTimeParser.ParseMpegTime(m.Groups["time"].Value)
-            : ReadTrailingTime(rohBeschreibung);
+            : ReadVideoTime(line);
 
         desc = StripTrailingNoise(rohBeschreibung);
         return !string.IsNullOrWhiteSpace(code);
     }
 
-    private static TimeSpan? ReadTrailingTime(string line)
+    /// <summary>
+    /// Liest den Videozaehlerstand aus der ROHEN Zeile, vor jedem Spaltenschnitt.
+    ///
+    /// Zuvor wurde er erst hinter <see cref="TakeFirstColumn"/> gesucht — die
+    /// schneidet die Zeile aber am ersten Doppel-Leerzeichen ab, und genau davor
+    /// steht die Zeit. Am 2026-08-13 an 24 Kundenprotokollen gemessen: 18 von 165
+    /// Befunden trugen eine Zeit, der Referenzparser holte 138 von 138.
+    ///
+    /// Die drei Muster spiegeln <c>TrainingPdfProtocolFindingParser</c>, der auf
+    /// denselben Protokollen 100 % erreicht. Ohne Treffer bleibt der Wert null
+    /// statt geraten.
+    /// </summary>
+    private static TimeSpan? ReadVideoTime(string line)
     {
-        var m = Regex.Match(line ?? "", @"\s+(?<time>\d{2}:\d{2}:\d{2})\b");
-        return m.Success ? ProtocolTimeParser.ParseMpegTime(m.Groups["time"].Value) : null;
+        foreach (var muster in ZeitMuster)
+        {
+            var treffer = muster.Match(line ?? "");
+            if (treffer.Success)
+                return ProtocolTimeParser.ParseMpegTime(treffer.Groups["time"].Value);
+        }
+
+        return null;
     }
+
+    private static readonly Regex[] ZeitMuster =
+    [
+        // Zeit HINTER der Beschreibung: "38.70  BCAEA  Anschluss ...  00:09:54  Foto  4"
+        new(@"^\s*\d{1,4}[.,]\d{1,3}[ \t]+(?:[AB]\d{1,3}[ \t]+)?[A-Z]{2,6}(?:\.[A-Z]{1,2})*[ \t]+.+?[ \t]+(?<time>\d{2}:\d{2}:\d{2})(?:[ \t]+.*)?$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+        // Zeit VOR dem Meterwert: "1777  00:00:09  0.00  BCD  Rohranfang"
+        new(@"^\s*(?:\d{1,5}[ \t]+)?(?<time>\d{2}:\d{2}:\d{2})[ \t]+\d{1,4}[.,]\d{1,3}[ \t]+[A-Z]{2,6}",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+        // Zeit VOR der Beschreibung: "0.00  BCD  1777  00:00:09  Rohranfang"
+        new(@"^\s*\d{1,4}[.,]\d{1,3}[ \t]+[A-Z]{2,6}(?:\.[A-Z]{1,2})*[ \t]+(?:\d{1,5}[ \t]+)?(?<time>\d{2}:\d{2}:\d{2})[ \t]+",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+    ];
 
     /// <summary>
     /// Gibt den Text vor dem ersten Doppel-Leerzeichen zurueck (erste Spalte).

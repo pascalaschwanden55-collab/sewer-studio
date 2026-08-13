@@ -91,3 +91,45 @@ internal static class PdfParserTestHilfe
     internal static string PrimaereSchaeden(string text)
         => PrimaryDamageRowParser.ExtractPrimaryDamages(text.Replace("\r\n", "\n").Split('\n'));
 }
+
+/// <summary>
+/// Die Zeit muss aus der ROHEN Zeile gelesen werden. TakeFirstColumn schneidet
+/// am ersten Doppel-Leerzeichen ab — und genau davor steht sie im echten
+/// Fretz-Layout. Vor dieser Regel trugen 18 von 165 Befunden eine Zeit, danach 139.
+/// </summary>
+public sealed class PdfDamageRowVideoTimeLayoutTests
+{
+    private static readonly PdfParser Parser = new();
+
+    [Theory]
+    // Zeit hinter der Beschreibung, durch Spaltenabstand getrennt (Fretz)
+    [InlineData("   0.00      BCD   Rohranfang                          00:00:00 06.24341-", 0, 0, 0)]
+    [InlineData("  38.70      BCAEA Anschluss eingespitzt, offen bei 1 Uhr   00:09:54 foto 4", 0, 9, 54)]
+    // Zeit vor dem Meterwert
+    [InlineData("1777 00:00:09 0.00 BCD Rohranfang", 0, 0, 9)]
+    // Zeit vor der Beschreibung
+    [InlineData("0.00 BCD 1777 00:00:09 Rohranfang", 0, 0, 9)]
+    public void Alle_drei_zeilenformate_liefern_die_zeit(string zeile, int h, int m, int s)
+    {
+        var row = Assert.Single(Parser.ParseDamageRows(zeile));
+        Assert.Equal(new TimeSpan(h, m, s), row.VideoTime);
+    }
+
+    [Fact]
+    public void Ohne_zeit_bleibt_der_wert_leer()
+    {
+        var row = Assert.Single(Parser.ParseDamageRows("  27.70   BCE   Rohrende"));
+        Assert.Null(row.VideoTime);
+    }
+
+    [Fact]
+    public void Die_beschreibung_bleibt_unveraendert()
+    {
+        // Der Spaltenschnitt gilt weiter fuer den Text — nur die Zeit kommt jetzt
+        // aus der Rohzeile. Sonst aenderte sich "Primaere_Schaeden" und mit ihm
+        // der Codierungs-Hash.
+        var row = Assert.Single(Parser.ParseDamageRows(
+            "  38.70      BCAEA Anschluss eingespitzt, offen bei 1 Uhr   00:09:54 foto 4"));
+        Assert.Equal("Anschluss eingespitzt, offen bei 1 Uhr", row.Description);
+    }
+}
