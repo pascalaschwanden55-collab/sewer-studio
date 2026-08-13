@@ -45,6 +45,10 @@ class SidecarSettings(BaseSettings):
     # Getrennter, nur lesender Root fuer nicht produktive Trainingskandidaten.
     # Der BCC-Testendpunkt akzeptiert keinen freien Modellpfad vom Client.
     training_model_candidates_root: str = r"C:\KI_BRAIN\training\models\candidates"
+    # Freigegebene Bild-Einordner aus Lernstufen (Rohranfang, Rohrende). Nur was
+    # hier mit gueltiger, hashgebundener Freigabedatei liegt, darf gerechnet
+    # werden — ein ungemessenes Modell bleibt gesperrt.
+    lernstufe_freigaben_root: str = r"C:\KI_BRAIN\training\lernstufen\freigaben"
     training_max_image_bytes: int = 25 * 1024 * 1024
     inference_max_image_bytes: int = 25 * 1024 * 1024
     max_image_pixels: int = 50_000_000

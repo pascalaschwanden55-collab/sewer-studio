@@ -183,3 +183,49 @@ class YoloClassifyResponse(BaseModel):
     bend_veto_failed: bool = False
     vanish_x: float = 0.5
     vanish_y: float = 0.5
+
+
+class LernstufeInfo(BaseModel):
+    """Eine freigegebene Lernstufe, wie der Client sie auswaehlen darf."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    klasse: str
+    gewicht_sha256: str
+    freigabe_sha256: str
+    # Gemessen an frischen Videos mit vorher festgeschriebener Regel.
+    precision: float
+    recall: float
+    regel: str
+
+
+class LernstufenResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lernstufen: list[LernstufeInfo]
+
+
+class LernstufeRequest(BaseModel):
+    """Klasse und erwarteter Gewicht-Hash. Kein Modellpfad vom Client."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_base64: str
+    klasse: str = Field(pattern=r"^[a-z][a-z_]{0,31}$")
+    gewicht_sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    imgsz: int = Field(default=640, ge=64, le=2048)
+
+
+class LernstufeResponse(BaseModel):
+    """Nur eine Konfidenz fuer das GANZE Bild — diese Modelle liefern keine Box."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    klasse: str
+    konfidenz: float
+    gewicht_sha256: str
+    freigabe_sha256: str
+    precision: float
+    recall: float
+    device: str | None = None
+    inference_time_ms: float

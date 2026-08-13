@@ -10,8 +10,11 @@ from ..schemas.detection import (
     BccTestYoloRequest, BccTestYoloResponse,
     BccTestCandidateInfo, BccTestCandidatesResponse,
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
+    LernstufeRequest, LernstufeResponse, LernstufeInfo, LernstufenResponse,
 )
-from ..models import bcc_test_wrapper, detector_qualification, yolo_wrapper
+from ..models import (
+    bcc_test_wrapper, detector_qualification, lernstufe_wrapper, yolo_wrapper,
+)
 from ..models.bend_geometry import analyze_bend
 from ..config import settings
 from ..telemetry import write_event, write_yolo_detection
@@ -202,3 +205,47 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         vanish_x=vanish_x,
         vanish_y=vanish_y,
     )
+
+
+@router.get("/classify/lernstufen", response_model=LernstufenResponse)
+def list_lernstufen() -> LernstufenResponse:
+    """Nennt die freigegebenen Bild-Einordner samt gemessener Guete.
+
+    Der Client waehlt daraus eine Klasse und schickt ihren Gewicht-Hash zurueck.
+    Einen Modellpfad kann er nicht vorgeben.
+    """
+    try:
+        stufen = lernstufe_wrapper.freigegebene_lernstufen()
+    except lernstufe_wrapper.LernstufeError as exc:
+        logger.warning("Keine Lernstufen verfuegbar: %s", exc)
+        return LernstufenResponse(lernstufen=[])
+    return LernstufenResponse(lernstufen=[
+        LernstufeInfo(klasse=s.klasse, gewicht_sha256=s.gewicht_sha256,
+                      freigabe_sha256=s.freigabe_sha256, precision=s.precision,
+                      recall=s.recall, regel=s.regel)
+        for s in stufen])
+
+
+# Bewusst sync (def) wie die uebrigen GPU-Handler: als async def wuerde die
+# blockierende Inferenz den Event-Loop und damit /health mitblockieren.
+@router.post("/classify/lernstufe", response_model=LernstufeResponse)
+def classify_lernstufe(req: LernstufeRequest) -> LernstufeResponse:
+    """Ordnet EIN Bild ein. Kein Detektor — es gibt keine Box, nur eine Konfidenz."""
+
+    started = time.perf_counter()
+    ergebnis = lernstufe_wrapper.einordnen(
+        image_base64=req.image_base64,
+        klasse=req.klasse,
+        erwarteter_sha256=req.gewicht_sha256,
+        imgsz=req.imgsz,
+    )
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    write_event("lernstufe_classification", {
+        "klasse": ergebnis["klasse"],
+        "konfidenz": round(ergebnis["konfidenz"], 4),
+        "gewicht_sha256": ergebnis["gewicht_sha256"],
+        "device": ergebnis["device"],
+        "imgsz": req.imgsz,
+        "roundtrip_ms": round(elapsed_ms, 1),
+    })
+    return LernstufeResponse(**ergebnis, inference_time_ms=round(elapsed_ms, 1))
