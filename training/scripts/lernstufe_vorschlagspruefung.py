@@ -37,6 +37,7 @@ sys.path.insert(0, str(SCRIPT))
 sys.path.insert(0, str(SCRIPT.parent / "vsa_classifier"))
 
 from lernstufe_videolauf import FFMPEG, VORLAUF_S, NACHLAUF_S, sha256_datei, zusammenfassen
+from lernstufe_mitte_ausblenden import maske_anwenden
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -54,6 +55,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="Nur die staerkste Meldung je Video und Modell behalten. Regel aus "
                              "der Sache: Ein Video hat genau EINEN Rohranfang und genau EIN "
                              "Rohrende. Braucht kein Zeitfenster und nichts zu justieren.")
+    parser.add_argument("--mitte-ausblenden", type=float, default=None,
+                        help="Zentriertes Rechteck schwaerzen, Anteil der Kantenlaenge. "
+                             "MUSS mit dem Wert des Lernbestands uebereinstimmen — eine "
+                             "andere Vorverarbeitung als im Training verschiebt jede Zahl.")
     parser.add_argument("--ab-sekunde", type=float, default=None,
                         help="Videoanfang ausblenden. Standard 3 s (Schacht); fuer den "
                              "Rohranfang auf 0 setzen.")
@@ -108,7 +113,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         werte = {m["name"]: [] for m in modelle}
         for j, bild in enumerate(bilder):
             with Image.open(bild) as bytes_bild:
-                vorbereitet = letterbox_pil(bytes_bild, args.imgsz)
+                # Erst maskieren, dann letterboxen — genau wie im Lernbestand,
+                # wo die Maske im gespeicherten Bild sitzt und Ultralytics
+                # danach letterboxt.
+                # NICHT `roh` nennen — so heisst die Sammelliste der Vorschlaege.
+                bild_roh = (maske_anwenden(bytes_bild, args.mitte_ausblenden)
+                            if args.mitte_ausblenden else bytes_bild)
+                vorbereitet = letterbox_pil(bild_roh, args.imgsz)
             for m in modelle:
                 e = m["modell"].predict(source=vorbereitet, imgsz=args.imgsz, verbose=False)[0]
                 werte[m["name"]].append((j / args.fps, float(e.probs.data[m["index"]])))
@@ -211,6 +222,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "schwelle": args.schwelle,
         "imgsz": args.imgsz,
         "ab_sekunde": args.ab_sekunde,
+        "mitte_ausgeblendet": args.mitte_ausblenden,
         "regel": ("staerkste Meldung je Video" if args.staerkste_je_video
                   else "alle gruppierten Meldungen"),
         "videos": len(videos),

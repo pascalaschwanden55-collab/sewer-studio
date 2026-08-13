@@ -359,6 +359,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     eintraege = []
     gesehen: set[str] = set()
+    geschrieben: set[Path] = set()   # bereits als Eintrag verbuchte Zielpfade
     zaehler = {positiv: 0, negativ: 0, "kein_bild": 0, "doppelt": 0}
 
     def aufnehmen(quelle: dict, sekunde: float, klasse: str) -> None:
@@ -371,6 +372,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         name = f"{''.join(c if c.isalnum() else '_' for c in quelle['haltung'])}_" \
                f"{hashlib.sha256(roh.encode()).hexdigest()[:16]}.jpg"
         ziel = staging / split / klasse / name
+        # Derselbe Dateiname kann zweimal drankommen — etwa wenn zwei Befunde
+        # denselben Videozaehlerstand tragen. Dann ist das Bild bytegleich und
+        # der Eintrag steht schon; erneutes Schreiben und anschliessendes
+        # Loeschen wuerde die Datei des ERSTEN Eintrags entfernen. Genau so
+        # entstanden im Bestand bca_protokoll_v3 31 Manifestzeilen ohne Datei.
+        if ziel in geschrieben:
+            zaehler["doppelt"] += 1
+            return
         if not bild_holen(ffmpeg, video, sekunde, ziel):
             zaehler["kein_bild"] += 1
             return
@@ -379,6 +388,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ziel.unlink(missing_ok=True)
             zaehler["doppelt"] += 1
             return
+        geschrieben.add(ziel)
         gesehen.add(h)
         zaehler[klasse] += 1
         eintraege.append({
