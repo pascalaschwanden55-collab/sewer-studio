@@ -730,6 +730,15 @@ public sealed partial class LegacyXtfImportService
                         if (TryParseDouble(child.Value, out var meter))
                             finding.MeterStart = meter;
                         break;
+                    case "Videozaehlerstand":
+                        // Sekunde ab Dateianfang (SN EN 13508-2, Kapitel 3.1.10).
+                        // Wurde bis 2026-08-13 nie eingelesen, obwohl die ganze
+                        // Weiterverarbeitung dahinter steht: finding.MPEG ->
+                        // entry.Mpeg/entry.Zeit -> CodingBoundaryImportReferencePolicy.
+                        // Ohne diesen Wert fiel die Videoreferenz von Rohranfang und
+                        // Rohrende dort still auf TimeSpan.Zero zurueck.
+                        finding.MPEG = child.Value;
+                        break;
                     case "Anmerkung":
                         s.Anmerkung = child.Value;
                         finding.Raw = child.Value;

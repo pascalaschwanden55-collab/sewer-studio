@@ -23,7 +23,10 @@ public static class XtfPrimaryDamageFormatter
             ["BCB"] = "Punktuelle Reparatur",
             ["BCC"] = "Krummung der Leitung",
             ["BCD"] = "Rohranfang",
-            ["BCE"] = "Einlauf in Leitung",
+            // BCE ist das Rohrende. Stand bis 2026-08-13 falsch als "Einlauf in
+            // Leitung" hier; der Rest des Systems (VsaCodeTree, ProtocolBoundaryService)
+            // hatte es immer richtig, nur die Anzeige der importierten Befunde nicht.
+            ["BCE"] = "Rohrende",
             ["BDA"] = "Allgemeinzustand, Fotobeispiel",
             ["BDB"] = "Allgemeine Anmerkung",
             ["BDC"] = "Abbruch der Inspektion"
