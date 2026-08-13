@@ -8,14 +8,16 @@ public sealed record DataPageDropdownOptionCollections(
     ObservableCollection<string> Eigentuemer,
     ObservableCollection<string> Pruefungsresultat,
     ObservableCollection<string> Referenzpruefung,
-    ObservableCollection<string> EmpfohleneSanierungsmassnahmen);
+    ObservableCollection<string> EmpfohleneSanierungsmassnahmen,
+    ObservableCollection<string> Rohrmaterial);
 
 public sealed record DataPageDropdownOptionGroups(
     DropdownOptionGroupController Sanieren,
     DropdownOptionGroupController Eigentuemer,
     DropdownOptionGroupController Pruefungsresultat,
     DropdownOptionGroupController Referenzpruefung,
-    DropdownOptionGroupController EmpfohleneSanierungsmassnahmen);
+    DropdownOptionGroupController EmpfohleneSanierungsmassnahmen,
+    DropdownOptionGroupController Rohrmaterial);
 
 public static class DataPageDropdownOptionGroupFactory
 {
@@ -46,6 +48,13 @@ public static class DataPageDropdownOptionGroupFactory
                 options.EmpfohleneSanierungsmassnahmen,
                 "Sanierungsmassnahmen-Liste",
                 [""],
+                actions),
+            // Zuruecksetzen bedeutet hier: zurueck auf die reinen Katalogwerte,
+            // also alle eigenen Ergaenzungen weg.
+            CreateGroup(
+                options.Rohrmaterial,
+                "Rohrmaterial-Liste",
+                PipeMaterialOptionList.FixedOptions,
                 actions));
     }
 

@@ -73,7 +73,9 @@
             </MenuItem>
         </ContextMenu>
 
-        <Style x:Key="DetailComboStyle" TargetType="ComboBox">
+        <Style x:Key="DetailComboStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="ContextMenu" Value="{StaticResource ManagedOptionsContextMenu}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding HasManagedOptions}" Value="False">

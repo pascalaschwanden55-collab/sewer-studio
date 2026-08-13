@@ -942,7 +942,9 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         if (record.Fields.TryGetValue(field, out var existing) && !string.IsNullOrWhiteSpace(existing))
             return;
 
-        record.SetFieldValue(field, value.Trim());
+        // Importwert: nie als Handeingabe kennzeichnen. Ein bereits von Hand gesetztes
+        // Feld bleibt zusaetzlich unangetastet, auch wenn es leer geleert wurde.
+        record.SetFieldValue(field, value.Trim(), FieldSource.Legacy, userEdited: false);
     }
 
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer

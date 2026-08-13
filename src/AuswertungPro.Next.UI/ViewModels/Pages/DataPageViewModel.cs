@@ -111,6 +111,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand ResetEmpfohleneSanierungsmassnahmenOptionsCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Reset;
     public IRelayCommand<object?> AddEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Add;
     public IRelayCommand<object?> RemoveEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Remove;
+    public IRelayCommand EditRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Edit;
+    public IRelayCommand PreviewRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Preview;
+    public IRelayCommand ResetRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Reset;
+    public IRelayCommand<object?> AddRohrmaterialOptionCommand => _dropdownCommands.Rohrmaterial.Add;
+    public IRelayCommand<object?> RemoveRohrmaterialOptionCommand => _dropdownCommands.Rohrmaterial.Remove;
     public IRelayCommand<HaltungRecord?> PlayVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> PlayGegenVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenProtocolCommand { get; }
@@ -139,6 +144,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> PruefungsresultatOptions { get; }
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions { get; }
+
+    /// <summary>Feste Katalogwerte plus eigene Ergaenzungen — Tabelle und Formular zeigen dieselbe Liste.</summary>
+    public ObservableCollection<string> RohrmaterialOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
     public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
     public DataPageStartFilter? StartFilter { get; }
@@ -241,6 +249,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         EmpfohleneSanierungsmassnahmenOptions = new ObservableCollection<string>(
             _dropdownOptions.LoadEmpfohleneSanierungsmassnahmenOptions());
+        RohrmaterialOptions = new ObservableCollection<string>(
+            PipeMaterialOptionList.Compose(_dropdownOptions.LoadRohrmaterialOptions()));
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
             _dialogs,
@@ -399,7 +409,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 PreviewEmpfohleneSanierungsmassnahmenOptions,
                 ResetEmpfohleneSanierungsmassnahmenOptions,
                 AddEmpfohleneSanierungsmassnahmenOption,
-                RemoveEmpfohleneSanierungsmassnahmenOption));
+                RemoveEmpfohleneSanierungsmassnahmenOption),
+            new DropdownCommandActions(
+                EditRohrmaterialOptions,
+                PreviewRohrmaterialOptions,
+                ResetRohrmaterialOptions,
+                AddRohrmaterialOption,
+                RemoveRohrmaterialOption));
         PlayVideoCommand = new RelayCommand<HaltungRecord?>(PlayVideo);
         PlayGegenVideoCommand = new RelayCommand<HaltungRecord?>(PlayGegenVideo);
         OpenProtocolCommand = new RelayCommand<HaltungRecord?>(OpenProtocol);

@@ -12,6 +12,9 @@ public sealed class DropdownOptionsModel
     public List<string> PruefungsresultatOptions { get; set; } = new() { "" };
     public List<string> ReferenzpruefungOptions { get; set; } = new() { "" };
     public List<string> EmpfohleneSanierungsmassnahmenOptions { get; set; } = new() { "" };
+
+    /// <summary>Nur die selbst ergaenzten Rohrmaterialien; die festen Katalogwerte stehen im Feldkatalog.</summary>
+    public List<string> RohrmaterialOptions { get; set; } = new();
 }
 
 public interface IDropdownOptionsStore
@@ -29,6 +32,8 @@ public interface IDropdownOptionsStore
     void SaveReferenzpruefungOptions(IEnumerable<string> options);
     List<string> LoadEmpfohleneSanierungsmassnahmenOptions();
     void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options);
+    List<string> LoadRohrmaterialOptions();
+    void SaveRohrmaterialOptions(IEnumerable<string> options);
 }
 
 /// <summary>Dateibasierter, atomar schreibender Speicher fuer die editierbaren Auswahllisten.</summary>
@@ -67,7 +72,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
             EigentuemerOptions = LoadEigentuemerOptions(),
             PruefungsresultatOptions = LoadPruefungsresultatOptions(),
             ReferenzpruefungOptions = LoadReferenzpruefungOptions(),
-            EmpfohleneSanierungsmassnahmenOptions = LoadEmpfohleneSanierungsmassnahmenOptions()
+            EmpfohleneSanierungsmassnahmenOptions = LoadEmpfohleneSanierungsmassnahmenOptions(),
+            RohrmaterialOptions = LoadRohrmaterialOptions()
         };
 
     public void Save(DropdownOptionsModel model)
@@ -78,6 +84,7 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
         SavePruefungsresultatOptions(model.PruefungsresultatOptions);
         SaveReferenzpruefungOptions(model.ReferenzpruefungOptions);
         SaveEmpfohleneSanierungsmassnahmenOptions(model.EmpfohleneSanierungsmassnahmenOptions);
+        SaveRohrmaterialOptions(model.RohrmaterialOptions);
     }
 
     public List<string> LoadSanierenOptions()
@@ -109,6 +116,15 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
 
     public void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options)
         => SaveList("sanierungsmassnahmen", options);
+
+    // Gespeichert werden bewusst nur die selbst ergaenzten Materialien. Die festen
+    // Katalogwerte kommen bei jedem Start aus dem Feldkatalog und koennen dadurch
+    // weder geloescht noch durch eine alte Datei ueberholt werden.
+    public List<string> LoadRohrmaterialOptions()
+        => LoadList("rohrmaterial", DefaultModel().RohrmaterialOptions);
+
+    public void SaveRohrmaterialOptions(IEnumerable<string> options)
+        => SaveList("rohrmaterial", options);
 
     private List<string> LoadList(string key, List<string> defaults)
     {
@@ -209,6 +225,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
                     SaveReferenzpruefungOptions(model.ReferenzpruefungOptions);
                 if (model.EmpfohleneSanierungsmassnahmenOptions.Count > 0)
                     SaveEmpfohleneSanierungsmassnahmenOptions(model.EmpfohleneSanierungsmassnahmenOptions);
+                if (model.RohrmaterialOptions.Count > 0)
+                    SaveRohrmaterialOptions(model.RohrmaterialOptions);
             }
             catch
             {
@@ -242,7 +260,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
                 "Anschluss verpressen",
                 "Reinigung + TV-Inspektion",
                 "Erneuerung / Neubau"
-            }
+            },
+            RohrmaterialOptions = new List<string>()
         };
 
     private static string NormalizeRequiredPath(string path, string parameterName)
@@ -269,4 +288,6 @@ public static class DropdownOptionsStore
     public static void SaveReferenzpruefungOptions(IEnumerable<string> options) => Default.SaveReferenzpruefungOptions(options);
     public static List<string> LoadEmpfohleneSanierungsmassnahmenOptions() => Default.LoadEmpfohleneSanierungsmassnahmenOptions();
     public static void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options) => Default.SaveEmpfohleneSanierungsmassnahmenOptions(options);
+    public static List<string> LoadRohrmaterialOptions() => Default.LoadRohrmaterialOptions();
+    public static void SaveRohrmaterialOptions(IEnumerable<string> options) => Default.SaveRohrmaterialOptions(options);
 }

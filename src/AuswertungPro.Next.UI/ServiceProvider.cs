@@ -115,6 +115,7 @@ namespace AuswertungPro.Next.UI
         public IVsaYoloClassMapStore VsaYoloClasses { get; }
         public ITrainingYoloClassMapStore TrainingYoloClasses { get; }
         public IGitCommitResolver GitCommit { get; }
+        public IProgramSnapshotService ProgramSnapshot { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
@@ -163,6 +164,9 @@ namespace AuswertungPro.Next.UI
         #region Persistenz
         // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
+
+        /// <summary>Erzeugt revidierte XTF-Dateien aus dem aktuellen Projektstand.</summary>
+        public AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService XtfRevisionExport { get; }
         public IProjectContentSignature ProjectContentSignature { get; }
         public IImportTransactionJournal ImportTransactionJournal { get; }
         public IImportTransactionRecoveryService ImportTransactionRecovery { get; }
@@ -234,6 +238,8 @@ namespace AuswertungPro.Next.UI
         public ISchachtProtocolImportService SchachtProtocolImport { get; }
         // Nachlauf fuer bestehende Projekte: nur fehlende Schacht-Stammdaten aus vorhandenen PDFs.
         public ISchachtStammdatenErgaenzungsService SchachtStammdatenErgaenzung { get; }
+        // Sucht die Protokoll-PDF genau eines Schachts (Verknuepfung, sonst dessen Schachtordner).
+        public ISchachtProtocolFileLocator SchachtProtocolFiles { get; }
         #endregion
 
         #region Export / Protokoll
@@ -453,6 +459,7 @@ namespace AuswertungPro.Next.UI
 
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
+            XtfRevisionExport = new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
             ProjectContentSignature = new JsonProjectContentSignature();
             ImportTransactionJournal = new FileImportTransactionJournal();
             ImportTransactionRecovery = new ImportTransactionRecoveryService(ImportTransactionJournal);
@@ -544,6 +551,7 @@ namespace AuswertungPro.Next.UI
                 SchachtProtocolOcr);
             SchachtStammdatenErgaenzung = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtStammdatenErgaenzungsService(
                 SchachtProtocolImport);
+            SchachtProtocolFiles = new AuswertungPro.Next.Infrastructure.Import.Protocols.SchachtProtocolFileLocator();
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
@@ -556,6 +564,7 @@ namespace AuswertungPro.Next.UI
                 OllamaListAsync,
                 GitCommit);
             KnowledgeBackup = new KnowledgeBackupTransferService();
+            ProgramSnapshot = new ProgramSnapshotService(GitCommit);
             KnowledgeRealtimeMirror = new KnowledgeRealtimeMirrorService(
                 KnowledgeRoot,
                 loggerFactory.CreateLogger<KnowledgeRealtimeMirrorService>());

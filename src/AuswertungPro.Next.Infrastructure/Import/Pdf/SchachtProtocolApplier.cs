@@ -15,49 +15,47 @@ internal static class SchachtProtocolApplier
     /// Schreibt die geparsten Felder + Schaeden auf <paramref name="target"/>.
     /// Gibt die Liste der fuer die Import-Meldung relevanten gesetzten Felder zurueck.
     /// </summary>
+    /// <param name="rebuildFromProtocol">
+    /// Nur fuer das ausdrueckliche Aktualisieren EINES bereits verknuepften Schachts:
+    /// Dann gilt das neu gelesene Protokoll als alleinige Wahrheit. Ein Feld, das im
+    /// PDF jetzt fehlt, wird geleert, und das Beobachtungs-Protokoll wird auch dann
+    /// ersetzt, wenn im PDF keine Beobachtung mehr steht. Der normale Import ergaenzt
+    /// dagegen weiter nur (false), damit er Werte aus anderen Quellen nicht loescht.
+    /// </param>
     public static IReadOnlyList<string> Apply(
         SchachtRecord target,
         string key,
         LegacyPdfImportService.ParsedSchachtFields parsed,
         IReadOnlyList<(string Component, string Damage)> damageEntries,
-        string pdfPath)
+        string pdfPath,
+        bool rebuildFromProtocol = false)
     {
         SetSchachtField(target, "Schachtnummer", key);
         SetSchachtField(target, "NR.", key);
         SetSchachtField(target, "Nr.", key);
 
-        if (!string.IsNullOrWhiteSpace(parsed.Datum))
-            SetSchachtField(target, "Ausfuehrung Datum/Jahr", parsed.Datum);
+        WriteProtocolField(target, "Ausfuehrung Datum/Jahr", parsed.Datum, rebuildFromProtocol);
+        WriteProtocolField(target, "Funktion", parsed.Funktion, rebuildFromProtocol);
+        WriteProtocolField(target, "Schachtform", parsed.Schachtform, rebuildFromProtocol);
+        WriteProtocolField(target, "Dimension", parsed.Dimension, rebuildFromProtocol);
+        WriteProtocolField(target, "Schachttiefe", parsed.Schachttiefe, rebuildFromProtocol);
+        WriteProtocolField(target, "Primaere Schaeden", parsed.PrimaereSchaeden, rebuildFromProtocol);
+        WriteProtocolField(target, "Bemerkungen", parsed.Bemerkungen, rebuildFromProtocol);
 
-        if (!string.IsNullOrWhiteSpace(parsed.Funktion))
-            SetSchachtField(target, "Funktion", parsed.Funktion);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Schachtform))
-            SetSchachtField(target, "Schachtform", parsed.Schachtform);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Dimension))
-            SetSchachtField(target, "Dimension", parsed.Dimension);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Schachttiefe))
-            SetSchachtField(target, "Schachttiefe", parsed.Schachttiefe);
-
-        if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden))
-            SetSchachtField(target, "Primaere Schaeden", parsed.PrimaereSchaeden);
-
-        if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen))
-            SetSchachtField(target, "Bemerkungen", parsed.Bemerkungen);
-
+        // "Link" und "PDF_Path" zeigen auf die Datei selbst. Sie werden nur ueberschrieben,
+        // nie geleert - sonst verliert der Schacht beim Neuaufbau den Weg zu seinem Protokoll.
         if (!string.IsNullOrWhiteSpace(parsed.Link))
             SetSchachtField(target, "Link", parsed.Link);
 
-        if (!string.IsNullOrWhiteSpace(parsed.Status))
-            SetSchachtField(target, "Status offen/abgeschlossen", parsed.Status);
+        WriteProtocolField(target, "Status offen/abgeschlossen", parsed.Status, rebuildFromProtocol);
 
         // PDF-Pfad speichern fuer spaeteres Oeffnen per Rechtsklick.
         target.SetFieldValue("PDF_Path", pdfPath);
 
-        // Strukturiertes Protokoll aus Bauteil-Schaeden erstellen.
-        if (damageEntries.Count > 0)
+        // Strukturiertes Protokoll aus Bauteil-Schaeden erstellen. Beim Neuaufbau auch
+        // dann, wenn keine Beobachtung mehr im PDF steht - sonst bleiben geloeschte
+        // Beobachtungen unsichtbar am Schacht haengen.
+        if (damageEntries.Count > 0 || rebuildFromProtocol)
         {
             var protocolEntries = damageEntries.Select(d => new ProtocolEntry
             {
@@ -101,6 +99,37 @@ internal static class SchachtProtocolApplier
         if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen)) imported.Add("Bemerkungen");
         if (damageEntries.Count > 0) imported.Add($"Protokoll ({damageEntries.Count} Beobachtungen)");
         return imported;
+    }
+
+    /// <summary>
+    /// Schreibt ein Protokollfeld. Im Ergaenzungsmodus bleibt ein vorhandener Wert stehen,
+    /// wenn das PDF an dieser Stelle nichts liefert. Beim Neuaufbau wird er geleert.
+    /// </summary>
+    private static void WriteProtocolField(
+        SchachtRecord record,
+        string logicalField,
+        string? value,
+        bool rebuildFromProtocol)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            SetSchachtField(record, logicalField, value);
+            return;
+        }
+
+        if (rebuildFromProtocol)
+            ClearSchachtField(record, logicalField);
+    }
+
+    private static void ClearSchachtField(SchachtRecord record, string logicalField)
+    {
+        foreach (var candidate in GetSchachtFieldAliases(logicalField))
+        {
+            // Nur wirklich vorhandene Spalten anfassen. Sonst entstuenden aus den
+            // Schreibweise-Aliasen leere Zusatzfelder, die es vorher nicht gab.
+            if (record.Fields.ContainsKey(candidate))
+                record.SetFieldValue(candidate, string.Empty);
+        }
     }
 
     private static void SetSchachtField(SchachtRecord record, string logicalField, string value)

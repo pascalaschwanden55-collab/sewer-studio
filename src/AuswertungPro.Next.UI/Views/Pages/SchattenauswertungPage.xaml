@@ -47,7 +47,8 @@
                           Foreground="{DynamicResource TextBrush}"
                           ToolTip="Zusätzlich zur Regelrechnung je Haltung eine KI-Sanierungsempfehlung mit Begründung einholen (Ollama).">
                     <CheckBox.Style>
-                        <Style TargetType="CheckBox">
+                        <Style TargetType="CheckBox"
+                               BasedOn="{StaticResource {x:Type CheckBox}}">
                             <Style.Triggers>
                                 <!-- Waehrend des Laufs nicht umschaltbar -->
                                 <DataTrigger Binding="{Binding IsBusy}" Value="True">

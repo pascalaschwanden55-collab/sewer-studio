@@ -16,7 +16,9 @@
         <local:DotCommaDoubleConverter x:Key="DotCommaDouble"/>
 
         <!-- ComboBox light theme -->
-        <Style x:Key="HComboBox" TargetType="ComboBox">
+        <Style x:Key="HComboBox"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -25,7 +27,8 @@
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
-                    <Style TargetType="ComboBoxItem">
+                    <Style TargetType="ComboBoxItem"
+                           BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="Padding" Value="8,5"/>
@@ -78,7 +81,9 @@
         </Style>
 
         <!-- Input TextBox -->
-        <Style x:Key="HInput" TargetType="TextBox">
+        <Style x:Key="HInput"
+               TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>

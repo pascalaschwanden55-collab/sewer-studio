@@ -76,5 +76,15 @@ public sealed class ProjectPageDropdownViewModelTests
         public void SaveReferenzpruefungOptions(IEnumerable<string> options) => _ = options;
         public List<string> LoadEmpfohleneSanierungsmassnahmenOptions() => [""];
         public void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options) => _ = options;
+        public List<string> LoadRohrmaterialOptions() => [];
+
+        public void SaveRohrmaterialOptions(IEnumerable<string> options)
+        {
+            LastSavedRohrmaterial = options.ToArray();
+            SaveRohrmaterialCalls++;
+        }
+
+        public int SaveRohrmaterialCalls { get; private set; }
+        public IReadOnlyList<string> LastSavedRohrmaterial { get; private set; } = [];
     }
 }

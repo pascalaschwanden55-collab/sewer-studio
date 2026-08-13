@@ -10,13 +10,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class SchachtStammdatenErgaenzungsService : ISchachtStammdatenErgaenzungsService
 {
-    private static readonly string[] KnownSchachtFolders =
-    {
-        "Schächte_Verteilt",
-        "Schaechte_Verteilt",
-        "Schächte_1.15",
-        "Schaechte_1.15"
-    };
+    private static readonly ISchachtProtocolFileLocator Locator = new SchachtProtocolFileLocator();
 
     private readonly ISchachtProtocolImportService _protocolImport;
 
@@ -128,91 +122,7 @@ public sealed class SchachtStammdatenErgaenzungsService : ISchachtStammdatenErga
     }
 
     internal static string? ResolvePdfPath(string projektOrdner, SchachtStammdatenQuelle quelle)
-    {
-        foreach (var rawPath in new[] { quelle.PdfPath, quelle.Link })
-        {
-            var resolved = ResolveStoredPath(projektOrdner, rawPath);
-            if (resolved is not null)
-                return resolved;
-        }
-
-        var safeNumber = ProjectPathResolver.SanitizePathSegment(quelle.Schachtnummer);
-        if (safeNumber == "UNKNOWN")
-            return null;
-
-        foreach (var baseName in KnownSchachtFolders)
-        {
-            var numberFolder = Path.Combine(projektOrdner, baseName, safeNumber);
-            var match = FindBestPdf(numberFolder, safeNumber);
-            if (match is not null)
-                return match;
-        }
-
-        // Projektnamen koennen abweichende Zusaetze tragen. Deshalb weitere
-        // Schacht-Hauptordner kontrolliert pruefen, ohne ausserhalb des Projekts zu suchen.
-        try
-        {
-            foreach (var directory in Directory.EnumerateDirectories(projektOrdner, "*", SearchOption.TopDirectoryOnly))
-            {
-                var name = Path.GetFileName(directory);
-                if (!name.Contains("Schächt", StringComparison.OrdinalIgnoreCase)
-                    && !name.Contains("Schaech", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var match = FindBestPdf(Path.Combine(directory, safeNumber), safeNumber);
-                if (match is not null)
-                    return match;
-            }
-        }
-        catch
-        {
-            // Die direkten Pfade wurden bereits versucht. Ein unlesbarer Zusatzordner
-            // darf den Nachlauf nicht fuer alle anderen Schaechte abbrechen.
-        }
-
-        return null;
-    }
-
-    private static string? ResolveStoredPath(string projektOrdner, string? rawPath)
-    {
-        var path = rawPath?.Trim();
-        if (string.IsNullOrWhiteSpace(path))
-            return null;
-
-        try
-        {
-            if (Path.IsPathRooted(path))
-                return File.Exists(path) && IsPdf(path) ? Path.GetFullPath(path) : null;
-
-            var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(path, projektOrdner);
-            return resolved is not null && IsPdf(resolved) ? resolved : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? FindBestPdf(string numberFolder, string schachtnummer)
-    {
-        if (!Directory.Exists(numberFolder))
-            return null;
-
-        try
-        {
-            return Directory
-                .EnumerateFiles(numberFolder, "*.pdf", SearchOption.AllDirectories)
-                .OrderByDescending(path => Path.GetFileNameWithoutExtension(path)
-                    .Contains(schachtnummer, StringComparison.OrdinalIgnoreCase))
-                .ThenByDescending(File.GetLastWriteTimeUtc)
-                .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault();
-        }
-        catch
-        {
-            return null;
-        }
-    }
+        => Locator.Locate(projektOrdner, quelle.PdfPath, quelle.Link, quelle.Schachtnummer)?.PdfPfad;
 
     private static bool IsComplete(SchachtStammdatenQuelle quelle)
         => !Missing(quelle.Schachtform)
@@ -220,7 +130,4 @@ public sealed class SchachtStammdatenErgaenzungsService : ISchachtStammdatenErga
            && !Missing(quelle.Schachttiefe);
 
     private static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
-
-    private static bool IsPdf(string path)
-        => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
 }

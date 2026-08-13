@@ -193,6 +193,64 @@ public sealed class SchaechteRecordCollectionControllerTests
         Assert.False(record.Fields.ContainsKey("Nr."));
     }
 
+    // Verschieben auf Position heisst EINFUEGEN, nicht tauschen: Der Zielschacht und
+    // alle dazwischen ruecken eine Stelle weiter, ihre Reihenfolge untereinander bleibt.
+    [Fact]
+    public void TryMoveToPosition_schiebt_nach_oben_ein_und_tauscht_nicht()
+    {
+        var records = Records(
+            Record("A"), Record("B"), Record("C"), Record("D"), Record("E"));
+
+        Assert.True(Create(records).TryMoveToPosition(records[4], targetPosition: 2));
+
+        Assert.Equal(
+            new[] { "A", "E", "B", "C", "D" },
+            records.Select(x => x.GetFieldValue("Schachtnummer")));
+    }
+
+    [Fact]
+    public void TryMoveToPosition_schiebt_nach_unten_ein_und_tauscht_nicht()
+    {
+        var records = Records(
+            Record("A"), Record("B"), Record("C"), Record("D"), Record("E"));
+
+        Assert.True(Create(records).TryMoveToPosition(records[1], targetPosition: 4));
+
+        Assert.Equal(
+            new[] { "A", "C", "D", "B", "E" },
+            records.Select(x => x.GetFieldValue("Schachtnummer")));
+    }
+
+    [Fact]
+    public void TryMoveToPosition_laesst_die_gleiche_Position_unveraendert()
+    {
+        var records = Records(Record("A"), Record("B"), Record("C"));
+
+        Assert.False(Create(records).TryMoveToPosition(records[1], targetPosition: 2));
+
+        Assert.Equal(
+            new[] { "A", "B", "C" },
+            records.Select(x => x.GetFieldValue("Schachtnummer")));
+    }
+
+    [Fact]
+    public void Renumber_zaehlt_nach_dem_Verschieben_lueckenlos_durch()
+    {
+        var records = Records(
+            Record("A", "1"), Record("B", "2"), Record("C", "3"), Record("D", "4"));
+        var controller = Create(records, ["Schachtnummer", "Nr."]);
+
+        Assert.True(controller.TryMoveToPosition(records[3], targetPosition: 2));
+        controller.Renumber();
+
+        Assert.Equal(
+            new[] { "A", "D", "B", "C" },
+            records.Select(x => x.GetFieldValue("Schachtnummer")));
+        Assert.Equal(
+            new[] { "1", "2", "3", "4" },
+            records.Select(x => x.GetFieldValue("Nr.")));
+    }
+
     private static SchaechteRecordCollectionController Create(
         ObservableCollection<SchachtRecord> records,
         IReadOnlyList<string>? columns = null,

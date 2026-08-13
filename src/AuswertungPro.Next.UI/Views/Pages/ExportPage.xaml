@@ -169,6 +169,29 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Revidierte XTF: nutzt denselben Zielordner. Kundenoriginale werden nur gelesen. -->
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Revidierte XTF" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="Schreibt deine Änderungen in eine neue XTF — eine je Originaldatei. Die Originale werden nur gelesen."
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Button Command="{Binding ErzeugeXtfRevisionCommand}"
+                                    HorizontalAlignment="Left" Padding="14,6"
+                                    ToolTip="Prüft zuerst, zeigt das Ergebnis und schreibt erst nach deiner Bestätigung.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE7C3;" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Revidierte XTF erzeugen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="Ausgabe: XTF-Revision_&lt;Zeitstempel&gt; im Zielordner oben"
+                                       FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Verzeichnisbaum für die Verteilung"
                                FontWeight="SemiBold" FontSize="12"
                                Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>

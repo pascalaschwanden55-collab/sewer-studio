@@ -125,7 +125,8 @@
                                       Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True">
                                 <ComboBox.Style>
-                                    <Style TargetType="ComboBox">
+                                    <Style TargetType="ComboBox"
+                                           BasedOn="{StaticResource {x:Type ComboBox}}">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
@@ -143,7 +144,8 @@
                             <TextBox Grid.Column="1"
                                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}">
                                 <TextBox.Style>
-                                    <Style TargetType="TextBox">
+                                    <Style TargetType="TextBox"
+                                           BasedOn="{StaticResource {x:Type TextBox}}">
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">

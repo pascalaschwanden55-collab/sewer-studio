@@ -62,9 +62,14 @@ public sealed class ServiceProviderRegistrationTests
         // zu zeigen (frueherer Kritikpunkt: nichtssagend).
         // 132 -> 135: Bogen-Vorschlaege (Auftrag Paket 4): IBendSuggestionScanService,
         // ICodingSuggestionExposure, IVideoClipExtractor.
+        // 135 -> 136: ISchachtProtocolFileLocator (Schachtprotokoll "Aktualisieren" findet die
+        // PDF auch bei absoluter Verknuepfung oder umbenannter Datei im eigenen Schachtordner).
+        // 136 -> 137: IXtfRevisionExportService (revidierte XTF aus dem aktuellen Projektstand).
+        // 137 -> 138: IProgramSnapshotService (Programmstand als eine ZIP-Datei fuer Ziele,
+        // an denen hunderttausende Einzeldateien nicht taugen, z. B. ein Cloud-Ordner).
         Assert.True(
-            registrations.Count == 135,
-            $"Erwartet 135 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 138,
+            $"Erwartet 138 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

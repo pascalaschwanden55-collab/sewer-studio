@@ -560,6 +560,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 vm.EditReferenzpruefungOptionsCommand,
                 vm.PreviewReferenzpruefungOptionsCommand,
                 vm.ResetReferenzpruefungOptionsCommand),
+            "Rohrmaterial" => new DataPageManagedComboSpec(
+                vm.RohrmaterialOptions,
+                spec.AllowFreeText,
+                vm.EditRohrmaterialOptionsCommand,
+                vm.PreviewRohrmaterialOptionsCommand,
+                vm.ResetRohrmaterialOptionsCommand,
+                vm.AddRohrmaterialOptionCommand,
+                vm.RemoveRohrmaterialOptionCommand),
             _ => null
         };
     }

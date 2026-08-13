@@ -895,6 +895,8 @@
                                             ToolTip="KI-Wissen, Trainingsdaten und zugehoerige Einstellungen als ZIP sichern."/>
                                     <Button Content="KI-Wissen importieren" Command="{Binding ImportBackupCommand}" Margin="8,0,0,0" Width="180"
                                             ToolTip="Gesichertes KI-Wissen aus einer ZIP-Datei wiederherstellen."/>
+                                    <Button Content="Programm sichern" Command="{Binding CreateProgramSnapshotCommand}" Margin="8,0,0,0" Width="180"
+                                            ToolTip="Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei sichern — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding BackupStatusText}" Margin="0,6,0,0"
                                            Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>

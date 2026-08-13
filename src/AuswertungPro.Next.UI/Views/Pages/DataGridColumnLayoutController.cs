@@ -4,11 +4,13 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.UI.Theme;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
 public sealed class DataGridColumnLayoutController
 {
+    private readonly Func<Type, Style?> _implicitStyleResolver;
     private readonly Dictionary<DataGridColumn, HorizontalAlignment> _columnHorizontalAlignments = new();
     private readonly Dictionary<DataGridColumn, VerticalAlignment> _columnVerticalAlignments = new();
     private readonly Dictionary<DataGridColumn, Style?> _baseCellStyles = new();
@@ -16,6 +18,16 @@ public sealed class DataGridColumnLayoutController
     private readonly Dictionary<DataGridTextColumn, Style?> _baseTextEditingStyles = new();
     private readonly HashSet<DataGridColumn> _trackedColumns = new();
     private bool _isRestoring;
+
+    public DataGridColumnLayoutController()
+        : this(ApplicationStyleResolver.FindImplicit)
+    {
+    }
+
+    internal DataGridColumnLayoutController(Func<Type, Style?> implicitStyleResolver)
+    {
+        _implicitStyleResolver = implicitStyleResolver ?? throw new ArgumentNullException(nameof(implicitStyleResolver));
+    }
 
     public event EventHandler? LayoutChanged;
 
@@ -208,9 +220,13 @@ public sealed class DataGridColumnLayoutController
         VerticalAlignment verticalAlignment)
     {
         if (!_baseCellStyles.ContainsKey(column))
-            _baseCellStyles[column] = column.CellStyle;
+        {
+            _baseCellStyles[column] = column.ReadLocalValue(DataGridColumn.CellStyleProperty) as Style
+                ?? _implicitStyleResolver(typeof(DataGridCell))
+                ?? column.CellStyle;
+        }
 
-        var style = new Style(typeof(DataGridCell), _baseCellStyles[column]);
+        var style = CreateDerivedStyle(typeof(DataGridCell), _baseCellStyles[column]);
         style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, horizontalAlignment));
         style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, verticalAlignment));
         column.CellStyle = style;
@@ -222,24 +238,35 @@ public sealed class DataGridColumnLayoutController
         VerticalAlignment verticalAlignment)
     {
         if (!_baseTextElementStyles.ContainsKey(column))
-            _baseTextElementStyles[column] = column.ElementStyle;
+        {
+            _baseTextElementStyles[column] = column.ReadLocalValue(DataGridBoundColumn.ElementStyleProperty) as Style
+                ?? _implicitStyleResolver(typeof(TextBlock))
+                ?? column.ElementStyle;
+        }
         if (!_baseTextEditingStyles.ContainsKey(column))
-            _baseTextEditingStyles[column] = column.EditingElementStyle;
+        {
+            _baseTextEditingStyles[column] = column.ReadLocalValue(DataGridBoundColumn.EditingElementStyleProperty) as Style
+                ?? _implicitStyleResolver(typeof(TextBox))
+                ?? column.EditingElementStyle;
+        }
 
         var textAlignment = ToTextAlignment(horizontalAlignment);
 
-        var elementStyle = new Style(typeof(TextBlock), _baseTextElementStyles[column]);
+        var elementStyle = CreateDerivedStyle(typeof(TextBlock), _baseTextElementStyles[column]);
         elementStyle.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, horizontalAlignment));
         elementStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, verticalAlignment));
         elementStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, textAlignment));
         column.ElementStyle = elementStyle;
 
-        var editingStyle = new Style(typeof(TextBox), _baseTextEditingStyles[column]);
+        var editingStyle = CreateDerivedStyle(typeof(TextBox), _baseTextEditingStyles[column]);
         editingStyle.Setters.Add(new Setter(TextBox.TextAlignmentProperty, textAlignment));
         editingStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, horizontalAlignment));
         editingStyle.Setters.Add(new Setter(TextBox.VerticalContentAlignmentProperty, ToTextBoxVerticalAlignment(verticalAlignment)));
         column.EditingElementStyle = editingStyle;
     }
+
+    private Style CreateDerivedStyle(Type targetType, Style? existingStyle)
+        => new(targetType, existingStyle ?? _implicitStyleResolver(targetType));
 
     private void AttachColumnLayoutChangeHandlers(DataGridColumn column)
     {

@@ -28,7 +28,9 @@ internal static class SchaechteFieldEditController
         }
         else
         {
-            record.SetFieldValue(fieldName, editedValue);
+            // Bewusste Eingabe des Menschen: als solche kennzeichnen, damit automatische
+            // Schreiber sie nicht ueberholen und ein spaeterer Export sie erkennt.
+            record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);
         }
 
         var optionField = SchaechteColumnPolicy.ResolveOptionField(fieldName);

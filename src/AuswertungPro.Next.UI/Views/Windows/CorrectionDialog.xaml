@@ -12,7 +12,9 @@
 
     <Window.Resources>
         <!-- Einheitlicher Stil fuer Eingabefelder -->
-        <Style x:Key="DarkTextBox" TargetType="TextBox">
+        <Style x:Key="DarkTextBox"
+               TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>

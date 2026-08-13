@@ -57,6 +57,18 @@ public static class GridDropdownFieldPolicy
                 ResetCommand: "ResetReferenzpruefungOptionsCommand",
                 RemoveCommand: "RemoveReferenzpruefungOptionCommand",
                 AddCommand: "AddReferenzpruefungOptionCommand"),
+            // Rohrmaterial: feste Katalogwerte plus eigene Ergaenzungen. Freitext ist
+            // erlaubt, ein neu getippter Wert wandert ueber EnsureOptionForField in die Liste.
+            "Rohrmaterial" => new GridDropdownFieldSpec(
+                optionField,
+                "RohrmaterialOptions",
+                AllowFreeText: true,
+                Managed: true,
+                EditCommand: "EditRohrmaterialOptionsCommand",
+                PreviewCommand: "PreviewRohrmaterialOptionsCommand",
+                ResetCommand: "ResetRohrmaterialOptionsCommand",
+                RemoveCommand: "RemoveRohrmaterialOptionCommand",
+                AddCommand: "AddRohrmaterialOptionCommand"),
             "Ausgefuehrt_durch" => new GridDropdownFieldSpec(
                 optionField,
                 "AusgefuehrtDurchOptions",

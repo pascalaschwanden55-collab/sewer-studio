@@ -294,7 +294,7 @@ dotnet test AuswertungPro.sln
 ```
 
 `AuswertungPro.sln` enthaelt die vier produktiven Projekte, die vier Testprojekte
-und alle 42 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
+und alle 43 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
 verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brechen.
 
 ## Wichtige Klassen
@@ -397,6 +397,23 @@ erzeugt nach erfolgreichem Lauf eine sichtbare Warnung und sein bisheriger
 Spiegelstand bleibt erhalten. Ein vorhandener, aber unlesbarer Ordner bleibt ein
 harter Sicherungsfehler.
 
+Die getrennte Programm-Momentaufnahme laeuft ueber `IProgramSnapshotService` und
+`ProgramSnapshotService`. Sie liest den Programmordner, folgt keinen Verknuepfungen
+und veroeffentlicht die ZIP erst nach vollstaendigem Schreiben atomar. Der
+`ProgramSnapshotFileCatalog` laesst Quellcode, Git-Verlauf und Modellgewichte zu,
+schliesst aber ableitbare Build-Ausgaben, Python-Umgebung, Kartenkacheln,
+Arbeitskopien und `.playwright-cli` aus. `_manifest.json` dokumentiert Dateizahl,
+uebersprungene Verknuepfungen und den lesbaren Git-Commit. Die UI-Orchestrierung
+liegt in `SettingsProgramSnapshotWorkflow`; `SettingsPageViewModel` waehlt nur das
+Ziel, zeigt Fortschritt und meldet das Ergebnis.
+
+Die gemeinsame Suche nach einer Schachtprotokoll-PDF liegt hinter
+`ISchachtProtocolFileLocator` und `SchachtProtocolFileLocator`. Sie bevorzugt den
+gespeicherten `PDF_Path`, sucht danach ausschliesslich im passenden Schachtordner
+und liefert fehlende oder mehrdeutige Treffer sichtbar zurueck. Import,
+Stammdatennachlauf und Neueinlesen verwenden denselben Dienst; die kleine
+`SchachtProtocolFileCompatibility`-Fassade bleibt nur fuer alte UI-Aufrufer.
+
 `StoredImportFileService` plant neue Importkopien fuer beide Projektdatei-Strukturen
 unter `<Projekt>\Imports\<Art>`. Im manuellen Import schreibt er zunaechst ueber die
 laufbezogene `IImportFileStagingSession`; ausserhalb dieses Ablaufs bleibt sein bisheriger
@@ -488,22 +505,35 @@ Strukturdaten auch das Protokoll an. Bereits vorhandene Findings oder manuelle
 Protokolle werden nicht ersetzt. Dadurch kann ein erneuter PDF-Import auch bestehende
 Text-only-Haltungen sicher nachziehen.
 
+Der Export `IXtfRevisionExportService`/`XtfRevisionExportService` erzeugt aus den
+unveraenderten Projektkopien unter `Imports\XTF` beziehungsweise
+`Importdateien\XTF` und dem aktuellen Projektstand neue revidierte XTF-Dateien.
+`VsaFinding` traegt dafuer additiv Kanalschaden- und Untersuchungs-TID;
+`HaltungRecord` und `SchachtRecord` bewahren die importierte `XtfHerkunft`.
+Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
+`XtfFindingMatcher` bilden nur beidseitig eindeutige Zuordnungen im Arbeitsspeicher.
+`XtfRevisionPlanBuilder` plant geaenderte, neue und entfernte Befunde;
+`XtfStammdatenPlanBuilder` nimmt nur eindeutig zugeordnete, vom Menschen bearbeitete
+Haltungsfelder `Nutzungsart_Ist` und `Standortname` auf. Offene Faelle sperren den
+Schreibweg. `XtfRevisionWriter` wendet nur den geprueften Plan an, veraendert das
+Original nie, ueberschreibt kein Ziel und veroeffentlicht jede Revision ueber eine
+Nebendatei. `ExportPageViewModel` zeigt zuerst den Pruefbericht und schreibt erst
+nach ausdruecklicher Bestaetigung in einen neuen Zeitstempelordner.
+
 Beim Teacher-Store ist die JSON-Karte verbindlich und `classes.txt` nur abgeleitet.
 Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`
 wiederhergestellt oder eine neu angelegte Kopie entfernt.
 
 Die versionierten Vorlagen liegen unter `training/class_maps/` und werden beim Build
 nach `Data/Training/` kopiert. Die v2-Karte mit 14 Klassen und 124
-Migrationszeilen bleibt eingefroren. Aktiv ist v3 mit 15 festen Klassen und 142
-Migrationszeilen: 92 Teacher-Codes, 35 Legacy-Schluessel, 10 produktive Modellnamen
-und 5 Annotation-Overrides. Persoenlich freigegeben sind 60 `map`- und 12
-`discard`-Entscheidungen fuer Teacher-Codes; zusammen mit einer freigegebenen
-Legacy-Zeile sind 73 Zeilen `approved`, 69 bleiben `pending`.
+Migrationszeilen bleibt eingefroren. Aktiv ist v3 mit 15 festen Klassen und 153
+Migrationszeilen: 103 Teacher-Codes, 35 Legacy-Schluessel, 10 produktive Modellnamen
+und 5 Annotation-Overrides. Davon sind 89 Zeilen `approved`, 64 bleiben `pending`.
 `personal_gold_approval` bindet diese Entscheidungen an den Audit-SHA-256
-`bb7f01f6b3582029ad4393c7217e5c2bbbb4ed5770ab15c807a574972b4905ba`
+`04f405acaa8b072b1dbd961b08d74a2baf0231b21613820933888aa966617da0`
 und den gebundenen `training_samples.json`-SHA-256
-`bfcb3362762dc552861feb0680f1267e086e8d7d3fb71d70e5806841b82daa83`.
-Die Freigabe umfasst 72 beobachtete Quellcodes; neu ist insbesondere
+`502f8d842b6b457403717a807aed6471ac503263a409caf8c9437844bd58583c`.
+Die Freigabe umfasst 88 beobachtete Quellcodes; neu ist insbesondere
 `BAFCZ -> BAF_oberflaeche`.
 Unbekannte oder offene Klassen werden vor jeder Exportausgabe hart gestoppt; es
 gibt keine stille neue ID und keinen automatischen SONST-Rueckfall.
@@ -643,6 +673,37 @@ voruebergehend entladen; das aktive Modell wird bei Bedarf wieder geladen. Der
 alte Request ohne ID bleibt nur als kompatibler automatischer Sidecar-Weg
 erhalten und wird vom Training Studio nicht mehr angeboten.
 
+### Bogen-Vorschlags-Subsystem (Bogen-Copilot, seit 2026-08-09 produktiv)
+
+Vorabdurchlauf ueber ein Video im Training Studio (Expander "Bogen-Vorschlaege"),
+der verdaechtige Bogen-Stellen als Liste zum Bestaetigen liefert — bewusst kein
+Live-Overlay im Player. Aufbau: `BendSuggestionScanWorkflow` →
+`IBendSuggestionScanService`/`BendSuggestionScanService` (Verdrahtung) →
+`BendSuggestionScanUseCase` (Ablauf: alle Bilder fragen, Meterfolge ueber ALLE
+Bilder, erst `MeterSequencePlausibility`, dann `MeterSequenceGapFiller`,
+Zusammenfassung im `BendSuggestionAggregator`). Der Meterstand kommt als
+`meter_value` in derselben Sidecar-Antwort (`/detect/yolo/bcc-test`), der
+Format-Lock (`meter_format`) erzwingt optional das OSD-Zahlenlayout. Ohne
+kalibrierten Arbeitspunkt (`workpoint.json` neben dem Kandidaten, gelesen ueber
+`BendSuggestionCalibrationFileStore`/`BendSuggestionCalibrationPolicy`) laeuft
+gar nichts; Kandidaten-ID und Gewicht-Hash gehen mit jeder Anfrage und werden an
+der Antwort erneut geprueft. Zeilen zeigen Ort (gelesen als `Meter 9,42`,
+geschaetzt mit Zusatz, fehlend als `Sekunde … (Meterstand nicht lesbar)` —
+niemals `0,0`), Stufe (stark/schwach), Konfidenz und Bildzahl; Doppelklick oder
+"Gross anzeigen" oeffnet `BendSuggestionPreviewWindow` mit Spitzenbild und Clip
+(`IVideoClipExtractor`/`VideoClipExtractionService`, drei Haerten wie der
+Bildfolgen-Extraktor). Das Sitzungsgedaechtnis `ICodingSuggestionExposure`
+(`CodingSuggestionExposure`, Singleton) merkt je Programmlauf, fuer welche
+Haltungen eine Liste angesehen wurde: Der `CodingEventToSampleMapper` meldet
+dann auch ohne Ereignis-KI-Kontext `SuggestionShown` statt `Independent`, damit
+der Assistent den unbeeinflussten Messbestand fuer `ModelPromotionPolicy` nicht
+verbrennt. Abnahme: `BendSuggestionLiveAcceptanceTests` (maschinengebunden)
+gegen die Repo-Fixture `tests/Fixtures/BendSuggestions/` — 226 Einzeltreffer
+ohne Abweichung zum Prototyp, fuenf Stellen feldgleich. Messgrundlagen:
+`docs/quality/BCC-COPILOT-2026-08-08.md` und `BCC-PDF-RECALL-2026-08-09.md`
+(77,6 % Recall auf 85 protokollierten Boegen, 60,3 % Precision nach blinder
+Clip-Pruefung).
+
 Der gleich parametrische Vergleich vom 2026-07-28 (`conf=0,25`, `imgsz=1280`)
 zeigt fuer `bcc_bogen_b50b37ab8a4f` auf den drei wirklich unbekannten,
 geschuetzten BCC-Bildern 3/3 Treffer und eine mittlere Box-IoU von 0,8607.
@@ -704,6 +765,132 @@ Review-Momentaufnahme bewertet. Technische Fehler zaehlen nie als Negativbefund;
 ein Teilfehler verhindert den endgueltigen Auswertungsbericht. Aufhebungsmarker,
 Klassenkarte, Bildbytes, Geraet, Qualitaetsgrenzen und Laufzeitversionen werden
 mitgebunden. Das Werkzeug trainiert, aktiviert und ersetzt kein Modell.
+
+`tools/PdfCodeScanner` erzeugt daneben eine rein lesende protokollbasierte
+BCC-Positionsliste. Sie fuehrt die acht gueltigen Untercodes `BCCAA`, `BCCAB`,
+`BCCAY`, `BCCBA`, `BCCBB`, `BCCBY`, `BCCYA` und `BCCYB` fuer die grobe
+Modellklasse `BCC_bogen` gemeinsam. Pro Befund werden PDF, Meteranfang/-ende,
+exakter Videozaehlerstand und nur ein eindeutig zugeordnetes Video ausgegeben;
+fehlende oder mehrdeutige Werte werden sichtbar gelassen. Der bekannte Rohcode
+`BCC.YB` schliesst die ganze betroffene Haltung fail-closed aus. Der JSON-Bericht
+wird atomar ausserhalb der Kundenoriginale geschrieben. Diese Liste ist erst
+die Messgrundlage; ohne Modelllauf und Zuordnungstoleranz ist sie noch kein
+Recall- oder Praezisionswert. Mit `--expect-holdings` und `--expect-findings`
+stoppt das Werkzeug fail-closed, wenn der gescannte Bestand nicht zur zuvor
+freigegebenen Ausgangszahl passt.
+
+Die Archivmessung des BCC-Copiloten wird mit
+`training/scripts/bcc_pdf_recall_bericht.py` strikt in Kalibrierung und Messung
+getrennt. Gesamt-, SD- und HD-Ausgaben besitzen verschiedene Dateinamen; ein
+Gruppenlauf darf den Gesamtbeleg nie ueberschreiben. Der additive
+`vergleichsbestand_*.json` kennzeichnet die verbrauchte Messhaelfte ausdruecklich
+nur als bekannten Vergleichsbestand, nicht als neue Release-Abnahme.
+`bcc_pdf_precision_queue.py` rekonstruiert den gemessenen Arbeitspunkt aus den
+gespeicherten Einzelbildern und baut eine blinde Clip-Pruefung aller Vorschlaege.
+Konfidenz und PDF-Zuordnung bleiben unsichtbar. Erst die vollstaendige, an den
+Queue-Hash gebundene Review darf `bcc_pdf_precision_bericht.py` auswerten;
+unsichere Urteile erscheinen als untere und obere Precision-Grenze.
+
+Der reale Blindreview des Archiv-Arbeitspunkts ist abgeschlossen: 154/154
+Vorschlaege, davon 91 mit sichtbarem Bogen, 60 ohne Bogen und 3 unsicher.
+Vorschlags-Precision ohne unsichere Faelle: 60,3 %; harte Grenze bei anderer
+Wertung der drei unsicheren Faelle: 59,1-61,0 %. Das ist keine
+Ereignis-Precision, weil zwei Vorschlaege denselben Bogen zeigen koennen. Aus
+diesem Wert und dem PDF-Recall darf deshalb kein F1-Wert gebildet werden.
+
+`training/scripts/osd_wahrheit_aus_protokoll.py` erzeugt OSD-Bilder aus dem
+PDF-Meterstand am PDF-Videozaehlerstand. Das Ziel darf nicht unter dem
+Kundenbestand liegen, wird ueber einen Arbeitsordner atomar veroeffentlicht und
+nie ueberschrieben. Gleiche oder umgedrehte Haltungen bleiben im selben
+Train-/Validation-/Test-Teil; bytegleiche Bilder werden nur einmal aufgenommen.
+Das Werkzeug wird mit `sidecar\.venv\Scripts\python.exe` gestartet, weil der
+Meterleser OpenCV aus dieser Umgebung benoetigt.
+Der automatisch beschriftete Bestand startet mit `status=qa_offen`: Die zwei
+belegten Zeitpunkte pruefen die grundsaetzliche Zeitachse, ersetzen aber keine
+Sichtprobe ueber den ganzen Archivbestand.
+
+`training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
+reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
+Gegenrichtung und akzeptiert nur die acht gueltigen BCC-Untercodes. Der aktuelle
+V2-Beleg umfasst 50 SD-Haltungen mit 130 Boegen und startet mit
+`reserved_not_evaluated`. Eine unabhaengige HD-Reserve existiert weiterhin nicht.
+
+Der reale OSD-V1-Lauf enthaelt nach Schutzfiltern und Byte-Deduplizierung 897
+Bilder aus 364 physischen Haltungen: 674 Train, 135 Validation und 88 Test.
+`osd_protokoll_qa_queue.py` hat daraus eine blinde Sichtprobe mit 30 Bildern aus
+30 Haltungen erzeugt. `tools/EvalVisibilityReview/start_osd_protokoll_qa.ps1`
+oeffnet den Eingabeplatz; erst `osd_protokoll_qa_bericht.py` vergleicht die
+persoenliche Lesung mit den bis dahin verdeckten PDF-Sollwerten.
+
+Die reale OSD-Sichtprobe ergab 25/30 Uebereinstimmungen auf 1 cm und 29/30
+innerhalb 10 cm; ein Fall wich grob ab. Die kleinen Differenzen passen zur
+Kamerabewegung zwischen Protokollmoment und Bild, der grobe Fall ist ein falsches
+PDF-Label. Die Sichtprobe misst die PDF-/Video-Zuordnung und nicht den Leser;
+bei allen fuenf Differenzen hatte er `nicht_gelesen` geliefert. Die 897 Werte
+bleiben schwache Labels mit Zeit- und Zuordnungsrauschen. Nur die 30
+persoenlich abgelesenen Werte sind exaktes Gold. Der aktuelle
+`sidecar/sidecar/osd_meter.py` ist ein fester Vorlagenleser ohne Trainingsweg;
+ein neues trainierbares OCR-Modell ist noch nicht vorhanden.
+
+`osd_layout_review_queue.py` zieht deshalb 40 weitere physische Haltungen, je
+ein Bild und ohne Ueberschneidung mit der 30er-Sichtprobe. Der lokale
+`osd_layout_review_server.py` zeigt weder PDF-Wert noch Lesergebnis. Die
+Meteranzeige wird direkt im Bild angeklickt und getrennt nach Polaritaet, Farbe
+und Schreibweise eingeordnet. `osd_layout_review_bericht.py` zaehlt erst eine
+vollstaendige, an Queue- und Bild-SHA gebundene Review. Die Lage wird nur aus dem
+menschlichen Klick abgeleitet; Kopftext darf nicht automatisch als Meterstand
+gelten.
+
+Die reale 40er-Sichtung ist abgeschlossen: 38 Meteranzeigen liegen unten rechts,
+2 unten links und keine oben. Polaritaet: 18 hell auf dunkel, 18 dunkel auf hell,
+4 andere. Farbe: 20 weiss/grau, 7 gelb, 13 andere. Format: 19 mit Praefix oder
+fuehrenden Nullen, 15 Zahlen mit Einheit, 6 ohne Einheit. Das belegt mehrere
+Hauptstile, aber wegen der kleinen Stichprobe keine exakten Archivanteile.
+
+Der Diagnosekandidat fuer den Vierziffern-Stil nutzt nach einer gescheiterten
+oder unvollstaendigen Vorlagenlesung das bereits lokal installierte Tesseract.
+Er prueft beide unteren Ecken und beide Polaritaeten, akzeptiert aber nur die
+vollstaendige Form `LZ... + 0000.00 m`; fehlt Tesseract oder ist die Form
+unsicher, bleibt der Wert `None`. Auf dem Zielstil liest er 8/12. Sein neuer
+Rueckfallweg liefert in der 40er-Probe 12 Werte, alle 12 passend zu den schwachen
+PDF-Labels; der gesamte Leser liefert dort 13 Werte mit einem falschen oder
+nicht pruefbaren Fall. Im Goldbestand liefert SD 82/82 richtig, HD nichts und
+HD2 0 geliefert/0 falsch. Der fruehere HD2-Fehler `f0046.jpg` aus Haltung
+`35722-35724` (Soll 13,7 m, Vorlagenlesung 11,7 m aus `L211.7m1.`) wird durch
+eine enge Trennzeichen-Sperre nach `L2`/`LZ2` verworfen; SD bleibt 82/82. Die
+hashgebundene Archivwiederholung mit `osd_archiv_abdeckung_messung.py` verarbeitet 83
+eindeutige Videos an je 20 gleichmaessigen Stellen: insgesamt SD 22,1 % und HD
+3,1 %, im von der 40er-Kalibrierung getrennten Anteil SD 21,2 % und HD 4,0 %.
+Der Bericht bindet Leser und feste Auswahl; Video-Inhalte sind ueber Pfad,
+Groesse und Aenderungszeit, aber nicht per Vollhash gebunden. Der Kandidat bleibt
+`diagnostic_not_deployed`.
+
+`training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
+reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
+Gegenrichtung und akzeptiert nur die acht gueltigen BCC-Untercodes. Der aktuelle
+V2-Beleg umfasst 50 SD-Haltungen mit 130 Boegen und startet mit
+`reserved_not_evaluated`. Eine unabhaengige HD-Reserve existiert weiterhin nicht.
+
+Die Archivmessung des BCC-Copiloten wird mit
+`training/scripts/bcc_pdf_recall_bericht.py` strikt in Kalibrierung und Messung
+getrennt. Gesamt-, SD- und HD-Ausgaben besitzen verschiedene Dateinamen; ein
+Gruppenlauf darf den Gesamtbeleg nie ueberschreiben. Der additive
+`vergleichsbestand_*.json` kennzeichnet die verbrauchte Messhaelfte ausdruecklich
+nur als bekannten Vergleichsbestand, nicht als neue Release-Abnahme.
+`bcc_pdf_precision_queue.py` rekonstruiert den gemessenen Arbeitspunkt aus den
+gespeicherten Einzelbildern und baut eine blinde Clip-Pruefung aller Vorschlaege.
+Konfidenz und PDF-Zuordnung bleiben unsichtbar. Erst die vollstaendige, an den
+Queue-Hash gebundene Review darf `bcc_pdf_precision_bericht.py` auswerten;
+unsichere Urteile erscheinen als untere und obere Precision-Grenze.
+
+`training/scripts/osd_wahrheit_aus_protokoll.py` erzeugt OSD-Bilder aus dem
+PDF-Meterstand am PDF-Videozaehlerstand. Das Ziel darf nicht unter dem
+Kundenbestand liegen, wird ueber einen Arbeitsordner atomar veroeffentlicht und
+nie ueberschrieben. Gleiche oder umgedrehte Haltungen bleiben im selben
+Train-/Validation-/Test-Teil; bytegleiche Bilder werden nur einmal aufgenommen.
+Der automatisch beschriftete Bestand startet mit `status=qa_offen`: Die zwei
+belegten Zeitpunkte pruefen die grundsaetzliche Zeitachse, ersetzen aber keine
+Sichtprobe ueber den ganzen Archivbestand.
 
 Der reale Vergleich vom 2026-07-28 hatte 240 Vorhersagen und null technische
 Fehler. Die zwei aufgehobenen Altlaeufe bleiben reine Diagnose. Bei den zwei noch

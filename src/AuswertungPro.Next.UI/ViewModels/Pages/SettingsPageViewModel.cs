@@ -36,6 +36,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ProgramCleanupService _programCleanup;
     private readonly ICodexArtifactCleanupService _codexArtifactCleanup;
     private readonly IKnowledgeBackupService _knowledgeBackup;
+    private readonly IProgramSnapshotService _programSnapshot;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IFolderOpenService _folderOpen;
     private readonly IProgramRootLocator _programRootLocator;
@@ -131,6 +132,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public IAsyncRelayCommand StartAiCommand { get; }
     public IAsyncRelayCommand ExportBackupCommand { get; }
     public IAsyncRelayCommand ImportBackupCommand { get; }
+    public IAsyncRelayCommand CreateProgramSnapshotCommand { get; }
     public AsyncRelayCommand CreateFullBackupCommand { get; }
     public IRelayCommand CancelFullBackupCommand { get; }
     public AsyncRelayCommand CleanProgramDataCommand { get; }
@@ -154,7 +156,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             aiStartedProcesses: sp.AiStartedProcesses,
             aiSettings: sp.AiSettings,
             sidecarScripts: sp.SidecarScripts,
-            sidecarTokens: sp.SidecarTokens)
+            sidecarTokens: sp.SidecarTokens,
+            programSnapshot: sp.ProgramSnapshot)
     {
     }
 
@@ -244,7 +247,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IAiStartedProcessLifetime? aiStartedProcesses = null,
         IAiPlatformSettingsResolver? aiSettings = null,
         ISidecarScriptLocator? sidecarScripts = null,
-        ISidecarTokenResolver? sidecarTokens = null)
+        ISidecarTokenResolver? sidecarTokens = null,
+        IProgramSnapshotService? programSnapshot = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -255,6 +259,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _programCleanup = programCleanup ?? throw new ArgumentNullException(nameof(programCleanup));
         _codexArtifactCleanup = codexArtifactCleanup ?? throw new ArgumentNullException(nameof(codexArtifactCleanup));
         _knowledgeBackup = knowledgeBackup ?? throw new ArgumentNullException(nameof(knowledgeBackup));
+        _programSnapshot = programSnapshot
+            ?? new Infrastructure.Backup.ProgramSnapshotService(
+                Infrastructure.Backup.GitCommitResolver.DefaultResolver);
         _katasterXtfPaths = katasterXtfPaths ?? Mapping.KatasterXtfPathResolver.CompatibilityService;
         _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
         _programRootLocator = programRootLocator
@@ -316,6 +323,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ResetDinoTextThresholdCommand = new RelayCommand(() => PipelineDinoTextThreshold = DefaultDinoTextThreshold);
         StartAiCommand = new AsyncRelayCommand(StartAiAsync);
         ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
+        CreateProgramSnapshotCommand = new AsyncRelayCommand(CreateProgramSnapshotAsync);
         ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
         CreateFullBackupCommand = new AsyncRelayCommand(
             CreateFullBackupAsync,
@@ -504,6 +512,24 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             _dialogs,
             value => BackupStatusText = value,
             () => DateTime.Now).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Packt den Programmstand in eine einzelne ZIP-Datei. Gedacht als zusaetzliche
+    /// Kopie fuer Ziele, an denen hunderttausende Einzeldateien nicht taugen —
+    /// etwa ein Cloud-Ordner.
+    /// </summary>
+    private async Task CreateProgramSnapshotAsync()
+    {
+        await SettingsProgramSnapshotWorkflow.RunAsync(
+            new SettingsProgramSnapshotWorkflowRequest(
+                _dialogs,
+                value => BackupStatusText = value,
+                () => _programRootLocator.FindProgramRoot(
+                    AppContext.BaseDirectory,
+                    Environment.CurrentDirectory),
+                _programSnapshot.CreateAsync,
+                () => DateTime.Now)).ConfigureAwait(true);
     }
 
     private async Task CreateFullBackupAsync(CancellationToken ct)

@@ -181,7 +181,8 @@
                                 <TextBox Grid.Column="1"
                                          Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                     <TextBox.Style>
-                                        <Style TargetType="TextBox">
+                                        <Style TargetType="TextBox"
+                                               BasedOn="{StaticResource {x:Type TextBox}}">
                                             <Setter Property="Visibility" Value="Visible" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsEnum}" Value="True">
@@ -199,7 +200,9 @@
                 </ItemsControl>
 
                 <TextBlock Text="Streckenschaden" FontWeight="SemiBold" Margin="0,8,0,4" />
-                <TextBlock Text="{Binding RangeHint}" TextWrapping="Wrap" Foreground="DarkSlateGray" />
+                <TextBlock Text="{Binding RangeHint}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
 
                 <Separator Margin="0,8,0,8" />
                 <TextBlock Text="Quantifizierung" FontWeight="SemiBold" Margin="0,0,0,6" />

@@ -94,5 +94,6 @@ public sealed class DataPageDropdownOptionGroupFactoryTests
             new ObservableCollection<string> { "Eigentuemer alt" },
             new ObservableCollection<string> { "Pruefung alt" },
             new ObservableCollection<string> { "Referenz alt" },
-            new ObservableCollection<string> { "Massnahme alt" });
+            new ObservableCollection<string> { "Massnahme alt" },
+            new ObservableCollection<string> { "Material alt" });
 }

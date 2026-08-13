@@ -26,6 +26,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
@@ -55,6 +56,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeShaftsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
     public IRelayCommand BrowseExcelExportRootCommand { get; }
+
+    /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
+    public IRelayCommand ErzeugeXtfRevisionCommand { get; }
 
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
@@ -143,7 +147,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDistributionPatternResolver? patternResolver,
         IDistributionDirectoryTreeResolver? directoryTreeResolver,
         IKatasterXtfPathResolver? katasterXtfPaths,
-        IHaltungCadastreIndexProvider? haltungCadastreIndexes)
+        IHaltungCadastreIndexProvider? haltungCadastreIndexes,
+        AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -161,6 +166,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
+        _xtfRevisionExport = xtfRevisionExport
+            ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
+        ErzeugeXtfRevisionCommand = new RelayCommand(ErzeugeXtfRevision, CanRunProjectExportCommands);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
@@ -278,6 +286,58 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 fixedObjectFolderPattern: "{Haltung}",
                 directoryTreeResolver: _directoryTreeResolver),
         };
+    }
+
+    /// <summary>
+    /// Erzeugt die revidierten XTF-Dateien. Zuerst laeuft eine reine Pruefung; erst nach
+    /// ausdruecklicher Bestaetigung wird geschrieben. Kundenoriginale werden nur gelesen,
+    /// die Revisionen landen in einem neuen Ordner mit Zeitstempel.
+    /// </summary>
+    private void ErzeugeXtfRevision()
+    {
+        var ziel = ExcelExportRoot;
+        if (string.IsNullOrWhiteSpace(ziel))
+            ziel = _dialogs.SelectFolder("Zielordner fuer die revidierte XTF waehlen");
+        if (string.IsNullOrWhiteSpace(ziel))
+            return;
+
+        var projektPfad = _settings.LastProjectPath ?? "";
+
+        var pruefung = _xtfRevisionExport.Erzeuge(
+            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
+                _shell.Project, projektPfad, ziel!, NurPruefen: true));
+
+        if (!pruefung.Ok && pruefung.Dateien.Count == 0 && string.IsNullOrWhiteSpace(pruefung.Bericht))
+        {
+            _dialogs.Error(pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen.", "Revidierte XTF");
+            return;
+        }
+
+        var weiter = _dialogs.ConfirmCancel(
+            $"{pruefung.Bericht}\n\nDie Revision jetzt schreiben?\n" +
+            "Die Originaldateien werden dabei nur gelesen.",
+            "Revidierte XTF");
+        if (weiter != DialogConfirm.Yes)
+        {
+            LastResult = "Revision abgebrochen.";
+            return;
+        }
+
+        var ergebnis = _xtfRevisionExport.Erzeuge(
+            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
+                _shell.Project, projektPfad, ziel!));
+
+        if (!ergebnis.Ok)
+        {
+            _dialogs.Error($"{ergebnis.Bericht}", "Revidierte XTF");
+            LastResult = "Revision nicht vollstaendig erzeugt.";
+            return;
+        }
+
+        LastResult = ergebnis.Dateien.Count == 0
+            ? "Keine Aenderung — keine Revision noetig."
+            : $"Revidierte XTF erzeugt: {ergebnis.Dateien.Count} Datei(en).";
+        _toasts.Success(LastResult);
     }
 
     private void BrowseExcelExportRoot()

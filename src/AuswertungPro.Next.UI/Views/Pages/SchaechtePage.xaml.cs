@@ -475,7 +475,7 @@ public partial class SchaechtePage : UserControl
         if (string.IsNullOrWhiteSpace(value))
             return;
 
-        record.SetFieldValue(tag.RecordField, value);
+        record.SetFieldValue(tag.RecordField, value, FieldSource.Manual, userEdited: true);
         vm.EnsureOptionForField(tag.OptionField, value);
         MarkProjectDirty();
         ApplySearchFilter();
@@ -733,7 +733,7 @@ public partial class SchaechtePage : UserControl
         else
         {
             foreach (var key in feld.AlleKeys)
-                record.SetFieldValue(key, next);
+                record.SetFieldValue(key, next, FieldSource.Manual, userEdited: true);
         }
 
         if (_vm is not null)
@@ -793,8 +793,10 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
+        // Bewusstes Leeren ist ebenfalls eine Entscheidung des Menschen und darf
+        // nicht spaeter von einem automatischen Schreiber wieder gefuellt werden.
         foreach (var record in _vm.Records)
-            record.SetFieldValue(fieldName, string.Empty);
+            record.SetFieldValue(fieldName, string.Empty, FieldSource.Manual, userEdited: true);
 
         MarkProjectDirty();
     }

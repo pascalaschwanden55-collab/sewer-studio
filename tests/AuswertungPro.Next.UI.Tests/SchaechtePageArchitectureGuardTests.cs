@@ -261,7 +261,11 @@ public sealed class SchaechtePageArchitectureGuardTests
 
         Assert.Contains("SchaechteFieldEditController.Apply(", page);
         Assert.DoesNotContain("record.SetFieldValue(recordField", page);
-        Assert.Contains("record.SetFieldValue(fieldName, editedValue);", controller);
+        // Handeingabe wird ausdruecklich als solche geschrieben, damit automatische
+        // Schreiber sie nicht ueberholen (siehe SchachtRecordFieldProtectionTests).
+        Assert.Contains(
+            "record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);",
+            controller);
         Assert.Contains("SchaechteColumnPolicy.ResolveOptionField(fieldName)", controller);
         Assert.Contains("applyShaftNumberChange(record, oldShaftNumber, editedValue)", controller);
     }
@@ -505,19 +509,28 @@ public sealed class SchaechtePageArchitectureGuardTests
             "GetProjectFolder:_shell.GetProjectFolder," +
             "CaptureProject:()=>newProjectOperationContext(" +
             "_shell.Project,_settings.LastProjectPath)," +
-            "ResolveLinkedFile:ProjectPathResolver.ResolveFilePathFromProjectFolder," +
+            "LocateProtocolFile:LocateProtocolFile," +
             "ReadProtocolAsync:ReadProtocolAsync," +
             "ProjectIsStillOpen:ProjectIsStillOpen," +
-            "Apply:_schachtProtocolImport.Apply," +
+            "Apply:RebuildFromProtocol," +
             "SaveProject:_shell.TrySaveProject," +
             "SetLastResult:value=>LastResult=value));",
             compactViewModel);
+        // Aktualisieren baut genau diesen einen Schacht komplett aus dem frisch
+        // gelesenen Protokoll neu auf; der ergaenzende Import bleibt davon getrennt.
+        Assert.Contains(
+            "if(_schachtProtocolImportisISchachtProtocolRebuildServicerebuild)" +
+            "rebuild.Rebuild(schacht,protokoll,pdfPfadFuerFeld);",
+            compactPartial);
         Assert.Contains("SchachtProtocolRefreshController.CanExecute(Selected)", partial);
         Assert.Contains(
             "privateasyncTaskRefreshProtocolAsync(){" +
             "_=await_schachtProtocolRefreshController.ExecuteAsync(Selected);}",
             compactPartial);
-        Assert.Contains("_actions.Apply(selected, result, relativePath)", controller);
+        Assert.Contains("_actions.Apply(selected, result, pathForRecord)", controller);
+        // Die Dateisuche selbst bleibt im injizierten Locator; der Controller entscheidet nur.
+        Assert.Contains("_actions.LocateProtocolFile(selected, projectFolder)", controller);
+        Assert.Contains("_protocolFileLocator.Locate(", partial);
         Assert.Contains("if (!ProjectSaveAttempt.Try(", controller);
         Assert.Contains("_actions.SaveProject,", controller);
         Assert.Contains("ProjectSaveAttempt.ErrorDetails(saveError)", controller);

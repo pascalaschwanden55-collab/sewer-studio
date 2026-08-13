@@ -43,6 +43,18 @@ public interface ISchachtProtocolImportService
 }
 
 /// <summary>
+/// Optionale, additive Erweiterung fuer das ausdrueckliche Aktualisieren EINES bereits
+/// verknuepften Schachts. Das frisch gelesene Protokoll gilt dabei als alleinige
+/// Wahrheit: Felder, die im PDF jetzt fehlen, werden geleert, und das Beobachtungs-
+/// Protokoll wird auch dann ersetzt, wenn im PDF keine Beobachtung mehr steht.
+/// <see cref="ISchachtProtocolImportService.Apply"/> bleibt der ergaenzende Importweg.
+/// </summary>
+public interface ISchachtProtocolRebuildService
+{
+    void Rebuild(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld);
+}
+
+/// <summary>
 /// Optionale, additive Erweiterung fuer Importdienste, die neben dem bisherigen
 /// Pfad auch sicher melden koennen, ob eine neue Projektdatei angelegt wurde.
 /// </summary>

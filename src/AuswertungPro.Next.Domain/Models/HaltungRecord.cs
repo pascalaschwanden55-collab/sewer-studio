@@ -17,6 +17,13 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     // Strukturierte VSA-Feststellungen (aus XTF), fuer Berechnung
     public List<VsaFinding> VsaFindings { get; set; } = new();
 
+    /// <summary>
+    /// Herkunft aus der XTF-Quelle. Wird beim Import gesetzt und beim spaeteren
+    /// Erzeugen einer revidierten XTF als Ankerangabe verwendet. Null bei Haltungen,
+    /// die nicht aus einer XTF stammen oder vor dem 2026-08-13 eingelesen wurden.
+    /// </summary>
+    public XtfHerkunft? XtfHerkunft { get; set; }
+
     // Optionaler Protokolleintrag fuer Code-Picker/Parametrisierung.
     public AuswertungPro.Next.Domain.Protocol.ProtocolEntry? ProtocolEntry { get; set; }
 

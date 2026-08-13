@@ -136,6 +136,28 @@ public sealed class DataGridColumnLayoutControllerTests
     }
 
     [Fact]
+    public void SetAlignment_bases_new_runtime_styles_on_the_active_application_theme()
+    {
+        RunOnSta(() =>
+        {
+            var baseStyles = new Dictionary<Type, Style>
+            {
+                [typeof(DataGridCell)] = new(typeof(DataGridCell)),
+                [typeof(TextBlock)] = new(typeof(TextBlock)),
+                [typeof(TextBox)] = new(typeof(TextBox))
+            };
+            var column = new DataGridTextColumn { Header = "Bemerkung" };
+            var controller = new DataGridColumnLayoutController(type => baseStyles[type]);
+
+            controller.SetAlignment(column, HorizontalAlignment.Right, VerticalAlignment.Bottom);
+
+            Assert.Same(baseStyles[typeof(DataGridCell)], column.CellStyle.BasedOn);
+            Assert.Same(baseStyles[typeof(TextBlock)], column.ElementStyle.BasedOn);
+            Assert.Same(baseStyles[typeof(TextBox)], column.EditingElementStyle.BasedOn);
+        });
+    }
+
+    [Fact]
     public void Restore_applies_order_adjustment_while_layout_change_notifications_are_suppressed()
     {
         RunOnSta(() =>

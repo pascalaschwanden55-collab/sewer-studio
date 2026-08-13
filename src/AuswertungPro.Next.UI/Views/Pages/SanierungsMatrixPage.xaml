@@ -143,12 +143,12 @@
                     <DataGridCheckBoxColumn Header="VD" Width="44"
                                             Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -156,12 +156,12 @@
                     <DataGridCheckBoxColumn Header="Wasser" Width="60"
                                             Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -169,12 +169,12 @@
                     <DataGridCheckBoxColumn Header="Fräsen" Width="62"
                                             Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -182,12 +182,12 @@
                     <DataGridCheckBoxColumn Header="Dicht." Width="52"
                                             Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -195,12 +195,12 @@
                     <DataGridCheckBoxColumn Header="Doku" Width="48"
                                             Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>

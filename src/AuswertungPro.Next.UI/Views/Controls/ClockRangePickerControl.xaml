@@ -12,25 +12,25 @@
                 ClipToBounds="False">
             <!-- Zifferblatt -->
             <Ellipse x:Name="Face"
-                     Stroke="#333"
+                     Stroke="{DynamicResource BorderLightBrush}"
                      StrokeThickness="1.5"
-                     Fill="White"/>
+                     Fill="{DynamicResource CardBrush}"/>
             <!-- Bereichs-Sektor (Von bis Bis, im Uhrzeigersinn) -->
             <Path x:Name="RangeArc"
-                  Fill="#44FF8C00"
-                  Stroke="#FF8C00"
+                  Fill="{DynamicResource AccentSubtleBrush}"
+                  Stroke="{DynamicResource WarningBrush}"
                   StrokeThickness="1.5"
                   Visibility="Collapsed"/>
             <!-- Zeiger Von -->
             <Line x:Name="HandVon"
-                  Stroke="#FF8C00"
+                  Stroke="{DynamicResource WarningBrush}"
                   StrokeThickness="3"
                   StrokeStartLineCap="Round"
                   StrokeEndLineCap="Round"
                   Visibility="Collapsed"/>
             <!-- Zeiger Bis -->
             <Line x:Name="HandBis"
-                  Stroke="#1F4E9E"
+                  Stroke="{DynamicResource AccentBrush}"
                   StrokeThickness="3"
                   StrokeStartLineCap="Round"
                   StrokeEndLineCap="Round"
@@ -39,14 +39,14 @@
             <Ellipse x:Name="CenterDot"
                      Width="8"
                      Height="8"
-                     Fill="#333"/>
+                     Fill="{DynamicResource TextSecondaryBrush}"/>
         </Canvas>
         <!-- Status-Anzeige: UNTER der Uhr, nicht ueberlappend -->
         <TextBlock x:Name="StatusText"
                    Grid.Row="1"
                    HorizontalAlignment="Center"
                    FontSize="11"
-                   Foreground="#666"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    Margin="0,4,0,0"
                    IsHitTestVisible="False"/>
     </Grid>

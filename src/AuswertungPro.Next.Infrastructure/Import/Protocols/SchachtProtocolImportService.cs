@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class SchachtProtocolImportService :
     ISchachtProtocolImportService,
+    ISchachtProtocolRebuildService,
     ISchachtProtocolDistributionResultService
 {
     private readonly IPdfTextExtractor _pdfTextExtractor;
@@ -130,13 +131,33 @@ public sealed class SchachtProtocolImportService :
     }
 
     public void Apply(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld)
+        => Write(ziel, ergebnis, pdfPfadFuerFeld, rebuildFromProtocol: false);
+
+    /// <summary>
+    /// Aktualisieren eines einzelnen, bereits verknuepften Schachts: Das gerade neu
+    /// gelesene Protokoll ersetzt seinen Stand vollstaendig.
+    /// </summary>
+    public void Rebuild(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld)
+        => Write(ziel, ergebnis, pdfPfadFuerFeld, rebuildFromProtocol: true);
+
+    private static void Write(
+        SchachtRecord ziel,
+        SchachtProtocolParseResult ergebnis,
+        string pdfPfadFuerFeld,
+        bool rebuildFromProtocol)
     {
         var pf = new LegacyPdfImportService.ParsedSchachtFields(
             ergebnis.Schachtnummer, ergebnis.Datum, ergebnis.Funktion,
             ergebnis.Schachtform, ergebnis.Dimension, ergebnis.Schachttiefe,
             ergebnis.PrimaereSchaeden, ergebnis.Bemerkungen, ergebnis.Status, ergebnis.Link);
         var key = (ergebnis.Schachtnummer ?? "").Trim();
-        SchachtProtocolApplier.Apply(ziel, key, pf, ergebnis.Schaeden, pdfPfadFuerFeld);
+        SchachtProtocolApplier.Apply(
+            ziel,
+            key,
+            pf,
+            ergebnis.Schaeden,
+            pdfPfadFuerFeld,
+            rebuildFromProtocol);
     }
 
     public string DistributePdf(

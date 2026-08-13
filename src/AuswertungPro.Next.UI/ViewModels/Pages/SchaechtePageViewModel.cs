@@ -35,6 +35,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISafeShellOpenService _shellOpen;
     private readonly ISchaechteTemplateColumnReader _templateColumnReader;
     private readonly ISchachtFileTargetResolver _schachtFileTargets;
+    private readonly ISchachtProtocolFileLocator _protocolFileLocator;
     private readonly ShellViewModel _shell;
     private readonly SchaechteDropdownCommands _dropdownCommands;
     private bool _suppressRequiredFieldWarning;
@@ -115,7 +116,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             shellOpen: services.ShellOpen,
             explorerReveal: services.ExplorerReveal,
             templateColumnReader: services.SchaechteTemplateColumns,
-            schachtFileTargets: services.SchachtFileTargets)
+            schachtFileTargets: services.SchachtFileTargets,
+            protocolFileLocator: services.SchachtProtocolFiles)
     {
     }
 
@@ -164,7 +166,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         IShaftRenameService? shaftRename = null,
         IExplorerRevealService? explorerReveal = null,
         ISchaechteTemplateColumnReader? templateColumnReader = null,
-        ISchachtFileTargetResolver? schachtFileTargets = null)
+        ISchachtFileTargetResolver? schachtFileTargets = null,
+        ISchachtProtocolFileLocator? protocolFileLocator = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -180,6 +183,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _explorerReveal = explorerReveal ?? ExplorerRevealService.DefaultService;
         _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;
         _schachtFileTargets = schachtFileTargets ?? SchachtFileTargetResolver.CompatibilityService;
+        _protocolFileLocator = protocolFileLocator ?? SchachtProtocolFileCompatibility.Default;
         _schachtProtocolRefreshController = new SchachtProtocolRefreshController(
             _dialogs,
             new SchachtProtocolRefreshActions(
@@ -187,10 +191,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 CaptureProject: () => new ProjectOperationContext(
                     _shell.Project,
                     _settings.LastProjectPath),
-                ResolveLinkedFile: ProjectPathResolver.ResolveFilePathFromProjectFolder,
+                LocateProtocolFile: LocateProtocolFile,
                 ReadProtocolAsync: ReadProtocolAsync,
                 ProjectIsStillOpen: ProjectIsStillOpen,
-                Apply: _schachtProtocolImport.Apply,
+                Apply: RebuildFromProtocol,
                 SaveProject: _shell.TrySaveProject,
                 SetLastResult: value => LastResult = value));
         _schachtProtocolSingleImportController = new SchachtProtocolSingleImportController(

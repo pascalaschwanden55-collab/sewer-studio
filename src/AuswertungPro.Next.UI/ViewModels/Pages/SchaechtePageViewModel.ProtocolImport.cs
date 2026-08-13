@@ -16,6 +16,34 @@ public sealed partial class SchaechtePageViewModel
         _ = await _schachtProtocolRefreshController.ExecuteAsync(Selected);
     }
 
+    /// <summary>
+    /// Sucht die Protokoll-PDF genau dieses einen Schachts: zuerst die gespeicherte
+    /// Verknuepfung (relativ oder absolut), danach nur dessen eigenen Schachtordner.
+    /// </summary>
+    private SchachtProtocolFileMatch? LocateProtocolFile(SchachtRecord record, string projektOrdner)
+        => _protocolFileLocator.Locate(
+            projektOrdner,
+            record.GetFieldValue(FieldKeys.PdfPath),
+            record.GetFieldValue(FieldKeys.Link),
+            record.GetFieldValue("Schachtnummer"));
+
+    /// <summary>
+    /// Uebernimmt das frisch gelesene Protokoll auf genau diesen einen Schacht und
+    /// baut ihn dabei vollstaendig neu auf. Nur so verschwindet auch ein Wert, den
+    /// der Benutzer inzwischen aus der verknuepften PDF entfernt hat. Ein Dienst
+    /// ohne diese Faehigkeit ergaenzt weiterhin nur.
+    /// </summary>
+    private void RebuildFromProtocol(
+        SchachtRecord schacht,
+        SchachtProtocolParseResult protokoll,
+        string pdfPfadFuerFeld)
+    {
+        if (_schachtProtocolImport is ISchachtProtocolRebuildService rebuild)
+            rebuild.Rebuild(schacht, protokoll, pdfPfadFuerFeld);
+        else
+            _schachtProtocolImport.Apply(schacht, protokoll, pdfPfadFuerFeld);
+    }
+
     private async Task ImportProtocolAsync()
     {
         var projectContext = new ProjectOperationContext(

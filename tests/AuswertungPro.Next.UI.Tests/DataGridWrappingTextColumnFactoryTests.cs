@@ -49,6 +49,24 @@ public sealed class DataGridWrappingTextColumnFactoryTests
         });
     }
 
+    [Fact]
+    public void Create_bases_runtime_styles_on_the_active_application_theme()
+    {
+        RunOnSta(() =>
+        {
+            var displayBase = new Style(typeof(TextBlock));
+            var editBase = new Style(typeof(TextBox));
+
+            var column = DataGridWrappingTextColumnFactory.Create(
+                "Empfohlene_Sanierungsmassnahmen",
+                "Empfohlene Sanierungsmassnahmen",
+                type => type == typeof(TextBox) ? editBase : displayBase);
+
+            Assert.Same(displayBase, column.ElementStyle.BasedOn);
+            Assert.Same(editBase, column.EditingElementStyle.BasedOn);
+        });
+    }
+
     private static void AssertStyleSetter(Style? style, DependencyProperty property, object expectedValue)
     {
         Assert.NotNull(style);

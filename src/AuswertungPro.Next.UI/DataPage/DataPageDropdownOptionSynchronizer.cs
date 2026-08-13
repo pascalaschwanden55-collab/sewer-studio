@@ -8,7 +8,8 @@ public sealed record DataPageDropdownOptionSets(
     ObservableCollection<string> SanierenOptions,
     ObservableCollection<string> PruefungsresultatOptions,
     ObservableCollection<string> ReferenzpruefungOptions,
-    ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions);
+    ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions,
+    ObservableCollection<string> RohrmaterialOptions);
 
 public static class DataPageDropdownOptionSynchronizer
 {
@@ -30,6 +31,11 @@ public static class DataPageDropdownOptionSynchronizer
             DropdownOptionList.AddIfMissing(
                 options.ReferenzpruefungOptions,
                 record.GetFieldValue("Referenzpruefung"));
+            // Materialien, die im Bestand stehen aber in keiner Liste: sichtbar machen,
+            // statt sie beim naechsten Oeffnen der Auswahl stillschweigend zu verlieren.
+            DropdownOptionList.AddIfMissing(
+                options.RohrmaterialOptions,
+                record.GetFieldValue(FieldKeys.PipeMaterial));
 
             foreach (var entry in ParseRecommendedTemplates(
                          record.GetFieldValue("Empfohlene_Sanierungsmassnahmen")))

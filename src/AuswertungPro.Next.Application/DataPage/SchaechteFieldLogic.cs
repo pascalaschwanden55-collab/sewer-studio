@@ -74,25 +74,52 @@ public static class SchaechteFieldLogic
     }
 
     /// <summary>
-    /// Ermittelt den Namen der Nummernfeld-Spalte aus Spaltenliste oder Records.
-    /// Prueft ob der Spaltenname "NR" oder "Nr" enthaelt.
-    /// Gibt null zurueck wenn kein Nummernfeld gefunden.
+    /// Ermittelt den Namen der laufenden Nummernspalte aus Spaltenliste oder Records.
+    ///
+    /// Reihenfolge: zuerst ein Feld, das WIRKLICH "NR" heisst (auch "NR." oder "Nr."),
+    /// erst danach der alte weiche Vergleich "Name enthaelt irgendwo nr". Das schuetzt
+    /// echte Datenfelder wie "Innen-Nr" oder "Kontroll-Nr" davor, beim Durchnummerieren
+    /// mit 1, 2, 3 ueberschrieben zu werden. Bei mehreren Kandidaten, die sich nur in der
+    /// Gross-/Kleinschreibung unterscheiden, gewinnt die historische Schreibweise "NR".
+    /// Gibt null zurueck, wenn kein Nummernfeld gefunden wurde.
     /// </summary>
     public static string? ResolveNrColumnName(IEnumerable<string> columns, IEnumerable<SchachtRecord> records)
     {
-        var fromColumns = columns.FirstOrDefault(c =>
-            c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-            c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(fromColumns))
-            return fromColumns;
+        var columnNames = columns as IReadOnlyList<string> ?? columns.ToList();
 
-        var fromRecord = records
+        var exactColumn = PickRunningNumberName(columnNames);
+        if (exactColumn is not null)
+            return exactColumn;
+
+        var looseColumn = columnNames.FirstOrDefault(ContainsNr);
+        if (!string.IsNullOrWhiteSpace(looseColumn))
+            return looseColumn;
+
+        var recordKeys = records
             .SelectMany(r => r.Fields.Keys)
-            .FirstOrDefault(c =>
-                c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-                c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        return fromRecord;
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        return PickRunningNumberName(recordKeys) ?? recordKeys.FirstOrDefault(ContainsNr);
     }
+
+    private static string? PickRunningNumberName(IReadOnlyList<string> names)
+    {
+        var candidates = names.Where(IsRunningNumberName).ToList();
+        if (candidates.Count == 0)
+            return null;
+
+        return candidates.FirstOrDefault(n => NormalizeNumberName(n) == "NR") ?? candidates[0];
+    }
+
+    private static bool IsRunningNumberName(string? name)
+        => string.Equals(NormalizeNumberName(name), "NR", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeNumberName(string? name)
+        => (name ?? string.Empty).Trim().TrimEnd('.').Trim();
+
+    private static bool ContainsNr(string? name)
+        => (name ?? string.Empty).Contains("nr", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Prueft ob ein Schacht-Record den Suchbegriff enthaelt (Schluessel oder Wert).
