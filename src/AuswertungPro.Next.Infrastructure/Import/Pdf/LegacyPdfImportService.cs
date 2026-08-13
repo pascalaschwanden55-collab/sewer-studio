@@ -121,6 +121,8 @@ public sealed class LegacyPdfImportService
                 try
                 {
                     var fields = _parser.ParseFields(chunk.Text ?? string.Empty);
+                    // Dieselben Zeilen strukturiert — nur so ueberlebt der Videozaehlerstand.
+                    var damageRows = _parser.ParseDamageRows(chunk.Text ?? string.Empty);
                     var parsedPage = HoldingFolderDistributor.ParsePdfPage(chunk.Text ?? "", pdfPath);
                     if (parsedPage.Success)
                     {
@@ -211,7 +213,7 @@ public sealed class LegacyPdfImportService
                     }
 
                     var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf, fillMissingOnly, ctx);
-                    PdfPrimaryDamageStructureSynchronizer.Sync(target);
+                    PdfPrimaryDamageStructureSynchronizer.Sync(target, damageRows);
 
                     // Original-PDF verknuepfen
                     var existingPdfPath = target.GetFieldValue("PDF_Path")?.Trim();

@@ -1,4 +1,6 @@
+using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -10,31 +12,48 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 internal static class PrimaryDamageRowParser
 {
     /// <summary>
-    /// Extrahiert alle primaeren Schaeden aus den uebergebenen Zeilen und gibt
-    /// sie als zeilengetrennten Text zurueck. Leerer String wenn keine Schaeden.
+    /// Eine gelesene Schadenszeile mit allem, was in ihr stand.
     /// </summary>
-    internal static string ExtractPrimaryDamages(string[] lines)
+    /// <param name="VideoTime">
+    /// Videozaehlerstand der Zeile, also die Sekunde ab Dateianfang
+    /// (SN EN 13508-2, Kapitel 3.1.10). null = im Protokoll nicht vorhanden.
+    /// </param>
+    internal sealed record PrimaryDamageRow(
+        string Code,
+        string? Meter,
+        string? Description,
+        TimeSpan? VideoTime);
+
+    /// <summary>
+    /// Liest alle primaeren Schaeden strukturiert.
+    ///
+    /// Bis 2026-08-13 gab es nur den Textweg: Die Zeilen wurden zu einem String
+    /// zusammengesetzt und spaeter wieder zerlegt. Der Videozaehlerstand ging
+    /// dabei verloren — er wurde vom Fretz-Ausdruck sogar erkannt und dann
+    /// verworfen. Diese Fassung parst einmal und behaelt alles.
+    /// </summary>
+    internal static IReadOnlyList<PrimaryDamageRow> ExtractRows(string[] lines)
     {
-        var entries = new List<string>();
+        var rows = new List<PrimaryDamageRow>();
         string? currentCode = null;
         string? currentDist = null;
         string? currentDesc = null;
+        TimeSpan? currentTime = null;
 
         void Flush()
         {
             if (string.IsNullOrWhiteSpace(currentCode))
                 return;
 
-            var detail = currentCode!.Trim();
-            if (!string.IsNullOrWhiteSpace(currentDist))
-                detail += $" @{currentDist}m";
-            if (!string.IsNullOrWhiteSpace(currentDesc))
-                detail += $" ({currentDesc!.Trim()})";
-
-            entries.Add(detail);
+            rows.Add(new PrimaryDamageRow(
+                currentCode!.Trim(),
+                string.IsNullOrWhiteSpace(currentDist) ? null : currentDist,
+                string.IsNullOrWhiteSpace(currentDesc) ? null : currentDesc!.Trim(),
+                currentTime));
             currentCode = null;
             currentDist = null;
             currentDesc = null;
+            currentTime = null;
         }
 
         foreach (var raw in lines)
@@ -46,12 +65,13 @@ internal static class PrimaryDamageRowParser
                 continue;
             }
 
-            if (TryParseDamageRow(line, out var dist, out var code, out var desc))
+            if (TryParseDamageRow(line, out var dist, out var code, out var desc, out var time))
             {
                 Flush();
                 currentCode = code;
                 currentDist = dist;
                 currentDesc = desc;
+                currentTime = time;
                 continue;
             }
 
@@ -69,11 +89,29 @@ internal static class PrimaryDamageRowParser
         }
 
         Flush();
+        return rows;
+    }
 
-        if (entries.Count == 0)
-            return "";
+    /// <summary>
+    /// Extrahiert alle primaeren Schaeden aus den uebergebenen Zeilen und gibt
+    /// sie als zeilengetrennten Text zurueck. Leerer String wenn keine Schaeden.
+    ///
+    /// Die Ausgabe geht in das Feld "Primaere_Schaeden" und damit in
+    /// <c>SchattenCodierungsHash</c>. Sie muss byteidentisch bleiben; dafuer
+    /// stehen die Kennzeichnungstests in
+    /// <c>PrimaryDamageRowParserCharacterizationTests</c>.
+    /// </summary>
+    internal static string ExtractPrimaryDamages(string[] lines)
+        => string.Join("\n", ExtractRows(lines).Select(Format));
 
-        return string.Join("\n", entries);
+    private static string Format(PrimaryDamageRow row)
+    {
+        var detail = row.Code;
+        if (!string.IsNullOrWhiteSpace(row.Meter))
+            detail += $" @{row.Meter}m";
+        if (!string.IsNullOrWhiteSpace(row.Description))
+            detail += $" ({row.Description})";
+        return detail;
     }
 
     /// <summary>
@@ -81,10 +119,22 @@ internal static class PrimaryDamageRowParser
     /// Unterstuetzt Standard- und Fretz-Format.
     /// </summary>
     internal static bool TryParseDamageRow(string line, out string dist, out string code, out string desc)
+        => TryParseDamageRow(line, out dist, out code, out desc, out _);
+
+    /// <summary>
+    /// Wie oben, liefert zusaetzlich den Videozaehlerstand der Zeile.
+    ///
+    /// Er steht je nach Protokollformat vor dem Meterwert (Fretz) oder hinter
+    /// der Beschreibung. Beide Stellen werden gelesen; ohne Fund bleibt der Wert
+    /// null statt geraten.
+    /// </summary>
+    internal static bool TryParseDamageRow(
+        string line, out string dist, out string code, out string desc, out TimeSpan? videoTime)
     {
         dist = "";
         code = "";
         desc = "";
+        videoTime = null;
 
         // Standard-Format: "[meter] [code] [beschreibung]"
         var m = Regex.Match(line, @"^\s*(?<dist>\d{1,4}\.\d{2})\s+(?<c1>[A-Z0-9]{1,6})(?:\s+(?<c2>[A-Z0-9]{1,6}))?\s+(?<desc>.+)$");
@@ -93,8 +143,10 @@ internal static class PrimaryDamageRowParser
         if (!m.Success)
         {
             // Fretz-Format: "[Foto?] [HH:MM:SS] [meter] [code] [beschreibung]"
-            // Foto-Nummer und Timestamp kommen VOR dem Meterwert
-            m = Regex.Match(line, @"^\s*(?:\d{1,5}\s+)?(?:\d{2}:\d{2}:\d{2}\s+)?(?<dist>\d{1,4}[.,]\d{1,3})\s+(?<c1>[A-Z]{2,6}(?:\.[A-Z]{1,2}(?:\.[A-Z]{1,2})?)?)\s+(?<desc>.+)$");
+            // Foto-Nummer und Zeitstempel kommen VOR dem Meterwert. Der
+            // Zeitstempel wurde hier frueher als nicht-erfassende Gruppe
+            // erkannt und weggeworfen.
+            m = Regex.Match(line, @"^\s*(?:\d{1,5}\s+)?(?:(?<time>\d{2}:\d{2}:\d{2})\s+)?(?<dist>\d{1,4}[.,]\d{1,3})\s+(?<c1>[A-Z]{2,6}(?:\.[A-Z]{1,2}(?:\.[A-Z]{1,2})?)?)\s+(?<desc>.+)$");
             hasC2Group = false;
         }
         if (!m.Success)
@@ -105,9 +157,21 @@ internal static class PrimaryDamageRowParser
         var c2 = hasC2Group ? m.Groups["c2"].Value.Trim() : "";
         code = string.IsNullOrWhiteSpace(c2) ? c1 : $"{c1} {c2}";
 
-        desc = TakeFirstColumn(m.Groups["desc"].Value);
-        desc = StripTrailingNoise(desc);
+        var rohBeschreibung = TakeFirstColumn(m.Groups["desc"].Value);
+        // Der Zeitstempel hinter der Beschreibung wird ohnehin abgeschnitten —
+        // hier wird er vorher noch gelesen statt nur entfernt.
+        videoTime = m.Groups["time"].Success
+            ? ProtocolTimeParser.ParseMpegTime(m.Groups["time"].Value)
+            : ReadTrailingTime(rohBeschreibung);
+
+        desc = StripTrailingNoise(rohBeschreibung);
         return !string.IsNullOrWhiteSpace(code);
+    }
+
+    private static TimeSpan? ReadTrailingTime(string line)
+    {
+        var m = Regex.Match(line ?? "", @"\s+(?<time>\d{2}:\d{2}:\d{2})\b");
+        return m.Success ? ProtocolTimeParser.ParseMpegTime(m.Groups["time"].Value) : null;
     }
 
     /// <summary>
