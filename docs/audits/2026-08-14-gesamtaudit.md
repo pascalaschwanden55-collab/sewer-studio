@@ -1,6 +1,7 @@
 # Gesamtaudit SewerStudio — 2026-08-14
 
-**Stand:** Commit `21f7b0194`, Branch `feature/eval-pruefsatz-review` (mit Remote synchron).
+**Stand:** Auditbasis `21f7b0194`; Sicherheits- und Grossumbauten bis `b6e640f2f`,
+Branch `feature/eval-pruefsatz-review`.
 **Methode:** Vollstaendiger Release-Build, alle Testprojekte, Sidecar- und
 QGIS-Bruecken-Tests, Abhaengigkeitspruefung .NET und Python, Quellcode-Durchsicht der
 sicherheits- und datenkritischen Wege, Pruefung der Programmsicherungs-ZIP.
@@ -26,10 +27,10 @@ grundsaetzlich stabil. Die Freigabe ist trotzdem nur eingeschraenkt:
 ## Messergebnisse
 
 - Vollstaendiger Release-Build: 0 Fehler, 0 Warnungen
-- .NET-Tests: 11.807 bestanden, 4 uebersprungen
-- Python-Sidecar: 273 bestanden, 2 GPU-Tests bewusst ausgeschlossen
-- QGIS-Bruecke: 5 bestanden
-- Insgesamt: 12.085 bestandene Tests
+- .NET-Tests: 11.899 bestanden, 4 uebersprungen
+- Python-Sidecar: 280 bestanden, GPU-Tests bewusst ausgeschlossen
+- QGIS-Bruecke: 10 bestanden
+- Insgesamt: 12.189 bestandene Tests
 - Verwundbare NuGet-Pakete: keine gefunden
 - Offensichtliche Zugangsdaten im aktuellen Quellcode: keine gefunden
 - Keine konkrete SQL-Injection, unsichere Zertifikatspruefung oder gefaehrliche
@@ -210,31 +211,46 @@ statt „Sicher". Die Gewichtung im Zahlenwert ist bewusst unveraendert.
 **P2 Weitere.** CSV-Formelzellen werden zentral entschaerft (`CsvCell`), Medienpfade des
 Protokolleditors sind auf Mediendateien in erlaubten Wurzeln begrenzt, `ApplyAndClose`
 ist ein `Task` mit Fehleranzeige, die CI restauriert gesperrt und mit gepinnten Actions,
-und die Testabdeckung ist gemessen: **44,91 %** (326.390 von 726.836 Zeilen) mit
-Untergrenze 42 % und Ratchet-Regel. Ein Waechter haelt die sechs zulaessigen
+und die Testabdeckung ist nach den Grossumbauten neu gemessen: **45,60 %**
+(292.503 von 641.408 instrumentierten Zeilen). Der Ratchet verlangte deshalb die
+Anhebung der Untergrenze von 42 % auf **45,60 %**. Die abweichende Gesamtzeilenzahl
+gegenueber der Erstmessung zeigt, dass der SDK-Sammler nur als CI-Verlaufswert taugt.
+Ein Waechter haelt die sechs zulaessigen
 Skip-Stellen namentlich fest.
 
-### Teilweise behoben
+### Nachgelagerte Grossumbauten umgesetzt
 
-**P1-5 Ein-Knopf-Import.** Umgesetzt ist eine **Ruecknahme**, kein vollstaendiges
-Staging: `IImportedFileLedger` erfasst den Projektordner vor dem Lauf und entfernt die
-neu erzeugten Dateien, wenn das Ergebnis verworfen wird (Ausnahme, Projektwechsel,
-zwischenzeitliche Bearbeitung, gescheiterte Pruefung). Sicher ist das, weil alle
-Verteiler kopieren und nicht verschieben; fehlt eine vorher vorhandene Datei, wird
-fail-closed gar nichts geloescht. Der Importbericht bleibt absichtlich liegen.
+**P1-5 Ein-Knopf-Import vollstaendig gestaged.** Der vorhandene Marker wurde nicht
+dupliziert: `ImportFileTransaction` steuert fuer manuellen und Ein-Knopf-Import denselben
+Ablauf aus Marker schreiben, `Publish`, Projekt-TxId speichern und aufraeumen. Archiv,
+Plan-PDF, Medien, namensbasierte Protokolle, Kanal und Dichtheit verwenden dieselbe
+`IImportFileStagingSession`. `ResolveReadPath` und `EnumerateReadableFiles` erlauben den
+Folgeschritten, vorbereitete Dateien vor der Veroeffentlichung zu lesen;
+`StageGeneratedFile` nimmt neu erzeugte PDF-Seiten auf. Das alte
+`IImportedFileLedger` bleibt nur bis unmittelbar vor `Publish` ein Sicherheitsnetz und
+kann danach keine veroeffentlichten Dateien loeschen. Absturzfaelle werden beim naechsten
+Projektstart ueber `.import-transaction.json` und `LastCommittedImportTxId` entschieden.
 
-Was fehlt: Bei einem Prozessabsturz mitten im Lauf fuehrt niemand die Ruecknahme aus.
-Der im Bericht vorgeschlagene Weg — alles ueber `ImportFileStagingSession` und erst am
-Ende veroeffentlichen — geht nicht ohne groesseren Umbau, weil spaetere Importschritte
-die zuvor geschriebenen Dateien wieder **lesen**: Plan-PDF-Import und
-Protokollverteilung arbeiten auf dem Archivordner, den Schritt 4 gerade gefuellt hat.
-Zusaetzlich vergeben die Verteiler eigene Zieldateinamen und erzeugen aus PDF-Seiten
-neue Dateien, was `StageCopy` nicht abbilden kann.
+**Manuelle Schachtverteilung.** `IShaftDistributionService` kapselt den alten Splitter.
+Projektinterne Ziele laufen ueber dasselbe Staging und denselben Marker; die 1.000-Zeilen-
+Grenze wurde durch `ExportPageViewModel.ShaftDistribution.cs` eingehalten, nicht
+aufgeweicht. Bewusst externe Zielordner bleiben direkte Exporte, weil der Projektmarker
+dort keine Dateien loeschen darf.
 
-### Offen (eigenes Arbeitspaket)
+**Training-Center-Dateispeicher.** `TrainingCenterStore` bleibt am eingefrorenen UI-Ort
+und behaelt Konstruktor, Zustand und Aufrufer, ist aber nur noch eine 61-zeilige
+Mapping-Fassade. `ITrainingCenterDocumentStore` und
+`TrainingCenterDocumentFileStore` liegen in Application/Infrastructure. Tests belegen
+das bestehende JSON mit numerischem Status, alle Felder, atomaren Austausch, `.bak`-
+Rueckfall und `.bad_<Zeit>`-Quarantaene.
 
-**UI-Dateilogik auslagern.** `KnowledgeBackupService` (565 Zeilen, 33 Datei-/
-Prozesszugriffe) und `TrainingCenterStore` (143 Zeilen, 12) brauchen Vertrag,
-Implementierung, Registrierung und Tests — rund 700 Zeilen Umbau am Bestand. In diesem
-Durchgang wurde nur neu entstehende Logik richtig einsortiert
-(`ProtocolEntryEditorMediaRoots`, `ImportedFileLedgerService`).
+**Wissenssicherung.** Die 565-zeilige `KnowledgeBackupEngine`, der Dateikatalog und die
+Import-Nachbearbeitung liegen jetzt unter `Infrastructure/Ai/Backup` statt in der UI.
+Die oeffentliche `KnowledgeBackupService`-Fassade samt verschachteltem `BackupResult`
+und ihren Aufrufern blieb erhalten. Wissens- und Vollsicherung teilen dieselbe zentrale
+SQLite-Snapshot-Instanz. Export, Import, Abbruch, Manifest, Pfadschutz, Rollback und
+SQLite-Integritaet sind durch die bestehenden und ergaenzten Tests abgesichert.
+
+Damit sind die beiden im Erstaudit bewusst zurueckgestellten Grossumbauten erledigt.
+Der zentrale `ServiceProviderRegistrationMap` enthaelt nun 141 bewusst gepruefte
+Vertragstypen.

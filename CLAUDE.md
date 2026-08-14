@@ -320,11 +320,12 @@ zurueckgedreht werden:
   Bild-Beschreibung desselben Modells und die Aehnlichkeit der Prompt-Beispiele sind EINE
   Quelle. Die Gewichtung im Zahlenwert ist unveraendert. Der Anzeigetext heisst
   „KI-Kriterien erfüllt – prüfen" statt „Sicher".
-- **Ein-Knopf-Import:** `IImportedFileLedger`/`ImportedFileLedgerService` nimmt die
-  Dateien eines verworfenen Laufs zurueck (Ausnahme, Projektwechsel, zwischenzeitliche
-  Bearbeitung, gescheiterte Pruefung). Sicher, weil alle Verteiler kopieren und nicht
-  verschieben. Fehlt eine vorher vorhandene Datei, wird fail-closed GAR NICHTS geloescht.
-  Der Importbericht bleibt absichtlich liegen.
+- **Ein-Knopf-Import:** Verwendet fuer Archiv, Plan-PDF, Medien, namensbasierte
+  Protokolle, Kanal und Dichtheit dieselbe `IImportFileStagingSession` und denselben
+  `.import-transaction.json`-Marker wie der manuelle Import. Das alte
+  `IImportedFileLedger` bleibt nur bis zum Beginn von `Publish` ein zusaetzliches
+  Sicherheitsnetz und darf danach nichts mehr loeschen. Der Importbericht bleibt
+  absichtlich ausserhalb der Transaktion liegen.
 - **CSV:** `CsvCell` entschaerft Formelanfaenge (`=`, `+`, `-`, `@`, Tab, CR) zentral;
   negative Zahlen bleiben Zahlen. Kein Exportweg darf das erneut halb umsetzen.
 - **Medienpfade:** Der Protokolleditor zeigt nur Mediendateien, keine `..`-Ausbrueche und
@@ -335,17 +336,21 @@ zurueckgedreht werden:
 - **Uebersprungene Tests:** `UebersprungeneTestsWaechterTests` haelt die sechs zulaessigen
   Skip-Stellen namentlich fest. Ein neuer oder entfernter Skip macht den Waechter rot.
 
-Bewusst NICHT umgesetzt (eigene Arbeitspakete, kein Versehen):
+Nachgelagerte Grossumbauten vom 2026-08-14:
 
-- **Vollstaendiges Staging aller Import-Verteilerwege.** Spaetere Importschritte lesen die
-  zuvor geschriebenen Dateien wieder (Plan-PDFs und Protokollverteilung lesen den
-  Archivordner). Ein „erst am Ende veroeffentlichen" verlangt, alle sechs Verteiler und
-  ihre Lesepfade gemeinsam umzustellen — inklusive umbenannter Ziele und der aus
-  PDF-Seiten neu erzeugten Dateien, die `StageCopy` nicht abbilden kann. Bis dahin gilt
-  die Ruecknahme oben; bei einem Prozessabsturz mitten im Lauf bleiben Dateien liegen.
-- **Auslagerung der restlichen UI-Dateilogik.** `KnowledgeBackupService` (565 Zeilen, 33
-  Datei-/Prozesszugriffe) und `TrainingCenterStore` (143 Zeilen, 12) brauchen Vertrag,
-  Implementierung, Registrierung und Tests — rund 700 Zeilen Umbau am Bestand.
+- **Import-Staging vervollstaendigt.** `ImportFileTransaction` ist der gemeinsame
+  Markerablauf fuer manuell und Ein-Knopf. `StageCopyAs`, `ResolveReadPath`,
+  `EnumerateReadableFiles` und `StageGeneratedFile` bilden auch umbenannte Ziele,
+  Zwischenlesepfade und neu erzeugte PDF-Seiten ab. Die manuelle projektinterne
+  Schachtverteilung verwendet denselben Weg. Nur bewusst externe Schacht-Zielordner
+  bleiben direkte Exporte, weil ein Projektmarker ausserhalb des Projekts nichts
+  loeschen darf.
+- **UI-Dateilogik ausgelagert.** `TrainingCenterStore` bleibt als 61-zeilige
+  Kompatibilitaetsfassade; `ITrainingCenterDocumentStore` und
+  `TrainingCenterDocumentFileStore` bewahren JSON, numerischen Status, `.bak` und
+  Quarantaeneformat. Die Wissens-ZIP-Engine, ihr Dateikatalog und ihre Nachbearbeitung
+  liegen unter `Infrastructure/Ai/Backup`; `KnowledgeBackupService.BackupResult` und
+  die bisherigen Aufrufer bleiben unveraendert.
 
 ## Build & Test
 ```bash
@@ -421,7 +426,10 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `StoredImportFilePathResolver`  -> liest gespeicherte XTF-/PDF-Listen zentral und loest moderne sowie bestehende Projektpfade sicher auf
 - `ImportFileStagingService`      -> bereitet projektbezogene Importkopien geprueft vor und nimmt sie bis zur Projektuebernahme zurueck
 - `MediaDistributionService`      -> verteilt Medien hinter `IImportMediaDistributionService`; die UI erzeugt ihn nicht selbst
-- `ServiceProviderRegistrationMap` -> ordnet die bereits gebauten Dienste ihren 130 Vertragstypen zu und erzeugt selbst nichts
+- `ShaftDistributionService`      -> kapselt die Schachtverteilung und staged projektinterne Ziele ueber dieselbe Importtransaktion
+- `TrainingCenterDocumentFileStore` -> speichert das UI-unabhaengige Training-Center-Dokument atomar mit Backup und Rueckfall
+- `KnowledgeBackupEngine`         -> exportiert/importiert Wissens-ZIPs, SQLite-Snapshot, Ruecknahme und Nachbearbeitung ausserhalb der UI
+- `ServiceProviderRegistrationMap` -> ordnet die bereits gebauten Dienste ihren 141 Vertragstypen zu und erzeugt selbst nichts
 
 Der Vollsicherungsaufbau liegt in Infrastructure. `ServiceProvider.FullBackup.cs`
 reicht die bisherigen oeffentlichen Dienste unveraendert weiter. Der zentrale
@@ -518,16 +526,22 @@ bleibt zur Pruefung erhalten. Auch bei einem normalen Speicherfehler bleibt er s
 Ein spaeterer erfolgreicher Save persistiert die Commit-TxId; entfernt wird der Marker
 erst durch den anschliessenden eindeutigen Recovery-Lauf.
 
-Noch ausserhalb dieser Transaktion liegen das additive XTF-Rohdatenarchiv und die
-Dateioperationen des Ein-Knopf-Imports. Sie koennen bei einem spaeten Projektkonflikt
-nicht automatisch zurueckgenommen werden. Diese Restgrenze spaeter in Infrastructure
-loesen, nicht im ViewModel verstecken.
-Der Ein-Knopf-Import arbeitet datenseitig inzwischen wie der manuelle Lauf auf einer
-Arbeitskopie: Die Live-Referenz wird erst bei Erfolg getauscht; Projektinstanz, Pfad
-und inhaltliche Projektsignatur werden vor der Uebernahme erneut geprueft. Ein
-fehlgeschlagener Projekt-Save wird laut gemeldet statt als „Import abgeschlossen".
-Seine Dateioperationen (Archiv, Medienverteilung) laufen weiterhin direkt, also
-ausserhalb der Staging-Sitzung.
+Der Ein-Knopf-Import verwendet `ImportFileTransaction` und dieselbe persistente
+Wiederherstellung wie der manuelle Lauf. Archiv, Plan-PDF, Medien, namensbasierte
+Protokolle, Kanal und Dichtheit schreiben in die gemeinsame Staging-Sitzung. Die
+Leseseite verwendet `ResolveReadPath`/`EnumerateReadableFiles`; aus PDF-Seiten erzeugte
+Dateien werden ueber `StagedDistributionOutput` und `StageGeneratedFile` aufgenommen.
+Erst danach folgen Marker, `Publish`, Projekt-TxId und atomarer Projekt-Save. Bei einem
+Absturz entscheidet `ImportTransactionRecoveryService` anhand derselben TxId. Das alte
+Ordner-Ledger ist nur vor `Publish` aktiv und deckt noch nicht migrierte Altpfade ab.
+Die Live-Referenz wird erst bei Erfolg getauscht; Projektinstanz, Pfad und inhaltliche
+Projektsignatur werden vor der Uebernahme erneut geprueft. Ein fehlgeschlagener
+Projekt-Save wird laut gemeldet und laesst den Marker zur eindeutigen Recovery stehen.
+
+Die manuelle Schachtverteilung liegt hinter `IShaftDistributionService`. Ziele im
+Projekt laufen ueber dieselbe Transaktion; die UI-Logik ist in
+`ExportPageViewModel.ShaftDistribution.cs` getrennt. Bewusst externe Zielordner bleiben
+direkte Exporte: Der Projektmarker besitzt dort keine sichere Loeschberechtigung.
 Der manuelle PDF-Stapellauf bleibt bewusst getrennt vom fehlertoleranten PDF-Scan des
 `ImportPostProcessingController`, weil beide verschiedene Fehlerregeln haben.
 

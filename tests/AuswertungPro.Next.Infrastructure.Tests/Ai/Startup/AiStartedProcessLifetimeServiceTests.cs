@@ -193,9 +193,11 @@ public sealed class AiStartedProcessLifetimeServiceTests
             Assert.Equal(process.StartTime.ToUniversalTime(), probe.StartTimeUtc);
 
             // MainModule ist direkt nach dem Start unter Last manchmal noch nicht lesbar
-            // (Win32-Zugriffsfehler -> Probe liefert defensiv null): kurz nachfassen.
+            // oder Windows meldet waehrend der Initialisierung kurz ntdll.dll: nachfassen.
             var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-            while (probe.ImagePath is null && DateTime.UtcNow < deadline)
+            while ((probe.ImagePath is null
+                    || !probe.ImagePath.Contains("powershell", StringComparison.OrdinalIgnoreCase))
+                   && DateTime.UtcNow < deadline)
             {
                 Thread.Sleep(50);
                 probe = ProcessTreeInspector.ProbeProcessIdentity(process.Id);

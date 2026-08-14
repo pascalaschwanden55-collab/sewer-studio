@@ -2,11 +2,11 @@
   "beschreibung": "Mindest-Zeilenabdeckung der vier .NET-Testprojekte (Gesamtaudit 2026-08-14, Prio 2). Die Zahl darf nur STEIGEN. Geprueft von .github/scripts/check-coverage.ps1.",
   "gemessen": {
     "datum": "2026-08-14",
-    "linienAbgedeckt": 326390,
-    "linienGesamt": 726836,
-    "prozent": 44.91,
-    "hinweis": "Gemessen mit dem im .NET-SDK enthaltenen Sammler ueber alle vier Testprojekte. Der Sammler zaehlt auch Testcode und generierten Code mit; die Zahl ist deshalb ein Verlaufswert, kein Qualitaetsurteil. Auffaellig niedrig ist der WPF-UI-Anteil (2998 von 105607 Zeilen) - dort laeuft das meiste nur mit echter Oberflaeche."
+    "linienAbgedeckt": 292503,
+    "linienGesamt": 641408,
+    "prozent": 45.6,
+    "hinweis": "Nach den Audit-Grossumbauten mit dem im .NET-SDK enthaltenen Sammler ueber alle vier Testprojekte neu gemessen. Der Sammler zaehlt auch Testcode und generierten Code mit; die instrumentierte Gesamtzeilenzahl unterscheidet sich von der Erstmessung. Die Prozentzahl ist deshalb ein CI-Verlaufswert, kein absolutes Qualitaetsurteil."
   },
-  "minimumLinePercent": 42.0,
-  "warumPuffer": "Knapp unter dem Messwert, damit ein Release-Lauf mit leicht anderer Instrumentierung nicht sofort rot wird. Steigt die Abdeckung um mehr als 3 Punkte darueber, verlangt das Pruefskript ein Anheben."
+  "minimumLinePercent": 45.6,
+  "warumPuffer": "Der vorhandene Ratchet hat bei 45,60 Prozent eine Anhebung verlangt. Die Grenze wurde deshalb bewusst auf den neu gemessenen Wert angehoben und darf nur steigen."
 }
