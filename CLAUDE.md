@@ -928,13 +928,38 @@ vollstaendige Form `LZ... + 0000.00 m`; fehlt Tesseract oder ist die Form
 unsicher, bleibt der Wert `None`. Auf dem Zielstil liest er 8/12. Sein neuer
 Rueckfallweg liefert in der 40er-Probe 12 Werte, alle 12 passend zu den schwachen
 PDF-Labels; der gesamte Leser liefert dort 13 Werte mit einem falschen oder
-nicht pruefbaren Fall. Im Goldbestand liefert SD 82/82 richtig, HD nichts und
-HD2 0 geliefert/0 falsch. Der fruehere HD2-Fehler `f0046.jpg` aus Haltung
-`35722-35724` (Soll 13,7 m, Vorlagenlesung 11,7 m aus `L211.7m1.`) wird durch
-eine enge Trennzeichen-Sperre nach `L2`/`LZ2` verworfen; SD bleibt 82/82. Die
-hashgebundene Archivwiederholung mit `osd_archiv_abdeckung_messung.py` verarbeitet 83
-eindeutige Videos an je 20 gleichmaessigen Stellen: insgesamt SD 22,1 % und HD
-3,1 %, im von der 40er-Kalibrierung getrennten Anteil SD 21,2 % und HD 4,0 %.
+nicht pruefbaren Fall.
+
+Seit 2026-08-14 ist die Zeichenfindung aufloesungsunabhaengig. Ihre Abstandsschranken
+standen als feste Pixelwerte da, eingestellt auf SD mit rund 18 Pixel hohen Ziffern;
+auf HD sind dieselben Zeichen doppelt so gross, und der Leser verlor Dezimalpunkt und
+Einheit ("LZ1: 3.2m" -> "L132"). `glyphen_skala` misst jetzt die tatsaechliche
+Zeichenhoehe und richtet die Schranken daran aus, skaliert aber nie nach unten —
+SD bleibt dadurch unveraendert.
+
+Zwei Regeln halten die wichtigste Eigenschaft des Lesers fest: keine Ziffer hinter
+der Einheit, hoechstens ein Dezimalpunkt. Beides heisst verwerfen, nicht raten.
+Ohne sie entstand aus `LZ:::6.4m3` der Wert 6,4 statt 26,4 und aus `ZLZ1:.0.1m`
+der Wert 0,1 statt -0,1. Das Minus als eigenes Zeichen wurde geprueft und wieder
+verworfen: Es rettete eine Lesung und kostete sieben. Negative Zaehlerstaende vor
+dem Rohranfang gelten deshalb als mehrdeutig und werden nicht gelesen.
+
+`training/scripts/osd_goldmessung.py` misst den Leser wiederholbar gegen die drei
+eingefrorenen Goldsaetze und trennt richtig / falsch / nicht gelesen streng; ein
+falscher Wert wandert unbemerkt ins Protokoll, ein fehlender faellt auf. Stand
+(Leser `85d3a107e5b3`, Bericht-SHA-256
+`3ddce99516ee8866c7bdba24fcc9cd52c01f499a1a103ff5bb3c6e124ab06aa2`):
+SD 80/95, HD 15/30, HD2 43/72, zusammen 138 richtig und **0 falsch** — vorher
+82 richtig und 0 falsch. Die zwei SD-Verluste waren Zufallstreffer aus erkennbar
+kaputten Zeichenfolgen.
+
+Die hashgebundene Archivwiederholung mit `osd_archiv_abdeckung_messung.py`
+verarbeitet 83 eindeutige Videos an je 20 gleichmaessigen Stellen. Mit demselben
+Leser: SD 43,0 % und HD 53,3 %, zusammen 45,8 % (vorher SD 22,1 %, HD 3,1 %,
+zusammen 16,8 %). Videos ohne jede Lesung: SD 33 -> 16 von 60, HD 21 -> 4 von 23.
+Diese Zahl misst nur, OB gelesen wurde — die Richtigkeit belegt allein die
+Goldmessung. Bericht-SHA-256
+`a2e13deaf17d20ca61e35feee6b042307e0a01c3d463db79022b49cc94682f6a`.
 Der Bericht bindet Leser und feste Auswahl; Video-Inhalte sind ueber Pfad,
 Groesse und Aenderungszeit, aber nicht per Vollhash gebunden. Der Kandidat bleibt
 `diagnostic_not_deployed`.

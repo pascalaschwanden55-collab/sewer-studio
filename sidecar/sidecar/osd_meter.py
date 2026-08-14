@@ -8,10 +8,19 @@ die Vorlagenlesung scheitert; er installiert nichts und bleibt optional.
 
 Heimat der Leser-Logik ist dieses Modul — der Prototyp
 `training/scripts/osd_meter_leser.py` delegiert hierher, damit Diagnose und
-Sidecar nicht auseinanderlaufen. Der aktuelle Diagnosekandidat vom 2026-08-09
-liefert im menschlich gelabelten SD-Goldbestand 82/82 Werte richtig. Im
-HD- und HD2-Goldbestand liefert er keinen Wert. Die Archivabdeckung ist noch
-zu niedrig; deshalb bleibt er ausdruecklich `diagnostic_not_deployed`.
+Sidecar nicht auseinanderlaufen.
+
+Stand 2026-08-14 (`training/scripts/osd_goldmessung.py`): SD 80/95, HD 15/30,
+HD2 43/72 — zusammen 138 richtig und 0 falsch. Vorher lagen HD und HD2 bei null,
+weil die Abstandsschranken der Zeichenfindung feste Pixelwerte waren; sie richten
+sich jetzt an der gemessenen Zeichenhoehe aus (`glyphen_skala`).
+
+Null falsche Werte ist die wichtigste Eigenschaft dieses Lesers: Ein falscher
+Meterstand wandert unbemerkt ins Protokoll, ein fehlender faellt auf. Wer hier
+etwas aendert, misst beides — nicht nur die Abdeckung.
+
+Die Archivabdeckung liegt bei 45,8 % (vorher 16,8 %) und ist damit weiterhin
+zu niedrig; der Kandidat bleibt ausdruecklich `diagnostic_not_deployed`.
 
 Der optionale Format-Lock (`format=`) erzwingt das Zahlenlayout eines Videos.
 Gelernt und gesetzt wird er vom Aufrufer (Integrationslogik), nie geraten —
