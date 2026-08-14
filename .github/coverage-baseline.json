@@ -1,14 +1,14 @@
 {
-  "beschreibung": "Mindest-Zeilenabdeckung der vier .NET-Testprojekte. Geprueft von .github/scripts/check-coverage.ps1. Die Zahl darf nur STEIGEN — sie muss aber unter CI-Bedingungen gemessen werden, siehe wieMessen.",
+  "beschreibung": "Mindest-Zeilenabdeckung der vier .NET-Testprojekte. Geprueft von .github/scripts/check-coverage.ps1. Die Zahl darf nur STEIGEN — der Messwert muss aber aus einem echten CI-Lauf stammen, siehe wieMessen.",
   "gemessen": {
     "datum": "2026-08-14",
-    "linienAbgedeckt": 292281,
-    "linienGesamt": 641429,
-    "prozent": 45.57,
-    "bedingungen": "CI-nah: ohne FFmpeg und ohne die nicht eingecheckte produktive yolo26m.names.json.",
+    "linienAbgedeckt": 291460,
+    "linienGesamt": 641717,
+    "prozent": 45.42,
+    "quelle": "GitHub-Lauf 31831851514, Job dotnet, Schritt 'Testabdeckung pruefen'.",
     "hinweis": "Der Sammler zaehlt auch Testcode und generierten Code mit. Die Prozentzahl ist ein CI-Verlaufswert, kein absolutes Qualitaetsurteil."
   },
-  "minimumLinePercent": 45.5,
-  "wieMessen": "IMMER unter CI-Bedingungen messen, nie auf dem voll ausgestatteten Entwicklerrechner. Umgebungsabhaengig uebersprungene Tests aendern die Zahl: derselbe Stand ergibt lokal 45,61 % und CI-nah 45,57 %. Die vorige Grenze von 45,60 % stammte aus einer Entwicklerrechner-Messung und war in der CI deshalb nie erreichbar — der Waechter mass die Maschine statt den Code.",
-  "warumPuffer": "0,07 Punkte Abstand zur CI-nahen Messung. Ohne Puffer macht ein einzelner umgebungsabhaengig uebersprungener Test die CI rot, ohne dass sich am Code etwas geaendert hat."
+  "minimumLinePercent": 45.35,
+  "wieMessen": "Den Wert IMMER aus einem echten CI-Lauf uebernehmen, nie vom Entwicklerrechner und auch nicht aus einer Nachstellung. Umgebungsabhaengig uebersprungene Tests verschieben die Zahl, und zwar mehr als erwartet: derselbe Stand ergab lokal 45,61 %, lokal ohne FFmpeg und ohne Modell-Klassenkarte 45,57 % und auf dem GitHub-Runner 45,42 %. Der Rest sind vor allem die 13 Junction-Schutztests, die lokal nur mit eingeschaltetem Windows-Entwicklermodus laufen.",
+  "warumPuffer": "0,07 Punkte Abstand zur CI-Messung. Ohne Puffer macht ein einzelner umgebungsabhaengig uebersprungener Test die CI rot, ohne dass sich am Code etwas geaendert hat."
 }
