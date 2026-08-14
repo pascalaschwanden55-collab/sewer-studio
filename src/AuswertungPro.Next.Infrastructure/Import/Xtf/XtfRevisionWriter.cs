@@ -67,7 +67,10 @@ public static class XtfRevisionWriter
                     {
                         foreach (var feld in position.Felder)
                             SetzeKind(zuAendern, feld.Name, feld.Neu);
-                        SetzeKind(zuAendern, "Letzte_Aenderung", stand);
+                        // Nur nachfuehren, wo die Datei dieses Feld selbst fuehrt. In der
+                        // SIA405-XTF gehoert "Letzte_Aenderung" in die Struktur "Metaattribute"
+                        // und nicht direkt an den Kanal — es wird dort deshalb nicht erfunden.
+                        AktualisiereVorhandenesKind(zuAendern, "Letzte_Aenderung", stand);
                         geaendert++;
                     }
                     break;
@@ -184,17 +187,70 @@ public static class XtfRevisionWriter
         throw new InvalidOperationException("Es konnte keine freie Kennung vergeben werden.");
     }
 
+    /// <summary>
+    /// Feldreihenfolge der SIA405-Klasse "Kanal" — erst die geerbten Felder der Oberklassen,
+    /// dann die eigenen, jeweils so wie im Modell (SIA405_Abwasser, Klasse Abwasserbauwerk
+    /// bzw. Kanal). INTERLIS gibt diese Reihenfolge vor; ein neu eingefuegtes Feld darf
+    /// deshalb nicht einfach hinten angehaengt werden.
+    /// </summary>
+    private static readonly string[] KanalFeldreihenfolge =
+    [
+        "OBJ_ID", "Metaattribute",
+        "Akten", "Baujahr", "BaulicherZustand", "Baulos", "Bemerkung", "Bezeichnung",
+        "Bruttokosten", "Detailgeometrie", "Ersatzjahr", "Finanzierung", "Inspektionsintervall",
+        "Sanierungsbedarf", "Standortname", "Status", "Subventionen", "WBW_Basisjahr",
+        "WBW_Bauart", "Wiederbeschaffungswert", "Zugaenglichkeit",
+        "Bettung_Umhuellung", "FunktionHierarchisch", "FunktionHydraulisch",
+        "Nutzungsart_geplant", "Nutzungsart_Ist", "Rohrlaenge", "Spuelintervall", "Verbindungsart"
+    ];
+
     private static void SetzeKind(XElement parent, string name, string? wert)
     {
-        var kind = parent.Elements()
-            .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal));
-
         if (string.IsNullOrWhiteSpace(wert))
             return;
 
-        if (kind is null)
-            parent.Add(new XElement(parent.Name.Namespace + name, wert));
+        var kind = parent.Elements()
+            .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal));
+
+        if (kind is not null)
+        {
+            kind.Value = wert;
+            return;
+        }
+
+        var neu = new XElement(parent.Name.Namespace + name, wert);
+        var nachfolger = ErstesFeldDanach(parent, name);
+        if (nachfolger is null)
+            parent.Add(neu);
         else
+            nachfolger.AddBeforeSelf(neu);
+    }
+
+    /// <summary>
+    /// Das erste vorhandene Feld, das laut Modell hinter <paramref name="name"/> steht.
+    /// Kennt das Modell den Namen nicht, wird nichts geraten und hinten angehaengt.
+    /// </summary>
+    private static XElement? ErstesFeldDanach(XElement parent, string name)
+    {
+        var platz = Array.IndexOf(KanalFeldreihenfolge, name);
+        if (platz < 0)
+            return null;
+
+        foreach (var kind in parent.Elements())
+        {
+            var stelle = Array.IndexOf(KanalFeldreihenfolge, kind.Name.LocalName);
+            if (stelle > platz)
+                return kind;
+        }
+
+        return null;
+    }
+
+    private static void AktualisiereVorhandenesKind(XElement parent, string name, string wert)
+    {
+        var kind = parent.Elements()
+            .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal));
+        if (kind is not null)
             kind.Value = wert;
     }
 

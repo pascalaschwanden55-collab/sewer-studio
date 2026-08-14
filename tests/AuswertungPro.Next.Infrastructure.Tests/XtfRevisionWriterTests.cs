@@ -233,6 +233,77 @@ public sealed class XtfRevisionWriterTests : IDisposable
 
     // ── Hilfen ──────────────────────────────────────────────────────────
 
+    // Die SIA405-Stammdaten: ein Kanal ohne "Letzte_Aenderung" und ohne "BaulicherZustand".
+    private const string Stammdaten = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2015_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <SIA405_Abwasser.SIA405_Abwasser.Kanal TID="ch010wcsKA000001">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Standortname>Utzibmattweg</Standortname>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+      </SIA405_Abwasser.SIA405_Abwasser.Kanal>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    // INTERLIS gibt die Feldreihenfolge vor. "BaulicherZustand" steht im Modell vor
+    // "Bezeichnung" und darf deshalb nicht hinten angehaengt werden.
+    [Fact]
+    public void Ein_neues_Feld_wird_an_die_vom_Modell_verlangte_Stelle_gesetzt()
+    {
+        var quelle = Path.Combine(_dir, "stammdaten.xtf");
+        File.WriteAllText(quelle, Stammdaten);
+        var ziel = Path.Combine(_dir, "stammdaten-revision.xtf");
+
+        var ergebnis = XtfRevisionWriter.Schreibe(
+            quelle,
+            Plan(Position(XtfRevisionAenderung.Geaendert, "ch010wcsKA000001", "",
+                new XtfRevisionFeld("BaulicherZustand", null, "Z2"))),
+            ziel,
+            new DateOnly(2026, 8, 13));
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var kanal = XDocument.Load(ziel).Descendants()
+            .Single(e => e.Name.LocalName.EndsWith(".Kanal", StringComparison.Ordinal));
+
+        Assert.Equal(
+            new[] { "BaulicherZustand", "Bezeichnung", "Standortname", "Nutzungsart_Ist" },
+            kanal.Elements().Select(e => e.Name.LocalName).ToArray());
+        Assert.Equal("Z2", Kindwert(kanal, "BaulicherZustand"));
+    }
+
+    // In der SIA405-XTF gehoert "Letzte_Aenderung" in die Struktur "Metaattribute".
+    // Direkt am Kanal waere es ein erfundenes Feld — die Datei wuerde die Pruefung nicht bestehen.
+    [Fact]
+    public void Ein_Aenderungsdatum_wird_nicht_erfunden()
+    {
+        var quelle = Path.Combine(_dir, "stammdaten.xtf");
+        File.WriteAllText(quelle, Stammdaten);
+        var ziel = Path.Combine(_dir, "stammdaten-revision.xtf");
+
+        var ergebnis = XtfRevisionWriter.Schreibe(
+            quelle,
+            Plan(Position(XtfRevisionAenderung.Geaendert, "ch010wcsKA000001", "",
+                new XtfRevisionFeld("Standortname", "Utzibmattweg", "Neue Gasse"))),
+            ziel,
+            new DateOnly(2026, 8, 13));
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var kanal = XDocument.Load(ziel).Descendants()
+            .Single(e => e.Name.LocalName.EndsWith(".Kanal", StringComparison.Ordinal));
+
+        Assert.Null(Kindwert(kanal, "Letzte_Aenderung"));
+        Assert.Equal("Neue Gasse", Kindwert(kanal, "Standortname"));
+    }
+
     private (string Quelle, string Ziel) Dateien()
     {
         var quelle = Path.Combine(_dir, "original.xtf");

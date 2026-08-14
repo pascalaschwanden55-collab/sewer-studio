@@ -76,16 +76,20 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
 
             var basis = XtfRevisionPlanBuilder.Build(request.Projekt.Data, elemente, name);
-            var stammPositionen = XtfStammdatenPlanBuilder.Build(request.Projekt.Data, stammdaten);
-            var plan = stammPositionen.Count == 0
+            var stamm = XtfStammdatenPlanBuilder.Build(request.Projekt.Data, stammdaten);
+            var plan = stamm.Positionen.Count == 0
                 ? basis
-                : basis with { Positionen = basis.Positionen.Concat(stammPositionen).ToList() };
+                : basis with { Positionen = basis.Positionen.Concat(stamm.Positionen).ToList() };
             bericht.AppendLine(
                 $"{name}: {plan.AnzahlGeaendert} geaendert, {plan.AnzahlNeu} neu, " +
                 $"{plan.AnzahlEntfernt} entfernt, {plan.AnzahlUnveraendert} unveraendert.");
 
             foreach (var warnung in plan.Warnungen)
                 bericht.AppendLine($"    offen: {warnung}");
+
+            // Hinweise halten den Export nicht auf, muessen aber sichtbar bleiben.
+            foreach (var hinweis in stamm.Hinweise)
+                bericht.AppendLine($"    Hinweis: {hinweis}");
 
             if (request.NurPruefen)
                 continue;
