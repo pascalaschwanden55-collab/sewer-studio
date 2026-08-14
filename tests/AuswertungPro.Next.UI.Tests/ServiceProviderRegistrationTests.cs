@@ -71,9 +71,11 @@ public sealed class ServiceProviderRegistrationTests
         // eines verworfenen Ein-Knopf-Imports zurueck, statt sie unbemerkt liegen zu lassen).
         // 139 -> 140: IShaftDistributionService kapselt die transaktionale manuelle
         // Schachtverteilung (grosser Audit-Umbau 2026-08-14).
+        // 140 -> 141: ITrainingCenterDocumentStore verschiebt die JSON-Dateiarbeit
+        // aus der eingefrorenen UI-Fassade in die Infrastructure.
         Assert.True(
-            registrations.Count == 140,
-            $"Erwartet 140 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 141,
+            $"Erwartet 141 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
@@ -94,6 +96,9 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.ShaftDistribution,
             registrations[typeof(IShaftDistributionService)]);
+        Assert.Same(
+            services.TrainingCenterDocuments,
+            registrations[typeof(ITrainingCenterDocumentStore)]);
         Assert.Same(
             services.ImportMediaDistribution,
             registrations[typeof(IImportMediaDistributionService)]);

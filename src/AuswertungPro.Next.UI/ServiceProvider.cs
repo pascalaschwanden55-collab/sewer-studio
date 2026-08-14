@@ -315,7 +315,8 @@ namespace AuswertungPro.Next.UI
         public IAiSanierungOptimizationFactory SanierungOptimizations { get; }
         internal DataPage.IDataPageSanierungViewModelFactory DataPageSanierungViewModels { get; }
         internal DataPage.IDataPageWindowLauncher DataPageWindows { get; }
-        public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; } = new();
+        public ITrainingCenterDocumentStore TrainingCenterDocuments { get; }
+        public AuswertungPro.Next.UI.Ai.Training.TrainingCenterStore TrainingCenterStore { get; }
         public ITrainingCaseIdSource TrainingCases { get; }
         public TrainingCenterImportService TrainingCenterImport { get; } = new();
         public ReviewQueueService TrainingReviewQueue => _trainingReviewQueue.Value;
@@ -458,6 +459,8 @@ namespace AuswertungPro.Next.UI
 
             DropdownOptions = new FileDropdownOptionsStore();
             CostStores = new CostStoreFactory();
+            TrainingCenterDocuments = new TrainingCenterDocumentFileStore();
+            TrainingCenterStore = new TrainingCenterStore(TrainingCenterDocuments);
             TrainingCases = new TrainingCaseIdSource(TrainingCenterStore);
             ProtocolTraining = new ProtocolTrainingFileStore();
 

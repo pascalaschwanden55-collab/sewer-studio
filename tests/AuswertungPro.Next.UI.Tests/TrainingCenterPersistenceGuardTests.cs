@@ -58,6 +58,44 @@ public sealed class TrainingCenterPersistenceGuardTests
         Assert.Empty(Directory.EnumerateFiles(temp.Path, "*.tmp", SearchOption.TopDirectoryOnly));
     }
 
+    [Fact]
+    public async Task TrainingCenterStore_erhaelt_alle_Felder_beim_UI_Mapping()
+    {
+        using var temp = new TempDir();
+        var store = new TrainingCenterStore(Path.Combine(temp.Path, "training_center.json"));
+        var inspectionDate = new DateTime(2026, 8, 14, 9, 30, 0, DateTimeKind.Utc);
+        var createdUtc = new DateTime(2026, 8, 13, 8, 15, 0, DateTimeKind.Utc);
+        await store.SaveAsync(new TrainingCenterState
+        {
+            Cases =
+            [
+                new TrainingCase
+                {
+                    CaseId = "vollstaendig",
+                    FolderPath = @"C:\Training\Fall",
+                    VideoPath = @"C:\Training\Fall\video.mp4",
+                    ProtocolPath = @"C:\Training\Fall\protokoll.pdf",
+                    InspectionDate = inspectionDate,
+                    Status = TrainingCaseStatus.Rejected,
+                    CreatedUtc = createdUtc
+                }
+            ],
+            RootFolders = [@"C:\Training"]
+        });
+
+        var loaded = await store.LoadAsync();
+
+        var trainingCase = Assert.Single(loaded.Cases);
+        Assert.Equal("vollstaendig", trainingCase.CaseId);
+        Assert.Equal(@"C:\Training\Fall", trainingCase.FolderPath);
+        Assert.Equal(@"C:\Training\Fall\video.mp4", trainingCase.VideoPath);
+        Assert.Equal(@"C:\Training\Fall\protokoll.pdf", trainingCase.ProtocolPath);
+        Assert.Equal(inspectionDate, trainingCase.InspectionDate);
+        Assert.Equal(TrainingCaseStatus.Rejected, trainingCase.Status);
+        Assert.Equal(createdUtc, trainingCase.CreatedUtc);
+        Assert.Equal([@"C:\Training"], loaded.RootFolders);
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

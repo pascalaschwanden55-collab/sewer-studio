@@ -186,6 +186,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IDichtheitProtocolFileLocator)] = services.DichtheitProtocolFiles,
             [typeof(ISchachtFileTargetResolver)] = services.SchachtFileTargets,
             [typeof(IProtocolTrainingStore)] = services.ProtocolTraining,
+            [typeof(ITrainingCenterDocumentStore)] = services.TrainingCenterDocuments,
             [typeof(ITrainingCenterSettingsStore)] = services.TrainingSettings,
             [typeof(ITrainingCaseIdSource)] = services.TrainingCases,
             [typeof(ISelfTrainingHistoryStore)] = services.SelfTrainingHistory,
