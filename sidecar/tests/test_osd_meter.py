@@ -35,6 +35,60 @@ def test_parse_meter_auto_lehnt_unvollstaendiges_ab(roh):
     assert osd_meter.parse_meter(roh) is None
 
 
+# --- Kein falscher Wert, lieber keiner (Goldmessung 2026-08-14) ---------------
+#
+# Der Leser lieferte im Goldbestand null falsche Werte. Bei der HD-Reparatur
+# tauchten zwei auf; beide entstanden dadurch, dass eine erkennbar kaputte
+# Zeichenfolge trotzdem eine plausible Zahl ergab. Ein falscher Meterstand
+# wandert unbemerkt ins Protokoll — ein fehlender faellt sofort auf.
+
+@pytest.mark.parametrize("roh,grund", [
+    ("LZ:::6.4m3", "Ziffer hinter der Einheit"),
+    ("LZ2: 0007.00m.7", "Ziffer hinter der Einheit"),
+])
+def test_eine_ziffer_hinter_der_einheit_verwirft_die_lesung(roh, grund):
+    # 'LZ:::6.4m3': Sollwert war 26,4. Die fuehrende 2 wurde zu ':' verlesen, die
+    # verirrte 3 verriet es. Frueher wurde alles hinter dem 'm' weggeworfen und
+    # 6,4 gemeldet — 20 Meter daneben, ohne jeden Hinweis.
+    assert osd_meter.parse_meter(roh) is None, grund
+
+
+@pytest.mark.parametrize("roh", [
+    "ZLZ1:.0.1m",      # aus "LZ1: -0.1m": das Minus wurde zum Punkt
+    "L:Z:03...:mm.",
+])
+def test_mehr_als_ein_punkt_verwirft_die_lesung(roh):
+    # Zwei Dezimalpunkte kann kein gueltiger Meterstand haben. Frueher wurde der
+    # fuehrende Punkt abgestreift und aus -0,1 wurde 0,1.
+    assert osd_meter.parse_meter(roh) is None
+
+
+def test_eine_einzelne_einheit_ohne_ziffernrest_bleibt_gueltig(roh="LZ2: 14.1m"):
+    # Die Regel darf nur Ziffern hinter der Einheit treffen, nicht die Einheit selbst.
+    assert osd_meter.parse_meter(roh) == pytest.approx(14.1)
+
+
+# --- Groessenabhaengige Zeichenfindung ---------------------------------------
+
+def test_die_skala_bleibt_bei_sd_hoehe_neutral():
+    # 18 Pixel ist der Bezugsfall. Nach unten wird nie skaliert, damit die
+    # SD-Lesungen bitgenau erhalten bleiben.
+    assert osd_meter.glyphen_skala([18, 18, 18]) == pytest.approx(1.0)
+    assert osd_meter.glyphen_skala([9, 10, 11]) == pytest.approx(1.0)
+    assert osd_meter.glyphen_skala([]) == pytest.approx(1.0)
+
+
+def test_doppelt_so_hohe_zeichen_verdoppeln_die_schranken():
+    # HD: dieselben Zeichen, doppelte Hoehe. Ohne Anpassung lagen Nachbarfenster
+    # und Doppelpunkt-Abstand zu eng, und Dezimalpunkt und Einheit gingen verloren.
+    assert osd_meter.glyphen_skala([36] * 5) == pytest.approx(2.0)
+
+
+def test_die_skala_ist_nach_oben_begrenzt():
+    # Ein einzelnes riesiges Stoerobjekt darf die Schranken nicht ins Uferlose ziehen.
+    assert osd_meter.glyphen_skala([500] * 5) == pytest.approx(4.0)
+
+
 def test_parse_meter_punktlos_nur_im_ein_dezimalen_layout():
     assert osd_meter.parse_meter("01", stil="dunkel") == pytest.approx(0.1)
     assert osd_meter.parse_meter("01", stil="hell") is None

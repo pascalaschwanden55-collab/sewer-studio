@@ -47,6 +47,15 @@ TESSERACT_ZONEN = (
 HELLIGKEIT = 150
 GLYPHE_MIN_H, GLYPHE_MAX_H = 8, 40
 TEMPLATE_H = 28
+
+# Ziffernhoehe des SD-Bezugsfalls. Alle Pixelschranken der Zeichenfindung sind
+# darauf eingestellt; groessere Aufloesungen werden ueber glyphen_skala daran
+# angeglichen, statt fuer jeden Stil eigene Werte zu pflegen.
+REFERENZ_GLYPHE_H = 18
+# Bewusst OHNE Minus: Als eigenes Zeichen aufgenommen, passten auf HD zu viele
+# andere Striche darauf — es kostete sieben richtige Lesungen und rettete eine.
+# Der negative Zaehlerstand vor dem Rohranfang wird stattdessen als mehrdeutig
+# erkannt und nicht gelesen (siehe Doppelpunkt-Regel in parse_meter).
 ZEICHEN = "0123456789.mLZ:"
 
 # Die Beschriftung beginnt mit einem L ("LZ", "LZ2"). Der Zeichenerkenner setzt
@@ -114,26 +123,54 @@ def glyphenmaske(bild: Image.Image) -> tuple["object", str]:
     return dunkel_video, "dunkel_video"
 
 
+def glyphen_skala(hoehen: list[int]) -> float:
+    """Wie viel groesser die Zeichen sind als im SD-Bezugsfall.
+
+    Alle Abstandsschranken hier waren feste Pixelwerte, eingestellt auf SD mit
+    rund 18 Pixel hohen Ziffern. Auf HD sind dieselben Zeichen doppelt so gross —
+    dann liegen Nachbarfenster, Doppelpunkt-Abstand und Zeilentoleranz zu eng, und
+    der Leser verliert Dezimalpunkt und Einheit. Deshalb werden die Schranken an
+    der tatsaechlichen Zeichenhoehe ausgerichtet.
+
+    Nach unten wird NIE skaliert: Fuer SD bleibt alles bitgenau wie bisher, die
+    Aenderung kann dort also nichts verschlechtern.
+    """
+    kandidaten = sorted(h for h in hoehen if h >= GLYPHE_MIN_H)
+    if not kandidaten:
+        return 1.0
+
+    # Oberes Fuenftel: Die Ziffern sind die hohen Zeichen; kleinere Bestandteile
+    # (Teilstriche, Rauschen) sollen den Bezug nicht nach unten ziehen.
+    bezug = kandidaten[int(len(kandidaten) * 0.8)] if len(kandidaten) > 1 else kandidaten[0]
+    return max(1.0, min(4.0, bezug / REFERENZ_GLYPHE_H))
+
+
 def boxen_aus_maske(maske, stil: str) -> list[tuple[int, int, int, int]]:
     import cv2
 
     n, _lab, stats, _ = cv2.connectedComponentsWithStats(maske, 8)
+    komponenten = [tuple(int(v) for v in stats[i][:5]) for i in range(1, n)]
+    skala = glyphen_skala([bh for _x, _y, _bw, bh, _f in komponenten])
+
+    def sk(wert: int) -> int:
+        return max(wert, int(round(wert * skala)))
+
     boxen = []
     punkte = []
-    for i in range(1, n):
-        x, y, bw, bh, flaeche = stats[i]
-        min_flaeche = 3 if stil in ("dunkel", "dunkel_video") else 8
-        min_h = GLYPHE_MIN_H - 2 if stil in ("dunkel", "dunkel_video") else GLYPHE_MIN_H
-        if 2 <= bw <= 7 and 2 <= bh <= 7 and flaeche >= 3:
+    min_flaeche = 3 if stil in ("dunkel", "dunkel_video") else 8
+    min_h = GLYPHE_MIN_H - 2 if stil in ("dunkel", "dunkel_video") else GLYPHE_MIN_H
+    for x, y, bw, bh, flaeche in komponenten:
+        if 2 <= bw <= sk(7) and 2 <= bh <= sk(7) and flaeche >= 3:
             punkte.append((x, y, x + bw, y + bh))  # Dezimalpunkt/Doppelpunkt-Punkt
-        elif (min_h <= bh <= GLYPHE_MAX_H and 2 <= bw <= 26
+        elif (min_h <= bh <= sk(GLYPHE_MAX_H) and 2 <= bw <= sk(26)
                 and min_flaeche <= flaeche <= bw * bh * 0.95):
             boxen.append((x, y, x + bw, y + bh))
     # vertikal gestapelte Punkte zu einem Doppelpunkt zusammenfassen;
-    # Punkte ohne Glyphen-Nachbarn (±22 px) sind Rauschen und fallen weg.
+    # Punkte ohne Glyphen-Nachbarn im Abstandsfenster sind Rauschen und fallen weg.
     punkte.sort(key=lambda b: (b[0], b[1]))
+    nachbarfenster = sk(22)
     def hat_nachbarn(p: tuple[int, int, int, int]) -> bool:
-        return any(abs(g[0] - p[0]) <= 22 for g in boxen)
+        return any(abs(g[0] - p[0]) <= nachbarfenster for g in boxen)
     punkte = [p for p in punkte if hat_nachbarn(p) and p[3] - p[1] >= 2]
     verbraucht: set[int] = set()
     for i, p in enumerate(punkte):
@@ -141,19 +178,21 @@ def boxen_aus_maske(maske, stil: str) -> list[tuple[int, int, int, int]]:
             continue
         for j in range(i + 1, len(punkte)):
             q = punkte[j]
-            if j not in verbraucht and abs(p[0] - q[0]) <= 3 and 3 <= q[1] - p[3] <= 10:
+            if (j not in verbraucht and abs(p[0] - q[0]) <= sk(3)
+                    and sk(3) <= q[1] - p[3] <= sk(10)):
                 boxen.append((p[0], p[1], max(p[2], q[2]), q[3]))  # ':'
                 verbraucht.add(j)
                 break
         else:
             boxen.append(p)  # '.'
         verbraucht.add(i)
-    # Zeilenkohärenz: OSD-Text steht in einer Zeile; alles, was mehr als 8 px
-    # vom Median der Zeichenmitten abweicht, ist Textur und faellt weg.
+    # Zeilenkohärenz: OSD-Text steht in einer Zeile; was zu weit vom Median der
+    # Zeichenmitten abweicht, ist Textur und faellt weg.
     if len(boxen) >= 4:
         mitten = sorted((b[1] + b[3]) / 2 for b in boxen)
         median = mitten[len(mitten) // 2]
-        gefiltert = [b for b in boxen if abs((b[1] + b[3]) / 2 - median) <= 8]
+        zeilentoleranz = sk(8)
+        gefiltert = [b for b in boxen if abs((b[1] + b[3]) / 2 - median) <= zeilentoleranz]
         if len(gefiltert) >= 3:
             boxen = gefiltert
     boxen.sort(key=lambda b: b[0])
@@ -185,7 +224,14 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None,
     if format not in FORMATE:
         raise ValueError(f"Unbekanntes OSD-Meterformat: {format!r}")
 
-    kern = roh.split("m")[0]
+    # Nach der Einheit darf keine Ziffer mehr stehen. Bisher wurde alles hinter dem
+    # ersten "m" stillschweigend weggeworfen — aus 'LZ:::6.4m3' wurde so 6,4, obwohl
+    # der Sollwert 26,4 war: Die fuehrende 2 war zu ':' verlesen und die verirrte 3
+    # verriet, dass die ganze Erkennung unzuverlaessig war. 20 Meter daneben, und
+    # nichts deutete darauf hin. Ein Rest mit Ziffer heisst jetzt: verwerfen.
+    kern, trenner, rest = roh.partition("m")
+    if trenner and any(c.isdigit() for c in rest):
+        return None
 
     # Fuehrende Stoerzeichen abschneiden, bevor die Praefixregel greift. Der
     # Zeichenerkenner setzt auf HD-Schrift gelegentlich ein Zeichen VOR die
@@ -224,6 +270,12 @@ def parse_meter(roh: str, stil: str = "dunkel", format: str | None = None,
         kern = kern[1:]
     elif ":" in kern:
         kern = kern.split(":", 1)[1]
+    # Mehr als ein Punkt heisst: mindestens ein Zeichen wurde verlesen. Genau so
+    # entstand aus dem Minus von "LZ1: -0.1m" die Folge ".0.1" — der fuehrende
+    # Punkt wurde abgestreift und aus -0,1 wurde 0,1. Ein falscher Meterstand
+    # wandert unbemerkt ins Protokoll; ein fehlender faellt auf.
+    if kern.count(".") >= 2:
+        return None
     kern = kern.strip("LZ: ?. +")
     if not kern or any(c.isalpha() for c in kern):
         return None
