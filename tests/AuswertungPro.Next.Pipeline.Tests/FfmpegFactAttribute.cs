@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using Xunit;
 
@@ -19,13 +20,39 @@ internal static class FfmpegProbe
 
     public static bool Verfuegbar => VerfuegbarLazy.Value;
 
+    /// <summary>
+    /// Startet ffmpeg wirklich. Ein blosser Name wie "ffmpeg" galt frueher schon als
+    /// vorhanden, weil er kein absoluter Pfad ist — auf einem Rechner ohne ffmpeg lief
+    /// der Test dann trotzdem los und scheiterte mit Win32Exception, statt uebersprungen
+    /// zu werden. Genau das war in der CI der Fall.
+    /// </summary>
     private static bool Pruefe()
     {
         try
         {
             var pfad = new FfmpegFileLocator().ResolveFfmpeg();
-            return !string.IsNullOrWhiteSpace(pfad)
-                && (File.Exists(pfad) || !Path.IsPathRooted(pfad));
+            if (string.IsNullOrWhiteSpace(pfad))
+                return false;
+
+            using var prozess = Process.Start(new ProcessStartInfo(pfad, "-version")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+
+            if (prozess is null)
+                return false;
+
+            // Zeitlimit: Ein haengendes ffmpeg darf den Testlauf nicht blockieren.
+            if (!prozess.WaitForExit(10_000))
+            {
+                try { prozess.Kill(entireProcessTree: true); } catch { /* Aufraeumen ist Nebensache */ }
+                return false;
+            }
+
+            return prozess.ExitCode == 0;
         }
         catch
         {

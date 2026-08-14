@@ -89,13 +89,8 @@ public sealed class YoloClassVsaMapperTests
         // Schutz gegen stilles Zurueckfallen auf die Default-Schwelle:
         // Jede Klasse der produktiven Gewichte muss entweder einen VSA-Hauptcode
         // liefern oder explizit in der Ausnahmen-Liste stehen.
-        var namesPath = FindNamesJsonPath();
-        using var doc = JsonDocument.Parse(File.ReadAllText(namesPath));
-        var classNames = doc.RootElement
-            .GetProperty("names")
-            .EnumerateObject()
-            .Select(p => p.Value.GetString()!)
-            .ToList();
+        var namesPath = FindFixtureNamesJsonPath();
+        var classNames = LeseKlassennamen(namesPath);
 
         Assert.NotEmpty(classNames);
 
@@ -116,24 +111,55 @@ public sealed class YoloClassVsaMapperTests
         }
     }
 
-    private static string FindNamesJsonPath()
+    /// <summary>
+    /// Die produktive Klassenkarte liegt neben den Modellgewichten und ist bewusst nicht
+    /// eingecheckt (<c>sidecar/models/.gitignore</c>). Auf einem frischen Rechner fehlt
+    /// sie deshalb, und der Test brach dort ab. Steht sie zur Verfuegung, muss sie mit der
+    /// eingecheckten Liste uebereinstimmen — sonst waere die Fixture veraltet und der
+    /// Test nur noch scheinbar gruen.
+    /// </summary>
+    [Fact]
+    public void DieEingechecktenKlassenStimmenMitDenProduktivenUeberein()
+    {
+        var produktiv = SucheProduktiveNamesJson();
+        if (produktiv is null)
+            return; // Ohne Modellgewichte gibt es nichts zu vergleichen.
+
+        Assert.Equal(
+            LeseKlassennamen(FindFixtureNamesJsonPath()),
+            LeseKlassennamen(produktiv));
+    }
+
+    private static List<string> LeseKlassennamen(string pfad)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(pfad));
+        return doc.RootElement
+            .GetProperty("names")
+            .EnumerateObject()
+            .Select(p => p.Value.GetString()!)
+            .ToList();
+    }
+
+    private static string FindFixtureNamesJsonPath()
+        => Suche(Path.Combine("tests", "Fixtures", "Yolo", "yolo26m.names.json"))
+           ?? throw new FileNotFoundException(
+               "tests/Fixtures/Yolo/yolo26m.names.json wurde nicht gefunden.");
+
+    private static string? SucheProduktiveNamesJson()
+        => Suche(Path.Combine("sidecar", "models", "yolo26m", "yolo26m.names.json"));
+
+    private static string? Suche(string relativerPfad)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            var candidate = Path.Combine(
-                current.FullName,
-                "sidecar",
-                "models",
-                "yolo26m",
-                "yolo26m.names.json");
-
+            var candidate = Path.Combine(current.FullName, relativerPfad);
             if (File.Exists(candidate))
                 return candidate;
 
             current = current.Parent;
         }
 
-        throw new FileNotFoundException("yolo26m.names.json wurde nicht gefunden.");
+        return null;
     }
 }

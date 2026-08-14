@@ -148,3 +148,6 @@ basemap_tiles/
 # Amtsblatt-Monitor: lokaler Laufzeitzustand + Temp-Ausgaben (nicht ins Repo)
 Amtsblatt-Monitor/state.json
 Amtsblatt-Monitor/tmp/
+
+# Editable-Installation des Sidecars (pip install -e) legt das an — Build-Ausgabe.
+*.egg-info/
