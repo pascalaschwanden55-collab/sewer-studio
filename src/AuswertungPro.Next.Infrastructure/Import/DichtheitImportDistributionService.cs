@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
 
@@ -32,7 +33,23 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         string projectFolder,
         string sourceFolder,
         PdfKiSchiedsrichter? ki = null)
+        => Distribute(project, projectFolder, sourceFolder, ki, fileStaging: null);
+
+    public DichtheitImportDistributor.Result Distribute(
+        Project project,
+        string projectFolder,
+        string sourceFolder,
+        PdfKiSchiedsrichter? ki,
+        IImportFileStagingSession? fileStaging)
     {
+        if (fileStaging is not null
+            && !Path.GetFullPath(fileStaging.ProjectRoot)
+                .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Datei-Staging und Dichtheits-Verteilung gehoeren nicht zum selben Projekt.");
+        }
+
         var messages = new List<string>();
         var kandidaten = new List<string>(FindeKandidaten(sourceFolder));
 
@@ -59,7 +76,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         // Idempotenz-Guard: bereits verteilte DP-Protokolle (gleiche Dateigroesse)
         // nicht erneut kopieren — DistributeDichtheitFiles wuerde sonst bei jedem
         // Lauf _01-Duplikate anlegen.
-        var vorhandeneGroessen = LeseVorhandeneDpGroessen(zielRoot);
+        var vorhandeneGroessen = LeseVorhandeneDpGroessen(zielRoot, fileStaging);
         var neue = new List<string>();
         var uebersprungen = 0;
         foreach (var kandidat in kandidaten)
@@ -86,7 +103,11 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         if (neue.Count == 0)
             return new DichtheitImportDistributor.Result(0, 0, uebersprungen, messages);
 
-        var results = HoldingFolderDistributor.DistributeDichtheitFiles(neue, zielRoot, project: project);
+        var results = DistributeCandidates(
+            neue,
+            zielRoot,
+            project,
+            fileStaging);
 
         var verteilt = results.Count(r => r.Success);
         var nichtZugeordnet = 0;
@@ -95,7 +116,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             // R4: Wenn der Inhalt-Parser das Schachtpaar nicht fand, darf die KI
             // einen Vorschlag machen — Zuordnung wird im Report als "per KI" gekennzeichnet.
             if (ki is not null && !string.IsNullOrWhiteSpace(r.SourcePdfPath)
-                && VerteilePerKi(ki, r.SourcePdfPath!, zielRoot, messages))
+                && VerteilePerKi(ki, r.SourcePdfPath!, zielRoot, messages, fileStaging))
             {
                 verteilt++;
                 continue;
@@ -110,6 +131,37 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             nichtZugeordnet,
             uebersprungen,
             messages);
+    }
+
+    private static IReadOnlyList<HoldingFolderDistributor.DistributionResult> DistributeCandidates(
+        IReadOnlyList<string> candidates,
+        string logicalDestinationRoot,
+        Project project,
+        IImportFileStagingSession? fileStaging)
+    {
+        if (fileStaging is null)
+        {
+            return HoldingFolderDistributor.DistributeDichtheitFiles(
+                candidates,
+                logicalDestinationRoot,
+                project: project);
+        }
+
+        using var output = new StagedDistributionOutput();
+        var temporaryResults = HoldingFolderDistributor.DistributeDichtheitFiles(
+            candidates,
+            output.OutputRoot,
+            project: project);
+        output.StageAll(fileStaging, logicalDestinationRoot);
+        return temporaryResults
+            .Select(result => result with
+            {
+                DestPdfPath = output.MapPath(result.DestPdfPath, logicalDestinationRoot),
+                DestVideoPath = output.MapPath(result.DestVideoPath, logicalDestinationRoot),
+                InfoPath = output.MapPath(result.InfoPath, logicalDestinationRoot),
+                HoldingFolder = output.MapPath(result.HoldingFolder, logicalDestinationRoot)
+            })
+            .ToList();
     }
 
     /// <summary>
@@ -137,7 +189,12 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     }
 
     /// <summary>Legt ein per KI zugeordnetes DP-Protokoll unter dem erkannten Schachtpaar ab.</summary>
-    private static bool VerteilePerKi(PdfKiSchiedsrichter ki, string pdfPath, string zielRoot, List<string> messages)
+    private static bool VerteilePerKi(
+        PdfKiSchiedsrichter ki,
+        string pdfPath,
+        string zielRoot,
+        List<string> messages,
+        IImportFileStagingSession? fileStaging)
     {
         var k = FrageKi(ki, pdfPath);
         if (k is null
@@ -156,10 +213,17 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                 stamp = datum.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
 
             var dir = Path.Combine(zielRoot, haltung);
-            Directory.CreateDirectory(dir);
             var ziel = Path.Combine(dir, $"{stamp}_{haltung}_DP.pdf");
-            if (!(File.Exists(ziel) && new FileInfo(ziel).Length == new FileInfo(pdfPath).Length))
+            if (fileStaging is not null)
             {
+                ziel = fileStaging.StageCopyAs(
+                    pdfPath,
+                    dir,
+                    Path.GetFileName(ziel));
+            }
+            else if (!(File.Exists(ziel) && new FileInfo(ziel).Length == new FileInfo(pdfPath).Length))
+            {
+                Directory.CreateDirectory(dir);
                 ziel = KanalImportDistributor.UniquePath(ziel);
                 File.Copy(pdfPath, ziel, overwrite: false);
             }
@@ -243,25 +307,38 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         return false;
     }
 
-    private static HashSet<long> LeseVorhandeneDpGroessen(string zielRoot)
+    private static HashSet<long> LeseVorhandeneDpGroessen(
+        string zielRoot,
+        IImportFileStagingSession? fileStaging)
     {
         var groessen = new HashSet<long>();
-        if (!Directory.Exists(zielRoot))
-            return groessen;
 
         try
         {
-            foreach (var pfad in SafeFileEnumeration.EnumerateFilesSafe(zielRoot, "*_DP*.pdf", recursive: true))
+            var files = fileStaging is null
+                ? Directory.Exists(zielRoot)
+                    ? SafeFileEnumeration.EnumerateFilesSafe(
+                        zielRoot,
+                        "*_DP*.pdf",
+                        recursive: true)
+                        .Select(path => new ImportReadableFile(path, path))
+                        .ToList()
+                    : []
+                : fileStaging.EnumerateReadableFiles(
+                    zielRoot,
+                    "*_DP*.pdf",
+                    SearchOption.AllDirectories);
+            foreach (var file in files)
             {
                 try
                 {
-                    groessen.Add(new FileInfo(pfad).Length);
+                    groessen.Add(new FileInfo(file.ReadPath).Length);
                 }
                 catch (Exception ex)
                 {
                     // Best effort: defekte Ziel-Dateien verhindern nur die Duplikat-Erkennung fuer diese Datei.
                     AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne Groesse ignoriert: {pfad}: {ex.Message}");
+                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne Groesse ignoriert: {file.TargetPath}: {ex.Message}");
                 }
             }
         }

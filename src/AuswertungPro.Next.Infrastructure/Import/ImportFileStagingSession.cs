@@ -70,9 +70,23 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         string targetDirectory,
         Func<DateTime>? now = null,
         CancellationToken cancellationToken = default)
+        => StageCopyAs(
+            sourcePath,
+            targetDirectory,
+            Path.GetFileName(sourcePath),
+            now,
+            cancellationToken);
+
+    public string StageCopyAs(
+        string sourcePath,
+        string targetDirectory,
+        string targetFileName,
+        Func<DateTime>? now = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetFileName);
 
         lock (_sync)
         {
@@ -87,9 +101,12 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             _paths.EnsureWithinProject(fullTargetDirectory, nameof(targetDirectory));
             _paths.EnsureNoNestedReparsePoint(fullTargetDirectory);
 
-            var fileName = Path.GetFileName(fullSource);
-            if (string.IsNullOrWhiteSpace(fileName))
+            var fileName = Path.GetFileName(targetFileName);
+            if (string.IsNullOrWhiteSpace(fileName)
+                || !fileName.Equals(targetFileName, StringComparison.Ordinal))
+            {
                 throw new ArgumentException("Quelldatei hat keinen gueltigen Dateinamen.", nameof(sourcePath));
+            }
 
             var targetPath = ResolveTargetPath(
                 fullSource,
@@ -113,6 +130,138 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             _filesByTarget.Add(targetPath, stagedFile);
             _stagedFiles.Add(stagedFile);
             return targetPath;
+        }
+    }
+
+    public string ResolveReadPath(string targetPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
+
+        lock (_sync)
+        {
+            var fullTarget = Path.GetFullPath(targetPath);
+            _paths.EnsureWithinProject(fullTarget, nameof(targetPath));
+            if (_filesByTarget.TryGetValue(fullTarget, out var staged)
+                && File.Exists(staged.StagePath))
+            {
+                return staged.StagePath;
+            }
+
+            return fullTarget;
+        }
+    }
+
+    public IReadOnlyList<ImportReadableFile> EnumerateReadableFiles(
+        string targetDirectory,
+        string searchPattern,
+        SearchOption searchOption)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(searchPattern);
+        if (searchOption is not SearchOption.TopDirectoryOnly and not SearchOption.AllDirectories)
+            throw new ArgumentOutOfRangeException(nameof(searchOption));
+
+        lock (_sync)
+        {
+            var fullDirectory = Path.GetFullPath(targetDirectory);
+            _paths.EnsureWithinProject(fullDirectory, nameof(targetDirectory));
+            _paths.EnsureNoNestedReparsePoint(fullDirectory);
+
+            var result = new Dictionary<string, ImportReadableFile>(StringComparer.OrdinalIgnoreCase);
+            if (Directory.Exists(fullDirectory))
+            {
+                foreach (var path in Directory.EnumerateFiles(fullDirectory, searchPattern, searchOption))
+                {
+                    var fullPath = Path.GetFullPath(path);
+                    result[fullPath] = new ImportReadableFile(fullPath, fullPath);
+                }
+            }
+
+            foreach (var file in _stagedFiles)
+            {
+                if (!IsVisibleBelow(file.TargetPath, fullDirectory, searchOption)
+                    || !System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(
+                        searchPattern,
+                        Path.GetFileName(file.TargetPath),
+                        ignoreCase: true))
+                {
+                    continue;
+                }
+
+                var readPath = File.Exists(file.StagePath)
+                    ? file.StagePath
+                    : file.TargetPath;
+                result[file.TargetPath] = new ImportReadableFile(file.TargetPath, readPath);
+            }
+
+            return result.Values
+                .OrderBy(file => file.TargetPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    public string StageGeneratedFile(
+        string preferredTargetPath,
+        Action<string> writeStageFile,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(preferredTargetPath);
+        ArgumentNullException.ThrowIfNull(writeStageFile);
+
+        lock (_sync)
+        {
+            EnsureState(SessionState.Open, "Weitere Dateien koennen nicht mehr vorbereitet werden.");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var fullPreferredTarget = Path.GetFullPath(preferredTargetPath);
+            _paths.EnsureWithinProject(fullPreferredTarget, nameof(preferredTargetPath));
+            var targetDirectory = Path.GetDirectoryName(fullPreferredTarget)
+                                  ?? throw new ArgumentException(
+                                      "Zieldatei hat keinen gueltigen Ordner.",
+                                      nameof(preferredTargetPath));
+            _paths.EnsureNoNestedReparsePoint(targetDirectory);
+
+            EnsureStagingDirectory();
+            var stagePath = Path.Combine(
+                _stagingDirectory,
+                $"{Guid.NewGuid():N}{Path.GetExtension(fullPreferredTarget)}");
+            try
+            {
+                writeStageFile(stagePath);
+                cancellationToken.ThrowIfCancellationRequested();
+                ImportFileStagingPathGuard.EnsureDirectChild(stagePath, _stagingDirectory);
+                if (!File.Exists(stagePath))
+                    throw new IOException("Der Dateierzeuger hat keine vorbereitete Datei geschrieben.");
+                ImportFileStagingPathGuard.EnsureNotReparsePoint(stagePath);
+
+                var sha256 = VerifiedImportFileCopy.ComputeSha256(stagePath);
+                var targetPath = ResolveGeneratedTargetPath(fullPreferredTarget, stagePath, sha256);
+                if (File.Exists(targetPath)
+                    || _filesByTarget.TryGetValue(targetPath, out _))
+                {
+                    File.Delete(stagePath);
+                    return targetPath;
+                }
+
+                var stagedFile = new StagedFile(stagePath, targetPath, sha256);
+                _filesByTarget.Add(targetPath, stagedFile);
+                _stagedFiles.Add(stagedFile);
+                return targetPath;
+            }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(stagePath))
+                        File.Delete(stagePath);
+                }
+                catch
+                {
+                    // Der eigentliche Erzeugungsfehler bleibt die Hauptursache.
+                }
+
+                throw;
+            }
         }
     }
 
@@ -212,6 +361,69 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 return reusable!;
             suffix++;
         }
+    }
+
+    private string ResolveGeneratedTargetPath(
+        string preferredTarget,
+        string stagePath,
+        string sha256)
+    {
+        if (CanUseOrReuseGenerated(preferredTarget, stagePath, sha256))
+            return preferredTarget;
+
+        var directory = Path.GetDirectoryName(preferredTarget)!;
+        var stem = Path.GetFileNameWithoutExtension(preferredTarget);
+        var extension = Path.GetExtension(preferredTarget);
+        for (var suffix = 1; suffix < int.MaxValue; suffix++)
+        {
+            var candidate = Path.Combine(directory, $"{stem}_{suffix}{extension}");
+            if (CanUseOrReuseGenerated(candidate, stagePath, sha256))
+                return candidate;
+        }
+
+        throw new IOException($"Kein freier Zielname fuer erzeugte Importdatei: {preferredTarget}");
+    }
+
+    private bool CanUseOrReuseGenerated(
+        string candidate,
+        string stagePath,
+        string sha256)
+    {
+        if (File.Exists(candidate))
+        {
+            ImportFileStagingPathGuard.EnsureNotReparsePoint(candidate);
+            return VerifiedImportFileCopy.ComputeSha256(candidate)
+                .Equals(sha256, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (_filesByTarget.TryGetValue(candidate, out var staged))
+        {
+            var readable = File.Exists(staged.StagePath)
+                ? staged.StagePath
+                : staged.TargetPath;
+            return File.Exists(readable)
+                   && VerifiedImportFileCopy.ContentsEqual(stagePath, readable);
+        }
+
+        return true;
+    }
+
+    private static bool IsVisibleBelow(
+        string targetPath,
+        string directory,
+        SearchOption searchOption)
+    {
+        var relative = Path.GetRelativePath(directory, targetPath);
+        if (relative.Equals("..", StringComparison.Ordinal)
+            || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || Path.IsPathRooted(relative))
+        {
+            return false;
+        }
+
+        return searchOption == SearchOption.AllDirectories
+               || !relative.Contains(Path.DirectorySeparatorChar)
+                  && !relative.Contains(Path.AltDirectorySeparatorChar);
     }
 
     private bool CanUseOrReuse(

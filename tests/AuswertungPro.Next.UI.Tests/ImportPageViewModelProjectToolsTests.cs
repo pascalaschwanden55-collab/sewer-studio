@@ -539,6 +539,93 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Ein_Knopf_Import_nutzt_denselben_persistenten_Dateitransaktionsweg_wie_manuell()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan);
+        var calls = new List<string>();
+        var staging = new OneClickStagingSessionFake(calls);
+        var stagingService = new OneClickStagingServiceFake(staging);
+        var journal = new OneClickJournalFake();
+        var ledger = new OneClickLedgerFake();
+        var liveProject = new Project();
+        var controller = new ImportOneClickProjectController(
+            dialogs,
+            () => importer,
+            new OneClickReportWriterFake(),
+            ledger,
+            stagingService,
+            journal);
+        Project? replacement = null;
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => liveProject,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: project =>
+            {
+                replacement = project;
+                calls.Add("replace");
+            },
+            CollectionLock: new object(),
+            SaveProject: () =>
+            {
+                calls.Add("save");
+                return true;
+            },
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { },
+            GetProjectPath: () => @"C:\Projekt\Projektdateien\projekt.json"));
+
+        Assert.Same(staging, importer.Context?.FileStaging);
+        Assert.Equal(@"C:\Projekt\Projektdateien\projekt.json", stagingService.ProjectPath);
+        Assert.True(calls.IndexOf("publish") < calls.IndexOf("replace"));
+        Assert.True(calls.IndexOf("replace") < calls.IndexOf("accept"));
+        Assert.True(calls.IndexOf("accept") < calls.IndexOf("save"));
+        Assert.Contains("dispose", calls);
+        Assert.Equal(2, journal.BeginCalls.Count);
+        Assert.Equal(1, journal.ClearCalls);
+        Assert.Equal(journal.BeginCalls[0].TxId, replacement?.LastCommittedImportTxId);
+        Assert.Equal(0, ledger.RollbackCalls);
+    }
+
+    [Fact]
+    public async Task Ein_Knopf_Import_Speicherfehler_behaelt_Marker_und_Ledger_loescht_nicht()
+    {
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var calls = new List<string>();
+        var staging = new OneClickStagingSessionFake(calls);
+        var journal = new OneClickJournalFake();
+        var ledger = new OneClickLedgerFake();
+        var liveProject = new Project();
+        var controller = new ImportOneClickProjectController(
+            dialogs,
+            () => new OneClickImporterFake(OneClickProjectImportFormat.WinCan),
+            new OneClickReportWriterFake(),
+            ledger,
+            new OneClickStagingServiceFake(staging),
+            journal);
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => liveProject,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: _ => calls.Add("replace"),
+            CollectionLock: new object(),
+            SaveProject: () => false,
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { },
+            GetProjectPath: () => @"C:\Projekt\Projektdateien\projekt.json"));
+
+        Assert.NotEmpty(journal.BeginCalls);
+        Assert.Equal(0, journal.ClearCalls);
+        Assert.Equal(0, ledger.RollbackCalls);
+        Assert.Contains("Speichern fehlgeschlagen", dialogs.LastErrorMessage);
+    }
+
+    [Fact]
     public async Task Ein_Knopf_Import_speicherfehler_wird_laut_gemeldet_statt_abgeschlossen()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
@@ -1053,6 +1140,77 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 
         public void TryWrite(string projectFolder, OneClickProjectImportResult result)
             => Calls++;
+    }
+
+    private sealed class OneClickStagingServiceFake(IImportFileStagingSession session)
+        : IImportFileStagingService
+    {
+        public string? ProjectPath { get; private set; }
+
+        public IImportFileStagingSession? Begin(string? projectPath)
+        {
+            ProjectPath = projectPath;
+            return session;
+        }
+    }
+
+    private sealed class OneClickStagingSessionFake(List<string> calls)
+        : IImportFileStagingSession
+    {
+        public string ProjectRoot => @"C:\Projekt";
+        public string StagingRoot => @"C:\Projekt\Projektdateien\.import-staging\tx";
+        public IReadOnlyList<PublishedFileInfo> PreparedFiles { get; } =
+            [new("Importdateien/PDF/a.pdf", "AA")];
+        public IReadOnlyList<PublishedFileInfo> PublishedFiles { get; private set; } = [];
+
+        public string StageCopy(
+            string sourcePath,
+            string targetDirectory,
+            Func<DateTime>? now = null,
+            CancellationToken cancellationToken = default)
+            => Path.Combine(targetDirectory, Path.GetFileName(sourcePath));
+
+        public void Publish()
+        {
+            calls.Add("publish");
+            PublishedFiles = PreparedFiles;
+        }
+
+        public void Accept() => calls.Add("accept");
+
+        public void Dispose() => calls.Add("dispose");
+    }
+
+    private sealed class OneClickJournalFake : IImportTransactionJournal
+    {
+        public List<ImportTransactionMarker> BeginCalls { get; } = [];
+        public int ClearCalls { get; private set; }
+
+        public void Begin(string projectRoot, ImportTransactionMarker marker)
+            => BeginCalls.Add(marker);
+
+        public ImportTransactionMarker? TryRead(string projectRoot)
+            => BeginCalls.LastOrDefault();
+
+        public void Clear(string projectRoot) => ClearCalls++;
+    }
+
+    private sealed class OneClickLedgerFake : IImportedFileLedger
+    {
+        public int RollbackCalls { get; private set; }
+
+        public ImportFolderSnapshot Capture(
+            string projectFolder,
+            CancellationToken cancellationToken = default)
+            => new(projectFolder, new Dictionary<string, long>(), new HashSet<string>());
+
+        public ImportRollbackResult RollbackNewFiles(
+            ImportFolderSnapshot before,
+            CancellationToken cancellationToken = default)
+        {
+            RollbackCalls++;
+            return new ImportRollbackResult(true, 0, 0, []);
+        }
     }
 
     private sealed class ImportSummaryExporterFake : IImportSummaryExporter

@@ -20,4 +20,12 @@ public sealed record ProtocolDistributionReport(
 public interface INameBasedProtocolDistributor
 {
     ProtocolDistributionReport Distribute(Project project, string projectFolder, string sourceFolder, object? collectionLock = null);
+
+    ProtocolDistributionReport Distribute(
+        Project project,
+        string projectFolder,
+        string sourceFolder,
+        object? collectionLock,
+        IImportFileStagingSession? fileStaging)
+        => Distribute(project, projectFolder, sourceFolder, collectionLock);
 }

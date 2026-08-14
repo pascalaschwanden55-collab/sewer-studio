@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -47,7 +48,32 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         string sourceVideoDir,
         bool splitPdf = true,
         string? primaryProtocolPdf = null)
+        => Distribute(
+            project,
+            projectFolder,
+            archivedPdfDir,
+            sourceVideoDir,
+            splitPdf,
+            primaryProtocolPdf,
+            fileStaging: null);
+
+    public KanalImportDistributor.Result Distribute(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        string sourceVideoDir,
+        bool splitPdf,
+        string? primaryProtocolPdf,
+        IImportFileStagingSession? fileStaging)
     {
+        if (fileStaging is not null
+            && !Path.GetFullPath(fileStaging.ProjectRoot)
+                .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Datei-Staging und Kanal-Verteilung gehoeren nicht zum selben Projekt.");
+        }
+
         var messages = new List<string>();
         int videos = 0, origs = 0, errors = 0;
         var destRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
@@ -55,22 +81,20 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         // 1) Original-Protokoll pro Haltung splitten + Video matchen (die echte „Haltung Verteilen"-Logik).
         //    HoldingFolderDistributor liefert bei leerem PDF-Ordner ein Fehlerergebnis (Success=false) und
         //    fasst dann kein Video an — die Videos übernimmt in diesem Fall der Fallback in Schritt 3.
-        if (splitPdf && (primaryProtocolPdf is not null || Directory.Exists(archivedPdfDir)))
+        if (splitPdf)
         {
             try
             {
                 // NUR das maßgebliche Inspektionsprotokoll splitten (nicht alle PDFs im Ordner) —
                 // sonst entstehen aus mehreren Gesamt-PDFs Duplikate (<H>.pdf + <H>_01.pdf).
-                var primaryPdf = primaryProtocolPdf is not null && File.Exists(primaryProtocolPdf)
-                    ? primaryProtocolPdf
-                    : SelectPrimaryProtocolPdf(archivedPdfDir);
-                var results = string.IsNullOrWhiteSpace(primaryPdf)
-                    ? (IReadOnlyList<HoldingFolderDistributor.DistributionResult>)System.Array.Empty<HoldingFolderDistributor.DistributionResult>()
-                    : HoldingFolderDistributor.DistributeFiles(
-                        pdfFiles: new[] { primaryPdf! },
-                        videoSourceFolder: sourceVideoDir,
-                        destGemeindeFolder: destRoot,
-                        project: project);
+                var results = DistributeOriginalProtocol(
+                    project,
+                    projectFolder,
+                    archivedPdfDir,
+                    sourceVideoDir,
+                    destRoot,
+                    primaryProtocolPdf,
+                    fileStaging);
 
                 foreach (var r in results)
                 {
@@ -144,11 +168,22 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             {
                 var san = ProjectPathResolver.SanitizePathSegment(haltung);
                 var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
-                Directory.CreateDirectory(dir);
                 var stamp = ResolveDateStamp(record);
                 var ext = Path.GetExtension(link);
-                var dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
-                File.Copy(link, dest, overwrite: false);
+                string dest;
+                if (fileStaging is null)
+                {
+                    Directory.CreateDirectory(dir);
+                    dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
+                    File.Copy(link, dest, overwrite: false);
+                }
+                else
+                {
+                    dest = fileStaging.StageCopyAs(
+                        link,
+                        dir,
+                        $"{stamp}_{san}{ext}");
+                }
                 record.SetFieldValue(FieldKeys.Link, ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
                 videos++;
             }
@@ -162,27 +197,144 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         return new KanalImportDistributor.Result(videos, origs, errors, messages);
     }
 
+    private IReadOnlyList<HoldingFolderDistributor.DistributionResult> DistributeOriginalProtocol(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        string sourceVideoDir,
+        string logicalDestinationRoot,
+        string? primaryProtocolPdf,
+        IImportFileStagingSession? fileStaging)
+    {
+        var primary = ResolvePrimaryProtocol(
+            primaryProtocolPdf,
+            archivedPdfDir,
+            fileStaging);
+        if (primary is null)
+            return Array.Empty<HoldingFolderDistributor.DistributionResult>();
+
+        if (fileStaging is null)
+        {
+            return HoldingFolderDistributor.DistributeFiles(
+                pdfFiles: [primary.ReadPath],
+                videoSourceFolder: sourceVideoDir,
+                destGemeindeFolder: logicalDestinationRoot,
+                project: project);
+        }
+
+        using var output = new StagedDistributionOutput();
+        var readablePdf = output.CreateReadableCopy(
+            primary.ReadPath,
+            Path.GetFileName(primary.TargetPath));
+        var temporaryResults = HoldingFolderDistributor.DistributeFiles(
+            pdfFiles: [readablePdf],
+            videoSourceFolder: sourceVideoDir,
+            destGemeindeFolder: output.OutputRoot,
+            project: project);
+        output.StageAll(fileStaging, logicalDestinationRoot);
+        RemapTemporaryProjectPaths(project, projectFolder, output, logicalDestinationRoot);
+
+        return temporaryResults
+            .Select(result => result with
+            {
+                DestPdfPath = output.MapPath(result.DestPdfPath, logicalDestinationRoot),
+                DestVideoPath = output.MapPath(result.DestVideoPath, logicalDestinationRoot),
+                InfoPath = output.MapPath(result.InfoPath, logicalDestinationRoot),
+                HoldingFolder = output.MapPath(result.HoldingFolder, logicalDestinationRoot)
+            })
+            .ToList();
+    }
+
+    private ImportReadableFile? ResolvePrimaryProtocol(
+        string? primaryProtocolPdf,
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging)
+    {
+        if (!string.IsNullOrWhiteSpace(primaryProtocolPdf))
+        {
+            if (File.Exists(primaryProtocolPdf))
+                return new ImportReadableFile(primaryProtocolPdf, primaryProtocolPdf);
+
+            if (fileStaging is not null)
+            {
+                try
+                {
+                    var readable = fileStaging.ResolveReadPath(primaryProtocolPdf);
+                    if (File.Exists(readable))
+                        return new ImportReadableFile(primaryProtocolPdf, readable);
+                }
+                catch (ArgumentException)
+                {
+                    // Explizite KINS-Quellen duerfen ausserhalb des Projekts liegen.
+                }
+            }
+        }
+
+        return SelectPrimaryProtocolPdfReadable(archivedPdfDir, fileStaging);
+    }
+
+    private static void RemapTemporaryProjectPaths(
+        Project project,
+        string projectFolder,
+        StagedDistributionOutput output,
+        string logicalDestinationRoot)
+    {
+        foreach (var record in project.Data)
+        {
+            foreach (var field in new[] { FieldKeys.Link, "Link_G", FieldKeys.PdfPath })
+            {
+                var current = record.GetFieldValue(field)?.Trim();
+                if (string.IsNullOrWhiteSpace(current) || ProjectPathResolver.IsRelative(current))
+                    continue;
+
+                var mapped = output.MapPath(current, logicalDestinationRoot);
+                if (string.IsNullOrWhiteSpace(mapped)
+                    || string.Equals(mapped, current, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                record.SetFieldValue(
+                    field,
+                    ProjectPathResolver.MakeRelative(mapped, projectFolder),
+                    FieldSource.Legacy,
+                    userEdited: false);
+            }
+        }
+    }
+
     // Wählt aus dem Archiv-PDF-Ordner das MASSGEBLICHE Inspektionsprotokoll: das größte PDF, das kein
     // Duplikat-Suffix (<basis>_&lt;n&gt;.pdf, wenn <basis>.pdf existiert) ist. So gewinnt das Basis-Protokoll
     // gegen Zweit-Export (_1) und den kleineren Plan. Liefert null, wenn keine PDFs vorhanden.
     internal string? SelectPrimaryProtocolPdf(string archivedPdfDir)
-    {
-        if (!Directory.Exists(archivedPdfDir))
-            return null;
+        => SelectPrimaryProtocolPdfReadable(archivedPdfDir, fileStaging: null)?.ReadPath;
 
-        var pdfs = Directory.EnumerateFiles(archivedPdfDir, "*.pdf", SearchOption.TopDirectoryOnly)
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
+    private ImportReadableFile? SelectPrimaryProtocolPdfReadable(
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging)
+    {
+        var pdfs = (fileStaging is null
+                ? Directory.Exists(archivedPdfDir)
+                    ? Directory.EnumerateFiles(archivedPdfDir, "*.pdf", SearchOption.TopDirectoryOnly)
+                        .Select(path => new ImportReadableFile(path, path))
+                        .ToList()
+                    : []
+                : fileStaging.EnumerateReadableFiles(
+                    archivedPdfDir,
+                    "*.pdf",
+                    SearchOption.TopDirectoryOnly))
+            .Where(p => !Path.GetFileName(p.TargetPath).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
         if (pdfs.Count == 0)
             return null;
 
         var stems = new HashSet<string>(
-            pdfs.Select(p => Path.GetFileNameWithoutExtension(p)), StringComparer.OrdinalIgnoreCase);
+            pdfs.Select(p => Path.GetFileNameWithoutExtension(p.TargetPath)), StringComparer.OrdinalIgnoreCase);
 
         // Ein PDF ist ein Duplikat-Variant, wenn sein Stamm = <basis>_<ziffern> und <basis>.pdf existiert.
-        bool IsDuplicateVariant(string path)
+        bool IsDuplicateVariant(ImportReadableFile file)
         {
-            var stem = Path.GetFileNameWithoutExtension(path);
+            var stem = Path.GetFileNameWithoutExtension(file.TargetPath);
             var us = stem.LastIndexOf('_');
             if (us <= 0 || us == stem.Length - 1)
                 return false;
@@ -196,20 +348,20 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         return pdfs
             .Select(p =>
             {
-                var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(p, maxPages: 6);
-                var typ = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(p));
+                var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(p.ReadPath, maxPages: 6);
+                var typ = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(p.TargetPath));
                 return new
                 {
-                    Path = p,
+                    File = p,
                     Score = ScoreProtocolCandidate(typ, IsDuplicateVariant(p)),
-                    Length = SafeLength(p)
+                    Length = SafeLength(p.ReadPath)
                 };
             })
             .OrderByDescending(p => p.Score)
             .ThenByDescending(p => p.Length)
-            .ThenBy(p => Path.GetFileName(p.Path), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => Path.GetFileName(p.File.TargetPath), StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()
-            ?.Path;
+            ?.File;
     }
 
     private static int ScoreProtocolCandidate(PdfDokumentTyp typ, bool isDuplicateVariant)

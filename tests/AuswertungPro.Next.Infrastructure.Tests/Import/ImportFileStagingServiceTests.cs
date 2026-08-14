@@ -69,6 +69,88 @@ public sealed class ImportFileStagingServiceTests
     }
 
     [Fact]
+    public void Vorbereitete_Datei_ist_vor_Publish_ueber_den_Lesepfad_verfuegbar()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/protokoll.pdf", "inhalt");
+        var targetDirectory = Path.Combine(temp.ProjectRoot, "Importdateien", "PDF");
+
+        using var session = Begin(projectPath);
+        var target = session.StageCopy(source, targetDirectory);
+
+        var readable = Assert.Single(
+            session.EnumerateReadableFiles(targetDirectory, "*.pdf", SearchOption.TopDirectoryOnly));
+        Assert.Equal(target, readable.TargetPath, ignoreCase: true);
+        Assert.False(target.Equals(readable.ReadPath, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("inhalt", File.ReadAllText(readable.ReadPath));
+        Assert.Equal(readable.ReadPath, session.ResolveReadPath(target), ignoreCase: true);
+        Assert.False(File.Exists(target));
+    }
+
+    [Fact]
+    public void Lesesicht_vereint_vorhandene_und_vorbereitete_Dateien_ohne_Duplikate()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var targetDirectory = Path.Combine(temp.ProjectRoot, "Importdateien", "PDF");
+        var existing = temp.CreateFile("Importdateien/PDF/alt.pdf", "alt");
+        var source = temp.CreateFile("quelle/neu.pdf", "neu");
+
+        using var session = Begin(projectPath);
+        var target = session.StageCopy(source, targetDirectory);
+
+        var files = session.EnumerateReadableFiles(
+            targetDirectory,
+            "*.pdf",
+            SearchOption.TopDirectoryOnly);
+
+        Assert.Equal(2, files.Count);
+        Assert.Contains(files, file => file.TargetPath.Equals(existing, StringComparison.OrdinalIgnoreCase)
+                                      && file.ReadPath.Equals(existing, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(files, file => file.TargetPath.Equals(target, StringComparison.OrdinalIgnoreCase)
+                                      && !file.ReadPath.Equals(target, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void StageGeneratedFile_schreibt_erst_in_den_Arbeitsordner_und_veroeffentlicht_spaeter()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var preferredTarget = Path.Combine(temp.ProjectRoot, "Haltungen_Verteilt", "H1", "H1.pdf");
+
+        using var session = Begin(projectPath);
+        var target = session.StageGeneratedFile(
+            preferredTarget,
+            stagePath => File.WriteAllText(stagePath, "erzeugt"));
+
+        Assert.Equal(preferredTarget, target, ignoreCase: true);
+        Assert.False(File.Exists(target));
+        Assert.Equal("erzeugt", File.ReadAllText(session.ResolveReadPath(target)));
+
+        session.Publish();
+        Assert.Equal("erzeugt", File.ReadAllText(target));
+        session.Accept();
+    }
+
+    [Fact]
+    public void StageGeneratedFile_behaelt_vorhandene_Datei_und_waehlt_bei_anderem_Inhalt_neuen_Namen()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var existing = temp.CreateFile("Haltungen_Verteilt/H1/H1.pdf", "alt");
+
+        using var session = Begin(projectPath);
+        var target = session.StageGeneratedFile(
+            existing,
+            stagePath => File.WriteAllText(stagePath, "neu"));
+
+        Assert.False(existing.Equals(target, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("alt", File.ReadAllText(existing));
+        Assert.Equal("neu", File.ReadAllText(session.ResolveReadPath(target)));
+    }
+
+    [Fact]
     public void Dispose_vor_Publish_entfernt_nur_den_Arbeitsordner()
     {
         using var temp = new TempDirectory();

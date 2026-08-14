@@ -101,7 +101,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
             dialogs,
             () => oneClickImporter,
             sp.OneClickImportReports,
-            sp.ImportedFiles);
+            sp.ImportedFiles,
+            sp.ImportFileStaging,
+            sp.ImportTransactionJournal);
         _reportNavigationController = new Services.ImportReportNavigationController(
             dialogs,
             () => _settings.LastProjectPath,
@@ -325,7 +327,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 SetProgress: value => ImportProgress = value,
                 AppendSummary: value => SummaryText += value,
                 AppendDetails: value => DetailsText += value,
-                ComputeSignature: _contentSignature.Compute));
+                ComputeSignature: _contentSignature.Compute,
+                GetProjectPath: () => _settings.LastProjectPath));
 
     private Task RunVsaAfterImport(Project project, string sourceLabel)
         => _vsaEvaluationController.ExecuteAsync(

@@ -58,6 +58,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IKinsDvdTextEnricher _kinsDvdTextEnricher;
     private readonly IKinsDbfWhitelistEnricher _kinsDbfWhitelistEnricher;
     private readonly IKinsGesamtprotokollLocator _kinsGesamtprotokollLocator;
+    private readonly IImportMediaDistributionService _mediaDistributor;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -75,7 +76,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IKanalExportDetectionService? exportDetector = null,
         IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
         IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null,
-        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null)
+        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null,
+        IImportMediaDistributionService? mediaDistributor = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -93,6 +95,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _kinsDvdTextEnricher = kinsDvdTextEnricher ?? Kins.KinsDvdTextEnricher.Current;
         _kinsDbfWhitelistEnricher = kinsDbfWhitelistEnricher ?? Kins.KinsDbfWhitelistEnricher.Current;
         _kinsGesamtprotokollLocator = kinsGesamtprotokollLocator ?? Kins.KinsGesamtprotokollLocator.Current;
+        _mediaDistributor = mediaDistributor ?? new MediaDistributionService();
     }
 
     /// <summary>
@@ -202,13 +205,19 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         try
         {
-            var archiveResult = _sourceArchiver.Archive(sourceFolder, projectFolder);
+            var archiveResult = _sourceArchiver.Archive(
+                sourceFolder,
+                projectFolder,
+                ctx?.FileStaging);
             messages.AddRange(archiveResult.Messages);
             messages.Add(
                 $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");
 
             var archivePdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var planResult = _planPdfImporter.ImportFromArchivedPdfFolder(archivePdfDir, projectFolder);
+            var planResult = _planPdfImporter.ImportFromArchivedPdfFolder(
+                archivePdfDir,
+                projectFolder,
+                ctx?.FileStaging);
             messages.AddRange(planResult.Messages);
             errors += planResult.Errors;
             if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)
@@ -382,20 +391,20 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
             //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
-            var mediaResult = new MediaDistributionService()
-                .DistributeImportedMedia(
-                    projectFolder,
-                    project,
-                    progress: null,
-                    ct: ct,
-                    dryRun: false,
-                    // CollectionLock aus dem Lauf-Kontext: die Verteilung mutiert die
-                    // UI-gebundenen Collections und darf nicht mit einem frischen,
-                    // wirkungslosen Lock-Objekt laufen.
-                    collectionLock: ctx?.CollectionLock ?? new object(),
-                    includeVideos: false,
-                    includePdfs: false,
-                    includeSchacht: false);
+            var mediaResult = _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
+                projectFolder,
+                project,
+                Progress: null,
+                CancellationToken: ct,
+                DryRun: false,
+                // CollectionLock aus dem Lauf-Kontext: die Verteilung mutiert die
+                // UI-gebundenen Collections und darf nicht mit einem frischen,
+                // wirkungslosen Lock-Objekt laufen.
+                CollectionLock: ctx?.CollectionLock ?? new object(),
+                IncludeVideos: false,
+                IncludePdfs: false,
+                IncludeSchacht: false,
+                FileStaging: ctx?.FileStaging));
             messages.AddRange(mediaResult.Messages);
 
             // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
@@ -412,7 +421,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             // Name-basierte Protokoll-Verteilung zuerst (narrensicher, Dateiname-basiert).
             // CollectionLock aus dem Lauf-Kontext mitgeben: das Anlegen neuer Schächte läuft ggf. auf
             // einem Hintergrund-Thread und mutiert die UI-gebundene SchaechteData-Collection.
-            var nameBased = _protocolDistributor?.Distribute(project, projectFolder, archivedPdfDir, ctx?.CollectionLock);
+            var nameBased = _protocolDistributor?.Distribute(
+                project,
+                projectFolder,
+                archivedPdfDir,
+                ctx?.CollectionLock,
+                ctx?.FileStaging);
             // Nur HALTUNG-Treffer duerfen den inhaltsbasierten Gesamtprotokoll-Split unterdruecken —
             // der Split verteilt HALTUNGS-Protokolle. Ein reiner Schacht-Treffer darf ihn NICHT abschalten.
             var nameBasedHaltungHits = nameBased?.HaltungProtokolle ?? 0;
@@ -426,7 +440,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             var distResult = _kanalDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
                 splitPdf: nameBasedHaltungHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
-                primaryProtocolPdf: kinsGesamtprotokoll);
+                primaryProtocolPdf: kinsGesamtprotokoll,
+                fileStaging: ctx?.FileStaging);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
             var recordsCreatedByDistribution = Math.Max(0, project.Data.Count - recordCountBeforeDistribution);
@@ -446,7 +461,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 project,
                 projectFolder,
                 sourceFolder,
-                _kiSchiedsrichter);
+                _kiSchiedsrichter,
+                ctx?.FileStaging);
             messages.AddRange(dpResult.Messages);
             if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
                 messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");

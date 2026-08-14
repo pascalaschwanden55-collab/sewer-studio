@@ -1,9 +1,46 @@
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class PlanPdfImporterTests
 {
+    [Fact]
+    public void Service_liest_vorbereitetes_Archiv_und_bereitet_Plan_weiter_vor()
+    {
+        var root = CreateTempRoot();
+        try
+        {
+            var projectDir = Path.Combine(root, "projekt");
+            var projectPath = Path.Combine(projectDir, "Projektdateien", "projekt.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
+            File.WriteAllText(projectPath, "{}");
+            var source = Path.Combine(root, "Netzplan.pdf");
+            File.WriteAllText(source, "Planinhalt");
+            using var staging = new ImportFileStagingService().Begin(projectPath)!;
+            var archivedPdfDir = Path.Combine(
+                projectDir,
+                ProjectStructure.Importdateien,
+                ProjectStructure.PdfDir);
+            staging.StageCopy(source, archivedPdfDir);
+            var service = new PlanPdfImportService(_ => true);
+
+            var result = service.ImportFromArchivedPdfFolder(
+                archivedPdfDir,
+                projectDir,
+                staging);
+
+            var target = Path.Combine(ProjectStructure.PlaeneDir(projectDir), "Netzplan.pdf");
+            Assert.Equal(1, result.Copied);
+            Assert.False(File.Exists(target));
+            Assert.Equal("Planinhalt", File.ReadAllText(staging.ResolveReadPath(target)));
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
     [Fact]
     public void Service_verwendet_injizierte_Dokumenterkennung()
     {

@@ -80,7 +80,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("public IImportSourceArchiver ImportSourceArchiver", provider);
         Assert.Contains("ImportSourceArchiver = new ImportSourceArchiveService()", provider);
         Assert.Contains("private readonly IImportSourceArchiver _sourceArchiver;", orchestrator);
-        Assert.Contains("_sourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
+        Assert.Contains("_sourceArchiver.Archive(", orchestrator);
+        Assert.Contains("ctx?.FileStaging", orchestrator);
         Assert.DoesNotContain("ImportSourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
         Assert.Contains("private static readonly IImportSourceArchiver DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
@@ -358,7 +359,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("KanalExportDetection,", provider);
         Assert.Contains("KinsDvdTextEnrichment,", provider);
         Assert.Contains("KinsDbfWhitelistEnrichment,", provider);
-        Assert.Contains("KinsGesamtprotokolle);", provider);
+        Assert.Contains("KinsGesamtprotokolle,", provider);
+        Assert.Contains("ImportMediaDistribution);", provider);
         Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);

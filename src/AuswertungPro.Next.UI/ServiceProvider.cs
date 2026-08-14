@@ -851,7 +851,8 @@ namespace AuswertungPro.Next.UI
                 KanalExportDetection,
                 KinsDvdTextEnrichment,
                 KinsDbfWhitelistEnrichment,
-                KinsGesamtprotokolle);
+                KinsGesamtprotokolle,
+                ImportMediaDistribution);
 
         public IOneClickProjectImportService CreateOneClickProjectImportService()
             => CreateProjectImportOrchestrator();

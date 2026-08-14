@@ -18,20 +18,34 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
 {
     public ProtocolDistributionReport Distribute(Project project, string projectFolder, string sourceFolder, object? collectionLock = null)
+        => Distribute(project, projectFolder, sourceFolder, collectionLock, fileStaging: null);
+
+    public ProtocolDistributionReport Distribute(
+        Project project,
+        string projectFolder,
+        string sourceFolder,
+        object? collectionLock,
+        IImportFileStagingSession? fileStaging)
     {
         int haltung = 0, schacht = 0, angelegt = 0;
         var nichtZugeordnet = new List<string>();
         var meldungen = new List<string>();
 
-        if (!Directory.Exists(sourceFolder))
+        if (fileStaging is null && !Directory.Exists(sourceFolder))
             return new ProtocolDistributionReport(0, 0, 0, nichtZugeordnet, new[] { $"Quellordner fehlt: {sourceFolder}" });
 
-        var pdfs = Directory.EnumerateFiles(sourceFolder, "*.pdf", SearchOption.AllDirectories)
-            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
+        var pdfs = fileStaging is null
+            ? Directory.EnumerateFiles(sourceFolder, "*.pdf", SearchOption.AllDirectories)
+                .Select(path => new ImportReadableFile(path, path))
+                .ToList()
+            : fileStaging.EnumerateReadableFiles(
+                sourceFolder,
+                "*.pdf",
+                SearchOption.AllDirectories);
 
-        foreach (var pdf in pdfs)
+        foreach (var pdf in pdfs.OrderBy(p => p.TargetPath, StringComparer.OrdinalIgnoreCase))
         {
-            var target = ProtocolNameResolver.Resolve(pdf);
+            var target = ProtocolNameResolver.Resolve(pdf.TargetPath);
             if (target is null)
                 continue; // Nicht-Protokoll -> stillschweigend überspringen
 
@@ -40,9 +54,12 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                 if (target.Value.Kind == ProtocolKind.Haltung)
                 {
                     var rec = FindHaltung(project, target.Value.Name);
-                    if (rec is null) { nichtZugeordnet.Add(Path.GetFileName(pdf)); continue; }
+                    if (rec is null) { nichtZugeordnet.Add(Path.GetFileName(pdf.TargetPath)); continue; }
                     var name = rec.GetFieldValue(FieldKeys.HoldingName) ?? target.Value.Name;
-                    var dest = CopyInto(ProjectStructure.HaltungVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(name)), pdf);
+                    var dest = CopyInto(
+                        ProjectStructure.HaltungVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(name)),
+                        pdf,
+                        fileStaging);
                     rec.SetFieldValue(FieldKeys.PdfPath, ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
                     haltung++;
                 }
@@ -52,7 +69,10 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                     var nr = rec?.GetFieldValue("Schachtnummer") ?? target.Value.Name;
                     // Erst kopieren; erst bei Erfolg den fehlenden Schacht anlegen -> keine Geister-Schaechte
                     // (ohne PDF), falls das Kopieren scheitert.
-                    var dest = CopyInto(ProjectStructure.SchachtVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(nr)), pdf);
+                    var dest = CopyInto(
+                        ProjectStructure.SchachtVerteiltDir(projectFolder, ProjectPathResolver.SanitizePathSegment(nr)),
+                        pdf,
+                        fileStaging);
                     if (rec is null)
                     {
                         rec = new SchachtRecord();
@@ -66,7 +86,7 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
             }
             catch (Exception ex)
             {
-                meldungen.Add($"{Path.GetFileName(pdf)}: {ex.Message}");
+                meldungen.Add($"{Path.GetFileName(pdf.TargetPath)}: {ex.Message}");
             }
         }
 
@@ -110,12 +130,23 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                 project.SchaechteData.Add(rec);
     }
 
-    private static string CopyInto(string destDir, string sourcePdf)
+    private static string CopyInto(
+        string destDir,
+        ImportReadableFile sourcePdf,
+        IImportFileStagingSession? fileStaging)
     {
+        if (fileStaging is not null)
+        {
+            return fileStaging.StageCopyAs(
+                sourcePdf.ReadPath,
+                destDir,
+                Path.GetFileName(sourcePdf.TargetPath));
+        }
+
         Directory.CreateDirectory(destDir);
-        var dest = Path.Combine(destDir, Path.GetFileName(sourcePdf));
+        var dest = Path.Combine(destDir, Path.GetFileName(sourcePdf.TargetPath));
         if (!File.Exists(dest))
-            File.Copy(sourcePdf, dest, overwrite: false);
+            File.Copy(sourcePdf.ReadPath, dest, overwrite: false);
         return dest;
     }
 }

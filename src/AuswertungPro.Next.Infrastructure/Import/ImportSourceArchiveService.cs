@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Infrastructure.Common;
+using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -24,6 +25,12 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
     private readonly object _sync = new();
 
     public ArchiveResult Archive(string sourceFolder, string projectFolder)
+        => Archive(sourceFolder, projectFolder, fileStaging: null);
+
+    public ArchiveResult Archive(
+        string sourceFolder,
+        string projectFolder,
+        IImportFileStagingSession? fileStaging)
     {
         lock (_sync)
         {
@@ -38,7 +45,13 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
             {
                 try
                 {
-                    ArchiveOne(sourcePath, projectFolder, ref copied, ref reused, messages);
+                    ArchiveOne(
+                        sourcePath,
+                        projectFolder,
+                        fileStaging,
+                        ref copied,
+                        ref reused,
+                        messages);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PathTooLongException)
                 {
@@ -54,6 +67,7 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
     private static void ArchiveOne(
         string sourcePath,
         string projectFolder,
+        IImportFileStagingSession? fileStaging,
         ref int copied,
         ref int reused,
         List<string> messages)
@@ -63,7 +77,31 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
             return;
 
         var targetDirectory = ProjectStructure.ImportdateienDir(projectFolder, subKind);
-        Directory.CreateDirectory(targetDirectory);
+        if (fileStaging is null)
+            Directory.CreateDirectory(targetDirectory);
+
+        if (fileStaging is not null)
+        {
+            var before = fileStaging.PreparedFiles.Count;
+            var stagedTarget = fileStaging.StageCopy(sourcePath, targetDirectory);
+            if (fileStaging.PreparedFiles.Count == before)
+            {
+                reused++;
+                return;
+            }
+
+            copied++;
+            var stagedSourceName = Path.GetFileName(sourcePath);
+            var targetName = Path.GetFileName(stagedTarget);
+            if (!stagedSourceName.Equals(targetName, StringComparison.OrdinalIgnoreCase))
+            {
+                messages.Add(
+                    $"Namenskollision: '{stagedSourceName}' im Ziel hat abweichenden Inhalt. " +
+                    $"Vorbereitet als '{targetName}'.");
+            }
+
+            return;
+        }
 
         var fileName = Path.GetFileName(sourcePath);
         var targetPath = Path.Combine(targetDirectory, fileName);

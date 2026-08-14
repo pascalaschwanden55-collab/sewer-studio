@@ -1,6 +1,8 @@
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Protocols;
 using Xunit;
 
@@ -8,6 +10,46 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class NameBasedProtocolDistributorTests
 {
+    [Fact]
+    public void Distribute_liest_vorbereitetes_Archiv_und_veroeffentlicht_noch_nichts()
+    {
+        var root = NewTempDir();
+        var source = NewTempDir();
+        try
+        {
+            var projectFolder = Path.Combine(root, "Projekt");
+            var projectPath = Path.Combine(projectFolder, "Projektdateien", "projekt.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
+            File.WriteAllText(projectPath, "{}");
+            var sourcePdf = Path.Combine(source, "H_33390-36268.pdf");
+            File.WriteAllText(sourcePdf, "x");
+            var archive = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+            using var staging = new ImportFileStagingService().Begin(projectPath)!;
+            staging.StageCopy(sourcePdf, archive);
+            var project = new Project();
+            project.Data.Add(Haltung("33390-36268"));
+
+            var report = new NameBasedProtocolDistributor().Distribute(
+                project,
+                projectFolder,
+                archive,
+                collectionLock: null,
+                fileStaging: staging);
+
+            Assert.Equal(1, report.HaltungProtokolle);
+            var relative = project.Data[0].GetFieldValue("PDF_Path");
+            Assert.False(string.IsNullOrWhiteSpace(relative));
+            var logicalTarget = Path.Combine(projectFolder, relative!);
+            Assert.False(File.Exists(logicalTarget));
+            Assert.True(File.Exists(staging.ResolveReadPath(logicalTarget)));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+            Directory.Delete(source, true);
+        }
+    }
+
     private static string NewTempDir()
     {
         var dir = Path.Combine(Path.GetTempPath(), "nbpd_" + System.Guid.NewGuid().ToString("N"));
