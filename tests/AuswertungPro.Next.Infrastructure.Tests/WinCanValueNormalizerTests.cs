@@ -53,14 +53,14 @@ public sealed class WinCanValueNormalizerTests
     // ── NormalizeUsage ───────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("S", "Schmutzwasser")]
-    [InlineData("sw", "Schmutzwasser")]
-    [InlineData("R", "Regenwasser")]
-    [InlineData("rw", "Regenwasser")]
+    [InlineData("S", "Schmutzabwasser")]
+    [InlineData("sw", "Schmutzabwasser")]
+    [InlineData("R", "Niederschlagsabwasser")]
+    [InlineData("rw", "Niederschlagsabwasser")]
     [InlineData("M", "Mischabwasser")]
     [InlineData("mw", "Mischabwasser")]
-    [InlineData("Schmutzabwasser", "Schmutzwasser")]
-    [InlineData("Regenwasserkanal", "Regenwasser")]
+    [InlineData("Schmutzabwasser", "Schmutzabwasser")]
+    [InlineData("Regenwasserkanal", "Niederschlagsabwasser")]
     [InlineData("Mischwasser", "Mischabwasser")]
     public void NormalizeUsage_BekannteKurzformenUndTexte_KehrtKanonischesLabel(string raw, string expected)
         => Assert.Equal(expected, WinCanValueNormalizer.NormalizeUsage(raw));

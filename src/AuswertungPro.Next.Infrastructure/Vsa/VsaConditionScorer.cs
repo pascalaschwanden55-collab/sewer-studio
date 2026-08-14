@@ -198,15 +198,16 @@ internal static class VsaConditionScorer
         _    => 1.00
     };
 
-    // Tabelle 4: Nutzungsart
-    private static double ComputeB2(string? value) => value?.Trim() switch
+    // Tabelle 4: Nutzungsart. Zuerst auf den Normbegriff bringen, damit auch alte
+    // Schreibweisen aus Bestandsprojekten denselben Faktor ergeben wie heute erfasste.
+    private static double ComputeB2(string? value) => NutzungsartVokabular.Normalisieren(value) switch
     {
-        "Bachwasser"        => 1.10,
-        "Industrieabwasser" => 0.90,
-        "Schmutzwasser" or "Schmutzabwasser" => 0.95,
-        "Mischabwasser"     => 1.00,
-        "Regenwasser" or "Meteorwasser"      => 1.05,
-        _                   => 1.00
+        "Bachwasser"             => 1.10,
+        "Industrieabwasser"      => 0.90,
+        "Schmutzabwasser"        => 0.95,
+        "Mischabwasser"          => 1.00,
+        "Niederschlagsabwasser"  => 1.05,
+        _                        => 1.00
     };
 
     // Tabelle 5: Grundwasserspiegel

@@ -55,10 +55,10 @@ public sealed class XtfValueNormalizerTests
     // ===================== NormalizeNutzungsart =====================
 
     [Theory]
-    [InlineData("Schmutzabwasser", "Schmutzwasser")]
-    [InlineData("schmutzabwasser", "Schmutzwasser")]
-    [InlineData("Regenabwasser", "Regenwasser")]
-    [InlineData("REGENABWASSER", "Regenwasser")]
+    [InlineData("Schmutzabwasser", "Schmutzabwasser")]
+    [InlineData("schmutzabwasser", "Schmutzabwasser")]
+    [InlineData("Regenabwasser", "Niederschlagsabwasser")]
+    [InlineData("REGENABWASSER", "Niederschlagsabwasser")]
     [InlineData("Mischabwasser", "Mischabwasser")]
     [InlineData("MISCHABWASSER", "Mischabwasser")]
     [InlineData("", "")]

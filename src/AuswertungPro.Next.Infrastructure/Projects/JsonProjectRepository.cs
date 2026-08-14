@@ -105,6 +105,7 @@ public sealed class JsonProjectRepository : IProjectRepository
 
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
+            ProjectVocabularyNormalizer.Normalize(project);
             project.ModifiedAtUtc = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(project, SerializerOptions);
 

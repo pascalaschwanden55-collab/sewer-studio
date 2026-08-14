@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
 
+using AuswertungPro.Next.Domain.Models;
+
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 /// <summary>
@@ -76,13 +78,7 @@ internal static class XtfValueNormalizer
     /// Normalisiert den SIA405-Nutzungsart-Wert auf den deutschen Bezeichner.
     /// </summary>
     public static string NormalizeNutzungsart(string v)
-    {
-        v ??= "";
-        if (Regex.IsMatch(v, "(?i)Schmutzabwasser")) return "Schmutzwasser";
-        if (Regex.IsMatch(v, "(?i)Regenabwasser")) return "Regenwasser";
-        if (Regex.IsMatch(v, "(?i)Mischabwasser")) return "Mischabwasser";
-        return v.Trim();
-    }
+        => NutzungsartVokabular.Normalisieren(v);
 
     /// <summary>
     /// Wandelt ein Datum im Format yyyymmdd in dd.MM.yyyy um.

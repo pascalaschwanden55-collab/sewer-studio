@@ -60,10 +60,9 @@ public static class FieldCatalog
                 "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser",
                 "Epoxydharz", "Faserzement", "Ton"
             }),
-            [FieldKeys.UsageType] = new ReadOnlyCollection<string>(new List<string>
-            {
-                "", "Schmutzwasser", "Regenwasser", "Mischabwasser"
-            }),
+            // Die Begriffe der Norm, gefuehrt in NutzungsartVokabular — keine zweite Liste.
+            [FieldKeys.UsageType] = new ReadOnlyCollection<string>(
+                NutzungsartVokabular.Auswahl.ToList()),
             ["Inspektionsrichtung"] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "In Fliessrichtung", "Gegen Fliessrichtung"

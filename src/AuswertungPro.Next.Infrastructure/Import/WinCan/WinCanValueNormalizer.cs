@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
+using AuswertungPro.Next.Domain.Models;
+
 namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
 
 /// <summary>
@@ -67,18 +69,18 @@ internal static class WinCanValueNormalizer
             or "-" or "--" or "n/a" or "k.a.")
             return null;
 
-        // Volltext-Pruefungen
-        if (lower.Contains("regen"))
-            return "Regenwasser";
+        // Volltext-Pruefungen. Die Begriffe selbst stehen in NutzungsartVokabular.
+        if (lower.Contains("regen") || lower.Contains("niederschlag"))
+            return NutzungsartVokabular.Normalisieren("Niederschlagsabwasser");
         if (lower.Contains("schmutz"))
-            return "Schmutzwasser";
+            return NutzungsartVokabular.Normalisieren("Schmutzabwasser");
         if (lower.Contains("misch"))
-            return "Mischabwasser";
+            return NutzungsartVokabular.Normalisieren("Mischabwasser");
 
         // DWA-M150 / ISYBAU / VSA Kurzformen
-        if (lower is "s" or "ks" or "sw") return "Schmutzwasser";
-        if (lower is "r" or "kr" or "rw") return "Regenwasser";
-        if (lower is "m" or "km" or "mw") return "Mischabwasser";
+        if (lower is "s" or "ks" or "sw") return NutzungsartVokabular.Normalisieren("Schmutzabwasser");
+        if (lower is "r" or "kr" or "rw") return NutzungsartVokabular.Normalisieren("Niederschlagsabwasser");
+        if (lower is "m" or "km" or "mw") return NutzungsartVokabular.Normalisieren("Mischabwasser");
 
         // Unbekannte Kurzformen (Schweizer VSA: E, H, F, Z usw.) werden uebersprungen.
         if (t.Length <= 2)

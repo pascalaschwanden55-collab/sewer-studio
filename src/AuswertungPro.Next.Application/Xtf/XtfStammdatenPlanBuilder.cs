@@ -48,27 +48,6 @@ public static class XtfStammdatenPlanBuilder
         };
 
     /// <summary>
-    /// Die Nutzungsart als fachliches Konzept — und wie die beiden Modellfassungen es
-    /// jeweils schreiben. Nur das Regenwasser unterscheidet sich: SIA405 2015 kennt
-    /// <c>Regenabwasser</c>, SIA405 2020 stattdessen <c>Niederschlagsabwasser</c>. Keine
-    /// der beiden Fassungen kennt den Wert der anderen — eine feste Liste wuerde also je
-    /// nach Datei das Falsche schreiben.
-    /// </summary>
-    private static readonly (string[] Projekt, string Bis2015, string Ab2020)[] Nutzungsarten =
-    [
-        (["schmutzwasser", "schmutzabwasser"], "Schmutzabwasser", "Schmutzabwasser"),
-        (["regenwasser", "regenabwasser", "niederschlagsabwasser"], "Regenabwasser", "Niederschlagsabwasser"),
-        (["mischwasser", "mischabwasser"], "Mischabwasser", "Mischabwasser"),
-        (["entlastetes mischabwasser", "entlastetes_mischabwasser"],
-            "entlastetes_Mischabwasser", "entlastetes_Mischabwasser"),
-        (["reinwasser", "reinabwasser"], "Reinabwasser", "Reinabwasser"),
-        (["bachwasser"], "Bachwasser", "Bachwasser"),
-        (["industrieabwasser", "industriewasser"], "Industrieabwasser", "Industrieabwasser"),
-        (["andere"], "andere", "andere"),
-        (["unbekannt"], "unbekannt", "unbekannt")
-    ];
-
-    /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
     ///
     /// <c>BaulicherZustand</c>: Das Projekt fuehrt die Zustandsklasse als blosse Ziffer,
@@ -76,10 +55,9 @@ public static class XtfStammdatenPlanBuilder
     /// schlechteste Zustand, 4 bedeutet keine Maengel (VSA "Erhaltung von Kanalisationen").
     /// Es wird deshalb nur die Schreibweise angepasst, nichts umgerechnet.
     ///
-    /// <c>Nutzungsart_Ist</c>: Das Projekt fuehrt "Schmutzwasser", das Modell verlangt
-    /// "Schmutzabwasser" — der Import benennt beim Lesen ausdruecklich um
-    /// (<c>XtfValueNormalizer</c>), also muss der Rueckweg dasselbe tun. Fuer das
-    /// Regenwasser entscheidet die Modellfassung der Datei.
+    /// <c>Nutzungsart_Ist</c>: Die Begriffe fuehrt <see cref="NutzungsartVokabular"/>.
+    /// Fuer das Regenwasser entscheidet die Modellfassung der Datei — SIA405 2015 kennt
+    /// nur <c>Regenabwasser</c>, SIA405 2020 nur <c>Niederschlagsabwasser</c>.
     ///
     /// Alles, was nicht eindeutig in den Wertebereich passt — "n/a", eine berechnete Note
     /// mit Nachkommastellen, ein unbekannter Begriff — liefert <c>null</c> und wird nicht
@@ -103,25 +81,7 @@ public static class XtfStammdatenPlanBuilder
         if (!string.Equals(xtfName, "Nutzungsart_Ist", StringComparison.Ordinal))
             return wert;
 
-        foreach (var (projekt, bis2015, ab2020) in Nutzungsarten)
-        {
-            if (!projekt.Contains(wert.ToLowerInvariant()))
-                continue;
-
-            if (string.Equals(bis2015, ab2020, StringComparison.Ordinal))
-                return bis2015;
-
-            // Nur hier entscheidet die Modellfassung. Ist sie unbekannt, wird nichts
-            // geschrieben — lieber eine Luecke als der Wert der falschen Fassung.
-            return IstModell2020OderNeuer(modell) switch
-            {
-                true => ab2020,
-                false => bis2015,
-                _ => null
-            };
-        }
-
-        return null;
+        return NutzungsartVokabular.NachModell(wert, IstModell2020OderNeuer(modell));
     }
 
     /// <summary>
