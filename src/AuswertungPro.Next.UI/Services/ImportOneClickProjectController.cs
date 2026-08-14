@@ -23,14 +23,23 @@ internal sealed class ImportOneClickProjectController
     private readonly Func<IOneClickProjectImportService> _createImporter;
     private readonly IOneClickImportReportWriter _reportWriter;
 
+    /// <summary>
+    /// Nimmt die Dateien zurueck, wenn das Importergebnis verworfen wird
+    /// (Gesamtaudit 2026-08-14, P1-5). Optional, damit bestehende Aufrufer und Tests
+    /// ohne Ledger unveraendert laufen.
+    /// </summary>
+    private readonly IImportedFileLedger? _fileLedger;
+
     public ImportOneClickProjectController(
         IDialogService dialogs,
         Func<IOneClickProjectImportService> createImporter,
-        IOneClickImportReportWriter reportWriter)
+        IOneClickImportReportWriter reportWriter,
+        IImportedFileLedger? fileLedger = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _createImporter = createImporter ?? throw new ArgumentNullException(nameof(createImporter));
         _reportWriter = reportWriter ?? throw new ArgumentNullException(nameof(reportWriter));
+        _fileLedger = fileLedger;
     }
 
     public async Task ExecuteAsync(ImportOneClickProjectActions actions)
@@ -69,6 +78,11 @@ internal sealed class ImportOneClickProjectController
             new ImportRunLog(),
             collectionLock: actions.CollectionLock);
 
+        // Ist-Zustand des Projektordners festhalten: Archivierung und Medienverteilung
+        // schreiben direkt dorthin, noch bevor das Ergebnis uebernommen wird. Wird der
+        // Lauf danach verworfen, muessen diese Dateien wieder verschwinden.
+        var ordnerVorLauf = TryCaptureFolder(projectFolder);
+
         OneClickProjectImportResult result;
         try
         {
@@ -79,8 +93,9 @@ internal sealed class ImportOneClickProjectController
         {
             actions.SetProgress(string.Empty);
             var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt importieren");
+            var ruecknahme = TryRollback(ordnerVorLauf);
             _dialogs.Error(
-                $"Import fehlgeschlagen — Projektdaten wurden nicht uebernommen:\n{userMessage}",
+                $"Import fehlgeschlagen — Projektdaten wurden nicht uebernommen:\n{userMessage}{ruecknahme}",
                 "Import Kanalfernseh-Projekt");
             return;
         }
@@ -104,22 +119,28 @@ internal sealed class ImportOneClickProjectController
                 actions.GetProject(),
                 actions.GetProjectFolder()))
         {
+            var ruecknahmeWechsel = TryRollback(ordnerVorLauf);
             _dialogs.Error(
                 "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
-                "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen.",
+                "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen." + ruecknahmeWechsel,
                 "Import Kanalfernseh-Projekt");
             return;
         }
 
         if (!TryComputeSignature(actions, liveProject, out var currentSignature))
+        {
+            TryRollback(ordnerVorLauf);
             return;
+        }
+
         if (actions.ComputeSignature is not null
             && !string.Equals(initialSignature, currentSignature, StringComparison.Ordinal))
         {
+            var ruecknahmeBearbeitet = TryRollback(ordnerVorLauf);
             _dialogs.Error(
                 "Das Projekt wurde waehrend des Imports bearbeitet. " +
                 "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen; " +
-                "die zwischenzeitlichen Aenderungen bleiben erhalten.",
+                "die zwischenzeitlichen Aenderungen bleiben erhalten." + ruecknahmeBearbeitet,
                 "Import Kanalfernseh-Projekt");
             return;
         }
@@ -158,6 +179,62 @@ internal sealed class ImportOneClickProjectController
         else
         {
             _dialogs.Error(summary, "Import Kanalfernseh-Projekt");
+        }
+    }
+
+    /// <summary>
+    /// Momentaufnahme des Projektordners. Ein Fehler dabei darf den Import nicht
+    /// verhindern — dann gibt es lediglich keine Ruecknahme.
+    /// </summary>
+    private ImportFolderSnapshot? TryCaptureFolder(string projectFolder)
+    {
+        if (_fileLedger is null)
+            return null;
+
+        try
+        {
+            return _fileLedger.Capture(projectFolder);
+        }
+        catch (Exception ex)
+        {
+            UserError.DescribeAndReport(ex, "Projektordner vor dem Import erfassen");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Nimmt die Dateien des verworfenen Laufs zurueck und liefert einen Zusatz fuer die
+    /// Meldung. Der Benutzer soll immer erfahren, was mit den Dateien geschehen ist —
+    /// auch dann, wenn die Ruecknahme aus Sicherheitsgruenden verweigert wurde.
+    /// </summary>
+    private string TryRollback(ImportFolderSnapshot? before)
+    {
+        if (_fileLedger is null || before is null)
+            return string.Empty;
+
+        try
+        {
+            var result = _fileLedger.RollbackNewFiles(before);
+            if (result.RolledBack && result.DeletedFiles == 0 && result.KeptFiles == 0)
+                return "\n\nEs waren keine neuen Dateien im Projektordner zurueckzunehmen.";
+
+            if (result.RolledBack)
+            {
+                var rest = result.KeptFiles > 0
+                    ? $" {result.KeptFiles} Datei(en) blieben liegen und sollten geprueft werden."
+                    : string.Empty;
+                return "\n\nDie waehrend des Laufs angelegten Dateien wurden zurueckgenommen "
+                       + $"({result.DeletedFiles} entfernt).{rest}";
+            }
+
+            return "\n\nAchtung: Die angelegten Dateien konnten nicht sicher zurueckgenommen werden "
+                   + "und liegen weiterhin im Projektordner. Grund: "
+                   + string.Join(" ", result.Messages.Take(2));
+        }
+        catch (Exception ex)
+        {
+            var userMessage = UserError.DescribeAndReport(ex, "Importdateien zuruecknehmen");
+            return $"\n\nAchtung: Die angelegten Dateien konnten nicht zurueckgenommen werden: {userMessage}";
         }
     }
 

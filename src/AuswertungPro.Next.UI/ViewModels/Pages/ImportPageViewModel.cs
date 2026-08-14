@@ -100,7 +100,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _oneClickProjectController = new Services.ImportOneClickProjectController(
             dialogs,
             () => oneClickImporter,
-            sp.OneClickImportReports);
+            sp.OneClickImportReports,
+            sp.ImportedFiles);
         _reportNavigationController = new Services.ImportReportNavigationController(
             dialogs,
             () => _settings.LastProjectPath,

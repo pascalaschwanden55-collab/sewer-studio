@@ -13,9 +13,10 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 /// Wird nur gestartet, wenn Live-Control den Port nicht bereits haelt —
 /// in dem Fall liefert der LiveControlServer die /qgis-Endpunkte selbst aus.
 /// Die eigentliche Verarbeitung liegt im <see cref="QgisBridgeRequestProcessor"/>.
-/// Bewusste Einzelplatz-Grenze: nur IPv4-Loopback und nur GET/HEAD. Die reine
-/// Lese-Bridge verwendet kein Token; fuer Mehrbenutzer-Systeme muss sie deaktiviert
-/// oder vor dem Einsatz um eine gemeinsame Authentifizierung erweitert werden.
+/// Bewusste Einzelplatz-Grenze: nur IPv4-Loopback und nur GET/HEAD. Zusaetzlich ist
+/// seit dem Gesamtaudit 2026-08-14 ein Token Pflicht (<see cref="QgisBridgeToken"/>):
+/// Loopback allein schuetzt nicht davor, dass ein anderes lokales Programm Projekt-
+/// und Geodaten abruft.
 /// </summary>
 internal sealed class QgisBridgeServer : IDisposable
 {
@@ -24,16 +25,18 @@ internal sealed class QgisBridgeServer : IDisposable
     private readonly ILogger _logger;
     private readonly BoundedBackgroundTaskRunner _clientTasks;
     private readonly int _port;
+    private readonly string _token;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
     private Task? _loopTask;
 
-    private QgisBridgeServer(QgisBridgeRequestProcessor processor, ILogger logger, int port)
+    private QgisBridgeServer(QgisBridgeRequestProcessor processor, ILogger logger, int port, string token)
     {
         _processor = processor;
         _logger = logger;
         _clientTasks = new BoundedBackgroundTaskRunner(MaxConcurrentClients, logger);
         _port = port;
+        _token = token;
     }
 
     public static QgisBridgeServer? TryStart(QgisBridgeRequestProcessor processor, ILogger logger)
@@ -46,7 +49,7 @@ internal sealed class QgisBridgeServer : IDisposable
             ? parsed
             : 8765;
 
-        var server = new QgisBridgeServer(processor, logger, port);
+        var server = new QgisBridgeServer(processor, logger, port, QgisBridgeToken.ResolveOrCreate(logger));
         try
         {
             server.Start();
@@ -116,7 +119,7 @@ internal sealed class QgisBridgeServer : IDisposable
             if (request is null)
                 return;
 
-            var (method, path) = request.Value;
+            var (method, path, token) = request.Value;
             QgisBridgeResponse response;
             if (method is not ("GET" or "HEAD"))
             {
@@ -124,6 +127,20 @@ internal sealed class QgisBridgeServer : IDisposable
                     405,
                     "application/json; charset=utf-8",
                     JsonSerializer.SerializeToUtf8Bytes(new { ok = false, error = "Nur GET ist erlaubt." }));
+            }
+            else if (!QgisBridgeToken.Matches(_token, token))
+            {
+                // Anmeldung ist Pflicht: sonst liest jedes lokale Programm Projekt- und Geodaten.
+                response = new QgisBridgeResponse(
+                    401,
+                    "application/json; charset=utf-8",
+                    JsonSerializer.SerializeToUtf8Bytes(new
+                    {
+                        ok = false,
+                        error = "QGIS-Bridge-Token fehlt oder ist falsch.",
+                        hinweis = $"Token aus der Datei {QgisBridgeToken.FileName} im SewerStudio-AppData-Ordner "
+                                  + $"im Header {QgisBridgeToken.HeaderName} senden."
+                    }));
             }
             else
             {
@@ -147,7 +164,7 @@ internal sealed class QgisBridgeServer : IDisposable
         }
     }
 
-    private static async Task<(string Method, string Path)?> ReadRequestAsync(
+    private static async Task<(string Method, string Path, string? Token)?> ReadRequestAsync(
         NetworkStream stream,
         CancellationToken cancellationToken)
     {
@@ -160,10 +177,16 @@ internal sealed class QgisBridgeServer : IDisposable
         if (parts.Length < 2)
             return null;
 
+        string? token = null;
         string? line;
         while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
         {
-            // Header werden fuer die reine Lese-Bridge nicht benoetigt.
+            var separator = line.IndexOf(':');
+            if (separator <= 0)
+                continue;
+
+            if (string.Equals(line[..separator].Trim(), QgisBridgeToken.HeaderName, StringComparison.OrdinalIgnoreCase))
+                token = line[(separator + 1)..].Trim();
         }
 
         var path = parts[1];
@@ -171,7 +194,7 @@ internal sealed class QgisBridgeServer : IDisposable
         if (queryIndex >= 0)
             path = path[..queryIndex];
 
-        return (parts[0].ToUpperInvariant(), path);
+        return (parts[0].ToUpperInvariant(), path, token);
     }
 
     private static async Task WriteResponseAsync(
@@ -196,6 +219,7 @@ internal sealed class QgisBridgeServer : IDisposable
         => statusCode switch
         {
             200 => "OK",
+            401 => "Unauthorized",
             404 => "Not Found",
             405 => "Method Not Allowed",
             503 => "Service Unavailable",

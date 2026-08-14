@@ -44,6 +44,37 @@ public static class ProgramSnapshotFileCatalog
     }
 
     /// <summary>
+    /// Ordner, ohne die eine Momentaufnahme wertlos ist: Quellcode, Testcode,
+    /// Werkzeuge, der Git-Verlauf und der Sidecar samt Modellgewichten. Ihr Inhalt
+    /// laesst sich aus nichts anderem wiederherstellen.
+    /// </summary>
+    private static readonly string[] RequiredRootNames =
+        { "src", "tests", "tools", "sidecar", ".git" };
+
+    /// <summary>
+    /// Meldet, ob ein Ordner unverzichtbar ist. Ist er nicht lesbar, darf die
+    /// Sicherung nicht als erfolgreich gelten (Gesamtaudit 2026-08-14, P1-2).
+    ///
+    /// Geprueft wird nur die oberste Ebene: <c>src</c> ist Pflicht, ein tief
+    /// liegendes <c>src\Foo\src</c> nicht. Sonst wuerde ein beliebiger fremder
+    /// Unterordner mit gleichem Namen die ganze Sicherung sperren.
+    /// Ein leerer Pfad bedeutet die Programmwurzel selbst und ist immer Pflicht.
+    /// </summary>
+    public static bool IsRequiredDirectory(string relativeDirPath)
+    {
+        if (string.IsNullOrWhiteSpace(relativeDirPath) || relativeDirPath == ".")
+            return true;
+
+        var segments = relativeDirPath.Split(
+            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+            return true;
+
+        return NameMatches(segments[0], RequiredRootNames);
+    }
+
+    /// <summary>
     /// Meldet, ob irgendeine Ebene des relativen Pfads ausgeschlossen ist. Damit
     /// entscheidet eine einzelne Datei genauso wie der Ordnerdurchlauf, ohne dass
     /// beide Wege dieselbe Regel doppelt auslegen.

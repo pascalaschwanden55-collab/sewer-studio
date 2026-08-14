@@ -81,20 +81,17 @@ public sealed class ProtocolEntryEditorMediaPathResolverTests
     }
 
     [Fact]
-    public void Existing_relative_path_from_working_directory_wins_before_project_resolution()
+    public void Ein_relativer_Pfad_wird_nur_im_Projektordner_gesucht()
     {
-        var projectReads = 0;
+        // Gesamtaudit 2026-08-14 (Prio 2): Vorher genuegte es, dass die Datei relativ zum
+        // ARBEITSVERZEICHNIS existierte — damit lag die Auflösung ausserhalb des Projekts.
+        using var project = new TempDirectory();
         var resolver = new ProtocolEntryEditorMediaPathResolver(
-            projectFolder: null,
-            currentProjectPath: () =>
-            {
-                projectReads++;
-                return "ignored.json";
-            },
+            project.RootPath,
+            currentProjectPath: () => null,
             fileExists: path => string.Equals(path, "cwd-photo.jpg", StringComparison.Ordinal));
 
-        Assert.Equal("cwd-photo.jpg", resolver.ResolveExistingPath("  cwd-photo.jpg  "));
-        Assert.Equal(0, projectReads);
+        Assert.Null(resolver.ResolveExistingPath("  cwd-photo.jpg  "));
     }
 
     [Fact]
@@ -128,6 +125,85 @@ public sealed class ProtocolEntryEditorMediaPathResolverTests
         var resolver = new ProtocolEntryEditorMediaPathResolver(project.RootPath, () => null);
 
         Assert.Throws<ArgumentException>(() => resolver.ResolveExistingPath("\0broken.jpg"));
+    }
+
+    // ---- Gesamtaudit 2026-08-14, Prio 2: keine beliebigen lokalen Dateien mehr ----
+
+    [Fact]
+    public void Ein_Ausbruch_mit_zwei_Punkten_wird_abgelehnt()
+    {
+        using var project = new TempDirectory();
+        using var fremd = new TempDirectory();
+        fremd.CreateFile("geheim.jpg");
+
+        var resolver = new ProtocolEntryEditorMediaPathResolver(project.RootPath, () => null);
+
+        var ausbruch = Path.Combine(
+            "..",
+            Path.GetFileName(fremd.RootPath),
+            "geheim.jpg");
+        Assert.Null(resolver.ResolveExistingPath(ausbruch));
+    }
+
+    [Fact]
+    public void Ein_absoluter_Pfad_ausserhalb_aller_erlaubten_Wurzeln_wird_abgelehnt()
+    {
+        using var project = new TempDirectory();
+        using var fremd = new TempDirectory();
+        var fremdesBild = fremd.CreateFile("fremd.jpg");
+
+        var resolver = new ProtocolEntryEditorMediaPathResolver(project.RootPath, () => null);
+
+        Assert.Null(resolver.ResolveExistingPath(fremdesBild));
+    }
+
+    [Fact]
+    public void Ein_absoluter_Pfad_in_einer_erlaubten_Zusatzwurzel_bleibt_erlaubt()
+    {
+        // Externe Kundenmedien liegen ausserhalb des Projektordners und muessen
+        // weiterhin angezeigt werden.
+        using var project = new TempDirectory();
+        using var kunde = new TempDirectory();
+        var video = kunde.CreateFile("haltung1.mp4");
+
+        var resolver = new ProtocolEntryEditorMediaPathResolver(
+            project.RootPath,
+            () => null,
+            fileExists: null,
+            additionalAllowedRoots: new[] { kunde.RootPath });
+
+        Assert.Equal(video, resolver.ResolveExistingPath(video));
+    }
+
+    [Theory]
+    [InlineData("id_rsa")]
+    [InlineData("settings.json")]
+    [InlineData("passwoerter.txt")]
+    [InlineData("programm.exe")]
+    public void Nicht_Medien_Dateien_werden_nie_angezeigt(string dateiname)
+    {
+        using var project = new TempDirectory();
+        var pfad = project.CreateFile(dateiname);
+
+        var resolver = new ProtocolEntryEditorMediaPathResolver(project.RootPath, () => null);
+
+        Assert.Null(resolver.ResolveExistingPath(pfad));
+        Assert.Null(resolver.ResolveExistingPath(dateiname));
+    }
+
+    [Theory]
+    [InlineData("bild.jpg")]
+    [InlineData("bild.PNG")]
+    [InlineData("film.mp4")]
+    [InlineData("protokoll.pdf")]
+    public void Medien_Dateien_im_Projekt_bleiben_erlaubt(string dateiname)
+    {
+        using var project = new TempDirectory();
+        var pfad = project.CreateFile(dateiname);
+
+        var resolver = new ProtocolEntryEditorMediaPathResolver(project.RootPath, () => null);
+
+        Assert.Equal(pfad, resolver.ResolveExistingPath(dateiname));
     }
 
     private sealed class TempDirectory : IDisposable

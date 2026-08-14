@@ -48,7 +48,13 @@ public partial class ProtocolEntryEditorDialog : Window
         _videoPath = videoPath;
         _mediaPathResolver = new ProtocolEntryEditorMediaPathResolver(
             projectFolder,
-            () => _sp?.Settings.LastProjectPath);
+            () => _sp?.Settings.LastProjectPath,
+            fileExists: null,
+            // Externe Kundenmedien liegen ausserhalb des Projektordners. Erlaubt sind
+            // deshalb zusaetzlich die Projektwurzel und die zuletzt genutzten
+            // Projektordner — aber keine beliebigen Systempfade
+            // (Gesamtaudit 2026-08-14, Prio 2).
+            additionalAllowedRoots: ProtocolEntryEditorMediaRoots.From(sp?.Settings));
 
         _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
         _kiVm = _paramVm is null || _sp is null
@@ -733,4 +739,5 @@ public partial class ProtocolEntryEditorDialog : Window
         else
             ValidationStatus.Text = "Video zu Zeitposition gesetzt.";
     }
+
 }

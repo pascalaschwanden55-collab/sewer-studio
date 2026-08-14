@@ -35,6 +35,9 @@ public sealed class LiveControlServer : IDisposable
     private readonly int _port;
     private readonly string? _token;
     private readonly QgisBridgeRequestProcessor? _qgisProcessor;
+    // Eigener Token fuer die QGIS-Endpunkte: das Plugin kennt den
+    // Live-Control-Token nicht, braucht aber trotzdem eine Anmeldung.
+    private readonly string? _qgisToken;
     private readonly BoundedBackgroundTaskRunner _clientTasks;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
@@ -54,6 +57,7 @@ public sealed class LiveControlServer : IDisposable
         _port = port;
         _token = string.IsNullOrWhiteSpace(token) ? null : token;
         _qgisProcessor = qgisProcessor;
+        _qgisToken = qgisProcessor is null ? null : QgisBridgeToken.ResolveOrCreate(logger);
         _clientTasks = new BoundedBackgroundTaskRunner(MaxConcurrentClients, logger);
     }
 
@@ -199,6 +203,7 @@ public sealed class LiveControlServer : IDisposable
 
         var contentLength = 0;
         string? token = null;
+        string? qgisToken = null;
         string? line;
         while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
         {
@@ -212,6 +217,8 @@ public sealed class LiveControlServer : IDisposable
                 _ = int.TryParse(value, out contentLength);
             else if (string.Equals(name, "X-Live-Control-Token", StringComparison.OrdinalIgnoreCase))
                 token = value;
+            else if (string.Equals(name, QgisBridgeToken.HeaderName, StringComparison.OrdinalIgnoreCase))
+                qgisToken = value;
         }
 
         // Body-Limit: schuetzt vor Speicher-Missbrauch durch riesige Content-Length.
@@ -238,18 +245,33 @@ public sealed class LiveControlServer : IDisposable
             body = new string(buffer, 0, read);
         }
 
-        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token);
+        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token, qgisToken);
     }
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
-        // QGIS-Bridge: rein lesende GET-Endpunkte OHNE Token, damit das QGIS-Plugin
-        // (kennt keinen Token) seine Layer auch dann bekommt, wenn Live-Control
-        // denselben Port haelt. Die Steuer-Endpunkte darunter bleiben Token-geschuetzt.
+        // QGIS-Bridge: rein lesende GET-Endpunkte, damit das QGIS-Plugin seine Layer
+        // auch dann bekommt, wenn Live-Control denselben Port haelt. Seit dem
+        // Gesamtaudit 2026-08-14 ist auch hier eine Anmeldung Pflicht — vorher war
+        // dieser Weg der offene Nebeneingang zu denselben Projekt- und Geodaten.
+        // Gueltig ist das QGIS-Bridge-Token oder das Live-Control-Token.
         if (_qgisProcessor is not null
             && request.Method == "GET"
             && QgisBridgeRequestProcessor.IsBridgePath(request.Path))
         {
+            var qgisErlaubt = QgisBridgeToken.Matches(_qgisToken, request.QgisToken)
+                              || QgisBridgeToken.Matches(_token, request.Token);
+            if (!qgisErlaubt)
+                return new LiveHttpResponse(
+                    401,
+                    new
+                    {
+                        ok = false,
+                        error = "QGIS-Bridge-Token fehlt oder ist falsch.",
+                        hinweis = $"Token aus der Datei {QgisBridgeToken.FileName} im SewerStudio-AppData-Ordner "
+                                  + $"im Header {QgisBridgeToken.HeaderName} senden."
+                    });
+
             var bridge = await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
             return new LiveHttpResponse(bridge.StatusCode, Payload: null, RawBody: bridge.Body, ContentType: bridge.ContentType);
         }
@@ -455,7 +477,8 @@ public sealed class LiveControlServer : IDisposable
         }
     }
 
-    private readonly record struct LiveHttpRequest(string Method, string Path, string Body, string? Token);
+    private readonly record struct LiveHttpRequest(
+        string Method, string Path, string Body, string? Token, string? QgisToken = null);
     private readonly record struct LiveHttpResponse(
         int StatusCode,
         object? Payload,

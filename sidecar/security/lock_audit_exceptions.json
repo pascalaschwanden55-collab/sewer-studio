@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "beschreibung": "Bekannte, bewusst offene Luecken der produktiven Sperrdatei requirements-lock.txt. Jede Zeile braucht einen Grund und einen Beleg. Ohne Eintrag hier schlaegt security/audit_lock.py fehl.",
+  "erzeugt": "2026-08-14",
+  "quelle": "Gesamtaudit 2026-08-14, P1-1 (docs/audits/2026-08-14-gesamtaudit.md)",
+  "ausnahmen": [
+    {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "PYSEC-2026-2288",
+      "grund": "Fix erst in transformers 5.0.0. Version 5.x bricht Grounding DINO.",
+      "beleg": "Realtest 2026-08-14 mit transformers 5.3.0: AttributeError 'BertModel' object has no attribute 'get_head_mask' in groundingdino/models/GroundingDINO/bertwarper.py:29; 0 statt 1 Treffer auf denselben drei Bildern.",
+      "aufloesbar_durch": "DINO-Weg ohne groundingdino-py 0.4.0 (eigener Wrapper oder gepflegter Fork)"
+    },
+    {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "PYSEC-2026-2289",
+      "grund": "Fix erst in transformers 5.3.0. Version 5.x bricht Grounding DINO.",
+      "beleg": "Siehe PYSEC-2026-2288, gleicher Realtest vom 2026-08-14.",
+      "aufloesbar_durch": "DINO-Weg ohne groundingdino-py 0.4.0"
+    },
+    {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "PYSEC-2025-217",
+      "grund": "Keine Fix-Version vorhanden - auch 5.x behebt es nicht.",
+      "beleg": "pip-audit 2.9.0 am 2026-08-14: Spalte 'Fix Versions' leer.",
+      "aufloesbar_durch": "Upstream-Fix abwarten"
+    },
+    {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "PYSEC-2026-2290",
+      "grund": "Keine Fix-Version vorhanden - auch 5.x behebt es nicht.",
+      "beleg": "pip-audit 2.9.0 am 2026-08-14: Spalte 'Fix Versions' leer.",
+      "aufloesbar_durch": "Upstream-Fix abwarten"
+    },
+    {
+      "paket": "setuptools",
+      "version": "81.0.0",
+      "id": "PYSEC-2026-3447",
+      "grund": "Fix waere 83.0.0, aber torch verlangt setuptools<82. 81.0.0 ist die hoechste torch-vertraegliche Version.",
+      "beleg": "uv pip check am 2026-08-14 mit setuptools 84.0.0: 'The package torch requires setuptools<82, but 84.0.0 is installed'. Mit 81.0.0 gruen.",
+      "aufloesbar_durch": "torch-Version, die setuptools>=83 erlaubt"
+    }
+  ],
+  "nicht_pruefbar": [
+    {
+      "paket": "torch",
+      "grund": "Lokale CUDA-Version 2.12.0.dev20260408+cu128 ist kein PyPI-Release - pip-audit kann sie nicht aufloesen."
+    },
+    {
+      "paket": "torchvision",
+      "grund": "Lokale CUDA-Version 0.27.0.dev20260407+cu128 ist kein PyPI-Release."
+    },
+    {
+      "paket": "SAM-2",
+      "grund": "Direkt aus Git gepinnt (Commit 2b90b9f5), kein PyPI-Paket."
+    }
+  ]
+}

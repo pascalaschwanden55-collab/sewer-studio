@@ -1,6 +1,10 @@
 # Serverseitiges CI-Gate (Schluss des lokalen Pre-Push-Hooks, siehe .githooks/pre-push).
 # Prueft den vollstaendigen Release-Weg aus AGENTS.md:
 # Build der Gesamtlsung, alle vier .NET-Testprojekte, Sidecar (ohne GPU) und QGIS-Bruecke.
+#
+# Actions sind auf Commit-Hashes gepinnt (Gesamtaudit 2026-08-14, Prio 2): ein
+# Versions-Tag wie @v4 kann vom Anbieter auf einen anderen Commit verschoben werden.
+# Beim Aktualisieren den Hash aus `gh api repos/<repo>/git/ref/tags/<tag>` holen.
 name: CI
 
 on:
@@ -12,46 +16,66 @@ jobs:
   dotnet:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           lfs: true
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore AuswertungPro.sln
+      # --locked-mode: der Restore darf die packages.lock.json NICHT veraendern.
+      # Eine geaenderte Abhaengigkeit muss lokal bewusst gelockt und committet werden.
+      - name: Restore (gesperrte Abhaengigkeiten)
+        run: dotnet restore AuswertungPro.sln --locked-mode
+
+      - name: NuGet-Sicherheitspruefung
+        run: powershell -NoProfile -File .github/scripts/check-dotnet-vulnerable.ps1
 
       - name: Build Gesamtloesung (Release)
         run: dotnet build AuswertungPro.sln -c Release --no-restore
 
       - name: Tests Infrastructure
-        run: dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore
+        run: dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests Pipeline
-        run: dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore
+        run: dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests UI
-        run: dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore
+        run: dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests ProjectModernizer
-        run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore
+        run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
+
+      # Mindest-Zeilenabdeckung (Gesamtaudit 2026-08-14, Prio 2). Die Grenze steht in
+      # .github/coverage-baseline.json und darf nur steigen.
+      - name: Testabdeckung pruefen
+        run: powershell -NoProfile -File .github/scripts/check-coverage.ps1 -ResultsDirectory artifacts/coverage
 
   python:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
+
+      # Prueft die PRODUKTIVE Sperrdatei, nicht die lose installierten Testversionen
+      # (Gesamtaudit 2026-08-14, P1-1). Bekannte, belegt blockierte Luecken stehen in
+      # sidecar/security/lock_audit_exceptions.json; alles andere macht die CI rot.
+      # pip-audit braucht dieselbe Python-Version wie die Sperrdatei (3.12).
+      - name: Sperrdatei-Sicherheitspruefung
+        working-directory: sidecar
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit==2.9.0
+          python security/audit_lock.py
 
       # CPU-Torch zuerst, damit pip nicht das grosse CUDA-Bundle zieht.
       - name: Sidecar installieren
         working-directory: sidecar
         run: |
-          python -m pip install --upgrade pip
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
 

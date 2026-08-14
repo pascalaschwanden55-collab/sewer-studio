@@ -287,6 +287,66 @@
   unterschiedliche BCC-Boxen und streng reviewte Hard-Negatives sammeln, danach
   einen frischen, zuvor unberuehrten Release-Holdout pruefen.
 
+## Gesamtaudit 2026-08-14 — umgesetzte Haertungen
+
+Bericht: `docs/audits/2026-08-14-gesamtaudit.md`. Folgendes ist umgesetzt und darf nicht
+zurueckgedreht werden:
+
+- **Python-Sperrdatei:** `sidecar/requirements-lock.txt` ist von 40 bekannten Luecken in
+  10 Paketen auf 5 in 2 Paketen gehoben. torch/torchvision/tensorrt wurden NICHT
+  angefasst (cu128/sm_120 bleibt). Belegt geprueft: CUDA verfuegbar, 273 Sidecar-Tests
+  gruen, echter Grounding-DINO-Lauf mit identischen Treffern. `transformers` bleibt
+  bewusst auf 4.57.6: 5.3.0 bricht Grounding DINO
+  (`'BertModel' object has no attribute 'get_head_mask'`, real getestet). `setuptools`
+  bleibt unter 82, weil torch das verlangt. Beide Ausnahmen stehen mit Beleg in
+  `sidecar/security/lock_audit_exceptions.json`; `sidecar/security/audit_lock.py` prueft
+  sie in der CI und wird auch bei einer VERALTETEN Ausnahme rot.
+- **CI:** `dotnet restore --locked-mode`, NuGet-Schwachstellenpruefung
+  (`.github/scripts/check-dotnet-vulnerable.ps1`, wertet JSON aus — die Textmeldung ist
+  uebersetzt und ein englischer Textvergleich fand nie etwas), Sperrdatei-Audit,
+  Abdeckungsgrenze und auf Commit-Hashes gepinnte Actions.
+- **Programm-Momentaufnahme:** Ein unlesbarer Ordner ist kein stiller Uebersprung mehr.
+  `ProgramSnapshotFileCatalog.IsRequiredDirectory` (src, tests, tools, sidecar, .git)
+  laesst die Sicherung fehlschlagen; alle anderen erscheinen in Ergebnis, Manifest und
+  Dialog. Die fertige ZIP wird vor der Veroeffentlichung geprueft — mit SELBST
+  nachgerechneter CRC-Summe, weil System.IO.Compression beim Lesen keine CRC prueft und
+  ein Bitfehler in einer unkomprimiert abgelegten Modellgewichtsdatei sonst durchgeht.
+  Die SHA-256 der Sicherung liegt als Nebendatei `<name>.zip.sha256` daneben.
+- **QGIS-Bruecke:** Token-Pflicht auf BEIDEN Wegen (eigener Server und Live-Control auf
+  demselben Port) ueber `QgisBridgeToken`; das Plugin liest den Token aus
+  `.qgis_bridge_token` im AppData-Ordner. Fehlermeldungen nach aussen sind neutral.
+- **KI-Ampel:** Gruen verlangt zwei unabhaengige BELEGQUELLEN, nicht zwei Zahlenfelder
+  (`EvidenceSourceGrouping`). Sprachmodell, die daraus abgeleitete Plausibilitaet, die
+  Bild-Beschreibung desselben Modells und die Aehnlichkeit der Prompt-Beispiele sind EINE
+  Quelle. Die Gewichtung im Zahlenwert ist unveraendert. Der Anzeigetext heisst
+  „KI-Kriterien erfüllt – prüfen" statt „Sicher".
+- **Ein-Knopf-Import:** `IImportedFileLedger`/`ImportedFileLedgerService` nimmt die
+  Dateien eines verworfenen Laufs zurueck (Ausnahme, Projektwechsel, zwischenzeitliche
+  Bearbeitung, gescheiterte Pruefung). Sicher, weil alle Verteiler kopieren und nicht
+  verschieben. Fehlt eine vorher vorhandene Datei, wird fail-closed GAR NICHTS geloescht.
+  Der Importbericht bleibt absichtlich liegen.
+- **CSV:** `CsvCell` entschaerft Formelanfaenge (`=`, `+`, `-`, `@`, Tab, CR) zentral;
+  negative Zahlen bleiben Zahlen. Kein Exportweg darf das erneut halb umsetzen.
+- **Medienpfade:** Der Protokolleditor zeigt nur Mediendateien, keine `..`-Ausbrueche und
+  absolute Pfade nur innerhalb erlaubter Wurzeln (`ProtocolEntryEditorMediaRoots`).
+- **`async void`:** `VsaCodeExplorerWindow.ApplyAndCloseAsync` ist ein `Task`; die
+  Aufrufer gehen ueber `StartApplyAndClose`, das Ausnahmen anzeigt statt die Oberflaeche
+  zu beenden.
+- **Uebersprungene Tests:** `UebersprungeneTestsWaechterTests` haelt die sechs zulaessigen
+  Skip-Stellen namentlich fest. Ein neuer oder entfernter Skip macht den Waechter rot.
+
+Bewusst NICHT umgesetzt (eigene Arbeitspakete, kein Versehen):
+
+- **Vollstaendiges Staging aller Import-Verteilerwege.** Spaetere Importschritte lesen die
+  zuvor geschriebenen Dateien wieder (Plan-PDFs und Protokollverteilung lesen den
+  Archivordner). Ein „erst am Ende veroeffentlichen" verlangt, alle sechs Verteiler und
+  ihre Lesepfade gemeinsam umzustellen — inklusive umbenannter Ziele und der aus
+  PDF-Seiten neu erzeugten Dateien, die `StageCopy` nicht abbilden kann. Bis dahin gilt
+  die Ruecknahme oben; bei einem Prozessabsturz mitten im Lauf bleiben Dateien liegen.
+- **Auslagerung der restlichen UI-Dateilogik.** `KnowledgeBackupService` (565 Zeilen, 33
+  Datei-/Prozesszugriffe) und `TrainingCenterStore` (143 Zeilen, 12) brauchen Vertrag,
+  Implementierung, Registrierung und Tests — rund 700 Zeilen Umbau am Bestand.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln

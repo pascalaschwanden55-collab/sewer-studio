@@ -8,10 +8,14 @@ internal static class EvalSetCsv
 {
     internal static string Csv(string value)
     {
-        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
-            return value;
+        // Formelanfaenge entschaerfen (Gesamtaudit 2026-08-14): Benchmark-CSVs enthalten
+        // Befundtexte aus Fremddaten und werden in Excel geoeffnet.
+        var text = AuswertungPro.Next.Application.Common.CsvCell.Neutralize(value);
 
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
+        if (text.IndexOfAny([',', '"', '\r', '\n']) < 0)
+            return text;
+
+        return "\"" + text.Replace("\"", "\"\"") + "\"";
     }
 
     internal static string Bool(bool value) => value ? "True" : "False";

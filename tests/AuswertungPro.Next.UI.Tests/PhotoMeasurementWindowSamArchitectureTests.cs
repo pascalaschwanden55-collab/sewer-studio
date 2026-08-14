@@ -51,11 +51,16 @@ public sealed class PhotoMeasurementWindowSamArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var window = File.ReadAllText(Path.Combine(
-            uiRoot,
-            "Views",
-            "Windows",
-            "VsaCodeExplorerWindow.xaml.cs"));
+        // Die partielle Klasse liegt seit dem Gesamtaudit 2026-08-14 in zwei Dateien:
+        // Uebernehmen/Schliessen wurde ausgelagert, damit die Hauptdatei unter der
+        // 1000-Zeilen-Grenze bleibt. Geprueft wird deshalb die ganze Klasse.
+        var windowsDir = Path.Combine(uiRoot, "Views", "Windows");
+        var window = string.Join(
+            "\n",
+            Directory
+                .EnumerateFiles(windowsDir, "VsaCodeExplorerWindow*.cs")
+                .OrderBy(pfad => pfad, StringComparer.OrdinalIgnoreCase)
+                .Select(File.ReadAllText));
         var dialogFactory = File.ReadAllText(Path.Combine(
             uiRoot,
             "Services",

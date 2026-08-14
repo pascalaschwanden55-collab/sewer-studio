@@ -17,12 +17,15 @@ public sealed class QualityGateService
     public const double YellowThreshold = 0.45;
 
     /// <summary>
-    /// Mindestzahl VORHANDENER Evidenzsignale fuer "Green". Mit weniger Signalen wird auf
-    /// hoechstens Yellow gedeckelt. Hinweis: geprueft wird die ANZAHL vorhandener Signale,
-    /// nicht ihre fachliche Uebereinstimmung. Verhindert, dass z.B. eine einzelne (evtl.
-    /// halluzinierte) YOLO-Box ungeprueft als bestaetigt durchlaeuft (QualityGate-Ehrlichkeit).
+    /// Mindestzahl unabhaengiger BELEGQUELLEN fuer "Green" (Gesamtaudit 2026-08-14, P1-4).
+    ///
+    /// Frueher wurden hier vorhandene Signalwerte gezaehlt. Das reichte nicht: Sprachmodell,
+    /// die daraus abgeleitete Plausibilitaet und die Aehnlichkeit der Prompt-Beispiele sind
+    /// derselbe Beleg unter drei Namen. Gezaehlt werden deshalb Quellen nach
+    /// <see cref="EvidenceSourceGrouping"/>, nicht Felder. Geprueft wird weiterhin die
+    /// Anzahl der Quellen, nicht ihre fachliche Uebereinstimmung.
     /// </summary>
-    public const int MinSignalsForGreen = 2;
+    public const int MinSignalsForGreen = EvidenceSourceGrouping.MinIndependentSourcesForGreen;
 
     private readonly Dictionary<string, CategoryWeights> _categoryWeights = new(StringComparer.OrdinalIgnoreCase);
 
@@ -79,18 +82,23 @@ public sealed class QualityGateService
             : composite >= YellowThreshold ? TrafficLight.Yellow
             : TrafficLight.Red;
 
-        // QualityGate-Ehrlichkeit: "Green" verlangt mindestens MinSignalsForGreen VORHANDENE
-        // Evidenzsignale (zaehlt die Anzahl, nicht fachliche Uebereinstimmung). Ein einzelnes
-        // hohes Signal (z.B. nur YoloConf=0.9, alle anderen null) darf NICHT als bestaetigt
-        // durchgehen — sonst laeuft eine halluzinierte Einzel-Erkennung als gruen durch.
-        var cappedSingleSignal = trafficLight == TrafficLight.Green && signals.Count < MinSignalsForGreen;
-        if (cappedSingleSignal)
+        // QualityGate-Ehrlichkeit: "Green" verlangt mindestens zwei unabhaengige BELEGQUELLEN
+        // (Gesamtaudit 2026-08-14, P1-4). Ein einzelnes hohes Signal — oder mehrere Signale
+        // aus derselben Quelle, etwa Sprachmodell plus daraus abgeleiteter Plausibilitaet —
+        // darf nicht als bestaetigt durchgehen.
+        var sources = EvidenceSourceGrouping.DistinctSources(signals.Select(s => s.Name));
+        var cappedSingleSource = trafficLight == TrafficLight.Green
+                                 && sources.Count < EvidenceSourceGrouping.MinIndependentSourcesForGreen;
+        if (cappedSingleSource)
             trafficLight = TrafficLight.Yellow;
 
-        var explanation = $"Composite={composite:F3} ({signals.Count} signals, category={category}): " +
+        var explanation = $"Composite={composite:F3} ({signals.Count} signals aus {sources.Count} Quelle(n), " +
+            $"category={category}): " +
             string.Join(", ", signals.Select(s => $"{s.Name}={s.Value:F2}×{s.Weight / totalWeight:F2}"))
-            + (cappedSingleSignal
-                ? $" — auf Gelb begrenzt: nur {signals.Count} Evidenzsignal vorhanden, Green erst ab {MinSignalsForGreen}."
+            + (cappedSingleSource
+                ? $" — auf Gelb begrenzt: nur {sources.Count} unabhaengige Belegquelle "
+                  + $"({string.Join(" + ", sources)}), Green erst ab "
+                  + $"{EvidenceSourceGrouping.MinIndependentSourcesForGreen}."
                 : string.Empty);
 
         return new QualityGateResult(composite, trafficLight, weightsUsed, explanation);

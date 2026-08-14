@@ -288,6 +288,11 @@ public sealed class FullProtocolGenerationService : IDisposable
             LlmCodeConf = confidence,
             KbSimilarity = kbTopScore,
             KbCodeAgreement = kbAgreement,
+            // Achtung: derselbe Ursprung wie LlmCodeConf (dieselbe Pruefung derselben
+            // Sprachmodell-Antwort) und KbSimilarity (die Prompt-Beispiele). Alle drei
+            // gelten daher als EINE Belegquelle — siehe EvidenceSourceGrouping.
+            // Fuer die Ampel zaehlen sie zusammen nur einmal; im Zahlenwert behalten sie
+            // bewusst ihr bisheriges Gewicht.
             PlausibilityScore = checked_.Confidence,
             DamageCategory = suggestedCode
         };

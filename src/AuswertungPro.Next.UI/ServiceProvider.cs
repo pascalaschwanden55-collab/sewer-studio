@@ -224,6 +224,9 @@ namespace AuswertungPro.Next.UI
         public IStoredImportFileService StoredImportFiles { get; }
         public IStoredImportFilePathResolver StoredImportFilePaths { get; }
         public IImportFileStagingService ImportFileStaging { get; }
+
+        /// <summary>Ruecknahme der Dateien eines verworfenen Ein-Knopf-Imports.</summary>
+        public IImportedFileLedger ImportedFiles { get; }
         public IImportMediaDistributionService ImportMediaDistribution { get; }
         public IProjectRestorePointService ProjectRestorePoints { get; }
         public IProjectStructureInitializer ProjectStructure { get; }
@@ -523,6 +526,7 @@ namespace AuswertungPro.Next.UI
             StoredImportFiles = new StoredImportFileService();
             StoredImportFilePaths = new StoredImportFilePathResolver();
             ImportFileStaging = new ImportFileStagingService();
+            ImportedFiles = new ImportedFileLedgerService();
             ImportMediaDistribution = new MediaDistributionService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator(StoredImportFilePaths);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();

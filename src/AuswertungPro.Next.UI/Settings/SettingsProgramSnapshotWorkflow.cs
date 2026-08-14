@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
@@ -63,16 +65,47 @@ public static class SettingsProgramSnapshotWorkflow
             }
 
             var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
-            request.SetStatusText($"Programm gesichert: {result.FileCount} Dateien, {sizeMb:F1} MB");
+            var unreadable = result.UnreadableDirectoriesOrEmpty;
+
+            request.SetStatusText(unreadable.Count > 0
+                ? $"Programm gesichert mit {unreadable.Count} unlesbaren Ordnern: "
+                  + $"{result.FileCount} Dateien, {sizeMb:F1} MB"
+                : $"Programm gesichert: {result.FileCount} Dateien, {sizeMb:F1} MB");
 
             var skippedHint = result.SkippedReparsePoints > 0
                 ? $"\nUebersprungene Verknuepfungen: {result.SkippedReparsePoints}"
                 : string.Empty;
+            var checksumHint = string.IsNullOrEmpty(result.ArchiveSha256)
+                ? string.Empty
+                : $"\nPruefsumme: {result.ArchiveSha256[..16]}... (vollstaendig in {Path.GetFileName(path)}.sha256)";
+
+            // Eine Sicherung mit Luecken darf nicht wie eine vollstaendige aussehen.
+            if (unreadable.Count > 0)
+            {
+                const int maxAnzeige = 10;
+                var liste = string.Join("\n", unreadable.Take(maxAnzeige).Select(d => $"  - {d}"));
+                var mehr = unreadable.Count > maxAnzeige
+                    ? $"\n  ... und {unreadable.Count - maxAnzeige} weitere"
+                    : string.Empty;
+
+                request.Dialogs.Warn(
+                    "Programm-Momentaufnahme erstellt, aber UNVOLLSTAENDIG.\n\n" +
+                    $"Diese {unreadable.Count} Ordner konnten nicht gelesen werden und fehlen:\n" +
+                    liste + mehr + "\n\n" +
+                    $"Dateien: {result.FileCount}\n" +
+                    $"Groesse: {sizeMb:F1} MB\n" +
+                    $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
+                    "Die unersetzlichen Ordner (Quellcode, Tests, Werkzeuge, Sidecar, Git-Verlauf) " +
+                    "sind vollstaendig — sonst waere die Sicherung abgebrochen.",
+                    DialogTitle);
+                return;
+            }
+
             request.Dialogs.Info(
                 "Programm-Momentaufnahme erstellt.\n\n" +
                 $"Dateien: {result.FileCount}\n" +
                 $"Groesse: {sizeMb:F1} MB\n" +
-                $"Pfad: {path}{skippedHint}\n\n" +
+                $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
                 "Enthalten sind Quellcode, der vollstaendige Git-Verlauf und die Modellgewichte. " +
                 "Build-Ausgabe, Python-Umgebung und Kartenkacheln fehlen bewusst — sie entstehen neu.",
                 DialogTitle);

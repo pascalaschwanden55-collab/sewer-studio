@@ -17,10 +17,27 @@ namespace AuswertungPro.Next.Infrastructure.Backup;
 public sealed class ProgramSnapshotService : IProgramSnapshotService
 {
     private readonly IGitCommitResolver? _gitCommits;
+    private readonly Func<string, IEnumerable<string>> _enumerateDirectories;
+    private readonly Func<string, IEnumerable<string>> _enumerateFiles;
 
     public ProgramSnapshotService(IGitCommitResolver? gitCommits = null)
+        : this(gitCommits, Directory.EnumerateDirectories, Directory.EnumerateFiles)
+    {
+    }
+
+    /// <summary>
+    /// Test-Seam: erlaubt einen Ordnerdurchlauf, der bei bestimmten Ordnern wirft.
+    /// Ein echter unlesbarer Ordner laesst sich sonst nur ueber Zugriffsrechte
+    /// erzeugen, was je nach Benutzerrechten unterschiedlich wirkt.
+    /// </summary>
+    internal ProgramSnapshotService(
+        IGitCommitResolver? gitCommits,
+        Func<string, IEnumerable<string>> enumerateDirectories,
+        Func<string, IEnumerable<string>> enumerateFiles)
     {
         _gitCommits = gitCommits;
+        _enumerateDirectories = enumerateDirectories;
+        _enumerateFiles = enumerateFiles;
     }
 
     public async Task<ProgramSnapshotResult> CreateAsync(
@@ -54,11 +71,28 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                 destinationDirectory,
                 $".{Path.GetFileName(destinationPath)}.{Guid.NewGuid():N}.tmp");
 
+            var scan = ScanSnapshotFiles(programRoot, ct, _enumerateDirectories, _enumerateFiles);
+
+            // Ein unlesbarer unersetzlicher Ordner darf keine "erfolgreiche" Sicherung
+            // ergeben (Gesamtaudit 2026-08-14, P1-2). Frueher wurde er still uebersprungen.
+            var missingRequired = scan.UnreadableDirectories
+                .Where(ProgramSnapshotFileCatalog.IsRequiredDirectory)
+                .ToList();
+            if (missingRequired.Count > 0)
+            {
+                return new ProgramSnapshotResult(
+                    false,
+                    "Unersetzliche Ordner konnten nicht gelesen werden: "
+                    + string.Join(", ", missingRequired)
+                    + ". Die Sicherung waere unvollstaendig und wurde nicht geschrieben.",
+                    0, 0, scan.SkippedReparsePoints, scan.UnreadableDirectories);
+            }
+
             var fileCount = 0;
-            var skippedReparsePoints = 0;
+            var skippedReparsePoints = scan.SkippedReparsePoints;
             using (var zip = ZipFile.Open(temporaryArchivePath, ZipArchiveMode.Create))
             {
-                foreach (var relativePath in EnumerateSnapshotFiles(programRoot, ref skippedReparsePoints, ct))
+                foreach (var relativePath in scan.Files)
                 {
                     ct.ThrowIfCancellationRequested();
                     var source = Path.Combine(programRoot, relativePath);
@@ -81,17 +115,36 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                     fileCount++;
                 }
 
-                await WriteManifestAsync(zip, programRoot, fileCount, skippedReparsePoints, ct)
+                await WriteManifestAsync(
+                        zip, programRoot, fileCount, skippedReparsePoints,
+                        scan.UnreadableDirectories, ct)
                     .ConfigureAwait(false);
+            }
+
+            if (request.VerifyArchive)
+            {
+                progress?.Report("Sicherung wird geprueft...");
+                var verifyError = VerifyArchive(temporaryArchivePath, fileCount, ct);
+                if (verifyError is not null)
+                    return new ProgramSnapshotResult(
+                        false, verifyError, 0, 0, skippedReparsePoints, scan.UnreadableDirectories);
             }
 
             CommitArchive(temporaryArchivePath, destinationPath);
             temporaryArchivePath = null;
 
             var size = new FileInfo(destinationPath).Length;
+
+            // Pruefsumme der veroeffentlichten Datei: im Manifest ginge sie nicht
+            // (sie wuerde sich selbst enthalten), deshalb als Nebendatei.
+            var archiveHash = ComputeFileSha256(destinationPath, ct);
+            WriteChecksumSidecar(destinationPath, archiveHash);
+
             progress?.Report(
                 $"Momentaufnahme fertig: {fileCount} Dateien, {size / (1024.0 * 1024.0):F1} MB");
-            return new ProgramSnapshotResult(true, null, fileCount, size, skippedReparsePoints);
+            return new ProgramSnapshotResult(
+                true, null, fileCount, size, skippedReparsePoints,
+                scan.UnreadableDirectories, archiveHash);
         }
         catch (OperationCanceledException)
         {
@@ -143,16 +196,32 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
             : CompressionLevel.Optimal;
 
     /// <summary>
+    /// Ergebnis des Ordnerdurchlaufs. Die unlesbaren Ordner sind Teil des Ergebnisses
+    /// und nicht nur eine Protokollzeile: Nur so kann der Aufrufer entscheiden, ob die
+    /// Sicherung ueberhaupt gueltig ist.
+    /// </summary>
+    internal sealed record SnapshotScan(
+        List<string> Files,
+        int SkippedReparsePoints,
+        List<string> UnreadableDirectories);
+
+    /// <summary>
     /// Laeuft den Programmordner ab und liefert die aufzunehmenden Dateien als
     /// Pfade relativ zur Wurzel. Ausgeschlossene und verknuepfte Ordner werden
-    /// gar nicht erst betreten; ein unlesbarer Unterordner beendet den Lauf nicht.
+    /// gar nicht erst betreten; ein unlesbarer Unterordner beendet den Lauf nicht,
+    /// wird aber namentlich zurueckgemeldet.
     /// </summary>
-    internal static IEnumerable<string> EnumerateSnapshotFiles(
+    internal static SnapshotScan ScanSnapshotFiles(
         string programRoot,
-        ref int skippedReparsePoints,
-        CancellationToken ct)
+        CancellationToken ct,
+        Func<string, IEnumerable<string>>? enumerateDirectories = null,
+        Func<string, IEnumerable<string>>? enumerateFiles = null)
     {
+        enumerateDirectories ??= Directory.EnumerateDirectories;
+        enumerateFiles ??= Directory.EnumerateFiles;
+
         var results = new List<string>();
+        var unreadable = new List<string>();
         var skipped = 0;
         var pending = new Stack<string>();
         pending.Push(programRoot);
@@ -161,8 +230,10 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
         {
             ct.ThrowIfCancellationRequested();
             var current = pending.Pop();
+            var currentRelative = RelativeOrRoot(programRoot, current);
 
-            foreach (var directory in SafeEnumerate(() => Directory.EnumerateDirectories(current)))
+            foreach (var directory in SafeEnumerate(
+                         () => enumerateDirectories(current), currentRelative, unreadable))
             {
                 var relative = Path.GetRelativePath(programRoot, directory);
                 if (ProgramSnapshotFileCatalog.IsExcludedDirectory(relative))
@@ -177,7 +248,8 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                 pending.Push(directory);
             }
 
-            foreach (var file in SafeEnumerate(() => Directory.EnumerateFiles(current)))
+            foreach (var file in SafeEnumerate(
+                         () => enumerateFiles(current), currentRelative, unreadable))
             {
                 if (ReparsePointGuard.IsReparsePoint(file))
                 {
@@ -189,12 +261,22 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
             }
         }
 
-        skippedReparsePoints += skipped;
         results.Sort(StringComparer.OrdinalIgnoreCase);
-        return results;
+        unreadable.Sort(StringComparer.OrdinalIgnoreCase);
+        return new SnapshotScan(results, skipped, unreadable);
     }
 
-    private static IEnumerable<string> SafeEnumerate(Func<IEnumerable<string>> enumerate)
+    /// <summary>Relativer Pfad; die Wurzel selbst wird als "." benannt.</summary>
+    private static string RelativeOrRoot(string programRoot, string path)
+    {
+        var relative = Path.GetRelativePath(programRoot, path);
+        return string.IsNullOrEmpty(relative) ? "." : relative;
+    }
+
+    private static IEnumerable<string> SafeEnumerate(
+        Func<IEnumerable<string>> enumerate,
+        string relativeDirectory,
+        List<string> unreadable)
     {
         try
         {
@@ -203,31 +285,171 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
         catch (Exception ex)
         {
             BestEffort.ReportWarning(
-                $"[ProgramSnapshot] Ordner nicht lesbar: {ex.GetType().Name}: {ex.Message}");
+                $"[ProgramSnapshot] Ordner nicht lesbar ({relativeDirectory}): "
+                + $"{ex.GetType().Name}: {ex.Message}");
+            if (!unreadable.Contains(relativeDirectory, StringComparer.OrdinalIgnoreCase))
+                unreadable.Add(relativeDirectory);
             return Array.Empty<string>();
         }
     }
+
+    /// <summary>
+    /// Oeffnet die fertige ZIP erneut und prueft jeden Eintrag: Laenge und selbst
+    /// nachgerechnete CRC-Pruefsumme gegen den im Archiv gespeicherten Wert.
+    ///
+    /// Das eigene Nachrechnen ist der Kern: System.IO.Compression prueft die CRC nur
+    /// beim SCHREIBEN, nicht beim Lesen. Reines Durchlesen wuerde eine gekippte
+    /// Bitfolge in einer unkomprimiert abgelegten Datei — also gerade in den
+    /// Modellgewichten — nicht bemerken.
+    ///
+    /// Gibt null zurueck, wenn alles passt.
+    /// </summary>
+    internal static string? VerifyArchive(string archivePath, int expectedFileCount, CancellationToken ct)
+    {
+        try
+        {
+            using var zip = ZipFile.OpenRead(archivePath);
+
+            var manifestFound = false;
+            var dataEntries = 0;
+            var buffer = new byte[81920];
+
+            foreach (var entry in zip.Entries)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (string.Equals(entry.FullName, "_manifest.json", StringComparison.Ordinal))
+                    manifestFound = true;
+                else
+                    dataEntries++;
+
+                long gelesen = 0;
+                var crc = 0xFFFFFFFFu;
+                using (var stream = entry.Open())
+                {
+                    int read;
+                    while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        gelesen += read;
+                        crc = Crc32Update(crc, buffer, read);
+                    }
+                }
+
+                crc ^= 0xFFFFFFFFu;
+
+                if (gelesen != entry.Length)
+                    return $"Nachpruefung fehlgeschlagen: {entry.FullName} ist {gelesen} Bytes gross, "
+                           + $"erwartet {entry.Length}.";
+
+                if (crc != entry.Crc32)
+                    return $"Nachpruefung fehlgeschlagen: Pruefsumme von {entry.FullName} stimmt nicht "
+                           + "(Daten in der Sicherung sind beschaedigt).";
+            }
+
+            if (!manifestFound)
+                return "Nachpruefung fehlgeschlagen: Das Manifest fehlt in der Sicherung.";
+
+            if (dataEntries != expectedFileCount)
+                return $"Nachpruefung fehlgeschlagen: {dataEntries} Eintraege in der Sicherung, "
+                       + $"erwartet {expectedFileCount}.";
+
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return $"Nachpruefung fehlgeschlagen: {ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// CRC-32 (Polynom 0xEDB88320) — dieselbe Rechnung, die das ZIP-Format verwendet.
+    /// Bewusst selbst gerechnet statt ein weiteres NuGet-Paket aufzunehmen.
+    /// </summary>
+    private static readonly uint[] Crc32Table = BuildCrc32Table();
+
+    private static uint[] BuildCrc32Table()
+    {
+        var table = new uint[256];
+        for (uint i = 0; i < 256; i++)
+        {
+            var wert = i;
+            for (var bit = 0; bit < 8; bit++)
+                wert = (wert & 1) != 0 ? 0xEDB88320u ^ (wert >> 1) : wert >> 1;
+            table[i] = wert;
+        }
+
+        return table;
+    }
+
+    private static uint Crc32Update(uint crc, byte[] buffer, int count)
+    {
+        for (var i = 0; i < count; i++)
+            crc = Crc32Table[(crc ^ buffer[i]) & 0xFF] ^ (crc >> 8);
+        return crc;
+    }
+
+    private static string ComputeFileSha256(string path, CancellationToken ct)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var buffer = new byte[1024 * 1024];
+        int read;
+        while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            sha.TransformBlock(buffer, 0, read, null, 0);
+        }
+
+        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        return Convert.ToHexString(sha.Hash ?? Array.Empty<byte>());
+    }
+
+    /// <summary>
+    /// Legt die Pruefsumme neben die Sicherung. Schlaegt das fehl, bleibt die
+    /// Sicherung selbst gueltig — die Nebendatei ist eine Zugabe, keine Bedingung.
+    /// </summary>
+    private static void WriteChecksumSidecar(string archivePath, string sha256)
+        => BestEffort.Try(
+            () => File.WriteAllText(
+                archivePath + ".sha256",
+                $"{sha256}  {Path.GetFileName(archivePath)}{Environment.NewLine}"),
+            $"Programm-Momentaufnahme: Pruefsumme neben {archivePath} schreiben");
 
     private async Task WriteManifestAsync(
         ZipArchive zip,
         string programRoot,
         int fileCount,
         int skippedReparsePoints,
+        IReadOnlyList<string> unreadableDirectories,
         CancellationToken ct)
     {
         var manifest = new
         {
             Product = "SewerStudio",
             Kind = "ProgramSnapshot",
-            Version = 1,
+            Version = 2,
             CreatedUtc = DateTime.UtcNow.ToString("o"),
             ProgramRoot = programRoot,
             FileCount = fileCount,
             SkippedReparsePoints = skippedReparsePoints,
+            // Unlesbare Ordner stehen ausdruecklich im Manifest: sonst sieht eine
+            // lueckenhafte Sicherung spaeter wie eine vollstaendige aus.
+            UnreadableDirectories = unreadableDirectories,
             GitCommit = TryResolveGitCommit(programRoot),
             Hinweis =
                 "Ableitbares fehlt bewusst: Build-Ausgabe, Python-Umgebung, Kartenkacheln, Arbeitsreste. "
-                + "Nach dem Auspacken werden sie durch Bauen bzw. Nachladen neu erzeugt."
+                + "Nach dem Auspacken werden sie durch Bauen bzw. Nachladen neu erzeugt.",
+            HinweisCommit =
+                "GitCommit beschreibt nur den zuletzt eingecheckten Stand. Nicht eingecheckte "
+                + "Arbeitsdateien sind ebenfalls enthalten; der Commit identifiziert den Inhalt "
+                + "dieser Sicherung deshalb nicht eindeutig.",
+            HinweisPruefsumme =
+                "Die SHA-256-Pruefsumme der Sicherung selbst liegt als Nebendatei <name>.zip.sha256 "
+                + "daneben - im Manifest wuerde sie sich selbst enthalten."
         };
 
         var entry = zip.CreateEntry("_manifest.json", CompressionLevel.Optimal);

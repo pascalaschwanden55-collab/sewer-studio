@@ -160,6 +160,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IStoredImportFileService)] = services.StoredImportFiles,
             [typeof(IStoredImportFilePathResolver)] = services.StoredImportFilePaths,
             [typeof(IImportFileStagingService)] = services.ImportFileStaging,
+            [typeof(IImportedFileLedger)] = services.ImportedFiles,
             [typeof(IImportMediaDistributionService)] = services.ImportMediaDistribution,
             [typeof(ISchachtProtocolImportService)] = services.SchachtProtocolImport,
             [typeof(ISchachtStammdatenErgaenzungsService)] = services.SchachtStammdatenErgaenzung,

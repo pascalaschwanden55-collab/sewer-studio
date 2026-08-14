@@ -64,11 +64,10 @@ public sealed class CsvExcelExportService : IExcelExportService
         }
     }
 
-    private static string Escape(string? s)
-    {
-        s ??= "";
-        if (s.Contains(';') || s.Contains('"') || s.Contains('\n') || s.Contains('\r'))
-            return $"\"{s.Replace("\"", "\"\"")}\"";
-        return s;
-    }
+    /// <summary>
+    /// Maskiert Trennzeichen UND entschaerft Formelanfaenge (Gesamtaudit 2026-08-14).
+    /// Die Regel liegt zentral in <see cref="CsvCell"/>, damit kein Exportweg sie
+    /// erneut halb umsetzt.
+    /// </summary>
+    private static string Escape(string? s) => CsvCell.Escape(s);
 }
