@@ -48,35 +48,102 @@ public static class XtfStammdatenPlanBuilder
         };
 
     /// <summary>
+    /// Die Nutzungsart als fachliches Konzept — und wie die beiden Modellfassungen es
+    /// jeweils schreiben. Nur das Regenwasser unterscheidet sich: SIA405 2015 kennt
+    /// <c>Regenabwasser</c>, SIA405 2020 stattdessen <c>Niederschlagsabwasser</c>. Keine
+    /// der beiden Fassungen kennt den Wert der anderen — eine feste Liste wuerde also je
+    /// nach Datei das Falsche schreiben.
+    /// </summary>
+    private static readonly (string[] Projekt, string Bis2015, string Ab2020)[] Nutzungsarten =
+    [
+        (["schmutzwasser", "schmutzabwasser"], "Schmutzabwasser", "Schmutzabwasser"),
+        (["regenwasser", "regenabwasser", "niederschlagsabwasser"], "Regenabwasser", "Niederschlagsabwasser"),
+        (["mischwasser", "mischabwasser"], "Mischabwasser", "Mischabwasser"),
+        (["entlastetes mischabwasser", "entlastetes_mischabwasser"],
+            "entlastetes_Mischabwasser", "entlastetes_Mischabwasser"),
+        (["reinwasser", "reinabwasser"], "Reinabwasser", "Reinabwasser"),
+        (["bachwasser"], "Bachwasser", "Bachwasser"),
+        (["industrieabwasser", "industriewasser"], "Industrieabwasser", "Industrieabwasser"),
+        (["andere"], "andere", "andere"),
+        (["unbekannt"], "unbekannt", "unbekannt")
+    ];
+
+    /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
     ///
-    /// Nur <c>BaulicherZustand</c> braucht das: Das Projekt fuehrt die Zustandsklasse als
-    /// blosse Ziffer, SIA405 verlangt <c>Z0</c> bis <c>Z4</c>. Beide zaehlen gleich herum —
-    /// 0 ist der schlechteste Zustand, 4 bedeutet keine Maengel (VSA "Erhaltung von
-    /// Kanalisationen"). Es wird deshalb nur die Schreibweise angepasst, nichts umgerechnet.
+    /// <c>BaulicherZustand</c>: Das Projekt fuehrt die Zustandsklasse als blosse Ziffer,
+    /// SIA405 verlangt <c>Z0</c> bis <c>Z4</c>. Beide zaehlen gleich herum — 0 ist der
+    /// schlechteste Zustand, 4 bedeutet keine Maengel (VSA "Erhaltung von Kanalisationen").
+    /// Es wird deshalb nur die Schreibweise angepasst, nichts umgerechnet.
     ///
-    /// Alles, was nicht eindeutig in den Wertebereich passt — leer, "n/a", eine berechnete
-    /// Note mit Nachkommastellen — liefert <c>null</c> und wird nicht geschrieben.
+    /// <c>Nutzungsart_Ist</c>: Das Projekt fuehrt "Schmutzwasser", das Modell verlangt
+    /// "Schmutzabwasser" — der Import benennt beim Lesen ausdruecklich um
+    /// (<c>XtfValueNormalizer</c>), also muss der Rueckweg dasselbe tun. Fuer das
+    /// Regenwasser entscheidet die Modellfassung der Datei.
+    ///
+    /// Alles, was nicht eindeutig in den Wertebereich passt — "n/a", eine berechnete Note
+    /// mit Nachkommastellen, ein unbekannter Begriff — liefert <c>null</c> und wird nicht
+    /// geschrieben. Ein erfundener Wert waere schlimmer als eine fehlende Angabe.
     /// </summary>
-    public static string? NachXtfWert(string xtfName, string projektWert)
+    public static string? NachXtfWert(string xtfName, string projektWert, string? modell = null)
     {
         var wert = (projektWert ?? "").Trim();
         if (wert.Length == 0)
             return null;
 
-        if (!string.Equals(xtfName, "BaulicherZustand", StringComparison.Ordinal))
+        if (string.Equals(xtfName, "BaulicherZustand", StringComparison.Ordinal))
+        {
+            // Ein bereits fertiges "Z2" wird uebernommen, eine nackte Ziffer ergaenzt.
+            if (wert.Length == 2 && (wert[0] == 'Z' || wert[0] == 'z') && wert[1] is >= '0' and <= '4')
+                return "Z" + wert[1];
+
+            return wert.Length == 1 && wert[0] is >= '0' and <= '4' ? "Z" + wert : null;
+        }
+
+        if (!string.Equals(xtfName, "Nutzungsart_Ist", StringComparison.Ordinal))
             return wert;
 
-        // Ein bereits fertiges "Z2" wird uebernommen, eine nackte Ziffer ergaenzt.
-        if (wert.Length == 2 && (wert[0] == 'Z' || wert[0] == 'z') && wert[1] is >= '0' and <= '4')
-            return "Z" + wert[1];
+        foreach (var (projekt, bis2015, ab2020) in Nutzungsarten)
+        {
+            if (!projekt.Contains(wert.ToLowerInvariant()))
+                continue;
 
-        return wert.Length == 1 && wert[0] is >= '0' and <= '4' ? "Z" + wert : null;
+            if (string.Equals(bis2015, ab2020, StringComparison.Ordinal))
+                return bis2015;
+
+            // Nur hier entscheidet die Modellfassung. Ist sie unbekannt, wird nichts
+            // geschrieben — lieber eine Luecke als der Wert der falschen Fassung.
+            return IstModell2020OderNeuer(modell) switch
+            {
+                true => ab2020,
+                false => bis2015,
+                _ => null
+            };
+        }
+
+        return null;
     }
 
+    /// <summary>
+    /// Liest die Fassung aus dem Modellnamen der Datei, etwa "SIA405_ABWASSER_2015_LV95".
+    /// <c>null</c> bedeutet: nicht erkennbar.
+    /// </summary>
+    private static bool? IstModell2020OderNeuer(string? modell)
+    {
+        var treffer = System.Text.RegularExpressions.Regex.Match(modell ?? "", @"(19|20)\d{2}");
+        return treffer.Success && int.TryParse(treffer.Value, out var jahr)
+            ? jahr >= 2020
+            : null;
+    }
+
+    /// <param name="modell">
+    /// Der Modellname aus dem Kopf der XTF, etwa "SIA405_ABWASSER_2015_LV95". Er entscheidet
+    /// bei der Nutzungsart ueber die richtige Schreibweise.
+    /// </param>
     public static XtfStammdatenPlan Build(
         IEnumerable<HaltungRecord> haltungen,
-        IReadOnlyList<XtfStammdatenElement> elemente)
+        IReadOnlyList<XtfStammdatenElement> elemente,
+        string? modell = null)
     {
         ArgumentNullException.ThrowIfNull(haltungen);
         ArgumentNullException.ThrowIfNull(elemente);
@@ -127,9 +194,21 @@ public static class XtfStammdatenPlanBuilder
                 if (!record.FieldMeta.TryGetValue(projektFeld, out var meta) || !meta.UserEdited)
                     continue;
 
-                var neu = NachXtfWert(xtfName, record.GetFieldValue(projektFeld) ?? "");
+                var roh = (record.GetFieldValue(projektFeld) ?? "").Trim();
+                var neu = NachXtfWert(xtfName, roh, modell);
                 if (string.IsNullOrEmpty(neu))
+                {
+                    // Ein gesetzter, aber nicht abbildbarer Wert darf nicht still
+                    // verschwinden — und erst recht nicht geraten werden.
+                    if (roh.Length > 0)
+                    {
+                        hinweise.Add(
+                            $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
+                            "gueltigen Wert — nicht geschrieben.");
+                    }
+
                     continue;
+                }
 
                 element.Werte.TryGetValue(xtfName, out var alt);
                 alt = (alt ?? "").Trim();

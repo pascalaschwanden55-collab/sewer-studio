@@ -17,6 +17,29 @@ public static class XtfStammdatenElementReader
         return Parse(XDocument.Load(path));
     }
 
+    /// <summary>
+    /// Der Modellname aus dem Kopf der Uebertragung, etwa "SIA405_ABWASSER_2015_LV95".
+    /// Er entscheidet ueber die gueltige Schreibweise mancher Werte. Gibt es mehrere
+    /// Modelle, gilt das erste; fehlt der Kopf, ist das Ergebnis <c>null</c>.
+    /// </summary>
+    public static string? ReadModelName(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return null;
+
+        return ParseModelName(XDocument.Load(path));
+    }
+
+    public static string? ParseModelName(XDocument doc)
+    {
+        ArgumentNullException.ThrowIfNull(doc);
+
+        return doc.Descendants()
+            .Where(e => string.Equals(e.Name.LocalName, "MODEL", StringComparison.Ordinal))
+            .Select(e => (string?)e.Attribute("NAME"))
+            .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+    }
+
     public static IReadOnlyList<XtfStammdatenElement> Parse(XDocument doc)
     {
         ArgumentNullException.ThrowIfNull(doc);

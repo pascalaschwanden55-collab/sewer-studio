@@ -76,7 +76,12 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
 
             var basis = XtfRevisionPlanBuilder.Build(request.Projekt.Data, elemente, name);
-            var stamm = XtfStammdatenPlanBuilder.Build(request.Projekt.Data, stammdaten);
+            // Die Modellfassung der Datei entscheidet ueber die gueltige Schreibweise
+            // mancher Werte (2015 "Regenabwasser" gegen 2020 "Niederschlagsabwasser").
+            var stamm = XtfStammdatenPlanBuilder.Build(
+                request.Projekt.Data,
+                stammdaten,
+                XtfStammdatenElementReader.ReadModelName(quelle));
             var plan = stamm.Positionen.Count == 0
                 ? basis
                 : basis with { Positionen = basis.Positionen.Concat(stamm.Positionen).ToList() };

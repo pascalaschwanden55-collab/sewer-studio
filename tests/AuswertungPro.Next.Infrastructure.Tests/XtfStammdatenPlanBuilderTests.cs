@@ -214,10 +214,97 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Empty(Plan(Haltung("99-999")).Hinweise);
     }
 
+    // Der Import benennt "Schmutzabwasser" beim Lesen zu "Schmutzwasser" um. Der
+    // Rueckweg muss dasselbe tun — sonst steht ein Wert in der Datei, den das Modell
+    // nicht kennt und der Pruefer ablehnt.
+    [Theory]
+    [InlineData("Mischabwasser", "Mischabwasser")]
+    [InlineData("Mischwasser", "Mischabwasser")]
+    [InlineData("Reinwasser", "Reinabwasser")]
+    [InlineData("unbekannt", "unbekannt")]
+    public void Die_Nutzungsart_wird_in_die_Schreibweise_des_Modells_gebracht(string projekt, string erwartet)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, projekt, FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(Plan(record).Positionen);
+        Assert.Equal(erwartet, Assert.Single(position.Felder).Neu);
+    }
+
+    // Der Hin- und Rueckweg schliesst sich: Aus "Schmutzabwasser" wird beim Import
+    // "Schmutzwasser", und daraus wieder "Schmutzabwasser". Frueher entstand hier eine
+    // Scheinaenderung, die einen im Modell unbekannten Wert in die Datei geschrieben haette.
+    [Fact]
+    public void Der_zurueckuebersetzte_Importwert_ist_keine_Aenderung()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Schmutzwasser", FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Empty(plan.Hinweise);
+    }
+
+    // Nur beim Regenwasser entscheidet die Modellfassung: 2015 kennt "Regenabwasser",
+    // 2020 stattdessen "Niederschlagsabwasser" — keine kennt den Wert der anderen.
+    [Theory]
+    [InlineData("SIA405_ABWASSER_2015_LV95", "Regenabwasser")]
+    [InlineData("SIA405_ABWASSER_2020_LV95", "Niederschlagsabwasser")]
+    public void Das_Regenwasser_richtet_sich_nach_der_Modellfassung(string modell, string erwartet)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Regenwasser", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(Sec)),
+            modell);
+
+        Assert.Equal(erwartet, Assert.Single(Assert.Single(plan.Positionen).Felder).Neu);
+    }
+
+    // Ohne erkennbare Fassung waere jede Wahl ein Ratespiel — lieber eine Luecke.
+    [Fact]
+    public void Ohne_erkennbare_Modellfassung_wird_das_Regenwasser_nicht_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Regenwasser", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(Sec)),
+            modell: "IRGENDEIN_MODELL");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains("Regenwasser", Assert.Single(plan.Hinweise));
+    }
+
+    [Fact]
+    public void Eine_unbekannte_Nutzungsart_wird_gemeldet_statt_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Kuehlwasser", FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains("Kuehlwasser", Assert.Single(plan.Hinweise));
+    }
+
+    [Fact]
+    public void Der_Modellname_wird_aus_dem_Dateikopf_gelesen()
+    {
+        Assert.Equal(
+            "SIA405_ABWASSER_2015_LV95",
+            XtfStammdatenElementReader.ParseModelName(XDocument.Parse(Sec)));
+    }
+
     private static XtfStammdatenPlan Plan(HaltungRecord record)
         => XtfStammdatenPlanBuilder.Build(
             new[] { record },
-            XtfStammdatenElementReader.Parse(XDocument.Parse(Sec)));
+            XtfStammdatenElementReader.Parse(XDocument.Parse(Sec)),
+            "SIA405_ABWASSER_2015_LV95");
 
     private static IReadOnlyList<XtfRevisionPosition> Baue(HaltungRecord record)
         => Plan(record).Positionen;
