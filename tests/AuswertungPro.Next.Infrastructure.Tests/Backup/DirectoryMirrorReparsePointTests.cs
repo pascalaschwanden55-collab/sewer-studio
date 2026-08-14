@@ -132,8 +132,12 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
         var foreign = Path.Combine(_root, "fremd");
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         Directory.CreateDirectory(foreign);
-        File.WriteAllText(source, "neu");
+        // Die Quelle muss sich vom Ziel wirklich unterscheiden — in Laenge UND Zeitstempel.
+        // Sonst haelt der Spiegel die Datei fuer unveraendert, ueberspringt sie, und der
+        // Versionierungs-Pfad, um den es hier geht, wird nie betreten.
         File.WriteAllText(target, "alt");
+        File.WriteAllText(source, "ein deutlich laengerer neuer Inhalt");
+        File.SetLastWriteTimeUtc(target, DateTime.UtcNow.AddDays(-1));
 
         var versionsLink = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
         CreateDirectoryLinkOrSkip(versionsLink, foreign);

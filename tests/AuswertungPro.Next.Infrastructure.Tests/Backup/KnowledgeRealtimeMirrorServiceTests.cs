@@ -285,11 +285,11 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
         await File.WriteAllTextAsync(sourceFile, "quelle-neu-und-laenger");
 
         await WaitUntilAsync(() =>
-            logger.Contains("erneut versucht")
+            Blockiert(logger)
             || File.ReadAllText(foreignFile) == "quelle-neu-und-laenger");
 
         Assert.Equal("fremd", await File.ReadAllTextAsync(foreignFile));
-        Assert.True(logger.Contains("erneut versucht"));
+        Assert.True(Blockiert(logger));
     }
 
     [JunctionFact]
@@ -319,13 +319,30 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
         File.Delete(sourceFile);
 
         await WaitUntilAsync(() =>
-            logger.Contains("erneut versucht")
+            Blockiert(logger)
             || !File.Exists(foreignFile));
 
         Assert.True(File.Exists(foreignFile));
         Assert.Equal("fremd", await File.ReadAllTextAsync(foreignFile));
-        Assert.True(logger.Contains("erneut versucht"));
+        Assert.True(Blockiert(logger));
     }
+
+    /// <summary>
+    /// Der Wächter hat die Verknüpfung gemeldet — auf einem von zwei Wegen.
+    ///
+    /// Eine Änderung an der Quelldatei meldet Windows manchmal als Ereignis am
+    /// enthaltenden Ordner. Dann verlangt der Dienst einen Vollabgleich
+    /// (<c>QueuePath</c>), und dieser scheitert an der Verknüpfung. Sonst greift der
+    /// inkrementelle Weg. Gemessen über acht Läufe: 7x Vollabgleich, 1x inkrementell —
+    /// und in allen acht blieb die fremde Datei unberührt.
+    ///
+    /// Beide Meldungen belegen dasselbe: Es wurde nichts nach aussen geschrieben, und
+    /// der Dienst hat es gesagt. Nur einen der beiden Wege zu erwarten, machte den Test
+    /// unzuverlässig, ohne mehr zu prüfen.
+    /// </summary>
+    private static bool Blockiert(RecordingLogger logger)
+        => logger.Contains("erneut versucht")
+           || logger.Contains("Vollabgleich fehlgeschlagen");
 
     [Fact]
     public async Task Start_Elements_zuerst_fehlt_holt_nach_Wiederanschliessen_Alles_nach()
