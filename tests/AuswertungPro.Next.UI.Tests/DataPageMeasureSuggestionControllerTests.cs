@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
@@ -8,6 +9,40 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageMeasureSuggestionControllerTests
 {
+    // Der Betrag wird schweizerisch dargestellt, egal was Windows eingestellt hat.
+    // Ohne diese Festlegung zeigte derselbe Stand auf dem Entwicklerrechner 1'250.00 und
+    // auf dem englischen CI-Rechner 1,250.00 — der Test wurde dort rot, ohne dass sich am
+    // Code etwas geaendert hatte.
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("de-CH")]
+    public void Der_Kostenbetrag_haengt_nicht_von_der_Rechnerkultur_ab(string kultur)
+    {
+        var vorher = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(kultur);
+        try
+        {
+            var record = Record("H1");
+            var dialogs = new CapturingDialogService();
+            var controller = CreateController(
+                dialogs,
+                new FakeMeasureRecommendationService(
+                    _ => Recommendation(new[] { "Inliner" }, 1250m, similarCases: 3, trained: true)),
+                selected: null,
+                recommendedOptions: new ObservableCollection<string>());
+
+            controller.Suggest(record);
+
+            var erwartet = 1250m.ToString("N2", CultureInfo.GetCultureInfo("de-CH"));
+            Assert.Contains($"Geschaetzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = vorher;
+        }
+    }
+
     [Fact]
     public void Suggest_nutzt_selected_fallback_und_meldet_fehlende_vorschlaege()
     {

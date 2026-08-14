@@ -258,6 +258,8 @@ namespace AuswertungPro.Next.UI
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IPdfMergeService PdfMerge { get; }
         public AuswertungPro.Next.Application.Output.IOfferPdfExportService OfferPdfExport { get; }
+        public AuswertungPro.Next.Application.Output.INpkOfferPdfExportService NpkOfferPdfExport { get; }
+        public AuswertungPro.Next.Application.Output.IPdfPrintService PdfPrint { get; }
         public IDossierPhotoAvailabilityService DossierPhotoAvailability { get; }
         public IInspectionProtocolFileLocator InspectionProtocolFiles { get; }
         public IDichtheitProtocolFileLocator DichtheitProtocolFiles { get; }
@@ -527,6 +529,8 @@ namespace AuswertungPro.Next.UI
             ProtocolPdfExporter = new ProtocolPdfExporter();
             PdfMerge = new PdfMergeService();
             OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
+            NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService();
+            PdfPrint = new AuswertungPro.Next.Infrastructure.Output.Offers.PdfPrintService();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             StoredImportFiles = new StoredImportFileService();
             StoredImportFilePaths = new StoredImportFilePathResolver();

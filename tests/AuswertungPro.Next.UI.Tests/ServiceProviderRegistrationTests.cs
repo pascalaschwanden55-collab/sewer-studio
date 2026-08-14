@@ -73,9 +73,12 @@ public sealed class ServiceProviderRegistrationTests
         // Schachtverteilung (grosser Audit-Umbau 2026-08-14).
         // 140 -> 141: ITrainingCenterDocumentStore verschiebt die JSON-Dateiarbeit
         // aus der eingefrorenen UI-Fassade in die Infrastructure.
+        // 141 -> 143: INpkOfferPdfExportService und IPdfPrintService (Wiederholungsaudit
+        // 2026-08-14, P2-3: der NPK-Weg baute Vorlagenpfade selbst, erzeugte direkt einen
+        // Renderer und startete Process.Start im ViewModel).
         Assert.True(
-            registrations.Count == 141,
-            $"Erwartet 141 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 143,
+            $"Erwartet 143 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

@@ -43,6 +43,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     // Nur auf dem produktiven ServiceProvider-Weg gesetzt; die Alt-/Test-Konstruktoren
     // ohne ServiceProvider lassen ihn null (der PDF-Export wacht dann mit klarer Meldung).
     private readonly AuswertungPro.Next.Application.Output.IOfferPdfExportService? _pdfExport;
+    private readonly AuswertungPro.Next.Application.Output.INpkOfferPdfExportService? _npkPdfExport;
+    private readonly AuswertungPro.Next.Application.Output.IPdfPrintService? _pdfPrint;
     private readonly ISafeShellOpenService _shellOpen;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly IProjectCostStoreRepository _costRepo;
@@ -153,6 +155,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     {
         _pdfMerge = services.PdfMerge;
         _pdfExport = services.OfferPdfExport;
+        _npkPdfExport = services.NpkOfferPdfExport;
+        _pdfPrint = services.PdfPrint;
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]

@@ -181,6 +181,8 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IProtocolService)] = services.Protocols,
             [typeof(IPdfMergeService)] = services.PdfMerge,
             [typeof(AuswertungPro.Next.Application.Output.IOfferPdfExportService)] = services.OfferPdfExport,
+            [typeof(AuswertungPro.Next.Application.Output.INpkOfferPdfExportService)] = services.NpkOfferPdfExport,
+            [typeof(AuswertungPro.Next.Application.Output.IPdfPrintService)] = services.PdfPrint,
             [typeof(IDossierPhotoAvailabilityService)] = services.DossierPhotoAvailability,
             [typeof(IInspectionProtocolFileLocator)] = services.InspectionProtocolFiles,
             [typeof(IDichtheitProtocolFileLocator)] = services.DichtheitProtocolFiles,

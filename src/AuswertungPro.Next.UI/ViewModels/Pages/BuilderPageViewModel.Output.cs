@@ -556,11 +556,10 @@ public sealed partial class BuilderPageViewModel
                 excludedPauschaleTotal,
                 pauschaleHoldings.Count);
 
-            var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "npk_offer.sbnhtml");
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var renderer = new OfferHtmlToPdfRenderer();
+            var npkExport = _npkPdfExport
+                ?? throw new InvalidOperationException("NPK-Export ist ohne ServiceProvider nicht verfuegbar.");
             PdfExportProgress = "NPK-Offerte wird gerendert...";
-            await renderer.RenderAsync(model, templatePath, output, logoPath);
+            await npkExport.ExportAsync(model, output);
 
             LastExportedPdfPath = output;
             LastExportedAt = DateTimeOffset.Now;
@@ -617,13 +616,9 @@ public sealed partial class BuilderPageViewModel
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = pdfPath,
-                Verb = "print",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+            var druck = _pdfPrint
+                ?? throw new InvalidOperationException("Drucken ist ohne ServiceProvider nicht verfuegbar.");
+            druck.Print(pdfPath);
             LastResult = $"Druckauftrag gestartet: {pdfPath}";
             _shell.SetStatus("PDF-Druckauftrag gestartet");
         }

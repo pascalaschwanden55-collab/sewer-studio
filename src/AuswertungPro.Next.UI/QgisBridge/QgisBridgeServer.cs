@@ -169,17 +169,23 @@ internal sealed class QgisBridgeServer : IDisposable
         CancellationToken cancellationToken)
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
-        var requestLine = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(requestLine))
+        // Feste Grenzen fuer Anfragezeile und Kopfteil: Die Anmeldung wird erst danach
+        // geprueft, also darf hier noch niemand beliebig viel Speicher binden.
+        var begrenzt = new BoundedHttpRequestReader(reader);
+        var requestLine = await begrenzt.ReadRequestLineAsync(cancellationToken).ConfigureAwait(false);
+        if (requestLine is null)
             return null;
 
         var parts = requestLine.Split(' ', 3);
         if (parts.Length < 2)
             return null;
 
+        var headerLines = await begrenzt.ReadHeaderLinesAsync(cancellationToken).ConfigureAwait(false);
+        if (headerLines is null)
+            return null;
+
         string? token = null;
-        string? line;
-        while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
+        foreach (var line in headerLines)
         {
             var separator = line.IndexOf(':');
             if (separator <= 0)
