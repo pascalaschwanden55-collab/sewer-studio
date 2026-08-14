@@ -69,9 +69,11 @@ public sealed class ServiceProviderRegistrationTests
         // an denen hunderttausende Einzeldateien nicht taugen, z. B. ein Cloud-Ordner).
         // 138 -> 139: IImportedFileLedger (Gesamtaudit 2026-08-14, P1-5: nimmt die Dateien
         // eines verworfenen Ein-Knopf-Imports zurueck, statt sie unbemerkt liegen zu lassen).
+        // 139 -> 140: IShaftDistributionService kapselt die transaktionale manuelle
+        // Schachtverteilung (grosser Audit-Umbau 2026-08-14).
         Assert.True(
-            registrations.Count == 139,
-            $"Erwartet 139 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 140,
+            $"Erwartet 140 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
@@ -89,6 +91,9 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.ImportFileStaging,
             registrations[typeof(IImportFileStagingService)]);
+        Assert.Same(
+            services.ShaftDistribution,
+            registrations[typeof(IShaftDistributionService)]);
         Assert.Same(
             services.ImportMediaDistribution,
             registrations[typeof(IImportMediaDistributionService)]);

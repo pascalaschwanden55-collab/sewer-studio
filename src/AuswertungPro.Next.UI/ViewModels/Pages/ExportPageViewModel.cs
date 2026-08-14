@@ -10,8 +10,10 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Map;
+using AuswertungPro.Next.Application.UseCases.Import;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Mapping;
@@ -36,6 +38,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IHaltungCadastreIndexProvider _haltungCadastreIndexes;
+    private readonly IShaftDistributionService _shaftDistribution;
+    private readonly IImportFileStagingService? _importFileStaging;
+    private readonly IImportTransactionJournal? _importTransactionJournal;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -76,7 +81,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
             patternResolver: sp.DistributionPatterns,
             directoryTreeResolver: sp.DistributionDirectoryTree,
             katasterXtfPaths: sp.KatasterXtfPaths,
-            haltungCadastreIndexes: sp.HaltungCadastreIndexes)
+            haltungCadastreIndexes: sp.HaltungCadastreIndexes,
+            shaftDistribution: sp.ShaftDistribution,
+            importFileStaging: sp.ImportFileStaging,
+            importTransactionJournal: sp.ImportTransactionJournal)
     {
     }
 
@@ -148,7 +156,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDistributionDirectoryTreeResolver? directoryTreeResolver,
         IKatasterXtfPathResolver? katasterXtfPaths,
         IHaltungCadastreIndexProvider? haltungCadastreIndexes,
-        AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null)
+        AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null,
+        IShaftDistributionService? shaftDistribution = null,
+        IImportFileStagingService? importFileStaging = null,
+        IImportTransactionJournal? importTransactionJournal = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -173,6 +184,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _haltungCadastreIndexes = haltungCadastreIndexes ?? HaltungCadastreIndex.CurrentProvider;
+        _shaftDistribution = shaftDistribution ?? new ShaftDistributionService();
+        _importFileStaging = importFileStaging;
+        _importTransactionJournal = importTransactionJournal;
         _settings.MigrateLegacyExcelExportRoot();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
@@ -666,101 +680,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
         }
     }
 
-    // ─── Distribution: Schaechte ───────────────────────────────────────────
-
-    private async Task DistributeShaftsAsync(DistributionVariant variant)
-    {
-        var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Schaechte verteilen");
-        if (mode == DialogConfirm.Cancel)
-            return;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == DialogConfirm.Yes)
-        {
-            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
-
-        var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
-            ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
-        if (string.IsNullOrWhiteSpace(destFolder)) return;
-        var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
-
-        try
-        {
-            IsPageBusy = true;
-            IsDistributionInProgress = true;
-            IsDistributionIndeterminate = true;
-            DistributionPercent = 0;
-            DistributionProgress = "Schacht-Verteilung gestartet...";
-            _shell.SetStatus(DistributionProgress);
-
-            var progress = new Progress<HoldingFolderDistributor.DistributionProgress>(p =>
-            {
-                IsDistributionIndeterminate = p.Total <= 0;
-                DistributionPercent = p.Total > 0 ? (p.Processed * 100.0 / p.Total) : 0;
-                var name = string.IsNullOrWhiteSpace(p.CurrentFile) ? "" : $" ({Path.GetFileName(p.CurrentFile)})";
-                DistributionProgress = $"Verteilung: {p.Processed}/{p.Total}{name}";
-                _shell.SetStatus(DistributionProgress);
-            });
-
-            IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
-            if (selectedPdfFiles.Length > 0)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShaftFiles(
-                    pdfFiles: selectedPdfFiles,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress,
-                    directoryConfig: directoryConfig,
-                    variant: variant));
-            }
-            else
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShafts(
-                    pdfSourceFolder: pdfFolder!,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress,
-                    directoryConfig: directoryConfig,
-                    variant: variant));
-            }
-
-            // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
-            var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
-            var pdfUpdated = ApplyPdfPathsToSchachtRecords(results);
-            LastResult = pdfUpdated > 0
-                ? summary + $"PDF-Pfade aktualisiert: {pdfUpdated}{Environment.NewLine}"
-                : summary;
-            _shell.SetStatus("Schachtprotokolle verteilt");
-
-            if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
-        }
-        finally
-        {
-            IsDistributionInProgress = false;
-            IsDistributionIndeterminate = false;
-            DistributionProgress = "";
-            DistributionPercent = 0;
-            IsPageBusy = false;
-        }
-    }
-
     // ─── Distribution: Dichtheitspruefung ──────────────────────────────────
 
     private async Task DistributeDichtheitAsync()
@@ -869,39 +788,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
-
-    private int ApplyPdfPathsToSchachtRecords(IReadOnlyList<HoldingFolderDistributor.DistributionResult> results)
-    {
-        var updated = 0;
-        foreach (var r in results)
-        {
-            if (!r.Success || string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
-                continue;
-
-            var folderName = Path.GetFileName(r.HoldingFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (string.IsNullOrWhiteSpace(folderName))
-                continue;
-
-            var record = _shell.Project.SchaechteData.FirstOrDefault(x =>
-                string.Equals(SanitizePathSegment((x.GetFieldValue("Schachtnummer") ?? "").Trim()), folderName, StringComparison.OrdinalIgnoreCase));
-            if (record is null)
-                continue;
-
-            record.SetFieldValue("PDF_Path", r.DestPdfPath);
-            updated++;
-        }
-
-        if (updated > 0)
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
-        }
-
-        return updated;
-    }
-
-    private static string SanitizePathSegment(string value)
-        => AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(value);
 
     private string? ResolveDistributionTargetFolder()
     {

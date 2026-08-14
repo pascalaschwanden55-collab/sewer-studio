@@ -224,6 +224,7 @@ namespace AuswertungPro.Next.UI
         public IStoredImportFileService StoredImportFiles { get; }
         public IStoredImportFilePathResolver StoredImportFilePaths { get; }
         public IImportFileStagingService ImportFileStaging { get; }
+        public IShaftDistributionService ShaftDistribution { get; }
 
         /// <summary>Ruecknahme der Dateien eines verworfenen Ein-Knopf-Imports.</summary>
         public IImportedFileLedger ImportedFiles { get; }
@@ -526,6 +527,7 @@ namespace AuswertungPro.Next.UI
             StoredImportFiles = new StoredImportFileService();
             StoredImportFilePaths = new StoredImportFilePathResolver();
             ImportFileStaging = new ImportFileStagingService();
+            ShaftDistribution = new ShaftDistributionService();
             ImportedFiles = new ImportedFileLedgerService();
             ImportMediaDistribution = new MediaDistributionService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator(StoredImportFilePaths);
