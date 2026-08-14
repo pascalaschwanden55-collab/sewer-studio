@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Ai.Backup;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Data.Sqlite;
 using Xunit;

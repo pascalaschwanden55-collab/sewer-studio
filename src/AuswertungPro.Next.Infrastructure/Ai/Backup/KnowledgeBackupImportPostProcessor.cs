@@ -9,7 +9,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
 
-namespace AuswertungPro.Next.UI.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Backup;
 
 /// <summary>
 /// Passt die importierten, rechnerabhaengigen Pfade an den aktuellen PC an.

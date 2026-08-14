@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using AuswertungPro.Next.Application.Ai.Backup;
 
-namespace AuswertungPro.Next.UI.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Backup;
 
 /// <summary>
 /// Kennt ausschliesslich die Zuordnung zwischen lokalen Dateien und ZIP-Pfaden.

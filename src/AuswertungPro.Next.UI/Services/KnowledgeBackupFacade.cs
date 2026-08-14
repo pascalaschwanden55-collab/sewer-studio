@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Infrastructure.Ai.Backup;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -53,7 +54,7 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
 
     public KnowledgeBackupTransferService()
         : this(
-            KnowledgeBackupLocations.FromCurrentSystem(),
+            KnowledgeBackupLocationFactory.FromCurrentSystem(),
             AppSettings.FlushPendingSave,
             KnowledgeBackupEngine.FlushSqliteWal)
     {
@@ -79,14 +80,15 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
         IProgress<string>? progress = null,
         CancellationToken ct = default)
         => RunExclusiveAsync(
-            token => KnowledgeBackupEngine.ExportAsync(
-                zipPath,
-                _locations,
-                _flushPendingSettings,
-                _flushSqliteWal,
-                _sqliteSnapshots,
-                progress,
-                token),
+            async token => ToFacadeResult(await KnowledgeBackupEngine.ExportAsync(
+                    zipPath,
+                    _locations,
+                    _flushPendingSettings,
+                    _flushSqliteWal,
+                    _sqliteSnapshots,
+                    progress,
+                    token)
+                .ConfigureAwait(false)),
             ct);
 
     public Task<KnowledgeBackupService.BackupResult> ImportAsync(
@@ -94,13 +96,18 @@ public sealed class KnowledgeBackupTransferService : IKnowledgeBackupService
         IProgress<string>? progress = null,
         CancellationToken ct = default)
         => RunExclusiveAsync(
-            token => KnowledgeBackupEngine.ImportAsync(
-                zipPath,
-                _locations,
-                _flushPendingSettings,
-                progress,
-                token),
+            async token => ToFacadeResult(await KnowledgeBackupEngine.ImportAsync(
+                    zipPath,
+                    _locations,
+                    _flushPendingSettings,
+                    progress,
+                    token)
+                .ConfigureAwait(false)),
             ct);
+
+    private static KnowledgeBackupService.BackupResult ToFacadeResult(
+        KnowledgeBackupEngineResult result)
+        => new(result.Success, result.Error, result.FileCount, result.SizeBytes);
 
     private async Task<KnowledgeBackupService.BackupResult> RunExclusiveAsync(
         Func<CancellationToken, Task<KnowledgeBackupService.BackupResult>> operation,

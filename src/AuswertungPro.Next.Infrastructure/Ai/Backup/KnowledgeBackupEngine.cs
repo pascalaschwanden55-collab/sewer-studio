@@ -10,16 +10,20 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Backup;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Common;
-using InfraBackup = AuswertungPro.Next.Infrastructure.Ai.Backup;
-using BackupResult = AuswertungPro.Next.UI.Services.KnowledgeBackupService.BackupResult;
 
-namespace AuswertungPro.Next.UI.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Backup;
+
+public sealed record KnowledgeBackupEngineResult(
+    bool Success,
+    string? Error,
+    int FileCount,
+    long SizeBytes);
 
 /// <summary>
 /// Fuehrt den ZIP-Transfer und dessen Rueckrollschutz aus.
 /// Dateikatalog und rechnerabhaengige Nachbearbeitung sind getrennte Bausteine.
 /// </summary>
-internal static class KnowledgeBackupEngine
+public static class KnowledgeBackupEngine
 {
     private const int ManifestVersion = BackupManifestVersionPolicy.CurrentVersion;
 
@@ -29,7 +33,7 @@ internal static class KnowledgeBackupEngine
     /// </summary>
     internal const string KnowledgeDatabaseEntryName = "knowledge/KnowledgeBase.db";
 
-    internal static async Task<BackupResult> ExportAsync(
+    public static async Task<KnowledgeBackupEngineResult> ExportAsync(
         string zipPath,
         KnowledgeBackupLocations locations,
         Action flushPendingSettings,
@@ -117,7 +121,7 @@ internal static class KnowledgeBackupEngine
             var size = new FileInfo(destinationPath).Length;
             progress?.Report(
                 $"Export abgeschlossen: {fileCount} Dateien, {size / (1024.0 * 1024.0):F1} MB");
-            return new BackupResult(true, null, fileCount, size);
+            return new KnowledgeBackupEngineResult(true, null, fileCount, size);
         }
         catch (OperationCanceledException)
         {
@@ -127,7 +131,7 @@ internal static class KnowledgeBackupEngine
         {
             BestEffort.ReportWarning(
                 $"[KnowledgeBackup] Export fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
-            return new BackupResult(false, UserError.Describe(ex), 0, 0);
+            return new KnowledgeBackupEngineResult(false, UserError.Describe(ex), 0, 0);
         }
         finally
         {
@@ -192,7 +196,7 @@ internal static class KnowledgeBackupEngine
         }
     }
 
-    internal static async Task<BackupResult> ImportAsync(
+    public static async Task<KnowledgeBackupEngineResult> ImportAsync(
         string zipPath,
         KnowledgeBackupLocations locations,
         Action flushPendingSettings,
@@ -210,7 +214,7 @@ internal static class KnowledgeBackupEngine
 
             var filesToImport = CollectImportFiles(zip, locations);
             if (filesToImport.Count == 0)
-                return new BackupResult(
+                return new KnowledgeBackupEngineResult(
                     false,
                     "Keine importierbaren Dateien im Archiv gefunden.",
                     0,
@@ -262,7 +266,7 @@ internal static class KnowledgeBackupEngine
                 SafeDeleteBackupDirectory(backupDirectory);
 
                 progress?.Report($"Import abgeschlossen: {fileCount} Dateien");
-                return new BackupResult(true, null, fileCount, totalBytes);
+                return new KnowledgeBackupEngineResult(true, null, fileCount, totalBytes);
             }
             catch (Exception)
             {
@@ -278,11 +282,11 @@ internal static class KnowledgeBackupEngine
         {
             BestEffort.ReportWarning(
                 $"[KnowledgeBackup] Import fehlgeschlagen ({zipPath}): {ex.GetType().Name}: {ex.Message}");
-            return new BackupResult(false, UserError.Describe(ex), 0, 0);
+            return new KnowledgeBackupEngineResult(false, UserError.Describe(ex), 0, 0);
         }
     }
 
-    internal static void FlushSqliteWal(IProgress<string>? progress)
+    public static void FlushSqliteWal(IProgress<string>? progress)
     {
         try
         {
@@ -306,7 +310,7 @@ internal static class KnowledgeBackupEngine
         }
     }
 
-    private static async Task<BackupResult?> CheckManifestAsync(
+    private static async Task<KnowledgeBackupEngineResult?> CheckManifestAsync(
         ZipArchive zip,
         CancellationToken ct)
     {
@@ -323,7 +327,7 @@ internal static class KnowledgeBackupEngine
         var version = versionProperty.GetInt32();
         return BackupManifestVersionPolicy.IsCompatible(version)
             ? null
-            : new BackupResult(
+            : new KnowledgeBackupEngineResult(
                 false,
                 BackupManifestVersionPolicy.FormatIncompatibleMessage(version),
                 0,
@@ -538,7 +542,7 @@ internal static class KnowledgeBackupEngine
     {
         try
         {
-            if (!InfraBackup.SafePathGuard.IsSafeToDelete(directory))
+            if (!SafePathGuard.IsSafeToDelete(directory))
             {
                 BestEffort.ReportWarning(
                     $"[KnowledgeBackup] Verzeichnis-Loeschung abgelehnt: {directory}");

@@ -1,21 +1,15 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Infrastructure.Ai.Backup;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>
-/// Alle Speicherorte, die zu einer KI-Wissenssicherung gehoeren.
-/// Die gebuendelte Uebergabe verhindert, dass Tests oder spaetere Dienste
-/// versehentlich auf echte Benutzerdaten zugreifen.
+/// Ermittelt die rechnerabhaengigen Standardpfade. Die ZIP-Dateiarbeit selbst
+/// liegt in der Infrastructure.
 /// </summary>
-internal sealed record KnowledgeBackupLocations(
-    string KnowledgeRoot,
-    string RoamingAuswertungPro,
-    string RoamingSewerStudio,
-    string LocalSewerStudio,
-    string TrainingCenterStatePath,
-    string TempRoot)
+internal static class KnowledgeBackupLocationFactory
 {
     public static KnowledgeBackupLocations FromCurrentSystem()
         => new(

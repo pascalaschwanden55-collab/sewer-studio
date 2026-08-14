@@ -22,6 +22,7 @@ using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Application.Vsa;
 
 using AuswertungPro.Next.Infrastructure.Backup;
+using AuswertungPro.Next.Infrastructure.Ai.Backup;
 using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Diagnostics;
@@ -572,7 +573,11 @@ namespace AuswertungPro.Next.UI
                 KnowledgeWalCheckpoint,
                 OllamaListAsync,
                 GitCommit);
-            KnowledgeBackup = new KnowledgeBackupTransferService();
+            KnowledgeBackup = new KnowledgeBackupTransferService(
+                KnowledgeBackupLocationFactory.FromCurrentSystem(),
+                AppSettings.FlushPendingSave,
+                KnowledgeBackupEngine.FlushSqliteWal,
+                SqliteSnapshots);
             ProgramSnapshot = new ProgramSnapshotService(GitCommit);
             KnowledgeRealtimeMirror = new KnowledgeRealtimeMirrorService(
                 KnowledgeRoot,

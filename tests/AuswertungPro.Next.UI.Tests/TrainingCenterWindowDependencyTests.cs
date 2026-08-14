@@ -180,7 +180,7 @@ public sealed class TrainingCenterWindowDependencyTests
         Assert.DoesNotContain("Zu FewShot", xaml, StringComparison.Ordinal);
 
         var backupCatalog = File.ReadAllText(RepoFile(
-            "src", "AuswertungPro.Next.UI", "Services", "KnowledgeBackupFileCatalog.cs"));
+            "src", "AuswertungPro.Next.Infrastructure", "Ai", "Backup", "KnowledgeBackupFileCatalog.cs"));
         Assert.Contains("\"fewshot_examples.json\"", backupCatalog, StringComparison.Ordinal);
         Assert.Contains("\"fewshot_images\"", backupCatalog, StringComparison.Ordinal);
     }

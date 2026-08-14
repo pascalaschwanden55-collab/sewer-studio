@@ -45,4 +45,20 @@ public sealed class KnowledgeBackupServiceArchitectureTests
         Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
         Assert.Contains("KnowledgeBackupTransferService", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Zip_Engine_und_Dateihelfer_liegen_ausserhalb_der_UI()
+    {
+        var uiServices = TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "Services");
+        Assert.False(File.Exists(Path.Combine(uiServices, "KnowledgeBackupService.cs")));
+        Assert.False(File.Exists(Path.Combine(uiServices, "KnowledgeBackupFileCatalog.cs")));
+        Assert.False(File.Exists(Path.Combine(uiServices, "KnowledgeBackupImportPostProcessor.cs")));
+
+        var infrastructure = TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Ai", "Backup");
+        Assert.True(File.Exists(Path.Combine(infrastructure, "KnowledgeBackupEngine.cs")));
+        Assert.True(File.Exists(Path.Combine(infrastructure, "KnowledgeBackupFileCatalog.cs")));
+        Assert.True(File.Exists(Path.Combine(infrastructure, "KnowledgeBackupImportPostProcessor.cs")));
+    }
 }
