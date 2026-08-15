@@ -1,0 +1,153 @@
+"""Kuenstliche OSD-Anzeigen (Spec Abschnitt 4.2).
+
+Die Wahrheit ist per Konstruktion exakt: Wir wissen, welches Zeichen wir wohin
+gemalt haben. Damit lassen sich genau die Stile abdecken, die der heutige Leser
+NICHT liest - die Luecke, die die Lehrer-Ernte prinzipiell nicht schliessen kann.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+SKRIPTE = Path(__file__).resolve().parents[2] / "training" / "scripts"
+if str(SKRIPTE) not in sys.path:
+    sys.path.insert(0, str(SKRIPTE))
+
+import osd_kunstbilder
+
+
+def test_gleiche_saat_liefert_gleiche_bytes():
+    erst = osd_kunstbilder.erzeuge(saat=42)
+    zweit = osd_kunstbilder.erzeuge(saat=42)
+
+    assert erst.text == zweit.text
+    assert erst.zeichen == zweit.zeichen
+    assert erst.bild.tobytes() == zweit.bild.tobytes()
+
+
+def test_andere_saat_liefert_anderen_text():
+    texte = {osd_kunstbilder.erzeuge(saat=n).text for n in range(20)}
+
+    assert len(texte) > 1, "Der Erzeuger liefert immer dasselbe."
+
+
+def test_labels_liegen_im_bild_und_kennen_gueltige_klassen():
+    from sidecar import osd_meter
+
+    for saat in range(10):
+        kunst = osd_kunstbilder.erzeuge(saat=saat)
+        assert kunst.zeichen, "Ein Bild ohne Zeichen ist nutzlos."
+        for klasse, x, y, b, h in kunst.zeichen:
+            assert 0 <= klasse < len(osd_meter.ZEICHEN)
+            assert 0.0 <= x - b / 2 and x + b / 2 <= 1.0
+            assert 0.0 <= y - h / 2 and y + h / 2 <= 1.0
+
+
+def test_zeichenzahl_passt_zum_text():
+    for saat in range(10):
+        kunst = osd_kunstbilder.erzeuge(saat=saat)
+        assert len(kunst.zeichen) == len(kunst.text.replace(" ", ""))
+
+
+def test_alle_stile_werden_erzeugt():
+    stile = {osd_kunstbilder.erzeuge(saat=n).stil_name for n in range(200)}
+
+    assert stile == {s.name for s in osd_kunstbilder.STILE}
+
+
+# ---------------------------------------------------------------------------
+# CLI-nahe reine Logik (Ruling zu Aufgabe 3: main() liest/schreibt Dateien,
+# die folgenden Bausteine sind dateisystemfrei und werden deshalb direkt
+# geprueft; der Ordner-Scan selbst wird bewusst nicht separat getestet).
+# ---------------------------------------------------------------------------
+
+def test_kunst_id_ist_reproduzierbar_und_kollisionsfrei():
+    assert osd_kunstbilder.kunst_id(42) == "kunst_00000042"
+    assert osd_kunstbilder.kunst_id(0) == "kunst_00000000"
+    # Verschiedene Saaten duerfen nie auf dieselbe Kennung fallen.
+    kennungen = {osd_kunstbilder.kunst_id(n) for n in range(50)}
+    assert len(kennungen) == 50
+
+
+def test_eintrag_erzeugen_liefert_erwartete_feldform():
+    kunst = osd_kunstbilder.erzeuge(saat=5)
+
+    eintrag = osd_kunstbilder.eintrag_erzeugen("kunst_00000005", kunst, "ab" * 32)
+
+    assert eintrag == {
+        "id": "kunst_00000005",
+        "bild_sha256": "ab" * 32,
+        "haltung": None,
+        "text": kunst.text,
+        "meter": kunst.meter,
+        "stil": kunst.stil_name,
+    }
+    # Ein kuenstliches Bild gehoert per Definition zu keiner Haltung.
+    assert eintrag["haltung"] is None
+
+
+# ---------------------------------------------------------------------------
+# main(): Schreibweg, Determinismus und Schema von eintraege.json.
+# ---------------------------------------------------------------------------
+
+def test_main_schreibt_bilder_labels_und_eintraege(tmp_path):
+    ziel = tmp_path / "ziel"
+
+    rc = osd_kunstbilder.main(
+        ["--ziel", str(ziel), "--anzahl", "3", "--saat", "10"])
+
+    assert rc == 0
+    for saat in (10, 11, 12):
+        kennung = osd_kunstbilder.kunst_id(saat)
+        assert (ziel / "bilder" / f"{kennung}.png").is_file()
+        assert (ziel / "labels" / f"{kennung}.txt").is_file()
+
+    dokument = json.loads((ziel / "eintraege.json").read_text(encoding="utf-8"))
+    assert dokument["schema"] == "osd_kunstbilder_v1"
+    assert len(dokument["eintraege"]) == 3
+    for eintrag in dokument["eintraege"]:
+        assert eintrag["haltung"] is None
+        assert eintrag["stil"] in {s.name for s in osd_kunstbilder.STILE}
+        assert len(eintrag["bild_sha256"]) == 64
+        assert isinstance(eintrag["meter"], float)
+
+
+def test_main_ist_deterministisch_bei_gleicher_saat(tmp_path):
+    args_a = ["--ziel", str(tmp_path / "a"), "--anzahl", "4", "--saat", "3"]
+    args_b = ["--ziel", str(tmp_path / "b"), "--anzahl", "4", "--saat", "3"]
+
+    osd_kunstbilder.main(args_a)
+    osd_kunstbilder.main(args_b)
+
+    eintraege_a = (tmp_path / "a" / "eintraege.json").read_text(encoding="utf-8")
+    eintraege_b = (tmp_path / "b" / "eintraege.json").read_text(encoding="utf-8")
+    assert eintraege_a == eintraege_b
+
+    for saat in range(3, 7):
+        kennung = osd_kunstbilder.kunst_id(saat)
+        bild_a = (tmp_path / "a" / "bilder" / f"{kennung}.png").read_bytes()
+        bild_b = (tmp_path / "b" / "bilder" / f"{kennung}.png").read_bytes()
+        assert bild_a == bild_b
+
+
+def test_main_nutzt_hintergrund_ordner_deterministisch(tmp_path):
+    from PIL import Image
+
+    hintergrund_ordner = tmp_path / "hintergruende"
+    hintergrund_ordner.mkdir()
+    Image.new("RGB", (50, 50), (80, 60, 40)).save(hintergrund_ordner / "h1.png")
+    Image.new("RGB", (50, 50), (40, 60, 80)).save(hintergrund_ordner / "h2.jpg")
+
+    ziel_a = tmp_path / "ziel_a"
+    ziel_b = tmp_path / "ziel_b"
+    for ziel in (ziel_a, ziel_b):
+        rc = osd_kunstbilder.main([
+            "--ziel", str(ziel), "--anzahl", "3", "--saat", "0",
+            "--hintergrund-ordner", str(hintergrund_ordner),
+        ])
+        assert rc == 0
+
+    kennung = osd_kunstbilder.kunst_id(0)
+    bild_a = (ziel_a / "bilder" / f"{kennung}.png").read_bytes()
+    bild_b = (ziel_b / "bilder" / f"{kennung}.png").read_bytes()
+    assert bild_a == bild_b
