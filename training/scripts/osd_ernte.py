@@ -132,10 +132,32 @@ def ernte_bild(bild: Image.Image, templates, schutz: Schutz,
 
 BILD_ENDUNGEN = {".jpg", ".jpeg", ".png"}
 
-# Sieht der Ordnername wie eine Haltung aus ("10261-10262", "A-B")? Genau ein
-# Bindestrich, beide Seiten nicht leer. Kein Normalisieren hier - das macht
-# Schutz.ist_gesperrt() bereits selbst ueber physische_haltung().
-_HALTUNG_MUSTER = re.compile(r"^[A-Za-z0-9]+-[A-Za-z0-9]+$")
+# Sieht der Ordnername wie eine Haltung aus? Genau ein Bindestrich, beide
+# Seiten nicht leer, aus Ziffern/Buchstaben (inkl. Umlaute/ss)/Punkten/
+# Unterstrichen. Kein Normalisieren hier - das macht Schutz.ist_gesperrt()
+# bereits selbst ueber physische_haltung().
+#
+# Fix-Runde 1 (2026-08-15): Das urspruengliche Muster ohne Punkt liess das
+# GESAMTE echte Archiv unter D:\Haltungen durchfallen - dort tragen die
+# Ordner Punkte ("06.24341-35625", "06.691078-691070"), nur die Goldmanifeste
+# haben punktlose Namen ("36051-33461"). Ohne erkannte Haltung griff der
+# Gegenrichtungsschutz nirgends mehr, nur noch der Bildhash-Schutz - eine
+# Goldhaltung in der Gegenrichtung waere ungehindert ins Training gelangt.
+# Weil beide Seiten hier keinen Bindestrich enthalten duerfen, bleibt das
+# Muster automatisch zum ERSTEN-Bindestrich-Split von haltungsvarianten()
+# (osd_wahrheit_aus_protokoll.py, split("-", 1)) konsistent: Ein Treffer hat
+# hier ohnehin nie mehr als einen Bindestrich.
+#
+# Beim Abgleich gegen das echte Archiv (1476 Ordner) fiel zusaetzlich ein
+# echter Umlautname auf ("61542-Schaechen_Bach", hier mit "ae" wiedergegeben -
+# die echte Datei traegt den echten Umlaut). "Buchstaben" schliesst im
+# Deutschen Umlaute und "ss" ein, deshalb ergaenzt. NICHT ergaenzt: Leerzeichen
+# um den Bindestrich ("36510 - 36906", 1 von 1476 Ordnern) - dieses Format
+# wuerde mit den `<Hauptcode - Klartext>`-Ordnern von gold_frames kollidieren
+# (siehe CLAUDE.md, z. B. "BAB - Riss"), die ausdruecklich KEINE Haltungen
+# sind. Bleibt bewusst ohne Haltungserkennung; der Bildhash-Schutz greift dort
+# weiterhin.
+_HALTUNG_MUSTER = re.compile(r"^[A-Za-z0-9._äöüÄÖÜß]+-[A-Za-z0-9._äöüÄÖÜß]+$")
 
 
 def haltung_aus_ordnername(name: str) -> str | None:
@@ -206,40 +228,53 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not quellen:
         raise SystemExit(f"Keine Bilder unter {args.bilder}")
 
-    zaehler = {"gesehen": 0, "geerntet": 0, "geschuetzt": 0, "unlesbar": 0}
+    zaehler = {"gesehen": 0, "geerntet": 0, "geschuetzt": 0, "unlesbar": 0,
+               "ohne_haltung": 0}
     eintraege: list[dict] = []
 
     for pfad in quellen:
         zaehler["gesehen"] += 1
         try:
+            # Fix-Runde 1 (2026-08-15): Der gesamte Bildkoerper - Oeffnen,
+            # Hashen, ernte_bild() bis zum Schreiben - liegt bewusst in EINEM
+            # try/except. Ein einzelnes ungewoehnliches, aber dekodierbares
+            # Bild darf einen Lauf ueber tausende Bilder nicht mit einer
+            # unbehandelten Ausnahme abbrechen (dann wuerde eintraege.json
+            # nie geschrieben und der ganze Lauf waere wertlos).
             bild = Image.open(pfad)
             bild.load()
+
+            bild_sha256 = _sha256_datei(pfad)
+            haltung = haltung_aus_ordnername(pfad.parent.name)
+            if haltung is None:
+                # Sichtbar machen statt still: Ohne erkannte Haltung greift
+                # fuer dieses Bild nur der Bildhash-Schutz, nicht der
+                # Gegenrichtungsschutz ueber physische_haltung().
+                zaehler["ohne_haltung"] += 1
+
+            # Vorab pruefen (ernte_bild prueft intern erneut): nur so kann
+            # die Zusammenfassung "geschuetzt" von "unlesbar/unvollstaendig"
+            # trennen - ernte_bild() gibt fuer beide Faelle gleichermassen
+            # None zurueck.
+            if schutz.ist_gesperrt(bild_sha256, haltung):
+                zaehler["geschuetzt"] += 1
+                continue
+
+            ergebnis = ernte_bild(bild, templates, schutz, bild_sha256, haltung)
+            if ergebnis is None:
+                zaehler["unlesbar"] += 1
+                continue
+
+            kennung = bild_id(bild_sha256)
+            ergebnis.ausschnitt.save(bilder_ordner / f"{kennung}.png")
+            (labels_ordner / f"{kennung}.txt").write_text(
+                als_labeltext(ergebnis.zeichen), encoding="utf-8")
+            eintraege.append(eintrag_erzeugen(
+                bild_sha256, haltung, ergebnis.zeichenfolge, ergebnis.meter))
+            zaehler["geerntet"] += 1
         except Exception:
             zaehler["unlesbar"] += 1
             continue
-
-        bild_sha256 = _sha256_datei(pfad)
-        haltung = haltung_aus_ordnername(pfad.parent.name)
-
-        # Vorab pruefen (ernte_bild prueft intern erneut): nur so kann die
-        # Zusammenfassung "geschuetzt" von "unlesbar/unvollstaendig" trennen -
-        # ernte_bild() gibt fuer beide Faelle gleichermassen None zurueck.
-        if schutz.ist_gesperrt(bild_sha256, haltung):
-            zaehler["geschuetzt"] += 1
-            continue
-
-        ergebnis = ernte_bild(bild, templates, schutz, bild_sha256, haltung)
-        if ergebnis is None:
-            zaehler["unlesbar"] += 1
-            continue
-
-        kennung = bild_id(bild_sha256)
-        ergebnis.ausschnitt.save(bilder_ordner / f"{kennung}.png")
-        (labels_ordner / f"{kennung}.txt").write_text(
-            als_labeltext(ergebnis.zeichen), encoding="utf-8")
-        eintraege.append(eintrag_erzeugen(
-            bild_sha256, haltung, ergebnis.zeichenfolge, ergebnis.meter))
-        zaehler["geerntet"] += 1
 
     dokument = {"schema": "osd_ernte_v1", "eintraege": eintraege}
     ziel_json = args.ziel / "eintraege.json"
@@ -253,6 +288,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Geerntet: {zaehler['geerntet']}")
     print(f"Uebersprungen (geschuetzt): {zaehler['geschuetzt']}")
     print(f"Uebersprungen (unlesbar/unvollstaendig): {zaehler['unlesbar']}")
+    print(f"Ohne erkennbare Haltung (Gegenrichtungsschutz konnte nicht "
+          f"greifen): {zaehler['ohne_haltung']}")
     print(f"Bestand: {ziel_json}")
     return 0
 

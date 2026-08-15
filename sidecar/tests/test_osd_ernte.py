@@ -5,6 +5,7 @@ Zweig hat auf dem gesamten Goldbestand null falsche Werte; eine Bruchstueck-
 Lesung dagegen raet den Dezimalpunkt und waere ein falsches Etikett.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -144,10 +145,49 @@ def test_haltung_aus_ordnername_erkennt_haltungsmuster():
     assert osd_ernte.haltung_aus_ordnername("A-B") == "A-B"
 
 
+def test_haltung_aus_ordnername_erkennt_echte_archivordner():
+    """Fix-Runde 1 (2026-08-15).
+
+    Die 1476 echten Ordner unter D:\\Haltungen tragen Punkte - das
+    urspruengliche punktlose Muster wies das GESAMTE Archiv ab und liess den
+    Gegenrichtungsschutz nirgends mehr greifen. Nur die Goldmanifeste selbst
+    haben punktlose Namen ("36051-33461"); beide Formen muessen erkannt
+    werden.
+    """
+    for name in ("06.24341-35625", "06.24379-06.24377",
+                 "06.691077-06.691078", "06.691078-691070"):
+        assert osd_ernte.haltung_aus_ordnername(name) == name
+
+    # Punktlose Goldform bleibt weiterhin erkannt.
+    assert osd_ernte.haltung_aus_ordnername("36051-33461") == "36051-33461"
+
+
+def test_haltung_aus_ordnername_erkennt_umlaute():
+    """Ein echter Archivordner ("61542-Schächen_Bach") - Umlaute sind
+    Buchstaben und muessen wie alle anderen Buchstaben erkannt werden.
+    """
+    name = "61542-Schächen_Bach"
+
+    assert osd_ernte.haltung_aus_ordnername(name) == name
+
+
+def test_haltung_aus_ordnername_verwirft_leerzeichen_um_bindestrich():
+    """Bewusst NICHT unterstuetzt (Fix-Runde 1).
+
+    "36510 - 36906" (Leerzeichen um den Bindestrich) waere sonst nicht von
+    den `<Hauptcode - Klartext>`-Ordnern in gold_frames zu unterscheiden
+    (z. B. "BAB - Riss") - die sind ausdruecklich keine Haltungen.
+    """
+    assert osd_ernte.haltung_aus_ordnername("36510 - 36906") is None
+    assert osd_ernte.haltung_aus_ordnername("BAB - Riss") is None
+
+
 def test_haltung_aus_ordnername_verwirft_nicht_passende_namen():
-    # Weder "bilder" noch "gold_frames" noch "1-2-3" sehen wie eine Haltung
-    # mit genau zwei Seiten aus - lieber None als eine geratene Haltung.
+    # Weder "bilder" noch "frames" noch "gold_frames" noch "1-2-3" sehen wie
+    # eine Haltung mit genau zwei Seiten aus - lieber None als eine
+    # geratene Haltung.
     assert osd_ernte.haltung_aus_ordnername("bilder") is None
+    assert osd_ernte.haltung_aus_ordnername("frames") is None
     assert osd_ernte.haltung_aus_ordnername("gold_frames") is None
     assert osd_ernte.haltung_aus_ordnername("1-2-3") is None
     assert osd_ernte.haltung_aus_ordnername("") is None
@@ -169,3 +209,56 @@ def test_eintrag_erzeugen_erlaubt_fehlende_haltung():
     eintrag = osd_ernte.eintrag_erzeugen("cd" * 32, None, "12", 1.2)
 
     assert eintrag["haltung"] is None
+
+
+# ---------------------------------------------------------------------------
+# main(): Fix-Runde 1 (2026-08-15) - ein unerwarteter Fehler tief im
+# Verarbeitungsweg darf den Lauf nicht wertlos machen, und die Zaehlung, ob
+# der Gegenrichtungsschutz greifen konnte, muss sichtbar sein.
+# ---------------------------------------------------------------------------
+
+def test_main_uebersteht_unerwarteten_fehler_mitten_im_bild(tmp_path, monkeypatch, capsys):
+    """Ein Fehler tief in ernte_bild() darf den ganzen Lauf nicht wegwerfen.
+
+    Vorher lag nur Image.open()/.load() in try/except: Ein Fehler in
+    glyphenmaske/boxen_aus_maske/klassifiziere/parse_meter waere unbehandelt
+    aus main() geflogen - eintraege.json waere nie geschrieben worden.
+    """
+    quelle = tmp_path / "quelle" / "99999-88888"
+    quelle.mkdir(parents=True)
+    _bild_mit_anzeige("LZ1: 9.4m").save(quelle / "a.jpg", quality=95)
+    _bild_mit_anzeige("LZ2: 3.1m").save(quelle / "b.jpg", quality=95)
+
+    monkeypatch.setattr(osd_ernte, "lade_schutz", lambda *_a, **_k: Schutz())
+
+    def _explodiert(*_a, **_k):
+        raise RuntimeError("unerwarteter Fehler tief im Verarbeitungsweg")
+
+    monkeypatch.setattr(osd_ernte, "ernte_bild", _explodiert)
+
+    ziel = tmp_path / "ziel"
+    rc = osd_ernte.main(["--bilder", str(quelle.parent), "--ziel", str(ziel)])
+
+    assert rc == 0
+    dokument = json.loads((ziel / "eintraege.json").read_text(encoding="utf-8"))
+    assert dokument == {"schema": "osd_ernte_v1", "eintraege": []}
+
+    ausgabe = capsys.readouterr().out
+    assert "Bilder gesehen: 2" in ausgabe
+    assert "Uebersprungen (unlesbar/unvollstaendig): 2" in ausgabe
+
+
+def test_main_zaehlt_bilder_ohne_erkennbare_haltung(tmp_path, monkeypatch, capsys):
+    """Fehlt die Haltung, muss das sichtbar sein - nicht nur der Bildhash-Schutz greift dann."""
+    ohne_haltung = tmp_path / "quelle" / "unsortiert"
+    ohne_haltung.mkdir(parents=True)
+    _bild_mit_anzeige("LZ1: 9.4m").save(ohne_haltung / "a.jpg", quality=95)
+
+    monkeypatch.setattr(osd_ernte, "lade_schutz", lambda *_a, **_k: Schutz())
+    monkeypatch.setattr(osd_ernte, "ernte_bild", lambda *_a, **_k: None)
+
+    ziel = tmp_path / "ziel"
+    osd_ernte.main(["--bilder", str(ohne_haltung.parent), "--ziel", str(ziel)])
+
+    ausgabe = capsys.readouterr().out
+    assert "Ohne erkennbare Haltung (Gegenrichtungsschutz konnte nicht greifen): 1" in ausgabe
