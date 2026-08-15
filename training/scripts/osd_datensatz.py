@@ -336,7 +336,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.ziel.is_dir():
             args.ziel.rmdir()  # bereits als leer geprueft - gefahrlos
         staging.replace(args.ziel)
-    except Exception:
+    except (Exception, SystemExit):
+        # SystemExit erbt von BaseException, nicht von Exception - alle drei
+        # Abbruchpruefungen oben (mehrdeutiges/fehlendes Bild, fehlende
+        # Labeldatei, Wettlauf am Ziel) werfen genau das und wuerden ein
+        # blosses "except Exception" durchschluepfen. Dann bliebe der
+        # Staging-Ordner samt bereits kopierten Bildern/Labels liegen, obwohl
+        # --ziel unangetastet bleibt. Fix-Runde 1 (2026-08-15).
         shutil.rmtree(staging, ignore_errors=True)
         raise
 

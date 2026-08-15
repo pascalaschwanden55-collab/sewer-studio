@@ -352,3 +352,35 @@ def test_main_akzeptiert_leeres_vorhandenes_ziel(tmp_path, monkeypatch):
 
     assert rc == 0
     assert (ziel / "data.yaml").is_file()
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 (2026-08-15): SystemExit erbt von BaseException, nicht von
+# Exception. Das urspruengliche "except Exception:" um den Kopiervorgang liess
+# genau die drei Abbruchpruefungen dort (mehrdeutiges/fehlendes Bild, fehlende
+# Labeldatei, Wettlaufpruefung am Ziel) durchschluepfen: main() brach zwar
+# korrekt ab und --ziel blieb unangetastet, aber der Staging-Ordner samt
+# bereits kopierten Bildern/Labels blieb liegen.
+# ---------------------------------------------------------------------------
+
+def test_main_raeumt_staging_bei_fehlender_labeldatei_mitten_im_lauf_auf(tmp_path, monkeypatch):
+    monkeypatch.setattr(osd_datensatz, "lade_schutz", lambda *_a, **_k: Schutz())
+
+    eintraege = [
+        {"id": "a", "bild_sha256": "11" * 32, "haltung": "1-2"},
+        {"id": "b", "bild_sha256": "22" * 32, "haltung": "3-4"},
+    ]
+    quelle = _schreibe_quelle(tmp_path / "quellen", "ernte", eintraege, "osd_ernte_v1")
+    # Labeldatei eines Eintrags erst NACH der Ernte entfernen - simuliert
+    # einen Fehler mitten im Kopiervorgang, nachdem bereits mindestens ein
+    # anderer Eintrag erfolgreich in den Staging-Ordner kopiert wurde.
+    (quelle / "labels" / "b.txt").unlink()
+
+    ziel = tmp_path / "ziel"
+    with pytest.raises(SystemExit):
+        osd_datensatz.main(["--quelle", str(quelle), "--ziel", str(ziel)])
+
+    assert not ziel.exists(), "Bei einem Abbruch mitten im Lauf darf kein Ziel entstehen."
+    staging_reste = list(ziel.parent.glob(f".{ziel.name}.staging-*"))
+    assert staging_reste == [], (
+        f"Staging-Ordner wurde nach SystemExit nicht aufgeraeumt: {staging_reste}")
