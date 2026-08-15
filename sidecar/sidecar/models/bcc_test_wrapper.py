@@ -17,7 +17,6 @@ import math
 import os
 import re
 import tempfile
-import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +27,7 @@ from .. import osd_meter
 from ..config import settings
 from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
 from ..schemas.detection import BccTestYoloResponse, YoloDetection
-from . import yolo_wrapper
+from . import yolo_wrapper, yolo_test_slot
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +46,8 @@ class BccCandidate:
     created_utc: str
 
 
-_predict_lock = threading.Lock()
-_loaded_candidate_sha256: str | None = None
+# Gemeinsam mit lernstufe_wrapper — beide belegen den Slot YOLO_TEST (Audit S-H1).
+_predict_lock = yolo_test_slot.PREDICT_LOCK
 _CANDIDATE_ID_PATTERN = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
 )
@@ -324,30 +323,20 @@ def _load_candidate(candidate: BccCandidate, device: str):
         ) from exc
 
 
-def _discard_stale_candidate(candidate: BccCandidate) -> None:
-    """Entlaedt den Test-Slot bei Kandidatenwechsel.
-
-    Muss UNTER _predict_lock, aber VOR der Busy-Lease laufen (Paket 2): eine
-    eigene Lease wuerde das unload sonst sperren (Lease-Schutz). Der
-    _predict_lock serialisiert alle Zugriffe auf diesen Slot, darum kann hier
-    keine fremde Lease aktiv sein.
-    """
-    global _loaded_candidate_sha256
-
-    if _loaded_candidate_sha256 != candidate.weights_sha256:
-        gpu_manager.unload(ModelSlot.YOLO_TEST)
-        _loaded_candidate_sha256 = None
-
-
 def _ensure_candidate_model(candidate: BccCandidate, device: str):
-    global _loaded_candidate_sha256
+    """Sorgt dafuer, dass GENAU dieser Kandidat im Test-Slot liegt.
 
+    Den Kandidatenwechsel entscheidet der gpu_manager anhand der Inhaltskennung
+    (Gewichts-SHA-256). Das ist wichtig, weil sich `lernstufe_wrapper` denselben
+    Slot teilt: Eine Modulvariable hier wuerde dessen Wechsel nicht sehen und das
+    fremde Modell inferieren lassen (Audit 2026-08-14, S-H1).
+    """
     state = gpu_manager.ensure_loaded(
         ModelSlot.YOLO_TEST,
         device,
         lambda: _load_candidate(candidate, device),
+        content_id=candidate.weights_sha256,
     )
-    _loaded_candidate_sha256 = candidate.weights_sha256
     return state.model
 
 
@@ -428,13 +417,19 @@ def detect(
             meter_value=meter_value,
         )
 
+    # Das Lock teilen sich beide Nutzer des Slots YOLO_TEST; damit kann sich
+    # kein fremder Modellwechsel zwischen Laden und Inferenz schieben.
     with _predict_lock:
-        # Kandidatenwechsel VOR der Lease erledigen (eigene Lease wuerde das
-        # unload sonst sperren); danach Laden + Inferenz UNTER der Lease
-        # (Paket 2): das geladene Kandidaten-Modell ist vom ensure_loaded bis
-        # zum Inferenzende vor Eviction geschuetzt, und wartende Requests
-        # koennen die Busy-Uhr nicht verschieben.
-        _discard_stale_candidate(candidate)
+        # Fremden Inhalt VOR der Lease raeumen (eigene Lease wuerde das unload
+        # sonst sperren). Der Vergleich laeuft ueber die Inhaltskennung des Slots,
+        # nicht ueber eine Modulvariable — sonst bliebe ein Wechsel des
+        # Lernstufen-Wrappers unbemerkt (Audit S-H1).
+        gpu_manager.discard_foreign_content(
+            ModelSlot.YOLO_TEST, candidate.weights_sha256)
+        # Danach Laden + Inferenz UNTER der Lease (Paket 2): das geladene
+        # Kandidaten-Modell ist vom ensure_loaded bis zum Inferenzende vor
+        # Eviction geschuetzt, und wartende Requests koennen die Busy-Uhr nicht
+        # verschieben.
         with gpu_manager.busy_slot(ModelSlot.YOLO_TEST):
             model = _ensure_candidate_model(candidate, device)
             if model is None:

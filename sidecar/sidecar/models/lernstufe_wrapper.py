@@ -26,13 +26,12 @@ import logging
 import os
 import re
 import tempfile
-import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import settings
-from ..gpu_manager import ModelSlot, gpu_manager
-from . import yolo_wrapper
+from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
+from . import yolo_wrapper, yolo_test_slot
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,8 @@ logger = logging.getLogger(__name__)
 ERLAUBTE_KLASSEN = ("rohranfang", "rohrende")
 
 _KLASSE_PATTERN = re.compile(r"^[a-z][a-z_]{0,31}$")
-_predict_lock = threading.Lock()
-_geladene_sha256: str | None = None
+# Gemeinsam mit bcc_test_wrapper — beide belegen den Slot YOLO_TEST (Audit S-H1).
+_predict_lock = yolo_test_slot.PREDICT_LOCK
 
 
 class LernstufeError(RuntimeError):
@@ -220,25 +219,30 @@ def _laden(stufe: Lernstufe, device: str):
 
 def einordnen(image_base64: str, klasse: str, erwarteter_sha256: str, imgsz: int = 640) -> dict:
     """Sagt, wie sicher das ganze Bild die Klasse zeigt. Keine Box."""
-    global _geladene_sha256
-
     stufe = waehlen(klasse, erwarteter_sha256)
     bild = yolo_wrapper.decode_image(image_base64)
     device = _geraet()
 
+    # Das Lock teilen sich beide Nutzer des Slots YOLO_TEST (Audit S-H1).
     with _predict_lock:
-        if _geladene_sha256 != stufe.gewicht_sha256:
-            # Muss unter _predict_lock, aber vor der Busy-Lease laufen —
-            # eine eigene Lease wuerde das Entladen sonst selbst sperren.
-            gpu_manager.unload(ModelSlot.YOLO_TEST)
-            _geladene_sha256 = None
-        zustand = gpu_manager.ensure_loaded(
-            ModelSlot.YOLO_TEST, device, lambda: _laden(stufe, device))
-        _geladene_sha256 = stufe.gewicht_sha256
-        modell = zustand.model
+        # Fremden Inhalt vor der Lease raeumen — eine eigene Lease wuerde das
+        # Entladen sonst selbst sperren. Welches Gewicht drinliegt, weiss allein
+        # der Slot; eine Modulvariable hier saehe den Wechsel des BCC-Wrappers nicht.
+        gpu_manager.discard_foreign_content(
+            ModelSlot.YOLO_TEST, stufe.gewicht_sha256)
 
         besitzer = gpu_manager.acquire_busy(ModelSlot.YOLO_TEST)
         try:
+            # Laden UNTER der Lease (Muster aus bcc_test_wrapper, Paket 2): sonst
+            # sieht der Waechter den Ladevorgang nicht und ein paralleler
+            # OOM-Evict koennte das Modell dazwischen entfernen.
+            zustand = gpu_manager.ensure_loaded(
+                ModelSlot.YOLO_TEST, device, lambda: _laden(stufe, device),
+                content_id=stufe.gewicht_sha256)
+            modell = zustand.model
+            if modell is None:
+                # Unload-Race: kontrollierter 503 statt AttributeError/500.
+                raise ModelUnloadedError(ModelSlot.YOLO_TEST.value)
             eingabe = yolo_wrapper._pil_rgb_to_ultralytics_bgr(bild)
             ergebnis = modell.predict(source=eingabe, imgsz=imgsz, verbose=False)[0]
             namen = {int(k): str(v).strip() for k, v in dict(modell.names).items()}

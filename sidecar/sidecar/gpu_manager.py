@@ -187,6 +187,11 @@ class SlotState:
     device: str = ""
     load_time_sec: float = 0.0
     last_used: float = 0.0   # time.monotonic() der letzten Nutzung (fuer LRU-Eviction)
+    # Inhaltskennung des geladenen Modells (z. B. Gewichts-SHA-256). Teilen sich
+    # mehrere Wrapper einen Slot, entscheidet allein dieser Wert ueber
+    # Wiederverwenden oder Neuladen (Audit 2026-08-14, S-H1). None = Slot mit nur
+    # einem festen Modell (YOLO, DINO, SAM).
+    content_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -211,7 +216,9 @@ class GpuModelManager:
 
     SPERRENREIHENFOLGE (Deadlock-Freiheit):
       1. Wrapper-Predict-Locks (Modulebene, z.B. _yolo_predict_lock) — immer aussen;
-         Manager-Code fordert sie nie an.
+         Manager-Code fordert sie nie an. Teilen sich zwei Wrapper einen Slot, teilen
+         sie sich auch das Lock (YOLO_TEST: yolo_test_slot.PREDICT_LOCK); die
+         Slot-Identitaet haengt zusaetzlich an SlotState.content_id (Audit S-H1).
       2. Per-Slot-Lock (self._locks[slot]) — serialisiert Laden/Entladen eines Slots.
       3. _global_lock — schuetzt _slots-Register und _busy-Leases (nur kurze
          kritische Abschnitte).
@@ -247,16 +254,26 @@ class GpuModelManager:
         slot: ModelSlot,
         device: str,
         loader: Callable[[], Tuple[Any, Optional[Any]]],
+        content_id: str | None = None,
     ) -> SlotState:
         """Load *slot* on *device* if not already loaded. Returns SlotState.
 
         Uses double-check locking for thread safety without blocking
         concurrent access to different slots. Vor dem Laden prueft die
         VRAM-Zulassung den geraeteweit freien Speicher (Paket 3/B).
+
+        *content_id* benennt den INHALT des Slots (z. B. den Gewichts-SHA-256 eines
+        Testkandidaten). Teilen sich mehrere Wrapper einen Slot, ist diese Kennung
+        die einzige Wahrheit darueber, welches Modell gerade drinsteckt: Bei
+        Abweichung entlaedt und laedt der Manager selbst. Frueher merkte sich jeder
+        Wrapper seinen eigenen Hash in einer Modulvariablen und sah den Wechsel des
+        anderen nicht — dann inferierte das FREMDE Modell (Audit 2026-08-14, S-H1).
+        Slots mit nur einem festen Modell rufen ohne Kennung auf und verhalten sich
+        unveraendert.
         """
-        # Fast path: already loaded
+        # Fast path: already loaded (nur bei exakt passendem Inhalt)
         state = self._slots.get(slot)
-        if state is not None and state.model is not None:
+        if state is not None and state.model is not None and state.content_id == content_id:
             state.last_used = time.monotonic()
             return state
 
@@ -267,8 +284,20 @@ class GpuModelManager:
             # entladener Slot hat model=None und wird hier frisch geladen).
             state = self._slots.get(slot)
             if state is not None and state.model is not None:
-                state.last_used = time.monotonic()
-                return state
+                if state.content_id == content_id:
+                    state.last_used = time.monotonic()
+                    return state
+                # Fremder Inhalt im gemeinsamen Slot: kontrolliert entladen, bevor
+                # das eigene Gewicht geladen wird. Eine laufende Inferenz hat immer
+                # Vorrang — dann lieber ein kontrollierter 503 als ein Modellwechsel
+                # unter den Fuessen des anderen Aufrufers.
+                if not self._unload_locked(slot):
+                    raise ModelUnloadedError(slot.value)
+                # Bereinigung VOR der VRAM-Zulassung: der eben freigegebene Speicher
+                # soll dem neuen Modell zugutekommen. Laeuft ausserhalb _global_lock,
+                # damit der Watchdog erreichbar bleibt.
+                self._try_empty_cache()
+                gc.collect()
 
             # Zulassung VOR dem Ladeversuch (geraeteweit freier VRAM, inkl. Ollama).
             # Paket 2/B4: Zulassung und In-flight-Reservierung atomar unter _global_lock —
@@ -289,6 +318,7 @@ class GpuModelManager:
                 device=device,
                 load_time_sec=elapsed,
                 last_used=time.monotonic(),
+                content_id=content_id,
             )
             with self._global_lock:
                 self._slots[slot] = state
@@ -310,24 +340,48 @@ class GpuModelManager:
         if lock is None:
             return False
         with lock:
-            with self._global_lock:
-                if slot in self._busy:
-                    logger.warning(
-                        "unload(%s) verweigert: Slot ist leased (laufende Inferenz).",
-                        slot.value)
-                    return False
-                state = self._slots.pop(slot, None)
-            if state is None:
+            if not self._unload_locked(slot):
                 return False
-            logger.info("Unloading %s from %s ...", slot.value, state.device)
-            # Referenzen auf None setzen (nicht del): haelt ein anderer Thread die SlotState ueber
-            # den lockfreien Fast-Path noch, faellt der Zugriff auf einen definierten None-Wert statt
-            # auf ein geloeschtes Attribut. Das Modell wird per Refcount freigegeben, sobald die
-            # letzte Referenz faellt.
-            state.model = None
-            state.processor = None
         self._try_empty_cache()
         gc.collect()
+        return True
+
+    def discard_foreign_content(self, slot: ModelSlot, content_id: str | None) -> bool:
+        """Entlaedt den Slot, wenn ein ANDERER Inhalt darin liegt.
+
+        Fuer geteilte Slots (YOLO_TEST): Der Aufrufer ruft das VOR seiner eigenen
+        Busy-Lease auf, denn die eigene Lease wuerde das Entladen selbst sperren
+        (Lease-Schutz). Danach laedt `ensure_loaded` unter der Lease das eigene
+        Gewicht. Liefert True, wenn wirklich entladen wurde.
+        """
+        state = self._slots.get(slot)
+        if state is None or state.model is None or state.content_id == content_id:
+            return False
+        return self.unload(slot)
+
+    def _unload_locked(self, slot: ModelSlot) -> bool:
+        """Entlaedt einen Slot; der Slot-Lock MUSS bereits gehalten werden.
+
+        Liefert False, wenn nichts geladen war ODER eine Lease laeuft. Die
+        CUDA-/GC-Bereinigung macht der Aufrufer nach dem Freigeben des Locks,
+        damit der Watchdog auch bei haengendem empty_cache erreichbar bleibt.
+        """
+        with self._global_lock:
+            if slot in self._busy:
+                logger.warning(
+                    "unload(%s) verweigert: Slot ist leased (laufende Inferenz).",
+                    slot.value)
+                return False
+            state = self._slots.pop(slot, None)
+        if state is None:
+            return False
+        logger.info("Unloading %s from %s ...", slot.value, state.device)
+        # Referenzen auf None setzen (nicht del): haelt ein anderer Thread die SlotState ueber
+        # den lockfreien Fast-Path noch, faellt der Zugriff auf einen definierten None-Wert statt
+        # auf ein geloeschtes Attribut. Das Modell wird per Refcount freigegeben, sobald die
+        # letzte Referenz faellt.
+        state.model = None
+        state.processor = None
         return True
 
     def unload_all(self) -> None:

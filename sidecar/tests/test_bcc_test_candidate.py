@@ -363,7 +363,8 @@ def test_detect_reicht_das_bild_als_bgr_an_ultralytics_weiter(monkeypatch):
         bcc_test_wrapper.yolo_wrapper, "_is_frame_usable", lambda _image: (True, "ok"))
     monkeypatch.setattr(bcc_test_wrapper, "select_candidate", lambda *_args: candidate)
     monkeypatch.setattr(bcc_test_wrapper, "_resolve_device", lambda: "cpu")
-    monkeypatch.setattr(bcc_test_wrapper, "_discard_stale_candidate", lambda *_args: None)
+    monkeypatch.setattr(
+        bcc_test_wrapper.gpu_manager, "discard_foreign_content", lambda *_args: False)
     monkeypatch.setattr(
         bcc_test_wrapper.gpu_manager, "busy_slot", lambda *_args, **_kw: _Lease())
     monkeypatch.setattr(
