@@ -148,6 +148,16 @@ basemap_tiles/
 # Amtsblatt-Monitor: lokaler Laufzeitzustand + Temp-Ausgaben (nicht ins Repo)
 Amtsblatt-Monitor/state.json
 Amtsblatt-Monitor/tmp/
+# Woechentliche Auswertungen sind Ausgaben, keine Quelle (Audit 2026-08-14, R-M2).
+# Nur im Ordner selbst - die Musterdateien unter beispiel/ bleiben absichtlich getrackt.
+/Amtsblatt-Monitor/Amtsblatt_Uri_KW*.xlsx
+
+# Toter Code-Schnappschuss (Stand Feb 2026), von nichts referenziert; die Historie
+# bewahrt den Inhalt (Audit 2026-08-14, R-M1).
+src/AuswertungPro.Next.UI/AppSettings.zip
+
+# Sicherungskopien der Klassenkarten-Kandidaten (lokale Arbeitsstaende)
+training/class_maps/*.bak_*
 
 # Editable-Installation des Sidecars (pip install -e) legt das an — Build-Ausgabe.
 *.egg-info/
