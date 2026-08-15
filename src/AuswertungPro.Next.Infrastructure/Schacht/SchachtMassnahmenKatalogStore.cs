@@ -6,6 +6,7 @@ using System.Text.Json;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Schacht;
 
@@ -30,31 +31,60 @@ public sealed class SchachtMassnahmenKatalogStore : ISchachtMassnahmenKatalogSto
 
     private string FilePath => Path.Combine(_dir, "schacht_massnahmen.json");
 
-    public IReadOnlyList<SchachtMassnahmeKatalogEintrag> Load()
+    public IReadOnlyList<SchachtMassnahmeKatalogEintrag> Load(out string? loadError)
     {
+        loadError = null;
+
+        // File.Exists allein reicht nicht: Es liefert auch bei Zugriffsfehlern und bei
+        // einem Ordner am Dateipfad false. Ein Erstlauf und eine unlesbare Datei duerfen
+        // aber nicht dasselbe bedeuten (Audit M2).
+        var probe = CostStoreFileProbe.Probe(FilePath);
+        if (probe.State == CostStorePathState.Missing)
+            return Defaults();
+
+        if (probe.State == CostStorePathState.Invalid)
+        {
+            loadError = probe.Error ?? "Die Massnahmenliste kann nicht gelesen werden.";
+            return Defaults();
+        }
+
         try
         {
-            if (!File.Exists(FilePath))
-                return Defaults();
-
             var json = File.ReadAllText(FilePath);
             var list = JsonSerializer.Deserialize<List<SchachtMassnahmeKatalogEintrag>>(json, JsonDefaults.CaseInsensitive);
             if (list is null)
+            {
+                loadError = "Die Massnahmenliste enthaelt keine gueltige Liste.";
                 return Defaults();
+            }
 
             var clean = list.Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Name)).ToList();
+            // Eine leere, aber gueltige Datei ist eine bewusste Entscheidung des Anwenders
+            // und kein Fehler; die Standardliste hilft ihm hier weiter.
             return clean.Count == 0 ? Defaults() : clean;
         }
-        catch
+        catch (Exception ex)
         {
-            // Beschaedigt/gesperrt -> Defaults statt Absturz (der User kann neu speichern).
+            // Beschaedigt/gesperrt: sichtbar melden statt still die Standardliste
+            // auszugeben — sonst ueberschreibt der Editor die echte Liste.
+            loadError = ex.Message;
             return Defaults();
         }
     }
 
-    public void Save(IEnumerable<SchachtMassnahmeKatalogEintrag> eintraege)
+    public bool Save(IEnumerable<SchachtMassnahmeKatalogEintrag> eintraege, out string? error)
     {
-        Directory.CreateDirectory(_dir);
+        error = null;
+
+        // Zweites Sicherheitsnetz: Selbst wenn ein Aufrufer den loadError uebersieht,
+        // wird eine vorhandene, nicht sicher lesbare Liste nie ueberschrieben.
+        Load(out var loadError);
+        if (loadError is not null)
+        {
+            error = "Die vorhandene Massnahmenliste kann nicht gelesen werden und wird " +
+                    $"deshalb nicht ueberschrieben: {loadError}";
+            return false;
+        }
 
         var clean = (eintraege ?? Enumerable.Empty<SchachtMassnahmeKatalogEintrag>())
             .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Name))
@@ -65,8 +95,18 @@ public sealed class SchachtMassnahmenKatalogStore : ISchachtMassnahmenKatalogSto
             })
             .ToList();
 
-        var json = JsonSerializer.Serialize(clean, JsonDefaults.Indented);
-        AtomicTextFileWriter.WriteAllText(FilePath, json);
+        try
+        {
+            Directory.CreateDirectory(_dir);
+            var json = JsonSerializer.Serialize(clean, JsonDefaults.Indented);
+            AtomicTextFileWriter.WriteAllText(FilePath, json);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     /// <summary>

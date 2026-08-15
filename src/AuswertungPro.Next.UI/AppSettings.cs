@@ -31,6 +31,28 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     private static PendingSettingsWrite? PendingWrite;
     private ISettingsFileStore _settingsFileStore = SettingsStore.CreateDefault();
 
+    // Gesetzt, wenn eine VORHANDENE settings.json beim Start nicht gelesen werden konnte.
+    // Solange das gesetzt ist, wird nichts geschrieben (M3). Bewusst nicht serialisiert.
+    private string? _loadError;
+
+    /// <summary>
+    /// Wahr, wenn die vorhandene Einstellungsdatei nicht gelesen werden konnte und
+    /// deshalb kein Speichern erlaubt ist. Verhindert, dass Standardwerte die echten
+    /// Einstellungen ersetzen.
+    /// </summary>
+    [JsonIgnore]
+    public bool PersistenceBlocked => _loadError is not null;
+
+    /// <summary>Meldungstext fuer die Oberflaeche, wenn <see cref="PersistenceBlocked"/> gilt.</summary>
+    [JsonIgnore]
+    public string? PersistenceBlockedWarning => _loadError is null
+        ? null
+        : "Die Einstellungsdatei konnte nicht gelesen werden. Aenderungen an den " +
+          "Einstellungen werden bis zum naechsten Programmstart NICHT gespeichert, damit " +
+          "die vorhandene Datei nicht durch Standardwerte ersetzt wird.\n" +
+          $"Datei: {SettingsPath}\n" +
+          $"Fehler: {_loadError}";
+
     public bool EnableDiagnostics { get; set; } = true;
     public string? PdfToTextPath { get; set; }
     public string? LastProjectPath { get; set; }
@@ -375,12 +397,56 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         catch (Exception ex)
         {
             TryAppendSettingsLog("Settings konnten nicht geladen werden. Es werden Standardwerte verwendet.", ex);
-            return new AppSettings();
+
+            var fallback = new AppSettings();
+            // Existiert die Datei, stehen echte Einstellungen auf dem Spiel: Dann darf
+            // NICHTS gespeichert werden, sonst ersetzt der naechste beliebige Save die
+            // vorhandene Datei durch Standardwerte (Audit 2026-08-10/14, M3).
+            // Ungueltiges JSON geht oben in die Quarantaene und bleibt dadurch erhalten;
+            // hier geht es um gesperrte, verweigerte oder kurz nicht erreichbare Dateien.
+            if (SettingsFileMightExist())
+                fallback._loadError = ex.Message;
+            return fallback;
+        }
+    }
+
+    /// <summary>
+    /// Sperrt jedes Schreiben, solange die vorhandene Datei nicht gelesen werden konnte.
+    /// Liefert true, wenn der Aufrufer abbrechen muss.
+    /// </summary>
+    private bool BlockPersistenceIfUnreadable()
+    {
+        if (_loadError is null)
+            return false;
+
+        TryAppendSettingsLog(
+            "Speichern der Einstellungen ist gesperrt, weil die vorhandene settings.json " +
+            $"beim Start nicht gelesen werden konnte ({_loadError}). Es wird nichts geschrieben.");
+        return true;
+    }
+
+    /// <summary>
+    /// Konservative Existenzpruefung fuer den Fehlerfall. <see cref="File.Exists"/>
+    /// liefert bei Zugriffsfehlern ebenfalls false; wir behandeln deshalb jeden
+    /// Zweifelsfall als "Datei ist da" und sperren lieber das Schreiben.
+    /// </summary>
+    private static bool SettingsFileMightExist()
+    {
+        try
+        {
+            return File.Exists(SettingsPath);
+        }
+        catch
+        {
+            return true;
         }
     }
 
     public void Save()
     {
+        if (BlockPersistenceIfUnreadable())
+            return;
+
         LastVideoFolder = LastVideoSourceFolder;
         MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
@@ -409,6 +475,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     public void SaveImmediate()
     {
+        if (BlockPersistenceIfUnreadable())
+            return;
+
         LastVideoFolder = LastVideoSourceFolder;
         MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);

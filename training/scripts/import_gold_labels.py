@@ -17,6 +17,7 @@ import hashlib
 import json
 import math
 import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -316,17 +317,58 @@ def main() -> int:
         print("Nur Vorschau. Es wurde nichts geschrieben (--apply fehlt).")
         return 0
 
+    # Laufende App = zweiter Schreiber auf derselben Datei. Ihr naechster Save wuerde
+    # unsere Ergaenzung stillschweigend ueberschreiben (Audit 2026-08-14, M11).
+    if _sewerstudio_laeuft():
+        print(
+            "ABBRUCH: SewerStudio.exe laeuft. Die App schreibt dieselbe "
+            "training_samples.json. Bitte zuerst beenden.",
+            file=sys.stderr)
+        return 2
+
     samples_path = args.knowledge_root / "training_samples.json"
     backup = samples_path.with_suffix(
         ".json.bak_vor_goldlabels_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"))
     backup.write_bytes(samples_path.read_bytes())
     merged = existing + created
-    samples_path.write_text(
-        json.dumps(merged, ensure_ascii=True, indent=2) + "\n",
-        encoding="utf-8")
+    _atomar_schreiben(
+        samples_path,
+        (json.dumps(merged, ensure_ascii=True, indent=2) + "\n").encode("utf-8"))
     print(f"Geschrieben: {samples_path} ({len(merged)} Samples)")
     print(f"Backup: {backup}")
     return 0
+
+
+def _sewerstudio_laeuft() -> bool:
+    """Wie in repair_gold_holding_ids.py: nur unter Windows pruefbar."""
+    if os.name != "nt":
+        return False
+    result = subprocess.run(
+        ["tasklist", "/FI", "IMAGENAME eq SewerStudio.exe", "/FO", "CSV", "/NH"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    return '"SewerStudio.exe"' in result.stdout
+
+
+def _atomar_schreiben(pfad: Path, daten: bytes) -> None:
+    """Erst vollstaendig danebenschreiben, dann umbenennen.
+
+    Ein direktes write_text laesst die Golddatei bei einem Absturz oder vollen
+    Datentraeger halb geschrieben zurueck (Audit 2026-08-14, M11).
+    """
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    temporaer = pfad.with_name(f".{pfad.name}.{os.getpid()}.tmp")
+    try:
+        with temporaer.open("xb") as strom:
+            strom.write(daten)
+            strom.flush()
+            os.fsync(strom.fileno())
+        os.replace(temporaer, pfad)
+    finally:
+        temporaer.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

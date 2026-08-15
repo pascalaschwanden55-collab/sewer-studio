@@ -37,15 +37,42 @@ def hms(ts):
 
 
 def eval_signatures(eval_root):
+    """Liest den Eval-Schutz. Fail-closed (Audit 2026-08-14, M12).
+
+    Vorher lieferte ein falscher oder leerer Pfad einfach zwei leere Mengen. Damit
+    war der komplette Eval-Schutz still ausgeschaltet und geschuetzte Bilder konnten
+    in den Trainingsdatensatz wandern. Ein nicht lesbares Bild wurde ebenso still
+    uebersprungen — genau dieses Bild waere dann ungeschuetzt.
+    """
+    if not os.path.isdir(eval_root):
+        raise SystemExit(
+            "ABBRUCH: Eval-Ordner nicht gefunden: " + str(eval_root) +
+            "\nOhne gelesenen Eval-Schutz wird nichts geschrieben.")
+
     halt, hashes = set(), set()
-    for p in glob.glob(os.path.join(eval_root, "**", "*.png"), recursive=True):
+    bilder = glob.glob(os.path.join(eval_root, "**", "*.png"), recursive=True)
+    unlesbar = []
+    for p in bilder:
         m = EVAL_HALT.match(os.path.basename(p))
         if m:
             halt.add(m.group(1))
         try:
             hashes.add(md5(p))
-        except Exception:
-            pass
+        except Exception as exc:
+            unlesbar.append(p + " (" + str(exc) + ")")
+
+    if not bilder:
+        raise SystemExit(
+            "ABBRUCH: Im Eval-Ordner " + str(eval_root) + " liegt kein einziges Bild. "
+            "Ein leerer Schutz ist kein Schutz.")
+    if unlesbar:
+        raise SystemExit(
+            "ABBRUCH: " + str(len(unlesbar)) + " Eval-Bilder sind nicht lesbar; ihr "
+            "Schutz waere unvollstaendig:\n  " + "\n  ".join(unlesbar[:10]))
+    if not hashes:
+        raise SystemExit(
+            "ABBRUCH: Es konnte kein einziger Eval-Bildhash gebildet werden.")
+
     return halt, hashes
 
 
@@ -74,7 +101,12 @@ def main():
     ap.add_argument("--eval", default=r"C:\KI_BRAIN\eval_set")
     ap.add_argument("--out", default=r"C:\KI_BRAIN\yolo_vsa_cls_dataset_pdfplus")
     ap.add_argument("--leer-gap", type=int, default=10, help="Mindestabstand (s) zu JEDEM Eintrag")
-    ap.add_argument("--dry-run", action="store_true")
+    # Schreiben ist bewusst NICHT mehr der Standard (Audit 2026-08-14, M12): Das Werkzeug
+    # kopiert Trainingsbilder und muss ausdruecklich dazu aufgefordert werden.
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Bleibt aus Kompatibilitaet erhalten; der Prueflauf ist ohnehin Standard.")
+    ap.add_argument("--execute", action="store_true",
+                    help="Kopiert wirklich. Ohne diesen Schalter bleibt der Lauf schreibfrei.")
     a = ap.parse_args()
 
     halt, hashes = eval_signatures(a.eval)
@@ -130,8 +162,8 @@ def main():
     print("  ausgeschlossen -> zu nah an einem Eintrag " + str(sk_near) +
           ", Eval " + str(sk_leval) + ", ohne Zuordnung " + str(sk_nokey))
 
-    if a.dry_run:
-        print("\n(DRY-RUN: nichts kopiert.)"); return
+    if a.dry_run or not a.execute:
+        print("\n(PRUEFLAUF: nichts kopiert. Fuer den echten Lauf: --execute)"); return
 
     if not os.path.isdir(a.out):
         print("\nKopiere Basis-Datensatz -> " + a.out + " ...", flush=True)

@@ -62,13 +62,25 @@ internal sealed class SchachtMassnahmenDialogController
             return;
         }
 
+        var katalog = _katalog.Load(out var katalogError);
+        if (katalogError is not null)
+        {
+            _dialogs.Error(
+                $"Die Schacht-Massnahmenliste konnte nicht gelesen werden:\n{katalogError}\n\n" +
+                "Bearbeiten und Speichern sind gesperrt, damit die selbst gepflegte Liste " +
+                "nicht durch die Standardliste ersetzt wird. Bitte die Datei pruefen und " +
+                "danach erneut oeffnen.",
+                "Sanierungsmassnahmen");
+            return;
+        }
+
         HoldingCost? bestehend = null;
         if (!string.IsNullOrWhiteSpace(schachtNummer))
             store.ByHolding.TryGetValue(schachtNummer, out bestehend);
 
         var viewModel = new SchachtMassnahmenViewModel(
             record,
-            _katalog.Load(),
+            katalog,
             bestehend,
             onUebernehmen: cost => Persist(_repository, store, schachtNummer, cost, projectPath),
             onListeBearbeiten: EditKatalog);
@@ -116,8 +128,19 @@ internal sealed class SchachtMassnahmenDialogController
 
     private IReadOnlyList<SchachtMassnahmeKatalogEintrag>? EditKatalog()
     {
-        var viewModel = new SchachtMassnahmenKatalogEditorViewModel(
-            _katalog.Load());
+        var bestand = _katalog.Load(out var loadError);
+        if (loadError is not null)
+        {
+            // Ohne diese Sperre zeigt der Editor die Standardliste, der Anwender
+            // bestaetigt sie, und die echte Liste ist beim Speichern weg (Audit M2).
+            _dialogs.Error(
+                $"Die Massnahmenliste konnte nicht gelesen werden:\n{loadError}\n\n" +
+                "Das Bearbeiten ist gesperrt, damit die vorhandene Liste nicht ersetzt wird.",
+                "Massnahmenliste");
+            return null;
+        }
+
+        var viewModel = new SchachtMassnahmenKatalogEditorViewModel(bestand);
         var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive)
                     ?? Window.GetWindow(_ownerElement);
         var window = new SchachtMassnahmenKatalogEditorWindow(viewModel) { Owner = owner };
@@ -125,7 +148,14 @@ internal sealed class SchachtMassnahmenDialogController
         if (window.ShowDialog() != true)
             return null;
 
-        _katalog.Save(viewModel.Ergebnis);
+        if (!_katalog.Save(viewModel.Ergebnis, out var saveError))
+        {
+            _dialogs.Error(
+                $"Die Massnahmenliste konnte nicht gespeichert werden:\n{saveError}",
+                "Massnahmenliste");
+            return null;
+        }
+
         return viewModel.Ergebnis;
     }
 }

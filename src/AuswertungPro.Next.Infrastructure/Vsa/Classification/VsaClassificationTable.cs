@@ -48,19 +48,23 @@ public sealed class VsaClassificationTable
         public int EZ { get; set; }
     }
 
+    /// <summary>
+    /// Liest die Regeltabelle. Wirft bei unlesbarer oder ungueltiger Datei.
+    /// </summary>
+    /// <remarks>
+    /// Bewusst KEIN Rueckfall auf eine leere Tabelle: Eine Bewertung mit null Regeln
+    /// sieht wie ein Erfolg aus, liefert aber wertlose Zustandsklassen ins Protokoll.
+    /// Der Aufrufer (<c>VsaEvaluationService.LoadClassificationTable</c>) prueft die
+    /// Existenz selbst und macht aus der Ausnahme das sichtbare
+    /// <c>VSA_TABLE_PARSE_FAILED</c> (Audit 2026-08-14, Befund Q-B1).
+    /// </remarks>
     public static VsaClassificationTable LoadFromFile(string path)
     {
-        try
-        {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<VsaClassificationTable>(json,
-                Application.Common.JsonDefaults.CaseInsensitive) ?? new VsaClassificationTable();
-        }
-        catch (Exception)
-        {
-            // Korrupte oder fehlende JSON-Datei: leere Tabelle verwenden
-            return new VsaClassificationTable();
-        }
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<VsaClassificationTable>(json,
+                Application.Common.JsonDefaults.CaseInsensitive)
+            ?? throw new InvalidDataException(
+                $"Die Regeltabelle '{path}' enthaelt kein gueltiges Tabellenobjekt.");
     }
 
     /// <summary>

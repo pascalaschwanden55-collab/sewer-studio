@@ -33,6 +33,10 @@ public partial class MainWindow : Window
         // (anderer/leerer KB-Ordner, z.B. verlorene Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT).
         if (!string.IsNullOrEmpty(services.KnowledgeRootStartupWarning))
             services.Toasts.Warning(services.KnowledgeRootStartupWarning);
+        // M3: Eine unlesbare settings.json sperrt jedes Speichern. Das darf der Anwender
+        // nicht erst merken, wenn nach dem Neustart alle Einstellungen wieder alt sind.
+        if (services.Settings.PersistenceBlocked)
+            services.Toasts.Warning(services.Settings.PersistenceBlockedWarning!);
         var backupReminder = Settings.FullBackupReminderPolicy.Evaluate(
             services.Settings.LastFullBackupUtc,
             DateTime.UtcNow);
