@@ -9,6 +9,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 SKRIPTE = Path(__file__).resolve().parents[2] / "training" / "scripts"
 if str(SKRIPTE) not in sys.path:
     sys.path.insert(0, str(SKRIPTE))
@@ -82,19 +84,41 @@ def test_negativer_saat_erzeugt_sauber_ein_bild():
     assert kunst.zeichen == wiederholt.zeichen
 
 
-def test_main_uebersteht_negativen_saat(tmp_path):
+# ---------------------------------------------------------------------------
+# Fix-Runde 2 (2026-08-15): Der Fix aus Fix-Runde 1 legte eine zweite Falle
+# frei. `random.Random(int)` nimmt in CPython intern den Betrag des
+# Startwerts - erzeuge(-n) und erzeuge(n) liefern deshalb denselben Text und
+# dieselben Zeichenboxen. Vor dem Fix-Runde-1-Fix war das unerreichbar (ein
+# negativer Startwert stuerzte sofort ab); jetzt liefe er still durch und
+# wuerde Dubletten in den Datensatz einschleusen. Entscheidung: erzeuge()
+# bleibt fuer negative Werte tolerant (siehe oben) - dokumentiertes Verhalten
+# einer reinen Funktion -, aber main() weist negative --saat klar ab.
+# ---------------------------------------------------------------------------
+
+def test_negativer_saat_kollidiert_mit_positivem_gleichen_betrags():
+    """Dokumentiert die Kollision, damit main() nie wieder ungeprueft
+    negative Saaten zulaesst, ohne dass es hier auffaellt."""
+    negativ = osd_kunstbilder.erzeuge(saat=-2)
+    positiv = osd_kunstbilder.erzeuge(saat=2)
+
+    assert negativ.text == positiv.text
+    assert negativ.zeichen == positiv.zeichen
+    # Nur der Hintergrund unterscheidet sich (separat maskierter Startwert
+    # in _video_hintergrund) - die Bildbytes sind deshalb NICHT gleich.
+    assert negativ.bild.tobytes() != positiv.bild.tobytes()
+
+
+def test_main_lehnt_negativen_saat_ab(tmp_path, capsys):
     ziel = tmp_path / "ziel"
 
-    rc = osd_kunstbilder.main(
-        ["--ziel", str(ziel), "--anzahl", "3", "--saat", "-2"])
+    with pytest.raises(SystemExit) as ausnahme:
+        osd_kunstbilder.main(
+            ["--ziel", str(ziel), "--anzahl", "3", "--saat", "-2"])
 
-    assert rc == 0
-    dokument = json.loads((ziel / "eintraege.json").read_text(encoding="utf-8"))
-    assert len(dokument["eintraege"]) == 3
-    # Saaten -2, -1, 0 muessen alle ein Bild geschrieben haben.
-    for saat in (-2, -1, 0):
-        kennung = osd_kunstbilder.kunst_id(saat)
-        assert (ziel / "bilder" / f"{kennung}.png").is_file()
+    assert ausnahme.value.code == 2
+    assert not ziel.exists(), "Bei abgewiesenem --saat darf nichts geschrieben werden."
+    ausgabe = capsys.readouterr().err
+    assert "--saat" in ausgabe
 
 
 # ---------------------------------------------------------------------------

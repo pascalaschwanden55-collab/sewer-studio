@@ -119,7 +119,18 @@ def _video_hintergrund(groesse: tuple[int, int], saat: int) -> Image.Image:
 
 
 def erzeuge(saat: int, hintergrund: Image.Image | None = None) -> Kunstbild:
-    """Ein kuenstlicher Ausschnitt. Gleiche Saat, gleiches Ergebnis."""
+    """Ein kuenstlicher Ausschnitt. Gleiche Saat, gleiches Ergebnis.
+
+    Fix-Runde 2 (2026-08-15): CPython nimmt bei `random.Random(int)` intern den
+    Betrag des Startwerts (`random.Random(-3).getstate() ==
+    random.Random(3).getstate()`) - nicht offensichtlich, aber belegt. Dadurch
+    liefern `erzeuge(-n)` und `erzeuge(n)` denselben Stil, Text und dieselben
+    Zeichenboxen (nur der Hintergrund unterscheidet sich, der laeuft ueber den
+    separat maskierten Startwert in `_video_hintergrund`). Bewusst dokumentiertes
+    Verhalten dieser reinen Funktion, siehe
+    test_negativer_saat_kollidiert_mit_positivem_gleichen_betrags - deshalb
+    weist main() negative `--saat` ab, statt still Dubletten zu erzeugen.
+    """
     zufall = random.Random(saat)
     stil = zufall.choice(STILE)
 
@@ -241,6 +252,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--hintergrund-ordner", type=Path, default=None,
                         help="Optionaler Ordner mit echten Ausschnitten als Hintergrund")
     args = parser.parse_args(argv)
+
+    if args.saat < 0:
+        # Fix-Runde 2 (2026-08-15): erzeuge(-n) liefert wegen CPythons
+        # abs()-Behandlung von int-Startwerten denselben Text und dieselben
+        # Zeichenboxen wie erzeuge(n) (siehe Kommentar dort). Ein negativer
+        # Basiswert wuerde bei ausreichend grossem --anzahl still Bildpaare
+        # mit identischem Etikett erzeugen. Ein Datensatzerzeuger hat fuer
+        # negative Startwerte keinen Verwendungszweck - klar abweisen statt
+        # still Dubletten zu produzieren.
+        parser.error(
+            "--saat darf nicht negativ sein: erzeuge(-n) liefert denselben "
+            "Text und dieselben Zeichenboxen wie erzeuge(n) und wuerde stille "
+            "Dubletten im Datensatz erzeugen.")
 
     if args.anzahl <= 0:
         raise SystemExit("--anzahl muss positiv sein.")
