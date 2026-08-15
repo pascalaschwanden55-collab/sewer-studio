@@ -48,8 +48,15 @@ run_gate() {
 
 printf "\nSewerStudio Schnelltest vor Push...\n"
 
+# Alle VIER Testprojekte — dieselbe Menge wie die CI (.github/workflows/ci.yml).
+# ProjectModernizer.Tests fehlte hier bis 2026-08-15; ein Bruch darin fiel lokal
+# nicht auf und wurde erst auf der CI rot (Audit 2026-08-14, T-M1).
+#
+# Bewusst Debug statt Release: Der Hook soll den Push nicht um einen zweiten
+# vollstaendigen Build verlaengern. Release faehrt die CI ohnehin bei jedem Push.
 run_gate tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj Infrastructure || exit 1
 run_gate tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj Pipeline || exit 1
 run_gate tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj UI || exit 1
+run_gate tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj ProjectModernizer || exit 1
 
 printf "\nSewerStudio Schnelltest bestanden.\n"

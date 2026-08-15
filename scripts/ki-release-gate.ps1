@@ -41,13 +41,57 @@ if ($VideoAt) { $env:SEWERSTUDIO_E2E_VIDEO_AT = $VideoAt }
 
 $testProject = Join-Path $repoRoot 'tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj'
 
-# Nur der Integration-Golden-Test (Trait Category=Integration)
-& dotnet test $testProject --filter 'Category=Integration' -v minimal
+# Nur der Integration-Golden-Test (Trait Category=Integration).
+# Ergebnis wird als TRX mitgeschrieben: "dotnet test" liefert Exit 0 auch dann,
+# wenn der Filter NULL Tests trifft. Ohne diese Zaehlung waere das Gate nach einer
+# Trait-Umbenennung still gruen, ohne je etwas geprueft zu haben
+# (Audit 2026-08-14, T-M2). Die Zahlen kommen aus dem XML und nicht aus der
+# uebersetzten Textausgabe - ein englischer Textvergleich findet auf einem
+# deutschen Windows nie etwas.
+$resultsDir = Join-Path $repoRoot '.tmp/ki-release-gate'
+$trxPath = Join-Path $resultsDir 'gate.trx'
+if (Test-Path $trxPath) { Remove-Item $trxPath -Force }
+
+& dotnet test $testProject --filter 'Category=Integration' -v minimal `
+    --logger 'trx;LogFileName=gate.trx' --results-directory $resultsDir
 $code = $LASTEXITCODE
 
-if ($code -eq 0) {
-    Write-Host "`nKI-Release-Gate BESTANDEN — Golden-Vertrag erfuellt. Release darf raus." -ForegroundColor Green
+$ausgefuehrt = 0
+$gefunden = 0
+if (Test-Path $trxPath) {
+    try {
+        $trx = [xml](Get-Content $trxPath -Raw)
+        $zaehler = $trx.TestRun.ResultSummary.Counters
+        if ($null -ne $zaehler) {
+            $ausgefuehrt = [int]$zaehler.executed
+            $gefunden = [int]$zaehler.total
+        }
+    } catch {
+        Write-Host "WARNUNG: Testbericht nicht lesbar: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 } else {
-    Write-Host "`nKI-Release-Gate ROT — Golden-Vertrag verletzt. Release STOPP." -ForegroundColor Red
+    Write-Host "WARNUNG: Es wurde kein Testbericht geschrieben." -ForegroundColor Yellow
+}
+
+# Beide Faelle liefern executed=0 und sind beide "nichts geprueft":
+#   gefunden=0  -> der Filter trifft keinen Test mehr
+#   gefunden>0  -> Tests da, aber alle uebersprungen (z. B. Maschinen-Gate nicht erfuellt)
+if ($ausgefuehrt -lt 1) {
+    Write-Host "`nKI-Release-Gate ROT - es wurde KEIN Test ausgefuehrt." -ForegroundColor Red
+    if ($gefunden -lt 1) {
+        Write-Host "Der Filter 'Category=Integration' trifft keinen Test mehr." -ForegroundColor Yellow
+        Write-Host "Trait im Testprojekt pruefen." -ForegroundColor Yellow
+    } else {
+        Write-Host "$gefunden Test(s) gefunden, aber alle uebersprungen." -ForegroundColor Yellow
+        Write-Host "Sidecar auf localhost:8100 und GPU pruefen; der Golden-Lauf braucht beides." -ForegroundColor Yellow
+    }
+    Write-Host "Ein Gate, das nichts geprueft hat, darf nicht gruen melden." -ForegroundColor Yellow
+    exit 2
+}
+
+if ($code -eq 0) {
+    Write-Host "`nKI-Release-Gate BESTANDEN - Golden-Vertrag erfuellt ($ausgefuehrt Test(s)). Release darf raus." -ForegroundColor Green
+} else {
+    Write-Host "`nKI-Release-Gate ROT - Golden-Vertrag verletzt. Release STOPP." -ForegroundColor Red
 }
 exit $code
