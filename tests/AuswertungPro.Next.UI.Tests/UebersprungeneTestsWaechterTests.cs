@@ -16,8 +16,9 @@ public sealed class UebersprungeneTestsWaechterTests
 {
     /// <summary>
     /// Bekannte, bewusst uebersprungene Faelle: Datei -> Grund.
-    /// Alle sechs haengen an einer Umgebung, die es in der CI nicht gibt
-    /// (Entwicklermodus, Kundenbestand, ffmpeg, GPU, WPF-Kindprozess).
+    /// Alle sieben haengen an einer Umgebung, die es in der CI nicht gibt
+    /// (Entwicklermodus, Kundenbestand, ffmpeg, GPU, WPF-Kindprozess, erzeugte
+    /// Messdaten aus Kundenvideos).
     /// </summary>
     private static readonly (string Datei, string Grundfragment)[] Bekannt =
     {
@@ -32,7 +33,12 @@ public sealed class UebersprungeneTestsWaechterTests
         (Path.Combine("AuswertungPro.Next.Pipeline.Tests", "SidecarE2eSmokeContractTests.cs"),
             "Maschinengebundener GPU-Test"),
         (Path.Combine("AuswertungPro.Next.UI.Tests", "IsolatedWpfFactAttribute.cs"),
-            "isolierten WPF-Kindprozess")
+            "isolierten WPF-Kindprozess"),
+        // Messtest, kein Absicherungstest: braucht die aus Kundenvideos erzeugten
+        // Meterfolgen (training/scripts/osd_sequenz_abdeckung.py). Die Daten liegen
+        // unter KnowledgeRoot und koennen nicht ins Repo.
+        (Path.Combine("AuswertungPro.Next.Pipeline.Tests", "OsdSequenzAbdeckungAcceptanceTests.cs"),
+            "Meterfolgen nicht vorhanden")
     };
 
     [Fact]

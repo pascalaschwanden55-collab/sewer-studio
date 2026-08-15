@@ -158,6 +158,10 @@ src/AuswertungPro.Next.UI/AppSettings.zip
 
 # Sicherungskopien der Klassenkarten-Kandidaten (lokale Arbeitsstaende)
 training/class_maps/*.bak_*
+training/class_maps/*.vor_freigabe_*
+
+# Playwright-CLI-Arbeitsordner (Werkzeug-Cache, regenerierbar)
+.playwright-cli/
 
 # Editable-Installation des Sidecars (pip install -e) legt das an — Build-Ausgabe.
 *.egg-info/

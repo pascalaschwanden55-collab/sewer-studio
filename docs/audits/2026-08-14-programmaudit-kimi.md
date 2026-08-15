@@ -213,16 +213,20 @@ Log/Degradation), 11 catch-ohne-Variable, 8 leere catch (alle Dispose/Stop),
 
 ## 5. Neue Befunde — Sicherheit (SEC-)
 
-### SEC-S1 (MITTEL) — Sidecar-Lock pinnt HTTP-Stack mit bekannten CVEs
-- **Ort:** `sidecar/requirements-lock.txt:74` `requests==2.28.1` (CVE-2023-32681),
-  `:96` `urllib3==1.26.13` (CVE-2024-37891, CVE-2023-45803), `:22`
-  `certifi==2022.12.7` (3,5 Jahre altes CA-Bundle).
-- **Relevanz:** Modell-Downloads (huggingface-hub/ultralytics) nutzen requests/urllib3
-  zur Laufzeit; Ausnutzung braucht Proxy/Redirect-Szenario — auf Einzelplatz klein,
-  aber die drei Pakete sind eine Altinsel im sonst aktuellen Lock (fastapi 0.136.3,
-  pydantic 2.13.4, uvicorn 0.48.0).
-- **Fix:** `requests>=2.32.x`, `urllib3>=2.x`, certifi aktuell; Lock neu einfrieren +
-  GPU-Smoke-Test.
+### SEC-S1 — ZURÜCKGEZOGEN am 2026-08-15 (Fehlbefund)
+Der Befund nannte `sidecar/requirements-lock.txt:74 requests==2.28.1`,
+`:96 urllib3==1.26.13`, `:22 certifi==2022.12.7`. **Diese Zeilen stehen dort nicht.**
+Die genannten Versionen existieren ausschliesslich in fertig gebauten Release-Paketen
+unter `artifacts/` — einem ignorierten Build-Ausgabeordner. Der prüfende Agent hat eine
+Kopie dort gelesen und sie als die produktive Sperrdatei ausgegeben.
+
+Ist-Stand der echten Datei: `requests==2.34.2`, `urllib3==2.7.0`, `certifi==2026.7.22`.
+`sidecar/security/audit_lock.py` läuft mit Exit 0: 88 geprüfte Pins, 5 Funde, alle
+fünf sind belegte Ausnahmen (setuptools, transformers). Es ist nichts zu tun.
+
+**Lehre für künftige Audits:** Pfadangaben aus Agenten-Befunden gegen den Index prüfen.
+`artifacts/`, `.worktrees/` und `.claude/worktrees/` enthalten vollständige, teils Monate
+alte Kopien des Baums — ein Treffer dort sieht wie ein Treffer in der Quelle aus.
 
 ### SEC-NIEDRIG (kurz)
 - **SEC-S2** Drei ffmpeg-Aufrufe mit String-Konkatenation statt `ArgumentList`
