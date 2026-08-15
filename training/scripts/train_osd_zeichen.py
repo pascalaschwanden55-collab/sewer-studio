@@ -69,21 +69,33 @@ def freier_vram_mb() -> int | None:
 def baue_manifest(
     kandidat_id: str,
     gewicht_pfad: Path,
-    basis: str,
+    basis_pfad: Path,
     imgsz: int,
     datensatz: Path,
-    datensatz_yaml_sha256: str,
+    datensatz_beleg_pfad: Path,
 ) -> dict:
     """Baut den Kandidaten-Manifest-Inhalt - reine Funktion, kein Training.
 
-    Ruling zu Aufgabe 5: main() und ein Test rufen exakt diese eine Funktion
-    auf, damit die Manifestform nur an einer Stelle entsteht. Der
-    Gewicht-Hash wird HIER aus den tatsaechlichen Bytes von gewicht_pfad
-    berechnet (nie vom Aufrufer uebernommen) - Manifest und Datei koennen
-    dadurch nie auseinanderlaufen. status bleibt immer
-    diagnostic_not_deployed und schwelle immer None: Das setzt erst
-    osd_schwelle_kalibrieren.py (Aufgabe 7); die Goldmessung (Aufgabe 8)
-    verweigert den Lauf, solange schwelle None ist.
+    Ruling zu Aufgabe 5 + Fix-Runde 1: main() und ein Test rufen exakt diese
+    eine Funktion auf, damit die Manifestform nur an einer Stelle entsteht.
+    Gewicht-, Basis- UND Beleg-Hash werden HIER aus den tatsaechlichen Bytes
+    der jeweiligen Datei berechnet (nie vom Aufrufer als fertiger Wert
+    uebernommen) - Manifest und Dateien koennen dadurch nie auseinanderlaufen.
+
+    Fix-Runde 1: datensatz_receipt_sha256 bindet datensatz.json statt
+    data.yaml. schreibe_data_yaml() (osd_datensatz.py) erzeugt data.yaml
+    ausschliesslich aus der festen Konstante osd_meter.ZEICHEN und zwei
+    festen relativen Pfaden - die Datei ist fuer JEDEN je erzeugten
+    Datensatz bytegleich und ein Hash darauf waere ein Scheinnachweis.
+    datensatz.json dagegen traegt echte Quellinformation (SHA-256 je
+    eintraege.json-Quelle, Split-Zahlen). Ebenso basis_sha256: Ein blosser
+    Dateiname wuerde Ultralytics erlauben, notfalls aus dem Netz
+    nachzuladen; hier wird ausschliesslich die tatsaechlich aufgeloeste,
+    lokal vorhandene Datei gebunden.
+
+    status bleibt immer diagnostic_not_deployed und schwelle immer None:
+    Das setzt erst osd_schwelle_kalibrieren.py (Aufgabe 7); die Goldmessung
+    (Aufgabe 8) verweigert den Lauf, solange schwelle None ist.
     """
     return {
         "schema": "osd_zeichen_kandidat_v1",
@@ -91,11 +103,12 @@ def baue_manifest(
         "status": "diagnostic_not_deployed",
         "gewicht_datei": "weights/best.pt",
         "gewicht_sha256": sha256(gewicht_pfad),
-        "basis": basis,
+        "basis_pfad": str(basis_pfad),
+        "basis_sha256": sha256(basis_pfad),
         "klassen": list(osd_meter.ZEICHEN),
         "imgsz": imgsz,
         "datensatz": str(datensatz),
-        "datensatz_yaml_sha256": datensatz_yaml_sha256,
+        "datensatz_receipt_sha256": sha256(datensatz_beleg_pfad),
         # Wird erst von osd_schwelle_kalibrieren.py gesetzt. Solange None,
         # verweigert die Goldmessung den Lauf.
         "schwelle": None,
@@ -108,7 +121,10 @@ def main(argv=None) -> int:
     p.add_argument("--epochen", type=int, default=60)
     p.add_argument("--imgsz", type=int, default=320)
     p.add_argument("--batch", type=int, default=16)
-    p.add_argument("--basis", default="yolo26n.pt")
+    # Vorgabe ist der absolute Pfad im Repo-Wurzelverzeichnis (WURZEL), nicht
+    # ein blosser Dateiname und nicht relativ zum Arbeitsverzeichnis - siehe
+    # Basisgewicht-Aufloesung weiter unten.
+    p.add_argument("--basis", type=Path, default=WURZEL / "yolo26n.pt")
     args = p.parse_args(argv)
 
     if sidecar_laeuft():
@@ -130,9 +146,26 @@ def main(argv=None) -> int:
         print(f"ABBRUCH: data.yaml fehlt unter {args.datensatz}", file=sys.stderr)
         return 2
 
+    # data.yaml allein bindet nichts (siehe baue_manifest-Docstring): Der
+    # einzige Beleg, der die tatsaechlichen Quellen bindet, ist
+    # datensatz.json. Ohne ihn laesst sich der Datensatz nicht nachweisen.
+    beleg_pfad = args.datensatz / "datensatz.json"
+    if not beleg_pfad.is_file():
+        print(f"ABBRUCH: datensatz.json fehlt unter {args.datensatz}", file=sys.stderr)
+        return 2
+
+    # Ultralytics wuerde einen blossen Dateinamen notfalls aus dem Netz
+    # nachladen - das ist hier kein zulaessiger Weg. Erst auf einen
+    # absoluten Pfad aufloesen und die Existenz pruefen; erst danach binden
+    # wir die tatsaechlichen Bytes ins Manifest (baue_manifest).
+    basis_pfad = args.basis.resolve()
+    if not basis_pfad.is_file():
+        print(f"ABBRUCH: Basisgewicht fehlt: {basis_pfad}", file=sys.stderr)
+        return 2
+
     from ultralytics import YOLO
 
-    modell = YOLO(args.basis)
+    modell = YOLO(str(basis_pfad))
     ergebnis = modell.train(
         data=str(yaml_pfad),
         epochs=args.epochen,
@@ -145,6 +178,10 @@ def main(argv=None) -> int:
         # Die Anzeige variiert in Helligkeit und Farbe, nicht in der Form.
         hsv_h=0.02, hsv_s=0.4, hsv_v=0.5,
         patience=15,
+        # Reproduzierbarkeit (Fix-Runde 1, wie train_bcc_pilot.py:445-446):
+        # Aufgabe 7/8 bauen ihre Messung auf genau diesem Kandidaten auf.
+        seed=42,
+        deterministic=True,
         project=str(KANDIDATEN),
         name="osd_zeichen_lauf",
         exist_ok=False,
@@ -166,10 +203,10 @@ def main(argv=None) -> int:
     manifest = baue_manifest(
         kandidat_id=kandidat_id,
         gewicht_pfad=ziel / "weights" / "best.pt",
-        basis=args.basis,
+        basis_pfad=basis_pfad,
         imgsz=args.imgsz,
         datensatz=args.datensatz,
-        datensatz_yaml_sha256=sha256(yaml_pfad),
+        datensatz_beleg_pfad=beleg_pfad,
     )
     (ziel / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
