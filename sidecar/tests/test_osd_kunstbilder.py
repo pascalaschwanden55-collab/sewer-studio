@@ -56,6 +56,48 @@ def test_alle_stile_werden_erzeugt():
 
 
 # ---------------------------------------------------------------------------
+# Fix-Runde 1 (2026-08-15): `saat` ist laut Schnittstelle ein beliebiger int -
+# `_video_hintergrund` gab negative Werte ungeprueft an `np.random.default_rng`
+# weiter, das nur nicht-negative Startwerte akzeptiert. Entscheidung: der
+# Startwert wird intern vorzeichenunabhaengig abgeleitet (`saat & 0xFFFFFFFF`);
+# `erzeuge()` bleibt dadurch fuer JEDEN int deterministisch, ohne eine stille
+# Nichtnegativitaetsbedingung an Aufrufer weiterzugeben.
+# ---------------------------------------------------------------------------
+
+def test_negativer_saat_erzeugt_sauber_ein_bild():
+    from sidecar import osd_meter
+
+    kunst = osd_kunstbilder.erzeuge(saat=-3)
+
+    assert kunst.zeichen, "Auch bei negativer Saat muss ein Bild entstehen."
+    for klasse, x, y, b, h in kunst.zeichen:
+        assert 0 <= klasse < len(osd_meter.ZEICHEN)
+        assert 0.0 <= x - b / 2 and x + b / 2 <= 1.0
+        assert 0.0 <= y - h / 2 and y + h / 2 <= 1.0
+
+    # Determinismus gilt auch fuer negative Saaten - dieselbe Garantie wie
+    # test_gleiche_saat_liefert_gleiche_bytes, nur mit negativem Vorzeichen.
+    wiederholt = osd_kunstbilder.erzeuge(saat=-3)
+    assert kunst.bild.tobytes() == wiederholt.bild.tobytes()
+    assert kunst.zeichen == wiederholt.zeichen
+
+
+def test_main_uebersteht_negativen_saat(tmp_path):
+    ziel = tmp_path / "ziel"
+
+    rc = osd_kunstbilder.main(
+        ["--ziel", str(ziel), "--anzahl", "3", "--saat", "-2"])
+
+    assert rc == 0
+    dokument = json.loads((ziel / "eintraege.json").read_text(encoding="utf-8"))
+    assert len(dokument["eintraege"]) == 3
+    # Saaten -2, -1, 0 muessen alle ein Bild geschrieben haben.
+    for saat in (-2, -1, 0):
+        kennung = osd_kunstbilder.kunst_id(saat)
+        assert (ziel / "bilder" / f"{kennung}.png").is_file()
+
+
+# ---------------------------------------------------------------------------
 # CLI-nahe reine Logik (Ruling zu Aufgabe 3: main() liest/schreibt Dateien,
 # die folgenden Bausteine sind dateisystemfrei und werden deshalb direkt
 # geprueft; der Ordner-Scan selbst wird bewusst nicht separat getestet).

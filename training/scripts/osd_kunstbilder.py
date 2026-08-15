@@ -100,9 +100,14 @@ def _video_hintergrund(groesse: tuple[int, int], saat: int) -> Image.Image:
     kuenstlich aus. Kein Fotorealismus noetig - nur Rauschen und ein leichtes
     Gefaelle statt einer toten Flaeche, damit der Zeichenfinder nicht lernt,
     dass "Text" gleichbedeutend mit "einzige Flaeche im Bild" ist.
+
+    Fix-Runde 1 (2026-08-15): `saat` ist laut Schnittstelle ein beliebiger int,
+    auch negativ - `np.random.default_rng` verlangt aber einen nicht-negativen
+    Startwert. Die Maskierung auf 32 Bit macht die Ableitung vorzeichenunabhaengig,
+    ohne `erzeuge()` selbst eine stille Nichtnegativitaetsbedingung aufzuerlegen.
     """
     breite, hoehe = groesse
-    generator = np.random.default_rng(saat)
+    generator = np.random.default_rng(saat & 0xFFFFFFFF)
     grundton = generator.uniform(18.0, 46.0, size=3)
     grundton += generator.uniform(-6.0, 10.0)  # leichte Warm-/Kuehlverschiebung
     rauschen = generator.normal(0.0, 9.0, size=(hoehe, breite, 1))
