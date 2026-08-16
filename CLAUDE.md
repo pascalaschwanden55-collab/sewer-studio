@@ -964,6 +964,50 @@ Der Bericht bindet Leser und feste Auswahl; Video-Inhalte sind ueber Pfad,
 Groesse und Aenderungszeit, aber nicht per Vollhash gebunden. Der Kandidat bleibt
 `diagnostic_not_deployed`.
 
+### Trainierbarer OSD-Zeichenleser — Stufe 1 gemessen, GESCHEITERT (2026-08-16)
+
+Entwurf `docs/superpowers/specs/2026-08-15-osd-meterleser-modell-design.md`, Plan
+`docs/superpowers/plans/2026-08-15-osd-meterleser-stufe1.md`. Werkzeugkette:
+`osd_frames_ziehen.py` -> `osd_ernte.py` -> `osd_kunstbilder.py` ->
+`osd_datensatz.py` -> `train_osd_zeichen.py` -> `osd_schwelle_kalibrieren.py` ->
+`osd_modell_goldmessung.py`, gemeinsamer Inferenzweg `osd_modell_leser.py`,
+Laufzeitteil `sidecar/sidecar/osd_modell.py`. `osd_meter.py` wurde nicht angefasst.
+
+Der Kandidat `osd_zeichen_1daf5433416d` (Gewicht-SHA-256
+`1daf5433416dd4aadf33c249419cd1ff305570630eb02227670f87c0226f9cf0`) erreicht auf
+den drei eingefrorenen Goldsaetzen **120 richtig und 1 falsch** (SD 67/95, HD
+14/30, HD2 39/72 richtig; der falsche Wert liegt in HD2). Bericht-SHA-256
+`eb07c04c7700e640c642308bc29498e553ba89ade1e56c644ed29590cbc8fdfb`.
+Der Vorlagenleser steht bei 138 richtig / 0 falsch — das Modell ist in BEIDEN
+Richtungen schlechter. Freigabemarke (null falsch UND >= 170 richtig) doppelt
+verfehlt; Status bleibt `diagnostic_not_deployed`.
+
+Die Ursachenkette ist gemessen, nicht vermutet:
+
+- Die Lehrer-Ernte lieferte 932 Ausschnitte aus nur **229 von 1361** Haltungen.
+  Der Lehrer liest nur seine eigenen Stile weiter; die uebrigen 1132 Haltungen
+  tragen genau die Stile, die er nicht kann.
+- Die kuenstlichen Bilder haben ihren Zweck erfuellt, aber nur ihren: Das
+  Ziffernverhaeltnis ging von 1:10,5 auf 1:2,9. Die Stilluecke schliessen sie
+  nicht — sie zeigen Rauschen mit Farbstich, kein echtes Kanalvideo.
+- Auf dem Reservebestand (88 vom Training ausgeschlossene Bilder) las das Modell
+  **10 von 88, davon 4 grob falsch**. Die interne Validierung sah dagegen
+  hervorragend aus (P 0,965, R 0,966, mAP50 0,984) — der Abstand zwischen beiden
+  Zahlen IST das Ergebnis.
+- Schwaechstes Zeichen ist der Dezimalpunkt: Recall 0,761 gegen 0,98 bei allen
+  anderen. Genau das Zeichen, dessen Fehlen den Wert um Faktor zehn verschiebt.
+
+Die Schwelle wurde nur mit `--trotz-wenig-vergleichbaren-faellen` eingefroren:
+Bei 10 vergleichbaren Faellen verweigert `osd_schwelle_kalibrieren.py` sonst
+(Mindestmass 20). Diese Zahl ist deshalb eine Standortbestimmung, keine Abnahme.
+
+Was trotzdem belegt funktioniert: Der Schutz sperrte 63 Goldhaltungen VOR dem
+Extrahieren; keine physische Haltung lag in Train und Validation zugleich; die
+Kalibrierung verweigerte von sich aus. **Stufe 1 hat ihre Frage beantwortet:**
+Lehrer-Ernte und kuenstliche Bilder allein reichen nicht — die 200
+handbeschrifteten schweren Faelle aus Stufe 2 sind noetig, und die Messung sagt
+auch wofuer.
+
 `training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
 reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
 Gegenrichtung und akzeptiert nur die acht gueltigen BCC-Untercodes. Der aktuelle

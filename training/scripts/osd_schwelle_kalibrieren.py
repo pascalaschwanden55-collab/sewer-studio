@@ -113,9 +113,14 @@ def waehle_schwelle(faelle: list[dict], sicherheitsabstand: float = 0.05) -> flo
     if not grob:
         return GRUNDSCHWELLE
 
-    # Knapp ueber der staerksten falschen Lesung.
-    schwelle = max(grob) + 1e-6
-    return round(min(schwelle + sicherheitsabstand, 1.0 + sicherheitsabstand), 6)
+    # Knapp ueber der staerksten falschen Lesung - aber NIE unter der
+    # Grundschwelle. Am 2026-08-16 kam beim ersten echten Lauf 0,144224 heraus,
+    # weil die vier groben Fehler alle Sicherheiten unter 0,1 hatten. Ohne diese
+    # Untergrenze waere die Schwelle damit LOCKERER gewesen als der Wert, den der
+    # Fall "gar kein grober Fehler" setzt - eine Schwelle, die sich verschaerfen
+    # soll, haette sich stattdessen geoeffnet.
+    schwelle = max(grob) + 1e-6 + sicherheitsabstand
+    return round(min(max(schwelle, GRUNDSCHWELLE), 1.0 + sicherheitsabstand), 6)
 
 
 def _atomar_schreiben(ziel: Path, text: str) -> None:

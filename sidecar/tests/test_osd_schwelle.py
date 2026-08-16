@@ -338,3 +338,31 @@ def test_kalibrieren_bricht_bei_bereits_eingefrorener_schwelle_ab(tmp_path, caps
 
     assert rc == 2
     assert "bereits eingefroren" in capsys.readouterr().err
+
+
+def test_schwelle_faellt_nie_unter_die_grundschwelle():
+    """Echter Fall vom 2026-08-16: vier grobe Fehler, alle unter 0,1 Sicherheit.
+
+    Die Rechnung ergab 0,144224 - lockerer als GRUNDSCHWELLE. Eine Schwelle, die
+    sich verschaerfen soll, haette sich damit geoeffnet.
+    """
+    faelle = [
+        {"sicherheit": 0.09, "abweichung_m": 7.4},
+        {"sicherheit": 0.05, "abweichung_m": 12.0},
+        {"sicherheit": 0.95, "abweichung_m": 0.0},
+    ]
+
+    schwelle = kal.waehle_schwelle(faelle, sicherheitsabstand=0.05)
+
+    assert schwelle >= kal.GRUNDSCHWELLE
+
+
+def test_schwelle_ueber_der_grundschwelle_bleibt_erhalten():
+    faelle = [
+        {"sicherheit": 0.60, "abweichung_m": 5.0},
+        {"sicherheit": 0.95, "abweichung_m": 0.0},
+    ]
+
+    schwelle = kal.waehle_schwelle(faelle, sicherheitsabstand=0.05)
+
+    assert schwelle > 0.65
