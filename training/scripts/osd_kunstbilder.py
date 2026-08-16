@@ -178,15 +178,23 @@ def erzeuge(saat: int, hintergrund: Image.Image | None = None) -> Kunstbild:
                           fill=stil.vordergrund)
             klasse = osd_meter.ZEICHEN.find(buchstabe)
             if klasse >= 0:
-                x0, y0 = laufend, y
-                x1, y1 = laufend + breite, y + groesse
-                zeichen.append((
-                    klasse,
-                    ((x0 + x1) / 2) / AUSSCHNITT[0],
-                    ((y0 + y1) / 2) / AUSSCHNITT[1],
-                    (x1 - x0) / AUSSCHNITT[0],
-                    (y1 - y0) / AUSSCHNITT[1],
-                ))
+                # Fix-Runde 1 (Aufgabe 2): NICHT die Vorschubzelle (laufend..
+                # laufend+breite, y..y+groesse) als Box nehmen - die ist fuer
+                # jedes Zeichen (Ziffer wie Punkt) gleich hoch und liefert dem
+                # Erntepfad (echte Connected-Component-Boxen, deutlich kleiner
+                # fuer '.') zwei widerspruechliche Vorstellungen derselben
+                # Klasse. textbbox() misst stattdessen die tatsaechlich
+                # gezeichnete Tinte dieses einen Zeichens.
+                x0, y0, x1, y1 = zeichner.textbbox(
+                    (laufend, y), buchstabe, font=schrift)
+                if x1 > x0 and y1 > y0:
+                    zeichen.append((
+                        klasse,
+                        ((x0 + x1) / 2) / AUSSCHNITT[0],
+                        ((y0 + y1) / 2) / AUSSCHNITT[1],
+                        (x1 - x0) / AUSSCHNITT[0],
+                        (y1 - y0) / AUSSCHNITT[1],
+                    ))
         laufend += breite
 
     if zufall.random() < 0.5:

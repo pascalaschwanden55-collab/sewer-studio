@@ -51,6 +51,38 @@ def test_zeichenzahl_passt_zum_text():
         assert len(kunst.zeichen) == len(kunst.text.replace(" ", ""))
 
 
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 (Aufgabe 2): Boxen zeigen die tatsaechlich gezeichnete Tinte,
+# nicht die Vorschubzelle. Gemessen auf erzeuge(saat=7): Vorher hatten '.'
+# und '9' beide eine 16x28-px-Box (Tintenanteil 4,0 % vs. 23,7 %) - derselbe
+# Widerspruch, den der Erntepfad (echte Connected-Component-Boxen) NICHT
+# hat. Der Dezimalpunkt ist das eine Zeichen, dessen Fehllesung den Wert um
+# Faktor 10 verschiebt - eine ueberdimensionierte Box waere als Trainings-
+# etikett fuer genau dieses Zeichen Gift.
+# ---------------------------------------------------------------------------
+
+def test_punkt_box_ist_deutlich_kleiner_als_ziffer_box():
+    """Kein hartcodierter Pixelwert - die Erwartung kommt aus der
+    tatsaechlich gerenderten Tinte beider Zeichenarten, gemittelt ueber
+    viele Saaten (Schriftgroesse/Stil variieren pro Saat)."""
+    punkt_flaechen: list[float] = []
+    ziffer_flaechen: list[float] = []
+    for saat in range(30):
+        kunst = osd_kunstbilder.erzeuge(saat=saat)
+        for zeichen, (_klasse, _x, _y, b, h) in zip(
+                kunst.text.replace(" ", ""), kunst.zeichen):
+            flaeche = b * h
+            if zeichen == ".":
+                punkt_flaechen.append(flaeche)
+            elif zeichen.isdigit():
+                ziffer_flaechen.append(flaeche)
+
+    assert punkt_flaechen and ziffer_flaechen
+    mittlere_punktflaeche = sum(punkt_flaechen) / len(punkt_flaechen)
+    mittlere_ziffernflaeche = sum(ziffer_flaechen) / len(ziffer_flaechen)
+    assert mittlere_punktflaeche < mittlere_ziffernflaeche * 0.5
+
+
 def test_alle_stile_werden_erzeugt():
     stile = {osd_kunstbilder.erzeuge(saat=n).stil_name for n in range(200)}
 
