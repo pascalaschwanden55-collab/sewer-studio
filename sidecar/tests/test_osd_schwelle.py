@@ -147,3 +147,66 @@ def test_faelle_dokument_hat_das_erwartete_schema():
         "gewicht_sha256": "deadbeef",
         "faelle": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 zu Aufgabe 7: Transparenz, worauf die Kalibrierung sich stuetzt,
+# und ein atomares Manifestschreiben.
+# ---------------------------------------------------------------------------
+
+def test_vergleichbare_faelle_laesst_faelle_ohne_sollwert_weg():
+    faelle = [
+        {"sicherheit": 0.9, "abweichung_m": 0.0},
+        {"sicherheit": 0.3, "abweichung_m": None},
+        {"sicherheit": 0.6, "abweichung_m": 0.7},
+    ]
+
+    vergleichbar = kal.vergleichbare_faelle(faelle)
+
+    assert vergleichbar == [faelle[0], faelle[2]]
+
+
+def test_grobe_fehler_ist_teilmenge_von_vergleichbaren_faellen():
+    faelle = [
+        {"sicherheit": 0.9, "abweichung_m": 0.0},    # vergleichbar, nicht grob
+        {"sicherheit": 0.3, "abweichung_m": None},   # nicht vergleichbar
+        {"sicherheit": 0.6, "abweichung_m": 0.7},    # vergleichbar UND grob
+    ]
+
+    grob = kal.grobe_fehler(faelle)
+
+    assert grob == [faelle[2]]
+
+
+def test_waehle_schwelle_und_grobe_fehler_stimmen_ueberein():
+    """Die Refaktorierung von waehle_schwelle auf grobe_fehler() darf das
+    urspruengliche Verhalten aus dem Brief nicht veraendern."""
+    faelle = [
+        {"sicherheit": 0.55, "abweichung_m": 7.4},
+        {"sicherheit": 0.40, "abweichung_m": 12.0},
+        {"sicherheit": 0.95, "abweichung_m": 0.0},
+    ]
+
+    grob_sicherheiten = sorted(f["sicherheit"] for f in kal.grobe_fehler(faelle))
+    assert grob_sicherheiten == [0.40, 0.55]
+
+    schwelle = kal.waehle_schwelle(faelle, sicherheitsabstand=0.0)
+    assert schwelle == pytest.approx(0.55 + 1e-6)
+
+
+def test_atomar_schreiben_ueberschreibt_vollstaendig_und_hinterlaesst_keine_tempdatei(tmp_path):
+    ziel = tmp_path / "manifest.json"
+    ziel.write_text('{"alt": true}', encoding="utf-8")
+
+    kal._atomar_schreiben(ziel, '{"neu": true}')
+
+    assert ziel.read_text(encoding="utf-8") == '{"neu": true}'
+    assert list(tmp_path.iterdir()) == [ziel]
+
+
+def test_atomar_schreiben_legt_fehlende_ordner_an(tmp_path):
+    ziel = tmp_path / "neuer_ordner" / "manifest.json"
+
+    kal._atomar_schreiben(ziel, '{"x": 1}')
+
+    assert ziel.read_text(encoding="utf-8") == '{"x": 1}'

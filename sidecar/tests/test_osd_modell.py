@@ -1,9 +1,14 @@
 """Laufzeitteil des Modell-Lesers (Spec Abschnitte 3 und 5).
 
 Zwei Dinge werden hier festgehalten:
-  1. Der Ausschnitt wird auf feste Zeichenhoehe normiert. SD und HD sehen fuer
-     das Modell dadurch gleich aus - der Aufloesungsfehler vom 2026-08-14 kann
-     bauartbedingt nicht wiederkehren.
+  1. Der Ausschnitt wird auf feste Zeichenhoehe normiert - das haelt den
+     urspruenglichen Aufloesungsfehler vom 2026-08-14 fern (Dezimalpunkt/
+     Einheit verloren, weil die Zeichenfindung auf SD-Pixelwerte geeicht war).
+     Richtigstellung (Fix-Runde 1 zu Aufgabe 7, 2026-08-16): Das macht SD und
+     HD NICHT "gleich" fuer das Modell - Ultralytics' eigenes Letterboxing
+     bei imgsz=320 skaliert je nach Seitenverhaeltnis des Ausschnitts
+     unterschiedlich nach (SD rund 5:4, HD rund 16:9), siehe die gemessenen
+     Zahlen im Docstring von osd_modell.py.
   2. Die Sicherheit einer Lesung ist die KLEINSTE Zeichensicherheit. Ein
      wackliges Zeichen macht die ganze Lesung wacklig.
 """

@@ -10,6 +10,31 @@ dieselben Zeichen doppelt so gross und der Leser verlor Dezimalpunkt und Einheit
 ("LZ1: 3.2m" wurde "L132"). Wer den Ausschnitt vor der Inferenz auf eine feste
 Hoehe bringt, kann diesen Fehler gar nicht erst machen.
 
+Richtigstellung (Fix-Runde 1 zu Aufgabe 7, 2026-08-16): Hier stand vorher, der
+HD-Ausfall vom 2026-08-14 koenne dadurch "bauartbedingt nicht wiederkehren".
+Das ist zu weitgehend. Nachgerechnet, was bei imgsz=320 tatsaechlich als
+Ziffernhoehe beim Modell ankommt (Ultralytics letterboxt seitenverhaeltnistreu;
+die Verkettung aus Normierung + Letterbox landet dabei am selben Punkt wie
+Letterbox allein - der befuerchtete Unterschied zwischen Trainings- und
+Inferenzaufbereitung betraegt 0,01 px, da ist nichts zu reparieren):
+
+                     ohne Normierung   mit Normierung
+    SD  576 (273x92)        21,1 px          21,1 px
+    HD  720 (486x115)       14,8 px          14,8 px
+    HD 1080 (729x172)       14,8 px          14,8 px
+
+Die Normierung bewirkt fuer die Ziffernhoehe am Modell also NICHTS: SD und HD
+sehen weiterhin verschieden aus, weil sich die ZONEN-Ausschnitte im
+Seitenverhaeltnis unterscheiden (SD rund 5:4, HD rund 16:9) und Ultralytics'
+eigenes Letterboxing anhand der laengeren Seite skaliert - nicht weil sich die
+Zeichengroesse unterscheidet. Was die Normierung tatsaechlich leistet: eine
+feste, von Ultralytics' Letterbox-Verhalten unabhaengige Eingangsgroesse (ohne
+sie haette der Skalierungsfaktor im Letterboxing selbst je nach roher
+Ausschnittsgroesse variiert). Echte Gleichheit der Ziffernhoehe ueber
+verschiedene Bildseitenverhaeltnisse braeuchte zusaetzlich ein festes
+Ziel-Seitenverhaeltnis mit Polsterung (Padding); das bleibt fuer Stufe 1
+bewusst offen.
+
 Fix-Runde 1 (2026-08-16): Zwei Bruchstellen im urspruenglichen Brief korrigiert
 - beide untergruben genau den Zweck dieser Datei:
   1. ZIEL_HOEHE war mit 32 zu klein bemessen (Herleitung siehe unten bei der

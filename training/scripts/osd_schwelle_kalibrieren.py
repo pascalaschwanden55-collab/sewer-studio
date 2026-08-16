@@ -53,19 +53,48 @@ GROB_FALSCH_AB_M = 0.5
 GRUNDSCHWELLE = 0.25
 
 
+def vergleichbare_faelle(faelle: list[dict]) -> list[dict]:
+    """Faelle MIT Sollwert - nur diese sagen etwas ueber richtig/falsch aus.
+
+    Ein Fall ohne Lesung oder ohne Sollwert (abweichung_m is None) ist weder
+    ein Beleg fuer noch gegen eine Schwelle; er zaehlt bewusst nicht mit
+    (Fix-Runde 1 zu Aufgabe 7: sichtbar machen, WORAUF sich die Kalibrierung
+    stuetzt - "0 grobe Fehler" aus 3 vergleichbaren Faellen sieht sonst aus
+    wie "0 grobe Fehler" aus 80)."""
+    return [fall for fall in faelle if fall.get("abweichung_m") is not None]
+
+
+def grobe_fehler(faelle: list[dict]) -> list[dict]:
+    """Teilmenge von vergleichbare_faelle mit Abweichung >= GROB_FALSCH_AB_M."""
+    return [
+        fall for fall in vergleichbare_faelle(faelle)
+        if abs(float(fall["abweichung_m"])) >= GROB_FALSCH_AB_M
+    ]
+
+
 def waehle_schwelle(faelle: list[dict], sicherheitsabstand: float = 0.05) -> float:
     """Kleinste Schwelle, die JEDEN groben Fehler aussperrt, plus Abstand."""
-    grob = [
-        fall["sicherheit"] for fall in faelle
-        if fall.get("abweichung_m") is not None
-        and abs(float(fall["abweichung_m"])) >= GROB_FALSCH_AB_M
-    ]
+    grob = [fall["sicherheit"] for fall in grobe_fehler(faelle)]
     if not grob:
         return GRUNDSCHWELLE
 
     # Knapp ueber der staerksten falschen Lesung.
     schwelle = max(grob) + 1e-6
     return round(min(schwelle + sicherheitsabstand, 1.0 + sicherheitsabstand), 6)
+
+
+def _atomar_schreiben(ziel: Path, text: str) -> None:
+    """Schreibt text nach ziel atomar: Temp-Datei im selben Ordner, dann Replace.
+
+    Verhindert eine halb geschriebene Datei bei einem Absturz mitten im
+    Schreiben. Fix-Runde 1 zu Aufgabe 7: das Kandidatenmanifest beim
+    Einfrieren ist der sicherheitskritische letzte Schritt dieses Werkzeugs
+    und darf nicht halb geschrieben liegenbleiben.
+    """
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    tmp = ziel.with_name(f".{ziel.name}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(ziel)
 
 
 # ---------------------------------------------------------------------------
@@ -158,10 +187,8 @@ def _main_faelle(args: argparse.Namespace) -> int:
         faelle,
     )
 
-    args.faelle_ziel.parent.mkdir(parents=True, exist_ok=True)
-    tmp = args.faelle_ziel.with_name(f".{args.faelle_ziel.name}.tmp")
-    tmp.write_text(json.dumps(dokument, indent=2, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(args.faelle_ziel)
+    _atomar_schreiben(
+        args.faelle_ziel, json.dumps(dokument, indent=2, ensure_ascii=False))
 
     print(f"Testfaelle gesehen: {len(eintraege)}")
     print(f"Gelesen: {gelesen}")
@@ -177,6 +204,8 @@ def _main_kalibrieren(args: argparse.Namespace) -> int:
         print("ABBRUCH: Keine Faelle im Reservebestand.", file=sys.stderr)
         return 2
 
+    vergleichbar = vergleichbare_faelle(faelle)
+    grob = grobe_fehler(faelle)
     schwelle = waehle_schwelle(faelle, args.sicherheitsabstand)
 
     manifest_pfad = args.kandidat / "manifest.json"
@@ -190,9 +219,14 @@ def _main_kalibrieren(args: argparse.Namespace) -> int:
     manifest["schwelle"] = schwelle
     manifest["schwelle_quelle"] = str(args.faelle)
     manifest["schwelle_faelle"] = len(faelle)
-    manifest_pfad.write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    manifest["schwelle_faelle_vergleichbar"] = len(vergleichbar)
+    manifest["schwelle_faelle_grob_falsch"] = len(grob)
+    _atomar_schreiben(
+        manifest_pfad, json.dumps(manifest, indent=2, ensure_ascii=False))
 
+    print(f"Faelle gesamt: {len(faelle)}")
+    print(f"Davon vergleichbar (Sollwert vorhanden): {len(vergleichbar)}")
+    print(f"Davon grob falsch (>= {GROB_FALSCH_AB_M} m): {len(grob)}")
     print(f"Schwelle: {schwelle}  (aus {len(faelle)} Faellen)")
     print(f"Eingefroren in: {manifest_pfad}")
     return 0

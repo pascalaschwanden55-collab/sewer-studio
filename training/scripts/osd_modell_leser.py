@@ -38,14 +38,27 @@ if str(_SIDECAR) not in sys.path:
 
 from sidecar import osd_meter, osd_modell  # noqa: E402  (Pfad muss vorher stehen)
 
-# Ultralytics' eigener Dokumentations-Default fuer predict(). Explizit
-# hingeschrieben statt implizit uebernommen: Ein kuenftiger Ultralytics-Wechsel
-# des Bibliotheks-Defaults darf die Kalibrierung nicht lautlos verschieben.
-# Gleicher Wert wie bei den anderen Kandidaten-Aufrufern dieses Projekts
-# (BCC-Testendpunkt, beide Holdout-Auswerter). Das ist die YOLO-interne
-# Box-Vorfilterung, NICHT die Zeichensicherheits-Schwelle: Die kommt erst
-# danach explizit ueber "schwelle" - siehe Docstring von baue_modell_leser.
-_YOLO_CONF = 0.25
+# YOLO-interne Box-Vorfilterung in predict() - NICHT die Zeichensicherheits-
+# Schwelle "schwelle" (die kommt erst danach, siehe _ergebnis_aus_erkennungen).
+#
+# Fix-Runde 1 zu Aufgabe 7 (2026-08-16): Stand hier zuerst auf 0.25 (Ultralytics'
+# eigener Default, wie bei den anderen Kandidaten-Aufrufern dieses Projekts).
+# Das war falsch: Bei 0.25 hat JEDE zustandekommende Lesung zwangslaeufig
+# konfidenz_min >= 0.25, weil predict() alles darunter schon vorher verwirft.
+# GRUNDSCHWELLE in osd_schwelle_kalibrieren.py ist ebenfalls 0.25 - findet die
+# Kalibrierung keinen groben Fehler (auf 88 Bildern gut moeglich), friert sie
+# genau diesen Wert ein, und "konfidenz_min >= schwelle" ist danach trivial
+# erfuellt: Das Tor prueft dann nichts mehr, was der Boxfilter nicht schon
+# vorher weggenommen hat. Dazu verschwindet ein schwaches Zeichen unter 0.25
+# komplett statt die Mindestsicherheit zu senken - die Zeichenfolge wird
+# kuerzer und kann TOR_MINDESTZEICHEN trotzdem mit kuenstlich hoher Sicherheit
+# erreichen (fail-open, nicht fail-closed). Deshalb jetzt deutlich unter jede
+# plausible Schwelle: Die rohe Sicherheit soll fuer die Kalibrierung ueberhaupt
+# sichtbar werden (das war der Sinn von schwelle=0.0 beim Faelle-Erzeugen).
+# test_yolo_conf_bleibt_unter_der_grundschwelle() (test_osd_modell_leser.py)
+# schreibt _YOLO_CONF < GRUNDSCHWELLE fest, damit die beiden nie wieder
+# zusammenfallen.
+_YOLO_CONF = 0.05
 
 
 def _sha256(pfad: Path) -> str:
@@ -77,6 +90,43 @@ def _lade_laufzeit():
     return YOLO, yolo_wrapper
 
 
+def _ergebnis_aus_erkennungen(
+    erkennungen: list[tuple[int, float, float, float, float, float]],
+    stil: str,
+    schwelle: float,
+) -> dict:
+    """Reine Logik: aus Erkennungen + Stil + Schwelle wird das Ergebnis-Dict.
+
+    Kein Bild, kein Modell - dadurch ohne YOLO testbar (siehe
+    test_osd_modell_leser.py). Bild-I/O und Inferenz bleiben in
+    baue_modell_leser.lese(); dort wird nur diese Funktion aufgerufen.
+
+    "meter" ist nur dann gesetzt, wenn die Zeichenfolge das Mindesttor
+    (osd_modell.TOR_MINDESTZEICHEN) erreicht, die kleinste Zeichensicherheit
+    mindestens die uebergebene Schwelle betraegt UND parse_meter daraus einen
+    Wert ableiten kann.
+    """
+    folge, kleinste_sicherheit = osd_modell.zu_zeichenfolge(erkennungen)
+    konfidenz_min = kleinste_sicherheit if erkennungen else None
+
+    meter = None
+    leseweg = None
+    if (len(folge) >= osd_modell.TOR_MINDESTZEICHEN
+            and konfidenz_min is not None and konfidenz_min >= schwelle):
+        wert = osd_meter.parse_meter(folge, stil)
+        if wert is not None:
+            meter = wert
+            leseweg = "modell"
+
+    return {
+        "meter": meter,
+        "zeichenfolge": folge,
+        "stil": stil,
+        "leseweg": leseweg,
+        "konfidenz_min": konfidenz_min,
+    }
+
+
 def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]:
     """Baut die geteilte Lesefunktion fuer genau diesen Kandidaten.
 
@@ -86,13 +136,19 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
     liest beliebig viele Bilder mit demselben geladenen Modell.
 
     Rueckgabe je Bild (Form wie osd_meter.lese_meter):
-    {"meter", "zeichenfolge", "stil", "leseweg", "konfidenz_min"}.
-    "meter" ist nur dann gesetzt, wenn die Zeichenfolge das Mindesttor
-    (osd_modell.TOR_MINDESTZEICHEN) erreicht, die kleinste Zeichensicherheit
-    mindestens die uebergebene Schwelle betraegt UND parse_meter daraus einen
-    Wert ableiten kann. "stil" ist immer "dunkel": Der Modell-Weg kennt keine
-    Maskenheuristik wie der Vorlagenleser und deutet die Folge deshalb immer
-    ueber den dunkel-Zweig von parse_meter (siehe Ruling zu Aufgabe 7).
+    {"meter", "zeichenfolge", "stil", "leseweg", "konfidenz_min"} - siehe
+    _ergebnis_aus_erkennungen fuer die genauen Regeln.
+
+    "stil" (Fix-Runde 1 zu Aufgabe 7, 2026-08-16 - stand vorher fest auf
+    "dunkel", das war geraten statt ermittelt): kommt aus derselben Heuristik
+    wie der Vorlagenleser, osd_meter.glyphenmaske(bild) auf dem VOLLEN,
+    ungeschnittenen Frame - glyphenmaske wendet ZONEN selbst als Bruchteil der
+    uebergebenen Bildgroesse an, ein bereits zugeschnittener Ausschnitt wuerde
+    die Zone ein zweites Mal verkleinern. parse_meter entscheidet je nach Stil
+    strenger oder lockerer (siehe dort); den Stil weiterhin fest zu "dunkel"
+    zu setzen waere fuer die rund die Haelfte der Videos mit anderem Stil
+    (helle Schrift auf dunklem Grund oder umgekehrt, siehe die 40er-Sichtung)
+    unnoetig streng oder unnoetig locker gewesen.
     """
     kandidat = Path(kandidat)
     manifest = json.loads(
@@ -121,6 +177,13 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
         ))
         normiert = osd_modell.normiere_ausschnitt(ausschnitt)
 
+        # Auf dem VOLLEN Frame, nicht auf "ausschnitt": glyphenmaske wendet
+        # ZONEN selbst als Bruchteil der uebergebenen Bildgroesse an (siehe
+        # Docstring oben). Die zurueckgegebene Maske wird hier nicht
+        # gebraucht - die Boxen kommen vom YOLO-Kandidaten, nicht aus der
+        # Connected-Components-Heuristik des Vorlagenlesers.
+        _, stil = osd_meter.glyphenmaske(bild)
+
         ergebnisse = modell.predict(
             source=yolo_wrapper._pil_rgb_to_ultralytics_bgr(normiert),
             imgsz=imgsz, conf=_YOLO_CONF, verbose=False, save=False,
@@ -133,24 +196,6 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
                 erkennungen.append(
                     (int(klasse), x_mitte, y_mitte, box_b, box_h, float(sicherheit)))
 
-        folge, kleinste_sicherheit = osd_modell.zu_zeichenfolge(erkennungen)
-        konfidenz_min = kleinste_sicherheit if erkennungen else None
-
-        meter = None
-        leseweg = None
-        if (len(folge) >= osd_modell.TOR_MINDESTZEICHEN
-                and konfidenz_min is not None and konfidenz_min >= schwelle):
-            wert = osd_meter.parse_meter(folge, "dunkel")
-            if wert is not None:
-                meter = wert
-                leseweg = "modell"
-
-        return {
-            "meter": meter,
-            "zeichenfolge": folge,
-            "stil": "dunkel",
-            "leseweg": leseweg,
-            "konfidenz_min": konfidenz_min,
-        }
+        return _ergebnis_aus_erkennungen(erkennungen, stil, schwelle)
 
     return lese

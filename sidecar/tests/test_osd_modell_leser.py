@@ -3,6 +3,11 @@
 Nur der fail-closed Pfad wird hier geprueft - kein trainierter Kandidat noetig
 und keiner vorhanden. Echte Inferenz bleibt bewusst ungetestet, bis ein
 Kandidat existiert (Aufgabe 5 laeuft erst spaeter auf echter Hardware).
+
+Fix-Runde 1 zu Aufgabe 7 (2026-08-16) ergaenzt zwei weitere reine Tests, beide
+ohne Modell/Bild: dass _YOLO_CONF nie wieder mit GRUNDSCHWELLE zusammenfaellt
+(das machte das Sicherheitstor wirkungslos), und dass der ermittelte Stil
+tatsaechlich bei parse_meter ankommt statt fest ueberschrieben zu werden.
 """
 
 import json
@@ -67,3 +72,54 @@ def test_fehlermeldung_nennt_erwarteten_und_gefundenen_hash(tmp_path, monkeypatc
     # Der tatsaechliche SHA-256 von b"andere-bytes" wird ebenfalls genannt.
     import hashlib
     assert hashlib.sha256(b"andere-bytes").hexdigest() in text
+
+
+def test_yolo_conf_bleibt_unter_der_grundschwelle():
+    """_YOLO_CONF und GRUNDSCHWELLE duerfen nie wieder zusammenfallen.
+
+    Fix-Runde 1 zu Aufgabe 7: Bei _YOLO_CONF == GRUNDSCHWELLE (frueher beide
+    0.25) hat predict() jedes Zeichen unter der Grundschwelle schon VOR
+    zu_zeichenfolge verworfen. Jede zustandekommende Lesung hatte dadurch
+    zwangslaeufig konfidenz_min >= GRUNDSCHWELLE, und "konfidenz_min >=
+    schwelle" pruefte nichts mehr, was der Boxfilter nicht schon vorher
+    weggenommen hatte, sobald die Kalibrierung die Grundschwelle einfror.
+    """
+    import osd_schwelle_kalibrieren as kal
+
+    assert leser_modul._YOLO_CONF < kal.GRUNDSCHWELLE
+
+
+def test_stil_aus_glyphenmaske_wird_an_parse_meter_durchgereicht():
+    """Fix-Runde 1 zu Aufgabe 7: stil stand vorher fest auf "dunkel" - geraten,
+    nicht ermittelt.
+
+    Ohne Trenner ("007") laesst osd_meter.parse_meter im Auto-Format die
+    punktlose Form NUR bei stil == "dunkel" durch (siehe dort: "if format ==
+    FORMAT_AUTO and stil != 'dunkel': return None"). Das macht den
+    durchgereichten Stil beobachtbar, ganz ohne Bild oder Modell - getestet
+    wird die reine Logik _ergebnis_aus_erkennungen, die lese() nach der
+    Inferenz aufruft.
+    """
+    # Klassen 0 und 7 sind laut osd_meter.ZEICHEN ("0123456789.mLZ:") die
+    # Ziffern '0' und '7'; drei nicht ueberlappende Boxen links nach rechts
+    # ergeben die Zeichenfolge "007".
+    erkennungen = [
+        (0, 0.2, 0.5, 0.1, 0.3, 0.9),
+        (0, 0.5, 0.5, 0.1, 0.3, 0.9),
+        (7, 0.8, 0.5, 0.1, 0.3, 0.9),
+    ]
+
+    dunkel = leser_modul._ergebnis_aus_erkennungen(erkennungen, "dunkel", schwelle=0.0)
+    hell = leser_modul._ergebnis_aus_erkennungen(erkennungen, "hell", schwelle=0.0)
+
+    assert dunkel["zeichenfolge"] == "007"
+    assert dunkel["stil"] == "dunkel"
+    assert dunkel["meter"] == pytest.approx(0.7)
+    assert dunkel["leseweg"] == "modell"
+
+    # Derselbe Rohbefund, aber mit Stil "hell" durchgereicht: parse_meter
+    # verweigert die punktlose Form dann bewusst - waere stil hier weiterhin
+    # fest auf "dunkel" gesetzt, wuerde dieser Fall faelschlich durchgehen.
+    assert hell["stil"] == "hell"
+    assert hell["meter"] is None
+    assert hell["leseweg"] is None
