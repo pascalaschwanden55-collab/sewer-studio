@@ -74,6 +74,17 @@ def test_fehlermeldung_nennt_erwarteten_und_gefundenen_hash(tmp_path, monkeypatc
     assert hashlib.sha256(b"andere-bytes").hexdigest() in text
 
 
+def test_code_hashes_bindet_die_drei_massgeblichen_module():
+    """Aufgabe 4: Gewicht + Schwelle binden nur das MODELL - ZIEL_HOEHE,
+    _IOU_SCHWELLE, TOR_MINDESTZEICHEN, _YOLO_CONF und der Zuschnitt aendern
+    die Lesung mit demselben Gewicht ebenso."""
+    hashes = leser_modul.code_hashes()
+
+    assert set(hashes) == {"osd_modell_leser.py", "osd_modell.py", "osd_meter.py"}
+    for wert in hashes.values():
+        assert len(wert) == 64
+
+
 def test_yolo_conf_bleibt_unter_der_grundschwelle():
     """_YOLO_CONF und GRUNDSCHWELLE duerfen nie wieder zusammenfallen.
 

@@ -42,6 +42,7 @@ if str(WURZEL / "training" / "scripts") not in sys.path:
     sys.path.insert(0, str(WURZEL / "training" / "scripts"))
 
 from sidecar import osd_meter
+from osd_crop import schneide_zone
 from osd_schutz import GOLD_WURZEL, RESERVEBESTAND_STANDARD, Schutz, lade_schutz
 
 
@@ -54,12 +55,15 @@ class Ernteergebnis:
 
 
 def zonen_ausschnitt(bild: Image.Image) -> tuple[Image.Image, tuple[int, int]]:
-    """Schneidet die Zone unten rechts heraus - dieselbe wie im Leser."""
-    links, oben, rechts, unten = osd_meter.ZONEN["unten_rechts"]
-    breite, hoehe = bild.size
-    kasten = (int(links * breite), int(oben * hoehe),
-              int(rechts * breite), int(unten * hoehe))
-    return bild.crop(kasten), (kasten[0], kasten[1])
+    """Schneidet die Zone unten rechts heraus.
+
+    Fix-Runde 1 (Aufgabe 3): frueher eigenes int()-Runden hier, waehrend
+    osd_modell_leser.py mit round() schnitt - auf zwei von drei
+    Gold-Aufloesungen verschob das den Ausschnitt zwischen Training und
+    Messung um eine Bildzeile. Beide Seiten nutzen jetzt denselben
+    osd_crop.schneide_zone() (siehe dort fuer die Begruendung von round()).
+    """
+    return schneide_zone(bild)
 
 
 def als_labeltext(zeichen: list[tuple[int, float, float, float, float]]) -> str:

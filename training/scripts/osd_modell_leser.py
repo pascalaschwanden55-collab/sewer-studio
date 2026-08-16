@@ -33,10 +33,14 @@ from PIL import Image
 
 _WURZEL = Path(__file__).resolve().parents[2]
 _SIDECAR = _WURZEL / "sidecar"
+_SKRIPTE = Path(__file__).resolve().parent
 if str(_SIDECAR) not in sys.path:
     sys.path.insert(0, str(_SIDECAR))
+if str(_SKRIPTE) not in sys.path:
+    sys.path.insert(0, str(_SKRIPTE))
 
 from sidecar import osd_meter, osd_modell  # noqa: E402  (Pfad muss vorher stehen)
+from osd_crop import schneide_zone  # noqa: E402  (Pfad muss vorher stehen)
 
 # YOLO-interne Box-Vorfilterung in predict() - NICHT die Zeichensicherheits-
 # Schwelle "schwelle" (die kommt erst danach, siehe _ergebnis_aus_erkennungen).
@@ -67,6 +71,33 @@ def _sha256(pfad: Path) -> str:
         for block in iter(lambda: datei.read(1 << 20), b""):
             hasher.update(block)
     return hasher.hexdigest()
+
+
+def zuschnitt_fuer_leser(bild: Image.Image) -> Image.Image:
+    """Der Zuschnitt, den lese() vor der Normierung verwendet.
+
+    Oeffentlich (statt in lese() vergraben), damit er unabhaengig vom
+    Modell/Ultralytics direkt gegen osd_ernte.zonen_ausschnitt() geprueft
+    werden kann (Fix-Runde 1, Aufgabe 3: Ernte und Leser muessen bytegleich
+    zuschneiden, siehe osd_crop.py).
+    """
+    return schneide_zone(bild)[0]
+
+
+def code_hashes() -> dict[str, str]:
+    """SHA-256 der Module, die eine Lesung tatsaechlich bestimmen (Aufgabe 4).
+
+    Gewicht + Schwelle binden nur das MODELL. ZIEL_HOEHE, _IOU_SCHWELLE,
+    TOR_MINDESTZEICHEN und _YOLO_CONF (osd_modell.py / dieses Modul) sowie
+    der Zuschnitt und parse_meter (osd_meter.py) aendern die Lesung mit
+    demselben Gewicht ebenso - ohne das ist ein Bericht/eine eingefrorene
+    Schwelle nicht auf den Code zurueckfuehrbar, der sie erzeugt hat.
+    """
+    return {
+        "osd_modell_leser.py": _sha256(Path(__file__)),
+        "osd_modell.py": _sha256(Path(osd_modell.__file__)),
+        "osd_meter.py": _sha256(Path(osd_meter.__file__)),
+    }
 
 
 def _lade_laufzeit():
@@ -164,17 +195,12 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
     YOLO, yolo_wrapper = _lade_laufzeit()
     modell = YOLO(str(gewicht_pfad))
     imgsz = int(manifest["imgsz"])
-    x0, y0, x1, y1 = osd_meter.ZONEN["unten_rechts"]
 
     def lese(bild_pfad: Path) -> dict:
         with Image.open(bild_pfad) as roh:
             roh.load()
             bild = roh.convert("RGB")
-        breite, hoehe = bild.size
-        ausschnitt = bild.crop((
-            round(x0 * breite), round(y0 * hoehe),
-            round(x1 * breite), round(y1 * hoehe),
-        ))
+        ausschnitt = zuschnitt_fuer_leser(bild)
         normiert = osd_modell.normiere_ausschnitt(ausschnitt)
 
         # Auf dem VOLLEN Frame, nicht auf "ausschnitt": glyphenmaske wendet

@@ -39,9 +39,15 @@ if str(WURZEL / "training" / "scripts") not in sys.path:
     sys.path.insert(0, str(WURZEL / "training" / "scripts"))
 
 from sidecar import osd_meter
+from osd_crop import zonen_box
 from osd_ernte import als_labeltext
 
-AUSSCHNITT = (274, 92)   # entspricht der Zone unten rechts eines SD-Bildes
+# Zone unten rechts eines SD-Bildes (720x576) - derselbe Zuschnitt-Helfer wie
+# Ernte und Modell-Leser (Fix-Runde 1, Aufgabe 3: EIN Weg fuer alle drei statt
+# einer separat gepflegten Konstante, die stillschweigend abweichen koennte).
+_SD_BREITE, _SD_HOEHE = 720, 576
+_sd_links, _sd_oben, _sd_rechts, _sd_unten = zonen_box(_SD_BREITE, _SD_HOEHE)
+AUSSCHNITT = (_sd_rechts - _sd_links, _sd_unten - _sd_oben)
 
 
 @dataclass(frozen=True)
