@@ -40,10 +40,13 @@ osd_modell_leser.baue_modell_leser mit schwelle=0.0 - ungefiltert, damit die
 tatsaechliche Sicherheit jedes Bildes sichtbar bleibt, nicht nur die Bilder, die
 mit irgendeiner willkuerlichen Schwelle bereits durchgekommen waeren - und
 schreibt je Bild Sicherheit, Lesung, Sollwert und Abweichung in einen
-Faelle-Rohbeleg. "kalibrieren" liest genau diesen Beleg, waehlt die kleinste
-Schwelle, die jeden groben Fehler aussperrt, und friert sie EINMALIG ins
-Kandidatenmanifest ein - ein Kandidat mit bereits gesetzter Schwelle wird
-abgewiesen, weil ein zweites Einstellen keine unabhaengige Messung mehr waere.
+Faelle-Rohbeleg samt code_sha256 des Lesercodes (Aufgabe 4). "kalibrieren"
+liest genau diesen Beleg, verweigert unter MINDEST_VERGLEICHBARE_FAELLE ohne
+den ausdruecklichen Flag --trotz-wenig-vergleichbaren-faellen (Aufgabe 5),
+waehlt sonst die kleinste Schwelle, die jeden groben Fehler aussperrt, und
+friert sie EINMALIG samt code_sha256 ins Kandidatenmanifest ein - ein
+Kandidat mit bereits gesetzter Schwelle wird abgewiesen, weil ein zweites
+Einstellen keine unabhaengige Messung mehr waere.
 """
 
 from __future__ import annotations
@@ -73,6 +76,16 @@ GROB_FALSCH_AB_M = 0.5
 # Ohne jeden groben Fehler bleibt es bei diesem Wert. Nicht 0.0: Eine Lesung
 # ohne jede Sicherheit soll auch dann nicht durchgehen.
 GRUNDSCHWELLE = 0.25
+
+# Mindestzahl vergleichbarer Faelle (vergleichbare_faelle()), bevor eine
+# Schwelle eingefroren werden darf (Fix-Runde 1, Aufgabe 5). "0 grobe
+# Fehler" sagt bei einer Handvoll Faellen fast nichts - der Reservebestand
+# hat insgesamt nur 88 Testeintraege, davon faellt jeder ungelesene Fall
+# schon vor vergleichbare_faelle() heraus. 20 ist das kleinste Mass, das
+# dieses Projekt bereits anderswo als aussagekraeftig behandelt (z.B. die
+# Mindestinstanzzahl je Klasse in detect_release_holdout_status.py) -
+# darunter ist eine eingefrorene Schwelle eher Zufall als Beleg.
+MINDEST_VERGLEICHBARE_FAELLE = 20
 
 
 def vergleichbare_faelle(faelle: list[dict]) -> list[dict]:
@@ -152,12 +165,22 @@ def baue_fall(eintrag_id: str, sicherheit: float, gelesen_m: float | None,
 
 
 def baue_faelle_dokument(kandidat_id: str, gewicht_sha256: str,
+                          code_sha256: dict[str, str],
                           faelle: list[dict]) -> dict:
-    """Reine Funktion: baut nur die Dokumentform, kein I/O."""
+    """Reine Funktion: baut nur die Dokumentform, kein I/O.
+
+    code_sha256 bindet den Lesercode (Aufgabe 4, osd_modell_leser.code_hashes()):
+    Gewicht + Schwelle binden nur das MODELL. ZIEL_HOEHE, _IOU_SCHWELLE,
+    TOR_MINDESTZEICHEN, _YOLO_CONF und der Zuschnitt aendern die Lesung mit
+    demselben Gewicht ebenso - ohne diese Bindung waeren die hier erzeugten
+    rohen Lesungen (und die daraus abgeleitete Schwelle) nicht auf den Code
+    zurueckfuehrbar, der sie erzeugt hat.
+    """
     return {
         "schema": "osd_schwelle_faelle_v1",
         "kandidat_id": kandidat_id,
         "gewicht_sha256": gewicht_sha256,
+        "code_sha256": code_sha256,
         "faelle": faelle,
     }
 
@@ -179,7 +202,7 @@ def _main_faelle(args: argparse.Namespace) -> int:
     manifest = _lade_manifest(args.kandidat)
 
     # Lazy: reine Logiktests dieses Skripts brauchen kein Ultralytics/Torch.
-    from osd_modell_leser import baue_modell_leser
+    from osd_modell_leser import baue_modell_leser, code_hashes
 
     # schwelle=0.0: keine Filterung. Wir brauchen die rohe Sicherheit JEDES
     # Bildes, nicht nur die, die eine willkuerliche Schwelle schon bestehen.
@@ -206,6 +229,7 @@ def _main_faelle(args: argparse.Namespace) -> int:
     dokument = baue_faelle_dokument(
         str(manifest.get("kandidat_id") or ""),
         str(manifest.get("gewicht_sha256") or ""),
+        code_hashes(),
         faelle,
     )
 
@@ -226,8 +250,28 @@ def _main_kalibrieren(args: argparse.Namespace) -> int:
         print("ABBRUCH: Keine Faelle im Reservebestand.", file=sys.stderr)
         return 2
 
+    # Aufgabe 4: der Faelle-Beleg muss den Lesercode binden, der die rohen
+    # Lesungen erzeugt hat - sonst ist die gleich eingefrorene Schwelle
+    # nicht auf den Code zurueckfuehrbar, der sie bestimmt hat.
+    code_sha256 = daten.get("code_sha256")
+    if not isinstance(code_sha256, dict) or not code_sha256:
+        print("ABBRUCH: Faelle-Beleg bindet keinen Lesercode (code_sha256). "
+              "Neu mit 'faelle' erzeugen.", file=sys.stderr)
+        return 2
+
     vergleichbar = vergleichbare_faelle(faelle)
     grob = grobe_fehler(faelle)
+
+    # Aufgabe 5: "0 grobe Fehler" aus einer Handvoll Faellen ist kein Beleg.
+    if len(vergleichbar) < MINDEST_VERGLEICHBARE_FAELLE and not args.trotz_wenig_vergleichbaren_faellen:
+        print(
+            f"ABBRUCH: Nur {len(vergleichbar)} vergleichbare Faelle "
+            f"(Mindestmass {MINDEST_VERGLEICHBARE_FAELLE}). 'null grobe Fehler' "
+            "sagt bei so wenigen Faellen fast nichts. Nur mit "
+            "--trotz-wenig-vergleichbaren-faellen einfrieren, wenn das "
+            "bewusst akzeptiert wird.", file=sys.stderr)
+        return 2
+
     schwelle = waehle_schwelle(faelle, args.sicherheitsabstand)
 
     manifest_pfad = args.kandidat / "manifest.json"
@@ -240,6 +284,7 @@ def _main_kalibrieren(args: argparse.Namespace) -> int:
 
     manifest["schwelle"] = schwelle
     manifest["schwelle_quelle"] = str(args.faelle)
+    manifest["schwelle_code_sha256"] = code_sha256
     manifest["schwelle_faelle"] = len(faelle)
     manifest["schwelle_faelle_vergleichbar"] = len(vergleichbar)
     manifest["schwelle_faelle_grob_falsch"] = len(grob)
@@ -271,6 +316,12 @@ def main(argv=None) -> int:
     p_kal.add_argument("--faelle", type=Path, required=True)
     p_kal.add_argument("--kandidat", type=Path, required=True)
     p_kal.add_argument("--sicherheitsabstand", type=float, default=0.05)
+    p_kal.add_argument(
+        "--trotz-wenig-vergleichbaren-faellen", action="store_true",
+        help=f"Schwelle trotz weniger als {MINDEST_VERGLEICHBARE_FAELLE} "
+             "vergleichbarer Faelle einfrieren - akzeptiert ausdruecklich, "
+             "dass 'null grobe Fehler' bei so wenigen Faellen fast nichts "
+             "beweist.")
 
     args = p.parse_args(argv)
     if args.modus == "faelle":

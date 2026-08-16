@@ -10,6 +10,7 @@ Inferenz wird hier bewusst NICHT getestet - dafuer existiert noch kein
 trainierter Kandidat.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -139,12 +140,15 @@ def test_fall_ohne_lesung_hat_abweichung_none():
 
 
 def test_faelle_dokument_hat_das_erwartete_schema():
-    dokument = kal.baue_faelle_dokument("osd_zeichen_abc123", "deadbeef", [])
+    code_sha256 = {"osd_meter.py": "ab" * 32}
+
+    dokument = kal.baue_faelle_dokument("osd_zeichen_abc123", "deadbeef", code_sha256, [])
 
     assert dokument == {
         "schema": "osd_schwelle_faelle_v1",
         "kandidat_id": "osd_zeichen_abc123",
         "gewicht_sha256": "deadbeef",
+        "code_sha256": code_sha256,
         "faelle": [],
     }
 
@@ -210,3 +214,127 @@ def test_atomar_schreiben_legt_fehlende_ordner_an(tmp_path):
     kal._atomar_schreiben(ziel, '{"x": 1}')
 
     assert ziel.read_text(encoding="utf-8") == '{"x": 1}'
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 1: CLI-Ebene von "kalibrieren" - Aufgabe 4 (Lesercode-Bindung)
+# und Aufgabe 5 (Mindestzahl vergleichbarer Faelle). Reine Datei-Fixtures,
+# kein Modell/Ultralytics noetig (_main_kalibrieren ruft keine Inferenz auf).
+# ---------------------------------------------------------------------------
+
+def _kandidat_ohne_schwelle(tmp_path: Path) -> Path:
+    kandidat = tmp_path / "kandidat"
+    kandidat.mkdir()
+    (kandidat / "manifest.json").write_text(
+        json.dumps({"kandidat_id": "osd_zeichen_test", "gewicht_sha256": "ab" * 32}),
+        encoding="utf-8")
+    return kandidat
+
+
+# Sentinel, um "code_sha256 weggelassen -> Standardwert setzen" von
+# "code_sha256=None -> bewusst weglassen" unterscheiden zu koennen.
+_STANDARD_CODE_SHA256 = object()
+
+
+def _faelle_datei(tmp_path: Path, anzahl_vergleichbar: int,
+                   grobe_fehler_anzahl: int = 0,
+                   code_sha256=_STANDARD_CODE_SHA256) -> Path:
+    faelle = [
+        {"id": f"f{i}", "sicherheit": 0.9, "gelesen_m": 1.0,
+         "soll_m": 1.0, "abweichung_m": 0.0}
+        for i in range(anzahl_vergleichbar)
+    ] + [
+        {"id": f"g{i}", "sicherheit": 0.5, "gelesen_m": 9.0,
+         "soll_m": 0.0, "abweichung_m": 9.0}
+        for i in range(grobe_fehler_anzahl)
+    ]
+    dokument: dict = {"faelle": faelle}
+    if code_sha256 is _STANDARD_CODE_SHA256:
+        dokument["code_sha256"] = {"osd_meter.py": "cd" * 32}
+    elif code_sha256 is not None:
+        dokument["code_sha256"] = code_sha256
+    pfad = tmp_path / "faelle.json"
+    pfad.write_text(json.dumps(dokument), encoding="utf-8")
+    return pfad
+
+
+def test_kalibrieren_verweigert_bei_zu_wenig_vergleichbaren_faellen(tmp_path, capsys):
+    kandidat = _kandidat_ohne_schwelle(tmp_path)
+    faelle = _faelle_datei(tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE - 1)
+
+    rc = kal.main(["kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat)])
+
+    assert rc == 2
+    fehler = capsys.readouterr().err
+    assert "vergleichbare" in fehler.lower()
+    manifest = json.loads((kandidat / "manifest.json").read_text(encoding="utf-8"))
+    assert "schwelle" not in manifest
+
+
+def test_kalibrieren_mit_override_flag_friert_trotzdem_ein(tmp_path):
+    kandidat = _kandidat_ohne_schwelle(tmp_path)
+    faelle = _faelle_datei(tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE - 1)
+
+    rc = kal.main([
+        "kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat),
+        "--trotz-wenig-vergleichbaren-faellen",
+    ])
+
+    assert rc == 0
+    manifest = json.loads((kandidat / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schwelle"] is not None
+
+
+def test_kalibrieren_friert_ohne_flag_bei_genug_faellen_ein(tmp_path):
+    kandidat = _kandidat_ohne_schwelle(tmp_path)
+    faelle = _faelle_datei(tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE)
+
+    rc = kal.main(["kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat)])
+
+    assert rc == 0
+
+
+def test_kalibrieren_verweigert_ohne_code_sha256_im_faelle_beleg(tmp_path, capsys):
+    """Ein Faelle-Beleg ohne code_sha256 (z.B. aus einer aelteren, nicht
+    kompatiblen Quelle) darf keine Schwelle einfrieren - sonst waere sie
+    nicht auf den erzeugenden Code zurueckfuehrbar (Aufgabe 4)."""
+    kandidat = _kandidat_ohne_schwelle(tmp_path)
+    faelle = _faelle_datei(
+        tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE,
+        code_sha256=None)
+
+    rc = kal.main(["kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat)])
+
+    assert rc == 2
+    fehler = capsys.readouterr().err
+    assert "code_sha256" in fehler
+    manifest = json.loads((kandidat / "manifest.json").read_text(encoding="utf-8"))
+    assert "schwelle" not in manifest
+
+
+def test_kalibrieren_bindet_code_sha256_ins_manifest(tmp_path):
+    kandidat = _kandidat_ohne_schwelle(tmp_path)
+    erwartet = {"osd_meter.py": "ee" * 32, "osd_modell.py": "ff" * 32}
+    faelle = _faelle_datei(
+        tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE,
+        code_sha256=erwartet)
+
+    rc = kal.main(["kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat)])
+
+    assert rc == 0
+    manifest = json.loads((kandidat / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schwelle_code_sha256"] == erwartet
+
+
+def test_kalibrieren_bricht_bei_bereits_eingefrorener_schwelle_ab(tmp_path, capsys):
+    kandidat = tmp_path / "kandidat"
+    kandidat.mkdir()
+    (kandidat / "manifest.json").write_text(
+        json.dumps({"kandidat_id": "x", "gewicht_sha256": "ab" * 32, "schwelle": 0.3}),
+        encoding="utf-8")
+    faelle = _faelle_datei(tmp_path, anzahl_vergleichbar=kal.MINDEST_VERGLEICHBARE_FAELLE)
+
+    rc = kal.main(["kalibrieren", "--faelle", str(faelle), "--kandidat", str(kandidat)])
+
+    assert rc == 2
+    assert "bereits eingefroren" in capsys.readouterr().err

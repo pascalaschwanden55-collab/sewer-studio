@@ -76,7 +76,7 @@ def main(argv=None) -> int:
     # freigabe_erreicht) brauchen kein Ultralytics/Torch. Der geteilte Leser
     # kommt UNVERAENDERT aus Aufgabe 7 - hier wird er nur aufgerufen, nie
     # neu geschrieben (siehe Ruling im Modul-Docstring).
-    from osd_modell_leser import baue_modell_leser
+    from osd_modell_leser import baue_modell_leser, code_hashes
 
     lese = baue_modell_leser(args.kandidat, float(schwelle))
 
@@ -92,15 +92,19 @@ def main(argv=None) -> int:
         "richtig": sum(s["richtig"] for s in saetze),
         "falsch": sum(s["falsch"] for s in saetze),
         "nicht_gelesen": sum(s["nicht_gelesen"] for s in saetze),
+        # Fix-Runde 1 (Aufgabe 6): messe_satz() liefert fuenf Zustaende, nicht
+        # vier - ohne dieses Feld summiert sich die Tabelle nicht immer zu
+        # "bilder", ohne dass das irgendwo sichtbar wird.
+        "ohne_sollwert": sum(s["ohne_sollwert"] for s in saetze),
     }
 
     print(f"Kandidat: {manifest['kandidat_id']}  Schwelle {schwelle}")
-    print(f"{'Satz':<14}{'Bilder':>8}{'richtig':>9}{'falsch':>8}{'nicht ges.':>12}")
+    print(f"{'Satz':<14}{'Bilder':>8}{'richtig':>9}{'falsch':>8}{'nicht ges.':>12}{'ohne Soll':>11}")
     for s in saetze:
         print(f"{s['satz']:<14}{s['bilder']:>8}{s['richtig']:>9}"
-              f"{s['falsch']:>8}{s['nicht_gelesen']:>12}")
+              f"{s['falsch']:>8}{s['nicht_gelesen']:>12}{s['ohne_sollwert']:>11}")
     print(f"{'GESAMT':<14}{gesamt['bilder']:>8}{gesamt['richtig']:>9}"
-          f"{gesamt['falsch']:>8}{gesamt['nicht_gelesen']:>12}")
+          f"{gesamt['falsch']:>8}{gesamt['nicht_gelesen']:>12}{gesamt['ohne_sollwert']:>11}")
     print()
     print(f"Freigabemarke: null falsch UND mindestens {FREIGABE_MINDEST_RICHTIG} richtig.")
     erreicht = freigabe_erreicht(gesamt)
@@ -113,6 +117,11 @@ def main(argv=None) -> int:
         "schema": "osd_modell_goldmessung_v1",
         "kandidat_id": manifest["kandidat_id"],
         "gewicht_sha256": manifest["gewicht_sha256"],
+        # Aufgabe 4: der Sibling osd_goldmessung.py bindet leser_sha256 -
+        # hier war bisher nur das Gewicht gebunden, nicht der Code, der mit
+        # demselben Gewicht die Lesung bestimmt (ZIEL_HOEHE, _IOU_SCHWELLE,
+        # TOR_MINDESTZEICHEN, _YOLO_CONF, Zuschnitt).
+        "code_sha256": code_hashes(),
         "schwelle": schwelle,
         "gesamt": gesamt,
         "freigabe_erreicht": erreicht,
