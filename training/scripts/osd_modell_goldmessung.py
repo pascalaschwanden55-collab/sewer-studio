@@ -1,0 +1,136 @@
+"""Misst den trainierten Zeichenleser gegen die drei eingefrorenen Goldsaetze.
+
+Benutzt bewusst messe_satz() aus osd_goldmessung.py: dieselbe Hashpruefung der
+Bildbytes, dieselbe Einteilung in richtig / falsch / nicht_gelesen. Nur der Leser
+ist ein anderer. Damit sind alter und neuer Stand direkt vergleichbar.
+
+Der Lauf verweigert, solange die Schwelle im Kandidatenmanifest nicht eingefroren
+ist - sonst waere die Versuchung gross, sie nach dem Ergebnis nachzuziehen.
+
+RULING zu Aufgabe 8: Der urspruengliche Brief definierte eine eigene
+baue_modell_leser(). Das wird hier NICHT getan. osd_modell_leser.baue_modell_leser
+(Aufgabe 7) ist der einzige Inferenzpfad - Zuschnitt, Normierung, Stilermittlung,
+Zeichenzusammenbau und Deutung. Ein zweiter, hier neu geschriebener Leser wuerde
+riskieren, dass Schwellenkalibrierung und Goldmessung leise auseinanderlaufen
+(anderes Cropping, andere Normierung, andere parse_meter-Aufrufe), ohne dass das
+je auffaellt. Dieses Skript ruft ihn nur auf.
+
+FAIL-CLOSED: Wie in osd_modell_leser dokumentiert, wird um die Inferenz kein
+try/except gelegt. Ein technischer Fehler (defektes Bild, CUDA-Fehler, ein
+fehlendes Modul, ...) muss den Lauf sichtbar sprengen statt als "nicht_gelesen"
+in die Zahlen einzugehen - das wuerde die Messung leise beschoenigen.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import osd_goldmessung
+
+GOLD_WURZEL = Path(r"C:\KI_BRAIN\eval_set\osd")
+BERICHT_ORDNER = Path(r"C:\KI_BRAIN\training\reports")
+
+# Freigabemarke (Spec Abschnitt 6): null falsch UND mindestens 170 von 197
+# Goldbildern richtig gelesen. Beide Bedingungen muessen GEMEINSAM gelten -
+# viele richtige Werte gleichen keinen einzigen falschen aus (ein falscher
+# Wert ist teurer als zehn fehlende).
+FREIGABE_MINDEST_RICHTIG = 170
+
+
+def freigabe_erreicht(gesamt: dict) -> bool:
+    """Reine Logik: True nur bei 0 falsch UND >= FREIGABE_MINDEST_RICHTIG richtig."""
+    return gesamt["falsch"] == 0 and gesamt["richtig"] >= FREIGABE_MINDEST_RICHTIG
+
+
+def main(argv=None) -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--kandidat", type=Path, required=True)
+    p.add_argument("--gold-wurzel", type=Path, default=GOLD_WURZEL)
+    p.add_argument("--bericht-ordner", type=Path, default=BERICHT_ORDNER)
+    args = p.parse_args(argv)
+
+    manifest_pfad = args.kandidat / "manifest.json"
+    if not manifest_pfad.is_file():
+        print(f"ABBRUCH: Kandidatenmanifest fehlt: {manifest_pfad}", file=sys.stderr)
+        return 2
+    manifest = json.loads(manifest_pfad.read_text(encoding="utf-8-sig"))
+
+    schwelle = manifest.get("schwelle")
+    if schwelle is None:
+        print("ABBRUCH: Die Schwelle ist nicht eingefroren. Erst "
+              "osd_schwelle_kalibrieren.py laufen lassen.", file=sys.stderr)
+        return 2
+
+    gewicht = args.kandidat / manifest["gewicht_datei"]
+    ist_hash = osd_goldmessung.sha256(gewicht)
+    if ist_hash != manifest["gewicht_sha256"]:
+        print(f"ABBRUCH: Gewichtshash weicht ab.\n  Manifest: "
+              f"{manifest['gewicht_sha256']}\n  Datei:    {ist_hash}", file=sys.stderr)
+        return 2
+
+    # Lazy: reine Logiktests dieses Skripts (beide Verweigerungen,
+    # freigabe_erreicht) brauchen kein Ultralytics/Torch. Der geteilte Leser
+    # kommt UNVERAENDERT aus Aufgabe 7 - hier wird er nur aufgerufen, nie
+    # neu geschrieben (siehe Ruling im Modul-Docstring).
+    from osd_modell_leser import baue_modell_leser
+
+    lese = baue_modell_leser(args.kandidat, float(schwelle))
+
+    # Kein try/except um diese Zeile oder um messe_satz(): ein technischer
+    # Fehler bei der Inferenz muss den Lauf abbrechen, nicht leise als
+    # "nicht_gelesen" verschwinden. messe_satz() ruft lese() seinerseits
+    # ebenfalls ohne eigenes try/except auf - beide Seiten bleiben fail-closed.
+    saetze = [osd_goldmessung.messe_satz(args.gold_wurzel / name, lese)
+              for name in osd_goldmessung.SAETZE]
+
+    gesamt = {
+        "bilder": sum(s["bilder"] for s in saetze),
+        "richtig": sum(s["richtig"] for s in saetze),
+        "falsch": sum(s["falsch"] for s in saetze),
+        "nicht_gelesen": sum(s["nicht_gelesen"] for s in saetze),
+    }
+
+    print(f"Kandidat: {manifest['kandidat_id']}  Schwelle {schwelle}")
+    print(f"{'Satz':<14}{'Bilder':>8}{'richtig':>9}{'falsch':>8}{'nicht ges.':>12}")
+    for s in saetze:
+        print(f"{s['satz']:<14}{s['bilder']:>8}{s['richtig']:>9}"
+              f"{s['falsch']:>8}{s['nicht_gelesen']:>12}")
+    print(f"{'GESAMT':<14}{gesamt['bilder']:>8}{gesamt['richtig']:>9}"
+          f"{gesamt['falsch']:>8}{gesamt['nicht_gelesen']:>12}")
+    print()
+    print(f"Freigabemarke: null falsch UND mindestens {FREIGABE_MINDEST_RICHTIG} richtig.")
+    erreicht = freigabe_erreicht(gesamt)
+    if erreicht:
+        print("ERREICHT.")
+    else:
+        print("NICHT erreicht - der Kandidat bleibt diagnostic_not_deployed.")
+
+    bericht = {
+        "schema": "osd_modell_goldmessung_v1",
+        "kandidat_id": manifest["kandidat_id"],
+        "gewicht_sha256": manifest["gewicht_sha256"],
+        "schwelle": schwelle,
+        "gesamt": gesamt,
+        "freigabe_erreicht": erreicht,
+        "saetze": saetze,
+    }
+    args.bericht_ordner.mkdir(parents=True, exist_ok=True)
+    ziel = args.bericht_ordner / f"osd_modell_goldmessung_{manifest['kandidat_id']}.json"
+    if ziel.exists():
+        print(f"\nBericht besteht bereits und wird nicht ueberschrieben: {ziel}")
+        return 0
+    text = json.dumps(bericht, indent=1, ensure_ascii=False)
+    arbeit = ziel.with_suffix(".json.arbeit")
+    arbeit.write_bytes(text.encode("utf-8"))
+    arbeit.replace(ziel)
+    print(f"\nBericht: {ziel}")
+    print(f"Bericht-SHA-256: {hashlib.sha256(text.encode('utf-8')).hexdigest()}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
