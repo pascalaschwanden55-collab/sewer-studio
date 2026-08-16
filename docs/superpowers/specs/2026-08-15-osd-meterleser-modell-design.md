@@ -80,12 +80,34 @@ kommt weiter nach vorn. In Stufe 1 steht das Modell am Ende.
   Zeichenhöhe gebracht, bevor das Modell ihn sieht. SD und HD sehen dadurch
   gleich aus.
 
-Der letzte Punkt ist die Lehre aus dem Fehler vom 2026-08-14: Die
+Der letzte Punkt zielt auf die Lehre aus dem Fehler vom 2026-08-14: Die
 Abstandsschranken der Zeichenfindung standen als feste Pixelwerte da, eingestellt auf
 SD mit rund 18 Pixel hohen Ziffern. Auf HD sind dieselben Zeichen doppelt so
 gross, und der Leser verlor Dezimalpunkt und Einheit (`LZ1: 3.2m` → `L132`).
-Die Normierung schliesst diese Fehlerklasse **durch die Bauart** aus, nicht
-durch Aufmerksamkeit.
+
+> **Korrektur vom 2026-08-16 — die ursprüngliche Behauptung war falsch.**
+> Hier stand, die Normierung schliesse diese Fehlerklasse „durch die Bauart" aus.
+> Nachgemessen, was bei `imgsz=320` tatsächlich beim Modell ankommt:
+>
+> | Zone | ohne Normierung | mit Normierung |
+> |---|---|---|
+> | SD 576 (273×92) | 21,1 px | 21,1 px |
+> | HD 720 (486×115) | 14,8 px | 14,8 px |
+> | HD 1080 (729×172) | 14,8 px | 14,8 px |
+>
+> Ultralytics letterboxt ohnehin seitenverhältnistreu auf `imgsz`; die Normierung
+> tut dasselbe, und die Verkettung landet am selben Punkt. Sie leistet also eine
+> feste, vom Letterbox-Verhalten unabhängige Eingangsgrösse — **nicht** aber gleiche
+> Zeichenhöhe über verschiedene Bildseitenverhältnisse. SD und HD unterscheiden sich
+> weiterhin um Faktor 1,4, weil die Zone bei 5:4 und 16:9 verschiedene Proportionen
+> hat.
+>
+> Echte Gleichheit bräuchte ein festes Ziel-Seitenverhältnis mit Polsterung, quer
+> durch Ernte, Kunstbilder und Inferenz. Das bleibt für Stufe 1 bewusst offen: Der
+> gemessene Rest liegt im Bereich, den ein Detektor über seine Mehrskalen-Augmentierung
+> trägt, und der Ausfall vom 14.08. war kategorisch (keine Schranke traf mehr), nicht
+> ein Faktor 1,4. Die Goldmessung weist SD, HD und HD2 getrennt aus und würde einen
+> echten Nachteil auf HD sichtbar machen.
 
 ---
 
