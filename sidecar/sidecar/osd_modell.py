@@ -8,7 +8,11 @@ Zur Normierung: Die Abstandsschranken des alten Vorlagenlesers standen als feste
 Pixelwerte da, eingestellt auf SD mit rund 18 Pixel hohen Ziffern. Auf HD sind
 dieselben Zeichen doppelt so gross und der Leser verlor Dezimalpunkt und Einheit
 ("LZ1: 3.2m" wurde "L132"). Wer den Ausschnitt vor der Inferenz auf eine feste
-Hoehe bringt, kann diesen Fehler gar nicht erst machen.
+Hoehe bringt, kann diesen Fehler gar nicht erst machen. (Fix-Runde 1 zu
+Aufgabe 8, 2026-08-16: das gilt NUR fuer genau diesen einen Fehler - feste
+Pixelschranken auf Zeichenhoehe geeicht. Es heisst NICHT, dass SD und HD
+danach fuer das Modell gleich aussehen; ein Leser, der hier aufhoert, waere
+falsch informiert - siehe die Richtigstellung direkt im Anschluss.)
 
 Richtigstellung (Fix-Runde 1 zu Aufgabe 7, 2026-08-16): Hier stand vorher, der
 HD-Ausfall vom 2026-08-14 koenne dadurch "bauartbedingt nicht wiederkehren".
@@ -59,25 +63,35 @@ from . import osd_meter
 # Herleitung (VORLAEUFIG - Spec Abschnitt 11 laesst den Wert ausdruecklich
 # "empirisch in Stufe 1 zu bestimmen" offen; hier nur eine erste Schaetzung,
 # die am echten Datensatz noch bestaetigt wird):
-# Die OSD-Zone ist bewusst grosszuegig geschnitten (Zonenanteil 0,16 der
-# Videohoehe, osd_meter.ZONEN["unten_rechts"]); die Ziffer selbst fuellt davon
-# gemessen nur rund ein Fuenftel (Verhaeltnis Ziffer/Zone 0,196, konstant
-# ueber SD 576p, HD 720p und HD 1080p). Bei ZIEL_HOEHE=96 landet die Ziffer
-# nach der Normierung bei rund 96 * 0,196 = 18,8 px - auf der gemessenen
-# Referenz osd_meter.REFERENZ_GLYPHE_H (18 px). Der fruehere Wert 32 druckte
-# die Ziffer auf rund 6,3 px, unter osd_meter.GLYPHE_MIN_H (8) und damit
-# unwiederbringlich unlesbar, noch bevor das Modell das Bild sieht.
+#
+# Richtigstellung (Fix-Runde 1 zu Aufgabe 8, 2026-08-16): Hier stand vorher,
+# ZIEL_HOEHE=96 lege die Ziffernhoehe AM MODELL fest (rund 96 * 0,196 = 18,8
+# px). Das ist falsch - wie der Docstring oben zeigt, bestimmt Ultralytics'
+# eigenes Letterboxing bei imgsz die tatsaechlich ankommende Ziffernhoehe,
+# nicht ZIEL_HOEHE. Der Wert 96 bleibt trotzdem: Die reale SD-Zone
+# (osd_meter.ZONEN["unten_rechts"] auf 720x576 -> rund 274x92 px) ist damit
+# schon fast 96 px hoch - SD wird in diesem Zwischenschritt also so gut wie
+# NICHT hochskaliert (Faktor rund 1,04), waehrend HD-Zonen (rund 115 px bei
+# 720p, rund 173 px bei 1080p) auf 96 heruntergerechnet werden. Kleiner als
+# 96 war trotzdem abzulehnen: Der fruehere Wert 32 haette die Ziffer schon in
+# DIESEM Zwischenschritt auf rund 6,3 px gedrueckt (unter
+# osd_meter.GLYPHE_MIN_H, 8) - verlorene Bildinformation, die kein
+# nachfolgendes Letterboxing zurueckholt, egal was danach mit imgsz passiert.
 ZIEL_HOEHE = 96
 
 # Unter drei Zeichen ist keine sinnvolle Meterangabe moeglich.
 TOR_MINDESTZEICHEN = 3
 
-# IoU-Schwelle fuer die Dublettenunterdrueckung: Zwei Boxen mit IoU >= diesem
-# Wert gelten als dasselbe Zeichen, die schwaechere faellt weg. 0,5 ist der
-# uebliche NMS-Schwellenwert und trennt zuverlaessig eine echte Doppel-
-# detektion (Ueberlappung meist > 0,7) von zwei eng benachbarten, aber
-# eigenstaendigen Zeichen wie Ziffer und Dezimalpunkt (Ueberlappung dort nahe
-# 0, siehe Testfaelle).
+# IoU-Schwelle fuer die Dublettenunterdrueckung (VORLAEUFIG, wie ZIEL_HOEHE -
+# noch nicht am echten Datensatz bestaetigt, siehe dort). Zwei Boxen mit
+# IoU >= diesem Wert gelten als dasselbe Zeichen, die schwaechere faellt weg
+# - das ist die Konstante, die entscheidet, ob ein Zeichen STILL aus der
+# Zeichenfolge verschwindet: bei falscher Wahl faellt ein echtes,
+# eigenstaendiges Zeichen (z.B. der Dezimalpunkt) weg, ohne dass irgendein
+# Tor das bemerkt. 0,5 ist der uebliche NMS-Schwellenwert und trennt
+# zuverlaessig eine echte Doppeldetektion (Ueberlappung meist > 0,7) von
+# zwei eng benachbarten, aber eigenstaendigen Zeichen wie Ziffer und
+# Dezimalpunkt (Ueberlappung dort nahe 0, siehe Testfaelle).
 _IOU_SCHWELLE = 0.5
 
 

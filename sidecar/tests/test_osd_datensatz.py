@@ -450,3 +450,28 @@ def test_main_raeumt_staging_bei_fehlender_labeldatei_mitten_im_lauf_auf(tmp_pat
     staging_reste = list(ziel.parent.glob(f".{ziel.name}.staging-*"))
     assert staging_reste == [], (
         f"Staging-Ordner wurde nach SystemExit nicht aufgeraeumt: {staging_reste}")
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 (Aufgabe 8): datensatz.json speichert --quelle als Beleg - ein
+# relativer Pfad ist dort kein Beleg.
+# ---------------------------------------------------------------------------
+
+def test_main_loest_relativen_quellpfad_im_beleg_auf(tmp_path, monkeypatch):
+    monkeypatch.setattr(osd_datensatz, "lade_schutz", lambda *_a, **_k: Schutz())
+
+    eintraege = [{"id": "a", "bild_sha256": "11" * 32, "haltung": "1-2"}]
+    quelle = _schreibe_quelle(tmp_path / "quellen", "ernte", eintraege, "osd_ernte_v1")
+
+    monkeypatch.chdir(tmp_path)
+    ziel = tmp_path / "ziel"
+    rc = osd_datensatz.main([
+        "--quelle", "quellen/ernte",  # bewusst relativ
+        "--ziel", str(ziel),
+    ])
+
+    assert rc == 0
+    beleg = json.loads((ziel / "datensatz.json").read_text(encoding="utf-8"))
+    pfad_im_beleg = beleg["quellen"][0]["pfad"]
+    assert Path(pfad_im_beleg).is_absolute()
+    assert Path(pfad_im_beleg) == quelle.resolve()

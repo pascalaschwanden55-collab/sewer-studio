@@ -18,12 +18,30 @@ from PIL import Image
 from sidecar import osd_meter, osd_modell
 
 
-def test_normierung_macht_sd_und_hd_gleich_gross():
-    sd = Image.new("RGB", (274, 92))
-    hd = Image.new("RGB", (548, 184))
+def test_normierung_bringt_reale_sd_und_hd_zone_auf_gleiche_hoehe_trotz_unterschiedlicher_seitenverhaeltnisse():
+    """Ersetzt test_normierung_macht_sd_und_hd_gleich_gross (Fix-Runde 1,
+    Aufgabe 8): der alte Test verglich zwei Bilder mit IDENTISCHEM
+    Seitenverhaeltnis (548x184 ist exakt das Zweifache von 274x92) - das
+    beweist nur, dass die Normierung das Seitenverhaeltnis erhaelt (eine
+    Tautologie: JEDE Zielhoehe haette bei gleichem Seitenverhaeltnis gleiche
+    Ausgabehoehen geliefert), nicht die im alten Testnamen behauptete
+    Gleichheit fuer das Modell. Die Richtigstellung im Docstring von
+    osd_modell.py zeigt: echte SD- und HD-Zonen haben VERSCHIEDENE
+    Seitenverhaeltnisse (SD 274x92 ~ 2,98:1, HD720 486x115 ~ 4,23:1) - was
+    normiere_ausschnitt() wirklich liefert, ist nur eine gemeinsame feste
+    Ausgangshoehe, keine visuelle Gleichheit.
+    """
+    sd = Image.new("RGB", (274, 92))    # reale SD-Zone, 720x576
+    hd = Image.new("RGB", (486, 115))   # reale HD-Zone, 1280x720
 
-    assert (osd_modell.normiere_ausschnitt(sd).height
-            == osd_modell.normiere_ausschnitt(hd).height)
+    sd_normiert = osd_modell.normiere_ausschnitt(sd)
+    hd_normiert = osd_modell.normiere_ausschnitt(hd)
+
+    # Beide erreichen dieselbe Zielhoehe ...
+    assert sd_normiert.height == hd_normiert.height == osd_modell.ZIEL_HOEHE
+    # ... aber NICHT dieselbe Breite: reale SD- und HD-Zonen haben
+    # unterschiedliche Seitenverhaeltnisse - die Normierung gleicht das nicht an.
+    assert sd_normiert.width != hd_normiert.width
 
 
 def test_normierung_haelt_das_seitenverhaeltnis():

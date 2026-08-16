@@ -291,6 +291,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not 0.0 <= args.val_anteil < 1.0:
         raise SystemExit("--val-anteil muss zwischen 0 und 1 liegen (0 <= x < 1).")
 
+    # Fix-Runde 1 (Aufgabe 8): datensatz.json speichert diese Pfade als Beleg
+    # ("quellen"/"pfad"). Ein relativer Pfad ist dort kein Beleg - er sagt
+    # nichts darueber, WELCHER Ordner tatsaechlich gemeint war, sobald der
+    # Beleg spaeter von einem anderen Arbeitsverzeichnis aus gelesen wird.
+    args.quelle = [quelle.resolve() for quelle in args.quelle]
+
     for quelle in args.quelle:
         if not quelle.is_dir():
             raise SystemExit(f"Quellordner fehlt: {quelle}")
