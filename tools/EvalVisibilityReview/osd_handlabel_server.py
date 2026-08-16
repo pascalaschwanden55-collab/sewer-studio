@@ -1,15 +1,30 @@
 """Lokaler Pruefplatz fuer die harte OSD-Handliste (osd_handlabel.py queue).
 
-Zeigt ein Bild mit den bereits gefundenen Zeichenboxen. Der Mensch tippt die
-Zeichenfolge von links nach rechts - eine Box pro Zeichen. Es wird NIE eine
-Modell- oder Vorlagenlesung angezeigt: Genau die Beeinflussung wuerde den
-ganzen Zweck der Handliste zerstoeren (siehe osd_handlabel.py-Modul-Docstring).
+REWORK 2026-08-16 - warum der erste Entwurf ersetzt wurde: Er zeichnete
+Boxen, die osd_meter.boxen_aus_maske() VORHER auf dem ganzen 720x576-Frame
+gefunden hatte. Zwei Defekte, am fertigen 200er-Bestand nachgemessen: Erstens
+waren die Boxen auf dem vollen Frame praktisch unsichtbar - die Meteranzeige
+ist eine Briefmarke unten rechts. Zweitens, schlimmer: Bei 166 von 200
+Faellen waren die Boxen Bruchstuecke innerhalb der Zeichenstriche, keine
+Zeichen (siehe osd_handlabel.py-Moduldocstring fuer die Messung).
+
+Der neue Ablauf zeigt deshalb NUR die Zone unten rechts, 4x vergroessert mit
+NEAREST (Pixel bleiben scharf). Der Mensch zieht EINEN Kasten mit der Maus um
+die Meteranzeige; der Server segmentiert live per
+osd_handlabel.zeichen_in_kasten() und zeigt die gefundenen, nummerierten
+Zeichenboxen. Der Mensch tippt die Zeichenfolge von links nach rechts - eine
+Box pro Zeichen, Anzahl muss uebereinstimmen. Es wird NIE eine Modell- oder
+Vorlagenlesung angezeigt: Genau die Beeinflussung wuerde den ganzen Zweck der
+Handliste zerstoeren (siehe osd_handlabel.py-Moduldocstring). Passt der
+Kasten nicht oder die Segmentierung daneben, drueckt der Mensch "boxen passen
+nicht".
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import sys
 import threading
@@ -23,20 +38,25 @@ from PIL import Image
 WURZEL = Path(__file__).resolve().parents[2]
 if str(WURZEL / "sidecar") not in sys.path:
     sys.path.insert(0, str(WURZEL / "sidecar"))
+if str(WURZEL / "training" / "scripts") not in sys.path:
+    sys.path.insert(0, str(WURZEL / "training" / "scripts"))
 
 # Zeichensatz wird LIVE aus osd_meter gelesen (keine eigene Kopie - ein
 # spaeteres Erweitern von ZEICHEN muesste sonst zwei Stellen pflegen).
 from sidecar import osd_meter  # noqa: E402
+import osd_crop  # noqa: E402
+import osd_handlabel  # noqa: E402
 
 AKTIONEN = ("uebernommen", "unleserlich", "boxen_passen_nicht")
+
+# Vergroesserungsfaktor der angezeigten Zone. NEAREST haelt Pixel scharf -
+# jede andere Interpolation wuerde die Zeichenkanten genau dort verwischen,
+# wo der Mensch sie fuer den Kasten braucht.
+ZONEN_SKALA = 4
 
 
 def sha256_datei(pfad: Path) -> str:
     return hashlib.sha256(pfad.read_bytes()).hexdigest()
-
-
-def _content_type(pfad: Path) -> str:
-    return "image/png" if pfad.suffix.lower() == ".png" else "image/jpeg"
 
 
 class OsdHandlabelStore:
@@ -46,6 +66,11 @@ class OsdHandlabelStore:
     Antwort auf /stand traegt die aktuelle Revision, jede Entscheidung muss
     sie zurueckschicken. Weicht sie ab, hat ein anderer Tab zwischenzeitlich
     gespeichert - abgewiesen statt still ueberschrieben.
+
+    Die Queue traegt KEINE Boxen mehr (siehe Moduldocstring) - Boxen entstehen
+    erst hier, wenn der Mensch einen Kasten zieht (vorschau()) und werden erst
+    bei einer bestaetigten Entscheidung (entscheiden()) in die Review
+    geschrieben.
     """
 
     def __init__(self, queue_root: Path, output: Path, reviewer: str) -> None:
@@ -65,21 +90,26 @@ class OsdHandlabelStore:
         if not self.faelle:
             raise SystemExit("Queue enthaelt keine Faelle.")
 
-        self._bildgroessen: dict[str, tuple[int, int]] = {}
         for fall in self.faelle:
             fall_id = str(fall.get("id") or "")
             bild_pfad = Path(str(fall.get("bild_pfad") or ""))
             if not bild_pfad.is_file() or sha256_datei(bild_pfad) != fall.get("bild_sha256"):
                 raise SystemExit(f"Bild fehlt oder wurde veraendert: {fall_id or '?'}")
             with Image.open(bild_pfad) as bild:
-                self._bildgroessen[fall_id] = bild.size
+                bild.load()
 
         self.entscheidungen: dict[str, dict] = {}
+        # fall_id -> Liste bereits gemeldeter Zeichen ausserhalb ZEICHEN, die
+        # beim Uebernehmen-Versuch abgewiesen wurden. Rein informativ fuer
+        # publizieren()'s Zusammenfassung ("wie viel Material geht so
+        # verloren") - keine Entscheidung, aendert die Revision nicht.
+        self._zeichen_ausserhalb_satz: dict[str, list[str]] = {}
         self._revision = 0
         # Die zuletzt per "zurueck" entfernte Entscheidung - nur solange
         # relevant, wie ihr Fall noch nicht neu entschieden wurde. Dient
         # ausschliesslich dazu, dem Menschen seine EIGENE vorherige Eingabe
-        # wieder vorzulegen (nie eine Maschinenvermutung).
+        # wieder vorzulegen (nie eine Maschinenvermutung). Der Kasten wird
+        # dabei bewusst NICHT wiederhergestellt - der Mensch zieht ihn neu.
         self._letzte_entfernte: dict | None = None
         self._laden()
 
@@ -95,6 +125,7 @@ class OsdHandlabelStore:
             raise SystemExit("Vorhandene Review enthaelt unbekannte Faelle.")
         self.entscheidungen = entscheidungen
         self._revision = len(entscheidungen)
+        self._zeichen_ausserhalb_satz = dict(daten.get("zeichen_ausserhalb_satz") or {})
 
     def _speichern(self) -> None:
         daten = {
@@ -103,6 +134,7 @@ class OsdHandlabelStore:
             "queue_sha256": self.queue_sha256,
             "gesamt": len(self.faelle),
             "entscheidungen": self.entscheidungen,
+            "zeichen_ausserhalb_satz": self._zeichen_ausserhalb_satz,
         }
         self.output.parent.mkdir(parents=True, exist_ok=True)
         temp = self.output.with_suffix(self.output.suffix + ".tmp")
@@ -114,7 +146,8 @@ class OsdHandlabelStore:
 
     def _vorherige_eingabe_fuer(self, fall_id: str) -> dict | None:
         """Die eigene fruehere Eingabe fuer GENAU diesen wiedervorgelegten
-        Fall - oder None. Niemals eine Modell-/Vorlagenvermutung."""
+        Fall - oder None. Niemals eine Modell-/Vorlagenvermutung, und auch
+        nicht der alte Kasten (der wird neu gezogen)."""
         letzte = self._letzte_entfernte
         if letzte is None or letzte["fall_id"] != fall_id:
             return None
@@ -129,17 +162,9 @@ class OsdHandlabelStore:
         if offen:
             fall = offen[0]
             fall_id = str(fall["id"])
-            breite, hoehe = self._bildgroessen[fall_id]
-            boxen_anteil = [
-                [box[0] / breite, box[1] / hoehe,
-                 (box[2] - box[0]) / breite, (box[3] - box[1]) / hoehe]
-                for box in fall["boxen"]
-            ]
             naechster = {
                 "id": fall_id,
                 "haltung": fall.get("haltung"),
-                "anzahl_boxen": len(fall["boxen"]),
-                "boxen_anteil": boxen_anteil,
                 "vorherige_eingabe": self._vorherige_eingabe_fuer(fall_id),
             }
         return {
@@ -150,8 +175,98 @@ class OsdHandlabelStore:
             "naechster": naechster,
         }
 
+    def bild_pfad(self, fall_id: str) -> Path | None:
+        fall = self._fall(fall_id)
+        if fall is None:
+            return None
+        pfad = Path(str(fall.get("bild_pfad") or ""))
+        return pfad if pfad.is_file() else None
+
+    # -----------------------------------------------------------------
+    # Zone-Anzeige + Koordinatenumrechnung. Der Client sieht und zieht
+    # IMMER in skalierten Zonen-lokalen Pixeln (0..Zonenbreite*4); Boxen
+    # werden intern in Vollbild-Koordinaten gefuehrt (wie
+    # zeichen_in_kasten() sie liefert), weil publizieren() genau diese
+    # Koordinaten fuer den YOLO-Zuschnitt braucht.
+    # -----------------------------------------------------------------
+
+    def zone_bild_bytes(self, fall_id: str) -> bytes | None:
+        bild_pfad = self.bild_pfad(fall_id)
+        if bild_pfad is None:
+            return None
+        with Image.open(bild_pfad) as roh:
+            bild = roh.convert("RGB")
+        zone = osd_crop.zonen_box(*bild.size)
+        ausschnitt = bild.crop(zone)
+        skaliert = ausschnitt.resize(
+            (ausschnitt.width * ZONEN_SKALA, ausschnitt.height * ZONEN_SKALA),
+            Image.NEAREST)
+        puffer = io.BytesIO()
+        skaliert.save(puffer, format="PNG")
+        return puffer.getvalue()
+
+    def _voller_kasten(self, bild: Image.Image,
+                       kasten_skaliert: Sequence[float]) -> tuple[int, int, int, int]:
+        zone_x0, zone_y0, _zx1, _zy1 = osd_crop.zonen_box(*bild.size)
+        dx0, dy0, dx1, dy1 = kasten_skaliert
+        return (
+            zone_x0 + round(dx0 / ZONEN_SKALA), zone_y0 + round(dy0 / ZONEN_SKALA),
+            zone_x0 + round(dx1 / ZONEN_SKALA), zone_y0 + round(dy1 / ZONEN_SKALA),
+        )
+
+    def _boxen_skaliert(self, bild: Image.Image,
+                        boxen_voll: list[tuple[int, int, int, int]]) -> list[list[float]]:
+        zone_x0, zone_y0, _zx1, _zy1 = osd_crop.zonen_box(*bild.size)
+        return [
+            [(x0 - zone_x0) * ZONEN_SKALA, (y0 - zone_y0) * ZONEN_SKALA,
+             (x1 - zone_x0) * ZONEN_SKALA, (y1 - zone_y0) * ZONEN_SKALA]
+            for (x0, y0, x1, y1) in boxen_voll
+        ]
+
+    @staticmethod
+    def _kasten_pruefen(kasten_skaliert) -> None:
+        if (not isinstance(kasten_skaliert, (list, tuple)) or len(kasten_skaliert) != 4
+                or not all(isinstance(w, (int, float)) for w in kasten_skaliert)):
+            raise ValueError(
+                "Kein Kasten gezogen - bitte die Anzeige mit der Maus umrahmen.")
+
+    def vorschau(self, fall_id: str, kasten_skaliert) -> dict:
+        """Reine Vorschau: segmentiert probeweise, speichert nichts.
+
+        Wird bei jedem Loslassen der Maus aufgerufen, damit der Mensch die
+        gefundenen Zeichenboxen VOR dem Tippen sieht.
+        """
+        fall = self._fall(fall_id)
+        if fall is None:
+            raise ValueError(f"Unbekannter Fall: {fall_id}")
+        self._kasten_pruefen(kasten_skaliert)
+        bild_pfad = self.bild_pfad(fall_id)
+        if bild_pfad is None:
+            raise ValueError("Bild fehlt.")
+        with Image.open(bild_pfad) as roh:
+            bild = roh.convert("RGB")
+        voller_kasten = self._voller_kasten(bild, kasten_skaliert)
+        boxen = osd_handlabel.zeichen_in_kasten(bild, voller_kasten)
+        return {"boxen": self._boxen_skaliert(bild, boxen)}
+
+    def _zeichen_ausserhalb_satz_vermerken(self, fall_id: str, zeichen_liste: list[str]) -> None:
+        """Merkt sich ALLE in diesem Versuch getippten unerlaubten Zeichen -
+        nicht nur das erste aus der Fehlermeldung. Ein Versuch ist keine
+        Entscheidung (der Fall bleibt offen), aendert deshalb auch nicht die
+        Revision, wird aber sofort persistiert, damit publizieren() ihn auch
+        nach einem Neustart mitzaehlt."""
+        with self._lock:
+            vorhandene = self._zeichen_ausserhalb_satz.setdefault(fall_id, [])
+            neu = False
+            for zeichen in zeichen_liste:
+                if zeichen not in vorhandene:
+                    vorhandene.append(zeichen)
+                    neu = True
+            if neu:
+                self._speichern()
+
     def entscheiden(self, fall_id: str, aktion: str, zeichenfolge: str,
-                    erwartete_revision: int) -> dict:
+                    kasten_skaliert, erwartete_revision: int) -> dict:
         if erwartete_revision != self._revision:
             raise ValueError(
                 "Ein anderer Tab oder Prozess hat zwischenzeitlich gespeichert "
@@ -166,18 +281,33 @@ class OsdHandlabelStore:
 
         if aktion == "uebernommen":
             text = (zeichenfolge or "").replace(" ", "")
-            boxen = fall["boxen"]
+            if not text:
+                raise ValueError(
+                    "Bitte eine Zeichenfolge eintippen oder eine andere Aktion waehlen.")
+            self._kasten_pruefen(kasten_skaliert)
+            bild_pfad = self.bild_pfad(fall_id)
+            if bild_pfad is None:
+                raise ValueError("Bild fehlt.")
+            with Image.open(bild_pfad) as roh:
+                bild = roh.convert("RGB")
+            voller_kasten = self._voller_kasten(bild, kasten_skaliert)
+            # Server-autoritativ neu segmentiert - der Client darf keine
+            # eigene Boxenliste einschmuggeln, nur den gezogenen Kasten.
+            boxen = osd_handlabel.zeichen_in_kasten(bild, voller_kasten)
             if len(text) != len(boxen):
                 raise ValueError(
-                    f"{len(text)} Zeichen fuer {len(boxen)} Boxen - die Anzahl "
-                    "muss genau uebereinstimmen. Bitte korrigieren oder "
-                    "'boxen passen nicht' waehlen.")
+                    f"{len(text)} Zeichen fuer {len(boxen)} gefundene Boxen - "
+                    "die Anzahl muss genau uebereinstimmen. Bitte den Kasten "
+                    "neu ziehen, den Text korrigieren oder 'boxen passen "
+                    "nicht' waehlen.")
             unbekannt = sorted(set(text) - set(osd_meter.ZEICHEN))
             if unbekannt:
+                self._zeichen_ausserhalb_satz_vermerken(fall_id, unbekannt)
                 raise ValueError(
                     f"Zeichen nicht erlaubt: {unbekannt[0]!r} (erlaubt: "
-                    f"{osd_meter.ZEICHEN!r}).")
-            eintrag = {"aktion": "uebernommen", "zeichenfolge": text}
+                    f"{osd_meter.ZEICHEN!r}). Bitte 'boxen passen nicht' waehlen.")
+            eintrag = {"aktion": "uebernommen", "zeichenfolge": text,
+                       "boxen": [list(box) for box in boxen]}
         else:
             eintrag = {"aktion": aktion}
 
@@ -217,21 +347,19 @@ class OsdHandlabelStore:
             self._speichern()
         return self.stand()
 
-    def bild_pfad(self, fall_id: str) -> Path | None:
-        fall = self._fall(fall_id)
-        if fall is None:
-            return None
-        pfad = Path(str(fall.get("bild_pfad") or ""))
-        return pfad if pfad.is_file() else None
-
 
 SEITE = """<!doctype html><meta charset="utf-8"><title>OSD-Handliste</title>
 <style>
 body{background:#14161a;color:#e8eaed;font-family:Segoe UI,sans-serif;margin:0;padding:16px}
 h1{font-size:19px;margin:0 0 4px}.sub,.stand{color:#9aa0a6;font-size:13px}
-.rahmen{position:relative;display:inline-block;margin-top:12px;background:#000;line-height:0}
-img{display:block;max-width:96vw;max-height:62vh}
-.box{position:absolute;border:2px solid #ff3b30;pointer-events:none;box-sizing:border-box}
+.rahmen{position:relative;display:inline-block;margin-top:12px;background:#000;line-height:0;
+        cursor:crosshair;touch-action:none;max-width:96vw;overflow:auto}
+#bild{display:block;max-width:96vw;image-rendering:pixelated;image-rendering:crisp-edges;
+      -webkit-user-drag:none;user-select:none}
+.dragbox{position:absolute;border:2px dashed #facc15;pointer-events:none;box-sizing:border-box}
+.zbox{position:absolute;border:2px solid #ff3b30;pointer-events:none;box-sizing:border-box}
+.zbox .nr{position:absolute;top:-15px;left:-2px;font-size:10px;line-height:1;color:#ff3b30;
+          background:#14161a;padding:0 2px}
 .zeile{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
 input{background:#20242a;border:1px solid #3a4048;color:#e8eaed;border-radius:5px;
       padding:12px 14px;font-size:20px;width:240px}
@@ -241,7 +369,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .fehler{color:#ff6b6b;margin-top:8px;font-size:13px}
 .hinweis{color:#8ab4f8;margin-top:10px;font-size:13px}
 </style><div id="app">Lade...</div><script>
-let aktuell=null, revision=0, kannZurueck=false;
+let aktuell=null, revision=0, kannZurueck=false, kastenAktuell=null;
+
 async function laden(){
   const s=await (await fetch('/stand')).json();
   revision=s.revision;
@@ -254,29 +383,24 @@ async function laden(){
     return;
   }
   aktuell=s.naechster;
+  kastenAktuell=null;
   const nr=s.gesamt-s.offen+1;
-  let boxen='';
-  for(const b of aktuell.boxen_anteil){
-    boxen+='<div class="box" style="left:'+(b[0]*100)+'%;top:'+(b[1]*100)+'%;width:'+(b[2]*100)+'%;height:'+(b[3]*100)+'%"></div>';
-  }
-  // Nie eine KI-/Vorlagenvermutung - nur die EIGENE fruehere Eingabe des
-  // Menschen, und nur wenn genau diese Karte gerade per "zurueck" wieder
-  // aufgemacht wurde.
-  let vorwert='', hinweis='';
+  let vorwert='', hinweisAlt='';
   const vorherige=aktuell.vorherige_eingabe;
   if(vorherige){
     if(vorherige.aktion==='uebernommen'){
       vorwert=vorherige.zeichenfolge||'';
     } else {
-      hinweis='<div class="hinweis">zuletzt: '
+      hinweisAlt='<div class="hinweis">zuletzt: '
         +(vorherige.aktion==='unleserlich'?'unleserlich':'boxen passen nicht')+'</div>';
     }
   }
-  a.innerHTML='<h1>Welche Zeichen stehen in den roten Boxen?</h1>'
-    +'<div class="sub">Fall '+nr+' von '+s.gesamt+' &middot; Haltung '+(aktuell.haltung||'?')
-    +' &middot; '+aktuell.anzahl_boxen+' Boxen, von links nach rechts eintippen</div>'
-    +'<div class="rahmen"><img id="bild" src="/bild?id='+aktuell.id+'">'+boxen+'</div>'
-    +hinweis
+  a.innerHTML='<h1>Kasten um die Meteranzeige ziehen, dann Zeichen eintippen</h1>'
+    +'<div class="sub">Fall '+nr+' von '+s.gesamt+' &middot; Haltung '+(aktuell.haltung||'?')+'</div>'
+    +'<div class="rahmen" id="rahmen"><img id="bild" draggable="false" src="/bild?id='
+    +aktuell.id+'&r='+Date.now()+'"></div>'
+    +hinweisAlt
+    +'<div class="hinweis" id="boxhinweis">Kasten mit der Maus um die Anzeige ziehen.</div>'
     +'<div class="zeile"><input id="wert" placeholder="von links nach rechts" autocomplete="off" value="'+vorwert+'">'
     +'<button class="ok" onclick="senden(\\'uebernommen\\')">uebernehmen</button>'
     +'<button class="frage" onclick="senden(\\'unleserlich\\')">unleserlich</button>'
@@ -284,11 +408,94 @@ async function laden(){
     +'<button class="zurueck"'+(kannZurueck?'':' disabled')+' onclick="zurueck()">zurueck</button></div>'
     +'<div id="meldung"></div>'
     +'<div class="stand">'+(s.gesamt-s.offen)+' erledigt &middot; '+s.offen+' offen</div>';
+  bindeRahmen();
   const feld=document.getElementById('wert');
   feld.focus();
   feld.select();
   feld.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();senden('uebernommen');}});
 }
+
+function bindeRahmen(){
+  const rahmen=document.getElementById('rahmen');
+  let start=null;
+  rahmen.addEventListener('pointerdown',e=>{
+    start=punkt(e);
+    try{rahmen.setPointerCapture(e.pointerId);}catch(err){}
+    zeichneDrag(rahmen,start,start);
+  });
+  rahmen.addEventListener('pointermove',e=>{
+    if(!start)return;
+    zeichneDrag(rahmen,start,punkt(e));
+  });
+  rahmen.addEventListener('pointerup',async e=>{
+    if(!start)return;
+    const ende=punkt(e);
+    const x0=Math.min(start.x,ende.x), y0=Math.min(start.y,ende.y);
+    const x1=Math.max(start.x,ende.x), y1=Math.max(start.y,ende.y);
+    start=null;
+    entferneKlasse(rahmen,'dragbox');
+    if(x1-x0<3||y1-y0<3){
+      document.getElementById('boxhinweis').textContent='Kasten zu klein - bitte neu ziehen.';
+      return;
+    }
+    kastenAktuell=[x0,y0,x1,y1];
+    await vorschauZeigen(rahmen);
+  });
+}
+
+function punkt(e){
+  const bild=document.getElementById('bild');
+  const rect=bild.getBoundingClientRect();
+  const x=Math.max(0,Math.min(bild.naturalWidth,(e.clientX-rect.left)*bild.naturalWidth/rect.width));
+  const y=Math.max(0,Math.min(bild.naturalHeight,(e.clientY-rect.top)*bild.naturalHeight/rect.height));
+  return {x:x,y:y};
+}
+
+function positioniere(div,x0,y0,x1,y1){
+  const bild=document.getElementById('bild');
+  const fx=100/bild.naturalWidth, fy=100/bild.naturalHeight;
+  div.style.left=(x0*fx)+'%';
+  div.style.top=(y0*fy)+'%';
+  div.style.width=((x1-x0)*fx)+'%';
+  div.style.height=((y1-y0)*fy)+'%';
+}
+
+function zeichneDrag(rahmen,a,b){
+  entferneKlasse(rahmen,'dragbox');
+  const div=document.createElement('div');
+  div.className='dragbox';
+  positioniere(div,Math.min(a.x,b.x),Math.min(a.y,b.y),Math.max(a.x,b.x),Math.max(a.y,b.y));
+  rahmen.appendChild(div);
+}
+
+function entferneKlasse(rahmen,klasse){
+  for(const el of rahmen.querySelectorAll('.'+klasse))el.remove();
+}
+
+async function vorschauZeigen(rahmen){
+  entferneKlasse(rahmen,'zbox');
+  document.getElementById('boxhinweis').textContent='...';
+  const antwort=await fetch('/vorschau',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:aktuell.id,kasten:kastenAktuell})});
+  if(!antwort.ok){
+    document.getElementById('boxhinweis').textContent='Konnte nicht segmentieren - Kasten neu ziehen.';
+    return;
+  }
+  const daten=await antwort.json();
+  let i=1;
+  for(const b of daten.boxen){
+    const div=document.createElement('div');
+    div.className='zbox';
+    positioniere(div,b[0],b[1],b[2],b[3]);
+    const nr=document.createElement('span');
+    nr.className='nr';
+    nr.textContent=i++;
+    div.appendChild(nr);
+    rahmen.appendChild(div);
+  }
+  document.getElementById('boxhinweis').textContent=daten.boxen.length+' Zeichenboxen gefunden.';
+}
+
 async function senden(aktion){
   if(!aktuell)return;
   const meldung=document.getElementById('meldung');
@@ -296,15 +503,18 @@ async function senden(aktion){
   let zeichenfolge='';
   if(aktion==='uebernommen'){
     zeichenfolge=document.getElementById('wert').value.replace(/ /g,'');
-    if(zeichenfolge.length!==aktuell.anzahl_boxen){
-      meldung.innerHTML='<div class="fehler">'+zeichenfolge.length+' Zeichen fuer '
-        +aktuell.anzahl_boxen+' Boxen - passt nicht. Bitte korrigieren oder '
-        +'"boxen passen nicht" waehlen.</div>';
+    if(!zeichenfolge){
+      meldung.innerHTML='<div class="fehler">Bitte eine Zeichenfolge eintippen.</div>';
+      return;
+    }
+    if(!kastenAktuell){
+      meldung.innerHTML='<div class="fehler">Bitte zuerst einen Kasten um die Anzeige ziehen.</div>';
       return;
     }
   }
   const antwort=await fetch('/entscheiden',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id:aktuell.id,aktion:aktion,zeichenfolge:zeichenfolge,revision:revision})});
+    body:JSON.stringify({id:aktuell.id,aktion:aktion,zeichenfolge:zeichenfolge,
+      kasten:kastenAktuell,revision:revision})});
   if(!antwort.ok){
     meldung.innerHTML='<div class="fehler">'+(await antwort.json()).fehler+'</div>';
     return;
@@ -356,13 +566,12 @@ def create_server(store: OsdHandlabelStore, port: int) -> ThreadingHTTPServer:
                 return
             if weg.path == "/bild":
                 fall_id = (parse_qs(weg.query).get("id") or [""])[0]
-                bild = store.bild_pfad(fall_id)
-                if bild is None:
+                daten = store.zone_bild_bytes(fall_id)
+                if daten is None:
                     self._json({"fehler": "Bild fehlt"}, 404)
                     return
-                daten = bild.read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", _content_type(bild))
+                self.send_header("Content-Type", "image/png")
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("Content-Length", str(len(daten)))
                 self.end_headers()
@@ -372,7 +581,7 @@ def create_server(store: OsdHandlabelStore, port: int) -> ThreadingHTTPServer:
 
         def do_POST(self) -> None:  # noqa: N802
             weg = urlparse(self.path).path
-            if weg not in ("/entscheiden", "/zurueck"):
+            if weg not in ("/entscheiden", "/zurueck", "/vorschau"):
                 self._json({"fehler": "unbekannt"}, 404)
                 return
             laenge = int(self.headers.get("Content-Length") or 0)
@@ -380,11 +589,15 @@ def create_server(store: OsdHandlabelStore, port: int) -> ThreadingHTTPServer:
             try:
                 if weg == "/zurueck":
                     self._json(store.zuruecknehmen(int(anfrage.get("revision") or 0)))
+                elif weg == "/vorschau":
+                    self._json(store.vorschau(
+                        str(anfrage.get("id") or ""), anfrage.get("kasten")))
                 else:
                     self._json(store.entscheiden(
                         str(anfrage.get("id") or ""),
                         str(anfrage.get("aktion") or ""),
                         str(anfrage.get("zeichenfolge") or ""),
+                        anfrage.get("kasten"),
                         int(anfrage.get("revision") or 0)))
             except ValueError as fehler:
                 self._json({"fehler": str(fehler)}, 400)
