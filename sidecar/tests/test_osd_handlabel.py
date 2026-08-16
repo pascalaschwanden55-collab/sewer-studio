@@ -468,3 +468,37 @@ def test_publizieren_verweigert_bei_unbekanntem_zeichen(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_zu_viele_boxen_kommen_nicht_in_die_liste(monkeypatch):
+    """Ueber MAX_BOXEN sind es Stoerflaechen, keine Meteranzeige.
+
+    Gemessen am 2026-08-16: Median 8,5 Boxen, der schlimmste Fall hatte 58.
+    Bei 58 Rahmen kann ein Mensch nichts eintippen - die Karte waere ein Klick
+    ins Leere.
+    """
+    import numpy as np
+    from PIL import Image as _Image
+
+    viele = [(i * 10, 0, i * 10 + 8, 18) for i in range(osd_handlabel.MAX_BOXEN + 1)]
+    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
+                        lambda _b: (np.zeros((100, 800), dtype="uint8"), "dunkel"))
+    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske", lambda _m, _s: viele)
+
+    assert osd_handlabel.pruefe_bild(_Image.new("RGB", (800, 100)), None) is None
+
+
+def test_genau_max_boxen_ist_noch_erlaubt(monkeypatch):
+    import numpy as np
+    from PIL import Image as _Image
+
+    genau = [(i * 10, 0, i * 10 + 8, 18) for i in range(osd_handlabel.MAX_BOXEN)]
+    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
+                        lambda _b: (np.zeros((100, 800), dtype="uint8"), "dunkel"))
+    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske", lambda _m, _s: genau)
+    monkeypatch.setattr(osd_handlabel.osd_meter, "klassifiziere", lambda _g, _t: ("?", 0.1))
+
+    ergebnis = osd_handlabel.pruefe_bild(_Image.new("RGB", (800, 100)), None)
+
+    assert ergebnis is not None
+    assert len(ergebnis.boxen) == osd_handlabel.MAX_BOXEN

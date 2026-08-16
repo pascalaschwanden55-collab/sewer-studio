@@ -72,6 +72,16 @@ ZIEL_STANDARD = Path(r"C:\KI_BRAIN\training\diagnostics\osd_handlabel_v1")
 SCHEMA_QUEUE = "osd_handlabel_queue_v1"
 SCHEMA_ERNTE = "osd_ernte_v1"
 MIN_BOXEN = 4
+
+# Obergrenze, gemessen am ersten echten Warteschlangenlauf (2026-08-16): Der
+# Median liegt bei 8,5 Boxen, was genau einer Meteranzeige entspricht
+# ("LZ1: 9.42m" sind 9 Zeichen). Faelle mit mehr als 15 Boxen sind kein
+# schwieriger Anzeigestil, sondern Stoerflaechen, die der Zeichenfinder
+# faelschlich aufgesammelt hat - bei 58 Boxen kann ein Mensch nichts eintippen
+# und wuerde nur "Boxen passen nicht" druecken. Da 9742 brauchbare Faelle aus
+# 1305 Haltungen zur Auswahl stehen, kostet das Aussortieren keine Stilvielfalt,
+# spart aber jede achte Karte der Handliste.
+MAX_BOXEN = 15
 AKTIONEN = ("uebernommen", "unleserlich", "boxen_passen_nicht")
 
 
@@ -127,7 +137,7 @@ def pruefe_bild(bild: Image.Image, templates) -> HarterFall | None:
     """
     maske, stil = osd_meter.glyphenmaske(bild)
     boxen = osd_meter.boxen_aus_maske(maske, stil)
-    if len(boxen) < MIN_BOXEN:
+    if not MIN_BOXEN <= len(boxen) <= MAX_BOXEN:
         return None
 
     zeichenfolge = ""
