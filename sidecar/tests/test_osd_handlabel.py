@@ -1,9 +1,11 @@
-"""Handliste fuer harte OSD-Faelle (Spec: Stufe 2 nach dem gescheiterten
-Stufe-1-Training).
+"""Handliste fuer harte OSD-Faelle (Spec: Rework nach dem gescheiterten
+ersten Pruefplatz-Entwurf, 2026-08-16).
 
-Deckt die reine Bild->Boxen-Logik (pruefe_bild/lesung_scheitert), die
-deterministische Auswahl (waehle_faelle), den Modus "queue" ueber main() und
-den Modus "publizieren" ueber main() ab.
+Deckt pruefe_bild() (der Grund fuer die Aufnahme in die Handliste - die
+vollstaendige Vorlagenlesung scheitert, "jeder Grund zaehlt"),
+zeichen_in_kasten() (die eigentliche neue Zeichenfindung im eng gezogenen
+Kasten), die deterministische Auswahl (waehle_faelle), den Modus "queue" ueber
+main() und den Modus "publizieren" ueber main() ab.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 SKRIPTE = Path(__file__).resolve().parents[2] / "training" / "scripts"
 if str(SKRIPTE) not in sys.path:
@@ -40,117 +42,152 @@ def _zonenbox(breite: int = 720, hoehe: int = 576) -> tuple[int, int]:
 
 
 # ---------------------------------------------------------------------------
-# lesung_scheitert() - reine Logik, drei Bedingungen, ODER-verknuepft.
+# pruefe_bild() - "hart" heisst: osd_meter.lese_meter() liefert keinen
+# Meterwert, jeder Grund zaehlt. Ob dabei Boxen gefunden wurden, ist bewusst
+# KEIN Kriterium mehr (das war der kaputte erste Entwurf, siehe Moduldocstring).
 # ---------------------------------------------------------------------------
 
-def test_lesung_scheitert_bei_fragezeichen(monkeypatch):
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: True)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "parse_meter", lambda *_a, **_k: 9.4)
+def test_pruefe_bild_liefert_none_bei_erfolgreicher_lesung(monkeypatch):
+    monkeypatch.setattr(osd_handlabel.osd_meter, "lese_meter",
+                        lambda *_a, **_k: {"meter": 9.4, "stil": "dunkel"})
 
-    assert osd_handlabel.lesung_scheitert("9?4", "dunkel") is True
+    ergebnis = osd_handlabel.pruefe_bild(_Bild(), None)
 
-
-def test_lesung_scheitert_bei_unvollstaendiger_folge(monkeypatch):
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: False)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "parse_meter", lambda *_a, **_k: 9.4)
-
-    assert osd_handlabel.lesung_scheitert("094", "dunkel") is True
+    assert ergebnis is None
 
 
-def test_lesung_scheitert_wenn_parse_meter_none_liefert(monkeypatch):
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: True)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "parse_meter", lambda *_a, **_k: None)
+def test_pruefe_bild_liefert_harten_fall_wenn_lesung_scheitert(monkeypatch):
+    monkeypatch.setattr(osd_handlabel.osd_meter, "lese_meter",
+                        lambda *_a, **_k: {"meter": None, "stil": "hell"})
 
-    assert osd_handlabel.lesung_scheitert("LZ1:9.4m", "dunkel") is True
-
-
-def test_lesung_scheitert_nicht_bei_vollstaendiger_lesung(monkeypatch):
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: True)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "parse_meter", lambda *_a, **_k: 9.4)
-
-    assert osd_handlabel.lesung_scheitert("LZ1:9.4m", "dunkel") is False
-
-
-# ---------------------------------------------------------------------------
-# pruefe_bild() - Boxenzahl-Schranke und Ausschluss bereits vollstaendiger
-# Lesungen (die gehoeren der Lehrer-Ernte, nicht der Handliste).
-# ---------------------------------------------------------------------------
-
-def test_pruefe_bild_verwirft_weniger_als_vier_boxen(monkeypatch):
-    import numpy as np
-
-    bild = _bild_mit_anzeige("94")
-    breite, hoehe = bild.size
-    x0, y0 = _zonenbox(breite, hoehe)
-
-    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
-                        lambda _b: (np.zeros((hoehe, breite), dtype="uint8"), "dunkel"))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske",
-                        lambda _m, _s: [(x0, y0, x0 + 12, y0 + 18),
-                                        (x0 + 14, y0, x0 + 26, y0 + 18)])
-
-    assert osd_handlabel.pruefe_bild(bild, None) is None
-
-
-def test_pruefe_bild_verwirft_bereits_vollstaendige_lesung(monkeypatch):
-    """Deckt sich mit der Lehrer-Ernte: keine Dopplung der Trainingsquelle."""
-    import numpy as np
-
-    bild = _bild_mit_anzeige("LZ1: 9.4m")
-    breite, hoehe = bild.size
-    x0, y0 = _zonenbox(breite, hoehe)
-    boxen = [(x0 + i * 14, y0, x0 + i * 14 + 12, y0 + 18) for i in range(4)]
-
-    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
-                        lambda _b: (np.zeros((hoehe, breite), dtype="uint8"), "dunkel"))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske",
-                        lambda _m, _s: boxen)
-    folge = iter("LZ1m")
-    monkeypatch.setattr(osd_handlabel.osd_meter, "klassifiziere",
-                        lambda _g, _t: (next(folge), 0.9))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: True)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "parse_meter", lambda *_a, **_k: 9.4)
-
-    assert osd_handlabel.pruefe_bild(bild, None) is None
-
-
-def test_pruefe_bild_liefert_harten_fall(monkeypatch):
-    """Genug Boxen, aber die Lesung scheitert - genau der gesuchte Fall."""
-    import numpy as np
-
-    bild = _bild_mit_anzeige("??1m")
-    breite, hoehe = bild.size
-    x0, y0 = _zonenbox(breite, hoehe)
-    boxen = [(x0 + i * 14, y0, x0 + i * 14 + 12, y0 + 18) for i in range(4)]
-
-    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
-                        lambda _b: (np.zeros((hoehe, breite), dtype="uint8"), "dunkel"))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske",
-                        lambda _m, _s: boxen)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "klassifiziere",
-                        lambda _g, _t: ("", 0.0))  # liefert ueberall "?"
-    monkeypatch.setattr(osd_handlabel.osd_meter, "_zeichenfolge_ist_vollstaendig",
-                        lambda _z: False)
-
-    ergebnis = osd_handlabel.pruefe_bild(bild, None)
+    ergebnis = osd_handlabel.pruefe_bild(_Bild(), None)
 
     assert ergebnis is not None
-    assert ergebnis.boxen == boxen
-    assert ergebnis.stil == "dunkel"
+    assert ergebnis.stil == "hell"
+
+
+def test_pruefe_bild_scheitert_auch_wenn_tesseract_rueckfall_nichts_liefert(monkeypatch):
+    """Der komplette Vorlagenleser (inkl. Tesseract-Rueckfaellen) muss
+    scheitern, nicht nur der reine Vorlagenweg - "jeder Grund zaehlt"."""
+    monkeypatch.setattr(osd_handlabel.osd_meter, "lese_meter",
+                        lambda *_a, **_k: {
+                            "meter": None, "stil": "dunkel_video",
+                            "leseweg": None, "tesseract_text": ""})
+
+    ergebnis = osd_handlabel.pruefe_bild(_Bild(), None)
+
+    assert ergebnis is not None
+    assert ergebnis.stil == "dunkel_video"
+
+
+def _Bild() -> Image.Image:
+    return Image.new("RGB", (64, 48), (10, 10, 10))
+
+
+# ---------------------------------------------------------------------------
+# zeichen_in_kasten() - die eigentliche neue Zeichenfindung. Arbeitet nur auf
+# einem eng gezogenen Kasten; siehe Docstring der Funktion fuer die Messung
+# gegen ein echtes Archivbild (Haltung 43661-44201), die diese Konstruktion
+# begruendet.
+# ---------------------------------------------------------------------------
+
+def _schrift(groesse: int = 24) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(r"C:\Windows\Fonts\arial.ttf", groesse)
+
+
+def _gerendertes_bild(text: str, hell_auf_dunkel: bool = True,
+                      groesse=(220, 70), position=(20, 15)) -> tuple[Image.Image, tuple[int, int, int, int]]:
+    """Rendert `text` und liefert (Bild, eng gezogener Kasten mit 2px Rand)."""
+    hintergrund = (15, 15, 15) if hell_auf_dunkel else (220, 220, 220)
+    vordergrund = (230, 230, 230) if hell_auf_dunkel else (20, 20, 20)
+    bild = Image.new("RGB", groesse, hintergrund)
+    zeichner = ImageDraw.Draw(bild)
+    schrift = _schrift()
+    zeichner.text(position, text, fill=vordergrund, font=schrift)
+    bbox = zeichner.textbbox(position, text, font=schrift)
+    kasten = (bbox[0] - 2, bbox[1] - 2, bbox[2] + 2, bbox[3] + 2)
+    return bild, kasten
+
+
+def test_zeichen_in_kasten_zaehlt_zeichen_korrekt():
+    bild, kasten = _gerendertes_bild("9.42m")
+
+    boxen = osd_handlabel.zeichen_in_kasten(bild, kasten)
+
+    assert len(boxen) == 5  # '9', '.', '4', '2', 'm'
+
+
+def test_zeichen_in_kasten_leerer_kasten_liefert_leere_liste():
+    bild, _kasten = _gerendertes_bild("9.42m")
+
+    assert osd_handlabel.zeichen_in_kasten(bild, (50, 10, 50, 30)) == []
+
+
+def test_zeichen_in_kasten_kasten_ausserhalb_des_bilds_liefert_leere_liste():
+    bild, _kasten = _gerendertes_bild("9.42m")
+
+    assert osd_handlabel.zeichen_in_kasten(bild, (1000, 1000, 1100, 1100)) == []
+
+
+def test_zeichen_in_kasten_null_hoehe_liefert_leere_liste():
+    bild, kasten = _gerendertes_bild("9.42m")
+    x0, y0, x1, _y1 = kasten
+
+    assert osd_handlabel.zeichen_in_kasten(bild, (x0, y0, x1, y0)) == []
+
+
+def test_zeichen_in_kasten_verliert_das_schmale_dezimalzeichen_nicht():
+    bild, kasten = _gerendertes_bild("9.4")
+
+    boxen = osd_handlabel.zeichen_in_kasten(bild, kasten)
+
+    assert len(boxen) == 3
+    breiten = [x1 - x0 for (x0, y0, x1, y1) in boxen]
+    # Der Punkt (mittleres Zeichen) ist deutlich schmaler als beide Ziffern.
+    assert breiten[1] < breiten[0]
+    assert breiten[1] < breiten[2]
+
+
+def test_zeichen_in_kasten_liefert_vollbildkoordinaten_sortiert_von_links():
+    # Text NICHT bei (0,0), sondern mit echtem Versatz - full-image-Koordinaten
+    # duerfen sich nicht mit kastenlokalen Koordinaten verwechseln lassen.
+    bild, kasten = _gerendertes_bild("9.42m", groesse=(400, 200), position=(150, 90))
+
+    boxen = osd_handlabel.zeichen_in_kasten(bild, kasten)
+
+    assert len(boxen) == 5
+    x0_werte = [b[0] for b in boxen]
+    assert x0_werte == sorted(x0_werte)
+    # Alle Boxen liegen im erwarteten Vollbildbereich (nahe der Textposition),
+    # nicht bei (0,0) - haetten wir kastenlokale statt Vollbildkoordinaten
+    # zurueckgegeben, laegen sie faelschlich am Bildursprung.
+    assert all(b[0] >= 140 for b in boxen)
+
+
+def test_zeichen_in_kasten_erkennt_helle_zeichen_auf_dunklem_grund():
+    bild, kasten = _gerendertes_bild("0.00", hell_auf_dunkel=True)
+
+    boxen = osd_handlabel.zeichen_in_kasten(bild, kasten)
+
+    assert len(boxen) == 4
+
+
+def test_zeichen_in_kasten_erkennt_dunkle_zeichen_auf_hellem_kasten():
+    bild, kasten = _gerendertes_bild("0.00", hell_auf_dunkel=False)
+
+    boxen = osd_handlabel.zeichen_in_kasten(bild, kasten)
+
+    assert len(boxen) == 4
 
 
 # ---------------------------------------------------------------------------
 # waehle_faelle() - hoechstens ein Bild je physischer Haltung, deterministisch.
+# Unveraendert durch den Rework: haengt nicht von Boxen ab.
 # ---------------------------------------------------------------------------
 
 def _kandidat(haltung: str, bild_pfad: str) -> dict:
     return {"haltung": haltung, "bild_pfad": bild_pfad,
-            "bild_sha256": "aa" * 32, "boxen": [[0, 0, 1, 1]], "stil": "dunkel"}
+            "bild_sha256": "aa" * 32, "stil": "dunkel"}
 
 
 def test_waehle_faelle_hoechstens_ein_bild_je_physischer_haltung():
@@ -195,26 +232,25 @@ def test_waehle_faelle_lehnt_ungueltige_anzahl_ab():
 
 def test_fall_erzeugen_liefert_erwartete_form():
     fall = osd_handlabel.fall_erzeugen(
-        "ab" * 32, "10261-10262", "D:\\OSD_Frames\\10261-10262\\a.jpg",
-        [(1, 2, 3, 4)], "dunkel")
+        "ab" * 32, "10261-10262", "D:\\OSD_Frames\\10261-10262\\a.jpg", "dunkel")
 
     assert fall == {
         "id": osd_ernte.bild_id("ab" * 32),
         "bild_sha256": "ab" * 32,
         "haltung": "10261-10262",
         "bild_pfad": "D:\\OSD_Frames\\10261-10262\\a.jpg",
-        "boxen": [[1, 2, 3, 4]],
         "stil": "dunkel",
     }
+    assert "boxen" not in fall
 
 
 # ---------------------------------------------------------------------------
 # Modus "queue" ueber main(): Sperrliste, hoechstens ein Bild je Haltung.
+# Queue-Eintraege tragen KEINE Boxen mehr.
 # ---------------------------------------------------------------------------
 
 def _harter_fall_immer():
-    return osd_handlabel.HarterFall(
-        [(1, 1, 5, 5), (6, 1, 10, 5), (11, 1, 15, 5), (16, 1, 20, 5)], "dunkel")
+    return osd_handlabel.HarterFall("dunkel")
 
 
 def test_main_queue_schliesst_geschuetzte_haltung_aus(tmp_path, monkeypatch, capsys):
@@ -261,7 +297,8 @@ def test_main_queue_hoechstens_ein_bild_je_physischer_haltung(tmp_path, monkeypa
     assert len(dokument["faelle"]) == 2
     assert dokument["schema"] == "osd_handlabel_queue_v1"
     for fall in dokument["faelle"]:
-        assert len(fall["boxen"]) == 4
+        assert "boxen" not in fall
+        assert fall["stil"] == "dunkel"
 
 
 def test_main_queue_ist_deterministisch_bei_gleicher_saat(tmp_path, monkeypatch):
@@ -297,9 +334,42 @@ def test_main_queue_verweigert_ueberschreiben(tmp_path, monkeypatch):
         osd_handlabel.main(["queue", "--quelle", str(quelle), "--ziel", str(ziel)])
 
 
+def test_main_queue_uebernimmt_nur_bilder_mit_scheiternder_lesung(tmp_path, monkeypatch):
+    """pruefe_bild() entscheidet allein ueber osd_meter.lese_meter() -
+    kein Boxen-Kriterium mehr."""
+    quelle = tmp_path / "OSD_Frames"
+    (quelle / "10261-10262").mkdir(parents=True)
+    Image.new("RGB", (64, 48), (10, 10, 10)).save(quelle / "10261-10262" / "a.jpg")
+    (quelle / "30001-30002").mkdir(parents=True)
+    Image.new("RGB", (64, 48), (20, 20, 20)).save(quelle / "30001-30002" / "b.jpg")
+
+    monkeypatch.setattr(osd_handlabel, "lade_schutz", lambda *_a, **_k: Schutz())
+
+    def _lese_meter(bild, _templates, *_a, **_k):
+        # Nur das zweite Bild (helleres Grau) gilt als bereits vollstaendig
+        # lesbar - simuliert per Bildinhalt statt Pfad, um pruefe_bild()
+        # wirklich end-to-end (ueber osd_meter.lese_meter) zu durchlaufen.
+        import numpy as np
+        arr = np.asarray(bild)
+        if arr.mean() > 15:
+            return {"meter": 9.4, "stil": "dunkel"}
+        return {"meter": None, "stil": "dunkel"}
+
+    monkeypatch.setattr(osd_handlabel.osd_meter, "lese_meter", _lese_meter)
+
+    ziel = tmp_path / "ziel"
+    osd_handlabel.main(
+        ["queue", "--quelle", str(quelle), "--ziel", str(ziel), "--anzahl", "10"])
+
+    dokument = json.loads((ziel / "queue.json").read_text(encoding="utf-8"))
+    haltungen = {fall["haltung"] for fall in dokument["faelle"]}
+    assert haltungen == {"10261-10262"}
+
+
 # ---------------------------------------------------------------------------
 # Modus "publizieren" ueber main(): Schema osd_ernte_v1, Hash-/Vollstaendig-
-# keitspruefung, Zeichenwahrheit auch ohne gueltigen Meterwert.
+# keitspruefung, Zeichenwahrheit auch ohne gueltigen Meterwert. Die Boxen
+# kommen jetzt aus der ENTSCHEIDUNG (Review), nicht mehr aus der Queue.
 # ---------------------------------------------------------------------------
 
 def _queue_und_review(tmp_path: Path, boxen: list[tuple[int, int, int, int]],
@@ -321,8 +391,7 @@ def _queue_und_review(tmp_path: Path, boxen: list[tuple[int, int, int, int]],
         "saat": 0,
         "faelle": [{
             "id": fall_id, "bild_sha256": bild_sha256, "haltung": "10261-10262",
-            "bild_pfad": str(bild_pfad), "boxen": [list(box) for box in boxen],
-            "stil": "dunkel",
+            "bild_pfad": str(bild_pfad), "stil": "dunkel",
         }],
     }
     queue_pfad = queue_ordner / "queue.json"
@@ -332,6 +401,7 @@ def _queue_und_review(tmp_path: Path, boxen: list[tuple[int, int, int, int]],
     entscheidung: dict = {"aktion": aktion}
     if aktion == "uebernommen":
         entscheidung["zeichenfolge"] = zeichenfolge
+        entscheidung["boxen"] = [list(box) for box in boxen]
 
     review_pfad = tmp_path / "review.json"
     review_pfad.write_text(json.dumps({
@@ -391,10 +461,8 @@ def test_publizieren_behaelt_zeichenwahrheit_ohne_meterwert(tmp_path, capsys):
 
 
 def test_publizieren_ueberspringt_unleserlich_und_boxen_passen_nicht(tmp_path):
-    x0, y0 = _zonenbox()
-    boxen = [(x0, y0, x0 + 12, y0 + 18)]
     queue_ordner, review_pfad, _fall_id, _ = _queue_und_review(
-        tmp_path, boxen, "", aktion="unleserlich")
+        tmp_path, [], "", aktion="unleserlich")
 
     ziel = tmp_path / "ziel"
     osd_handlabel.main([
@@ -438,11 +506,8 @@ def test_publizieren_verweigert_bei_falschem_queue_hash(tmp_path):
 def test_publizieren_verweigert_bei_zeichenzahl_ungleich_boxenzahl(tmp_path):
     x0, y0 = _zonenbox()
     boxen = [(x0, y0, x0 + 12, y0 + 18), (x0 + 14, y0, x0 + 26, y0 + 18)]
-    # Review von Hand manipuliert: nur ein Zeichen fuer zwei Boxen.
-    queue_ordner, review_pfad, fall_id, _ = _queue_und_review(tmp_path, boxen, "9")
-    review = json.loads(review_pfad.read_text(encoding="utf-8"))
-    review["entscheidungen"][fall_id]["zeichenfolge"] = "9"
-    review_pfad.write_text(json.dumps(review), encoding="utf-8")
+    # Zwei Boxen, aber nur ein Zeichen - passt nicht zusammen.
+    queue_ordner, review_pfad, _fall_id, _ = _queue_und_review(tmp_path, boxen, "9")
 
     ziel = tmp_path / "ziel"
     with pytest.raises(SystemExit):
@@ -466,39 +531,37 @@ def test_publizieren_verweigert_bei_unbekanntem_zeichen(tmp_path):
             "--ziel", str(ziel)])
 
 
+def test_publizieren_verweigert_entscheidung_ohne_boxen(tmp_path):
+    x0, y0 = _zonenbox()
+    boxen = [(x0, y0, x0 + 12, y0 + 18)]
+    queue_ordner, review_pfad, fall_id, _ = _queue_und_review(tmp_path, boxen, "9")
+    review = json.loads(review_pfad.read_text(encoding="utf-8"))
+    del review["entscheidungen"][fall_id]["boxen"]
+    review_pfad.write_text(json.dumps(review), encoding="utf-8")
+
+    ziel = tmp_path / "ziel"
+    with pytest.raises(SystemExit):
+        osd_handlabel.main([
+            "publizieren", "--queue", str(queue_ordner), "--review", str(review_pfad),
+            "--ziel", str(ziel)])
+
+
+def test_publizieren_berichtet_zeichen_ausserhalb_des_satzes(tmp_path, capsys):
+    x0, y0 = _zonenbox()
+    boxen = [(x0, y0, x0 + 12, y0 + 18)]
+    queue_ordner, review_pfad, _fall_id, _ = _queue_und_review(tmp_path, boxen, "9")
+    review = json.loads(review_pfad.read_text(encoding="utf-8"))
+    review["zeichen_ausserhalb_satz"] = {"irgendeinefallid": ["+"]}
+    review_pfad.write_text(json.dumps(review), encoding="utf-8")
+
+    ziel = tmp_path / "ziel"
+    osd_handlabel.main([
+        "publizieren", "--queue", str(queue_ordner), "--review", str(review_pfad),
+        "--ziel", str(ziel)])
+
+    ausgabe = capsys.readouterr().out
+    assert "Zeichen ausserhalb des Satzes versucht (Material verloren): 1" in ausgabe
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
-
-
-def test_zu_viele_boxen_kommen_nicht_in_die_liste(monkeypatch):
-    """Ueber MAX_BOXEN sind es Stoerflaechen, keine Meteranzeige.
-
-    Gemessen am 2026-08-16: Median 8,5 Boxen, der schlimmste Fall hatte 58.
-    Bei 58 Rahmen kann ein Mensch nichts eintippen - die Karte waere ein Klick
-    ins Leere.
-    """
-    import numpy as np
-    from PIL import Image as _Image
-
-    viele = [(i * 10, 0, i * 10 + 8, 18) for i in range(osd_handlabel.MAX_BOXEN + 1)]
-    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
-                        lambda _b: (np.zeros((100, 800), dtype="uint8"), "dunkel"))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske", lambda _m, _s: viele)
-
-    assert osd_handlabel.pruefe_bild(_Image.new("RGB", (800, 100)), None) is None
-
-
-def test_genau_max_boxen_ist_noch_erlaubt(monkeypatch):
-    import numpy as np
-    from PIL import Image as _Image
-
-    genau = [(i * 10, 0, i * 10 + 8, 18) for i in range(osd_handlabel.MAX_BOXEN)]
-    monkeypatch.setattr(osd_handlabel.osd_meter, "glyphenmaske",
-                        lambda _b: (np.zeros((100, 800), dtype="uint8"), "dunkel"))
-    monkeypatch.setattr(osd_handlabel.osd_meter, "boxen_aus_maske", lambda _m, _s: genau)
-    monkeypatch.setattr(osd_handlabel.osd_meter, "klassifiziere", lambda _g, _t: ("?", 0.1))
-
-    ergebnis = osd_handlabel.pruefe_bild(_Image.new("RGB", (800, 100)), None)
-
-    assert ergebnis is not None
-    assert len(ergebnis.boxen) == osd_handlabel.MAX_BOXEN

@@ -12,26 +12,46 @@ Deshalb beschriftet jetzt ein Mensch die harten Faelle von Hand. Der ganze
 Zweck ist, Stile einzufangen, an denen der Lehrer scheitert - jede Beeinflussung
 durch eine Modell- oder Vorlagen-Vermutung zerstoert genau diesen Wert.
 
-DIE MESSUNG, DIE DEN ENTWURF BESTIMMT
-Auf 400 Stichprobenbildern fand die Zeichenfindung des Lehrers (glyphenmaske +
-boxen_aus_maske) in 64 % der Faelle Boxen, an denen aber Benennung/
-Vollstaendigkeit der Lesung scheitert. 16 % sind bereits vollstaendig lesbar
-(gehoeren der Lehrer-Ernte), 16 % liefern gar keine Boxen und 4 % weniger als
-vier Boxen. Auf zwei Dritteln der harten Bilder existieren die Zeichenboxen also
-schon - nur die Benennung fehlt. Der Mensch tippt deshalb nur eine Zeichenkette;
-er zeichnet nie eine Box. Das macht daraus eine Stundenarbeit statt ein
-Wochenendprojekt.
+DER ERSTE ENTWURF WAR KAPUTT (2026-08-16) - UND WARUM
+Der erste Pruefplatz zeichnete Boxen, die osd_meter.boxen_aus_maske() VORHER
+auf dem ganzen 720x576-Frame gefunden hatte. Zwei Defekte, am fertigen
+200er-Bestand nachgemessen:
+1. Die Boxen waren unsichtbar - gezeichnet auf dem vollen Frame, waehrend die
+   Meteranzeige eine Briefmarke unten rechts ist.
+2. Schlimmer: Die Boxen waren Bruchstuecke, keine Zeichen. Bei 166 von 200
+   Faellen koennen die gezeichneten Boxen gar keine Zeichen sein (Beispiel
+   Haltung 43661-44201, Anzeige "LZ1: +0000.60 m": sieben Boxen, jede 2-3 Pixel
+   breit bei 9 Pixel Hoehe - eine Ziffer waere bei dieser Hoehe 6-8 breit).
+   boxen_aus_maske() scheitert an genau diesen Bildern, indem es Splitter
+   INNERHALB der Zeichenstriche findet. "Boxen gefunden, aber Benennung
+   scheitert" war deshalb nie ein brauchbares Auswahlkriterium - die Benennung
+   scheitert GENAU WEIL die Boxen kaputt sind. Die alte Auswahlregel waehlte
+   damit systematisch die kaputten Faelle aus und erklaerte sie fuer brauchbar.
+
+WAS STATTDESSEN NACHWEISLICH FUNKTIONIERT
+Auf einem ENG gezogenen Kasten um die Meteranzeige (nicht die ganze Zone mit
+Rohrwand, Reflexen und Kompressionsrauschen) trennt eine einfache
+Helligkeitsschwelle sauber (siehe zeichen_in_kasten()). Der neue Pruefplatz
+zeigt deshalb nur die Zone unten rechts, 4x vergroessert mit NEAREST (Pixel
+bleiben scharf), der Mensch zieht EINEN Kasten um die Anzeige, der Server
+segmentiert live und zeigt die gefundenen, nummerierten Zeichenboxen. Der
+Mensch tippt die Zeichenfolge; Zeichenzahl muss zur Boxenzahl passen, sonst
+wird nichts gespeichert. Passt der Kasten nicht oder die Segmentierung daneben,
+drueckt der Mensch "boxen passen nicht".
 
 ZWEI MODI
 "queue" baut die eingefrorene Arbeitsliste: durchsucht die Quelle (Standard
-D:\\OSD_Frames, Ablage <Haltung>/<name>.jpg), behaelt nur Bilder mit
-mindestens 4 gefundenen Boxen, an denen die vollstaendige Lesung scheitert,
-hoechstens ein Bild je physischer Haltung, prueft die Sperrliste
-(osd_schutz.lade_schutz()) und waehlt deterministisch aus.
+D:\\OSD_Frames, Ablage <Haltung>/<name>.jpg), behaelt nur Bilder, an denen die
+VOLLSTAENDIGE Lesung des Vorlagenlesers scheitert (osd_meter.lese_meter(),
+inklusive seiner Tesseract-Rueckfallwege - jeder Grund zaehlt), hoechstens ein
+Bild je physischer Haltung, prueft die Sperrliste (osd_schutz.lade_schutz())
+und waehlt deterministisch aus. Es werden KEINE Boxen vorausberechnet - die
+entstehen erst am Pruefplatz, nachdem der Mensch den Kasten gezogen hat.
 "publizieren" liest eine abgeschlossene Review und baut daraus Trainingsdaten
 im Schema osd_ernte_v1 - exakt in der Form, die osd_datensatz.py bereits
 kennt (Wiederverwendung von osd_ernte.eintrag_erzeugen/als_labeltext statt
-einer zweiten Implementierung).
+einer zweiten Implementierung). Die Zeichenboxen kommen jetzt aus der Review
+(vom Menschen bestaetigt), nicht mehr aus der Queue.
 
 Kundenoriginale und D:\\OSD_Frames sind fuer dieses Werkzeug nur lesend.
 """
@@ -52,6 +72,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
+import numpy as np
 from PIL import Image
 
 WURZEL = Path(__file__).resolve().parents[2]
@@ -71,18 +92,11 @@ ZIEL_STANDARD = Path(r"C:\KI_BRAIN\training\diagnostics\osd_handlabel_v1")
 
 SCHEMA_QUEUE = "osd_handlabel_queue_v1"
 SCHEMA_ERNTE = "osd_ernte_v1"
-MIN_BOXEN = 4
-
-# Obergrenze, gemessen am ersten echten Warteschlangenlauf (2026-08-16): Der
-# Median liegt bei 8,5 Boxen, was genau einer Meteranzeige entspricht
-# ("LZ1: 9.42m" sind 9 Zeichen). Faelle mit mehr als 15 Boxen sind kein
-# schwieriger Anzeigestil, sondern Stoerflaechen, die der Zeichenfinder
-# faelschlich aufgesammelt hat - bei 58 Boxen kann ein Mensch nichts eintippen
-# und wuerde nur "Boxen passen nicht" druecken. Da 9742 brauchbare Faelle aus
-# 1305 Haltungen zur Auswahl stehen, kostet das Aussortieren keine Stilvielfalt,
-# spart aber jede achte Karte der Handliste.
-MAX_BOXEN = 15
 AKTIONEN = ("uebernommen", "unleserlich", "boxen_passen_nicht")
+
+# Helligkeitsschwelle fuer zeichen_in_kasten(): Abstand vom Median des
+# Kastens, nicht ein fester Grauwert - siehe dortige Begruendung.
+ZEICHEN_KASTEN_ABSTAND = 90
 
 
 def _sha256_datei(pfad: Path) -> str:
@@ -101,55 +115,118 @@ def _png_bytes(bild: Image.Image) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Modus "queue": reine Bild->Boxen-Logik (dateisystemfrei, testbar wie
-# osd_ernte.ernte_bild). Der Schutz-Check liegt bewusst eine Ebene hoeher
-# (dort sind Bildhash und Haltung schon bekannt).
+# Modus "queue": reine Bild->Stil-Logik (dateisystemfrei). Der Schutz-Check
+# liegt bewusst eine Ebene hoeher (dort sind Bildhash und Haltung schon
+# bekannt). Boxen werden hier bewusst NICHT berechnet - siehe Moduldocstring:
+# das war genau der kaputte erste Entwurf.
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class HarterFall:
-    """Ein Bild, dessen Boxen brauchbar sind, dessen Lesung aber scheitert."""
+    """Ein Bild, an dem die vollstaendige Vorlagenlesung scheitert."""
 
-    boxen: list[tuple[int, int, int, int]]
     stil: str
 
 
-def lesung_scheitert(zeichenfolge: str, stil: str) -> bool:
-    """True, wenn die vollstaendige Vorlagenlesung fehlschlaegt.
-
-    Dieselben drei Bedingungen wie in osd_ernte.ernte_bild(), nur umgekehrt
-    gelesen: Dort ist ein Treffer ein Ausschlussgrund (das Material ist schon
-    geerntet); hier ist er der Aufnahmegrund fuer die Handliste.
-    """
-    if "?" in zeichenfolge:
-        return True
-    if not osd_meter._zeichenfolge_ist_vollstaendig(zeichenfolge):
-        return True
-    return osd_meter.parse_meter(zeichenfolge, stil) is None
-
-
 def pruefe_bild(bild: Image.Image, templates) -> HarterFall | None:
-    """Liefert Boxen+Stil eines harten Falls - oder None.
+    """Liefert den Stil eines harten Falls - oder None.
 
-    None bedeutet eines von zwei Dingen: zu wenige Boxen (unbrauchbar) ODER
-    eine bereits vollstaendige Lesung (gehoert der Lehrer-Ernte, nicht der
-    Handliste).
+    "Hart" heisst: osd_meter.lese_meter() liefert keinen Meterwert, auch nach
+    seinen Tesseract-Rueckfallwegen nicht (jeder Grund zaehlt - "any reason").
+    Ob dabei ueberhaupt Boxen gefunden wurden, ist bewusst KEIN Kriterium mehr:
+    Genau diese Vorauswahl waehlte beim ersten Entwurf systematisch die Faelle
+    aus, an denen boxen_aus_maske() Zeichen in Splitter zerlegt (siehe
+    Moduldocstring).
     """
-    maske, stil = osd_meter.glyphenmaske(bild)
-    boxen = osd_meter.boxen_aus_maske(maske, stil)
-    if not MIN_BOXEN <= len(boxen) <= MAX_BOXEN:
+    ergebnis = osd_meter.lese_meter(bild, templates)
+    if ergebnis["meter"] is not None:
         return None
+    return HarterFall(str(ergebnis["stil"]))
 
-    zeichenfolge = ""
-    for (x0, y0, x1, y1) in boxen:
-        glyph = maske[y0:y1, x0:x1].astype("float32")
-        zeichen, _ = osd_meter.klassifiziere(glyph, templates)
-        zeichenfolge += zeichen or "?"
 
-    if not lesung_scheitert(zeichenfolge, stil):
-        return None
+# ---------------------------------------------------------------------------
+# zeichen_in_kasten(): die eigentliche neue Zeichenfindung. Arbeitet NUR auf
+# einem eng um die Anzeige gezogenen Kasten (nicht der ganzen Zone mit
+# Rohrwand/Reflexen/Rauschen) - genau das ist der Unterschied zu
+# osd_meter.boxen_aus_maske(), das auf der ganzen Zone scheitert.
+# ---------------------------------------------------------------------------
 
-    return HarterFall(list(boxen), stil)
+def zeichen_in_kasten(
+    bild: Image.Image, kasten: tuple[int, int, int, int],
+) -> list[tuple[int, int, int, int]]:
+    """Segmentiert Zeichen in einem eng gezogenen Kasten per Helligkeitsschwelle.
+
+    `kasten` ist (x0, y0, x1, y1) in VOLLBILD-Koordinaten (wie boxen_aus_maske
+    sie liefert) - der Kasten, den der Mensch am Pruefplatz um die Meteranzeige
+    zieht. Rueckgabe: Zeichenboxen, ebenfalls in Vollbild-Koordinaten, sortiert
+    von links nach rechts.
+
+    WARUM DAS FUNKTIONIERT (gemessen, nicht angenommen - Haltung 43661-44201,
+    Anzeige "LZ1: +0000.60 m", Kasten x 550-700 / y 518-545):
+    Auf dem ENGEN Kasten trennt eine einfache Helligkeitsschwelle sauber in
+    Spaltengruppen. Reproduziert mit genau diesem Bild und Kasten:
+        Schwelle 130: 11 Spaltengruppen, Breiten [3,4,5,5,5,9,9,9,9,10,10]
+        Schwelle 170: 11 Spaltengruppen, Breiten [3,3,4,4,5,9,9,9,9,9,9]
+    9-10 Pixel breite Gruppen sind echte Ziffern, die schmalen 3-5 sind Punkt,
+    Doppelpunkt und die "1". Der Median des Kastens liegt dort bei 47,7 (der
+    Kasten ist meist dunkler Hintergrund mit hellen Zeichenkanten); Median plus
+    ZEICHEN_KASTEN_ABSTAND (90) trifft mit 137,7 mitten in dieses Band und
+    reproduziert exakt obige Zahlen. Der Abstand vom MEDIAN statt eines festen
+    Grauwerts ist bewusst: Er passt sich an den Kasten an (Video ist mal
+    dunkler, mal heller) und erkennt BEIDE Polaritaeten (helle Zeichen auf
+    dunklem Grund UND dunkle Zeichen auf hellem Kasten) mit derselben Formel,
+    weil der Hintergrund im Kasten immer die Mehrheit der Pixel stellt und der
+    Median ihn deshalb trifft, egal in welche Richtung die Zeichen davon
+    abweichen. Gegengeprueft an synthetisch gerenderten Zeichenketten in beiden
+    Polaritaeten sowie an zwei weiteren echten Archivbildern mit hellem
+    OSD-Kasten (siehe Testdatei) - liefert dort ebenfalls die richtige
+    Zeichenzahl.
+
+    Degenerierte Eingabe (leerer/ungueltiger Kasten, Kasten ausserhalb des
+    Bilds) liefert eine leere Liste statt eines Fehlers - der Pruefplatz zeigt
+    dann einfach keine Boxen, und der Mensch zieht neu oder drueckt "boxen
+    passen nicht".
+    """
+    bild_breite, bild_hoehe = bild.size
+    x0, y0, x1, y1 = kasten
+    x0 = max(0, min(int(x0), bild_breite))
+    x1 = max(0, min(int(x1), bild_breite))
+    y0 = max(0, min(int(y0), bild_hoehe))
+    y1 = max(0, min(int(y1), bild_hoehe))
+    if x1 <= x0 or y1 <= y0:
+        return []
+
+    ausschnitt = np.asarray(bild.convert("RGB"))[y0:y1, x0:x1]
+    if ausschnitt.size == 0:
+        return []
+    grau = ausschnitt.mean(axis=2)
+    median = float(np.median(grau))
+    maske = np.abs(grau - median) > ZEICHEN_KASTEN_ABSTAND
+
+    spalten_belegt = maske.any(axis=0)
+    spaltengruppen: list[tuple[int, int]] = []
+    start: int | None = None
+    for i, belegt in enumerate(spalten_belegt):
+        if belegt and start is None:
+            start = i
+        elif not belegt and start is not None:
+            spaltengruppen.append((start, i))
+            start = None
+    if start is not None:
+        spaltengruppen.append((start, len(spalten_belegt)))
+
+    boxen: list[tuple[int, int, int, int]] = []
+    for sx0, sx1 in spaltengruppen:
+        teil = maske[:, sx0:sx1]
+        zeilen = np.where(teil.any(axis=1))[0]
+        if zeilen.size == 0:
+            continue
+        boxen.append((
+            x0 + sx0, y0 + int(zeilen.min()),
+            x0 + sx1, y0 + int(zeilen.max()) + 1,
+        ))
+    boxen.sort(key=lambda b: b[0])
+    return boxen
 
 
 def waehle_faelle(kandidaten: list[dict], anzahl: int, saat: int) -> list[dict]:
@@ -177,15 +254,17 @@ def waehle_faelle(kandidaten: list[dict], anzahl: int, saat: int) -> list[dict]:
     return [je_haltung[schluessel_wert] for schluessel_wert in schluessel[:anzahl]]
 
 
-def fall_erzeugen(bild_sha256: str, haltung: str, bild_pfad: str,
-                  boxen: list[tuple[int, int, int, int]], stil: str) -> dict:
-    """Baut einen Eintrag fuer queue.json (Schema osd_handlabel_queue_v1)."""
+def fall_erzeugen(bild_sha256: str, haltung: str, bild_pfad: str, stil: str) -> dict:
+    """Baut einen Eintrag fuer queue.json (Schema osd_handlabel_queue_v1).
+
+    Bewusst OHNE Boxen - die entstehen erst am Pruefplatz, wenn der Mensch den
+    Kasten um die Anzeige zieht (siehe Moduldocstring).
+    """
     return {
         "id": osd_ernte.bild_id(bild_sha256),
         "bild_sha256": bild_sha256,
         "haltung": haltung,
         "bild_pfad": bild_pfad,
-        "boxen": [list(box) for box in boxen],
         "stil": stil,
     }
 
@@ -222,7 +301,7 @@ def _main_queue(args: argparse.Namespace) -> int:
     schutz = lade_schutz(args.gold_wurzel, reservebestand=args.reservebestand)
     templates = osd_meter.get_templates()
 
-    zaehler = {"gesehen": 0, "unlesbar": 0, "geschuetzt": 0, "mit_boxen": 0,
+    zaehler = {"gesehen": 0, "unlesbar": 0, "geschuetzt": 0, "hart": 0,
                "ohne_haltung": 0}
     kandidaten: list[dict] = []
     geschuetzte_treffer: list[str] = []
@@ -260,14 +339,13 @@ def _main_queue(args: argparse.Namespace) -> int:
             if ergebnis is None:
                 continue
 
-            zaehler["mit_boxen"] += 1
+            zaehler["hart"] += 1
             kandidaten.append(fall_erzeugen(
-                bild_sha256, haltung, str(bild_pfad.resolve()),
-                ergebnis.boxen, ergebnis.stil))
+                bild_sha256, haltung, str(bild_pfad.resolve()), ergebnis.stil))
 
     if not kandidaten:
-        raise SystemExit("Keine brauchbaren Bilder gefunden (harte Faelle mit "
-                         f">= {MIN_BOXEN} Boxen und scheiternder Lesung).")
+        raise SystemExit("Keine brauchbaren Bilder gefunden (harte Faelle, an "
+                         "denen die vollstaendige Vorlagenlesung scheitert).")
 
     auswahl = waehle_faelle(kandidaten, args.anzahl, args.saat)
 
@@ -293,8 +371,7 @@ def _main_queue(args: argparse.Namespace) -> int:
         {physische_haltung(str(k["haltung"])) for k in kandidaten})
 
     print(f"Bilder gesehen: {zaehler['gesehen']}")
-    print(f"Mit brauchbaren Boxen (>= {MIN_BOXEN} Boxen, Lesung scheitert): "
-          f"{zaehler['mit_boxen']}")
+    print(f"Harte Faelle (Vorlagenlesung scheitert): {zaehler['hart']}")
     print(f"Geschuetzt uebersprungen: {zaehler['geschuetzt']}")
     if geschuetzte_treffer:
         print("ACHTUNG: geschuetzte Bilder unter der Quelle gefunden - die "
@@ -366,8 +443,15 @@ def _main_publizieren(args: argparse.Namespace) -> int:
         # Haltung wie osd_datensatz.pruefe_keine_gesperrten): eine von Hand
         # veraenderte Review-Datei darf nie unbemerkt falsche Zeichen in den
         # Trainingsdatensatz schleusen.
+        #
+        # Die Boxen kommen aus der ENTSCHEIDUNG, nicht mehr aus der Queue: Der
+        # Kasten wird erst am Pruefplatz gezogen, die Queue traegt keine Boxen
+        # mehr (siehe Moduldocstring).
         zeichenfolge = str(entscheidung.get("zeichenfolge") or "").replace(" ", "")
-        boxen = [tuple(int(wert) for wert in box) for box in fall["boxen"]]
+        boxen_roh = entscheidung.get("boxen")
+        if not isinstance(boxen_roh, list) or not boxen_roh:
+            raise SystemExit(f"Fall {fall_id}: Entscheidung ohne Boxen.")
+        boxen = [tuple(int(wert) for wert in box) for box in boxen_roh]
         if len(zeichenfolge) != len(boxen):
             raise SystemExit(
                 f"Fall {fall_id}: Zeichenzahl ({len(zeichenfolge)}) passt "
@@ -434,12 +518,16 @@ def _main_publizieren(args: argparse.Namespace) -> int:
     temp.write_text(json.dumps(dokument, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(temp, ziel_json)
 
+    zeichen_ausserhalb_satz = dict(review.get("zeichen_ausserhalb_satz") or {})
+
     print(f"Faelle gesamt: {len(faelle)}")
     print(f"Uebernommen: {zaehler['uebernommen']}")
     print(f"  davon ohne gueltigen Meterwert (Zeichenwahrheit bleibt trotzdem "
           f"brauchbar): {zaehler['ohne_meterwert']}")
     print(f"Unleserlich: {zaehler['unleserlich']}")
     print(f"Boxen passen nicht: {zaehler['boxen_passen_nicht']}")
+    print(f"Zeichen ausserhalb des Satzes versucht (Material verloren): "
+          f"{len(zeichen_ausserhalb_satz)}")
     print(f"Bestand: {ziel_json}")
     return 0
 
