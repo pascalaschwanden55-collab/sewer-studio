@@ -41,6 +41,7 @@ if str(_SKRIPTE) not in sys.path:
 
 from sidecar import osd_meter, osd_modell  # noqa: E402  (Pfad muss vorher stehen)
 from osd_crop import schneide_zone  # noqa: E402  (Pfad muss vorher stehen)
+import osd_crop  # noqa: E402  (nur fuer den Modul-SHA-256 in code_hashes())
 
 # YOLO-interne Box-Vorfilterung in predict() - NICHT die Zeichensicherheits-
 # Schwelle "schwelle" (die kommt erst danach, siehe _ergebnis_aus_erkennungen).
@@ -88,15 +89,32 @@ def code_hashes() -> dict[str, str]:
     """SHA-256 der Module, die eine Lesung tatsaechlich bestimmen (Aufgabe 4).
 
     Gewicht + Schwelle binden nur das MODELL. ZIEL_HOEHE, _IOU_SCHWELLE,
-    TOR_MINDESTZEICHEN und _YOLO_CONF (osd_modell.py / dieses Modul) sowie
-    der Zuschnitt und parse_meter (osd_meter.py) aendern die Lesung mit
-    demselben Gewicht ebenso - ohne das ist ein Bericht/eine eingefrorene
-    Schwelle nicht auf den Code zurueckfuehrbar, der sie erzeugt hat.
+    TOR_MINDESTZEICHEN und _YOLO_CONF (osd_modell.py / dieses Modul), der
+    Zuschnitt (osd_crop.py - rundet die ZONEN-Bruchteile aus osd_meter.py auf
+    ein Pixelrechteck; DIESE Rundung entscheidet den Ausschnitt, nicht
+    osd_meter.py selbst), die RGB->BGR-Kanalumkehr direkt vor der Inferenz
+    (yolo_wrapper.py, _pil_rgb_to_ultralytics_bgr) sowie glyphenmaske und
+    parse_meter (osd_meter.py) aendern die Lesung mit demselben Gewicht
+    ebenso - ohne das ist ein Bericht/eine eingefrorene Schwelle nicht auf
+    den Code zurueckfuehrbar, der sie erzeugt hat.
+
+    Fix-Runde 1 (2026-08-16): osd_crop.py fehlte hier trotz der Cropping-
+    Konsolidierung (siehe dort) und dieser Docstring zeigte faelschlich auf
+    osd_meter.py - eine erneute Rundungsaenderung waere unbemerkt geblieben.
+    Gleichzeitig ergaenzt: yolo_wrapper.py war im Lesepfad ebenso ungebunden,
+    obwohl genau seine Kanalumkehr schonmal an anderer Stelle im Projekt
+    kaputt war (BCC-Endpunkt, siehe CLAUDE.md, Fund 2026-08-09) - derselbe
+    Fehler ist hier ebenso moeglich und waere ohne diese Bindung ebenso
+    unsichtbar.
     """
+    from sidecar.models import yolo_wrapper  # nur fuer den Hash, kein Torch noetig
+
     return {
         "osd_modell_leser.py": _sha256(Path(__file__)),
         "osd_modell.py": _sha256(Path(osd_modell.__file__)),
         "osd_meter.py": _sha256(Path(osd_meter.__file__)),
+        "osd_crop.py": _sha256(Path(osd_crop.__file__)),
+        "yolo_wrapper.py": _sha256(Path(yolo_wrapper.__file__)),
     }
 
 

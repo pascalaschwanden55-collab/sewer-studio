@@ -74,13 +74,30 @@ def test_fehlermeldung_nennt_erwarteten_und_gefundenen_hash(tmp_path, monkeypatc
     assert hashlib.sha256(b"andere-bytes").hexdigest() in text
 
 
-def test_code_hashes_bindet_die_drei_massgeblichen_module():
+def test_code_hashes_bindet_alle_massgeblichen_module():
     """Aufgabe 4: Gewicht + Schwelle binden nur das MODELL - ZIEL_HOEHE,
-    _IOU_SCHWELLE, TOR_MINDESTZEICHEN, _YOLO_CONF und der Zuschnitt aendern
-    die Lesung mit demselben Gewicht ebenso."""
+    _IOU_SCHWELLE, TOR_MINDESTZEICHEN, _YOLO_CONF, der Zuschnitt und die
+    RGB->BGR-Kanalumkehr vor der Inferenz aendern die Lesung mit demselben
+    Gewicht ebenso.
+
+    Fix-Runde 1 (2026-08-16): osd_crop.py fehlte hier, obwohl seit der
+    Cropping-Konsolidierung genau dort die Rundung auf das Pixelrechteck
+    entschieden wird - das waere bei einer erneuten Rundungsaenderung wie in
+    Fix-Runde 1 selbst unbemerkt geblieben. yolo_wrapper.py war ebenso
+    unbenannt, obwohl seine Kanalumkehr bei GLEICHEM Gewicht eine andere
+    Lesung erzeugen kann. FAUSTREGEL fuer die naechste Aenderung: Jedes
+    Modul, dessen Code eine Lesung bei gleichem Gewicht aendern kann, gehoert
+    in diese Menge - sonst ist ein Bericht/eine eingefrorene Schwelle nicht
+    mehr auf den Code zurueckfuehrbar, der sie erzeugt hat."""
     hashes = leser_modul.code_hashes()
 
-    assert set(hashes) == {"osd_modell_leser.py", "osd_modell.py", "osd_meter.py"}
+    assert set(hashes) == {
+        "osd_modell_leser.py",
+        "osd_modell.py",
+        "osd_meter.py",
+        "osd_crop.py",
+        "yolo_wrapper.py",
+    }
     for wert in hashes.values():
         assert len(wert) == 64
 

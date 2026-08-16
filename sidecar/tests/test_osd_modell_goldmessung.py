@@ -271,7 +271,11 @@ def test_bericht_bindet_den_lesercode(tmp_path, monkeypatch):
     bericht = json.loads(ziel.read_text(encoding="utf-8"))
     erwartet = osd_modell_leser.code_hashes()
     assert bericht["code_sha256"] == erwartet
-    assert set(erwartet) == {"osd_modell_leser.py", "osd_modell.py", "osd_meter.py"}
+    # Die vollstaendige Menge wird in test_osd_modell_leser.py gepinnt
+    # (test_code_hashes_bindet_alle_massgeblichen_module); hier reicht die
+    # Nicht-Leere, damit dieser Test nicht bei jeder Erweiterung von
+    # code_hashes() zusaetzlich angefasst werden muss.
+    assert set(erwartet)
 
 
 def test_gesamt_zaehlt_ohne_sollwert_mit_und_tabelle_summiert_sich(tmp_path, monkeypatch, capsys):
