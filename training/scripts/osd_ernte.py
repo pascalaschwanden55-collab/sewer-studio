@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import re
@@ -177,11 +178,25 @@ def bild_id(bild_sha256: str) -> str:
 
 
 def eintrag_erzeugen(bild_sha256: str, haltung: str | None,
-                      zeichenfolge: str, meter: float) -> dict:
-    """Baut den Eintrag fuer eintraege.json (Schema osd_ernte_v1)."""
+                      zeichenfolge: str, meter: float,
+                      ausschnitt_sha256: str) -> dict:
+    """Baut den Eintrag fuer eintraege.json (Schema osd_ernte_v1).
+
+    ZWEI HASHES MIT VERSCHIEDENER BEDEUTUNG (Fix-Runde 1, Aufgabe 7):
+    - bild_sha256: Hash des QUELLFRAMES (des ganzen Kundenbilds, vor dem
+      Zuschnitt). Das ist es, was die Sperrliste (osd_schutz.Schutz)
+      braucht - Gold-/Reserve-Manifeste hashen ebenfalls den vollen Frame.
+    - ausschnitt_sha256: Hash der tatsaechlich GESCHRIEBENEN Datei
+      (bilder/<id>.png, der zugeschnittene Ausschnitt). Das ist es, was
+      osd_datensatz.py beim Kopieren braucht, um zu pruefen, dass die
+      kopierte Datei wirklich zu diesem Eintrag gehoert - vorher wurde nach
+      Dateiname kopiert und NIE gegen bild_sha256 geprueft (der beschreibt
+      ohnehin ein anderes Bild, den unzugeschnittenen Quellframe).
+    """
     return {
         "id": bild_id(bild_sha256),
         "bild_sha256": bild_sha256,
+        "ausschnitt_sha256": ausschnitt_sha256,
         "haltung": haltung,
         "zeichenfolge": zeichenfolge,
         "meter": meter,
@@ -194,6 +209,13 @@ def _sha256_datei(pfad: Path) -> str:
         for block in iter(lambda: datei.read(1 << 20), b""):
             hasher.update(block)
     return hasher.hexdigest()
+
+
+def _png_bytes(bild: Image.Image) -> bytes:
+    """PNG-Bytes im Speicher - hashbar, bevor irgendetwas geschrieben wird."""
+    puffer = io.BytesIO()
+    bild.save(puffer, format="PNG")
+    return puffer.getvalue()
 
 
 def _ist_link_oder_junction(pfad: Path) -> bool:
@@ -309,11 +331,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 continue
 
             kennung = bild_id(bild_sha256)
-            ergebnis.ausschnitt.save(bilder_ordner / f"{kennung}.png")
+            # Erst die PNG-Bytes im Speicher erzeugen und hashen, DANACH
+            # genau diese Bytes schreiben - so beschreibt ausschnitt_sha256
+            # garantiert die Datei, die tatsaechlich auf der Platte landet
+            # (Fix-Runde 1, Aufgabe 7), nicht ein zweites, separat kodiertes
+            # Save().
+            png_bytes = _png_bytes(ergebnis.ausschnitt)
+            ausschnitt_sha256 = hashlib.sha256(png_bytes).hexdigest()
+            (bilder_ordner / f"{kennung}.png").write_bytes(png_bytes)
             (labels_ordner / f"{kennung}.txt").write_text(
                 als_labeltext(ergebnis.zeichen), encoding="utf-8")
             eintraege.append(eintrag_erzeugen(
-                bild_sha256, haltung, ergebnis.zeichenfolge, ergebnis.meter))
+                bild_sha256, haltung, ergebnis.zeichenfolge, ergebnis.meter,
+                ausschnitt_sha256))
             zaehler["geerntet"] += 1
         except Exception:
             zaehler["unlesbar"] += 1

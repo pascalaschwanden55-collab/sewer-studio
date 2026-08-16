@@ -146,11 +146,30 @@ SCHEMA_KUNSTBILDER = "osd_kunstbilder_v1"
 BEKANNTE_SCHEMAS = (SCHEMA_ERNTE, SCHEMA_KUNSTBILDER)
 
 
+def _sha256_datei(pfad: Path) -> str:
+    hasher = hashlib.sha256()
+    with pfad.open("rb") as datei:
+        for block in iter(lambda: datei.read(1 << 20), b""):
+            hasher.update(block)
+    return hasher.hexdigest()
+
+
 def eintraege_aus_dokument(dokument: dict, quelle_label: str) -> list[dict]:
     """Prueft das Schema und liefert die Eintragsliste.
 
     Ein unbekanntes Schema bricht laut ab statt eine unbekannte Datenform
     stillschweigend wie osd_ernte_v1 zu behandeln.
+
+    ZWEI BEDEUTUNGEN VON "bild_sha256" (Fix-Runde 1, Aufgabe 7):
+    - osd_ernte_v1: bild_sha256 ist der Hash des QUELLFRAMES (fuer die
+      Sperrliste). Die geschriebene Datei ist der Zuschnitt und hat einen
+      ANDEREN Hash - dessen eigenes Feld heisst ausschnitt_sha256 (siehe
+      osd_ernte.eintrag_erzeugen) und wird von pruefe_ausschnitt_hash()
+      gegen die tatsaechlich kopierte Datei geprueft.
+    - osd_kunstbilder_v1: es gibt keine separate Quelle. bild_sha256 IST
+      bereits der Hash der geschriebenen Datei (siehe
+      osd_kunstbilder.eintrag_erzeugen) - eine zweite Pruefung waere hier
+      keine zusaetzliche Sicherheit.
     """
     schema = dokument.get("schema")
     if schema not in BEKANNTE_SCHEMAS:
@@ -158,6 +177,33 @@ def eintraege_aus_dokument(dokument: dict, quelle_label: str) -> list[dict]:
             f"Unbekanntes Schema in {quelle_label}: {schema!r} "
             f"(erwartet eines von: {', '.join(BEKANNTE_SCHEMAS)})")
     return list(dokument.get("eintraege") or [])
+
+
+def pruefe_ausschnitt_hash(eintrag: dict, schema: str, bild_pfad: Path) -> None:
+    """Nur osd_ernte_v1: prueft die tatsaechlich kopierte Datei gegen den
+    beim Ernten notierten ausschnitt_sha256 (Fix-Runde 1, Aufgabe 7).
+
+    Vorher kopierte main() nur nach Dateiname und pruefte NIE gegen
+    bild_sha256 - das haette ohnehin nichts genuetzt, weil bild_sha256 bei
+    osd_ernte_v1 den Quellframe beschreibt, nicht die kopierte Datei
+    (siehe eintraege_aus_dokument()). Ohne diese Pruefung koennte eine
+    still vertauschte oder beschaedigte Zuschnittdatei unbemerkt in den
+    Trainingsdatensatz gelangen (vgl. train_detect_gold.py, das jeden
+    Datei-Hash erneut prueft). osd_kunstbilder_v1 braucht das nicht: dort
+    IST bild_sha256 bereits der Hash der geschriebenen Datei.
+    """
+    if schema != SCHEMA_ERNTE:
+        return
+    erwartet = str(eintrag.get("ausschnitt_sha256") or "").lower()
+    if len(erwartet) != 64:
+        raise SystemExit(
+            f"Eintrag id={eintrag.get('id')!r} hat keinen gueltigen "
+            "ausschnitt_sha256.")
+    tatsaechlich = _sha256_datei(bild_pfad)
+    if tatsaechlich != erwartet:
+        raise SystemExit(
+            f"Bytehash des Zuschnitts weicht ab fuer id={eintrag.get('id')!r}: "
+            f"erwartet {erwartet}, gefunden {tatsaechlich} ({bild_pfad}).")
 
 
 def pruefe_keine_gesperrten(eintraege: list[dict], schutz: Schutz,
@@ -260,6 +306,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     alle_eintraege: list[dict] = []
     id_zu_quelle: dict[str, Path] = {}
+    id_zu_schema: dict[str, str] = {}
+    id_zu_eintrag: dict[str, dict] = {}
     quellen_belege: list[dict] = []
 
     for quelle in args.quelle:
@@ -272,8 +320,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         eintraege = eintraege_aus_dokument(dokument, str(eintraege_pfad))
         pruefe_keine_gesperrten(eintraege, schutz, str(eintraege_pfad))
 
+        schema = str(dokument.get("schema"))
         for eintrag in eintraege:
-            id_zu_quelle.setdefault(str(eintrag["id"]), quelle)
+            id_ = str(eintrag["id"])
+            id_zu_quelle.setdefault(id_, quelle)
+            id_zu_schema.setdefault(id_, schema)
+            id_zu_eintrag.setdefault(id_, eintrag)
         alle_eintraege.extend(eintraege)
         quellen_belege.append({
             "pfad": str(quelle),
@@ -313,6 +365,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             label_quelle = quelle / "labels" / f"{id_}.txt"
             if not label_quelle.is_file():
                 raise SystemExit(f"Labeldatei fehlt: {label_quelle}")
+
+            # Fix-Runde 1 (Aufgabe 7): vorher wurde nur nach Dateiname
+            # kopiert, nie gegen einen Hash der tatsaechlichen Datei
+            # geprueft.
+            pruefe_ausschnitt_hash(id_zu_eintrag[id_], id_zu_schema[id_], bild_quelle)
 
             shutil.copy2(bild_quelle,
                         staging / "images" / teil / f"{id_}{bild_quelle.suffix}")

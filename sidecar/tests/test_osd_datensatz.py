@@ -4,6 +4,7 @@ Zwei Bilder derselben physischen Haltung duerfen nie ueber train und val
 verteilt sein - sonst misst die interne Validierung sich selbst.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -229,9 +230,16 @@ def _schreibe_quelle(wurzel: Path, name: str, eintraege: list[dict], schema: str
     (quelle / "bilder").mkdir(parents=True)
     (quelle / "labels").mkdir(parents=True)
     for eintrag in eintraege:
-        _mini_bild().save(quelle / "bilder" / f"{eintrag['id']}.png")
+        bildpfad = quelle / "bilder" / f"{eintrag['id']}.png"
+        _mini_bild().save(bildpfad)
         (quelle / "labels" / f"{eintrag['id']}.txt").write_text(
             "0 0.5 0.5 0.1 0.1\n", encoding="utf-8")
+        if schema == osd_datensatz.SCHEMA_ERNTE and "ausschnitt_sha256" not in eintrag:
+            # Aufgabe 7: main() prueft jetzt ausschnitt_sha256 gegen die
+            # tatsaechlich geschriebene Datei - der Testfixture-Hash muss
+            # deshalb echt sein, nicht wie bild_sha256 (Sperrlisten-Feld)
+            # frei erfunden werden koennen.
+            eintrag["ausschnitt_sha256"] = hashlib.sha256(bildpfad.read_bytes()).hexdigest()
     (quelle / "eintraege.json").write_text(
         json.dumps({"schema": schema, "eintraege": eintraege}, ensure_ascii=False),
         encoding="utf-8")
@@ -320,6 +328,64 @@ def test_main_bricht_bei_geschuetztem_eintrag_ab(tmp_path, monkeypatch):
         osd_datensatz.main(["--quelle", str(quelle), "--ziel", str(ziel)])
 
     assert not ziel.exists(), "Bei einem gesperrten Treffer darf kein Ziel entstehen."
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 (Aufgabe 7): main() muss die tatsaechlich kopierte Datei gegen
+# ausschnitt_sha256 pruefen, nicht nur nach Dateiname kopieren.
+# ---------------------------------------------------------------------------
+
+def test_pruefe_ausschnitt_hash_bricht_bei_abweichung_ab(tmp_path):
+    bild = tmp_path / "bild.png"
+    bild.write_bytes(b"echte bytes")
+    eintrag = {"id": "a", "ausschnitt_sha256": "ff" * 32}
+
+    with pytest.raises(SystemExit):
+        osd_datensatz.pruefe_ausschnitt_hash(eintrag, osd_datensatz.SCHEMA_ERNTE, bild)
+
+
+def test_pruefe_ausschnitt_hash_bricht_bei_fehlendem_feld_ab(tmp_path):
+    bild = tmp_path / "bild.png"
+    bild.write_bytes(b"echte bytes")
+    eintrag = {"id": "a"}
+
+    with pytest.raises(SystemExit):
+        osd_datensatz.pruefe_ausschnitt_hash(eintrag, osd_datensatz.SCHEMA_ERNTE, bild)
+
+
+def test_pruefe_ausschnitt_hash_akzeptiert_uebereinstimmung(tmp_path):
+    bild = tmp_path / "bild.png"
+    bild.write_bytes(b"echte bytes")
+    eintrag = {"id": "a", "ausschnitt_sha256": hashlib.sha256(b"echte bytes").hexdigest()}
+
+    osd_datensatz.pruefe_ausschnitt_hash(eintrag, osd_datensatz.SCHEMA_ERNTE, bild)  # kein Fehler
+
+
+def test_pruefe_ausschnitt_hash_uebersprungen_fuer_kunstbilder(tmp_path):
+    """osd_kunstbilder_v1 hat kein ausschnitt_sha256-Feld - bild_sha256 IST
+    bereits der Hash der geschriebenen Datei, siehe Docstring."""
+    bild = tmp_path / "bild.png"
+    bild.write_bytes(b"irgendwas")
+    eintrag = {"id": "k1", "bild_sha256": "voellig falsch"}
+
+    osd_datensatz.pruefe_ausschnitt_hash(
+        eintrag, osd_datensatz.SCHEMA_KUNSTBILDER, bild)  # kein Fehler - nichts geprueft
+
+
+def test_main_bricht_bei_abweichendem_ausschnitt_hash_ab(tmp_path, monkeypatch):
+    """main() darf eine still vertauschte oder beschaedigte Zuschnittdatei
+    nicht in den Datensatz kopieren."""
+    monkeypatch.setattr(osd_datensatz, "lade_schutz", lambda *_a, **_k: Schutz())
+
+    eintraege = [{"id": "a", "bild_sha256": "11" * 32, "haltung": "1-2",
+                  "ausschnitt_sha256": "ff" * 32}]  # bewusst falsch
+    quelle = _schreibe_quelle(tmp_path / "quellen", "ernte", eintraege, "osd_ernte_v1")
+
+    ziel = tmp_path / "ziel"
+    with pytest.raises(SystemExit):
+        osd_datensatz.main(["--quelle", str(quelle), "--ziel", str(ziel)])
+
+    assert not ziel.exists(), "Bei einem Hash-Mismatch darf kein Ziel entstehen."
 
 
 def test_main_verweigert_nicht_leeres_ziel(tmp_path, monkeypatch):

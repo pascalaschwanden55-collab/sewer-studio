@@ -194,19 +194,33 @@ def test_haltung_aus_ordnername_verwirft_nicht_passende_namen():
 
 
 def test_eintrag_erzeugen_liefert_erwartete_feldform():
-    eintrag = osd_ernte.eintrag_erzeugen("ab" * 32, "10261-10262", "094", 9.4)
+    eintrag = osd_ernte.eintrag_erzeugen(
+        "ab" * 32, "10261-10262", "094", 9.4, "ef" * 32)
 
     assert eintrag == {
         "id": osd_ernte.bild_id("ab" * 32),
         "bild_sha256": "ab" * 32,
+        "ausschnitt_sha256": "ef" * 32,
         "haltung": "10261-10262",
         "zeichenfolge": "094",
         "meter": 9.4,
     }
 
 
+def test_eintrag_erzeugen_haelt_quellframe_und_ausschnitt_hash_getrennt():
+    """Fix-Runde 1 (Aufgabe 7): bild_sha256 (Quellframe, Sperrliste) und
+    ausschnitt_sha256 (geschriebene Datei, osd_datensatz-Pruefung) duerfen
+    sich nie vermischen - unterschiedliche Werte bleiben unterschiedlich."""
+    eintrag = osd_ernte.eintrag_erzeugen(
+        "11" * 32, "10261-10262", "094", 9.4, "22" * 32)
+
+    assert eintrag["bild_sha256"] == "11" * 32
+    assert eintrag["ausschnitt_sha256"] == "22" * 32
+    assert eintrag["bild_sha256"] != eintrag["ausschnitt_sha256"]
+
+
 def test_eintrag_erzeugen_erlaubt_fehlende_haltung():
-    eintrag = osd_ernte.eintrag_erzeugen("cd" * 32, None, "12", 1.2)
+    eintrag = osd_ernte.eintrag_erzeugen("cd" * 32, None, "12", 1.2, "99" * 32)
 
     assert eintrag["haltung"] is None
 
