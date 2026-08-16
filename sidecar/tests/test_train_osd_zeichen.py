@@ -296,3 +296,40 @@ def test_main_verweigert_bei_fehlendem_basisgewicht(tmp_path, monkeypatch, capsy
 
     assert rc == 2
     assert "Basisgewicht fehlt" in capsys.readouterr().err
+
+
+def test_laufzeit_yaml_traegt_absoluten_pfad(tmp_path):
+    """Ultralytics loest ein relatives path: gegen das Arbeitsverzeichnis auf.
+
+    Beim ersten echten Trainingslauf am 2026-08-16 suchte es deshalb
+    <Repo>/images/val statt im Datensatzordner und brach ab.
+    """
+    ds = tmp_path / "datensatz_v1"
+    ds.mkdir()
+    (ds / "data.yaml").write_text(
+        "path: .\ntrain: images/train\nval: images/val\nnc: 15\nnames:\n  0: '0'\n",
+        encoding="utf-8")
+
+    laufzeit = train_osd_zeichen.schreibe_laufzeit_yaml(ds)
+    text = laufzeit.read_text(encoding="utf-8")
+
+    assert laufzeit.name == "data.runtime.yaml"
+    assert f"path: {ds.resolve().as_posix()}" in text
+    assert "path: ." not in text
+    assert "train: images/train" in text and "val: images/val" in text
+    # Die data.yaml des Datensatzes ist gehasht und bleibt unveraendert.
+    assert (ds / "data.yaml").read_text(encoding="utf-8").startswith("path: .")
+
+
+def test_label_caches_werden_entfernt(tmp_path):
+    ds = tmp_path / "datensatz_v1"
+    (ds / "labels").mkdir(parents=True)
+    for name in ("train.cache", "val.cache"):
+        (ds / "labels" / name).write_bytes(b"x")
+    (ds / "labels" / "bleibt.txt").write_text("0 0.5 0.5 0.1 0.4\n", encoding="utf-8")
+
+    train_osd_zeichen.entferne_label_caches(ds)
+
+    assert not (ds / "labels" / "train.cache").exists()
+    assert not (ds / "labels" / "val.cache").exists()
+    assert (ds / "labels" / "bleibt.txt").is_file()

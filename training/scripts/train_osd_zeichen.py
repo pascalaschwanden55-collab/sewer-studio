@@ -35,6 +35,40 @@ def sha256(pfad: Path) -> str:
     return h.hexdigest()
 
 
+def schreibe_laufzeit_yaml(datensatz: Path) -> Path:
+    """Laufzeit-YAML mit ABSOLUTEM Pfad neben der data.yaml des Datensatzes.
+
+    Die data.yaml selbst traegt "path: ." und bleibt unveraendert - sie ist im
+    Datensatzbeleg gehasht. Ultralytics wuerde ein relatives "path:" gegen das
+    Arbeitsverzeichnis aufloesen und die Bilder nicht finden.
+    """
+    quelle = datensatz / "data.yaml"
+    zeilen = []
+    for zeile in quelle.read_text(encoding="utf-8").splitlines():
+        if zeile.startswith("path:"):
+            zeilen.append(f"path: {datensatz.resolve().as_posix()}")
+        else:
+            zeilen.append(zeile)
+    ziel = datensatz / "data.runtime.yaml"
+    ziel.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
+    return ziel
+
+
+def entferne_label_caches(datensatz: Path) -> None:
+    """Von Ultralytics erzeugte Cachedateien wieder wegraeumen.
+
+    Der Datensatz ist per Beleg gehasht und soll nach dem Lauf so dastehen wie
+    davor. Unsichere Pfade und Verknuepfungen werden nicht angefasst.
+    """
+    labels = (datensatz / "labels").resolve()
+    for name in ("train.cache", "val.cache"):
+        pfad = (labels / name).resolve()
+        if pfad.parent != labels or pfad.is_symlink():
+            continue
+        if pfad.is_file():
+            pfad.unlink()
+
+
 def sidecar_laeuft() -> bool:
     """True, wenn unter localhost:8100 ein Sidecar antwortet.
 
@@ -163,11 +197,20 @@ def main(argv=None) -> int:
         print(f"ABBRUCH: Basisgewicht fehlt: {basis_pfad}", file=sys.stderr)
         return 2
 
+    # Ultralytics loest ein relatives "path:" gegen das ARBEITSVERZEICHNIS auf,
+    # nicht gegen den Ort der data.yaml. Die data.yaml des Datensatzes traegt
+    # bewusst "path: ." (Hausform, siehe osd_datensatz.schreibe_data_yaml) und
+    # wuerde deshalb im Repo-Ordner nach images/val suchen. Darum bekommt der
+    # Trainingslauf eine eigene Laufzeit-YAML mit absolutem Pfad, genau wie
+    # train_bcc_pilot.py:349-361 (_write_runtime_yaml). Die data.yaml des
+    # Datensatzes bleibt unangetastet - sie ist im Beleg gehasht.
+    laufzeit_yaml = schreibe_laufzeit_yaml(args.datensatz)
+
     from ultralytics import YOLO
 
     modell = YOLO(str(basis_pfad))
     ergebnis = modell.train(
-        data=str(yaml_pfad),
+        data=str(laufzeit_yaml),
         epochs=args.epochen,
         imgsz=args.imgsz,
         batch=args.batch,
@@ -186,6 +229,11 @@ def main(argv=None) -> int:
         name="osd_zeichen_lauf",
         exist_ok=False,
     )
+
+    # Ultralytics legt neben den Labels train.cache/val.cache an. Der Datensatz
+    # ist per Beleg gehasht und soll nach dem Lauf unveraendert dastehen -
+    # dieselbe Aufraeumung wie train_bcc_pilot.py:364-373.
+    entferne_label_caches(args.datensatz)
 
     quelle = Path(ergebnis.save_dir) / "weights" / "best.pt"
     if not quelle.is_file():
