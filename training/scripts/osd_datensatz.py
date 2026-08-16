@@ -24,7 +24,7 @@ for pfad in (WURZEL / "sidecar", WURZEL / "training" / "scripts"):
         sys.path.insert(0, str(pfad))
 
 from sidecar import osd_meter
-from osd_schutz import GOLD_WURZEL, Schutz, lade_schutz
+from osd_schutz import GOLD_WURZEL, RESERVEBESTAND_STANDARD, Schutz, lade_schutz
 from osd_wahrheit_aus_protokoll import physische_haltung
 
 ZIEL_WURZEL = Path(r"C:\KI_BRAIN\training\osd_zeichen")
@@ -238,6 +238,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="Saat fuer die Aufteilung (Default 0)")
     parser.add_argument("--gold-wurzel", type=Path, default=GOLD_WURZEL,
                         help="Wurzel der eingefrorenen Goldsaetze (Sperrliste)")
+    parser.add_argument("--reservebestand", type=Path, default=RESERVEBESTAND_STANDARD,
+                        help="wahrheit.json des Reservebestands (Testteil gesperrt)")
     args = parser.parse_args(argv)
 
     if not 0.0 <= args.val_anteil < 1.0:
@@ -254,7 +256,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"Ziel existiert bereits und ist nicht leer: {args.ziel} - ein "
             "bestehender Datensatz wird nie repariert oder zusammengefuehrt.")
 
-    schutz = lade_schutz(args.gold_wurzel)
+    schutz = lade_schutz(args.gold_wurzel, reservebestand=args.reservebestand)
 
     alle_eintraege: list[dict] = []
     id_zu_quelle: dict[str, Path] = {}

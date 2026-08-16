@@ -248,6 +248,77 @@ def test_main_uebersteht_unerwarteten_fehler_mitten_im_bild(tmp_path, monkeypatc
     assert "Uebersprungen (unlesbar/unvollstaendig): 2" in ausgabe
 
 
+# ---------------------------------------------------------------------------
+# Fix-Runde 1 (Aufgabe 1): Junction-/Symlink-Schutz in _bilder_finden().
+#
+# Wie in derive_negative_set_for_gold_audit.py und Geschwistern: die
+# Reparse-Erkennung selbst wird gefaked statt eine echte Junction anzulegen
+# (braucht auf Windows sonst erhoehte Rechte) - der Test bleibt so auf jeder
+# Maschine lauffaehig.
+# ---------------------------------------------------------------------------
+
+def test_bilder_finden_folgt_keinem_verlinkten_unterordner(tmp_path, monkeypatch):
+    echt = tmp_path / "echt"
+    verlinkt = tmp_path / "verlinkt"
+    echt.mkdir()
+    verlinkt.mkdir()
+    (echt / "a.jpg").write_bytes(b"x")
+    (verlinkt / "b.jpg").write_bytes(b"x")
+
+    original = osd_ernte._ist_link_oder_junction
+
+    def gefaked(pfad):
+        return pfad == verlinkt or original(pfad)
+
+    monkeypatch.setattr(osd_ernte, "_ist_link_oder_junction", gefaked)
+
+    treffer = osd_ernte._bilder_finden(tmp_path)
+
+    assert treffer == [echt / "a.jpg"]
+
+
+def test_bilder_finden_ueberspringt_verlinkte_einzelne_bilddatei(tmp_path, monkeypatch):
+    ordner = tmp_path / "ordner"
+    ordner.mkdir()
+    normal = ordner / "a.jpg"
+    verlinkte_datei = ordner / "b.jpg"
+    normal.write_bytes(b"x")
+    verlinkte_datei.write_bytes(b"x")
+
+    original = osd_ernte._ist_link_oder_junction
+
+    def gefaked(pfad):
+        return pfad == verlinkte_datei or original(pfad)
+
+    monkeypatch.setattr(osd_ernte, "_ist_link_oder_junction", gefaked)
+
+    treffer = osd_ernte._bilder_finden(tmp_path)
+
+    assert treffer == [normal]
+
+
+def test_bilder_finden_liefert_leer_wenn_wurzel_selbst_verlinkt_ist(tmp_path, monkeypatch):
+    (tmp_path / "a.jpg").write_bytes(b"x")
+
+    monkeypatch.setattr(osd_ernte, "_ist_link_oder_junction", lambda _pfad: True)
+
+    assert osd_ernte._bilder_finden(tmp_path) == []
+
+
+def test_ist_link_oder_junction_behandelt_lesefehler_als_link(tmp_path, monkeypatch):
+    """Fail-closed: ein Lesefehler bei lstat() zaehlt als Link, nicht als
+    normale Datei - sonst koennte ein unlesbarer Pfad stillschweigend
+    durchrutschen."""
+    pfad = tmp_path / "nicht_vorhanden"
+
+    def kaputtes_lstat(self):
+        raise OSError("simulierter Lesefehler")
+
+    monkeypatch.setattr(Path, "lstat", kaputtes_lstat)
+
+    assert osd_ernte._ist_link_oder_junction(pfad) is True
+
+
 def test_main_zaehlt_bilder_ohne_erkennbare_haltung(tmp_path, monkeypatch, capsys):
     """Fehlt die Haltung, muss das sichtbar sein - nicht nur der Bildhash-Schutz greift dann."""
     ohne_haltung = tmp_path / "quelle" / "unsortiert"

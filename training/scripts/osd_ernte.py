@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import sys
 import uuid
 from dataclasses import dataclass
@@ -41,7 +42,7 @@ if str(WURZEL / "training" / "scripts") not in sys.path:
     sys.path.insert(0, str(WURZEL / "training" / "scripts"))
 
 from sidecar import osd_meter
-from osd_schutz import GOLD_WURZEL, Schutz, lade_schutz
+from osd_schutz import GOLD_WURZEL, RESERVEBESTAND_STANDARD, Schutz, lade_schutz
 
 
 @dataclass(frozen=True)
@@ -191,10 +192,46 @@ def _sha256_datei(pfad: Path) -> str:
     return hasher.hexdigest()
 
 
+def _ist_link_oder_junction(pfad: Path) -> bool:
+    """True bei Symlink oder Windows-Reparse-Point (z.B. Junction).
+
+    Ohne diese Pruefung koennte ein verlinkter Unterordner unter --bilder auf
+    einen ganz anderen Ort zeigen (z.B. hinaus aus dem beabsichtigten Archiv)
+    und dessen Inhalt unbemerkt in die Ernte holen - dieselbe Frage ("was darf
+    in die Ernte") wie beim Schutz gegen Gold-/Reservebilder, nur auf
+    Dateisystemebene. lstat() statt stat(): der Link selbst wird geprueft,
+    nicht sein Ziel. Ein Lesefehler zaehlt als Link (fail-closed).
+    """
+    try:
+        metadaten = pfad.lstat()
+    except OSError:
+        return True
+    attribute = getattr(metadaten, "st_file_attributes", 0)
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return pfad.is_symlink() or bool(attribute & reparse_flag)
+
+
 def _bilder_finden(wurzel: Path) -> list[Path]:
-    return sorted(
-        p for p in wurzel.rglob("*")
-        if p.is_file() and p.suffix.lower() in BILD_ENDUNGEN)
+    """Durchsucht wurzel rekursiv, folgt aber keinem Link/Junction.
+
+    os.walk() statt rglob(): rglob() steigt in JEDEN Unterordner ab, auch
+    verlinkte - dirnames[:] laesst sich dagegen vor dem Abstieg filtern.
+    """
+    if _ist_link_oder_junction(wurzel):
+        return []
+
+    treffer: list[Path] = []
+    for aktuell, unterordner, dateien in os.walk(wurzel):
+        aktueller_pfad = Path(aktuell)
+        unterordner[:] = [
+            name for name in unterordner
+            if not _ist_link_oder_junction(aktueller_pfad / name)
+        ]
+        for name in dateien:
+            pfad = aktueller_pfad / name
+            if pfad.suffix.lower() in BILD_ENDUNGEN and not _ist_link_oder_junction(pfad):
+                treffer.append(pfad)
+    return sorted(treffer)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -205,6 +242,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="Ausgabeordner fuer geerntete Bilder, Labels und eintraege.json")
     parser.add_argument("--gold-wurzel", type=Path, default=GOLD_WURZEL,
                         help="Wurzel der eingefrorenen Goldsaetze (Sperrliste)")
+    parser.add_argument("--reservebestand", type=Path, default=RESERVEBESTAND_STANDARD,
+                        help="wahrheit.json des Reservebestands (Testteil gesperrt)")
     parser.add_argument("--limit", type=int, default=None,
                         help="Nur die ersten N Bilder verarbeiten (Probelauf)")
     args = parser.parse_args(argv)
@@ -214,7 +253,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.limit is not None and args.limit <= 0:
         raise SystemExit("--limit muss positiv sein.")
 
-    schutz = lade_schutz(args.gold_wurzel)
+    schutz = lade_schutz(args.gold_wurzel, reservebestand=args.reservebestand)
     templates = osd_meter.get_templates()
 
     bilder_ordner = args.ziel / "bilder"

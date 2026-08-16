@@ -11,6 +11,22 @@ Wer die Schwelle so lange dreht, bis auf Gold null Fehler stehen, hat Gold zum
 Anpassen benutzt. Die anschliessende Goldmessung waere dann keine unabhaengige
 Messung mehr, sondern eine Selbstbestaetigung.
 
+WAS DEN RESERVEBESTAND WIRKLICH VON GOLD TRENNT (Richtigstellung, Fix-Runde 1,
+2026-08-16)
+Hier stand vorher, der Testteil sei "GETRENNT" vom Training, weil er aus dem
+Testteil (split == "test") von wahrheit.json stammt. Das allein stimmt nicht:
+dieser Split hat nichts mit dem Split zu tun, den osd_datensatz.teile_auf()
+fuer den eigentlichen Trainingsdatensatz erzeugt, und die dokumentierte Ernte
+zeigt auf D:\\Haltungen - denselben Archivbestand, aus dem der Reservebestand
+geschnitten wurde. Ohne eine eigene Sperre waeren Reserve-Testhaltungen
+ungehindert in die Ernte gewandert; die Schwelle waere dann an Material
+kalibriert worden, das das Modell effektiv auswendig gelernt hat. Was den
+Reservebestand tatsaechlich trennt: osd_schutz.lade_schutz() sperrt seit
+Fix-Runde 1 jede physische Haltung (beide Fahrtrichtungen) der 88
+Test-Eintraege zusaetzlich zu Gold, mit demselben harten Abbruch bei einem
+fehlenden Reservebestand. osd_ernte.py und osd_datensatz.py pruefen dagegen -
+ein Reserve-Test-Bild kann die Ernte nicht mehr erreichen.
+
 WARUM DIE SCHWACHEN ETIKETTEN HIER TAUGEN
 Sie stimmen nur auf wenige Zentimeter genau (Sichtprobe: 25 von 30 auf 1 cm).
 Fuer die Frage "liegt diese Lesung GROB daneben" reicht das voellig - und nur
@@ -37,11 +53,17 @@ import json
 import sys
 from pathlib import Path
 
+SKRIPTE = Path(__file__).resolve().parent
+if str(SKRIPTE) not in sys.path:
+    sys.path.insert(0, str(SKRIPTE))
+
 # Standard-Reservebestand: Testteil der 897 schwach beschrifteten
 # Protokollbilder (siehe osd_wahrheit_aus_protokoll.py). 674 Train, 135
-# Validation, 88 Test - nur die 88 Test-Eintraege sind hier zulaessig.
-RESERVEBESTAND_STANDARD = Path(
-    r"C:\KI_BRAIN\training\diagnostics\osd_wahrheit_protokoll_v1\wahrheit.json")
+# Validation, 88 Test - nur die 88 Test-Eintraege sind hier zulaessig. Der Wert
+# selbst lebt in osd_schutz.py (dort die "einzige Wahrheit darueber, was
+# gesperrt ist") und wird hier nur wiederverwendet, damit Kalibrierung und
+# Sperrliste nie auseinanderlaufen koennen.
+from osd_schutz import RESERVEBESTAND_STANDARD
 
 # Ab dieser Abweichung gilt eine Lesung als grob falsch. Deutlich ueber dem
 # Zentimeter-Rauschen der schwachen Etiketten, deutlich unter einem echten
