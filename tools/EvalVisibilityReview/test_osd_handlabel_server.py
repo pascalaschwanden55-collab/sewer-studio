@@ -44,6 +44,33 @@ class OsdHandlabelStoreTests(unittest.TestCase):
     def store(self) -> OsdHandlabelStore:
         return OsdHandlabelStore(self.queue_root, self.output, "Pascal")
 
+    def _store_mit_zwei_faellen(self) -> tuple[OsdHandlabelStore, Path]:
+        """Eigener Wurzelordner mit zwei Faellen - fuer Tests, die eine
+        Reihenfolge (erst f1, dann f2) brauchen, z.B. den Zurueck-Weg."""
+        root2 = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: _rmtree_ignore(root2))
+        bild1 = root2 / "b1.jpg"
+        Image.new("RGB", (80, 60), (1, 1, 1)).save(bild1)
+        bild2 = root2 / "b2.jpg"
+        Image.new("RGB", (80, 60), (2, 2, 2)).save(bild2)
+        sha1 = hashlib.sha256(bild1.read_bytes()).hexdigest()
+        sha2 = hashlib.sha256(bild2.read_bytes()).hexdigest()
+
+        queue_root = root2 / "queue"
+        queue_root.mkdir()
+        (queue_root / "queue.json").write_text(json.dumps({
+            "schema": "osd_handlabel_queue_v1",
+            "faelle": [
+                {"id": "f1", "bild_sha256": sha1, "haltung": "10261-10262",
+                 "bild_pfad": str(bild1), "boxen": [[1, 1, 5, 5], [6, 1, 10, 5]],
+                 "stil": "dunkel"},
+                {"id": "f2", "bild_sha256": sha2, "haltung": "20001-20002",
+                 "bild_pfad": str(bild2), "boxen": [[1, 1, 5, 5]], "stil": "dunkel"},
+            ],
+        }), encoding="utf-8")
+        output = root2 / "review.json"
+        return OsdHandlabelStore(queue_root, output, "Pascal"), output
+
     # -----------------------------------------------------------------
     # Grundfluss: uebernehmen, unleserlich, boxen passen nicht.
     # -----------------------------------------------------------------
@@ -133,28 +160,7 @@ class OsdHandlabelStoreTests(unittest.TestCase):
     # -----------------------------------------------------------------
 
     def test_veraltete_revision_wird_abgewiesen(self) -> None:
-        root2 = Path(tempfile.mkdtemp())
-        self.addCleanup(lambda: _rmtree_ignore(root2))
-        bild1 = root2 / "b1.jpg"
-        Image.new("RGB", (80, 60), (1, 1, 1)).save(bild1)
-        bild2 = root2 / "b2.jpg"
-        Image.new("RGB", (80, 60), (2, 2, 2)).save(bild2)
-        sha1 = hashlib.sha256(bild1.read_bytes()).hexdigest()
-        sha2 = hashlib.sha256(bild2.read_bytes()).hexdigest()
-
-        queue_root = root2 / "queue"
-        queue_root.mkdir()
-        (queue_root / "queue.json").write_text(json.dumps({
-            "schema": "osd_handlabel_queue_v1",
-            "faelle": [
-                {"id": "f1", "bild_sha256": sha1, "haltung": "10261-10262",
-                 "bild_pfad": str(bild1), "boxen": [[1, 1, 5, 5]], "stil": "dunkel"},
-                {"id": "f2", "bild_sha256": sha2, "haltung": "20001-20002",
-                 "bild_pfad": str(bild2), "boxen": [[1, 1, 5, 5]], "stil": "dunkel"},
-            ],
-        }), encoding="utf-8")
-        output = root2 / "review.json"
-        store = OsdHandlabelStore(queue_root, output, "Pascal")
+        store, output = self._store_mit_zwei_faellen()
 
         # Tab A speichert zuerst (Revision 0 -> 1).
         store.entscheiden("f1", "unleserlich", "", 0)
@@ -173,6 +179,113 @@ class OsdHandlabelStoreTests(unittest.TestCase):
         store.entscheiden("f1", "uebernommen", "94", 0)
         with self.assertRaises(ValueError):
             store.entscheiden("f1", "unleserlich", "", 1)
+
+    # -----------------------------------------------------------------
+    # "Zurueck": zur zuletzt entschiedenen Karte zurueckspringen (Nachtrag
+    # auf Wunsch von Pascal - ein Vertipper ist bei ~200 Karten mit je rund
+    # acht Zeichen wahrscheinlich, und ein falsches Etikett ist teurer als
+    # ein fehlendes).
+    # -----------------------------------------------------------------
+
+    def test_zurueck_von_erster_karte_tut_nichts(self) -> None:
+        store = self.store()
+        vorher = store.stand()
+
+        nachher = store.zuruecknehmen(0)
+
+        self.assertEqual(vorher["offen"], nachher["offen"])
+        self.assertEqual(0, nachher["revision"])
+        self.assertFalse(nachher["kann_zurueck"])
+        # Nichts hat sich geaendert - keine Review-Datei angelegt.
+        self.assertFalse(self.output.exists())
+
+    def test_zurueck_stellt_eigene_vorherige_zeichenfolge_ins_feld(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "uebernommen", "94", 0)
+
+        stand = store.zuruecknehmen(1)
+
+        self.assertEqual("f1", stand["naechster"]["id"])
+        self.assertEqual(
+            {"aktion": "uebernommen", "zeichenfolge": "94"},
+            stand["naechster"]["vorherige_eingabe"])
+
+    def test_zurueck_bei_unleserlich_zeigt_hinweis_ohne_zeichenfolge(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "unleserlich", "", 0)
+
+        stand = store.zuruecknehmen(1)
+
+        self.assertEqual({"aktion": "unleserlich"}, stand["naechster"]["vorherige_eingabe"])
+
+    def test_zurueck_bei_boxen_passen_nicht_zeigt_hinweis_ohne_zeichenfolge(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "boxen_passen_nicht", "", 0)
+
+        stand = store.zuruecknehmen(1)
+
+        self.assertEqual(
+            {"aktion": "boxen_passen_nicht"}, stand["naechster"]["vorherige_eingabe"])
+
+    def test_neue_entscheidung_nach_zurueck_ersetzt_die_alte(self) -> None:
+        """Der Punkt, an dem sowas schiefgeht: pro Fall darf am Ende genau
+        ein Eintrag in der Reviewdatei stehen, keine Dublette."""
+        store, output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "uebernommen", "94", 0)
+        store.zuruecknehmen(1)
+
+        store.entscheiden("f1", "uebernommen", "77", 2)
+
+        daten = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(["f1"], list(daten["entscheidungen"]))
+        self.assertEqual("77", daten["entscheidungen"]["f1"]["zeichenfolge"])
+
+    def test_fortschritt_zaehlt_nach_zurueck_und_neuentscheidung_nicht_doppelt(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        self.assertEqual(2, store.stand()["offen"])
+
+        store.entscheiden("f1", "uebernommen", "94", 0)
+        self.assertEqual(1, store.stand()["offen"])
+
+        store.zuruecknehmen(1)
+        self.assertEqual(2, store.stand()["offen"])
+
+        store.entscheiden("f1", "uebernommen", "77", 2)
+        self.assertEqual(1, store.stand()["offen"])
+
+    def test_zurueck_prueft_die_revision_wie_entscheiden(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "unleserlich", "", 0)  # Revision 0 -> 1
+
+        # Ein Tab, der noch Revision 0 kennt, darf auch ueber "zurueck"
+        # nicht mehr durchkommen - sonst waere der Zwei-Tabs-Schutz auf
+        # diesem Weg ausgehebelt.
+        with self.assertRaises(ValueError):
+            store.zuruecknehmen(0)
+
+    def test_zurueck_erhoeht_die_revision(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "unleserlich", "", 0)  # Revision 0 -> 1
+        store.zuruecknehmen(1)  # Revision 1 -> 2
+
+        # Wer jetzt noch Revision 1 kennt (z.B. ein zweiter Tab), ist
+        # veraltet - auch fuer eine normale Entscheidung.
+        with self.assertRaises(ValueError):
+            store.entscheiden("f1", "unleserlich", "", 1)
+
+    def test_mehrfaches_zurueck_geht_schrittweise_weiter_zurueck(self) -> None:
+        store, _output = self._store_mit_zwei_faellen()
+        store.entscheiden("f1", "uebernommen", "94", 0)   # Revision 0 -> 1
+        store.entscheiden("f2", "unleserlich", "", 1)     # Revision 1 -> 2
+
+        erster_rueck = store.zuruecknehmen(2)   # nimmt f2 zurueck
+        self.assertEqual("f2", erster_rueck["naechster"]["id"])
+
+        zweiter_rueck = store.zuruecknehmen(3)  # nimmt jetzt f1 zurueck
+        self.assertEqual("f1", zweiter_rueck["naechster"]["id"])
+        self.assertEqual(
+            {"aktion": "uebernommen", "zeichenfolge": "94"},
+            zweiter_rueck["naechster"]["vorherige_eingabe"])
 
     # -----------------------------------------------------------------
     # Resumability und Manipulationsschutz (wie das Layout-Review-Pendant).
@@ -230,6 +343,19 @@ class OsdHandlabelStoreTests(unittest.TestCase):
     # -----------------------------------------------------------------
 
     def test_seite_zeigt_keine_modell_oder_vorlagen_vermutung(self) -> None:
+        verboten = ("konfidenz", "vorschlag", "template", "modell", "leseweg",
+                    "suggestion", "prediction")
+        seite_klein = SEITE.lower()
+        for wort in verboten:
+            with self.subTest(wort=wort):
+                self.assertNotIn(wort, seite_klein)
+
+    def test_seite_bindet_zurueck_button_ohne_maschinenvermutung(self) -> None:
+        # Der Zurueck-Knopf muss verdrahtet sein ...
+        self.assertIn("/zurueck", SEITE)
+        self.assertIn("zurueck()", SEITE)
+        # ... darf aber weiterhin keine Modell-/Vorlagenvermutung zeigen -
+        # nur die eigene fruehere Eingabe (vorherige_eingabe).
         verboten = ("konfidenz", "vorschlag", "template", "modell", "leseweg",
                     "suggestion", "prediction")
         seite_klein = SEITE.lower()

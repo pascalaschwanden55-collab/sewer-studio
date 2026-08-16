@@ -76,6 +76,11 @@ class OsdHandlabelStore:
 
         self.entscheidungen: dict[str, dict] = {}
         self._revision = 0
+        # Die zuletzt per "zurueck" entfernte Entscheidung - nur solange
+        # relevant, wie ihr Fall noch nicht neu entschieden wurde. Dient
+        # ausschliesslich dazu, dem Menschen seine EIGENE vorherige Eingabe
+        # wieder vorzulegen (nie eine Maschinenvermutung).
+        self._letzte_entfernte: dict | None = None
         self._laden()
 
     def _laden(self) -> None:
@@ -107,6 +112,17 @@ class OsdHandlabelStore:
     def _fall(self, fall_id: str) -> dict | None:
         return next((f for f in self.faelle if str(f["id"]) == fall_id), None)
 
+    def _vorherige_eingabe_fuer(self, fall_id: str) -> dict | None:
+        """Die eigene fruehere Eingabe fuer GENAU diesen wiedervorgelegten
+        Fall - oder None. Niemals eine Modell-/Vorlagenvermutung."""
+        letzte = self._letzte_entfernte
+        if letzte is None or letzte["fall_id"] != fall_id:
+            return None
+        ergebnis = {"aktion": letzte["aktion"]}
+        if letzte["aktion"] == "uebernommen":
+            ergebnis["zeichenfolge"] = letzte["zeichenfolge"]
+        return ergebnis
+
     def stand(self) -> dict:
         offen = [f for f in self.faelle if str(f["id"]) not in self.entscheidungen]
         naechster = None
@@ -124,11 +140,13 @@ class OsdHandlabelStore:
                 "haltung": fall.get("haltung"),
                 "anzahl_boxen": len(fall["boxen"]),
                 "boxen_anteil": boxen_anteil,
+                "vorherige_eingabe": self._vorherige_eingabe_fuer(fall_id),
             }
         return {
             "gesamt": len(self.faelle),
             "offen": len(offen),
             "revision": self._revision,
+            "kann_zurueck": bool(self.entscheidungen),
             "naechster": naechster,
         }
 
@@ -165,6 +183,36 @@ class OsdHandlabelStore:
 
         with self._lock:
             self.entscheidungen[fall_id] = eintrag
+            # Die vorherige Eingabe wurde jetzt durch eine neue ersetzt -
+            # nichts mehr davon zeigen, sollte dieser Fall spaeter erneut per
+            # "zurueck" wieder aufgemacht werden (dann gilt seine NEUE
+            # Entscheidung als "vorherige").
+            if self._letzte_entfernte is not None and self._letzte_entfernte["fall_id"] == fall_id:
+                self._letzte_entfernte = None
+            self._revision += 1
+            self._speichern()
+        return self.stand()
+
+    def zuruecknehmen(self, erwartete_revision: int) -> dict:
+        """Springt zur zuletzt entschiedenen Karte zurueck und stellt sie
+        erneut zur Entscheidung. Von der ersten Karte aus (nichts entschieden)
+        tut der Aufruf nichts.
+
+        Dieselbe Revisionspruefung wie entscheiden(): ein anderer Tab/Prozess
+        darf den Zwei-Tabs-Schutz auch ueber diesen Weg nicht aushebeln.
+        """
+        if erwartete_revision != self._revision:
+            raise ValueError(
+                "Ein anderer Tab oder Prozess hat zwischenzeitlich gespeichert "
+                "- bitte die Seite neu laden.")
+        with self._lock:
+            if not self.entscheidungen:
+                return self.stand()
+            # Dict-Einfuegereihenfolge ist seit Python 3.7 garantiert - der
+            # letzte Schluessel ist die zuletzt getroffene Entscheidung.
+            letzte_id = list(self.entscheidungen)[-1]
+            entfernt = self.entscheidungen.pop(letzte_id)
+            self._letzte_entfernte = {"fall_id": letzte_id, **entfernt}
             self._revision += 1
             self._speichern()
         return self.stand()
@@ -188,33 +236,57 @@ img{display:block;max-width:96vw;max-height:62vh}
 input{background:#20242a;border:1px solid #3a4048;color:#e8eaed;border-radius:5px;
       padding:12px 14px;font-size:20px;width:240px}
 button{border:0;border-radius:6px;padding:11px 16px;font-size:14px;cursor:pointer;color:#fff}
-.ok{background:#2e7d32}.frage{background:#8a6d1f}.nein{background:#8e2f2f}
+button:disabled{opacity:.35;cursor:not-allowed}
+.ok{background:#2e7d32}.frage{background:#8a6d1f}.nein{background:#8e2f2f}.zurueck{background:#454b54}
 .fehler{color:#ff6b6b;margin-top:8px;font-size:13px}
+.hinweis{color:#8ab4f8;margin-top:10px;font-size:13px}
 </style><div id="app">Lade...</div><script>
-let aktuell=null, revision=0;
+let aktuell=null, revision=0, kannZurueck=false;
 async function laden(){
   const s=await (await fetch('/stand')).json();
   revision=s.revision;
+  kannZurueck=s.kann_zurueck;
   const a=document.getElementById('app');
-  if(!s.naechster){a.innerHTML='<h1>Alle '+s.gesamt+' Faelle entschieden.</h1>';return;}
+  if(!s.naechster){
+    a.innerHTML='<h1>Alle '+s.gesamt+' Faelle entschieden.</h1>'
+      +'<div class="zeile"><button class="zurueck"'+(kannZurueck?'':' disabled')
+      +' onclick="zurueck()">zurueck</button></div>';
+    return;
+  }
   aktuell=s.naechster;
   const nr=s.gesamt-s.offen+1;
   let boxen='';
   for(const b of aktuell.boxen_anteil){
     boxen+='<div class="box" style="left:'+(b[0]*100)+'%;top:'+(b[1]*100)+'%;width:'+(b[2]*100)+'%;height:'+(b[3]*100)+'%"></div>';
   }
+  // Nie eine KI-/Vorlagenvermutung - nur die EIGENE fruehere Eingabe des
+  // Menschen, und nur wenn genau diese Karte gerade per "zurueck" wieder
+  // aufgemacht wurde.
+  let vorwert='', hinweis='';
+  const vorherige=aktuell.vorherige_eingabe;
+  if(vorherige){
+    if(vorherige.aktion==='uebernommen'){
+      vorwert=vorherige.zeichenfolge||'';
+    } else {
+      hinweis='<div class="hinweis">zuletzt: '
+        +(vorherige.aktion==='unleserlich'?'unleserlich':'boxen passen nicht')+'</div>';
+    }
+  }
   a.innerHTML='<h1>Welche Zeichen stehen in den roten Boxen?</h1>'
     +'<div class="sub">Fall '+nr+' von '+s.gesamt+' &middot; Haltung '+(aktuell.haltung||'?')
     +' &middot; '+aktuell.anzahl_boxen+' Boxen, von links nach rechts eintippen</div>'
     +'<div class="rahmen"><img id="bild" src="/bild?id='+aktuell.id+'">'+boxen+'</div>'
-    +'<div class="zeile"><input id="wert" placeholder="von links nach rechts" autocomplete="off">'
+    +hinweis
+    +'<div class="zeile"><input id="wert" placeholder="von links nach rechts" autocomplete="off" value="'+vorwert+'">'
     +'<button class="ok" onclick="senden(\\'uebernommen\\')">uebernehmen</button>'
     +'<button class="frage" onclick="senden(\\'unleserlich\\')">unleserlich</button>'
-    +'<button class="nein" onclick="senden(\\'boxen_passen_nicht\\')">boxen passen nicht</button></div>'
+    +'<button class="nein" onclick="senden(\\'boxen_passen_nicht\\')">boxen passen nicht</button>'
+    +'<button class="zurueck"'+(kannZurueck?'':' disabled')+' onclick="zurueck()">zurueck</button></div>'
     +'<div id="meldung"></div>'
     +'<div class="stand">'+(s.gesamt-s.offen)+' erledigt &middot; '+s.offen+' offen</div>';
   const feld=document.getElementById('wert');
   feld.focus();
+  feld.select();
   feld.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();senden('uebernommen');}});
 }
 async function senden(aktion){
@@ -235,6 +307,17 @@ async function senden(aktion){
     body:JSON.stringify({id:aktuell.id,aktion:aktion,zeichenfolge:zeichenfolge,revision:revision})});
   if(!antwort.ok){
     meldung.innerHTML='<div class="fehler">'+(await antwort.json()).fehler+'</div>';
+    return;
+  }
+  laden();
+}
+async function zurueck(){
+  if(!kannZurueck)return;
+  const antwort=await fetch('/zurueck',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({revision:revision})});
+  if(!antwort.ok){
+    const meldung=document.getElementById('meldung');
+    if(meldung)meldung.innerHTML='<div class="fehler">'+(await antwort.json()).fehler+'</div>';
     return;
   }
   laden();
@@ -288,17 +371,21 @@ def create_server(store: OsdHandlabelStore, port: int) -> ThreadingHTTPServer:
             self._json({"fehler": "unbekannt"}, 404)
 
         def do_POST(self) -> None:  # noqa: N802
-            if urlparse(self.path).path != "/entscheiden":
+            weg = urlparse(self.path).path
+            if weg not in ("/entscheiden", "/zurueck"):
                 self._json({"fehler": "unbekannt"}, 404)
                 return
             laenge = int(self.headers.get("Content-Length") or 0)
             anfrage = json.loads(self.rfile.read(laenge) or b"{}")
             try:
-                self._json(store.entscheiden(
-                    str(anfrage.get("id") or ""),
-                    str(anfrage.get("aktion") or ""),
-                    str(anfrage.get("zeichenfolge") or ""),
-                    int(anfrage.get("revision") or 0)))
+                if weg == "/zurueck":
+                    self._json(store.zuruecknehmen(int(anfrage.get("revision") or 0)))
+                else:
+                    self._json(store.entscheiden(
+                        str(anfrage.get("id") or ""),
+                        str(anfrage.get("aktion") or ""),
+                        str(anfrage.get("zeichenfolge") or ""),
+                        int(anfrage.get("revision") or 0)))
             except ValueError as fehler:
                 self._json({"fehler": str(fehler)}, 400)
 
