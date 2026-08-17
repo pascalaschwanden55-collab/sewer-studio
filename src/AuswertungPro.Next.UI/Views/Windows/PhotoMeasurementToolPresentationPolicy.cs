@@ -26,7 +26,13 @@ internal static class PhotoMeasurementToolPresentationPolicy
     {
         var isLevel = tool is PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle;
         var isAngle = tool is PhotoTool.Lateral or PhotoTool.Bend;
-        var needsCalibration = tool is PhotoTool.Ruler or PhotoTool.Connection;
+        // Der Querschnitt gehoert dazu, obwohl er Prozente liefert: Sein Wert
+        // bezieht sich auf die ROHRFLAECHE, und die ist ohne Referenzlinie
+        // unbekannt. Die Verformung dagegen NICHT — sie vergleicht zwei
+        // gemessene Achsen miteinander und braucht keinen Massstab.
+        var needsCalibration = tool is PhotoTool.Ruler
+            or PhotoTool.Connection
+            or PhotoTool.CrossSection;
 
         var levelMode = tool switch
         {

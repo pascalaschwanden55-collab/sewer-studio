@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -52,9 +52,16 @@ public sealed class PhotoMeasurementToolPresentationPolicyTests
         Assert.False(state.ShowAngleControls);
     }
 
+    // Der Querschnitt kam 2026-08-17 dazu. Der urspruengliche Gedanke war
+    // "Millimeter brauchen eine Referenz, Prozente nicht" - fuer die Verformung
+    // stimmt das (Verhaeltnis zweier gemessener Achsen), fuer den Querschnitt
+    // nicht: Sein Prozentsatz bezieht sich auf die ROHRFLAECHE, und die kennt
+    // man ohne Kalibrierung nicht. Ohne diese Pflicht rechnete das Werkzeug mit
+    // einem erfundenen Durchmesser weiter und schrieb das Ergebnis nach Q1.
     [Theory]
     [InlineData((int)PhotoTool.Ruler)]
     [InlineData((int)PhotoTool.Connection)]
+    [InlineData((int)PhotoTool.CrossSection)]
     public void MillimeterWerkzeuge_BrauchenKalibrierung(int toolValue)
     {
         var tool = (PhotoTool)toolValue;
@@ -98,5 +105,15 @@ public sealed class PhotoMeasurementToolPresentationPolicyTests
         var state = PhotoMeasurementToolPresentationPolicy.Build(tool, LevelMode.Water, isCalibrated: true);
 
         Assert.False(string.IsNullOrWhiteSpace(state.StatusText));
+    }
+
+    [Fact]
+    public void Verformung_BrauchtKeineKalibrierung()
+    {
+        // Selbstbezogener Prozentsatz: (groesste - kleinste Achse) / groesste
+        // Achse. Ohne Nenndurchmesser faellt DeformationPercent korrekt auf die
+        // gemessene groessere Achse zurueck - hier waere eine Pflicht falsch.
+        Assert.True(PhotoMeasurementToolPresentationPolicy
+            .Build(PhotoTool.Deformation, LevelMode.Water, isCalibrated: false).IsOkEnabled);
     }
 }

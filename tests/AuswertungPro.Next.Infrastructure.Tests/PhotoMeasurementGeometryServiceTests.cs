@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
@@ -465,11 +465,75 @@ public sealed class PhotoMeasurementGeometryServiceTests
         Assert.Equal(OverlayToolType.CrossSection, result.Geometry.ToolType);
         Assert.Equal(4, result.Geometry.Points.Count);
         Assert.Equal(10000, result.PolygonAreaPx, precision: 6);
-        Assert.Equal(100, result.PipeRadiusPx, precision: 6);
-        Assert.Equal(31.830989, result.ReductionPercent, precision: 6);
+        Assert.NotNull(result.PipeRadiusPx);
+        Assert.NotNull(result.ReductionPercent);
+        Assert.Equal(100, result.PipeRadiusPx.Value, precision: 6);
+        Assert.Equal(31.830989, result.ReductionPercent.Value, precision: 6);
         Assert.Equal(31.8, result.Geometry.FillPercent);
         Assert.Equal(0.5, result.LabelPoint.X, precision: 6);
         Assert.Equal(0.5, result.LabelPoint.Y, precision: 6);
+    }
+
+
+    // ═══════════════════════════════════════════════
+    // Querschnitt ohne Kalibrierung (Audit 2026-08-17)
+    //
+    // PipeRadiusPx setzt bei fehlendem Durchmesser 0,7 ein - also die Annahme,
+    // das Rohr fuelle 70 % des Bildes. Daraus entstand ein Prozentwert, der
+    // ueber PhotoMeasurementResultMapper ins Q1-Feld des Protokolls wanderte.
+    // Bei einem Rohr, das tatsaechlich 50 % fuellt, erscheint eine echte
+    // 30-Prozent-Verlegung dadurch als 15 %; bei 90 % als 50 %. Genau daraus
+    // folgt bei BBC/BBA/BBB/BAI die Schadensstufe.
+    //
+    // Die Verformung ist davon NICHT betroffen: Sie rechnet das Verhaeltnis
+    // zweier gemessener Achsen und faellt korrekt auf die groessere Achse
+    // zurueck - ein selbstbezogener Prozentsatz braucht keine Referenz.
+    // ═══════════════════════════════════════════════
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(-1.0)]
+    public void BuildCrossSectionGeometry_OhneKalibrierung_LiefertKeinenProzentwert(
+        double normalizedDiameter)
+    {
+        var points = new List<NormalizedPoint>
+        {
+            new(0.25, 0.25),
+            new(0.75, 0.25),
+            new(0.75, 0.75),
+            new(0.25, 0.75)
+        };
+
+        var result = PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            points,
+            renderWidth: 200,
+            renderHeight: 200,
+            normalizedDiameter: normalizedDiameter);
+
+        Assert.NotNull(result);
+        Assert.Null(result.ReductionPercent);
+        Assert.Null(result.Geometry.FillPercent);
+        Assert.Null(result.PipeRadiusPx);
+    }
+
+    [Fact]
+    public void BuildCrossSectionGeometry_OhneKalibrierung_ZeichnetDasPolygonTrotzdem()
+    {
+        var points = new List<NormalizedPoint>
+        {
+            new(0.25, 0.25),
+            new(0.75, 0.25),
+            new(0.75, 0.75),
+            new(0.25, 0.75)
+        };
+
+        var result = PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            points, renderWidth: 200, renderHeight: 200, normalizedDiameter: 0);
+
+        Assert.NotNull(result);
+        Assert.Equal(4, result.Geometry.Points.Count);
+        Assert.Equal(10000, result.PolygonAreaPx, precision: 6);
+        Assert.Equal(0.5, result.LabelPoint.X, precision: 6);
     }
 
     [Fact]

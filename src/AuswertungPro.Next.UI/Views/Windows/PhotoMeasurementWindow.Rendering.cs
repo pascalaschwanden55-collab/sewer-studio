@@ -256,7 +256,14 @@ public partial class PhotoMeasurementWindow
         if (crossSection is null) return;
 
         _currentGeometry = crossSection.Geometry;
-        double reductionPct = crossSection.ReductionPercent;
+        // Ohne Kalibrierung gibt es keinen Prozentwert (siehe
+        // BuildCrossSectionGeometry). Das Polygon wird trotzdem gezeichnet, der
+        // Grund steht sichtbar daneben — eine geschaetzte Zahl waere schlimmer
+        // als gar keine, weil sie unbemerkt ins Protokoll wandert.
+        double? reductionPct = crossSection.ReductionPercent;
+        string messtext = reductionPct is { } p
+            ? $"Quersch: {p:F1}%"
+            : "Quersch: nicht messbar";
 
         // Polygon zeichnen
         ClearByTag(TagOverlay);
@@ -276,10 +283,13 @@ public partial class PhotoMeasurementWindow
 
         // Schwerpunkt fuer Label
         var labelPos = NormToCanvas(crossSection.LabelPoint.X, crossSection.LabelPoint.Y);
-        AddCanvasLabel($"Quersch: {reductionPct:F1}%", labelPos.X, labelPos.Y - 12, TagOverlay);
+        AddCanvasLabel(messtext, labelPos.X, labelPos.Y - 12, TagOverlay);
 
-        TxtMeasureInfo.Text = $"Quersch: {reductionPct:F1}%";
-        TxtStatus.Text = $"Querschnittsverminderung: {reductionPct:F1}%";
+        TxtMeasureInfo.Text = messtext;
+        TxtStatus.Text = reductionPct is { } prozent
+            ? $"Querschnittsverminderung: {prozent:F1}%"
+            : "Querschnittsverminderung: nicht messbar — zuerst kalibrieren "
+              + "(Referenzlinie über den sichtbaren Rohrdurchmesser ziehen).";
     }
 
     // ═══════════════════════════════════════════════
