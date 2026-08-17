@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -116,5 +116,27 @@ public class ProjectFieldCsvExporterTests : IDisposable
         var result = ProjectFieldCsvExporter.Escape("Zeile1\nZeile2");
         Assert.StartsWith("\"", result);
         Assert.EndsWith("\"", result);
+    }
+
+    // Codeaudit 2026-08-17: Diese Escape-Kette (ProjectFieldCsvExporter ->
+    // ImportSummaryExporter) setzte nur Anfuehrungszeichen. Formelanfaenge
+    // blieben stehen, obwohl CsvCell sie zentral entschaerft und die
+    // Projektregel jeden halben Exportweg verbietet. Der Importbericht enthaelt
+    // Feldwerte aus Kundendaten - also fremden Text.
+    [Theory]
+    [InlineData("=1+1")]
+    [InlineData("+42")]
+    [InlineData("@SUM(A1)")]
+    public void Escape_EntschaerftFormelanfaenge(string eingabe)
+    {
+        var ergebnis = ProjectFieldCsvExporter.Escape(eingabe);
+
+        Assert.StartsWith("'", ergebnis.TrimStart('"'));
+    }
+
+    [Fact]
+    public void Escape_LaesstNegativeZahlZahlBleiben()
+    {
+        Assert.Equal("-12.5", ProjectFieldCsvExporter.Escape("-12.5"));
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -114,13 +115,18 @@ public static class NpkLeistungsverzeichnisExporter
         _ => $"NPK {chapter}"
     };
 
+    /// <summary>
+    /// Delegiert an die zentrale <see cref="CsvCell"/>-Entschaerfung. Diese
+    /// Umsetzung setzte frueher nur Anfuehrungszeichen und liess Formelanfaenge
+    /// (<c>=</c>, <c>+</c>, <c>-</c>, <c>@</c>, Tab, CR) stehen. Positionstext
+    /// und Projektname sind freier Text, und das Leistungsverzeichnis geht nach
+    /// draussen — an Unternehmer und Gemeinde (Codeaudit 2026-08-17).
+    /// Negative Zahlen bleiben Zahlen. <see cref="CsvText"/> bleibt davon
+    /// unberuehrt: Das dortige <c>="…"</c> erzwingt bewusst Text, damit ein
+    /// NPK-Code wie 612.110 nicht zu 612.11 gekuerzt wird.
+    /// </summary>
     private static string Csv(string? value)
-    {
-        var v = value ?? "";
-        if (v.IndexOf(';') >= 0 || v.IndexOf('"') >= 0 || v.IndexOf('\n') >= 0 || v.IndexOf('\r') >= 0)
-            return "\"" + v.Replace("\"", "\"\"") + "\"";
-        return v;
-    }
+        => CsvCell.Escape(value);
 
     private static string AppendPriceHint(string? text, string? priceHint)
     {

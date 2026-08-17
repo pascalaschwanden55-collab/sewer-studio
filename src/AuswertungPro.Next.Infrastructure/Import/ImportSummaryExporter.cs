@@ -69,11 +69,14 @@ public sealed class ImportSummaryExporter : IImportSummaryExporter
         return path;
     }
 
+    /// <summary>
+    /// Delegiert an die zentrale <see cref="CsvCell"/>-Entschaerfung. Diese
+    /// Umsetzung setzte frueher nur Anfuehrungszeichen und liess Formelanfaenge
+    /// (<c>=</c>, <c>+</c>, <c>-</c>, <c>@</c>, Tab, CR) stehen — obwohl der
+    /// Importbericht Feldwerte aus Kundendaten enthaelt und die Projektregel
+    /// jeden halb umgesetzten Exportweg verbietet (Codeaudit 2026-08-17).
+    /// Negative Zahlen bleiben dabei Zahlen; genau dafuer gibt es CsvCell.
+    /// </summary>
     internal static string Escape(string? value)
-    {
-        value ??= "";
-        if (value.Contains(';') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-        return value;
-    }
+        => CsvCell.Escape(value);
 }
