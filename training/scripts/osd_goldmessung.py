@@ -73,11 +73,25 @@ def messe_satz(satz: Path, lese) -> dict:
                 f"  Manifest: {eintrag['bild_sha256']}\n  Datei:    {ist_hash}")
 
         soll = eintrag.get("meter")
+
+        # Ausdrueckliches menschlich_lesbar=false heisst: In diesem Bild ist
+        # KEINE Anzeige. Eine Lesung darauf ist eine erfundene Zahl - der
+        # teuerste Fehler, den dieser Leser machen kann, weil sie unbemerkt ins
+        # Protokoll wandert - und zaehlt deshalb als falsch, nicht als
+        # Randnotiz. Die drei alten Saetze tragen das Feld nur mit true und
+        # aendern sich dadurch nicht; ein Eintrag OHNE das Feld bleibt
+        # 'ohne_sollwert' wie bisher.
+        ohne_anzeige = eintrag.get("menschlich_lesbar") is False
+
         ergebnis = lese(bild)
         ist = ergebnis.get("meter")
+        grund = None
 
         if ist is None:
             zustand = "nicht_gelesen"
+        elif ohne_anzeige:
+            zustand = "falsch"
+            grund = "erfunden"
         elif soll is None:
             zustand = "ohne_sollwert"
         elif round(float(ist), GENAUIGKEIT) == round(float(soll), GENAUIGKEIT):
@@ -86,12 +100,15 @@ def messe_satz(satz: Path, lese) -> dict:
             zustand = "falsch"
 
         zaehler[zustand] += 1
+        if grund:
+            zaehler[grund] += 1
         faelle.append({
             "datei": eintrag["datei"],
             "haltung": eintrag.get("haltung"),
             "soll": soll,
             "ist": ist,
             "zustand": zustand,
+            "grund": grund,
             "zeichenfolge": ergebnis.get("zeichenfolge"),
             "stil": ergebnis.get("stil"),
             "leseweg": ergebnis.get("leseweg"),
@@ -106,6 +123,8 @@ def messe_satz(satz: Path, lese) -> dict:
         "falsch": zaehler["falsch"],
         "nicht_gelesen": zaehler["nicht_gelesen"],
         "ohne_sollwert": zaehler["ohne_sollwert"],
+        # Teilmenge von 'falsch': Lesungen auf Bildern ohne jede Anzeige.
+        "erfunden": zaehler["erfunden"],
         "trefferquote": round(zaehler["richtig"] / gesamt, 4) if gesamt else 0.0,
         "faelle": faelle,
     }
@@ -133,12 +152,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--marke", default="", help="Kurzname des Stands, z.B. 'vorher'.")
     parser.add_argument("--kein-bericht", action="store_true",
                         help="Nur anzeigen, nichts schreiben.")
+    parser.add_argument("--satz", action="append",
+                        help="Goldsatz statt der drei Standardsaetze. Mehrfach "
+                             "moeglich - fuer eine Zusatzmessung, etwa auf der "
+                             "vierten stilgemischten Messlatte.")
     args = parser.parse_args(argv)
 
     lese, leser_hash = baue_leser()
 
     saetze = []
-    for name in SAETZE:
+    for name in tuple(args.satz or SAETZE):
         satz = args.gold_wurzel / name
         if not satz.is_dir():
             raise SystemExit(f"Goldsatz fehlt: {satz}")

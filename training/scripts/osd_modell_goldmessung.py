@@ -46,12 +46,28 @@ def freigabe_erreicht(gesamt: dict) -> bool:
     return gesamt["falsch"] == 0 and gesamt["richtig"] >= FREIGABE_MINDEST_RICHTIG
 
 
+def ist_freigabelauf(saetze: tuple[str, ...]) -> bool:
+    """Nur die drei Standardsaetze duerfen ueber die Freigabe entscheiden.
+
+    Die Marke "170 richtig" ist an deren 197 Bilder gebunden. Ein Lauf ueber
+    einen anderen Satz - etwa die vierte, stilgemischte Messlatte - misst
+    dieselbe Groesse an einem anderen Bestand; die Marke daraufhin anzuwenden
+    waere ein stilles Verschieben des Massstabs in beide Richtungen.
+    """
+    return tuple(saetze) == tuple(osd_goldmessung.SAETZE)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--kandidat", type=Path, required=True)
     p.add_argument("--gold-wurzel", type=Path, default=GOLD_WURZEL)
     p.add_argument("--bericht-ordner", type=Path, default=BERICHT_ORDNER)
+    p.add_argument("--satz", action="append",
+                   help="Goldsatz statt der drei Standardsaetze. Mehrfach "
+                        "moeglich. Ein solcher Lauf ist eine Zusatzmessung und "
+                        "kann die Freigabemarke nicht erreichen.")
     args = p.parse_args(argv)
+    saetze_namen = tuple(args.satz or osd_goldmessung.SAETZE)
 
     manifest_pfad = args.kandidat / "manifest.json"
     if not manifest_pfad.is_file():
@@ -85,7 +101,7 @@ def main(argv=None) -> int:
     # "nicht_gelesen" verschwinden. messe_satz() ruft lese() seinerseits
     # ebenfalls ohne eigenes try/except auf - beide Seiten bleiben fail-closed.
     saetze = [osd_goldmessung.messe_satz(args.gold_wurzel / name, lese)
-              for name in osd_goldmessung.SAETZE]
+              for name in saetze_namen]
 
     gesamt = {
         "bilder": sum(s["bilder"] for s in saetze),
@@ -96,6 +112,8 @@ def main(argv=None) -> int:
         # vier - ohne dieses Feld summiert sich die Tabelle nicht immer zu
         # "bilder", ohne dass das irgendwo sichtbar wird.
         "ohne_sollwert": sum(s["ohne_sollwert"] for s in saetze),
+        # Teilmenge von 'falsch': erfundene Zahlen auf Bildern ohne Anzeige.
+        "erfunden": sum(s.get("erfunden", 0) for s in saetze),
     }
 
     print(f"Kandidat: {manifest['kandidat_id']}  Schwelle {schwelle}")
@@ -105,13 +123,23 @@ def main(argv=None) -> int:
               f"{s['falsch']:>8}{s['nicht_gelesen']:>12}{s['ohne_sollwert']:>11}")
     print(f"{'GESAMT':<14}{gesamt['bilder']:>8}{gesamt['richtig']:>9}"
           f"{gesamt['falsch']:>8}{gesamt['nicht_gelesen']:>12}{gesamt['ohne_sollwert']:>11}")
+    if gesamt["erfunden"]:
+        print(f"  davon erfunden (Lesung auf Bild ohne Anzeige): {gesamt['erfunden']}")
     print()
-    print(f"Freigabemarke: null falsch UND mindestens {FREIGABE_MINDEST_RICHTIG} richtig.")
-    erreicht = freigabe_erreicht(gesamt)
-    if erreicht:
-        print("ERREICHT.")
+
+    freigabelauf = ist_freigabelauf(saetze_namen)
+    if not freigabelauf:
+        erreicht = None
+        print("Zusatzmessung auf " + ", ".join(saetze_namen) + ".")
+        print("Die Freigabemarke gilt nur fuer die drei Standardsaetze und wird "
+              "hier NICHT beurteilt.")
     else:
-        print("NICHT erreicht - der Kandidat bleibt diagnostic_not_deployed.")
+        print(f"Freigabemarke: null falsch UND mindestens {FREIGABE_MINDEST_RICHTIG} richtig.")
+        erreicht = freigabe_erreicht(gesamt)
+        if erreicht:
+            print("ERREICHT.")
+        else:
+            print("NICHT erreicht - der Kandidat bleibt diagnostic_not_deployed.")
 
     bericht = {
         "schema": "osd_modell_goldmessung_v1",
@@ -124,7 +152,12 @@ def main(argv=None) -> int:
         "code_sha256": code_hashes(),
         "schwelle": schwelle,
         "gesamt": gesamt,
+        # null (nicht false) bei einer Zusatzmessung: Die Marke ist dort nicht
+        # anwendbar, und "false" waere als bestandene Pruefung mit schlechtem
+        # Ergebnis lesbar statt als ungeprueft.
         "freigabe_erreicht": erreicht,
+        "freigabelauf": freigabelauf,
+        "gemessene_saetze": list(saetze_namen),
         "saetze": saetze,
     }
     args.bericht_ordner.mkdir(parents=True, exist_ok=True)

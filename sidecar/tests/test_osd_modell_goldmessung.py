@@ -239,6 +239,10 @@ def test_schreibt_bericht_wenn_noch_keiner_existiert(tmp_path, monkeypatch):
     assert bericht["schwelle"] == 0.42
     assert bericht["gesamt"] == {
         "bilder": 0, "richtig": 0, "falsch": 0, "nicht_gelesen": 0, "ohne_sollwert": 0,
+        # Teilmenge von 'falsch': erfundene Zahlen auf Bildern ohne Anzeige.
+        # Absichtlich mitfixiert - ein fehlendes Feld im Bericht heisst, dass
+        # dieser Fehlertyp irgendwo unterwegs unsichtbar geworden ist.
+        "erfunden": 0,
     }
     assert bericht["freigabe_erreicht"] is False
     assert [s["satz"] for s in bericht["saetze"]] == list(osd_goldmessung.SAETZE)
@@ -329,3 +333,109 @@ def test_freigabe_nicht_erreicht_trotz_genug_richtig_bei_einem_falschen():
 
 def test_freigabe_erreicht_mit_deutlich_mehr_als_der_mindestzahl():
     assert goldmessung.freigabe_erreicht({"falsch": 0, "richtig": 197}) is True
+
+
+# ---------------------------------------------------------------------------
+# Vierte Messlatte (2026-08-17): Bilder OHNE Anzeige. Eine Lesung darauf ist
+# eine erfundene Zahl und muss als 'falsch' zaehlen - sie wandert sonst
+# unbemerkt ins Protokoll. Die drei alten Saetze duerfen sich dadurch nicht
+# aendern, und die Freigabemarke darf sich nicht stillschweigend verschieben.
+# ---------------------------------------------------------------------------
+
+def _goldsatz_ohne_anzeige(ordner: Path, name: str) -> None:
+    """Eintrag mit ausdruecklichem menschlich_lesbar=false - so schreibt es
+    osd_goldsatz.friere_ein() fuer ein Bild ohne sichtbare Anzeige."""
+    satz = ordner / name
+    (satz / "frames").mkdir(parents=True)
+    bild = satz / "frames" / "f0001.jpg"
+    Image.new("RGB", (16, 16), (5, 5, 5)).save(bild)
+    manifest = {
+        "schema_version": 1,
+        "name": name,
+        "eintraege": [{
+            "nr": 1,
+            "datei": "f0001.jpg",
+            "haltung": "1-2",
+            "bild_sha256": hashlib.sha256(bild.read_bytes()).hexdigest(),
+            "menschlich_lesbar": False,
+            "meter": None,
+        }],
+    }
+    (satz / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False),
+                                        encoding="utf-8")
+
+
+def test_lesung_auf_bild_ohne_anzeige_zaehlt_als_falsch(tmp_path):
+    gold_wurzel = tmp_path / "gold"
+    _goldsatz_ohne_anzeige(gold_wurzel, "osd_mix_v1")
+
+    ergebnis = osd_goldmessung.messe_satz(gold_wurzel / "osd_mix_v1",
+                                          lambda _bild: {"meter": 12.5})
+
+    assert ergebnis["falsch"] == 1
+    assert ergebnis["erfunden"] == 1
+    assert ergebnis["ohne_sollwert"] == 0
+    assert ergebnis["faelle"][0]["grund"] == "erfunden"
+
+
+def test_keine_lesung_auf_bild_ohne_anzeige_ist_richtiges_verhalten(tmp_path):
+    """Nichts zu lesen, wo nichts steht, ist kein Fehler - aber auch kein
+    Treffer: der Satz hat dort keinen Sollwert."""
+    gold_wurzel = tmp_path / "gold"
+    _goldsatz_ohne_anzeige(gold_wurzel, "osd_mix_v1")
+
+    ergebnis = osd_goldmessung.messe_satz(gold_wurzel / "osd_mix_v1",
+                                          lambda _bild: {"meter": None})
+
+    assert ergebnis["falsch"] == 0
+    assert ergebnis["erfunden"] == 0
+    assert ergebnis["nicht_gelesen"] == 1
+
+
+def test_alter_eintrag_ohne_das_feld_bleibt_ohne_sollwert(tmp_path):
+    """Die drei eingefrorenen Saetze tragen menschlich_lesbar nur mit true.
+    Ein Eintrag ohne das Feld darf sein Verhalten NICHT aendern, sonst sind
+    frueher gemessene Berichte nicht mehr vergleichbar."""
+    gold_wurzel = tmp_path / "gold"
+    _goldsatz_ohne_sollwert(gold_wurzel, "osd_alt_v1")
+
+    ergebnis = osd_goldmessung.messe_satz(gold_wurzel / "osd_alt_v1",
+                                          lambda _bild: {"meter": 12.5})
+
+    assert ergebnis["ohne_sollwert"] == 1
+    assert ergebnis["falsch"] == 0
+    assert ergebnis["erfunden"] == 0
+
+
+def test_zusatzmessung_beurteilt_die_freigabemarke_nicht(tmp_path, monkeypatch, capsys):
+    kandidat = _kandidat(tmp_path, schwelle=0.42)
+    gold_wurzel = tmp_path / "gold"
+    _goldsatz_mit_einem_bild(gold_wurzel, "osd_mix_v1", soll=1.0)
+    monkeypatch.setattr(
+        osd_modell_leser, "baue_modell_leser",
+        lambda _k, _s: (lambda _bild: {"meter": 1.0}))
+
+    rc = goldmessung.main([
+        "--kandidat", str(kandidat),
+        "--gold-wurzel", str(gold_wurzel),
+        "--bericht-ordner", str(tmp_path / "reports"),
+        "--satz", "osd_mix_v1",
+    ])
+
+    assert rc == 0
+    ausgabe = capsys.readouterr().out
+    assert "Zusatzmessung" in ausgabe
+    assert "ERREICHT" not in ausgabe
+    bericht = json.loads((tmp_path / "reports" /
+                          "osd_modell_goldmessung_osd_zeichen_test.json")
+                         .read_text(encoding="utf-8"))
+    assert bericht["freigabe_erreicht"] is None
+    assert bericht["freigabelauf"] is False
+    assert bericht["gemessene_saetze"] == ["osd_mix_v1"]
+
+
+def test_ist_freigabelauf_nur_bei_den_drei_standardsaetzen():
+    assert goldmessung.ist_freigabelauf(osd_goldmessung.SAETZE) is True
+    assert goldmessung.ist_freigabelauf(("osd_mix_v1",)) is False
+    assert goldmessung.ist_freigabelauf(
+        osd_goldmessung.SAETZE + ("osd_mix_v1",)) is False
