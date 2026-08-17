@@ -34,17 +34,13 @@ _WURZEL = Path(__file__).resolve().parents[2]
 if str(_WURZEL / "sidecar") not in sys.path:
     sys.path.insert(0, str(_WURZEL / "sidecar"))
 
-from sidecar import osd_meter
+from sidecar import osd_modell
 
 
 def zonen_box(breite: int, hoehe: int) -> tuple[int, int, int, int]:
     """Pixelkasten (links, oben, rechts, unten) der Zone "unten_rechts" fuer
     ein Bild dieser Groesse - dieselbe Rundung wie osd_meter.glyphenmaske()."""
-    links, oben, rechts, unten = osd_meter.ZONEN["unten_rechts"]
-    return (
-        round(links * breite), round(oben * hoehe),
-        round(rechts * breite), round(unten * hoehe),
-    )
+    return osd_modell.zonen_box(breite, hoehe)
 
 
 def schneide_zone(bild: Image.Image) -> tuple[Image.Image, tuple[int, int]]:
@@ -54,6 +50,4 @@ def schneide_zone(bild: Image.Image) -> tuple[Image.Image, tuple[int, int]]:
     Vollbildkoordinaten (z.B. aus osd_meter.boxen_aus_maske()) auf den
     Ausschnitt umzurechnen.
     """
-    breite, hoehe = bild.size
-    kasten = zonen_box(breite, hoehe)
-    return bild.crop(kasten), (kasten[0], kasten[1])
+    return osd_modell.schneide_zone(bild)

@@ -1182,6 +1182,38 @@ Material bestaetigt. Der eine verbleibende falsche Wert (13,8 -> 13,88) bekommt
 im ganzen Faecher nur eine Stimme; dort gibt es keine Mehrheit, die ihn
 ueberstimmen koennte.
 
+### OSD-Modell als diagnostischer Rueckfall verdrahtet und gemessen (2026-08-17)
+
+`osd_meter.lese_meter` besitzt additiv einen optionalen Modell-Rueckfall. Er wird
+erst nach Vorlagenleser sowie beiden Tesseract-Wegen aufgerufen und kann deshalb
+keinen vorhandenen Wert ersetzen. Der Bogen-Copilot reicht ihn nur bei
+`SEWER_SIDECAR_OSD_MODEL_FALLBACK_ENABLED=true` durch; Standard ist `false`.
+Damit ist die Kette messbar, aber noch nicht produktiv freigegeben.
+
+Der Laufzeitanschluss `models/osd_model_wrapper.py` bindet fest den Kandidaten
+`osd_zeichen_c668e35d59cb`, den Gewicht-SHA-256
+`c668e35d59cb4feba82b60b857663a11ac6f493104d03bf1b0414103a4a75845`
+und die Schwelle 0,25. Er akzeptiert nur den Status `diagnostic_not_deployed`,
+die feste 15er-Zeichenkarte und `weights/best.pt`. Das Gewicht wird vor dem
+Laden aus einer privaten, erneut geprueften Momentaufnahme geoeffnet. Das Modell
+belegt den eigenen, durch Busy-Lease und Watchdog geschuetzten GPU-Platz
+`YOLO_OSD`; es ersetzt weder Standard- noch BCC-Modell.
+
+`osd_kettenmessung.py` hat die vier bereits verwendeten Goldsaetze auf exakt
+demselben Stand verglichen. Ergebnis: Vorlagenkette 194 richtig / 1 falsch,
+Kette 224 richtig / 1 falsch. Das Modell liefert 30 neue richtige Werte und
+keinen neuen falschen. Mit dem echten Bogen-Kandidaten gleichzeitig geladen
+belegt der OSD-Rueckfall zusaetzlich rund 9 MB VRAM. Warm braucht eine
+Modelllesung im Mittel 61 ms (Median 35 ms, p95 115 ms); ueber alle 317 Bilder
+steigt die mittlere Zeit um rund 24 ms je Bild. Bericht-SHA-256:
+`ef25b19df5ae1a169ea91da5b3e14e931b5c196084c596aa05732c810dcd1093`.
+
+Diese Messung waehlt die Kette, erteilt aber keine Produktfreigabe: Alle vier
+Saetze einschliesslich `osd_mix_v1` sind jetzt fuer diese Entscheidung verwendet.
+Vor dem Einschalten des Standardschalters ist ein frischer, unberuehrter Bestand
+Pflicht. Die 22 Sollbilder ohne gefundene Zeichen bleiben eine getrennte Baustelle
+vor der Erkennung.
+
 `training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
 reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
 Gegenrichtung und akzeptiert nur die acht gueltigen BCC-Untercodes. Der aktuelle

@@ -130,6 +130,27 @@ def normiere_ausschnitt(bild: Image.Image, ziel_hoehe: int = ZIEL_HOEHE) -> Imag
     return bild.resize((max(1, round(breite * faktor)), ziel_hoehe), Image.BICUBIC)
 
 
+def zonen_box(breite: int, hoehe: int) -> tuple[int, int, int, int]:
+    """Pixelkasten der unteren rechten OSD-Zone.
+
+    Die Rundung entspricht exakt ``osd_meter.glyphenmaske``. Training,
+    Messung und Sidecar-Laufzeit muessen dadurch denselben Ausschnitt sehen.
+    """
+    links, oben, rechts, unten = osd_meter.ZONEN["unten_rechts"]
+    return (
+        round(links * breite),
+        round(oben * hoehe),
+        round(rechts * breite),
+        round(unten * hoehe),
+    )
+
+
+def schneide_zone(bild: Image.Image) -> tuple[Image.Image, tuple[int, int]]:
+    """Schneidet die OSD-Zone aus und liefert Ausschnitt sowie Versatz."""
+    kasten = zonen_box(*bild.size)
+    return bild.crop(kasten), (kasten[0], kasten[1])
+
+
 def zu_zeichenfolge(
     erkennungen: list[tuple[int, float, float, float, float, float]],
 ) -> tuple[str, float]:
@@ -159,3 +180,32 @@ def zu_zeichenfolge(
             return "", 0.0
 
     return folge, min(e[5] for e in behalten)
+
+
+def ergebnis_aus_erkennungen(
+    erkennungen: list[tuple[int, float, float, float, float, float]],
+    stil: str,
+    schwelle: float,
+    format: str | None = None,
+) -> dict:
+    """Baut aus Modellboxen dieselbe rohe Lesung wie der Vorlagenleser."""
+    folge, kleinste_sicherheit = zu_zeichenfolge(erkennungen)
+    konfidenz_min = kleinste_sicherheit if erkennungen else None
+
+    meter = None
+    leseweg = None
+    if (len(folge) >= TOR_MINDESTZEICHEN
+            and konfidenz_min is not None
+            and konfidenz_min >= schwelle):
+        wert = osd_meter.parse_meter(folge, stil, format)
+        if wert is not None:
+            meter = wert
+            leseweg = "modell"
+
+    return {
+        "meter": meter,
+        "zeichenfolge": folge,
+        "stil": stil,
+        "leseweg": leseweg,
+        "konfidenz_min": konfidenz_min,
+    }

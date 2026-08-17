@@ -194,3 +194,21 @@ def test_gemischte_erkennung_mit_unbekannter_klasse_verwirft_die_ganze_lesung():
 
     assert folge == ""
     assert sicherheit == 0.0
+
+
+def test_modellergebnis_beachtet_den_format_lock():
+    erkennungen = [
+        (osd_meter.ZEICHEN.find("0"), 0.2, 0.5, 0.1, 0.3, 0.9),
+        (osd_meter.ZEICHEN.find("0"), 0.5, 0.5, 0.1, 0.3, 0.9),
+        (osd_meter.ZEICHEN.find("7"), 0.8, 0.5, 0.1, 0.3, 0.9),
+    ]
+
+    auto = osd_modell.ergebnis_aus_erkennungen(
+        erkennungen, "dunkel", schwelle=0.25)
+    vierziffern = osd_modell.ergebnis_aus_erkennungen(
+        erkennungen, "dunkel", schwelle=0.25, format="vierziffern")
+
+    assert auto["meter"] == 0.7
+    assert auto["leseweg"] == "modell"
+    assert vierziffern["meter"] is None
+    assert vierziffern["leseweg"] is None

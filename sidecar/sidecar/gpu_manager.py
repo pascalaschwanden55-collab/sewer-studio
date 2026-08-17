@@ -40,6 +40,7 @@ class ModelSlot(str, enum.Enum):
     NONE = "none"
     YOLO = "yolo"
     YOLO_TEST = "yolo_test"
+    YOLO_OSD = "yolo_osd"
     DINO = "dino"
     SAM = "sam"
     # Logische Slots (Paket 2/A5): besitzen KEINEN SlotState/VRAM-Eintrag und werden
@@ -59,6 +60,7 @@ class ModelSlot(str, enum.Enum):
 MODEL_VRAM_ESTIMATE_GB: dict[ModelSlot, float] = {
     ModelSlot.YOLO: 3.0,
     ModelSlot.YOLO_TEST: 3.0,
+    ModelSlot.YOLO_OSD: 0.5,
     ModelSlot.DINO: 4.0,
     ModelSlot.SAM: 6.0,
 }
@@ -234,6 +236,7 @@ class GpuModelManager:
         self._locks: dict[ModelSlot, threading.Lock] = {
             ModelSlot.YOLO: threading.Lock(),
             ModelSlot.YOLO_TEST: threading.Lock(),
+            ModelSlot.YOLO_OSD: threading.Lock(),
             ModelSlot.DINO: threading.Lock(),
             ModelSlot.SAM: threading.Lock(),
         }

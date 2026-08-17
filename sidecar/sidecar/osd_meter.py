@@ -34,6 +34,7 @@ import shutil
 import subprocess
 from functools import lru_cache
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -881,6 +882,7 @@ def lese_meter(
     format: str | None = None,
     debug_dir: Path | None = None,
     debug_name: str | None = None,
+    modell_leser: Callable[[Image.Image, str | None], dict] | None = None,
 ) -> dict:
     """Liest den Meterstand aus einem PIL-Bild.
 
@@ -898,6 +900,7 @@ def lese_meter(
         konfidenzen.append(round(wert, 3))
     meter = parse_meter(zeichenfolge, stil, format)
     leseweg = "vorlagen" if meter is not None else None
+    modell_konfidenz_min = None
     tesseract_text = ""
     if meter is None and format != FORMAT_EIN_DEZIMAL:
         meter, tesseract_text = _lese_vierziffern_mit_tesseract(bild)
@@ -929,6 +932,19 @@ def lese_meter(
             leseweg = "tesseract_zwei_dezimal"
             tesseract_text = zwei_text or tesseract_text
 
+    if meter is None and modell_leser is not None:
+        # Der trainierte Zeichenleser ist nur ein letzter Rueckfall. Eine
+        # vorhandene Lesung der bisherigen Kette wird nie durch das Modell
+        # ersetzt. Der Aufrufer entscheidet, ob der noch nicht produktiv
+        # freigegebene Kandidat ueberhaupt mitgegeben wird.
+        modell_ergebnis = modell_leser(bild, format)
+        if modell_ergebnis.get("meter") is not None:
+            meter = modell_ergebnis["meter"]
+            leseweg = "modell"
+            zeichenfolge = modell_ergebnis.get("zeichenfolge", zeichenfolge)
+            stil = modell_ergebnis.get("stil", stil)
+            modell_konfidenz_min = modell_ergebnis.get("konfidenz_min")
+
     if debug_dir is not None and debug_name is not None:
         debug_dir.mkdir(parents=True, exist_ok=True)
         d = ImageDraw.Draw(bild)
@@ -942,7 +958,11 @@ def lese_meter(
         "meter": meter,
         "stil": stil,
         "glyphen": len(boxen),
-        "konfidenz_min": min(konfidenzen) if konfidenzen else None,
+        "konfidenz_min": (
+            modell_konfidenz_min
+            if leseweg == "modell"
+            else (min(konfidenzen) if konfidenzen else None)
+        ),
         "leseweg": leseweg,
         "tesseract_text": tesseract_text,
     }

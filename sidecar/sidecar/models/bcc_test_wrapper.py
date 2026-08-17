@@ -27,7 +27,7 @@ from .. import osd_meter
 from ..config import settings
 from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
 from ..schemas.detection import BccTestYoloResponse, YoloDetection
-from . import yolo_wrapper, yolo_test_slot
+from . import osd_model_wrapper, yolo_wrapper, yolo_test_slot
 
 logger = logging.getLogger(__name__)
 
@@ -380,8 +380,17 @@ def _lese_meter_sicher(image, meter_format: str | None) -> float | None:
     """
 
     try:
+        modell_leser = (
+            osd_model_wrapper.lese
+            if settings.osd_model_fallback_enabled
+            else None
+        )
         return osd_meter.lese_meter(
-            image, osd_meter.get_templates(), format=meter_format)["meter"]
+            image,
+            osd_meter.get_templates(),
+            format=meter_format,
+            modell_leser=modell_leser,
+        )["meter"]
     except Exception:
         logger.warning("OSD-Meterlesung fehlgeschlagen", exc_info=True)
         return None

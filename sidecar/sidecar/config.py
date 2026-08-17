@@ -45,6 +45,10 @@ class SidecarSettings(BaseSettings):
     # Getrennter, nur lesender Root fuer nicht produktive Trainingskandidaten.
     # Der BCC-Testendpunkt akzeptiert keinen freien Modellpfad vom Client.
     training_model_candidates_root: str = r"C:\KI_BRAIN\training\models\candidates"
+    # Der OSD-Zeichenkandidat bleibt bis zur getrennten Freigabe aus. Ein
+    # diagnostischer Lauf kann den fest angehefteten Rueckfall ausdruecklich
+    # einschalten; ID, Gewicht und Schwelle sind nicht frei konfigurierbar.
+    osd_model_fallback_enabled: bool = False
     # Freigegebene Bild-Einordner aus Lernstufen (Rohranfang, Rohrende). Nur was
     # hier mit gueltiger, hashgebundener Freigabedatei liegt, darf gerechnet
     # werden — ein ungemessenes Modell bleibt gesperrt.

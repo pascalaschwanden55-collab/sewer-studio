@@ -40,7 +40,6 @@ if str(_SKRIPTE) not in sys.path:
     sys.path.insert(0, str(_SKRIPTE))
 
 from sidecar import osd_meter, osd_modell  # noqa: E402  (Pfad muss vorher stehen)
-from osd_crop import schneide_zone  # noqa: E402  (Pfad muss vorher stehen)
 import osd_crop  # noqa: E402  (nur fuer den Modul-SHA-256 in code_hashes())
 
 # YOLO-interne Box-Vorfilterung in predict() - NICHT die Zeichensicherheits-
@@ -82,7 +81,7 @@ def zuschnitt_fuer_leser(bild: Image.Image) -> Image.Image:
     werden kann (Fix-Runde 1, Aufgabe 3: Ernte und Leser muessen bytegleich
     zuschneiden, siehe osd_crop.py).
     """
-    return schneide_zone(bild)[0]
+    return osd_modell.schneide_zone(bild)[0]
 
 
 def code_hashes() -> dict[str, str]:
@@ -143,6 +142,7 @@ def _ergebnis_aus_erkennungen(
     erkennungen: list[tuple[int, float, float, float, float, float]],
     stil: str,
     schwelle: float,
+    format: str | None = None,
 ) -> dict:
     """Reine Logik: aus Erkennungen + Stil + Schwelle wird das Ergebnis-Dict.
 
@@ -155,34 +155,19 @@ def _ergebnis_aus_erkennungen(
     mindestens die uebergebene Schwelle betraegt UND parse_meter daraus einen
     Wert ableiten kann.
     """
-    folge, kleinste_sicherheit = osd_modell.zu_zeichenfolge(erkennungen)
-    konfidenz_min = kleinste_sicherheit if erkennungen else None
-
-    meter = None
-    leseweg = None
-    if (len(folge) >= osd_modell.TOR_MINDESTZEICHEN
-            and konfidenz_min is not None and konfidenz_min >= schwelle):
-        wert = osd_meter.parse_meter(folge, stil)
-        if wert is not None:
-            meter = wert
-            leseweg = "modell"
-
-    return {
-        "meter": meter,
-        "zeichenfolge": folge,
-        "stil": stil,
-        "leseweg": leseweg,
-        "konfidenz_min": konfidenz_min,
-    }
+    return osd_modell.ergebnis_aus_erkennungen(
+        erkennungen, stil, schwelle, format)
 
 
-def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]:
-    """Baut die geteilte Lesefunktion fuer genau diesen Kandidaten.
+def baue_modell_bildleser(
+    kandidat: Path,
+    schwelle: float,
+) -> Callable[[Image.Image, str | None], dict]:
+    """Baut die Lesefunktion fuer bereits geladene PIL-Bilder.
 
     Prueft das Gewicht gegen den im Manifest gebundenen SHA-256 BEVOR das
-    Modell geladen wird - ein abweichendes Gewicht darf nie unbemerkt laufen.
-    Das YOLO-Modell wird genau einmal geladen; die zurueckgegebene Funktion
-    liest beliebig viele Bilder mit demselben geladenen Modell.
+    Modell geladen wird. Das YOLO-Modell wird genau einmal geladen; die
+    zurueckgegebene Funktion liest beliebig viele Bilder mit demselben Modell.
 
     Rueckgabe je Bild (Form wie osd_meter.lese_meter):
     {"meter", "zeichenfolge", "stil", "leseweg", "konfidenz_min"} - siehe
@@ -214,10 +199,8 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
     modell = YOLO(str(gewicht_pfad))
     imgsz = int(manifest["imgsz"])
 
-    def lese(bild_pfad: Path) -> dict:
-        with Image.open(bild_pfad) as roh:
-            roh.load()
-            bild = roh.convert("RGB")
+    def lese(bild: Image.Image, format: str | None = None) -> dict:
+        bild = bild.convert("RGB")
         ausschnitt = zuschnitt_fuer_leser(bild)
         normiert = osd_modell.normiere_ausschnitt(ausschnitt)
 
@@ -240,6 +223,19 @@ def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]
                 erkennungen.append(
                     (int(klasse), x_mitte, y_mitte, box_b, box_h, float(sicherheit)))
 
-        return _ergebnis_aus_erkennungen(erkennungen, stil, schwelle)
+        return _ergebnis_aus_erkennungen(erkennungen, stil, schwelle, format)
+
+    return lese
+
+
+def baue_modell_leser(kandidat: Path, schwelle: float) -> Callable[[Path], dict]:
+    """Kompatible Dateipfad-Fassade fuer Kalibrierung und Messwerkzeuge."""
+    bild_lesen = baue_modell_bildleser(kandidat, schwelle)
+
+    def lese(bild_pfad: Path) -> dict:
+        with Image.open(bild_pfad) as roh:
+            roh.load()
+            bild = roh.convert("RGB")
+        return bild_lesen(bild, None)
 
     return lese

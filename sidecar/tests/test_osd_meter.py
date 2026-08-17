@@ -194,6 +194,51 @@ def test_ein_dezimal_format_ruft_vierziffern_rueckfall_nicht_auf(monkeypatch):
     assert ergebnis["meter"] is None
 
 
+def test_modell_rueckfall_laeuft_nur_wenn_alle_bisherigen_wege_schweigen(monkeypatch):
+    aufrufe = []
+    monkeypatch.setattr(
+        osd_meter, "_lese_vierziffern_mit_tesseract", lambda _bild: (None, ""))
+    monkeypatch.setattr(
+        osd_meter, "_lese_zwei_dezimal_mit_tesseract", lambda _bild: (None, ""))
+
+    def modell_lesen(_bild, format):
+        aufrufe.append(format)
+        return {
+            "meter": 12.3,
+            "zeichenfolge": "LZ1:12.3m",
+            "stil": "dunkel",
+            "leseweg": "modell",
+            "konfidenz_min": 0.71,
+        }
+
+    ergebnis = osd_meter.lese_meter(
+        Image.new("RGB", (640, 480), (120, 120, 120)),
+        _templates,
+        modell_leser=modell_lesen,
+    )
+
+    assert aufrufe == [None]
+    assert ergebnis["meter"] == pytest.approx(12.3)
+    assert ergebnis["leseweg"] == "modell"
+    assert ergebnis["zeichenfolge"] == "LZ1:12.3m"
+    assert ergebnis["konfidenz_min"] == pytest.approx(0.71)
+
+
+@braucht_templates
+def test_modell_rueckfall_bleibt_aus_wenn_vorlagenleser_liefert():
+    def nicht_aufrufen(_bild, _format):
+        raise AssertionError("Modell wurde trotz vorhandener Lesung aufgerufen")
+
+    ergebnis = osd_meter.lese_meter(
+        _osd_bild("LZ2: 14.1m"),
+        _templates,
+        modell_leser=nicht_aufrufen,
+    )
+
+    assert ergebnis["meter"] == pytest.approx(14.1)
+    assert ergebnis["leseweg"] == "vorlagen"
+
+
 def test_vierziffern_rueckfall_startet_nur_bei_schmaler_zeichenzeile():
     import numpy as np
 
@@ -243,6 +288,26 @@ def test_wrapper_meterlesung_laesst_die_erkennung_nie_ausfallen():
     # nicht zum Abbruch — auf dem HTTP-Weg verhindert das Schema diesen Fall.
     bild = _osd_bild("LZ2: 14.1m")
     assert bcc_test_wrapper._lese_meter_sicher(bild, "sechsziffern") is None
+
+
+def test_bcc_wrapper_reicht_modell_nur_beim_diagnoseschalter_durch(monkeypatch):
+    from sidecar.config import settings
+    from sidecar.models import bcc_test_wrapper, osd_model_wrapper
+
+    gesehen = []
+
+    def fake_lese_meter(_bild, _templates, **kwargs):
+        gesehen.append(kwargs.get("modell_leser"))
+        return {"meter": None}
+
+    monkeypatch.setattr(osd_meter, "lese_meter", fake_lese_meter)
+    monkeypatch.setattr(settings, "osd_model_fallback_enabled", False)
+    assert bcc_test_wrapper._lese_meter_sicher(Image.new("RGB", (10, 10)), None) is None
+
+    monkeypatch.setattr(settings, "osd_model_fallback_enabled", True)
+    assert bcc_test_wrapper._lese_meter_sicher(Image.new("RGB", (10, 10)), None) is None
+
+    assert gesehen == [None, osd_model_wrapper.lese]
 
 
 def test_bruchstueck_ohne_beschriftung_wird_nicht_geliefert():
