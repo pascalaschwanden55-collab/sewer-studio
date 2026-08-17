@@ -409,3 +409,105 @@ def test_ohne_erkennbare_zeile_kein_veto():
     maske[10:24, 40:46] = 255
     maske[16:18, 28:32] = 255
     assert _hat_vorzeichenstrich(maske) is False
+
+
+# ---------------------------------------------------------------------------
+# Vierziffern-Mehrheit (2026-08-17). Der Pfad nahm den ERSTEN vollstaendigen
+# Treffer einer einzigen Schwelle. Eine verlesene Ziffer wurde dadurch mit
+# voller Zuversicht geliefert: LZ1:+0021.70m ergab 24,7 (gemessen, f0067 in
+# osd_mix_v1). Der Zwei-Dezimal-Pfad hat gegen genau diesen Fehler ein Quorum
+# ueber fuenf Schwellen - dem Vierziffern-Pfad fehlte es.
+#
+# Gemessen ueber die 30 Bilder aller vier Goldsaetze, die diesen Pfad nutzen:
+# Mehrheit ohne Mindestzahl bringt richtig 28 -> 29 und falsch 2 -> 1. Eine
+# Mindestzahl von 2 Stimmen brachte falsch auf 0, kostete aber 8 richtige Werte
+# (10 bei 3 Stimmen) - nach der Regel "ein falscher Wert ist teurer als zehn
+# fehlende" gerade kein Gewinn mehr.
+# ---------------------------------------------------------------------------
+
+def test_mehrheit_waehlt_den_haeufigsten_wert():
+    from sidecar.osd_meter import _mehrheit
+
+    assert _mehrheit({24.7: 1, 21.7: 3}) == pytest.approx(21.7)
+
+
+def test_mehrheit_ohne_stimmen_ist_none():
+    from sidecar.osd_meter import _mehrheit
+
+    assert _mehrheit({}) is None
+
+
+def test_mehrheit_nimmt_auch_eine_einzelne_stimme():
+    """Eine Mindeststimmenzahl kostete 8 belegte Goldwerte - Einzelstimmen
+    sind auf diesem Pfad zu 10 von 11 Faellen richtig."""
+    from sidecar.osd_meter import _mehrheit
+
+    assert _mehrheit({3.2: 1}) == pytest.approx(3.2)
+
+
+def test_mehrheit_entscheidet_gleichstand_deterministisch():
+    """Gleichstand darf nicht von der Aufzaehlungsreihenfolge abhaengen -
+    sonst ist eine Messung nicht wiederholbar."""
+    from sidecar.osd_meter import _mehrheit
+
+    assert _mehrheit({5.0: 2, 9.0: 2}) == _mehrheit({9.0: 2, 5.0: 2})
+
+
+def test_vierziffern_faecher_liefert_mehr_schwellen_als_zuvor():
+    """Ohne mehrere Schwellen gibt es nichts zu vergleichen."""
+    import numpy as np
+    from sidecar.osd_meter import _vierziffern_masken, _zeilenkandidaten
+
+    # Helle Zeichenzeile auf dunklem Grund, genug Zeichen fuer den Kandidatentest
+    z = np.zeros((40, 200, 3), dtype="uint8")
+    for k in range(12):
+        z[12:28, 8 + k * 15:14 + k * 15] = 230
+
+    assert len(_vierziffern_masken(z)) > len(_zeilenkandidaten(z))
+
+
+def test_verlesene_ziffer_wird_von_der_mehrheit_ueberstimmt(monkeypatch):
+    """Der Kern des Fehlers: Die erste Schwelle darf nicht allein entscheiden.
+
+    Nachgestellt ist f0067 - eine Schwelle liest 24.7, drei lesen 21.7.
+    """
+    import numpy as np
+    from PIL import Image
+    from sidecar import osd_meter
+
+    monkeypatch.setattr(osd_meter, "_tesseract_pfad", lambda: "tesseract")
+    monkeypatch.setattr(osd_meter, "_vierziffern_masken",
+                        lambda _z: [np.zeros((10, 10), dtype="uint8")] * 4)
+    texte = iter([": +0024.70m", ": +0021.70m", ": +0021.70m", ": +0021.70m"])
+    monkeypatch.setattr(osd_meter, "_tesseract_aufrufen",
+                        lambda *_a, **_k: next(texte, ""))
+
+    meter, _text = osd_meter._lese_vierziffern_mit_tesseract(
+        Image.new("RGB", (720, 576), (0, 0, 0)))
+
+    assert meter == pytest.approx(21.7)
+
+
+def test_vierziffern_bricht_ab_sobald_zwei_schwellen_uebereinstimmen(monkeypatch):
+    """Der Pfad laeuft je Bild des Bogen-Copiloten. Zwei uebereinstimmende
+    Stimmen genuegen; danach werden keine weiteren Prozesse gestartet."""
+    import numpy as np
+    from PIL import Image
+    from sidecar import osd_meter
+
+    aufrufe = []
+    monkeypatch.setattr(osd_meter, "_tesseract_pfad", lambda: "tesseract")
+    monkeypatch.setattr(osd_meter, "_vierziffern_masken",
+                        lambda _z: [np.zeros((10, 10), dtype="uint8")] * 8)
+
+    def falscher_aufruf(*_a, **_k):
+        aufrufe.append(1)
+        return ": +0007.00m"
+
+    monkeypatch.setattr(osd_meter, "_tesseract_aufrufen", falscher_aufruf)
+
+    meter, _text = osd_meter._lese_vierziffern_mit_tesseract(
+        Image.new("RGB", (720, 576), (0, 0, 0)))
+
+    assert meter == pytest.approx(7.0)
+    assert len(aufrufe) == 2, f"{len(aufrufe)} Tesseract-Laeufe statt 2"

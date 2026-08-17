@@ -427,6 +427,60 @@ def _zeilenkandidaten(ausschnitt: np.ndarray) -> list[np.ndarray]:
     return [k for k in kandidaten if _ist_vierziffern_kandidat(k)]
 
 
+# Schwellenfaecher fuer den Vierziffern-Pfad (2026-08-17). Er nahm bis dahin den
+# ERSTEN vollstaendigen Treffer einer einzigen Schwelle; eine verlesene Ziffer
+# wurde damit mit voller Zuversicht geliefert (`LZ1:+0021.70m` ergab 24,7,
+# gemessen an f0067 in osd_mix_v1). Der Zwei-Dezimal-Pfad hat gegen genau diesen
+# Fehler ein Quorum ueber fuenf Schwellen - hier fehlte es.
+#
+# Die Anteile sind Bruchteile des 95. Perzentils der Zone, nicht feste
+# Grauwerte: Die Kastenhelligkeit schwankt je Geraet. Jeder Anteil wird in
+# beiden Polaritaeten versucht, weil das Archiv beide kennt.
+VIERZIFFERN_ANTEILE = (0.55, 0.62, 0.70, 0.78, 0.86)
+# Zwei uebereinstimmende Schwellen beenden die Suche. Der Pfad laeuft im
+# Bogen-Copiloten je Einzelbild, und ein voller Faecher waere rund elf
+# Tesseract-Prozesse statt bisher hoechstens zwei.
+VIERZIFFERN_ABBRUCH_STIMMEN = 2
+
+
+def _mehrheit(stimmen: dict[float, int]) -> float | None:
+    """Haeufigster Wert; bei Gleichstand der kleinere - immer deterministisch.
+
+    Ohne Mindeststimmenzahl: Eine solche brachte auf den 30 Goldbildern dieses
+    Pfades zwar null falsche Werte, kostete aber 8 belegte richtige (10 bei drei
+    Stimmen). Einzelstimmen sind hier in 10 von 11 Faellen richtig.
+    """
+    if not stimmen:
+        return None
+    return max(stimmen.items(), key=lambda p: (p[1], -p[0]))[0]
+
+
+def _vierziffern_masken(ausschnitt: np.ndarray) -> list[np.ndarray]:
+    """Bisherige Kandidaten PLUS Schwellenfaecher, Text jeweils weiss.
+
+    Die bisherigen Kandidaten stehen bewusst VORNE: Sie haben den geprueften
+    Goldbestand gelesen, und bei nur einer Stimme bleibt ihr Ergebnis dadurch
+    unveraendert.
+    """
+    import cv2
+
+    if ausschnitt.size == 0:
+        return []
+    masken = list(_zeilenkandidaten(ausschnitt))
+    grau = cv2.cvtColor(ausschnitt, cv2.COLOR_RGB2GRAY)
+    bezug = float(np.percentile(grau, 95))
+    for anteil in VIERZIFFERN_ANTEILE:
+        for schwelle, art in ((int(round(bezug * anteil)), cv2.THRESH_BINARY),
+                              (int(round(bezug * (1.0 - anteil))),
+                               cv2.THRESH_BINARY_INV)):
+            if not 1 <= schwelle <= 254:
+                continue
+            _s, maske = cv2.threshold(grau, schwelle, 255, art)
+            if _ist_vierziffern_kandidat(maske):
+                masken.append(maske)
+    return masken
+
+
 def _lese_vierziffern_mit_tesseract(bild: Image.Image) -> tuple[float | None, str]:
     """Enger Rueckfallweg fuer die vollstaendige Form `LZ1: + 0000.00 m`.
 
@@ -446,10 +500,11 @@ def _lese_vierziffern_mit_tesseract(bild: Image.Image) -> tuple[float | None, st
     arr = np.asarray(bild.convert("RGB"))
     h, w = arr.shape[:2]
     letzter_text = ""
+    stimmen: dict[float, int] = {}
     for zone in TESSERACT_ZONEN:
         x0, y0, x1, y1 = zone
         ausschnitt = arr[round(y0 * h):round(y1 * h), round(x0 * w):round(x1 * w)]
-        for binaer in _zeilenkandidaten(ausschnitt):
+        for binaer in _vierziffern_masken(ausschnitt):
             text = _tesseract_aufrufen(executable, binaer)
             if not text:
                 continue
@@ -460,9 +515,15 @@ def _lese_vierziffern_mit_tesseract(bild: Image.Image) -> tuple[float | None, st
             # und oeffnete zugleich den Weg, ein Datum ("05.09.2023") als
             # Meterstand zu lesen.
             meter = parse_meter(text, stil="hell", format=FORMAT_VIERZIFFERN)
-            if meter is not None:
+            if meter is None:
+                continue
+            stimmen[meter] = stimmen.get(meter, 0) + 1
+            # Nicht mehr der erste Treffer entscheidet, sondern die Mehrheit -
+            # aber sobald zwei Schwellen uebereinstimmen, ist weiteres Suchen
+            # verlorene Rechenzeit auf einem Pfad, der je Einzelbild laeuft.
+            if stimmen[meter] >= VIERZIFFERN_ABBRUCH_STIMMEN:
                 return meter, text
-    return None, letzter_text
+    return _mehrheit(stimmen), letzter_text
 
 
 # --- Zusatzweg: zwei Nachkommastellen auf hellem OSD-Kasten -----------------
