@@ -31,12 +31,28 @@ public static class AtomicTextFileWriter
         }
     }
 
-    public static void WriteAllText(string path, string content)
+    /// <param name="durable">
+    /// Erzwingt vor dem Umbenennen ein echtes Schreiben auf den Datentraeger.
+    ///
+    /// Ohne das ist nur die HAELFTE atomar: Das Umbenennen fuehrt NTFS im Journal,
+    /// den Inhalt nicht. Faellt der Strom zwischen Schreiben und Puffer-Leerung
+    /// aus, ueberlebt die Umbenennung — und zurueck bleibt eine Datei mit
+    /// richtigem Namen und leerem oder halbem Inhalt (Codeaudit 2026-08-17).
+    ///
+    /// Ein Programmabsturz ist davon NICHT betroffen; der Puffer gehoert dem
+    /// Betriebssystem und ueberlebt ihn. Es geht allein um Stromausfall und
+    /// harten Reset.
+    ///
+    /// Bewusst abschaltbar: Das Leeren des Puffers kostet Zeit. Es gehoert an
+    /// die Stellen, an denen die Wiederherstellung spaeter auf den Inhalt baut —
+    /// Transaktionsmarker und Projektdatei —, nicht an Berichte und Exporte.
+    /// </param>
+    public static void WriteAllText(string path, string content, bool durable = false)
     {
         var write = PrepareWrite(path);
         try
         {
-            File.WriteAllText(write.TempPath, content);
+            WriteTemp(write.TempPath, content, encoding: null, durable);
             CompleteWrite(write);
         }
         catch
@@ -44,6 +60,31 @@ public static class AtomicTextFileWriter
             DeleteTemp(write.TempPath);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Schreibt die Zwischendatei und leert bei <paramref name="durable"/> den
+    /// Schreibpuffer bis auf den Datentraeger.
+    /// </summary>
+    private static void WriteTemp(string tempPath, string content, Encoding? encoding, bool durable)
+    {
+        if (!durable)
+        {
+            if (encoding is null)
+                File.WriteAllText(tempPath, content);
+            else
+                File.WriteAllText(tempPath, content, encoding);
+            return;
+        }
+
+        var bytes = (encoding ?? new UTF8Encoding(false)).GetBytes(content);
+        using var stream = new FileStream(
+            tempPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: 4096, FileOptions.WriteThrough);
+        stream.Write(bytes, 0, bytes.Length);
+        // Flush(true) reicht das Leeren bis zum Geraet durch — WriteThrough allein
+        // umgeht nur den Zwischenspeicher des Betriebssystems.
+        stream.Flush(flushToDisk: true);
     }
 
     public static void WriteAllText(string path, string content, Encoding encoding)

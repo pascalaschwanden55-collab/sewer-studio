@@ -24,7 +24,13 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
         ArgumentNullException.ThrowIfNull(marker);
 
         var json = JsonSerializer.Serialize(marker, Opt);
-        AtomicTextFileWriter.WriteAllText(MarkerPath(projectRoot), json);
+        // durable: Die gesamte Wiederherstellung baut darauf, dass ein vorhandener
+        // Marker auch lesbar ist. Ohne erzwungenes Schreiben auf den Datentraeger
+        // kann ein Stromausfall genau hier eine Datei mit richtigem Namen und
+        // leerem Inhalt hinterlassen — und dann blockiert das Projektoeffnen
+        // (Codeaudit 2026-08-17). Zwei Schreibvorgaenge je Import; die Kosten
+        // fallen nicht ins Gewicht.
+        AtomicTextFileWriter.WriteAllText(MarkerPath(projectRoot), json, durable: true);
     }
 
     public ImportTransactionJournalReadResult Read(string projectRoot)

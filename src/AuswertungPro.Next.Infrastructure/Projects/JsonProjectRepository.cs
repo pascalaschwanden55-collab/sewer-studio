@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Projects;
@@ -117,7 +119,12 @@ public sealed class JsonProjectRepository : IProjectRepository
             Directory.CreateDirectory(directory);
 
             tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-            File.WriteAllText(tempPath, json);
+            // Erzwungenes Schreiben auf den Datentraeger VOR dem Umbenennen. Das
+            // Umbenennen fuehrt NTFS im Journal, den Inhalt nicht — ein
+            // Stromausfall dazwischen hinterliess sonst eine projekt.json mit
+            // richtigem Namen und leerem Inhalt. Die .bak-Kopie aus File.Replace
+            // bleibt als zweites Netz (Codeaudit 2026-08-17).
+            WriteDurable(tempPath, json);
 
             if (File.Exists(fullPath))
             {
@@ -152,5 +159,20 @@ public sealed class JsonProjectRepository : IProjectRepository
                 try { File.Delete(tempPath); } catch { /* best effort cleanup */ }
             }
         }
+    }
+
+    /// <summary>
+    /// Schreibt die Zwischendatei und leert den Schreibpuffer bis auf den
+    /// Datentraeger. Erst danach darf umbenannt werden — sonst ist nur die
+    /// Umbenennung dauerhaft, der Inhalt aber nicht.
+    /// </summary>
+    private static void WriteDurable(string tempPath, string json)
+    {
+        var bytes = new UTF8Encoding(false).GetBytes(json);
+        using var stream = new FileStream(
+            tempPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: 4096, FileOptions.WriteThrough);
+        stream.Write(bytes, 0, bytes.Length);
+        stream.Flush(flushToDisk: true);
     }
 }
