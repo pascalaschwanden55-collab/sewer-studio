@@ -255,11 +255,16 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         if (finalCode.Length == 0)
             return FailedSave("Der bestaetigte VSA-Code fehlt.");
 
+        // Der Protokolleintrag kann "Meter unbekannt" ausdruecken (double?), das
+        // Goldsample konnte es nicht — die 0 sah hinterher aus wie Rohranfang.
+        // Das Kennzeichen haelt den Unterschied fest (Codeaudit 2026-08-17).
+        var meterIsUnknown = request.FinalEntry.MeterStart is null;
         var meterStart = request.FinalEntry.MeterStart ?? 0;
         var item = request.Draft.Item with
         {
             MeterStart = meterStart,
             MeterEnd = request.FinalEntry.MeterEnd ?? meterStart,
+            MeterIsUnknown = meterIsUnknown,
             IsStreckenschaden = request.FinalEntry.IsStreckenschaden
         };
         var decision = new WorkbenchDecision(

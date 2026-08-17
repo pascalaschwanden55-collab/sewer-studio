@@ -98,6 +98,19 @@ public sealed class TrainingSample
     public string Beschreibung { get; set; } = string.Empty;
     public double MeterStart { get; set; }
     public double MeterEnd { get; set; }
+
+    /// <summary>
+    /// Wahr, wenn zur Quelle gar kein Meterstand vorlag. <see cref="MeterStart"/>
+    /// und <see cref="MeterEnd"/> stehen dann auf 0 und sind KEIN Messwert.
+    ///
+    /// Bewusst ein Kennzeichen statt eines nullbaren Typs — dasselbe Muster wie
+    /// BendSuggestion.MeterIsEstimated und das Feld VSA_Geschaetzt. Das haelt den
+    /// Altbestand gueltig: Ein fehlendes Feld liest sich als false und bedeutet
+    /// damit "Meter bekannt", so wie es bisher immer gemeint war
+    /// (Codeaudit 2026-08-17).
+    /// </summary>
+    public bool MeterIsUnknown { get; set; }
+
     public bool IsStreckenschaden { get; set; }
     public double TimeSeconds { get; set; }
     public double? DetectedMeter { get; set; }
@@ -235,6 +248,19 @@ public sealed class TrainingSample
     /// Objekte (Format "...|b:x,y,w,h", je 3 Dezimalstellen, InvariantCulture).
     /// Ohne Box bleibt das 4-Teiler-Format — Legacy-Daten bleiben gueltig.
     /// </summary>
+    /// <param name="meterIsUnknown">
+    /// Wahr, wenn zur Quelle gar kein Meterstand vorlag. Dann steht in der
+    /// Signatur ein Fragezeichen statt einer Zahl: Ein Befund ohne bekannten Ort
+    /// ist etwas anderes als einer am Rohranfang, und genau diese Verwechslung
+    /// hat 809 von 1787 Goldsamples auf Meter 0,00 gesetzt — darunter 25-mal
+    /// BCE (Rohrende), das dort per Definition nicht liegen kann
+    /// (Codeaudit 2026-08-17).
+    ///
+    /// Der Standardwert false haelt jede bestehende Signatur unveraendert:
+    /// Altdaten ohne dieses Feld gelten weiterhin als "Meter bekannt", sonst
+    /// griffe die Dublettensperre nicht mehr und erneutes Akzeptieren legte
+    /// Zweitstuecke an.
+    /// </param>
     public static string BuildCanonicalSignature(
         string caseId,
         string code,
@@ -243,11 +269,14 @@ public sealed class TrainingSample
         double? bboxXCenter,
         double? bboxYCenter,
         double? bboxWidth,
-        double? bboxHeight)
+        double? bboxHeight,
+        bool meterIsUnknown = false)
     {
         var rc = Math.Round(meterCenter, 1);
         var re = Math.Round(meterEnd, 1);
-        var baseSignature = $"{caseId}|{code}|{rc:F1}|{re:F1}";
+        var baseSignature = meterIsUnknown
+            ? $"{caseId}|{code}|?|?"
+            : $"{caseId}|{code}|{rc:F1}|{re:F1}";
         if (bboxXCenter is null || bboxYCenter is null || bboxWidth is null || bboxHeight is null)
             return baseSignature;
 

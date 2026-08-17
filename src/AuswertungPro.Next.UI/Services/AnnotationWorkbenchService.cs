@@ -651,6 +651,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             Beschreibung = beschreibung,
             MeterStart = item.MeterStart,
             MeterEnd = item.MeterEnd,
+            MeterIsUnknown = item.MeterIsUnknown,
             Signature = TrainingSample.BuildCanonicalSignature(
                 item.CaseId,
                 finalCode,
@@ -661,7 +662,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 box.XCenter,
                 box.YCenter,
                 box.Width,
-                box.Height),
+                box.Height,
+                item.MeterIsUnknown),
             Status = maskValid ? TrainingSampleStatus.Approved : TrainingSampleStatus.Draft,
             HumanConfirmed = true,
             Corrected = wasCorrected,

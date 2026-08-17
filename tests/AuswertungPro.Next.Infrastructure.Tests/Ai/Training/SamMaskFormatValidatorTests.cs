@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Ai.Training;
+﻿using AuswertungPro.Next.Application.Ai.Training;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Training;
@@ -123,5 +123,63 @@ public sealed class TrainingSampleSignatureTests
         var signature = TrainingSample.BuildCanonicalSignature("H-01", "BAB", 5.0, 5.0, 0.3, null, 0.2, 0.2);
 
         Assert.Equal("H-01|BAB|5.0|5.0", signature);
+    }
+
+    // ═══════════════════════════════════════════════
+    // Unbekannter Meterstand (Codeaudit 2026-08-17, Befund 5)
+    //
+    // WorkbenchItem und TrainingSample konnten "Meter unbekannt" nicht
+    // ausdruecken; die Erzeugungsstellen setzten 0. In 809 von 1787 Goldsamples
+    // steht dadurch Meter 0,00 - darunter 25x BCE (Rohrende), das dort per
+    // Definition nicht liegen kann. Gemessen: 809 exakte Nullen gegenueber 107
+    // Werten im ganzen Bereich 0,01-0,99.
+    //
+    // Das Kennzeichen folgt dem Hausmuster (BendSuggestion.MeterIsEstimated,
+    // VSA_Geschaetzt) statt eines nullbaren Typs: Ein fehlendes Feld in den
+    // Altdaten wird zu false und bedeutet damit "Meter bekannt" - die
+    // bestehenden Signaturen bleiben unveraendert.
+    // ═══════════════════════════════════════════════
+
+    [Fact]
+    public void Signatur_UnbekannterMeter_UnterscheidetSichVonEchterNull()
+    {
+        var echteNull = TrainingSample.BuildCanonicalSignature("H-01", "BCD", 0.0, 0.0);
+        var unbekannt = TrainingSample.BuildCanonicalSignature(
+            "H-01", "BCD", 0.0, 0.0, null, null, null, null, meterIsUnknown: true);
+
+        Assert.NotEqual(echteNull, unbekannt);
+    }
+
+    [Fact]
+    public void Signatur_AltbestandBleibtUnveraendert()
+    {
+        // Die 1787 vorhandenen Samples duerfen ihre Signatur nicht verlieren -
+        // sonst greift die Dublettensperre nicht mehr und erneutes Akzeptieren
+        // legt Zweitstuecke an.
+        var alt = TrainingSample.BuildCanonicalSignature("H-01", "BAB", 12.3, 12.3);
+        var neu = TrainingSample.BuildCanonicalSignature(
+            "H-01", "BAB", 12.3, 12.3, null, null, null, null, meterIsUnknown: false);
+
+        Assert.Equal(alt, neu);
+    }
+
+    [Fact]
+    public void Signatur_UnbekannterMeter_TraegtKeineErfundeneZahl()
+    {
+        var signatur = TrainingSample.BuildCanonicalSignature(
+            "H-01", "BCE", 0.0, 0.0, null, null, null, null, meterIsUnknown: true);
+
+        Assert.DoesNotContain("0.0", signatur);
+    }
+
+    [Fact]
+    public void Signatur_UnbekannterMeter_BleibtMitBoxUnterscheidbar()
+    {
+        var erstes = TrainingSample.BuildCanonicalSignature(
+            "H-01", "BAB", 0.0, 0.0, 0.3, 0.5, 0.2, 0.2, meterIsUnknown: true);
+        var zweites = TrainingSample.BuildCanonicalSignature(
+            "H-01", "BAB", 0.0, 0.0, 0.7, 0.5, 0.2, 0.2, meterIsUnknown: true);
+
+        Assert.NotEqual(erstes, zweites);
     }
 }

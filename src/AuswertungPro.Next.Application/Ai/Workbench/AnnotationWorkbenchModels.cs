@@ -22,7 +22,12 @@ public sealed record WorkbenchItem(
     string? ExistingBeschreibung = null,
     string? SuggestedMainCode = null, // unverbindlicher Ordnerhinweis aus dem Gold-Eingang
     bool IsStreckenschaden = false,
-    WorkbenchSourceSuggestion? SourceSuggestion = null)
+    WorkbenchSourceSuggestion? SourceSuggestion = null,
+    // Wahr, wenn zur Quelle gar kein Meterstand vorlag. MeterStart/MeterEnd
+    // stehen dann auf 0 und sind KEIN Messwert. Ohne dieses Kennzeichen wurde
+    // ein Befund ohne bekannten Ort nicht von einem am Rohranfang unterschieden
+    // (Codeaudit 2026-08-17).
+    bool MeterIsUnknown = false)
 {
     /// <summary>
     /// Sicher aus der Quelle gelesenes Inspektionsdatum. Null bedeutet unbekannt;
