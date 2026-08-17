@@ -42,6 +42,11 @@ public static class FieldCatalog
         FieldKeys.InspectionYear,
         "VSA_Zustandsnote_S",
         "VSA_Zustandsnote_B",
+        // Markiert Haltungen, deren Note aus einem Standard-Schaetzwert je
+        // Schadenscode stammt, weil die Quantifizierung fehlte. Ohne diese
+        // Spalte sah eine geschaetzte Note aus wie eine gerechnete
+        // (Codeaudit 2026-08-17).
+        "VSA_Geschaetzt",
         "Gewaesserschutz",
         "Grundwasserspiegel",
         "FunktionHierarchisch"
@@ -137,6 +142,7 @@ public static class FieldCatalog
             [FieldKeys.InspectionYear] = new(FieldKeys.InspectionYear, "Datum/Jahr", FieldType.Text),
             ["VSA_Zustandsnote_S"] = new("VSA_Zustandsnote_S", "VSA-Zustandsnote S", FieldType.Decimal),
             ["VSA_Zustandsnote_B"] = new("VSA_Zustandsnote_B", "VSA-Zustandsnote B", FieldType.Decimal),
+            ["VSA_Geschaetzt"] = new("VSA_Geschaetzt", "Note geschätzt", FieldType.Text),
             ["Gewaesserschutz"] = new("Gewaesserschutz", "Gewässerschutz", FieldType.Combo, ComboItems["Gewaesserschutz"]),
             ["Grundwasserspiegel"] = new("Grundwasserspiegel", "Grundwasserspiegel", FieldType.Combo, ComboItems["Grundwasserspiegel"]),
             ["FunktionHierarchisch"] = new("FunktionHierarchisch", "Funktionale Hierarchie", FieldType.Combo, ComboItems["FunktionHierarchisch"])

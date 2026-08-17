@@ -1,3 +1,4 @@
+﻿using System.Linq;
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 
@@ -116,5 +117,45 @@ public sealed class FieldKeysTests
             Assert.DoesNotContain($"SetFieldValue(\"{key}\"", source, StringComparison.Ordinal);
             Assert.DoesNotContain($"target[\"{key}\"]", source, StringComparison.Ordinal);
         }
+    }
+
+    // ═══════════════════════════════════════════════
+    // Geschaetzte Zustandsnote sichtbar machen (Codeaudit 2026-08-17)
+    //
+    // Kann das Regelwerk einen Befund nicht benoten (fehlende Quantifizierung),
+    // setzt VsaEvaluationService einen Standard-Schaetzwert je Schadenscode und
+    // markiert das mit VSA_Geschaetzt. Das Feld stand aber weder in der
+    // Spaltenreihenfolge noch im Export - einziger Leser war die
+    // Schattenauswertung. In den Tabellen sah eine geschaetzte Note damit aus
+    // wie eine gerechnete.
+    //
+    // Auf dem realen Bestand betrifft das 147 von 14'084 bewerteten Haltungen
+    // (1,0 %). Fuer den Abgleich "passt meine Einschaetzung zum Code" sind
+    // genau das die Faelle, in denen der Code gar nichts eingeschaetzt hat.
+    // ═══════════════════════════════════════════════
+
+    [Fact]
+    public void VsaGeschaetzt_StehtInDerSpaltenreihenfolge()
+    {
+        Assert.Contains("VSA_Geschaetzt", FieldCatalog.ColumnOrder);
+    }
+
+    [Fact]
+    public void VsaGeschaetzt_HatEineFeldbeschreibung()
+    {
+        var feld = Assert.Single(
+            FieldCatalog.Definitions.Values.Where(d => d.Name == "VSA_Geschaetzt"));
+        Assert.False(string.IsNullOrWhiteSpace(feld.Label));
+    }
+
+    [Fact]
+    public void VsaGeschaetzt_StehtNebenDenZustandsnoten()
+    {
+        // Nuetzt nur, wenn es dort auftaucht, wo die Noten gelesen werden.
+        var reihenfolge = FieldCatalog.ColumnOrder;
+        var geschaetzt = reihenfolge.ToList().IndexOf("VSA_Geschaetzt");
+        var noteB = reihenfolge.ToList().IndexOf("VSA_Zustandsnote_B");
+        Assert.True(geschaetzt >= 0 && noteB >= 0);
+        Assert.Equal(noteB + 1, geschaetzt);
     }
 }
