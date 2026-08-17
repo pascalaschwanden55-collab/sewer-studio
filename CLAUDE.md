@@ -1160,6 +1160,18 @@ Tesseract-Prozessen.
 Der Faecher bringt also nicht nur den einen falschen Wert weg, sondern liest acht
 bisher unlesbare SD-Bilder richtig.
 
+Die hashgebundene Archivwiederholung (83 Videos, je 20 Stellen, derselbe
+gebundene Bestand) steigt von 45,8 % auf 47,2 %: SD 43,0 -> 44,8 %, HD
+unveraendert 53,3 %. Deutlicher wird es je Haltung — SD-Haltungen mit mindestens
+70 % Abdeckung 19 -> 23 von 60, denn erst eine dichte Folge ergibt eine
+brauchbare Meterspur. Haltungen ohne jede Lesung bleiben 16 (SD) und 4 (HD).
+Bericht `osd_archiv_abdeckung_nach_mehrheit_20260817.json`.
+
+Produktive Abnahme: `BendSuggestionLiveAcceptanceTests` laeuft mit echtem
+Sidecar, echtem Video und dem gebundenen Kandidaten `bcc_nc15_seed46_20260808`
+durch. Der Bogen-Copilot findet dieselben fuenf Stellen, die Meterwerte bleiben
+innerhalb der 0,6-m-Toleranz der Repo-Fixture.
+
 **Gemessen und ausdruecklich NICHT umgesetzt:** Die Zwei-Dezimal-Form auf dem
 Vorlagenweg freizuschalten wuerde den letzten 0,00-Fall retten (`LZ1:0.00m` wird
 heute verworfen), kostet aber 3 falsche Werte und zerstoert einen bereits
