@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using AuswertungPro.Next.Infrastructure.Import;
 
@@ -244,5 +244,47 @@ public sealed class KanalExportDetectorTests
         Assert.Equal(KanalExportFormat.Ambiguous, result.Format);
         Assert.NotNull(result.Db3Path);
         Assert.NotNull(result.VsaKekXtfPath);
+    }
+
+    // -------------------------------------------------------------------------
+    // Versteckte Ordner/Dateien (Audit 2026-08-17)
+    //
+    // Die Sucher benutzten die Standard-Aufzaehloptionen von .NET. Deren
+    // AttributesToSkip ist "Hidden, System" — ein versteckter Ordner oder eine
+    // versteckte Datei verschwand damit lautlos aus dem Import, und der Bericht
+    // meldete nur eine kleinere Fundzahl. Nachgemessen auf .NET 10: 1 von 3
+    // Dateien gefunden. Kundendaten von optischen Medien, aus Sicherungen oder
+    // von Netzlaufwerken tragen diese Merker regelmaessig.
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Detect_WinCanDb3_ImVerstecktenOrdner_WirdGefunden()
+    {
+        using var temp = new TempDir();
+        var db = Path.Combine(temp.Path, "DB");
+        Directory.CreateDirectory(db);
+        File.WriteAllText(Path.Combine(db, "projekt.db3"), "x");
+        new DirectoryInfo(db).Attributes |= FileAttributes.Hidden;
+
+        var ergebnis = KanalExportDetector.Detect(temp.Path);
+
+        Assert.Equal(KanalExportFormat.WinCan, ergebnis.Format);
+        Assert.NotNull(ergebnis.Db3Path);
+    }
+
+    [Fact]
+    public void Detect_VersteckteDb3Datei_WirdGefunden()
+    {
+        using var temp = new TempDir();
+        var db = Path.Combine(temp.Path, "DB");
+        Directory.CreateDirectory(db);
+        var datei = Path.Combine(db, "projekt.db3");
+        File.WriteAllText(datei, "x");
+        File.SetAttributes(datei, FileAttributes.Hidden);
+
+        var ergebnis = KanalExportDetector.Detect(temp.Path);
+
+        Assert.Equal(KanalExportFormat.WinCan, ergebnis.Format);
+        Assert.NotNull(ergebnis.Db3Path);
     }
 }
