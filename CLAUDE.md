@@ -1113,11 +1113,62 @@ Berichte: Vorlagenleser
 `ecabed4bc28d1089ee2b3e31c02a4c8cc9709fddfcbac99368f6a375b107b487`.
 
 Beide Kandidaten bleiben `diagnostic_not_deployed`, und der Vorlagenleser bleibt
-vorne in der Kette — er liest sechsmal mehr. Aber keiner der drei ist auf
-vertretendem Material brauchbar, und die vermeintlich sichere Grundlage
-"null falsch" gibt es nicht mehr. Die naechste Arbeit gehoert deshalb nicht ins
-Modell, sondern an die zwei belegten Fehlerursachen des Vorlagenlesers
-(Vorzeichen, Rohranfang 0,00). `osd_meter.py` ist dabei unveraendert geblieben.
+vorne in der Kette — er liest sechsmal mehr.
+
+### Zwei Ursachen im Vorlagenleser behoben (2026-08-17)
+
+Erste Eingriffe in `osd_meter.py` seit langem, beide mit gemessener Ursache. Der
+neue Satz hat sie erst sichtbar gemacht.
+
+**1. Verlorenes Vorzeichen.** Der Zwei-Dezimal-Pfad konnte ein Minus
+strukturell nicht ausdruecken: Es fehlt in `ZWEI_DEZIMAL_WHITELIST`, und der
+flache Strich faellt in `_zwei_dezimal_zeile` durch beide Filter — die
+Zeichenpruefung verlangt `h>=6`, die Satzzeichenpruefung die Grundlinie. Im Bild
+ist er klar sichtbar (`- 2.41  m`) und wird als 4x1-Fleck gefunden, aber nie
+weitergegeben. `_hat_vorzeichenstrich()` verwirft die ganze Lesung, arbeitet aber
+NEBEN der Maske und veraendert deren Inhalt nicht: Ein zusaetzlicher Fleck in der
+OCR-Zeile hat in diesem Leser schon mehrfach belegte richtige Werte gekostet.
+Gelesen wird das Vorzeichen bewusst nicht — der Vertrag ist 0..400 m, und ein
+Zaehlerstand vor dem Rohranfang traegt fuer das Protokoll nichts. Die zwei
+Schranken sind an der Sache begruendet: Ein Vorzeichen ist ein eigenes Zeichen
+(von der Ziffer getrennt) und sitzt auf halber Zeichenhoehe. Die verschaerfte
+Variante gegen die lose gemessen: null Kosten und 6,8 % Fehlalarm gegen zwei
+verlorene richtige Werte und 13,2 %.
+
+**2. Erster Treffer statt Mehrheit.** Der Vierziffern-Pfad nahm den ersten
+vollstaendigen Treffer einer einzigen Schwelle; eine verlesene Ziffer wurde damit
+mit voller Zuversicht geliefert (`LZ1: +0021.70 m` ergab 24,7). Der
+Zwei-Dezimal-Pfad hat gegen genau diesen Fehler ein Quorum ueber fuenf
+Schwellen — hier fehlte es. Neu sind `_vierziffern_masken()` (Schwellenfaecher
+aus Bruchteilen des 95. Perzentils, beide Polaritaeten, bisherige Kandidaten
+vorne) und `_mehrheit()`. Ohne Mindeststimmenzahl, und das ist gemessen: Eine
+Mindestzahl von 2 brachte null falsche Werte, kostete aber 8 belegte richtige
+(10 bei 3 Stimmen); Einzelstimmen sind hier in 10 von 11 Faellen richtig.
+Abbruch bei zwei uebereinstimmenden Stimmen, weil der Pfad im Bogen-Copiloten je
+Einzelbild laeuft — Laufzeit 264 -> 374 ms je Bild (Faktor 1,42) statt rund elf
+Tesseract-Prozessen.
+
+| Satz | vorher | nachher |
+|---|---|---|
+| `osd_sd_v1` | 80 richtig | **88 richtig** |
+| `osd_hd_v1` | 15 richtig | 15 richtig |
+| `osd_hd2_v1` | 43 richtig | 43 richtig |
+| drei alte zusammen | 138 / 0 falsch | **146 / 0 falsch** |
+| `osd_mix_v1` | 45 / 4 falsch | **48 / 1 falsch** |
+| alle 317 Bilder | 183 / 4 falsch | **194 / 1 falsch** |
+
+Der Faecher bringt also nicht nur den einen falschen Wert weg, sondern liest acht
+bisher unlesbare SD-Bilder richtig.
+
+**Gemessen und ausdruecklich NICHT umgesetzt:** Die Zwei-Dezimal-Form auf dem
+Vorlagenweg freizuschalten wuerde den letzten 0,00-Fall retten (`LZ1:0.00m` wird
+heute verworfen), kostet aber 3 falsche Werte und zerstoert einen bereits
+richtigen Goldwert (1,4 -> 31,1). Der Vorlagenleser haengt nach dem Punkt Zeichen
+an (`.9` wird `.01`), und die Form unterscheidet echte von erfundenen
+Nachkommastellen nicht. Die alte Entscheidung ist damit gegen vertretendes
+Material bestaetigt. Der eine verbleibende falsche Wert (13,8 -> 13,88) bekommt
+im ganzen Faecher nur eine Stimme; dort gibt es keine Mehrheit, die ihn
+ueberstimmen koennte.
 
 `training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
 reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
