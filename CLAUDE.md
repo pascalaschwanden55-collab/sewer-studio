@@ -1055,7 +1055,69 @@ die Live-Vorschau macht das handhabbar, eine erneute Runde sollte es aber
 vorher verbessern.
 
 Beide Kandidaten bleiben `diagnostic_not_deployed`. Der Vorlagenleser bleibt
-vorne in der Kette und behaelt seine 138 richtig / 0 falsch.
+vorne in der Kette.
+
+### Vierte Messlatte gemessen — die 0 falsch gehoerten der Messlatte (2026-08-17)
+
+`training/scripts/osd_goldsatz.py` zieht mit `queue`/`einfrieren` einen
+stilgemischten Goldsatz gleichmaessig ueber die freien physischen Haltungen,
+ausdruecklich NICHT nach Lesbarkeit. Dreifache Sperre: Gold, Reservebestand UND
+Trainingsmaterial (Lehrer-Ernte und Handliste, fail-closed ueber ihre Belege).
+Die Trainingssperre steht bewusst NICHT in `osd_schutz.lade_schutz()` — diesen
+Schutz laden auch die Trainingsskripte, dort ist Trainingsmaterial per
+Definition erlaubt.
+
+Der eingefrorene Satz `osd_mix_v1` (Manifest-SHA-256
+`5ed76a78087021803b9084ac0ff643aab347d2357abee43e11ef1277099d9015`) enthaelt
+120 Bilder aus 120 physischen Haltungen, gezogen aus 1064 freien (366
+gesperrt), persoenlich abgelesen: 119 mit sichtbarer Anzeige, 1 ohne.
+
+Zwei Belege, dass der Satz den Bestand vertritt: Der Vorlagenleser liest hier
+40,8 % der Bilder, die unabhaengige Archivmessung ergab 45,8 %. Und die
+Auflösungen sind 117 SD gegen 3 HD — die drei alten Saetze wiegen mit 95 SD
+gegen 102 HD das seltene HD mehr als doppelt.
+
+| Leser | richtig | falsch | nicht gelesen |
+|---|---|---|---|
+| Vorlagenleser | 45 | **4** | 71 |
+| v1 `osd_zeichen_1daf5433416d` | 7 | 2 | 111 |
+| v2 `osd_zeichen_c668e35d59cb` | 7 | **0** | 113 |
+
+**Die wichtigste Zahl ist die 4.** Der Vorlagenleser stand auf den drei alten
+Saetzen bei 138 richtig / null falsch, und diese null galt als seine
+Kerneigenschaft. Auf vertretendem Material produziert er 4 falsche Werte bei 49
+Lesungen. Die null war eine Eigenschaft der Messlatte, nicht des Lesers.
+
+Zwei der vier haben dieselbe Ursache: ein verlorenes Minus (Soll -0,01 gelesen
+als 0,01; Soll -2,41 gelesen als 2,41). Das widerspricht der bisherigen Annahme,
+negative Zaehlerstaende wuerden als mehrdeutig verworfen — sie werden gelesen
+und liefern das Vorzeichen falsch. Von 3 negativen Sollwerten wurden 2 gelesen,
+beide falsch. Die anderen zwei Faelle sind Ziffernfehler (21,7 -> 24,7;
+13,8 -> 13,88). Von 20 Bildern mit Rohranfang 0,00 liest er nur 4 richtig.
+
+`messe_satz()` zaehlt eine Lesung auf einem Bild mit ausdruecklichem
+`menschlich_lesbar=false` jetzt als `falsch` mit Grund `erfunden` — eine
+erfundene Zahl wandert unbemerkt ins Protokoll. Die drei alten Saetze aendern
+sich dadurch nicht; sie tragen das Feld nur mit `true`.
+
+Beide Messwerkzeuge kennen `--satz`. Ein Lauf ueber einen anderen Bestand
+beurteilt die Freigabemarke NICHT (`freigabe_erreicht=null`, nicht `false`):
+"170 von 197" ist an die drei Standardsaetze gebunden. Der Berichtsname trug
+zuvor nur die Kandidaten-ID; da ein bestehender Bericht nie ueberschrieben wird,
+ging die zweite Messung desselben Kandidaten still verloren (real passiert).
+Zusatzmessungen tragen ihren Bestand jetzt im Namen.
+
+Berichte: Vorlagenleser
+`9ad96e2d51a1da60415398d9f2a4c9bc539dbe2663a3f43a8e107055643b2d21`, v2
+`117e94892466473f2a83893a6d80cbf10c3d9f313df6adf22aca67a2852a1d38`, v1
+`ecabed4bc28d1089ee2b3e31c02a4c8cc9709fddfcbac99368f6a375b107b487`.
+
+Beide Kandidaten bleiben `diagnostic_not_deployed`, und der Vorlagenleser bleibt
+vorne in der Kette — er liest sechsmal mehr. Aber keiner der drei ist auf
+vertretendem Material brauchbar, und die vermeintlich sichere Grundlage
+"null falsch" gibt es nicht mehr. Die naechste Arbeit gehoert deshalb nicht ins
+Modell, sondern an die zwei belegten Fehlerursachen des Vorlagenlesers
+(Vorzeichen, Rohranfang 0,00). `osd_meter.py` ist dabei unveraendert geblieben.
 
 `training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
 reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt

@@ -427,7 +427,7 @@ def test_zusatzmessung_beurteilt_die_freigabemarke_nicht(tmp_path, monkeypatch, 
     assert "Zusatzmessung" in ausgabe
     assert "ERREICHT" not in ausgabe
     bericht = json.loads((tmp_path / "reports" /
-                          "osd_modell_goldmessung_osd_zeichen_test.json")
+                          "osd_modell_goldmessung_osd_zeichen_test_osd_mix_v1.json")
                          .read_text(encoding="utf-8"))
     assert bericht["freigabe_erreicht"] is None
     assert bericht["freigabelauf"] is False
@@ -439,3 +439,29 @@ def test_ist_freigabelauf_nur_bei_den_drei_standardsaetzen():
     assert goldmessung.ist_freigabelauf(("osd_mix_v1",)) is False
     assert goldmessung.ist_freigabelauf(
         osd_goldmessung.SAETZE + ("osd_mix_v1",)) is False
+
+
+def test_zusatzmessung_kollidiert_nicht_mit_dem_freigabebericht(tmp_path, monkeypatch):
+    """Der Name trug nur die Kandidaten-ID. Da ein bestehender Bericht nie
+    ueberschrieben wird, verschwand die zweite Messung desselben Kandidaten
+    stillschweigend (real passiert, 2026-08-17)."""
+    kandidat = _kandidat(tmp_path, schwelle=0.42)
+    gold_wurzel = tmp_path / "gold"
+    for name in osd_goldmessung.SAETZE:
+        _leerer_goldsatz(gold_wurzel, name)
+    _goldsatz_mit_einem_bild(gold_wurzel, "osd_mix_v1", soll=1.0)
+    berichte = tmp_path / "reports"
+    monkeypatch.setattr(osd_modell_leser, "baue_modell_leser",
+                        lambda _k, _s: (lambda _bild: {"meter": 1.0}))
+
+    gemeinsam = ["--kandidat", str(kandidat), "--gold-wurzel", str(gold_wurzel),
+                 "--bericht-ordner", str(berichte)]
+    assert goldmessung.main(gemeinsam) == 0
+    assert goldmessung.main(gemeinsam + ["--satz", "osd_mix_v1"]) == 0
+
+    freigabe = berichte / "osd_modell_goldmessung_osd_zeichen_test.json"
+    zusatz = berichte / "osd_modell_goldmessung_osd_zeichen_test_osd_mix_v1.json"
+    assert freigabe.is_file() and zusatz.is_file()
+    assert json.loads(zusatz.read_text(encoding="utf-8"))["gemessene_saetze"] \
+        == ["osd_mix_v1"]
+    assert json.loads(freigabe.read_text(encoding="utf-8"))["freigabelauf"] is True

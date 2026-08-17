@@ -161,7 +161,16 @@ def main(argv=None) -> int:
         "saetze": saetze,
     }
     args.bericht_ordner.mkdir(parents=True, exist_ok=True)
-    ziel = args.bericht_ordner / f"osd_modell_goldmessung_{manifest['kandidat_id']}.json"
+    # Der Dateiname trug nur die Kandidaten-ID. Seit es --satz gibt, treffen
+    # zwei verschiedene Messungen desselben Kandidaten sonst auf denselben
+    # Namen - und weil ein bestehender Bericht nie ueberschrieben wird, ginge
+    # die zweite Messung stillschweigend verloren (real passiert, 2026-08-17).
+    # Der Freigabelauf behaelt seinen Namen, damit alte Berichte auffindbar
+    # bleiben; jede Zusatzmessung bekommt ihren Bestand in den Namen.
+    kennung = manifest["kandidat_id"]
+    if not freigabelauf:
+        kennung += "_" + "_".join(saetze_namen)
+    ziel = args.bericht_ordner / f"osd_modell_goldmessung_{kennung}.json"
     if ziel.exists():
         print(f"\nBericht besteht bereits und wird nicht ueberschrieben: {ziel}")
         return 0
