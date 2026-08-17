@@ -232,24 +232,38 @@ def zeichen_in_kasten(
 def waehle_faelle(kandidaten: list[dict], anzahl: int, saat: int) -> list[dict]:
     """Waehlt hoechstens ANZAHL Faelle, ein Bild je physischer Haltung.
 
-    Deterministisch bei gleicher Eingabe: Zuerst wird je physischer Haltung
-    der Kandidat mit dem kleinsten Bildpfad behalten (Sortierschluessel, nicht
-    von der Reihenfolge der Eingabeliste abhaengig), danach werden die
-    Haltungsschluessel sortiert und mit fester Saat gemischt - dieselbe
-    Technik wie osd_datensatz.teile_auf().
+    Deterministisch bei gleicher Eingabe, aber OHNE Positionsverzerrung: Je
+    physischer Haltung wird aus allen ihren Kandidaten einer GEZOGEN, nicht der
+    mit dem kleinsten Bildpfad genommen. Danach werden die Haltungsschluessel
+    sortiert und mit fester Saat gemischt - dieselbe Technik wie
+    osd_datensatz.teile_auf().
+
+    WARUM GEZOGEN STATT DER ERSTE (gemessen 2026-08-16)
+    Die erste Fassung behielt je Haltung den kleinsten Bildpfad. Die Bilder
+    heissen <video>_000.jpg bis _009.jpg, also gewann immer das ALLERERSTE Bild
+    des Videos. Ergebnis: 141 von 200 Karten (70 %) stammten von der Stelle 000,
+    erwartbar waeren 10 %. Eroeffnungsbilder sind ueberdurchschnittlich schwer
+    (Kamera am Schacht, Zaehler auf null, Anzeige noch nicht eingeschwungen) und
+    zeigen fast alle denselben Wert 0.00 - fuer ein Zeichenmodell nahezu
+    wertlos. Die Verzerrung kostete also 70 % der Handarbeit.
     """
     if anzahl <= 0:
         raise ValueError("Die Anzahl muss groesser als null sein.")
 
-    je_haltung: dict[str, dict] = {}
+    nach_haltung: dict[str, list[dict]] = {}
     for kandidat in kandidaten:
         phys = physische_haltung(str(kandidat["haltung"]))
-        vorhanden = je_haltung.get(phys)
-        if vorhanden is None or str(kandidat["bild_pfad"]) < str(vorhanden["bild_pfad"]):
-            je_haltung[phys] = kandidat
+        nach_haltung.setdefault(phys, []).append(kandidat)
+
+    zufall = random.Random(saat)
+    je_haltung: dict[str, dict] = {}
+    for phys in sorted(nach_haltung):
+        # Innerhalb der Haltung nach Pfad sortieren, damit die Ziehung nicht von
+        # der Reihenfolge der Eingabeliste abhaengt, dann einen ziehen.
+        liste = sorted(nach_haltung[phys], key=lambda k: str(k["bild_pfad"]))
+        je_haltung[phys] = liste[zufall.randrange(len(liste))]
 
     schluessel = sorted(je_haltung)
-    zufall = random.Random(saat)
     zufall.shuffle(schluessel)
     return [je_haltung[schluessel_wert] for schluessel_wert in schluessel[:anzahl]]
 

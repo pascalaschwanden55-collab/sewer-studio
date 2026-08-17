@@ -204,7 +204,14 @@ def test_waehle_faelle_hoechstens_ein_bild_je_physischer_haltung():
     assert haltungen.count("10261-10262") + haltungen.count("10262-10261") == 1
 
 
-def test_waehle_faelle_bevorzugt_kleinsten_bildpfad_je_haltung():
+def test_waehle_faelle_nimmt_genau_ein_bild_je_haltung():
+    """Ersetzt den frueheren Test, der den kleinsten Bildpfad festschrieb.
+
+    Genau diese Regel erzeugte die Positionsverzerrung (2026-08-16): Der
+    kleinste Pfad ist immer <video>_000.jpg, also das allererste Videobild.
+    Welches Bild einer Haltung gezogen wird, ist jetzt bewusst offen - nur die
+    Anzahl je Haltung ist festgeschrieben.
+    """
     kandidaten = [
         _kandidat("10261-10262", "z.jpg"),
         _kandidat("10261-10262", "a.jpg"),
@@ -213,7 +220,7 @@ def test_waehle_faelle_bevorzugt_kleinsten_bildpfad_je_haltung():
     auswahl = osd_handlabel.waehle_faelle(kandidaten, 10, saat=0)
 
     assert len(auswahl) == 1
-    assert auswahl[0]["bild_pfad"] == "a.jpg"
+    assert auswahl[0]["bild_pfad"] in {"a.jpg", "z.jpg"}
 
 
 def test_waehle_faelle_ist_deterministisch_bei_gleicher_saat():
@@ -565,3 +572,42 @@ def test_publizieren_berichtet_zeichen_ausserhalb_des_satzes(tmp_path, capsys):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_auswahl_bevorzugt_nicht_das_erste_bild_je_haltung():
+    """Gemessen 2026-08-16: Die erste Fassung nahm je Haltung den kleinsten
+    Bildpfad - also immer <video>_000.jpg. 141 von 200 Karten (70 %) kamen so
+    vom allerersten Videobild, wo 10 % erwartbar waeren. Eroeffnungsbilder
+    zeigen fast alle 0.00 und sind fuer ein Zeichenmodell nahezu wertlos.
+    """
+    kandidaten = []
+    for h in range(60):
+        for stelle in range(10):
+            kandidaten.append({
+                "haltung": f"100{h}-200{h}",
+                "bild_pfad": f"D:/OSD_Frames/100{h}-200{h}/v_{stelle:03d}.jpg",
+                "bild_sha256": f"{h:02d}{stelle:02d}" + "0" * 60,
+                "stil": "dunkel",
+            })
+
+    gewaehlt = osd_handlabel.waehle_faelle(kandidaten, anzahl=60, saat=0)
+
+    stellen = [p["bild_pfad"][-7:-4] for p in gewaehlt]
+    anteil_erstes = stellen.count("000") / len(stellen)
+    assert len(gewaehlt) == 60
+    # Bei sauberer Ziehung liegt der Anteil um 10 %; die alte Fassung lieferte 100 %.
+    assert anteil_erstes < 0.35, f"Stelle 000 ist mit {anteil_erstes:.0%} ueberrepraesentiert"
+    assert len(set(stellen)) > 3, "Es werden kaum verschiedene Videostellen gezogen"
+
+
+def test_auswahl_bleibt_bei_gleicher_saat_gleich():
+    kandidaten = [
+        {"haltung": f"10{h}-20{h}", "bild_pfad": f"D:/x/10{h}-20{h}/v_{s:03d}.jpg",
+         "bild_sha256": f"{h}{s}" + "0" * 62, "stil": "dunkel"}
+        for h in range(20) for s in range(5)
+    ]
+
+    erst = osd_handlabel.waehle_faelle(kandidaten, anzahl=20, saat=3)
+    zweit = osd_handlabel.waehle_faelle(kandidaten, anzahl=20, saat=3)
+
+    assert [x["bild_pfad"] for x in erst] == [x["bild_pfad"] for x in zweit]

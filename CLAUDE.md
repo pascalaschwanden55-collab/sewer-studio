@@ -1008,6 +1008,55 @@ Lehrer-Ernte und kuenstliche Bilder allein reichen nicht — die 200
 handbeschrifteten schweren Faelle aus Stufe 2 sind noetig, und die Messung sagt
 auch wofuer.
 
+### Stufe 2 gemessen — der Goldbestand vertritt das Archiv nicht (2026-08-17)
+
+Pascal hat alle 200 Karten der Handliste entschieden: 97 uebernommen, 86 "boxen
+passen nicht", 17 unleserlich. Werkzeuge: `osd_frames_ziehen.py` (Bilder nach
+Haltung ablegen), `osd_handlabel.py` (Modi `queue`/`publizieren`) und
+`tools/EvalVisibilityReview/osd_handlabel_server.py` (Zone 4x, Mensch zieht EINEN
+Kasten, Server segmentiert per `zeichen_in_kasten`).
+
+Kandidat `osd_zeichen_c668e35d59cb` (Gewicht-SHA-256
+`c668e35d59cb4feba82b60b857663a11ac6f493104d03bf1b0414103a4a75845`,
+Bericht-SHA-256
+`cc8cdd0d9da5dbb9825010996b37b69a76c2725db2dcd0e83876a92c8c983b90`),
+Schwelle 0,25 ohne Zwang eingefroren (20 vergleichbare Faelle, Mindestmass
+erreicht):
+
+| Stand | richtig | falsch |
+|---|---|---|
+| Vorlagenleser | **138** | **0** |
+| v1 ohne Handfaelle | 120 | 1 |
+| v2 mit den 97 Handfaellen | **104** | **0** |
+
+**Was die Handfaelle bewirkt haben:** Der falsche Wert ist weg, und die Lesequote
+auf ungesehenen Haltungen hat sich verdoppelt (20 von 88 statt 10 von 88). Auf
+fremden Stilen ist das Modell belegbar besser — genau das, was 3000 kuenstliche
+Bilder nicht geschafft hatten.
+
+**Warum Gold trotzdem faellt:** 64 der 97 handbeschrifteten Anzeigen bestehen NUR
+aus Zahlen ohne `LZ`-Beschriftung. Beim Lehrer sind es 3 von 932 — er liest
+praktisch nur einen Anzeigetyp. Die drei Goldsaetze bestehen fast ausschliesslich
+aus diesem beschrifteten Stil. Das Modell hat also einen Stil gelernt, der auf
+Gold kaum vorkommt, und ist beim Goldstil unsicherer geworden.
+
+**Der eigentliche Befund ist damit nicht "zu wenige Daten", sondern eine
+Messlatte, die den Bestand nicht vertritt.** Solange die drei Goldsaetze nur den
+beschrifteten Stil messen, sieht jede Verbesserung auf den anderen zwei Dritteln
+des Archivs wie eine Verschlechterung aus. Ein vierter, stilgemischter Goldsatz
+muesste her, BEVOR weitere Handarbeit ins Training geht.
+
+Weiter offen: Die Ablehnungsquote der Handliste lag bei 43 % (86 von 200), fast
+ausschliesslich wegen der Segmentierung — Zeichen ausserhalb des Satzes wurden nur
+EINMAL versucht, die Sorge um das `+` war unbegruendet. `zeichen_in_kasten`
+reagiert nicht monoton auf die Kastengroesse (bei +5 px Rand brach ein
+verifizierter Fall von 8 auf 5 Zeichen ein, bei +10 und +20 px stimmte er wieder);
+die Live-Vorschau macht das handhabbar, eine erneute Runde sollte es aber
+vorher verbessern.
+
+Beide Kandidaten bleiben `diagnostic_not_deployed`. Der Vorlagenleser bleibt
+vorne in der Kette und behaelt seine 138 richtig / 0 falsch.
+
 `training/scripts/bcc_pdf_messreserve.py` reserviert deterministisch einen neuen
 reinen SD-Messbestand. Es sperrt alte Mess-, Trainings- und Eval-Haltungen samt
 Gegenrichtung und akzeptiert nur die acht gueltigen BCC-Untercodes. Der aktuelle
