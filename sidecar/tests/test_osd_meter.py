@@ -327,3 +327,85 @@ def test_schwellenband_liegt_tief():
     assert max(ZWEI_DEZIMAL_ANTEILE) <= 0.46
     assert len(ZWEI_DEZIMAL_ANTEILE) == 5
     assert ZWEI_DEZIMAL_QUORUM == 3
+
+
+# ---------------------------------------------------------------------------
+# Vorzeichenstrich (2026-08-17): Der Zwei-Dezimal-Pfad kann ein Minus
+# strukturell nicht ausdruecken - es steht nicht in ZWEI_DEZIMAL_WHITELIST, und
+# der flache Strich faellt sowohl durch die Zeichenpruefung (verlangt h>=6) als
+# auch durch die Satzzeichenpruefung (verlangt Grundlinie). Gemessen auf
+# osd_mix_v1: -0,01 wurde als 0,01 geliefert und -2,41 als 2,41, jeweils mit
+# vollem Quorum. Ein falscher Wert ist teurer als zehn fehlende, also verwerfen.
+# ---------------------------------------------------------------------------
+
+def _maske_mit_zeile(strich: tuple[int, int, int, int] | None = None):
+    """Kuenstliche Maske: fuenf Ziffernbloecke, optional ein Strich davor.
+
+    Reine Geometrie, kein Bild und kein Tesseract - der Veto arbeitet auf
+    genau dieser Maske.
+    """
+    import numpy as np
+
+    maske = np.zeros((40, 120), dtype="uint8")
+    for k in range(5):                      # Ziffern: x=40,50,...  y=10..24
+        maske[10:24, 40 + k * 10:46 + k * 10] = 255
+    if strich is not None:
+        x, y, breite, hoehe = strich
+        maske[y:y + hoehe, x:x + breite] = 255
+    return maske
+
+
+def test_vorzeichenstrich_wird_erkannt():
+    """Minus: flach, breit, links der Ziffern, auf halber Zeichenhoehe."""
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    # Ziffern beginnen bei x=40; Strich endet bei x=32 -> Abstand 8 (wie gemessen)
+    assert _hat_vorzeichenstrich(_maske_mit_zeile((28, 16, 4, 2))) is True
+
+
+def test_ohne_strich_kein_veto():
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    assert _hat_vorzeichenstrich(_maske_mit_zeile()) is False
+
+
+def test_strich_direkt_an_der_ziffer_ist_kein_vorzeichen():
+    """Abstand 0-2 heisst: Bruchstueck der Ziffer selbst, nicht eigenes Zeichen.
+    Belegt an f0098 (Soll 5,6, Abstand 2) - ein Veto dort kostete einen
+    richtigen Wert."""
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    assert _hat_vorzeichenstrich(_maske_mit_zeile((37, 16, 3, 1))) is False
+
+
+def test_flacher_fleck_am_oberen_rand_ist_kein_vorzeichen():
+    """Ein Minus sitzt nie am Oberrand der Zeichenhoehe. Belegt an f0101
+    (Soll 0,15, Lage 0,07)."""
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    assert _hat_vorzeichenstrich(_maske_mit_zeile((28, 10, 6, 2))) is False
+
+
+def test_hoher_fleck_ist_kein_vorzeichen():
+    """Nur flach zaehlt - ein hoher Block links ist ein Zeichen oder Rauschen."""
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    assert _hat_vorzeichenstrich(_maske_mit_zeile((28, 12, 4, 8))) is False
+
+
+def test_strich_rechts_der_zahl_ist_kein_vorzeichen():
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    assert _hat_vorzeichenstrich(_maske_mit_zeile((100, 16, 4, 2))) is False
+
+
+def test_ohne_erkennbare_zeile_kein_veto():
+    """Ohne mindestens drei Zeichen gibt es keine Zeile, an der ein Strich
+    gemessen werden koennte - dann entscheidet der Veto nichts."""
+    import numpy as np
+    from sidecar.osd_meter import _hat_vorzeichenstrich
+
+    maske = np.zeros((40, 120), dtype="uint8")
+    maske[10:24, 40:46] = 255
+    maske[16:18, 28:32] = 255
+    assert _hat_vorzeichenstrich(maske) is False

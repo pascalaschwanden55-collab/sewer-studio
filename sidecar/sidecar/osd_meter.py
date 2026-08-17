@@ -575,6 +575,87 @@ def _zwei_dezimal_zeile(maske: np.ndarray) -> np.ndarray | None:
     return rein
 
 
+# Vorzeichen-Veto (2026-08-17, gemessen auf osd_mix_v1). Dieser Pfad kann ein
+# Minus strukturell nicht ausdruecken: es steht nicht in
+# ZWEI_DEZIMAL_WHITELIST, und der flache Strich faellt sowohl durch die
+# Zeichenpruefung in _zwei_dezimal_zeile (verlangt h>=6) als auch durch die
+# Satzzeichenpruefung (verlangt Grundlinie). Folge: -0,01 wurde als 0,01 und
+# -2,41 als 2,41 geliefert, jeweils mit vollem Quorum, also mit voller
+# Zuversicht. Die Dokumentation nahm dagegen an, negative Zaehlerstaende wuerden
+# verworfen; sie wurden gelesen und verloren nur das Vorzeichen.
+#
+# Gelesen wird das Vorzeichen bewusst NICHT: Der Vertrag des ganzen Lesers ist
+# 0..400 m, und ein negativer Wert vor dem Rohranfang traegt fuer das Protokoll
+# nichts. Erkannt und verworfen ist hier das Richtige.
+#
+# Die beiden Schranken sind an der Sache begruendet, nicht an den drei
+# Messfaellen: Ein Vorzeichen ist ein EIGENES Zeichen (also von der Ziffer
+# getrennt) und sitzt auf halber Zeichenhoehe (nie am Ober- oder Unterrand).
+# Gemessen ueber alle vier Goldsaetze (317 Bilder): beide falschen Werte
+# verschwinden, kein richtiger Wert geht verloren, Fehlalarmquote 6,8 % gegen
+# 13,2 % ohne diese zwei Schranken. Ein loses Veto haette zusaetzlich zwei
+# belegte richtige Werte gekostet.
+VORZEICHEN_MIN_ABSTAND = 3
+VORZEICHEN_MAX_ABSTAND = 25
+VORZEICHEN_MAX_HOEHE = 4
+VORZEICHEN_MIN_BREITE = 3
+VORZEICHEN_MIN_SEITENVERHAELTNIS = 2.0
+VORZEICHEN_LAGE_BAND = (0.25, 0.75)
+
+
+def _hat_vorzeichenstrich(maske: np.ndarray) -> bool:
+    """Sitzt links der Zeichenzeile ein flacher Strich auf halber Hoehe?
+
+    Arbeitet auf derselben Maske wie _zwei_dezimal_zeile, aber getrennt davon:
+    Der Maskeninhalt wird ausdruecklich NICHT veraendert. Ein zusaetzlicher
+    Fleck in der OCR-Zeile hat in diesem Leser schon mehrfach belegte richtige
+    Werte gekostet; ein Veto daneben kann das nicht.
+    """
+    import cv2
+
+    if maske is None or maske.size == 0:
+        return False
+
+    anzahl, _marken, stats, _zentren = cv2.connectedComponentsWithStats(
+        (maske > 0).astype("uint8"), 8)
+
+    # Dieselbe Zeilenbestimmung wie in _zwei_dezimal_zeile - ohne sie gibt es
+    # kein Bezugssystem fuer "links davon" und "halbe Hoehe".
+    zeichen = [
+        i for i in range(1, anzahl)
+        if 6 <= stats[i, 3] <= 40 and 2 <= stats[i, 2] <= 30 and stats[i, 4] >= 3
+    ]
+    if len(zeichen) < 3:
+        return False
+    mitten = sorted(stats[i, 1] + stats[i, 3] / 2 for i in zeichen)
+    median = mitten[len(mitten) // 2]
+    zeile = [i for i in zeichen if abs(stats[i, 1] + stats[i, 3] / 2 - median) <= 8]
+    if len(zeile) < 3:
+        return False
+
+    linke_kante = min(stats[i, 0] for i in zeile)
+    oben = min(stats[i, 1] for i in zeile)
+    unten = max(stats[i, 1] + stats[i, 3] for i in zeile)
+    if unten <= oben:
+        return False
+
+    for i in range(1, anzahl):
+        if i in zeile:
+            continue
+        x, y, breite, hoehe = stats[i, 0], stats[i, 1], stats[i, 2], stats[i, 3]
+        abstand = linke_kante - (x + breite)
+        if not VORZEICHEN_MIN_ABSTAND <= abstand <= VORZEICHEN_MAX_ABSTAND:
+            continue
+        if hoehe > VORZEICHEN_MAX_HOEHE or breite < VORZEICHEN_MIN_BREITE:
+            continue
+        if breite / max(hoehe, 1) < VORZEICHEN_MIN_SEITENVERHAELTNIS:
+            continue
+        lage = (y + hoehe / 2 - oben) / (unten - oben)
+        if VORZEICHEN_LAGE_BAND[0] <= lage <= VORZEICHEN_LAGE_BAND[1]:
+            return True
+    return False
+
+
 def _parse_zwei_dezimal(text: str) -> float | None:
     """Nur `NN.NN m` / `NN,NN m` auf der ganzen Zeile — sonst nichts.
 
@@ -610,6 +691,11 @@ def _lese_zwei_dezimal_mit_tesseract(bild: Image.Image) -> tuple[float | None, s
     stimmen: dict[float, int] = {}
     letzter_text = ""
     for maske in _zwei_dezimal_masken(ausschnitt):
+        # Ein Vorzeichenstrich in EINER der Schwellen verwirft die ganze Lesung,
+        # nicht nur diese Stimme: Sonst erreichen die uebrigen Schwellen weiter
+        # das Quorum und liefern denselben Wert ohne Vorzeichen.
+        if _hat_vorzeichenstrich(maske):
+            return None, letzter_text
         zeile = _zwei_dezimal_zeile(maske)
         if zeile is None:
             continue
