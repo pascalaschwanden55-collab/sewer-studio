@@ -38,7 +38,16 @@ if str(SKRIPTE) not in sys.path:
 from osd_wahrheit_aus_protokoll import haltungsvarianten, physische_haltung
 
 GOLD_WURZEL = Path(r"C:\KI_BRAIN\eval_set\osd")
-SAETZE = ("osd_sd_v1", "osd_hd_v1", "osd_hd2_v1")
+# Alle eingefrorenen Messlatten. osd_mix_v1 kam am 2026-08-17 dazu: Er hat die
+# Kettenentscheidung (Vorlagenleser plus Modell-Rueckfall) mitbestimmt und ist
+# damit genauso verbraucht wie die drei alten Saetze. Ohne diesen Eintrag zoege
+# eine neue Ziehung seine Haltungen wieder mit, und ein Training duerfte sie
+# verwenden - dann misst die naechste Abnahme sich selbst.
+#
+# NICHT verwechseln mit osd_goldmessung.SAETZE: Dort stehen bewusst nur die drei
+# alten Saetze, weil die Freigabemarke "170 von 197" an ihre Bilderzahl gebunden
+# ist. Hier geht es um Sperren, dort um Bewerten.
+SAETZE = ("osd_sd_v1", "osd_hd_v1", "osd_hd2_v1", "osd_mix_v1")
 
 # Reservebestand fuer die Schwellenkalibrierung: der Testteil (split ==
 # "test") der 897 schwach beschrifteten Protokollbilder aus

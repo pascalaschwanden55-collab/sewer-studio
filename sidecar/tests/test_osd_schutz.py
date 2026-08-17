@@ -257,3 +257,22 @@ def test_schutz_positionale_konstruktion_bleibt_kompatibel():
     assert schutz.bild_hashes_reserve == frozenset()
     assert schutz.haltungen_reserve == frozenset()
     assert schutz.ist_gesperrt("aa" * 32, None) is True
+
+
+def test_saetze_enthalten_jede_eingefrorene_messlatte():
+    """osd_mix_v1 hat am 2026-08-17 die Kettenentscheidung mitbestimmt und ist
+    damit verbraucht. Fehlt er in der Sperrliste, zieht die naechste Ziehung
+    seine Haltungen wieder mit und die naechste Abnahme misst sich selbst."""
+    import osd_schutz
+
+    assert osd_schutz.SAETZE == ("osd_sd_v1", "osd_hd_v1", "osd_hd2_v1", "osd_mix_v1")
+
+
+def test_sperrliste_und_bewertungsliste_sind_getrennt():
+    """osd_goldmessung.SAETZE bleibt bei den drei alten Saetzen - die
+    Freigabemarke '170 von 197' ist an deren Bilderzahl gebunden."""
+    import osd_goldmessung
+    import osd_schutz
+
+    assert osd_goldmessung.SAETZE == ("osd_sd_v1", "osd_hd_v1", "osd_hd2_v1")
+    assert set(osd_goldmessung.SAETZE).issubset(set(osd_schutz.SAETZE))
