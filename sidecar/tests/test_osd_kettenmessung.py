@@ -62,3 +62,32 @@ def test_kandidaten_pin_entspricht_dem_gemessenen_v2_gewicht():
     assert osd_model_wrapper.GEWICHT_SHA256 == (
         "c668e35d59cb4feba82b60b857663a11ac6f493104d03bf1b0414103a4a75845")
     assert osd_model_wrapper.SCHWELLE == 0.25
+
+
+# ---------------------------------------------------------------------------
+# freigabe_ableitbar() - der Wert stand fest auf False und trug einen Hinweis,
+# der von "den vier Saetzen" sprach. Auf einem frischen Bestand war beides
+# falsch: Der Beleg sagte die Unwahrheit ueber seine eigene Grundlage.
+# ---------------------------------------------------------------------------
+
+def test_verbrauchte_saetze_tragen_keine_freigabe():
+    for satz in osd_kettenmessung.VERBRAUCHTE_SAETZE:
+        assert osd_kettenmessung.freigabe_ableitbar((satz,)) is False, satz
+
+
+def test_ein_verbrauchter_satz_im_lauf_genuegt_zur_sperre():
+    assert osd_kettenmessung.freigabe_ableitbar(
+        ("osd_abnahme_v1", "osd_mix_v1")) is False
+
+
+def test_nur_frische_saetze_tragen_eine_freigabe():
+    assert osd_kettenmessung.freigabe_ableitbar(("osd_abnahme_v1",)) is True
+
+
+def test_leerer_lauf_traegt_keine_freigabe():
+    assert osd_kettenmessung.freigabe_ableitbar(()) is False
+
+
+def test_standardlauf_ist_nie_freigabefaehig():
+    """Der Lauf ohne --satz misst genau die verbrauchten vier."""
+    assert osd_kettenmessung.freigabe_ableitbar(osd_kettenmessung.SAETZE) is False

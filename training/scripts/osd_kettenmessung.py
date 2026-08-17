@@ -34,6 +34,22 @@ from sidecar.models import bcc_test_wrapper, osd_model_wrapper, yolo_wrapper  # 
 GOLD_WURZEL = Path(r"C:\KI_BRAIN\eval_set\osd")
 BERICHT_ORDNER = Path(r"C:\KI_BRAIN\training\reports")
 SAETZE = osd_goldmessung.SAETZE + ("osd_mix_v1",)
+# Diese vier Saetze haben Kandidatenwahl und Kettenentscheidung mitbestimmt und
+# sind damit verbraucht. Eine Messung auf ihnen kann nie eine Produktfreigabe
+# tragen, eine Messung auf ausschliesslich frischem Material dagegen schon.
+VERBRAUCHTE_SAETZE = SAETZE
+
+
+def freigabe_ableitbar(saetze_namen: tuple[str, ...]) -> bool:
+    """Darf aus DIESEN Saetzen eine Produktfreigabe abgeleitet werden?
+
+    Nur wenn kein einziger verbrauchter Satz dabei ist. Der Wert stand hier
+    fest auf False und trug einen Hinweistext, der von "den vier Saetzen"
+    sprach - bei einem Lauf ueber einen frischen Bestand war beides schlicht
+    falsch, und der Beleg sagte die Unwahrheit ueber seine eigene Grundlage.
+    """
+    namen = tuple(saetze_namen)
+    return bool(namen) and not set(namen) & set(VERBRAUCHTE_SAETZE)
 BCC_KANDIDAT_ID = "bcc_nc15_seed46_20260808"
 BCC_GEWICHT_SHA256 = "8ad82c1b0186ec02126a18f095d551d7a083faa90855350b22a6e893ac860114"
 BCC_SCHWELLE = 0.5
@@ -252,11 +268,19 @@ def main(argv=None) -> int:
         "erstellt_utc": datetime.now(timezone.utc).isoformat(),
         "status": "diagnostic_not_deployed",
         "produktiver_schalter": bool(settings.osd_model_fallback_enabled),
-        "freigabe_ableitbar": False,
+        "freigabe_ableitbar": freigabe_ableitbar(saetze_namen),
         "freigabe_hinweis": (
-            "Die vier Saetze wurden fuer Kandidatenwahl und Kettenentscheidung verwendet. "
-            "Eine Produktfreigabe braucht einen frischen, unberuehrten Bestand."
+            "Alle gemessenen Saetze sind frisch: Kandidatenwahl und "
+            "Kettenentscheidung haben sie nicht mitbestimmt. Diese Messung darf "
+            "eine Produktfreigabe tragen. Der Standardschalter bleibt trotzdem "
+            "eine ausdrueckliche Entscheidung."
+            if freigabe_ableitbar(saetze_namen) else
+            "Mindestens ein gemessener Satz hat Kandidatenwahl oder "
+            "Kettenentscheidung mitbestimmt und ist damit verbraucht. Eine "
+            "Produktfreigabe braucht einen frischen, unberuehrten Bestand."
         ),
+        "verbrauchte_saetze_im_lauf": sorted(
+            set(saetze_namen) & set(VERBRAUCHTE_SAETZE)),
         "kandidat_id": kandidat.candidate_id,
         "gewicht_sha256": kandidat.weights_sha256,
         "schwelle": osd_model_wrapper.SCHWELLE,
