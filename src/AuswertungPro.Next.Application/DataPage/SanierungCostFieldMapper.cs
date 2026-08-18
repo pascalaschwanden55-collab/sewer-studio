@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.DataPage;
@@ -156,8 +157,11 @@ public static class SanierungCostFieldMapper
         }
         else
         {
-            var hasMeasures = cost is not null
-                && cost.Measures.Any(m => m.Lines.Any(l => l.Selected && l.Qty > 0m));
+            // Dieselbe Regel wie ueberall sonst - jetzt an einer Stelle. Sie stand
+            // hier und in MeasurePricingEngine handgeschrieben, waehrend
+            // SchachtLvCostLoader eine schwaechere benutzte (Gesamtaudit
+            // 2026-08-18, F-01). Verhalten unveraendert.
+            var hasMeasures = ExportableCostRule.HasExportableLine(cost);
             if (!hasMeasures)
             {
                 foreach (var f in QuantityFieldNames)
