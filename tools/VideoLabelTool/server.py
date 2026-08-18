@@ -407,6 +407,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def do_GET(self):
+        if not is_allowed_local_host(self.headers.get("Host", "")):
+            return self._send(403, {"error": "ungueltiger Host"})
+
         u = urllib.parse.urlparse(self.path)
         q = urllib.parse.parse_qs(u.query)
         if u.path in ("/", "/index.html"):

@@ -55,5 +55,35 @@ class ServerSelectionTests(unittest.TestCase):
         self.assertEqual(["H3", "H4", "H3"], bcc_holdings)
 
 
+class ServerSecurityTests(unittest.TestCase):
+    @staticmethod
+    def _call(method, host):
+        handler = object.__new__(server.Handler)
+        handler.command = method
+        handler.path = "/session.json"
+        handler.headers = {"Host": host}
+        responses = []
+        handler._send = lambda code, body, ctype="application/json", extra=None: responses.append(
+            (code, body)
+        )
+
+        getattr(handler, f"do_{method}")()
+        return responses
+
+    def test_get_und_head_verweigern_fremden_host_vor_der_tokenausgabe(self):
+        for method in ("GET", "HEAD"):
+            with self.subTest(method=method):
+                responses = self._call(method, "angreifer.example")
+
+                self.assertEqual(403, responses[0][0])
+                self.assertNotIn("video_label_token", responses[0][1])
+
+    def test_session_json_bleibt_ueber_localhost_erreichbar(self):
+        responses = self._call("GET", "localhost:8200")
+
+        self.assertEqual(200, responses[0][0])
+        self.assertEqual(server.VIDEO_LABEL_TOKEN, responses[0][1]["video_label_token"])
+
+
 if __name__ == "__main__":
     unittest.main()

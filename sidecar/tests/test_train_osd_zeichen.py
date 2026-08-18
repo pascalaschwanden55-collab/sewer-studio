@@ -8,6 +8,7 @@ nicht statt - das passiert bewusst erst spaeter, wenn der Datensatz existiert.
 
 import hashlib
 import sys
+import urllib.error
 from pathlib import Path
 
 SKRIPTE = Path(__file__).resolve().parents[2] / "training" / "scripts"
@@ -63,6 +64,16 @@ def test_main_verweigert_bei_laufendem_sidecar_ruehrt_ultralytics_nicht_an(
     assert rc == 2
     ausgabe = capsys.readouterr()
     assert "Sidecar laeuft" in ausgabe.err
+
+
+def test_sidecar_laeuft_behandelt_http_fehler_als_erreichbaren_dienst(monkeypatch):
+    def antwortet_mit_401(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "http://127.0.0.1:8100/health", 401, "Unauthorized", {}, None)
+
+    monkeypatch.setattr(train_osd_zeichen.urllib.request, "urlopen", antwortet_mit_401)
+
+    assert train_osd_zeichen.sidecar_laeuft()
 
 
 # ---------------------------------------------------------------------------

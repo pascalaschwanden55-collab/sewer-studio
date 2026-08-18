@@ -12,8 +12,10 @@ import argparse
 import hashlib
 import json
 import shutil
+import socket
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -79,8 +81,15 @@ def sidecar_laeuft() -> bool:
     try:
         with urllib.request.urlopen("http://127.0.0.1:8100/health", timeout=2):
             return True
+    except urllib.error.HTTPError:
+        # Auch 401/403 beweist, dass der Sidecar laeuft und VRAM belegen kann.
+        return True
     except Exception:
-        return False
+        try:
+            with socket.create_connection(("127.0.0.1", 8100), timeout=2):
+                return True
+        except OSError:
+            return False
 
 
 def freier_vram_mb() -> int | None:

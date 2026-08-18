@@ -235,6 +235,16 @@ async def enforce_request_size_limit(request: Request, call_next):
     grenze = int(getattr(settings, "max_request_bytes", 0) or 0)
     if grenze > 0:
         angegeben = request.headers.get("content-length")
+        transfer_encoding = request.headers.get("transfer-encoding")
+        braucht_laenge = request.method.upper() in {"POST", "PUT", "PATCH"}
+        if braucht_laenge and (angegeben is None or transfer_encoding):
+            return JSONResponse(
+                {
+                    "detail": "Content-Length required.",
+                    "code": "content_length_required",
+                },
+                status_code=411,
+            )
         if angegeben is not None:
             try:
                 if int(angegeben) > grenze:

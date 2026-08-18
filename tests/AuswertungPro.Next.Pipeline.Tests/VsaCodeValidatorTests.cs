@@ -24,6 +24,8 @@ public sealed class VsaCodeValidatorTests
     [InlineData("BBZ")]
     [InlineData("BA-")]
     [InlineData("B A B")]
+    [InlineData("BCDXYZ")]
+    [InlineData("BCAFAFOO")]
     public void IsKnownCode_rejects_groups_unknown_codes_and_noise(string code)
     {
         Assert.False(VsaCodeValidator.IsKnownCode(code));

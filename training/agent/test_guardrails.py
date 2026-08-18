@@ -4,6 +4,7 @@ Lauf:  python -m pytest test_guardrails.py   (oder)   python test_guardrails.py
 """
 from __future__ import annotations
 
+import urllib.error
 from pathlib import Path
 
 import guardrails as g
@@ -33,6 +34,20 @@ def test_assert_eval_split_allowed_blockt_abnahme():
 
 def test_assert_eval_split_allowed_erlaubt_devval():
     g.assert_eval_split_allowed("devval")  # darf NICHT werfen
+
+
+def test_sidecar_running_behandelt_http_fehler_als_erreichbaren_dienst():
+    original = g.urllib.request.urlopen
+
+    def antwortet_mit_401(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            g.SIDECAR_HEALTH_URL, 401, "Unauthorized", {}, None)
+
+    try:
+        g.urllib.request.urlopen = antwortet_mit_401
+        assert g.sidecar_running()
+    finally:
+        g.urllib.request.urlopen = original
 
 
 def test_path_is_within():

@@ -15,7 +15,8 @@ public static partial class VsaCodeValidator
             return false;
 
         var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
-        if (!CodePattern().IsMatch(normalized))
+        if (normalized.Length < 3 || normalized.Length > MaxKnownCodeLength ||
+            !CodePattern().IsMatch(normalized))
             return false;
 
         var groupKey = normalized[..2];
@@ -55,6 +56,6 @@ public static partial class VsaCodeValidator
         return IsKnownCode(letters) ? letters : null;
     }
 
-    [GeneratedRegex("^[A-Z]{3,8}$")]
+    [GeneratedRegex("^[A-Z]+$")]
     private static partial Regex CodePattern();
 }

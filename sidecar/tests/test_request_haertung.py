@@ -83,6 +83,24 @@ def test_ungueltige_laengenangabe_wird_abgewiesen(client):
     assert antwort.status_code in (400, 422)
 
 
+def test_chunked_koerper_ohne_laengenangabe_wird_mit_411_abgewiesen(
+    client, monkeypatch,
+):
+    monkeypatch.setattr(settings, "max_request_bytes", 1_000, raising=False)
+
+    antwort = client.post(
+        "/training/export-yolo",
+        content=iter([b"{}"]),
+        headers={
+            "Content-Type": "application/json",
+            "Transfer-Encoding": "chunked",
+        },
+    )
+
+    assert antwort.status_code == 411
+    assert antwort.json()["code"] == "content_length_required"
+
+
 def test_grenze_null_schaltet_die_pruefung_ab(client, monkeypatch):
     monkeypatch.setattr(settings, "max_request_bytes", 0, raising=False)
 

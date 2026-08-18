@@ -8,7 +8,9 @@ Bewusst nur Standardbibliothek -> ohne LLM-SDK importierbar und damit einfach te
 from __future__ import annotations
 
 import shutil
+import socket
 import subprocess
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Optional
@@ -28,13 +30,19 @@ class GuardrailViolation(Exception):
 def sidecar_running(timeout: float = 1.5) -> bool:
     """True, wenn der Sidecar erreichbar ist (== Prozess laeuft == haelt evtl. VRAM).
 
-    Konservativ: jeder Verbindungsfehler gilt als 'nicht erreichbar' -> False.
+    Auch ein HTTP-Fehler oder ein offener Sidecar-Port gilt als erreichbar.
     """
     try:
         with urllib.request.urlopen(SIDECAR_HEALTH_URL, timeout=timeout) as resp:
             return 200 <= resp.status < 300
+    except urllib.error.HTTPError:
+        return True
     except Exception:
-        return False
+        try:
+            with socket.create_connection(("127.0.0.1", 8100), timeout=timeout):
+                return True
+        except OSError:
+            return False
 
 
 def gpu_free_vram_mb() -> Optional[int]:
