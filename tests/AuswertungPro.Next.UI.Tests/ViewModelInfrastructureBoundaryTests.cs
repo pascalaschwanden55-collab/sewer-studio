@@ -26,7 +26,7 @@ public sealed class ViewModelInfrastructureBoundaryTests
     private static readonly HashSet<string> ErlaubteKompatibilitaetsFassaden = new(StringComparer.Ordinal)
     {
         "DataPage/DataPagePrintController.cs :: CostStoreCompatibility :: 1",
-        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility :: 2",
+        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility :: 1",
         "ViewModels/Pages/ExportPageViewModel.cs :: CostStoreCompatibility :: 1",
         "ViewModels/Pages/OverviewPageViewModel.cs :: CostStoreCompatibility :: 2",
         "ViewModels/Pages/ProjectPageViewModel.cs :: DropdownOptionsCompatibility.Default :: 1",

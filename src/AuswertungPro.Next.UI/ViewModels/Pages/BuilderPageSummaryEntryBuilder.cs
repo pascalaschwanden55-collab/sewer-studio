@@ -20,6 +20,8 @@ public static class BuilderPageSummaryEntryBuilder
                     Holding = row.Holding,
                     Owner = row.Owner,
                     ExecutedBy = row.ExecutedBy,
+                    GroupLabel = GroupLabel(row),
+                    Street = row.Street,
                     Cost = row.StoredCost
                 });
                 continue;
@@ -35,10 +37,16 @@ public static class BuilderPageSummaryEntryBuilder
                 Holding = row.Holding,
                 Owner = row.Owner,
                 ExecutedBy = row.ExecutedBy,
+                GroupLabel = GroupLabel(row),
+                Street = row.Street,
                 Cost = TablePauschaleCostHelper.BuildFallbackHoldingCost(row.Holding, row.NetCost, vatRate)
             });
         }
 
         return entries;
     }
+
+    /// <summary>Bauteilart fuer die Gruppierung der Detailliste im PDF.</summary>
+    private static string GroupLabel(DruckcenterRowVm row)
+        => row.Kind == DruckcenterRowKind.Schacht ? "Schächte" : "Haltungen";
 }

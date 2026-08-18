@@ -28,7 +28,7 @@ public sealed partial class BuilderPageViewModel
         if (!EnsureCostsReadyForExport())
             return;
 
-        var filteredRows = Rows.ToList();
+        var filteredRows = BuildExportRows();
         if (filteredRows.Count == 0)
         {
             _dialogs.Info(
@@ -40,22 +40,22 @@ public sealed partial class BuilderPageViewModel
         if (!OfferRecomputeCostsForCurrentCatalog(filteredRows))
             return;
 
-        filteredRows = Rows.ToList();
+        filteredRows = BuildExportRows();
 
-        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
-        var defaultName = $"Druckcenter_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
+        var defaultName = BuildExportFileName();
         var output = _dialogs.SaveFile(
-            "Druckcenter PDF speichern",
+            $"Druckcenter PDF speichern ({BauteilLabelPlural})",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
             defaultFileName: defaultName);
         if (string.IsNullOrWhiteSpace(output))
             return;
 
-        var selection = BuilderPageExportScope.All(filteredRows);
+        var selection = BuilderPageExportScope.All(filteredRows, BauteilLabelPlural);
         var qualityHint = RowsWithDetailedCosts == FilteredRowsCount
-            ? "Alle gefilterten Haltungen haben Positionsdetails."
-            : $"{FilteredRowsCount - RowsWithDetailedCosts} Haltung(en) ohne Positionsdetails (Pauschalwerte aus Tabelle).";
+            ? $"Alle gefilterten {BauteilLabelPlural} haben Positionsdetails."
+            : $"{FilteredRowsCount - RowsWithDetailedCosts} {BauteilLabel}(en) ohne Positionsdetails "
+              + "(Pauschalwerte aus Tabelle).";
 
         await RenderCostSummaryPdfAsync(selection, BuildFilterSummaryText(), qualityHint, output);
     }
@@ -73,25 +73,25 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Druckcenter");
+            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle waehlen.", "Druckcenter");
             return;
         }
 
         var safeHolding = SanitizeFilePart(row.Holding);
         var defaultName = $"Kostenblatt_{safeHolding}_{DateTime.Now:yyyyMMdd}.pdf";
         var output = _dialogs.SaveFile(
-            "Kostenblatt (Haltung) speichern",
+            $"Kostenblatt ({BauteilLabel}) speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
             defaultFileName: defaultName);
         if (string.IsNullOrWhiteSpace(output))
             return;
 
-        var selection = BuilderPageExportScope.Single(row);
+        var selection = BuilderPageExportScope.Single(row, BauteilLabel);
         var qualityHint = row.HasDetailedCost
-            ? "Diese Haltung hat Positionsdetails."
-            : "Diese Haltung hat keine Positionsdetails (Pauschalwert aus Tabelle).";
-        var filterSummary = $"Einzelne Haltung: {row.Holding}";
+            ? $"Diese(r) {BauteilLabel} hat Positionsdetails."
+            : $"Diese(r) {BauteilLabel} hat keine Positionsdetails (Pauschalwert aus Tabelle).";
+        var filterSummary = $"Einzeln — {BauteilLabel}: {row.Holding}";
 
         await RenderCostSummaryPdfAsync(selection, filterSummary, qualityHint, output);
     }
@@ -105,11 +105,21 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung in der Tabelle waehlen.", "Dossier");
+            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle waehlen.", "Dossier");
             return;
         }
 
-        await EnsurePrintController().PrintDossierPdfAsync(_shell.Project, row.Record);
+        // Ein Schacht hat kein Haltungsdossier — lieber sichtbar ablehnen als ein leeres Blatt.
+        if (!row.CanPrintDossier)
+        {
+            _dialogs.Info(
+                "Ein volles Dossier gibt es nur fuer Haltungen. Fuer einen Schacht steht das "
+                + "Kostenblatt (Rechtsklick auf die Zeile) zur Verfuegung.",
+                "Dossier");
+            return;
+        }
+
+        await EnsurePrintController().PrintDossierPdfAsync(_shell.Project, row.Record!);
     }
 
     /// <summary>Baut das Kosten-Summary-PDF fuer die uebergebene Auswahl (alle oder eine Haltung).</summary>
@@ -126,12 +136,14 @@ public sealed partial class BuilderPageViewModel
         {
             await Task.Yield();
             var rows = selection.Rows;
+            var sections = BuildPdfSections();
             var entries = BuilderPageSummaryEntryBuilder.Build(rows, _vatRate);
-            var dataLines = IncludeDataSection ? BuilderPageHoldingDataLineBuilder.Build(rows) : null;
+            var dataLines = sections.DataOverview ? BuilderPageHoldingDataLineBuilder.Build(rows) : null;
 
             var projectMeta = _shell.Project.Metadata;
             var projectCustomer = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta);
-            var objectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, rows.Count);
+            var objectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(
+                projectMeta, rows.Count, BauteilLabelPlural);
             var textBlocks = new List<string>
             {
                 qualityHint,
@@ -158,9 +170,11 @@ public sealed partial class BuilderPageViewModel
                 entries,
                 ctx,
                 DateTimeOffset.Now,
-                includeOwnerSummary: IncludeOwnerSummarySection,
-                includePositionSummary: IncludePositionSummarySection,
-                holdingDataLines: dataLines);
+                sections,
+                dataLines);
+            model.Totals.EntryCountLabel = selection.Rows.Count == 1
+                ? BauteilLabel
+                : BauteilLabelPlural;
 
             var pdfExport = _pdfExport
                 ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfuegbar.");
@@ -398,7 +412,8 @@ public sealed partial class BuilderPageViewModel
         var schachtCosts = SchachtLvCostLoader.LoadForLv(projectPath, out var schachtLoadError);
         if (schachtLoadError is not null)
             _dialogs.Warn(
-                $"Schacht-Kosten konnten nicht geladen werden und fehlen im Leistungsverzeichnis:\n{schachtLoadError}",
+                "Schacht-Kosten konnten nicht geladen werden und fehlen im Leistungsverzeichnis "
+                + $"(Schacht-Matrix und/oder Schacht-Massnahmen):\n{schachtLoadError}",
                 "Druckcenter");
         // Schacht-Positionen (NPK Kap. 700) nur fuer Schaechte im Eigentum AWU.
         var prep = BuilderPageLvPreparationService.Build(
@@ -423,8 +438,8 @@ public sealed partial class BuilderPageViewModel
     // sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
     private string BuildLvStandHinweis()
         => _shell.Project.Dirty
-            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs- und Schacht-Matrix."
-            : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json) und Schacht-Matrix (schacht_costs.json).";
+            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix, Schacht-Matrix und Schacht-Massnahmen."
+            : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json), Schacht-Matrix (schacht_costs.json) und Schacht-Massnahmen (schacht_empfehlungen.json).";
 
     private sealed record LvPrep(
         IReadOnlyList<AggregatedPosition> Positions,
@@ -540,7 +555,8 @@ public sealed partial class BuilderPageViewModel
                 ProjectTitle = "NPK-135-Offerte Kanalsanierung",
                 VariantTitle = _shell.Project.Name,
                 CustomerBlock = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta),
-                ObjectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, filteredRows.Count),
+                ObjectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(
+                    projectMeta, filteredRows.Count, BauteilLabelPlural),
                 ReferenceBlock = BuildReferenceBlock(projectMeta),
                 FilterSummaryText = BuildFilterSummaryText(),
                 Currency = "CHF",

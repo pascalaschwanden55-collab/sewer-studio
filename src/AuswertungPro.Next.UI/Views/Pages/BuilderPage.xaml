@@ -2,7 +2,11 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors">
+    <UserControl.Resources>
+        <pages:DruckcenterRowKindToBoolConverter x:Key="BereichToBool"/>
+    </UserControl.Resources>
     <ScrollViewer x:Name="PageScroll"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
@@ -26,6 +30,25 @@
                                Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="Filterbarer Ausdruck mit Kosten-, Eigentümer- und Positionszusammenfassung"
                                Style="{StaticResource Caption}"/>
+
+                    <!-- Bereichsumschalter: wechselt Datenquelle und Kostendatei gemeinsam. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Bereich:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                        <RadioButton Content="Haltungen"
+                                     GroupName="DruckcenterBereich"
+                                     Padding="14,4"
+                                     Margin="0,0,6,0"
+                                     ToolTip="Haltungen mit Kosten aus der Sanierungs-Matrix (costs.json)."
+                                     IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Haltung, Mode=TwoWay}"/>
+                        <RadioButton Content="Schächte"
+                                     GroupName="DruckcenterBereich"
+                                     Padding="14,4"
+                                     ToolTip="Schächte mit Kosten aus der Schacht-Matrix (schacht_costs.json)."
+                                     IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Schacht, Mode=TwoWay}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right"
@@ -67,7 +90,22 @@
                 Style="{StaticResource Card}"
                 Padding="14"
                 Margin="0,0,0,10">
-            <StackPanel>
+            <!-- Zugeklappt als Standard: Die Filter werden selten geändert, brauchten aber
+                 ein Drittel der Seitenhöhe. Der Kopf zeigt jederzeit, was aktiv ist. -->
+            <Expander IsExpanded="False">
+                <Expander.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Filter"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding ActiveFilterText}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontStyle="Italic"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="640"/>
+                    </StackPanel>
+                </Expander.Header>
+            <StackPanel Margin="0,10,0,0">
                 <WrapPanel Margin="0,0,0,8">
                     <StackPanel Width="260"
                                 Margin="0,0,10,8">
@@ -132,66 +170,50 @@
                     </StackPanel>
                 </WrapPanel>
 
-                <WrapPanel Margin="0,0,0,8">
+                <WrapPanel>
                     <CheckBox Content="Nur mit Kosten"
                               IsChecked="{Binding OnlyWithCost, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
                     <CheckBox Content="Nur mit Maßnahmen"
                               IsChecked="{Binding OnlyWithMeasures, Mode=TwoWay}"/>
                 </WrapPanel>
-
-                <TextBlock Text="{Binding ActiveFilterText}"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           FontStyle="Italic"/>
             </StackPanel>
+            </Expander>
         </Border>
 
-        <Grid Grid.Row="2"
-              Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="420"/>
-            </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="2"
+                    Margin="0,0,0,10">
 
-            <Border Grid.Column="0"
-                    Style="{StaticResource Card}"
+            <!-- Vier Kennzahlen in einer Reihe: Anzahl, Auswahl, Netto, Lücken.
+                 Die früheren sechs Kacheln standen zweizeilig und drängten die Tabelle nach unten. -->
+            <Border Style="{StaticResource Card}"
                     Padding="14"
-                    Margin="0,0,10,0">
+                    Margin="0,0,0,10">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Row="0"
-                                Grid.Column="0"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Haltungen (gesamt)"
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding BauteilLabelPlural, StringFormat={}{0} (gesamt)}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding TotalRows}"
                                    FontSize="18"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="0"
-                                Grid.Column="1"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Haltungen (Filter)"
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Im Ausdruck"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding FilteredRowsCount}"
                                    FontSize="18"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="0"
-                                Grid.Column="2"
-                                Margin="0,0,0,8">
+                    <StackPanel Grid.Column="2">
                         <TextBlock Text="Netto total"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding NetTotalText}"
@@ -200,57 +222,37 @@
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1"
-                                Grid.Column="0">
-                        <TextBlock Text="Mit Positionsdetails"
+                    <StackPanel Grid.Column="3"
+                                ToolTip="Fehlende Kosten und fehlende Eigentümer — beides hält Positionen aus dem Leistungsverzeichnis heraus.">
+                        <TextBlock Text="Ohne Kosten / ohne Eigentümer"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding RowsWithDetailedCosts}"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                Grid.Column="1">
-                        <TextBlock Text="Ohne Kosten"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding RowsWithoutCosts}"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                Grid.Column="2">
-                        <TextBlock Text="Ohne Eigentümer"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding RowsWithoutOwner}"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding RowsWithoutCosts}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text=" / "
+                                       FontSize="18"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding RowsWithoutOwner}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="1"
-                          Width="6"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Stretch"
-                          ResizeBehavior="PreviousAndNext"
-                          ResizeDirection="Columns"
-                          Background="Transparent"
-                          ToolTip="Breite des Statistik-Bereichs ziehen (wird pro Ansicht gemerkt)"
-                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
-                          behaviors:SplitterPersistenceBehavior.SplitterKey="Stats"
-                          behaviors:SplitterPersistenceBehavior.TargetColumnIndex="2"
-                          behaviors:SplitterPersistenceBehavior.MinSize="280"
-                          behaviors:SplitterPersistenceBehavior.MaxSize="900"/>
-
-            <Border Grid.Column="2"
-                    Style="{StaticResource Card}"
+            <!-- Spezialstatistik ist Spezialwissen und belegte dauerhaft ein Drittel der
+                 Breite. Jetzt zugeklappt über der Tabelle, die dafür volle Breite bekommt. -->
+            <Border Style="{StaticResource Card}"
                     Padding="14">
-                <StackPanel>
-                    <TextBlock Text="Spezialstatistik"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Margin="0,0,0,8"/>
+                <Expander IsExpanded="False">
+                    <Expander.Header>
+                        <TextBlock Text="Spezialstatistik und Auswertungen"
+                                   FontWeight="SemiBold"/>
+                    </Expander.Header>
+                <StackPanel Margin="0,10,0,0"
+                            MaxWidth="640"
+                            HorizontalAlignment="Left">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -392,8 +394,9 @@
                         </ScrollViewer>
                     </Border>
                 </StackPanel>
+                </Expander>
             </Border>
-        </Grid>
+        </StackPanel>
 
         <Border Grid.Row="3"
                 Style="{StaticResource Card}"
@@ -429,11 +432,13 @@
                 </DataGrid.LayoutTransform>
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Kostenblatt (diese Haltung)"
+                        <MenuItem Header="{Binding PlacementTarget.DataContext.BauteilLabel, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}, StringFormat=Kostenblatt (dieser {0})}"
                                   Command="{Binding PlacementTarget.DataContext.PrintSingleKostenblattCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
                             <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                         </MenuItem>
+                        <!-- Ein volles Dossier gibt es nur fuer Haltungen; bei Schaechten gesperrt. -->
                         <MenuItem Header="Volles Dossier (diese Haltung)"
+                                  IsEnabled="{Binding PlacementTarget.DataContext.SelectedRow.CanPrintDossier, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}, FallbackValue=False}"
                                   Command="{Binding PlacementTarget.DataContext.PrintSingleDossierCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
                             <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                         </MenuItem>
@@ -465,7 +470,9 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Haltung" SortMemberPath="Holding" Binding="{Binding Holding}" Width="170"/>
+                    <!-- Kopf folgt dem Bereich; DataGridColumn liegt ausserhalb des VisualTree
+                         und kann darum nicht binden — wird im Code-Behind gesetzt. -->
+                    <DataGridTextColumn x:Name="BauteilColumn" Header="Haltung" SortMemberPath="Holding" Binding="{Binding Holding}" Width="170"/>
                     <DataGridTextColumn Header="Straße" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
                     <DataGridTextColumn Header="Eigentümer" SortMemberPath="Owner" Binding="{Binding Owner}" Width="160"/>
                     <DataGridTextColumn Header="Ausgeführt durch" SortMemberPath="ExecutedBy" Binding="{Binding ExecutedBy}" Width="160"/>
@@ -492,18 +499,53 @@
                 Style="{StaticResource Card}"
                 Padding="14">
             <StackPanel>
-                <!-- Optionen (brechen bei Bedarf um) -->
-                <WrapPanel Margin="0,0,0,8">
-                    <CheckBox Content="Datenübersicht drucken"
-                              IsChecked="{Binding IncludeDataSection, Mode=TwoWay}"
-                              Margin="0,0,16,4"/>
-                    <CheckBox Content="Eigentümer-Zusammenfassung"
-                              IsChecked="{Binding IncludeOwnerSummarySection, Mode=TwoWay}"
-                              Margin="0,0,16,4"/>
-                    <CheckBox Content="Positions-Zusammenfassung"
-                              IsChecked="{Binding IncludePositionSummarySection, Mode=TwoWay}"
-                              Margin="0,0,0,4"/>
-                </WrapPanel>
+                <!-- Abschnitte des PDF. Zugeklappt, weil der Standard schlank ist und
+                     nur selten geändert wird. -->
+                <Expander Header="Was soll ins PDF?"
+                          IsExpanded="False"
+                          Margin="0,0,0,8">
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Text="Gedruckt wird der oben gewählte Bereich — Haltungen und Schächte ergeben zwei getrennte PDFs. Standard ist die kurze Zusammenstellung; die grossen Abschnitte lassen sich zuschalten."
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"/>
+                        <WrapPanel>
+                            <CheckBox Content="Detailliste je Bauteil"
+                                      ToolTip="Pro Haltung bzw. Schacht eine Zeile mit Total, darunter die Massnahmen mit Menge und Betrag."
+                                      IsChecked="{Binding IncludeDetailListSection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                            <CheckBox Content="Eigentümer-Zusammenfassung"
+                                      IsChecked="{Binding IncludeOwnerSummarySection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                            <CheckBox Content="Kosten je Massnahme"
+                                      IsChecked="{Binding IncludeMeasureSummarySection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                            <CheckBox Content="Positions-Zusammenfassung"
+                                      IsChecked="{Binding IncludePositionSummarySection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                            <CheckBox Content="Spezialstatistik"
+                                      ToolTip="Inliner GFK, Nadelfilz, Manschetten, Linerendmanschetten."
+                                      IsChecked="{Binding IncludeSpecialStatsSection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                            <CheckBox Content="Kosten nach Ausgeführt durch"
+                                      IsChecked="{Binding IncludeExecutorStatsSection, Mode=TwoWay}"
+                                      Margin="0,0,20,6"/>
+                        </WrapPanel>
+                        <Separator Margin="0,4,0,8"/>
+                        <TextBlock Text="Umfangreiche Abschnitte — machen den Ausdruck deutlich länger:"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,6"/>
+                        <WrapPanel>
+                            <CheckBox Content="Datenübersicht (eine Zeile je Bauteil)"
+                                      IsChecked="{Binding IncludeDataSection, Mode=TwoWay}"
+                                      Margin="0,0,20,4"/>
+                            <CheckBox Content="Komplette Aufstellung aller Einzelpositionen"
+                                      ToolTip="Jede einzelne Kostenzeile jedes Bauteils. Bei einem mittleren Projekt sind das rund 20 zusätzliche Seiten."
+                                      IsChecked="{Binding IncludeFullPositionListSection, Mode=TwoWay}"
+                                      Margin="0,0,0,4"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Expander>
 
                 <!-- Aktionen (brechen bei schmalem Fenster in mehrere Reihen um) -->
                 <WrapPanel>
@@ -579,21 +621,26 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button Content="NPK-Offerte (PDF)"
-                            Command="{Binding ExportNpkOfferPdfCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,8,4"
-                            ToolTip="Formatierte NPK-135-Offerte mit Deckblatt, Konditionen, Kapitelübersicht und Positionen."/>
-                    <Button Content="NPK-Leistungsverzeichnis (CSV)"
-                            Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,8,4"
-                            ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt)."/>
-                    <Button Content="NPK-Leistungsverzeichnis (Excel)"
-                            Command="{Binding ExportNpkLeistungsverzeichnisExcelCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,0,4"
-                            ToolTip="Formatiertes Excel mit zwei Reitern: 'Zum Ausfüllen' (leere Preise für die Firma, Totale als Formeln) und 'Kalkulation (intern)' mit euren Schätzpreisen."/>
+                    <!-- Die drei NPK-Ausgaben gehören zusammen und werden seltener gebraucht
+                         als der PDF-Ausdruck — darum gebündelt statt drei Knöpfe nebeneinander. -->
+                    <Menu Margin="0,0,0,4"
+                          Background="Transparent"
+                          VerticalAlignment="Center">
+                        <MenuItem Header="NPK-Leistungsverzeichnis  ▾"
+                                  Padding="12,6"
+                                  FontWeight="SemiBold"
+                                  ToolTip="Projektweite NPK-135-Ausgaben: immer Haltungen UND Schächte im Eigentum AWU, unabhängig vom gewählten Bereich.">
+                            <MenuItem Header="NPK-Offerte (PDF)"
+                                      Command="{Binding ExportNpkOfferPdfCommand}"
+                                      ToolTip="Formatierte NPK-135-Offerte mit Deckblatt, Konditionen, Kapitelübersicht und Positionen."/>
+                            <MenuItem Header="Leistungsverzeichnis (CSV)"
+                                      Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
+                                      ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt)."/>
+                            <MenuItem Header="Leistungsverzeichnis (Excel)"
+                                      Command="{Binding ExportNpkLeistungsverzeichnisExcelCommand}"
+                                      ToolTip="Formatiertes Excel mit zwei Reitern: 'Zum Ausfüllen' (leere Preise für die Firma, Totale als Formeln) und 'Kalkulation (intern)' mit euren Schätzpreisen."/>
+                        </MenuItem>
+                    </Menu>
                 </WrapPanel>
             </StackPanel>
         </Border>

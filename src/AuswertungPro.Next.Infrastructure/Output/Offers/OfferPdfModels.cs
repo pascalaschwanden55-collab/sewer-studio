@@ -27,6 +27,10 @@ public sealed class OfferPdfModel : IOfferPdfModel
     public List<OfferPdfOwnerSummaryLineModel> OwnerSummaryLines { get; set; } = new();
     public List<OfferPdfExecutorCostChartLineModel> ExecutorCostChartLines { get; set; } = new();
     public List<OfferPdfPositionSummaryLineModel> PositionSummaryLines { get; set; } = new();
+
+    /// <summary>Detailliste je Bauteil, nach Bauteilart gruppiert.</summary>
+    public List<OfferPdfDetailGroupModel> DetailGroups { get; set; } = new();
+
     public OfferPdfTotalsModel Totals { get; set; } = new();
 
     public string FilterSummaryText { get; set; } = "";
@@ -45,11 +49,21 @@ public sealed class OfferPdfLineModel
     public string TotalText { get; set; } = "";
 }
 
+/// <summary>
+/// Totale des Ausdrucks. <see cref="OfferPdfTotalsModel.EntryCount"/> speist den
+/// Kennzahlenstreifen auf Seite 1.
+/// </summary>
 public sealed class OfferPdfTotalsModel
 {
     public string NetText { get; set; } = "";
     public string VatText { get; set; } = "";
     public string GrossText { get; set; } = "";
+
+    /// <summary>Anzahl Bauteile mit Kosten im Ausdruck — fuer den Kennzahlenstreifen.</summary>
+    public int EntryCount { get; set; }
+
+    /// <summary>Bezeichnung dazu ("Haltungen"/"Schächte").</summary>
+    public string EntryCountLabel { get; set; } = "";
 }
 
 public sealed class OfferPdfMeasureSummaryLineModel
@@ -116,6 +130,45 @@ public sealed class CostSummaryEntry
     public string Owner { get; set; } = "";
     public string ExecutedBy { get; set; } = "";
     public HoldingCost Cost { get; set; } = new();
+
+    /// <summary>
+    /// Bauteilart fuer die Detailliste ("Haltungen"/"Schächte"). Leer = einbereichiger
+    /// Ausdruck, dann entsteht genau eine Gruppe.
+    /// </summary>
+    public string GroupLabel { get; set; } = "";
+
+    /// <summary>Strasse/Lage — nur Anzeige in der Kopfzeile der Detailliste.</summary>
+    public string Street { get; set; } = "";
+}
+
+/// <summary>Ein Abschnitt der Detailliste: alle Bauteile einer Art mit Zwischentotal.</summary>
+public sealed class OfferPdfDetailGroupModel
+{
+    public string Title { get; set; } = "";
+    public string EntryCountText { get; set; } = "";
+    public string SubtotalText { get; set; } = "";
+    public List<OfferPdfDetailEntryModel> Entries { get; set; } = new();
+}
+
+/// <summary>Ein Bauteil in der Detailliste: Kopfzeile plus seine Massnahmen.</summary>
+public sealed class OfferPdfDetailEntryModel
+{
+    public string Name { get; set; } = "";
+    public string Owner { get; set; } = "";
+    public string Street { get; set; } = "";
+    public string TotalText { get; set; } = "";
+    public List<OfferPdfDetailMeasureModel> Measures { get; set; } = new();
+}
+
+/// <summary>Eine Massnahme in der Detailliste.</summary>
+public sealed class OfferPdfDetailMeasureModel
+{
+    public string Name { get; set; } = "";
+
+    /// <summary>Menge samt Einheit — leer, wenn die Einheiten uneinheitlich sind.</summary>
+    public string QtyText { get; set; } = "";
+
+    public string TotalText { get; set; } = "";
 }
 
 public sealed class OfferPdfContext

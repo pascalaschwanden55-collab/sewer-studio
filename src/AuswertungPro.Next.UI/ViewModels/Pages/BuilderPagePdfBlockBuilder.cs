@@ -19,7 +19,14 @@ public static class BuilderPagePdfBlockBuilder
         return result.Length == 0 ? "Nicht definiert" : result;
     }
 
-    public static string BuildObjectBlock(IReadOnlyDictionary<string, string> metadata, int holdingCount)
+    /// <param name="bauteilLabelPlural">
+    /// Bauteilname im Ausdruck ("Haltungen"/"Schächte") — der Bereich des Druckcenters
+    /// entscheidet darueber, damit auf einem Schacht-Ausdruck nichts von Haltungen steht.
+    /// </param>
+    public static string BuildObjectBlock(
+        IReadOnlyDictionary<string, string> metadata,
+        int holdingCount,
+        string bauteilLabelPlural = "Haltungen")
     {
         var lines = new List<string>();
         AddLine(lines, "Projekt", metadata.TryGetValue("Zone", out var zone) ? zone : "");
@@ -27,7 +34,7 @@ public static class BuilderPagePdfBlockBuilder
         AddLine(lines, "Auftrag-Nr.", metadata.TryGetValue("AuftragNr", out var auftragNr) ? auftragNr : "");
         AddLine(lines, "Bearbeiter", metadata.TryGetValue("Bearbeiter", out var bearbeiter) ? bearbeiter : "");
         AddLine(lines, "Inspektionsdatum", metadata.TryGetValue("InspektionsDatum", out var datum) ? datum : "");
-        lines.Add($"Haltungen im Ausdruck: {holdingCount}");
+        lines.Add($"{bauteilLabelPlural} im Ausdruck: {holdingCount}");
         return string.Join("\n", lines);
     }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -48,8 +48,19 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly ISafeShellOpenService _shellOpen;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly IProjectCostStoreRepository _costRepo;
+    // Zweite Kostendatei: Die Schacht-Matrix speichert getrennt in schacht_costs.json.
+    private readonly IProjectCostStoreRepository _schachtCostRepo;
+    // Dritte Kostendatei: Der Massnahmen-Dialog der Schaechte-Seite schreibt hierhin.
+    private readonly IProjectCostStoreRepository _schachtEmpfehlungRepo;
+    private ProjectCostStore _schachtEmpfehlungStore = new();
     private readonly ICostCatalogStore _catalogStore;
     private readonly DispatcherTimer _refreshDebounceTimer;
+
+    /// <summary>Kostendatei der Schacht-Matrix — dieselbe Quelle wie im NPK-Kapitel 700.</summary>
+    internal const string SchachtCostFileName = "schacht_costs.json";
+
+    /// <summary>Kostendatei des Schacht-Massnahmen-Dialogs auf der Schaechte-Seite.</summary>
+    internal const string SchachtEmpfehlungFileName = "schacht_empfehlungen.json";
 
     private List<DruckcenterRowVm> _allRows = new();
     private ProjectCostStore _costStore = new();
@@ -87,12 +98,47 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private DruckcenterRowVm? _selectedRow;
 
+    /// <summary>
+    /// Umschalter Haltungen/Schaechte. Wechselt Datenquelle UND Kostendatei gemeinsam:
+    /// Haltungen lesen costs.json, Schaechte schacht_costs.json (Schacht-Matrix).
+    /// </summary>
+    [ObservableProperty] private DruckcenterRowKind _bereich = DruckcenterRowKind.Haltung;
+
+    /// <summary>Bauteilname fuer Spaltenkopf und Meldungen — folgt dem Bereich.</summary>
+    public string BauteilLabel
+        => Bereich == DruckcenterRowKind.Schacht ? "Schacht" : "Haltung";
+
+    public string BauteilLabelPlural
+        => Bereich == DruckcenterRowKind.Schacht ? "Schächte" : "Haltungen";
+
     [ObservableProperty] private bool _onlyWithCost;
     [ObservableProperty] private bool _onlyWithMeasures;
 
-    [ObservableProperty] private bool _includeDataSection = true;
+    // Abschnitte des Ausdrucks. Standard ist bewusst schlank: Der Ausdruck heisst
+    // "Kostenzusammenstellung" und war faktisch eine 25-seitige Volldokumentation.
+    // Grosse Abschnitte sind zuschaltbar, aber nicht mehr Standard.
+    [ObservableProperty] private bool _includeDataSection;
     [ObservableProperty] private bool _includeOwnerSummarySection = true;
-    [ObservableProperty] private bool _includePositionSummarySection = true;
+    [ObservableProperty] private bool _includeMeasureSummarySection = true;
+    [ObservableProperty] private bool _includeDetailListSection = true;
+    [ObservableProperty] private bool _includePositionSummarySection;
+    [ObservableProperty] private bool _includeSpecialStatsSection;
+    [ObservableProperty] private bool _includeExecutorStatsSection;
+    [ObservableProperty] private bool _includeFullPositionListSection;
+
+    /// <summary>Die angehakten Abschnitte als Auswahl fuer die PDF-Fabrik.</summary>
+    public CostSummaryPdfSections BuildPdfSections()
+        => new()
+        {
+            OwnerSummary = IncludeOwnerSummarySection,
+            MeasureSummary = IncludeMeasureSummarySection,
+            DetailList = IncludeDetailListSection,
+            DataOverview = IncludeDataSection,
+            SpecialStats = IncludeSpecialStatsSection,
+            ExecutorStats = IncludeExecutorStatsSection,
+            PositionSummary = IncludePositionSummarySection,
+            FullPositionList = IncludeFullPositionListSection
+        };
 
     [ObservableProperty] private int _totalRows;
     [ObservableProperty] private int _filteredRowsCount;
@@ -151,13 +197,27 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             shellOpen: services.ShellOpen,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
-            npkExcelExporter: services.NpkExcelExport)
+            npkExcelExporter: services.NpkExcelExport,
+            schachtCostRepo: services.CostStores.CreateProjectCostStore(SchachtCostFileName),
+            schachtEmpfehlungRepo: services.CostStores.CreateProjectCostStore(SchachtEmpfehlungFileName))
     {
         _pdfMerge = services.PdfMerge;
         _pdfExport = services.OfferPdfExport;
         _npkPdfExport = services.NpkOfferPdfExport;
         _pdfPrint = services.PdfPrint;
     }
+
+    /// <summary>
+    /// Einzige Beruehrung der Kompatibilitaetsfassade in dieser Datei.
+    ///
+    /// Die Fassade ist per Waechter gedeckelt und darf nur schrumpfen. Vorher
+    /// stand ihr Name viermal hier: zweimal im Uebergangskonstruktor und zweimal
+    /// als Rueckfall fuer die neuen Schacht-Speicher. Der DI-Weg ueber den
+    /// ServiceProvider reicht diese Speicher laengst korrekt durch; die
+    /// Rueckfaelle greifen nur noch fuer die veralteten oeffentlichen
+    /// Konstruktoren (Gesamtaudit 2026-08-18, A-01).
+    /// </summary>
+    private static ICostStoreFactory UebergangsKostenfabrik => CostStoreCompatibility.Factory;
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public BuilderPageViewModel(
@@ -175,8 +235,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             dialogs,
             protocolPdfExporter,
             costFieldSync,
-            CostStoreCompatibility.Factory.CreateProjectCostStore(),
-            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            UebergangsKostenfabrik.CreateProjectCostStore(),
+            UebergangsKostenfabrik.CreateCostCatalogStore(),
             SafeShellOpen.CompatibilityService,
             dossierPhotoAvailability,
             inspectionProtocolFiles,
@@ -222,7 +282,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         ISafeShellOpenService shellOpen,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
+        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null,
+        IProjectCostStoreRepository? schachtCostRepo = null,
+        IProjectCostStoreRepository? schachtEmpfehlungRepo = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -230,6 +292,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _protocolPdfExporter = protocolPdfExporter ?? throw new ArgumentNullException(nameof(protocolPdfExporter));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
+        _schachtCostRepo = schachtCostRepo
+            ?? UebergangsKostenfabrik.CreateProjectCostStore(SchachtCostFileName);
+        _schachtEmpfehlungRepo = schachtEmpfehlungRepo
+            ?? UebergangsKostenfabrik.CreateProjectCostStore(SchachtEmpfehlungFileName);
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _dossierPhotoAvailability = dossierPhotoAvailability
@@ -257,26 +323,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ResetFilters()
     {
-        _suspendFilterRefresh = true;
-        try
-        {
-            SelectedOwnerFilter = AllFilterLabel;
-            SelectedExecutedByFilter = AllFilterLabel;
-            SelectedSanierenFilter = AllFilterLabel;
-            SelectedMaterialFilter = AllFilterLabel;
-            SelectedStatusFilter = AllFilterLabel;
-            SelectedYearFilter = AllFilterLabel;
-            SearchText = "";
-            OnlyWithCost = false;
-            OnlyWithMeasures = false;
-        }
-        finally
-        {
-            _suspendFilterRefresh = false;
-        }
-
+        ResetFilterSelections();
         ApplyFilters();
     }
+
     partial void OnSelectedOwnerFilterChanged(string value) => ApplyFiltersIfReady();
     partial void OnSelectedExecutedByFilterChanged(string value) => ApplyFiltersIfReady();
     partial void OnSelectedSanierenFilterChanged(string value) => ApplyFiltersIfReady();
@@ -408,22 +458,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         RefreshData();
     }
 
-    private void InitializeOptionCollections()
-    {
-        OwnerFilterOptions.Clear();
-        ExecutedByFilterOptions.Clear();
-        SanierenFilterOptions.Clear();
-        MaterialFilterOptions.Clear();
-        StatusFilterOptions.Clear();
-        YearFilterOptions.Clear();
-
-        OwnerFilterOptions.Add(AllFilterLabel);
-        ExecutedByFilterOptions.Add(AllFilterLabel);
-        SanierenFilterOptions.Add(AllFilterLabel);
-        MaterialFilterOptions.Add(AllFilterLabel);
-        StatusFilterOptions.Add(AllFilterLabel);
-        YearFilterOptions.Add(AllFilterLabel);
-    }
 
     private void RefreshData()
     {
@@ -431,13 +465,33 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
             ClearLastExport();
 
-        _costStore = _costRepo.Load(projectPath, out var costLoadError);
+        // Der Bereich entscheidet ueber die Kostendatei: costs.json bzw. schacht_costs.json.
+        var costRepo = Bereich == DruckcenterRowKind.Schacht ? _schachtCostRepo : _costRepo;
+        _costStore = costRepo.Load(projectPath, out var costLoadError);
         ReportCostStoreLoadError(costLoadError);
+
+        // Zweite Schachtquelle: Massnahmen-Dialog. Ein Lesefehler darf die Liste nicht
+        // sperren, aber auch nicht still Kosten verschlucken — er wird sichtbar gemeldet.
+        if (Bereich == DruckcenterRowKind.Schacht)
+        {
+            _schachtEmpfehlungStore = _schachtEmpfehlungRepo.Load(projectPath, out var empfehlungError);
+            if (!string.IsNullOrWhiteSpace(empfehlungError))
+            {
+                LastResult = $"Schacht-Massnahmen konnten nicht geladen werden: {empfehlungError}";
+                _shell.SetStatus("Schacht-Massnahmen unlesbar — Kosten koennen fehlen.");
+            }
+        }
+        else
+        {
+            _schachtEmpfehlungStore = new ProjectCostStore();
+        }
 
         var catalog = _catalogStore.LoadMerged(projectPath, out var catalogLoadError);
         ReportCatalogLoadError(catalogLoadError);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
-        ReportTableCostParseError(FindTableCostParseError());
+        // Tabellenkosten gibt es nur an Haltungen; Schaechte rechnen ausschliesslich ueber die Matrix.
+        ReportTableCostParseError(
+            Bereich == DruckcenterRowKind.Schacht ? null : FindTableCostParseError());
 
         _suspendFilterRefresh = true;
         try
@@ -676,97 +730,38 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
     private List<DruckcenterRowVm> BuildRows()
-        => BuilderPageRowBuilder.Build(
-            _shell.Project.Data,
-            _shell.Project.Metadata,
-            _costStore);
+        => Bereich == DruckcenterRowKind.Schacht
+            ? BuilderPageSchachtRowBuilder.Build(
+                _shell.Project.SchaechteData,
+                _shell.Project.Metadata,
+                _costStore,
+                _schachtEmpfehlungStore)
+            : BuilderPageRowBuilder.Build(
+                _shell.Project.Data,
+                _shell.Project.Metadata,
+                _costStore);
 
-    private void RebuildFilterOptions()
+    /// <summary>
+    /// Bereichswechsel: Kostendatei, Zeilen und Filteroptionen gehoeren zusammen und werden
+    /// gemeinsam neu aufgebaut. Ein alter Filterwert darf die neue Liste nicht leerfiltern.
+    /// </summary>
+    partial void OnBereichChanged(DruckcenterRowKind value)
     {
-        RebuildOptionCollection(
-            OwnerFilterOptions,
-            _allRows.Select(r => r.Owner).Where(v => v.Length > 0),
-            SelectedOwnerFilter,
-            value => SelectedOwnerFilter = value);
-
-        var executedByValues = _allRows
-            .Select(r => r.ExecutedBy)
-            .Where(v => v.Length > 0)
-            .Concat(DefaultExecutedByValues);
-
-        if (!string.IsNullOrWhiteSpace(SelectedExecutedByFilter) &&
-            !SelectedExecutedByFilter.Equals(AllFilterLabel, StringComparison.OrdinalIgnoreCase))
-        {
-            executedByValues = executedByValues.Concat(new[] { SelectedExecutedByFilter.Trim() });
-        }
-
-        RebuildOptionCollection(
-            ExecutedByFilterOptions,
-            executedByValues,
-            SelectedExecutedByFilter,
-            value => SelectedExecutedByFilter = value);
-
-        RebuildOptionCollection(
-            SanierenFilterOptions,
-            _allRows.Select(r => r.Sanieren).Where(v => v.Length > 0),
-            SelectedSanierenFilter,
-            value => SelectedSanierenFilter = value);
-
-        RebuildOptionCollection(
-            MaterialFilterOptions,
-            _allRows.Select(r => r.Material).Where(v => v.Length > 0),
-            SelectedMaterialFilter,
-            value => SelectedMaterialFilter = value);
-
-        RebuildOptionCollection(
-            StatusFilterOptions,
-            _allRows.Select(r => r.Status).Where(v => v.Length > 0),
-            SelectedStatusFilter,
-            value => SelectedStatusFilter = value);
-
-        RebuildOptionCollection(
-            YearFilterOptions,
-            _allRows.Select(r => r.Year).Where(v => v.Length > 0),
-            SelectedYearFilter,
-            value => SelectedYearFilter = value);
+        _ = value;
+        OnPropertyChanged(nameof(BauteilLabel));
+        OnPropertyChanged(nameof(BauteilLabelPlural));
+        ResetFilterSelections();
+        SelectedRow = null;
+        ClearLastExport();
+        RefreshData();
     }
 
-    private static void RebuildOptionCollection(
-        ObservableCollection<string> target,
-        IEnumerable<string> values,
-        string selected,
-        Action<string> setSelected)
-    {
-        var allValues = values
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
-        target.Clear();
-        target.Add(AllFilterLabel);
-        foreach (var value in allValues)
-            target.Add(value);
 
-        if (target.Contains(selected))
-            setSelected(selected);
-        else
-            setSelected(AllFilterLabel);
-    }
 
     private void ApplyFilters()
     {
-        var filtered = BuilderPageRowFilter.Apply(
-            _allRows,
-            new BuilderPageFilterCriteria(
-                SelectedOwnerFilter,
-                SelectedExecutedByFilter,
-                SelectedSanierenFilter,
-                SelectedMaterialFilter,
-                SelectedStatusFilter,
-                SelectedYearFilter,
-                SearchText,
-                OnlyWithCost,
-                OnlyWithMeasures));
+        var filtered = BuilderPageRowFilter.Apply(_allRows, CurrentFilterCriteria());
 
         Rows.Clear();
         foreach (var row in filtered)

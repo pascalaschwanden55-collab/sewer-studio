@@ -15,13 +15,18 @@ public sealed class BuilderPageExportScopeTests
         Assert.Equal("Kostenzusammenstellung - Haltung HAL-5", selection.VariantTitle);
     }
 
+    /// <summary>
+    /// Fallback ohne Namen. Der Text lautet seit der Trennung Haltungen/Schaechte
+    /// "&lt;Bauteilart&gt; ohne Bezeichnung" — das benennt den Grund und funktioniert
+    /// grammatikalisch fuer beide Bauteilarten.
+    /// </summary>
     [Fact]
     public void Single_ohne_haltungsnamen_faellt_auf_neutralen_titel_zurueck()
     {
         var selection = BuilderPageExportScope.Single(Row("   "));
 
         Assert.Single(selection.Rows);
-        Assert.Equal("Kostenzusammenstellung - einzelne Haltung", selection.VariantTitle);
+        Assert.Equal("Kostenzusammenstellung - Haltung ohne Bezeichnung", selection.VariantTitle);
     }
 
     [Fact]
@@ -35,6 +40,29 @@ public sealed class BuilderPageExportScopeTests
         Assert.Equal("Gefilterte Kostenzusammenstellung (3 Haltungen)", selection.VariantTitle);
     }
 
+    /// <summary>
+    /// Haltungen und Schaechte werden getrennt gedruckt — der Titel muss sagen, welche
+    /// Bauteilart im Dokument steht.
+    /// </summary>
+    [Fact]
+    public void All_nennt_die_Bauteilart_im_Titel()
+    {
+        var selection = BuilderPageExportScope.All([SchachtRow("S-1"), SchachtRow("S-2")], "Schächte");
+
+        Assert.Equal("Gefilterte Kostenzusammenstellung (2 Schächte)", selection.VariantTitle);
+    }
+
+    [Fact]
+    public void Single_nennt_die_Bauteilart_im_Titel()
+    {
+        var selection = BuilderPageExportScope.Single(SchachtRow("80551"), "Schacht");
+
+        Assert.Equal("Kostenzusammenstellung - Schacht 80551", selection.VariantTitle);
+    }
+
     private static DruckcenterRowVm Row(string holding)
         => new() { Holding = holding };
+
+    private static DruckcenterRowVm SchachtRow(string nummer)
+        => new() { Holding = nummer, Kind = DruckcenterRowKind.Schacht };
 }

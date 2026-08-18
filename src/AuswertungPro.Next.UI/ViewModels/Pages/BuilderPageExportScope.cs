@@ -9,23 +9,36 @@ public sealed record BuilderPageExportSelection(
 
 /// <summary>
 /// Bestimmt Umfang und Titel des Druckcenter-Kostenausdrucks:
-/// alle (gefilterten) Haltungen oder genau eine einzelne.
+/// alle (gefilterten) Bauteile eines Bereichs oder genau eines.
+/// Haltungen und Schaechte werden getrennt gedruckt — die Bauteilart steht darum im Titel.
 /// </summary>
 public static class BuilderPageExportScope
 {
-    /// <summary>Alle (gefilterten) Haltungen — Titel wie der bisherige Gesamtausdruck.</summary>
-    public static BuilderPageExportSelection All(IReadOnlyList<DruckcenterRowVm> filteredRows)
-        => new(filteredRows, $"Gefilterte Kostenzusammenstellung ({filteredRows.Count} Haltungen)");
+    /// <summary>Alle (gefilterten) Bauteile des gewaehlten Bereichs.</summary>
+    public static BuilderPageExportSelection All(
+        IReadOnlyList<DruckcenterRowVm> filteredRows,
+        string bauteilLabelPlural = "Haltungen")
+        => new(
+            filteredRows,
+            $"Gefilterte Kostenzusammenstellung ({filteredRows.Count} {Safe(bauteilLabelPlural, "Haltungen")})");
 
-    /// <summary>Genau eine Haltung — Titel mit Haltungsname, neutraler Fallback ohne Namen.</summary>
-    public static BuilderPageExportSelection Single(DruckcenterRowVm row)
-        => new(new[] { row }, SingleVariantTitle(row.Holding));
+    /// <summary>Genau ein Bauteil — Titel mit Namen, neutraler Fallback ohne Namen.</summary>
+    public static BuilderPageExportSelection Single(
+        DruckcenterRowVm row,
+        string bauteilLabel = "Haltung")
+        => new(new[] { row }, SingleVariantTitle(row.Holding, Safe(bauteilLabel, "Haltung")));
 
-    private static string SingleVariantTitle(string? holding)
+    private static string SingleVariantTitle(string? holding, string bauteilLabel)
     {
         var name = (holding ?? string.Empty).Trim();
         return name.Length == 0
-            ? "Kostenzusammenstellung - einzelne Haltung"
-            : $"Kostenzusammenstellung - Haltung {name}";
+            ? $"Kostenzusammenstellung - {bauteilLabel} ohne Bezeichnung"
+            : $"Kostenzusammenstellung - {bauteilLabel} {name}";
+    }
+
+    private static string Safe(string? value, string fallback)
+    {
+        var text = (value ?? string.Empty).Trim();
+        return text.Length == 0 ? fallback : text;
     }
 }
