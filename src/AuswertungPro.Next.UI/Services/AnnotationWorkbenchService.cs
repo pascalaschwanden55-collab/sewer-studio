@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
@@ -967,28 +967,6 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
 
         return warning;
     }
-
-    private static bool PathsEqual(string? first, string? second)
-        => !string.IsNullOrWhiteSpace(first)
-           && !string.IsNullOrWhiteSpace(second)
-           && string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);
-
-    private static string? CombineWarnings(params string?[] warnings)
-    {
-        var present = warnings.Where(w => !string.IsNullOrWhiteSpace(w)).ToArray();
-        return present.Length == 0 ? null : string.Join(" | ", present);
-    }
-
-    private static string NormalizeCode(string? code)
-        => (code ?? string.Empty).Trim().Replace(".", string.Empty).ToUpperInvariant();
-
-    private static DateTimeOffset ToUtc(DateTime value)
-        => value.Kind switch
-        {
-            DateTimeKind.Utc => new DateTimeOffset(value, TimeSpan.Zero),
-            DateTimeKind.Local => new DateTimeOffset(value).ToUniversalTime(),
-            _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeSpan.Zero),
-        };
 
     // Der Pruefplatz baut SAM-Service und Vision-Client pro Fenster frisch (eigener HttpClient).
     // Dispose gibt sie frei, falls disposbar — Fakes/geteilte Clients (nicht IDisposable) bleiben

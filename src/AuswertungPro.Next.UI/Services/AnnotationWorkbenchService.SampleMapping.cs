@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Application.Protocol;
@@ -79,4 +79,32 @@ public sealed partial class AnnotationWorkbenchService
         }
         sample.CodeMeta.UpdatedAt = DateTimeOffset.UtcNow;
     }
+
+    // ── Kleine reine Helfer ──────────────────────────────────────────────
+    // Aus der Hauptdatei hierher verschoben: Sie stand exakt auf der
+    // 1000-Zeilen-Grenze des Wartbarkeits-Waechters, und schon zwei neue
+    // Zeilen haetten sie gerissen. Reine Helfer ohne Zustand sind der
+    // natuerliche Teil, der in die bestehende Partialdatei gehoert.
+
+    private static bool PathsEqual(string? first, string? second)
+        => !string.IsNullOrWhiteSpace(first)
+           && !string.IsNullOrWhiteSpace(second)
+           && string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static string? CombineWarnings(params string?[] warnings)
+    {
+        var present = warnings.Where(w => !string.IsNullOrWhiteSpace(w)).ToArray();
+        return present.Length == 0 ? null : string.Join(" | ", present);
+    }
+
+    private static string NormalizeCode(string? code)
+        => (code ?? string.Empty).Trim().Replace(".", string.Empty).ToUpperInvariant();
+
+    private static DateTimeOffset ToUtc(DateTime value)
+        => value.Kind switch
+        {
+            DateTimeKind.Utc => new DateTimeOffset(value, TimeSpan.Zero),
+            DateTimeKind.Local => new DateTimeOffset(value).ToUniversalTime(),
+            _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeSpan.Zero),
+        };
 }
