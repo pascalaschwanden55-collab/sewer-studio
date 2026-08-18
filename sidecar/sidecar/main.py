@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
@@ -186,6 +187,72 @@ def _resolve_or_create_token() -> str:
 
 def _auth_token() -> str:
     return (settings.auth_token or "").strip()
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, exc: RequestValidationError):
+    """Validierungsfehler OHNE die Eingabe zurueckspiegeln.
+
+    Der Standardhandler von FastAPI nimmt bei jedem Fehler das ungueltige
+    Eingabeobjekt als ``input`` in die Antwort auf. Verfehlt ein CONTAINER-Feld
+    seinen Typ - etwa ``samples`` als Objekt statt als Liste, oder ein
+    unbekanntes Feld auf oberster Ebene -, dann ist dieses Objekt der gesamte
+    Anfragekoerper samt Base64-Bildern. Gemessen am 2026-08-18: ein Koerper von
+    200 KB erzeugte eine Antwort von 101 KB mit dem Base64-Inhalt darin.
+
+    Bei den meisten Fehlerformen (falscher Literalwert, unbekanntes Feld in
+    einem Sample) blieb die Antwort dagegen bei rund 1,1 KB - die Spiegelung war
+    also nie das Normalverhalten, aber sie war moeglich.
+
+    Geliefert werden nur Ort, stabiler Code und eine kurze Meldung. Der
+    Aufrufer weiss damit, WO es klemmt, bekommt aber nie seine eigenen
+    Nutzdaten zurueck (Gesamtaudit 2026-08-18, R-01).
+    """
+    fehler = [
+        {
+            "loc": [str(teil) for teil in (einzeln.get("loc") or ())],
+            "type": str(einzeln.get("type") or "validation_error"),
+        }
+        for einzeln in exc.errors()[:20]
+    ]
+    return JSONResponse(
+        {
+            "detail": "Request validation failed.",
+            "code": "validation_error",
+            "errors": fehler,
+        },
+        status_code=422,
+    )
+
+
+@app.middleware("http")
+async def enforce_request_size_limit(request: Request, call_next):
+    """Groessengrenze VOR JSON und Pydantic.
+
+    Bis hierher wurde erst in der Route geprueft - also nachdem der ganze
+    Koerper als Zeichenkette und Objektbaum im Speicher stand.
+    """
+    grenze = int(getattr(settings, "max_request_bytes", 0) or 0)
+    if grenze > 0:
+        angegeben = request.headers.get("content-length")
+        if angegeben is not None:
+            try:
+                if int(angegeben) > grenze:
+                    return JSONResponse(
+                        {
+                            "detail": "Request body too large.",
+                            "code": "request_too_large",
+                            "limit_bytes": grenze,
+                        },
+                        status_code=413,
+                    )
+            except ValueError:
+                return JSONResponse(
+                    {"detail": "Invalid Content-Length.", "code": "invalid_content_length"},
+                    status_code=400,
+                )
+
+    return await call_next(request)
 
 
 @app.middleware("http")

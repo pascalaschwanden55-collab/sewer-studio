@@ -53,6 +53,18 @@ class SidecarSettings(BaseSettings):
     # hier mit gueltiger, hashgebundener Freigabedatei liegt, darf gerechnet
     # werden — ein ungemessenes Modell bleibt gesperrt.
     lernstufe_freigaben_root: str = r"C:\KI_BRAIN\training\lernstufen\freigaben"
+    # Gesamtgrenze des Anfragekoerpers, geprueft VOR dem Aufbau von JSON und
+    # Pydantic-Objekten. Ohne sie waren 500 Bilder mal 25 MB implizit erlaubt -
+    # rund 16,7 GB Base64, die der Prozess vollstaendig im Speicher aufgebaut
+    # haette, bevor die Groessenpruefung der Route ueberhaupt lief
+    # (Gesamtaudit 2026-08-18, R-01).
+    #
+    # Der Wert ist an den gemessenen Bestand gelegt, nicht geraten: 4503
+    # Goldbilder haben Median 488 KB, p95 3,2 MB und Maximum 5,1 MB. Ein
+    # vollstaendiger 500-Bilder-Export mit lauter groessten Bildern ergibt als
+    # Base64 rund 3,35 GB. 4 GiB laesst jeden realen Export durch und schneidet
+    # das theoretische Maximum auf ein Viertel.
+    max_request_bytes: int = 4 * 1024 * 1024 * 1024
     training_max_image_bytes: int = 25 * 1024 * 1024
     inference_max_image_bytes: int = 25 * 1024 * 1024
     max_image_pixels: int = 50_000_000
