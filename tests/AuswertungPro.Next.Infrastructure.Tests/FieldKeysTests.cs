@@ -129,9 +129,12 @@ public sealed class FieldKeysTests
     // Schattenauswertung. In den Tabellen sah eine geschaetzte Note damit aus
     // wie eine gerechnete.
     //
-    // Auf dem realen Bestand betrifft das 147 von 14'084 bewerteten Haltungen
-    // (1,0 %). Fuer den Abgleich "passt meine Einschaetzung zum Code" sind
-    // genau das die Faelle, in denen der Code gar nichts eingeschaetzt hat.
+    // Auf dem realen Bestand betrifft das 27 von 1741 bewerteten Haltungen
+    // (1,6 %), gezaehlt ueber 50 Projektordner mit je nur der neuesten Datei.
+    // (Eine erste Zaehlung nannte 147 von 14'084; sie hatte die zahlreichen
+    // Sicherungskopien desselben Projekts mitgezaehlt.) Fuer den Abgleich
+    // "passt meine Einschaetzung zum Code" sind genau das die Faelle, in denen
+    // der Code gar nichts eingeschaetzt hat.
     // ═══════════════════════════════════════════════
 
     [Fact]
