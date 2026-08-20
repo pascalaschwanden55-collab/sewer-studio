@@ -69,3 +69,60 @@ public sealed class KostenfallFileStoreTests : IDisposable
         Assert.Equal("{ kaputt", File.ReadAllText(pfad));
     }
 }
+
+/// <summary>
+/// Faelle wachsen ueber mehrere Projekte. Ein Aufbaulauf fuer Projekt B darf die
+/// Faelle aus Projekt A nicht loeschen — sonst faengt der Bestand jedes Mal neu an.
+/// </summary>
+public sealed class KostenfallZusammenfuehrungTests
+{
+    private static Kostenfall Fall(string projekt, string haltung) => new()
+    {
+        Haltung = haltung,
+        Projekt = projekt,
+        ErfasstUtc = new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc),
+        Merkmale = new KostenfallMerkmale
+        {
+            DnMm = 300,
+            LaengeM = 40,
+            Schaeden = [new SchadensMerkmal("BAF", 1, false)]
+        },
+        Positionen = [new MassnahmePosition("SCHLAUCHLINER_GFK", 40m, "m")]
+    };
+
+    [Fact]
+    public void Ein_neues_Projekt_ergaenzt_den_Bestand()
+    {
+        var bestand = new[] { Fall("Zone 1.15", "H-1"), Fall("Zone 1.15", "H-2") };
+        var neu = new[] { Fall("Wassen", "W-1") };
+
+        var zusammen = KostenfallZusammenfuehrung.Fuehre(bestand, neu, "Wassen");
+
+        Assert.Equal(3, zusammen.Count);
+        Assert.Contains(zusammen, f => f.Projekt == "Zone 1.15" && f.Haltung == "H-1");
+        Assert.Contains(zusammen, f => f.Projekt == "Wassen");
+    }
+
+    [Fact]
+    public void Ein_erneuter_Lauf_desselben_Projekts_ersetzt_nur_dessen_Faelle()
+    {
+        var bestand = new[] { Fall("Zone 1.15", "H-1"), Fall("Wassen", "W-1") };
+        var neu = new[] { Fall("Zone 1.15", "H-1"), Fall("Zone 1.15", "H-2") };
+
+        var zusammen = KostenfallZusammenfuehrung.Fuehre(bestand, neu, "Zone 1.15");
+
+        Assert.Equal(3, zusammen.Count);
+        Assert.Equal(2, zusammen.Count(f => f.Projekt == "Zone 1.15"));
+        Assert.Single(zusammen, f => f.Projekt == "Wassen");
+    }
+
+    [Fact]
+    public void Ohne_neue_Faelle_bleibt_der_Bestand_unangetastet()
+    {
+        var bestand = new[] { Fall("Zone 1.15", "H-1") };
+
+        var zusammen = KostenfallZusammenfuehrung.Fuehre(bestand, [], "Wassen");
+
+        Assert.Single(zusammen);
+    }
+}

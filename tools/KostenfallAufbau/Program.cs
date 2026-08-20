@@ -104,7 +104,18 @@ if (!schreiben)
     return 0;
 }
 
-new KostenfallFileStore(wurzel).Speichere(faelle);
+// Bestand anderer Projekte bleibt erhalten; ein erneuter Lauf desselben Projekts
+// ersetzt genau dessen Faelle.
+var store = new KostenfallFileStore(wurzel);
+var bisher = store.Lade();
+var zusammen = KostenfallZusammenfuehrung.Fuehre(bisher, faelle, projektName);
+store.Speichere(zusammen);
+
+Console.WriteLine();
+Console.WriteLine($"Bestand vorher   : {bisher.Count}");
+Console.WriteLine($"Bestand jetzt    : {zusammen.Count}");
+foreach (var gruppe in zusammen.GroupBy(f => f.Projekt).OrderBy(g => g.Key, StringComparer.Ordinal))
+    Console.WriteLine($"  {gruppe.Count(),4}  {gruppe.Key}");
 Console.WriteLine();
 Console.WriteLine($"Geschrieben nach {Path.Combine(wurzel, "kostenanalyse", "kostenfaelle_v1.json")}");
 return 0;
