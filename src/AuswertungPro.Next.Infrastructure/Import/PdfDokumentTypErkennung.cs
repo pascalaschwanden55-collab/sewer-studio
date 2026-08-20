@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using AuswertungPro.Next.Application.Import;
 
@@ -73,6 +73,13 @@ public static class PdfDokumentTypErkennung
                    "Dichtheitspr\u00fcfung",
                    "SIA190",
                    "SIA 190",
+                   // Reale Schreibweisen aus KIT-Bauinspekt-Pruefberichten. Ohne sie
+                   // blieb ein ganzer Pruefbericht "Unbekannt" und wurde nie verteilt.
+                   // Die letzte Form ist die wichtigste: der produktive PdfPig-Leser
+                   // liefert den Seitentext OHNE Leerzeichen ("...gemaRSIANorm190:2017").
+                   "SIA Norm 190",
+                   "SIANorm 190",
+                   "SIANorm190",
                    "VSA RL Dicht")
                || (ContainsAny(text, "von Schacht:", "nach Schacht:")
                    && ContainsAny(text, "Pruefdruck", "Pr\u00fcfdruck", "Pruefstrecke", "Pr\u00fcfstrecke"));

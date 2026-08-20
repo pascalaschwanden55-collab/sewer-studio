@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Infrastructure.Import;
+﻿using AuswertungPro.Next.Infrastructure.Import;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -110,5 +110,38 @@ public sealed class PdfDokumentTypErkennungTests
             if (File.Exists(path))
                 File.Delete(path);
         }
+    }
+}
+
+/// <summary>
+/// Echter Fall aus dem Projekt Hellgasse: KIT-Prüfberichte_2.pdf blieb "Unbekannt"
+/// und wurde deshalb nie verteilt. Der Text schreibt die Norm als "SIA Norm 190"
+/// bzw. "SIANorm 190" - die Erkennung suchte nur "SIA 190".
+/// </summary>
+public class PdfDokumentTypErkennungNormSchreibweiseTests
+{
+    [Theory]
+    [InlineData("Feststellung der Dichtheit des oben angefuhrten Prufgegenstandes gemaess SIA Norm 190 : 2017 / PV: Luft")]
+    [InlineData("Feststellung der Dichtheit des oben angefuhrten Prufgegenstandes gemaess SIANorm 190 : 2017")]
+    // So liest der produktive PdfPig-Leser: er entfernt SAEMTLICHE Leerzeichen.
+    // Genau daran scheiterte KIT-Pruefberichte_2.pdf im Projekt Hellgasse.
+    [InlineData("FeststellungderDichtheitdesobenangefuhrtenPrufgegenstandesgemaRSIANorm190:2017/PV:LuftPrufdruck:200.0mbar")]
+    public void NormMitZusatzwortNorm_GiltAlsDichtheitspruefung(string text)
+    {
+        Assert.Equal(
+            PdfDokumentTyp.Dichtheitspruefung,
+            PdfDokumentTypErkennung.ErkenneText(text, fileName: null));
+    }
+
+    [Fact]
+    public void FremdeNormNummer_BleibtUnbekannt()
+    {
+        // Gegenprobe: keine pauschale "Norm"-Erkennung.
+        Assert.NotEqual(
+            PdfDokumentTyp.Dichtheitspruefung,
+            PdfDokumentTypErkennung.ErkenneText("Ausgefuehrt nach SIA Norm 205", fileName: null));
+        Assert.NotEqual(
+            PdfDokumentTyp.Dichtheitspruefung,
+            PdfDokumentTypErkennung.ErkenneText("AusgefuehrtnachSIANorm205", fileName: null));
     }
 }
