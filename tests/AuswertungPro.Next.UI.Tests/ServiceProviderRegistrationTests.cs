@@ -79,9 +79,12 @@ public sealed class ServiceProviderRegistrationTests
         // 143 -> 144: IImportPdfReferenceResolver ordnet Herstellernamen wie
         // "Section_8_892037-74091.pdf" einer bereits vorhandenen Haltung/einem Schacht zu.
         // Ohne ihn fielen im Projekt Hellgasse alle 38 Haltungsprotokolle still heraus.
+        // 144 -> 145: IProtocolPdfDateReader liest das Protokolldatum mit derselben
+        // Textquelle wie die Verteilung. Vorher hiess dieselbe Datei je nach Weg anders
+        // ("20231010_80783.pdf" nach dem Verteilen, "00000000_80783.pdf" nach dem Import).
         Assert.True(
-            registrations.Count == 144,
-            $"Erwartet 144 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 145,
+            $"Erwartet 145 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

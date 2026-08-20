@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -439,70 +439,14 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
     }
 
     // JJJJMMTT aus Datum_Jahr (verschiedene Formate), sonst aus verteilten Medienpfaden.
+    // Die Regel selbst liegt in ImportDateStampResolver, damit der Protokoll-Verteiler
+    // denselben Stempel bildet wie der Videoweg.
     internal string ResolveDateStamp(HaltungRecord record)
-    {
-        var raw = record.GetFieldValue("Datum_Jahr")?.Trim();
-        if (TryResolveDateStamp(raw, out var stamp))
-            return stamp;
-
-        foreach (var field in new[] { FieldKeys.PdfPath, FieldKeys.PdfEigen, FieldKeys.Link })
-        {
-            if (TryExtractDateStampFromPath(record.GetFieldValue(field), out stamp))
-                return stamp;
-        }
-
-        return "00000000";
-    }
-
-    private static bool TryResolveDateStamp(string? raw, out string stamp)
-    {
-        stamp = "00000000";
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        if (DateTime.TryParse(raw, CultureInfo.GetCultureInfo("de-CH"), DateTimeStyles.None, out var d)
-            || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
-        {
-            stamp = d.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-            return true;
-        }
-
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        if (digits.Length == 4)          // reines Jahr
-        {
-            stamp = digits + "0101";
-            return true;
-        }
-
-        if (digits.Length >= 8)          // bereits JJJJMMTT o.ae.
-        {
-            var candidate = digits.Substring(0, 8);
-            if (DateTime.TryParseExact(candidate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            {
-                stamp = candidate;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool TryExtractDateStampFromPath(string? path, out string stamp)
-    {
-        stamp = "00000000";
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        var match = Regex.Match(path, @"(?<!\d)(?:19|20)\d{6}(?!\d)");
-        if (!match.Success)
-            return false;
-
-        if (!DateTime.TryParseExact(match.Value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            return false;
-
-        stamp = match.Value;
-        return true;
-    }
+        => Common.ImportDateStampResolver.Resolve(
+            record.GetFieldValue("Datum_Jahr"),
+            record.GetFieldValue(FieldKeys.PdfPath),
+            record.GetFieldValue(FieldKeys.PdfEigen),
+            record.GetFieldValue(FieldKeys.Link));
 
     internal string UniquePath(string path)
     {

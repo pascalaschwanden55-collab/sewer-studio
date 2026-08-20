@@ -141,6 +141,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IVideoConflictCandidateCopier)] = services.VideoConflictCandidates,
             [typeof(IShaftPdfSelectionExpander)] = services.ShaftPdfSelectionExpansion,
             [typeof(IImportPdfReferenceResolver)] = services.ImportPdfReferences,
+            [typeof(IProtocolPdfDateReader)] = services.ProtocolPdfDates,
             [typeof(INameBasedProtocolDistributor)] = services.NameBasedProtocolDistributor,
             [typeof(IVsaMediaPathResolver)] = services.VsaMediaPaths,
             [typeof(IXtfHoldingFileReader)] = services.XtfHoldingFiles,

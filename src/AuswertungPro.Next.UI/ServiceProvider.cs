@@ -195,6 +195,8 @@ namespace AuswertungPro.Next.UI
         // Ordnet Herstellernamen wie "Section_8_892037-74091.pdf" einer bereits
         // vorhandenen Haltung/einem Schacht zu (fail-closed, legt selbst nichts an).
         public IImportPdfReferenceResolver ImportPdfReferences { get; }
+        // Liest das Protokolldatum mit derselben Textquelle und Regel wie die Verteilung.
+        public IProtocolPdfDateReader ProtocolPdfDates { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
@@ -500,8 +502,10 @@ namespace AuswertungPro.Next.UI
             VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
             ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
             ImportPdfReferences = new AuswertungPro.Next.Infrastructure.Import.Protocols.ImportPdfReferenceResolver();
+            ProtocolPdfDates = new AuswertungPro.Next.Infrastructure.Import.Protocols.ProtocolPdfDateReader();
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor(
-                ImportPdfReferences);
+                ImportPdfReferences,
+                ProtocolPdfDates);
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfHoldingFiles = new XtfHoldingFileReader();
             XtfHelper.UseHoldingReader(XtfHoldingFiles);
