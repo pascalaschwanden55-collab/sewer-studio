@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
@@ -140,6 +140,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IDistributionFileTransfer)] = services.DistributionFileTransfers,
             [typeof(IVideoConflictCandidateCopier)] = services.VideoConflictCandidates,
             [typeof(IShaftPdfSelectionExpander)] = services.ShaftPdfSelectionExpansion,
+            [typeof(IImportPdfReferenceResolver)] = services.ImportPdfReferences,
             [typeof(INameBasedProtocolDistributor)] = services.NameBasedProtocolDistributor,
             [typeof(IVsaMediaPathResolver)] = services.VsaMediaPaths,
             [typeof(IXtfHoldingFileReader)] = services.XtfHoldingFiles,

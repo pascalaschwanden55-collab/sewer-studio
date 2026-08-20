@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -192,6 +192,9 @@ namespace AuswertungPro.Next.UI
         public IDistributionFileTransfer DistributionFileTransfers { get; }
         public IVideoConflictCandidateCopier VideoConflictCandidates { get; }
         public IShaftPdfSelectionExpander ShaftPdfSelectionExpansion { get; }
+        // Ordnet Herstellernamen wie "Section_8_892037-74091.pdf" einer bereits
+        // vorhandenen Haltung/einem Schacht zu (fail-closed, legt selbst nichts an).
+        public IImportPdfReferenceResolver ImportPdfReferences { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
@@ -496,7 +499,9 @@ namespace AuswertungPro.Next.UI
             DistributionFileTransfers = new DistributionFileTransferService();
             VideoConflictCandidates = new VideoConflictCandidateCopyService(DistributionFileTransfers);
             ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
-            NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor();
+            ImportPdfReferences = new AuswertungPro.Next.Infrastructure.Import.Protocols.ImportPdfReferenceResolver();
+            NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor(
+                ImportPdfReferences);
             VsaMediaPaths = new VsaMediaPathFileResolver();
             XtfHoldingFiles = new XtfHoldingFileReader();
             XtfHelper.UseHoldingReader(XtfHoldingFiles);

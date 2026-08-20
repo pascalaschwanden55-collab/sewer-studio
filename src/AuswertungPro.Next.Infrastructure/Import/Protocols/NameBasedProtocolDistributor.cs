@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +17,18 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
 {
+    private readonly IImportPdfReferenceResolver _referenzAufloeser;
+
+    public NameBasedProtocolDistributor()
+        : this(new ImportPdfReferenceResolver())
+    {
+    }
+
+    public NameBasedProtocolDistributor(IImportPdfReferenceResolver referenzAufloeser)
+    {
+        _referenzAufloeser = referenzAufloeser ?? throw new ArgumentNullException(nameof(referenzAufloeser));
+    }
+
     public ProtocolDistributionReport Distribute(Project project, string projectFolder, string sourceFolder, object? collectionLock = null)
         => Distribute(project, projectFolder, sourceFolder, collectionLock, fileStaging: null);
 
@@ -45,9 +57,18 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
 
         foreach (var pdf in pdfs.OrderBy(p => p.TargetPath, StringComparer.OrdinalIgnoreCase))
         {
-            var target = ProtocolNameResolver.Resolve(pdf.TargetPath);
+            var target = ProtocolNameResolver.Resolve(pdf.TargetPath)
+                          ?? LoeseUeberBekannteNamen(project, pdf.TargetPath);
             if (target is null)
-                continue; // Nicht-Protokoll -> stillschweigend überspringen
+            {
+                // Kein Bezug im Namen. Nur wenn der INHALT die Datei als TV-Protokoll
+                // ausweist, ist das ein echter Verlust und muss sichtbar werden -
+                // Plaene und Handbuecher bleiben still. Frueher verschwand hier jedes
+                // Herstellerprotokoll unbemerkt.
+                if (IstTvProtokoll(pdf.ReadPath))
+                    nichtZugeordnet.Add(Path.GetFileName(pdf.TargetPath));
+                continue;
+            }
 
             try
             {
@@ -91,6 +112,53 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
         }
 
         return new ProtocolDistributionReport(haltung, schacht, angelegt, nichtZugeordnet, meldungen);
+    }
+
+    /// <summary>
+    /// Zweiter Versuch fuer Herstellernamen wie "Section_8_892037-74091.pdf": Es zaehlt
+    /// nur ein Name, den das Projekt bereits kennt. Dadurch entstehen keine
+    /// Geister-Haltungen aus beliebigen Zahlenfolgen im Dateinamen.
+    /// </summary>
+    private ProtocolTarget? LoeseUeberBekannteNamen(Project project, string pdfPfad)
+    {
+        var haltungsnamen = project.Data
+            .Select(r => r.GetFieldValue(FieldKeys.HoldingName))
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var schachtnummern = project.SchaechteData
+            .Select(r => r.GetFieldValue("Schachtnummer"))
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var referenz = _referenzAufloeser.Resolve(
+            Path.GetFileName(pdfPfad), haltungsnamen!, schachtnummern!);
+
+        return referenz is null
+            ? null
+            : new ProtocolTarget(
+                referenz.Value.Kind == ImportPdfReferenceKind.Haltung
+                    ? ProtocolKind.Haltung
+                    : ProtocolKind.Schacht,
+                referenz.Value.Name);
+    }
+
+    /// <summary>
+    /// Inhaltliche Zweitmeinung fuer nicht zugeordnete PDFs. Fehler beim Lesen gelten
+    /// als "kein Protokoll" - eine unlesbare Datei darf den Import nicht anhalten.
+    /// </summary>
+    private static bool IstTvProtokoll(string pdfPfad)
+    {
+        try
+        {
+            return PdfDokumentTypErkennung.ErkenneDatei(pdfPfad) == PdfDokumentTyp.TvProtokoll;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static HaltungRecord? FindHaltung(Project project, string name)

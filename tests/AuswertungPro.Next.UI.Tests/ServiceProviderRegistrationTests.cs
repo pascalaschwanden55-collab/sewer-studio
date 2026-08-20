@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
@@ -76,9 +76,12 @@ public sealed class ServiceProviderRegistrationTests
         // 141 -> 143: INpkOfferPdfExportService und IPdfPrintService (Wiederholungsaudit
         // 2026-08-14, P2-3: der NPK-Weg baute Vorlagenpfade selbst, erzeugte direkt einen
         // Renderer und startete Process.Start im ViewModel).
+        // 143 -> 144: IImportPdfReferenceResolver ordnet Herstellernamen wie
+        // "Section_8_892037-74091.pdf" einer bereits vorhandenen Haltung/einem Schacht zu.
+        // Ohne ihn fielen im Projekt Hellgasse alle 38 Haltungsprotokolle still heraus.
         Assert.True(
-            registrations.Count == 143,
-            $"Erwartet 143 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 144,
+            $"Erwartet 144 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
