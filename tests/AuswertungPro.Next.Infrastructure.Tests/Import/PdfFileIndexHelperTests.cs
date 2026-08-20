@@ -80,3 +80,62 @@ public class PdfFileIndexHelperTests
         Assert.Single(result);
     }
 }
+
+/// <summary>
+/// Doppelablage im Kundenexport: WinCan legt dieselben Section-PDFs zweimal ab
+/// (DISK1\Section_PDF und Projects\...\Misc\Docu\Section_PDF). Beide Kopien sind
+/// byte-identisch. Frueher galt das als "mehrdeutig" und ALLE Haltungsprotokolle
+/// gingen verloren (real gemessen: 0 von 38).
+/// </summary>
+public class PdfFileIndexHelperDoppelablageTests : IDisposable
+{
+    private readonly string _wurzel = Path.Combine(
+        Path.GetTempPath(), $"pdfindex-doppel-{Guid.NewGuid():N}");
+
+    private string SchreibeDatei(string unterordner, string name, string inhalt)
+    {
+        var ordner = Path.Combine(_wurzel, unterordner);
+        Directory.CreateDirectory(ordner);
+        var pfad = Path.Combine(ordner, name);
+        File.WriteAllText(pfad, inhalt);
+        return pfad;
+    }
+
+    [Fact]
+    public void ZweiKopienMitGleichemInhalt_WerdenAlsEineDateiAufgeloest()
+    {
+        var a = SchreibeDatei("A", "Section_8_892037-74091.pdf", "identischer inhalt");
+        var b = SchreibeDatei("B", "Section_8_892037-74091.pdf", "identischer inhalt");
+
+        var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Section_8_892037-74091.pdf"] = new List<string> { a, b }
+        };
+
+        var treffer = PdfFileIndexHelper.ResolvePdfMatches(index, "892037-74091");
+
+        Assert.Single(treffer);
+        Assert.Equal(a, treffer[0]);
+    }
+
+    [Fact]
+    public void ZweiKopienMitVerschiedenemInhalt_BleibenMehrdeutig()
+    {
+        var a = SchreibeDatei("A", "892037-74091.pdf", "stand eins");
+        var b = SchreibeDatei("B", "892037-74091.pdf", "stand zwei - anderer inhalt");
+
+        var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["892037-74091.pdf"] = new List<string> { a, b }
+        };
+
+        var treffer = PdfFileIndexHelper.ResolvePdfMatches(index, "892037-74091");
+
+        Assert.Empty(treffer);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_wurzel, recursive: true); } catch { }
+    }
+}
