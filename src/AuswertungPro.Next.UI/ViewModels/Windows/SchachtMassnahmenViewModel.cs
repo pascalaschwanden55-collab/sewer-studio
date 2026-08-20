@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -6,6 +6,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Schacht;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels;
 
@@ -55,6 +56,9 @@ public sealed partial class SchachtMassnahmenViewModel : ObservableObject
     private readonly SchachtRecord _record;
     private readonly Action<HoldingCost> _onUebernehmen;
     private readonly Func<IReadOnlyList<SchachtMassnahmeKatalogEintrag>?>? _onListeBearbeiten;
+    // MWST-Satz des Projektkatalogs. 0 heisst bewusst "unbekannt": Dann wird keine
+    // MWST geschrieben, statt einen womoeglich falschen Satz zu erfinden.
+    private readonly decimal _vatRate;
 
     public string SchachtNummer { get; }
     public string Funktion { get; }
@@ -90,11 +94,13 @@ public sealed partial class SchachtMassnahmenViewModel : ObservableObject
         IEnumerable<SchachtMassnahmeKatalogEintrag> katalog,
         HoldingCost? bestehend,
         Action<HoldingCost> onUebernehmen,
-        Func<IReadOnlyList<SchachtMassnahmeKatalogEintrag>?>? onListeBearbeiten = null)
+        Func<IReadOnlyList<SchachtMassnahmeKatalogEintrag>?>? onListeBearbeiten = null,
+        decimal vatRate = 0m)
     {
         _record = record ?? throw new ArgumentNullException(nameof(record));
         _onUebernehmen = onUebernehmen ?? throw new ArgumentNullException(nameof(onUebernehmen));
         _onListeBearbeiten = onListeBearbeiten;
+        _vatRate = vatRate;
 
         Katalog = new ObservableCollection<SchachtMassnahmeKatalogEintrag>(
             (katalog ?? Enumerable.Empty<SchachtMassnahmeKatalogEintrag>()).Where(e => e is not null));
@@ -182,7 +188,11 @@ public sealed partial class SchachtMassnahmenViewModel : ObservableObject
             measure.Lines.Add(new CostLine { Text = p.Name, Qty = p.Menge, UnitPrice = p.Preis, Selected = true });
         measure.Total = Positionen.Sum(p => p.ZeilenTotal);
 
-        return new HoldingCost { Holding = SchachtNummer, Measures = { measure }, Total = measure.Total };
+        var cost = new HoldingCost { Holding = SchachtNummer, Measures = { measure }, Total = measure.Total };
+
+        // Ohne diese Zeile lagen die Schacht-Kosten ohne MWST auf der Platte und
+        // erschienen im Druckcenter ohne MWST (Fehler vom 2026-08-20).
+        return HoldingCostVatCompleter.Complete(cost, _vatRate)!;
     }
 
     private void ApplyAbdeckungStkDefault()

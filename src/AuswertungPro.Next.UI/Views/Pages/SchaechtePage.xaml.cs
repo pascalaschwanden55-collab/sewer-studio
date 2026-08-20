@@ -136,7 +136,8 @@ public partial class SchaechtePage : UserControl
             _vm.SchachtRecommendationCosts,
             this,
             MarkProjectDirty,
-            ApplySearchFilter);
+            ApplySearchFilter,
+            _vm.SchachtCostCatalog);
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
 

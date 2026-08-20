@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -22,6 +22,7 @@ internal sealed class SchachtMassnahmenDialogController
     private readonly IDialogService _dialogs;
     private readonly ISchachtMassnahmenKatalogStore _katalog;
     private readonly IProjectCostStoreRepository _repository;
+    private readonly ICostCatalogStore? _catalogStore;
     private readonly FrameworkElement _ownerElement;
     private readonly Action _markProjectDirty;
     private readonly Action _refreshPage;
@@ -33,7 +34,8 @@ internal sealed class SchachtMassnahmenDialogController
         IProjectCostStoreRepository repository,
         FrameworkElement ownerElement,
         Action markProjectDirty,
-        Action refreshPage)
+        Action refreshPage,
+        ICostCatalogStore? catalogStore = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -42,6 +44,7 @@ internal sealed class SchachtMassnahmenDialogController
         _ownerElement = ownerElement ?? throw new ArgumentNullException(nameof(ownerElement));
         _markProjectDirty = markProjectDirty ?? throw new ArgumentNullException(nameof(markProjectDirty));
         _refreshPage = refreshPage ?? throw new ArgumentNullException(nameof(refreshPage));
+        _catalogStore = catalogStore;
     }
 
     public void Open(SchachtRecord record)
@@ -83,13 +86,30 @@ internal sealed class SchachtMassnahmenDialogController
             katalog,
             bestehend,
             onUebernehmen: cost => Persist(_repository, store, schachtNummer, cost, projectPath),
-            onListeBearbeiten: EditKatalog);
+            onListeBearbeiten: EditKatalog,
+            vatRate: ResolveVatRate(projectPath));
 
         var window = new SchachtMassnahmenWindow(viewModel)
         {
             Owner = Window.GetWindow(_ownerElement)
         };
         window.ShowDialog();
+    }
+
+    /// <summary>
+    /// MWST-Satz des Projektkatalogs. Ohne lesbaren Katalog gilt der App-Standard —
+    /// dieselbe Regel wie in der Schacht-Matrix.
+    /// </summary>
+    private decimal ResolveVatRate(string? projectPath)
+    {
+        if (_catalogStore is null)
+            return CostCalculatorLogicService.DefaultVatRate;
+
+        var catalog = _catalogStore.LoadMerged(projectPath ?? "", out var catalogError);
+        if (catalogError is not null)
+            return CostCalculatorLogicService.DefaultVatRate;
+
+        return catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
     }
 
     private void Persist(

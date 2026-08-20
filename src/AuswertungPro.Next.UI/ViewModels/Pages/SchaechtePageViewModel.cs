@@ -28,6 +28,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
     private readonly IProjectCostStoreRepository _schachtRecommendationCosts;
+    // Nur der DI-Weg liefert den Katalog. Alte Aufrufer bekommen null; der Dialog
+    // faellt dann auf den App-Standardsatz zurueck. Bewusst KEINE
+    // Kompatibilitaets-Fassade hier — die darf laut Wachtest nicht wieder wachsen.
+    private readonly ICostCatalogStore? _schachtCostCatalog;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IShaftRenameService _shaftRename;
     private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;
@@ -44,6 +48,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     internal IDialogService Dialogs => _dialogs;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
     internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
+    /// <summary>Quelle des Projekt-MWST-Satzes fuer den Schacht-Massnahmen-Dialog.</summary>
+    internal ICostCatalogStore? SchachtCostCatalog => _schachtCostCatalog;
     internal IShaftRenameService ShaftRename => _shaftRename;
     internal IPdfTextLayerRewriter PdfTextLayerRewrite => _pdfTextLayerRewrite;
     internal IExplorerRevealService ExplorerReveal => _explorerReveal;
@@ -110,6 +116,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
             schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
             schachtRecommendationCosts: services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
+            schachtCostCatalog: services.CostStores.CreateCostCatalogStore(),
             dropdownOptions: services.DropdownOptions,
             shaftRename: services.ShaftRename,
             pdfTextLayerRewrite: services.PdfTextLayerRewrite,
@@ -167,7 +174,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         IExplorerRevealService? explorerReveal = null,
         ISchaechteTemplateColumnReader? templateColumnReader = null,
         ISchachtFileTargetResolver? schachtFileTargets = null,
-        ISchachtProtocolFileLocator? protocolFileLocator = null)
+        ISchachtProtocolFileLocator? protocolFileLocator = null,
+        ICostCatalogStore? schachtCostCatalog = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -184,6 +192,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;
         _schachtFileTargets = schachtFileTargets ?? SchachtFileTargetResolver.CompatibilityService;
         _protocolFileLocator = protocolFileLocator ?? SchachtProtocolFileCompatibility.Default;
+        _schachtCostCatalog = schachtCostCatalog;
         _schachtProtocolRefreshController = new SchachtProtocolRefreshController(
             _dialogs,
             new SchachtProtocolRefreshActions(

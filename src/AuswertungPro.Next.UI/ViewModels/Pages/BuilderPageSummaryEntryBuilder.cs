@@ -22,7 +22,10 @@ public static class BuilderPageSummaryEntryBuilder
                     ExecutedBy = row.ExecutedBy,
                     GroupLabel = GroupLabel(row),
                     Street = row.Street,
-                    Cost = row.StoredCost
+                    // Der Schacht-Massnahmen-Dialog hat die MWST-Felder nie gefuellt.
+                    // Fehlt sie an einer gespeicherten Kostenquelle, wird sie hier aus
+                    // dem Projektsatz ergaenzt — die Kundendatei bleibt unveraendert.
+                    Cost = HoldingCostVatCompleter.Complete(row.StoredCost, vatRate)!
                 });
                 continue;
             }
