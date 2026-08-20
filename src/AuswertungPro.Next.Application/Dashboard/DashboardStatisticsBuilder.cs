@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -44,6 +44,40 @@ public sealed record DashboardStatistics(
     int DringendCount,
     int OhneZustandCount)
 {
+    // Additiv ergaenzt (2026-08-20). Bewusst als init-Eigenschaften und nicht als
+    // weitere Positionsparameter — sonst muesste jeder bestehende Aufrufer angepasst werden.
+
+    /// <summary>Nettokosten nur der Haltungen.</summary>
+    public decimal HaltungSanierungsKosten { get; init; }
+
+    /// <summary>Nettokosten nur der Schaechte.</summary>
+    public decimal SchachtSanierungsKosten { get; init; }
+
+    /// <summary>
+    /// Schaechte mit Sanierungsentscheid "Ja". Schaechte haben kein eigenes
+    /// Ja/Nein-Feld; "Ja" gilt bei eingetragener Massnahme ODER Kosten ueber 0.
+    /// Ein Schacht mit Massnahme, aber noch ohne Preis, zaehlt damit mit.
+    /// </summary>
+    public int SchaechteSanierenJa { get; init; }
+
+    /// <summary>Gesamtzahl der Schaechte — Nenner zu <see cref="SchaechteSanierenJa"/>.</summary>
+    public int SchaechteGesamt => SchachtCount;
+
+    /// <summary>Mengen der Sanierungsverfahren der HALTUNGEN (Liner, Kurzliner, Manschetten).</summary>
+    public IReadOnlyList<RehabilitationQuantity> Sanierungsverfahren { get; init; } = [];
+
+    public bool HasVerfahren => Sanierungsverfahren.Count > 0;
+
+    /// <summary>Haltungskosten als Text — fest de-CH, damit CHF ueberall gleich aussieht.</summary>
+    public string HaltungSanierungsKostenText => FormatChf(HaltungSanierungsKosten);
+
+    /// <summary>Schachtkosten als Text.</summary>
+    public string SchachtSanierungsKostenText => FormatChf(SchachtSanierungsKosten);
+
+    private static string FormatChf(decimal value)
+        => Math.Round(value, 0, MidpointRounding.AwayFromZero)
+            .ToString("N0", CultureInfo.GetCultureInfo("de-CH"));
+
     public bool HasData => HoldingCount > 0 || SchachtCount > 0;
     public bool HasHoldings => HoldingCount > 0;
 
@@ -110,7 +144,9 @@ public static class DashboardStatisticsBuilder
             holdings.Select(r => r.GetFieldValue(FieldKeys.ConditionClass)));
         var sVerteilung = BuildZustandVerteilung(
             schaechte.Select(r => r.GetFieldValue(FieldKeys.ConditionClass)));
-        var totalCost = hCostMap.Values.Sum(ResolveNetTotal) + sCostMap.Values.Sum(ResolveNetTotal);
+        var haltungCost = hCostMap.Values.Sum(ResolveNetTotal);
+        var schachtCost = sCostMap.Values.Sum(ResolveNetTotal);
+        var totalCost = haltungCost + schachtCost;
 
         return new DashboardStatistics(
             holdings.Count,
@@ -126,7 +162,44 @@ public static class DashboardStatisticsBuilder
             holdings.Count,
             sCostMap.Values.Count(c => ResolveNetTotal(c) > 0m),
             CountKeys(hVerteilung, "0", "1") + CountKeys(sVerteilung, "0", "1"),
-            CountKeys(hVerteilung, "ohne") + CountKeys(sVerteilung, "ohne"));
+            CountKeys(hVerteilung, "ohne") + CountKeys(sVerteilung, "ohne"))
+        {
+            HaltungSanierungsKosten = haltungCost,
+            SchachtSanierungsKosten = schachtCost,
+            SchaechteSanierenJa = CountSchaechteSanieren(schaechte, sCostMap),
+            // Bewusst nur die Haltungskosten: Schachtpositionen wuerden Rohrmeter
+            // und Schachtstueck in derselben Zeile vermischen.
+            Sanierungsverfahren = RehabilitationQuantityCalculator.Calculate(haltungCosts)
+        };
+    }
+
+    /// <summary>
+    /// Ein Schacht gilt als "Sanieren: Ja", wenn eine Massnahme eingetragen ist ODER
+    /// Kosten hinterlegt sind. Ein eigenes Ja/Nein-Feld gibt es beim Schacht nicht.
+    /// </summary>
+    private static int CountSchaechteSanieren(
+        IReadOnlyList<SchachtRecord> schaechte,
+        IReadOnlyDictionary<string, HoldingCost> schachtCosts)
+    {
+        var count = 0;
+        foreach (var schacht in schaechte)
+        {
+            if (!string.IsNullOrWhiteSpace(schacht.GetFieldValue("Massnahmen")))
+            {
+                count++;
+                continue;
+            }
+
+            var nummer = (schacht.GetFieldValue("Schachtnummer") ?? string.Empty).Trim();
+            if (nummer.Length > 0
+                && schachtCosts.TryGetValue(nummer, out var cost)
+                && ResolveNetTotal(cost) > 0m)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     public static DashboardStatistics Build(IEnumerable<HaltungRecord>? records)

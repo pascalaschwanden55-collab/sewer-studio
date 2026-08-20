@@ -1,11 +1,16 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
-namespace AuswertungPro.Next.Infrastructure.Output.Offers;
+namespace AuswertungPro.Next.Application.Costs;
 
 // ---------------------------------------------------------------------------
 // Kategorien fuer Spezial-Statistiken in der Kostenzusammenstellung
+//
+// Liegt bewusst in der Application-Schicht: Die Frage "ist diese Kostenzeile ein
+// Liner?" ist Fachlogik und wird von mehreren Ausgaben gebraucht (Angebots-PDF,
+// Druckcenter, Projekt-Cockpit). Eine zweite Kopie dieser Regeln wuerde bedeuten,
+// dass zwei Ausdrucke verschiedene Mengen zeigen.
 // ---------------------------------------------------------------------------
 
 /// <summary>Kategorien fuer aggregierte Mengenstatistiken (Liner, Manschetten).</summary>
@@ -15,7 +20,8 @@ public enum SpecialStatsCategory
     InlinerGfk = 1,
     InlinerNadelfilz = 2,
     Manschette = 3,
-    Linerendmanschette = 4
+    Linerendmanschette = 4,
+    Kurzliner = 5
 }
 
 /// <summary>Konfigurationseintrag fuer eine Spezial-Statistik-Kategorie.</summary>
@@ -49,6 +55,7 @@ public static class SpecialStatsClassifier
     [
         new(SpecialStatsCategory.InlinerGfk,          "Inliner GFK",              "m"),
         new(SpecialStatsCategory.InlinerNadelfilz,    "Inliner Nadelfilz",        "m"),
+        new(SpecialStatsCategory.Kurzliner,           "Kurzliner",                "stk"),
         new(SpecialStatsCategory.Manschette,          "Manschetten",              "stk"),
         new(SpecialStatsCategory.Linerendmanschette,  "Linerendmanschetten (LEM)", "stk")
     ];
@@ -84,6 +91,16 @@ public static class SpecialStatsClassifier
             ContainsToken(combined, " LEM"))
         {
             category = SpecialStatsCategory.Linerendmanschette;
+            return true;
+        }
+
+        // Kurzliner zuerst: Er wird in Stueck gemessen, der Schlauchliner in Metern.
+        // Sonst wuerde "Kurzliner GFK" faelschlich als Inliner-Meter gezaehlt.
+        if (ContainsToken(combined, "KURZLINER")  ||
+            ContainsToken(combined, "POINTLINER") ||
+            ContainsToken(combined, "PARTLINER"))
+        {
+            category = SpecialStatsCategory.Kurzliner;
             return true;
         }
 

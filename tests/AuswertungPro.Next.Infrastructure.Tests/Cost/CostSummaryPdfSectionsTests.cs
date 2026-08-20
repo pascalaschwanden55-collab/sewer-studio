@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using Xunit;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Cost;
 

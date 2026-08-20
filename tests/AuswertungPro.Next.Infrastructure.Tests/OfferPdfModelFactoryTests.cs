@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -129,7 +130,8 @@ public sealed class OfferPdfModelFactoryTests
         Assert.Equal("200.00 CHF", liner.TotalText);
         Assert.Equal("variabel", liner.UnitPriceText);
 
-        Assert.Equal(4, model.SpecialStatsLines.Count);
+        // Seit 2026-08-20 zusaetzlich Kurzliner (Pointliner/Partliner).
+        Assert.Equal(5, model.SpecialStatsLines.Count);
         var gfk = model.SpecialStatsLines.Single(x => x.Category == "Inliner GFK");
         Assert.Equal("3", gfk.QtyText);
         Assert.Equal("m", gfk.Unit);
@@ -137,6 +139,9 @@ public sealed class OfferPdfModelFactoryTests
 
         var nadelfilz = model.SpecialStatsLines.Single(x => x.Category == "Inliner Nadelfilz");
         Assert.Equal("0", nadelfilz.QtyText);
+
+        var kurzliner = model.SpecialStatsLines.Single(x => x.Category == "Kurzliner");
+        Assert.Equal("0", kurzliner.QtyText);
 
         var manschette = model.SpecialStatsLines.Single(x => x.Category == "Manschetten");
         Assert.Equal("0", manschette.QtyText);
@@ -194,7 +199,8 @@ public sealed class OfferPdfModelFactoryTests
             includePositionSummary: false);
 
         Assert.Single(model.MeasureSummaryLines);
-        Assert.Equal(4, model.SpecialStatsLines.Count);
+        // Seit 2026-08-20 zusaetzlich Kurzliner (Pointliner/Partliner).
+        Assert.Equal(5, model.SpecialStatsLines.Count);
         Assert.Empty(model.OwnerSummaryLines);
         Assert.Empty(model.PositionSummaryLines);
     }

@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Costs;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 

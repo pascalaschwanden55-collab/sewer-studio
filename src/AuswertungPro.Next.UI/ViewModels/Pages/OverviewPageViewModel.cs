@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
@@ -41,6 +41,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly OverviewPreviewLoadController _previewController;
         private readonly IProjectCostStoreRepository _haltungCostRepo;
         private readonly IProjectCostStoreRepository _schachtCostRepo;
+        // Zweite gepflegte Schachtquelle (Massnahmen-Dialog). Ohne sie stand ein
+        // Projekt, das nur diesen Weg nutzt, im Cockpit mit 0 CHF da.
+        private readonly IProjectCostStoreRepository? _schachtEmpfehlungCostRepo;
         private Project? _subscribedProject;
         private string? _activeCostLoadError;
 
@@ -95,7 +98,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.CostStores.CreateProjectCostStore(),
                 sp.CostStores.CreateProjectCostStore("schacht_costs.json"),
                 sp.ProjectOverviewCatalog,
-                sp.ProjectDropPaths)
+                sp.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
+                projectDropPaths: sp.ProjectDropPaths)
         {
         }
 
@@ -158,7 +162,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 haltungCostRepo,
                 schachtCostRepo,
                 ProjectOverviewCatalogCompatibility.Create(projectFileDiscovery),
-                projectDropPaths)
+                projectDropPaths: projectDropPaths)
         {
         }
 
@@ -171,6 +175,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             IProjectCostStoreRepository haltungCostRepo,
             IProjectCostStoreRepository schachtCostRepo,
             IProjectOverviewCatalog projectOverviewCatalog,
+            IProjectCostStoreRepository? schachtEmpfehlungCostRepo = null,
             IProjectDropPathResolver? projectDropPaths = null)
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
@@ -180,6 +185,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
             _haltungCostRepo = haltungCostRepo ?? throw new ArgumentNullException(nameof(haltungCostRepo));
             _schachtCostRepo = schachtCostRepo ?? throw new ArgumentNullException(nameof(schachtCostRepo));
+            _schachtEmpfehlungCostRepo = schachtEmpfehlungCostRepo;
             _projectOverviewCatalog = projectOverviewCatalog
                 ?? throw new ArgumentNullException(nameof(projectOverviewCatalog));
             _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
@@ -351,9 +357,24 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             out string? costLoadError)
         {
             var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            var sCosts = LoadSchachtCostStore(projectPath, out var sError);
             costLoadError = CombineCostLoadErrors(hError, sError);
             return DashboardStatisticsBuilder.Build(project, hCosts, sCosts);
+        }
+
+        /// <summary>
+        /// Schacht-Kosten aus Matrix UND Massnahmen-Dialog; die Matrix hat Vorrang.
+        /// Dieselbe Regel wie im Druckcenter.
+        /// </summary>
+        private ProjectCostStore LoadSchachtCostStore(string? projectPath, out string? error)
+        {
+            var matrix = LoadCostStore(_schachtCostRepo, projectPath, out var matrixError);
+            var empfehlungen = _schachtEmpfehlungCostRepo is null
+                ? new ProjectCostStore()
+                : LoadCostStore(_schachtEmpfehlungCostRepo, projectPath, out _);
+
+            error = matrixError;
+            return SchachtCostStoreMerger.Merge(matrix, empfehlungen);
         }
 
         private static ProjectCostStore LoadCostStore(
@@ -399,7 +420,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         private static string FormatDashboardCostText(DashboardStatistics? stats)
-            => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.CurrentCulture);
+            // Fest de-CH statt CurrentCulture: CHF-Betraege sollen auf jeder
+            // Windows-Einstellung gleich aussehen wie die uebrigen Kostenkacheln.
+            => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.GetCultureInfo("de-CH"));
 
         private bool CanPrintPreviewPdf()
             => HasActiveDashboard
@@ -458,7 +481,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             var projectPath = _settings.LastProjectPath ?? string.Empty;
             var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            var sCosts = LoadSchachtCostStore(projectPath, out var sError);
             _activeCostLoadError = CombineCostLoadErrors(hError, sError);
             if (_activeCostLoadError is not null)
             {
@@ -772,7 +795,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (res.Ok && res.Value is not null)
             {
                 var hCosts = LoadCostStore(_haltungCostRepo, request.Path, out var hError);
-                var sCosts = LoadCostStore(_schachtCostRepo, request.Path, out var sError);
+                var sCosts = LoadSchachtCostStore(request.Path, out var sError);
                 ct.ThrowIfCancellationRequested();
                 return ProjectPreviewFactory
                     .FromProject(res.Value, request.Path, hCosts, sCosts)

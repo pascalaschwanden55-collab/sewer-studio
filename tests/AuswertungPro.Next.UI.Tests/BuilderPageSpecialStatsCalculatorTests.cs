@@ -1,6 +1,7 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.UI.ViewModels.Pages;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.UI.Tests;
 

@@ -1,5 +1,6 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -175,9 +176,10 @@ public sealed class SpecialStatsClassifierTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void SpecialStatsConfigs_HasFourEntries()
+    public void SpecialStatsConfigs_HasFiveEntries()
     {
-        Assert.Equal(4, SpecialStatsClassifier.SpecialStatsConfigs.Length);
+        // Seit 2026-08-20 zusaetzlich Kurzliner (Pointliner/Partliner).
+        Assert.Equal(5, SpecialStatsClassifier.SpecialStatsConfigs.Length);
     }
 
     [Fact]
@@ -188,6 +190,7 @@ public sealed class SpecialStatsClassifierTests
         Assert.Contains(SpecialStatsCategory.InlinerNadelfilz, cats);
         Assert.Contains(SpecialStatsCategory.Manschette, cats);
         Assert.Contains(SpecialStatsCategory.Linerendmanschette, cats);
+        Assert.Contains(SpecialStatsCategory.Kurzliner, cats);
     }
 
     // ---------------------------------------------------------------------------
@@ -210,5 +213,48 @@ public sealed class SpecialStatsClassifierTests
         var dict = SpecialStatsClassifier.CreateSpecialStatsBuckets();
         Assert.Equal("m", dict[SpecialStatsCategory.InlinerGfk].DefaultUnit);
         Assert.Equal("stk", dict[SpecialStatsCategory.Manschette].DefaultUnit);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Kurzliner (Pointliner / Partliner) — bis 2026-08-20 in keiner Statistik gezaehlt
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void TryResolve_KurzlinerViaKey_ReturnsKurzliner()
+    {
+        var line = new CostLine { ItemKey = "KURZLINER_PARTLINER", Text = "Kurzliner (Pointliner, Partliner)", Unit = "Stk" };
+        var ok = SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out var cat);
+        Assert.True(ok);
+        Assert.Equal(SpecialStatsCategory.Kurzliner, cat);
+    }
+
+    [Fact]
+    public void TryResolve_PointlinerText_ReturnsKurzliner()
+    {
+        var line = new CostLine { ItemKey = "FOO", Text = "Pointliner setzen", Unit = "Stk" };
+        var ok = SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out var cat);
+        Assert.True(ok);
+        Assert.Equal(SpecialStatsCategory.Kurzliner, cat);
+    }
+
+    [Fact]
+    public void TryResolve_KurzlinerAusGfk_bleibt_Kurzliner()
+    {
+        // Ein Kurzliner aus GFK ist ein Kurzliner (Stueck) und kein Inliner (Meter).
+        var line = new CostLine { ItemKey = "FOO", Text = "Kurzliner GFK", Unit = "Stk" };
+        var ok = SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out var cat);
+        Assert.True(ok);
+        Assert.Equal(SpecialStatsCategory.Kurzliner, cat);
+    }
+
+    [Fact]
+    public void SpecialStatsConfigs_enthaelt_Kurzliner_in_Stueck()
+    {
+        var eintrag = Assert.Single(
+            SpecialStatsClassifier.SpecialStatsConfigs,
+            c => c.Category == SpecialStatsCategory.Kurzliner);
+
+        Assert.Equal("Kurzliner", eintrag.Label);
+        Assert.Equal("stk", eintrag.DefaultUnit);
     }
 }

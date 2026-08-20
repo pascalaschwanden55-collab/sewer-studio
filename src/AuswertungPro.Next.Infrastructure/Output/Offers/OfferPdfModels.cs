@@ -1,6 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using AuswertungPro.Next.Application.Output;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 

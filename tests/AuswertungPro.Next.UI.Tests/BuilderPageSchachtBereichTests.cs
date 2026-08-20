@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Threading;
@@ -8,6 +8,7 @@ using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.UI.Tests;
 
