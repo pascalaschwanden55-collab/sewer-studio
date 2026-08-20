@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
@@ -155,6 +155,11 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportIbakCommand.NotifyCanExecuteChanged();
         ImportKinsCommand.NotifyCanExecuteChanged();
         ImportSchachtProCommand.NotifyCanExecuteChanged();
+        // Fehlte: Der Ein-Knopf-Befehl hat CanStartImport zwar als Bedingung, wurde
+        // ueber den Wechsel aber nie informiert - WPF fragt CanExecute erst nach dieser
+        // Meldung erneut, die Schaltflaeche blieb also waehrend eines manuellen Imports
+        // anklickbar.
+        ImportKanalProjektCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCanCancelChanged(bool value)
@@ -315,20 +320,41 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// Filme/PDFs verteilen → Fotos zentral gruppieren → relativ verlinken. Nutzt den getesteten
     /// ProjectImportOrchestrator. Die 5 manuellen Format-Knoepfe bleiben als Spezialfall.
     /// </summary>
-    private Task ImportKanalProjektAsync()
-        => _oneClickProjectController.ExecuteAsync(
-            new Services.ImportOneClickProjectActions(
-                GetProjectFolder: _shell.GetProjectFolder,
-                GetProject: () => _shell.Project,
-                DeepCopyProject: _projects.DeepCopy,
-                ReplaceProject: _shell.ReplaceProject,
-                CollectionLock: _shell.CollectionLock,
-                SaveProject: _shell.TrySaveProject,
-                SetProgress: value => ImportProgress = value,
-                AppendSummary: value => SummaryText += value,
-                AppendDetails: value => DetailsText += value,
-                ComputeSignature: _contentSignature.Compute,
-                GetProjectPath: () => _settings.LastProjectPath));
+    private async Task ImportKanalProjektAsync()
+    {
+        // Ein-Knopf und die fuenf manuellen Importe teilen sich Projekt, Staging und den
+        // einen Wiederherstellungs-Marker. Frueher setzte dieser Weg die Sperre gar nicht,
+        // beide Laeufe konnten also gleichzeitig starten und um dieselben Dateien streiten.
+        if (IsImportInProgress)
+        {
+            _shell.SetStatus("Es laeuft bereits ein Import.");
+            return;
+        }
+
+        IsImportInProgress = true;
+        try
+        {
+            await _oneClickProjectController.ExecuteAsync(
+                new Services.ImportOneClickProjectActions(
+                    GetProjectFolder: _shell.GetProjectFolder,
+                    GetProject: () => _shell.Project,
+                    DeepCopyProject: _projects.DeepCopy,
+                    ReplaceProject: _shell.ReplaceProject,
+                    CollectionLock: _shell.CollectionLock,
+                    SaveProject: _shell.TrySaveProject,
+                    SetProgress: value => ImportProgress = value,
+                    AppendSummary: value => SummaryText += value,
+                    AppendDetails: value => DetailsText += value,
+                    ComputeSignature: _contentSignature.Compute,
+                    GetProjectPath: () => _settings.LastProjectPath));
+        }
+        finally
+        {
+            // Ohne finally bliebe die Sperre nach einem Fehler haengen und niemand
+            // koennte mehr importieren.
+            IsImportInProgress = false;
+        }
+    }
 
     private Task RunVsaAfterImport(Project project, string sourceLabel)
         => _vsaEvaluationController.ExecuteAsync(

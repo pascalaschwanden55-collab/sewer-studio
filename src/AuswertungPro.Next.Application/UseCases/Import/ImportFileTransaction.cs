@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Import;
+﻿using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.UseCases.Import;
@@ -91,7 +91,23 @@ public sealed class ImportFileTransaction
         {
             try
             {
-                _journal.Clear(FileStaging.ProjectRoot);
+                // NUR den eigenen Marker aufraeumen. Frueher loeschte jeder abgebrochene
+                // Import den Marker, der gerade dalag - auch den einer frueheren
+                // Transaktion, deren Speichern fehlgeschlagen war. Damit verschwand der
+                // Beweis, welche Dateien noch zurueckzunehmen sind. Das braucht keinen
+                // Absturz: ein Speicherfehler und ein danach abgebrochener zweiter Import
+                // genuegen (gemessen in ImportFileTransactionMarkerOwnershipTests).
+                //
+                // Fail-closed: geloescht wird nur ein Marker, der sich positiv als der
+                // eigene ausweist. Ein fehlender Marker ist nichts zu tun, ein nicht
+                // lesbarer bleibt liegen und die Wiederherstellung prueft ihn beim
+                // naechsten Projektoeffnen.
+                var vorhanden = _journal.TryRead(FileStaging.ProjectRoot);
+                if (vorhanden is not null
+                    && string.Equals(vorhanden.TxId, TxId, StringComparison.Ordinal))
+                {
+                    _journal.Clear(FileStaging.ProjectRoot);
+                }
             }
             catch
             {
@@ -108,6 +124,8 @@ public sealed class ImportFileTransaction
         if (FileStaging is null || _journal is null)
             return;
 
+        EnsureNoForeignMarker();
+
         _journal.Begin(FileStaging.ProjectRoot, new ImportTransactionMarker(
             TxId,
             DateTime.UtcNow,
@@ -115,5 +133,45 @@ public sealed class ImportFileTransaction
             FileStaging.StagingRoot,
             files,
             RestorePointPath: null));
+    }
+
+    /// <summary>
+    /// Es gibt genau einen Marker je Projekt. Liegt dort noch der einer fremden,
+    /// unabgeschlossenen Transaktion, darf dieser Lauf ihn nicht ueberschreiben -
+    /// sonst geht die Rollback-Information des frueheren Imports verloren.
+    ///
+    /// Der Weg heraus ist das Projekt neu zu laden: dort prueft die Wiederherstellung
+    /// den offenen Marker und meldet, was noch im Weg ist.
+    /// </summary>
+    private void EnsureNoForeignMarker()
+    {
+        if (FileStaging is null || _journal is null)
+            return;
+
+        ImportTransactionMarker? vorhanden;
+        try
+        {
+            vorhanden = _journal.TryRead(FileStaging.ProjectRoot);
+        }
+        catch
+        {
+            // Nicht lesbar heisst nicht "nicht vorhanden": fail-closed abbrechen.
+            throw new InvalidOperationException(
+                "Im Projekt liegt ein Import-Wiederherstellungsmarker, der nicht gelesen "
+                + "werden kann. Bitte das Projekt neu laden, damit die Wiederherstellung "
+                + "ihn pruefen kann.");
+        }
+
+        if (vorhanden is null
+            || string.Equals(vorhanden.TxId, TxId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Im Projekt liegt noch eine unabgeschlossene Import-Transaktion vom "
+            + $"{vorhanden.StartedUtc.ToLocalTime():g}. Bitte das Projekt zuerst neu laden - "
+            + "die Wiederherstellung prueft den offenen Import und meldet, was zu tun ist. "
+            + "Erst danach ist ein neuer Import moeglich.");
     }
 }
