@@ -1,3 +1,4 @@
+﻿using System.Collections.Generic;
 using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -77,37 +78,76 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
 
         // Commit ist NICHT durchgelaufen: die veroeffentlichten Dateien zuruecknehmen,
         // aber nur, wenn ihr Inhalt seit der Veroeffentlichung unveraendert ist.
-        var rolledBack = 0;
-        var skippedUnsafeTargets = 0;
-        var rollbackWarnings = new List<string>();
+        //
+        // ZUERST vollstaendig pruefen, DANN loeschen. Eine Ruecknahme ist alles oder
+        // nichts: Ein No-op laesst sich wiederholen, eine Loeschung nicht. Frueher lief
+        // die Loeschschleife sofort und erst danach fiel auf, dass der Rollback
+        // unvollstaendig bleibt - der Benutzer bekam eine Box, die zugleich
+        // "3 Datei(en) zurueckgenommen" und "nicht veraendert" behauptete.
+        var loeschbar = new List<string>();
+        var hindernisse = new List<string>();
+        var blockierendeDateien = new List<string>();
+
         foreach (var target in marker.PublishedTargets)
         {
             var path = Path.Combine(projectRoot, target.RelativePath);
+
             // Der Marker ist eine Datei im Projekt und damit manipulierbar: ohne
-            // Grenzpruefung koennte ein Eintrag wie "..\..\..." oder ein absoluter
+            // Grenzpruefung koennte ein Eintrag mit Aufwaertspfaden oder ein absoluter
             // Pfad bei passendem Hash eine Datei ausserhalb des Projekts loeschen.
             if (!IsSafeRollbackTarget(projectRoot, path))
             {
-                skippedUnsafeTargets++;
+                hindernisse.Add(
+                    $"Der Markereintrag \"{target.RelativePath}\" zeigt aus dem Projekt heraus " +
+                    "oder ueber eine Verknuepfung hinaus und wurde nicht angefasst.");
+                blockierendeDateien.Add(target.RelativePath);
                 continue;
             }
 
-            if (TryRollbackFile(path, target.Sha256, out var deleted, out var warning))
+            var pruefung = InspectRollbackTarget(path, target.Sha256);
+            switch (pruefung.Verdict)
             {
-                if (deleted)
-                    rolledBack++;
-            }
-            else if (!string.IsNullOrWhiteSpace(warning))
-            {
-                rollbackWarnings.Add(warning);
+                case RollbackVerdict.Deletable:
+                    loeschbar.Add(path);
+                    break;
+                case RollbackVerdict.AlreadyGone:
+                    break;
+                default:
+                    hindernisse.Add(pruefung.Warning!);
+                    blockierendeDateien.Add(target.RelativePath);
+                    break;
             }
         }
 
-        if (skippedUnsafeTargets > 0)
+        if (hindernisse.Count > 0)
         {
-            rollbackWarnings.Add(
-                $"{skippedUnsafeTargets} Markereintraege zeigen ausserhalb des Projekts " +
-                "oder ueber Verknuepfungen hinaus und wurden nicht angefasst.");
+            return new ImportRecoveryResult(
+                ImportRecoveryOutcome.Blocked,
+                BuildBlockedRollbackMessage(marker, hindernisse, blockierendeDateien, projectRoot),
+                ProjectFolderModified: false);
+        }
+
+        // Ab hier ist jedes Ziel geprueft; jetzt erst wird geloescht.
+        var rolledBack = 0;
+        var rollbackWarnings = new List<string>();
+        var projektOrdnerVeraendert = false;
+        foreach (var path in loeschbar)
+        {
+            if (TryRollbackFile(path, out var deleted, out var warning))
+            {
+                if (deleted)
+                {
+                    rolledBack++;
+                    projektOrdnerVeraendert = true;
+                }
+            }
+            else
+            {
+                // Zwischen Pruefung und Loeschen ist etwas passiert - echter Teilzustand.
+                projektOrdnerVeraendert = true;
+                if (!string.IsNullOrWhiteSpace(warning))
+                    rollbackWarnings.Add(warning);
+            }
         }
 
         var cleanupWarning = _cleanupStaging(marker.StagingRoot, projectRoot);
@@ -118,11 +158,12 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.Blocked,
-                $"Die Wiederherstellung des unvollstaendigen Imports vom " +
+                $"Die Ruecknahme des unvollstaendigen Imports vom " +
                 $"{marker.StartedUtc.ToLocalTime():g} ist unvollstaendig " +
                 $"({rolledBack} Datei(en) zurueckgenommen). " +
                 string.Join(" ", rollbackWarnings) +
-                " Der Marker bleibt fuer eine sichere Pruefung erhalten.");
+                " Der Marker bleibt fuer eine sichere Pruefung erhalten.",
+                ProjectFolderModified: projektOrdnerVeraendert);
         }
 
         var rollbackClearWarning = ClearJournalAndVerify(projectRoot);
@@ -132,13 +173,37 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 ImportRecoveryOutcome.Blocked,
                 $"Der unvollstaendige Import vom {marker.StartedUtc.ToLocalTime():g} wurde " +
                 $"zurueckgenommen ({rolledBack} Datei(en)), aber der Wiederherstellungs-Marker " +
-                $"konnte nicht entfernt werden. {rollbackClearWarning}");
+                $"konnte nicht entfernt werden. {rollbackClearWarning}",
+                ProjectFolderModified: true);
         }
 
         return new ImportRecoveryResult(
             ImportRecoveryOutcome.RolledBack,
             $"Ein unvollstaendiger Import vom {marker.StartedUtc.ToLocalTime():g} wurde zurueckgenommen " +
-            $"({rolledBack} Datei(en)).");
+            $"({rolledBack} Datei(en)).",
+            ProjectFolderModified: true);
+    }
+
+    /// <summary>
+    /// Sperrmeldung mit Namen und Ausweg. Ohne beides steht der Benutzer vor einem
+    /// Projekt, das nicht mehr aufgeht: beide Oeffnen-Wege der Shell enden bei Blocked.
+    /// </summary>
+    private static string BuildBlockedRollbackMessage(
+        ImportTransactionMarker marker,
+        IReadOnlyList<string> hindernisse,
+        IReadOnlyList<string> blockierendeDateien,
+        string projectRoot)
+    {
+        var markerPfad = Path.Combine(projectRoot, FileImportTransactionJournal.MarkerFileName);
+        return
+            $"Der unvollstaendige Import vom {marker.StartedUtc.ToLocalTime():g} wurde NICHT " +
+            "zurueckgenommen; im Projektordner wurde nichts veraendert. " +
+            $"Im Weg: {string.Join(", ", blockierendeDateien)}. " +
+            string.Join(" ", hindernisse) +
+            $" Der Wiederherstellungs-Marker liegt unter {markerPfad}. " +
+            "Pruefen Sie die genannten Dateien und sichern Sie sie. Wird der Marker danach " +
+            "entfernt, laesst sich das Projekt wieder oeffnen; die bereits kopierten " +
+            "Importdateien bleiben dann im Projekt.";
     }
 
     private string? ClearJournalAndVerify(string projectRoot)
@@ -188,9 +253,71 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         }
     }
 
+    private enum RollbackVerdict
+    {
+        /// <summary>Datei liegt unveraendert vor und darf entfernt werden.</summary>
+        Deletable,
+        /// <summary>Datei ist bereits weg - nichts zu tun, kein Hindernis.</summary>
+        AlreadyGone,
+        /// <summary>Etwas steht im Weg; die Ruecknahme darf gar nicht erst beginnen.</summary>
+        Blocked
+    }
+
+    private readonly record struct RollbackInspection(RollbackVerdict Verdict, string? Warning);
+
+    /// <summary>
+    /// Reine Pruefung eines Rollback-Ziels - loescht NICHTS. Erst wenn jedes Ziel
+    /// geprueft ist, darf die Ruecknahme beginnen.
+    /// </summary>
+    private static RollbackInspection InspectRollbackTarget(string path, string expectedSha)
+    {
+        try
+        {
+            if (!TryGetPathAttributes(path, out var attributes, out var missing, out var accessError))
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprueft " +
+                    $"werden ({accessError}).");
+            }
+
+            if (missing)
+                return new RollbackInspection(RollbackVerdict.AlreadyGone, null);
+
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt ein Ordner; " +
+                    "er wurde nicht angefasst.");
+            }
+
+            var currentSha = VerifiedImportFileCopy.ComputeSha256(path);
+            if (!currentSha.Equals(expectedSha, StringComparison.OrdinalIgnoreCase))
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde nach dem Import veraendert " +
+                    "und deshalb nicht angefasst.");
+            }
+
+            return new RollbackInspection(RollbackVerdict.Deletable, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new RollbackInspection(
+                RollbackVerdict.Blocked,
+                $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht geprueft werden " +
+                $"({ex.Message}).");
+        }
+    }
+
+    /// <summary>
+    /// Entfernt ein bereits geprueftes Ziel und bestaetigt die Entfernung. Ein Fehler
+    /// hier ist ein echter Teilzustand und wird als solcher gemeldet.
+    /// </summary>
     private static bool TryRollbackFile(
         string path,
-        string expectedSha,
         out bool deleted,
         out string? warning)
     {
@@ -198,35 +325,8 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         warning = null;
         try
         {
-            if (!TryGetPathAttributes(path, out var attributes, out var missing, out var accessError))
-            {
-                warning =
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprueft " +
-                    $"werden ({accessError}).";
-                return false;
-            }
-
-            if (missing)
-                return true;
-            if ((attributes & FileAttributes.Directory) != 0)
-            {
-                warning =
-                    $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt ein Ordner; " +
-                    "er wurde nicht angefasst.";
-                return false;
-            }
-
-            var currentSha = VerifiedImportFileCopy.ComputeSha256(path);
-            if (!currentSha.Equals(expectedSha, StringComparison.OrdinalIgnoreCase))
-            {
-                warning =
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde inzwischen veraendert " +
-                    "und deshalb nicht angefasst.";
-                return false;
-            }
-
             File.Delete(path);
-            if (!TryGetPathAttributes(path, out _, out missing, out accessError))
+            if (!TryGetPathAttributes(path, out _, out var missing, out var accessError))
             {
                 warning =
                     $"Die Entfernung der Importdatei \"{Path.GetFileName(path)}\" konnte nicht " +

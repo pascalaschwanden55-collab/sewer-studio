@@ -620,9 +620,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             {
                 var message = importRecovery.Message
                     ?? "Die Import-Wiederherstellung konnte nicht sicher geprueft werden.";
+                // Der Zusatz "nicht veraendert" darf nur stehen, wenn er stimmt. Frueher hing
+                // er pauschal an jeder gesperrten Meldung - auch neben "3 Datei(en)
+                // zurueckgenommen". Eine Box, die sich selbst widerspricht, glaubt der Leser
+                // in der beruhigenden Haelfte und sucht die fehlenden Dateien nicht.
+                var nachsatz = importRecovery.ProjectFolderModified
+                    ? "\n\nDas Projekt wurde nicht geoeffnet. Im Projektordner wurde bereits "
+                      + "etwas veraendert - bitte den obigen Hinweis pruefen."
+                    : "\n\nDas Projekt wurde nicht geoeffnet und nicht veraendert.";
                 _sp.Dialogs.Error(
-                    message
-                    + "\n\nDas Projekt wurde nicht geoeffnet und nicht veraendert.",
+                    message + nachsatz,
                     "Import-Wiederherstellung gesperrt");
                 SetStatus(message);
                 return false;

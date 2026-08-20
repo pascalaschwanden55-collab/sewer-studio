@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import;
@@ -222,8 +222,18 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.NotNull(journal.TryRead(projectDir.Path));
     }
 
+    /// <summary>
+    /// Frueher hiess dieser Fall "nimmt gueltige Ziele mit und sperrt nur die Ausbrueche":
+    /// die sicheren Ziele wurden sofort geloescht und erst danach fiel auf, dass der
+    /// Rollback unvollstaendig bleibt. Der Benutzer bekam dann eine Box, die im selben
+    /// Atemzug "3 Datei(en) zurueckgenommen" UND "nicht veraendert" sagte.
+    ///
+    /// Eine Ruecknahme ist alles oder nichts: Ein No-op kann man wiederholen, eine
+    /// Loeschung nicht. Steht ein einziges Ziel im Weg, bleibt der Projektordner
+    /// unangetastet und der Marker liegen.
+    /// </summary>
     [Fact]
-    public void Rollback_nimmt_gueltige_ziele_mit_und_sperrt_nur_die_ausbrueche()
+    public void Rollback_loescht_nichts_wenn_ein_einziges_ziel_unsicher_ist()
     {
         using var projectDir = new TempDir();
         using var outsideDir = new TempDir();
@@ -243,11 +253,45 @@ public sealed class ImportTransactionRecoveryServiceTests
         var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
 
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
-        Assert.False(File.Exists(legitFull));    // gueltiges Ziel normal zurueckgerollt
-        Assert.True(File.Exists(outsideFile));   // Ausbruch gesperrt
-        Assert.Contains("1 Datei(en)", result.Message);
-        Assert.Contains("nicht angefasst", result.Message);
+        Assert.True(File.Exists(legitFull));     // NICHTS geloescht, auch nicht das gueltige Ziel
+        Assert.True(File.Exists(outsideFile));   // Ausbruch ohnehin gesperrt
+        Assert.False(result.ProjectFolderModified);
         Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Gesperrte_ruecknahme_nennt_die_blockierende_datei_und_den_weg_hinaus()
+    {
+        using var projectDir = new TempDir();
+        var (journal, published) = Arrange(projectDir.Path, "tx-hinweis");
+
+        // Der Benutzer hat die Datei nach dem Import bearbeitet -> Hash passt nicht mehr.
+        File.WriteAllText(published, "vom benutzer geaendert");
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(published));
+        Assert.False(result.ProjectFolderModified);
+        // Ohne Namen und ohne Ausweg steht der Benutzer vor einem Projekt, das nicht
+        // mehr aufgeht: beide Oeffnen-Wege enden bei Blocked.
+        Assert.Contains(Path.GetFileName(published), result.Message);
+        Assert.Contains(FileImportTransactionJournal.MarkerFileName, result.Message);
+    }
+
+    [Fact]
+    public void Vollstaendig_moegliche_ruecknahme_laeuft_weiterhin_durch()
+    {
+        using var projectDir = new TempDir();
+        var (journal, published) = Arrange(projectDir.Path, "tx-sauber");
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.RolledBack, result.Outcome);
+        Assert.False(File.Exists(published));
+        Assert.True(result.ProjectFolderModified);
     }
 
     [Fact]

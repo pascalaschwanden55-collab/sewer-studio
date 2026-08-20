@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.Application.Import;
+﻿namespace AuswertungPro.Next.Application.Import;
 
 /// <summary>Ergebnis eines Recovery-Laufs beim Projekt-Laden.</summary>
 public enum ImportRecoveryOutcome
@@ -17,7 +17,16 @@ public enum ImportRecoveryOutcome
 }
 
 /// <summary>Ergebnis samt optionaler, dem Nutzer anzeigbarer Meldung.</summary>
-public sealed record ImportRecoveryResult(ImportRecoveryOutcome Outcome, string? Message);
+/// <param name="ProjectFolderModified">
+/// Wahr, sobald die Wiederherstellung im Projektordner etwas veraendert hat (Datei
+/// zurueckgenommen, Arbeitsordner entfernt, Marker geloescht). Die Oberflaeche darf den
+/// beruhigenden Zusatz "nicht veraendert" nur anhaengen, wenn das falsch ist - frueher
+/// stand er pauschal an jeder gesperrten Meldung, auch neben "3 Datei(en) zurueckgenommen".
+/// </param>
+public sealed record ImportRecoveryResult(
+    ImportRecoveryOutcome Outcome,
+    string? Message,
+    bool ProjectFolderModified = false);
 
 /// <summary>
 /// Prueft beim Projekt-Laden, ob eine Import-Transaktion durch einen Prozess-Absturz
