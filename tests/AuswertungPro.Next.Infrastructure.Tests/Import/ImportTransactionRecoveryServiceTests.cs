@@ -294,6 +294,61 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.True(result.ProjectFolderModified);
     }
 
+    /// <summary>
+    /// Der Arbeitsordner gehoert in denselben Preflight wie die Zieldateien. Sonst
+    /// werden erst alle Ziele geloescht und danach faellt auf, dass ".import-staging"
+    /// eine Datei oder eine Junction ist - genau der Teilzustand, den der Preflight
+    /// verhindern soll.
+    /// </summary>
+    [Fact]
+    public void Unsicherer_arbeitsordner_verhindert_jede_loeschung()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-staging");
+
+        var service = new ImportTransactionRecoveryService(
+            journal,
+            inspectStaging: (_, _) => "Am erwarteten Arbeitsordnerpfad liegt eine Datei.",
+            cleanupStaging: (_, _) => null);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(published));   // kein einziges Ziel angefasst
+        Assert.False(result.ProjectFolderModified);
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    /// <summary>
+    /// Gespeicherter Import: Der Arbeitsordner verschwindet erfolgreich, danach
+    /// scheitert das Loeschen des Markers. Der Projektordner IST damit veraendert -
+    /// die Oberflaeche darf hier nicht "nicht veraendert" melden.
+    /// </summary>
+    [Fact]
+    public void Committed_cleanup_meldet_den_projektordner_als_veraendert()
+    {
+        using var dir = new TempDir();
+        var (_, published) = Arrange(dir.Path, "tx-committed");
+        var marker = new ImportTransactionMarker(
+            "tx-committed",
+            DateTime.UtcNow,
+            "Test",
+            Path.Combine(dir.Path, ".import-staging"),
+            new[] { new PublishedFileInfo("egal.txt", "00") },
+            RestorePointPath: null);
+
+        var service = new ImportTransactionRecoveryService(
+            new UnclearableJournal(marker),
+            inspectStaging: (_, _) => null,
+            cleanupStaging: (_, _) => null);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: "tx-committed");
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(result.ProjectFolderModified);
+        Assert.True(File.Exists(published));
+    }
+
     [Fact]
     public void Aufraeumfehler_sperrt_recovery_und_marker_bleibt_fuer_naechsten_lauf()
     {

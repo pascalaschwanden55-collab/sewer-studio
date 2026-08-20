@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 
@@ -15,18 +16,28 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 public sealed class ImportTransactionRecoveryService : IImportTransactionRecoveryService
 {
     private readonly IImportTransactionJournal _journal;
+    private readonly Func<string, string, string?> _inspectStaging;
     private readonly Func<string, string, string?> _cleanupStaging;
 
     public ImportTransactionRecoveryService(IImportTransactionJournal journal)
-        : this(journal, CleanupStaging)
+        : this(journal, InspectStaging, CleanupStaging)
     {
     }
 
     internal ImportTransactionRecoveryService(
         IImportTransactionJournal journal,
         Func<string, string, string?> cleanupStaging)
+        : this(journal, InspectStaging, cleanupStaging)
+    {
+    }
+
+    internal ImportTransactionRecoveryService(
+        IImportTransactionJournal journal,
+        Func<string, string, string?> inspectStaging,
+        Func<string, string, string?> cleanupStaging)
     {
         _journal = journal ?? throw new ArgumentNullException(nameof(journal));
+        _inspectStaging = inspectStaging ?? throw new ArgumentNullException(nameof(inspectStaging));
         _cleanupStaging = cleanupStaging ?? throw new ArgumentNullException(nameof(cleanupStaging));
     }
 
@@ -52,28 +63,46 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             // Der atomare projekt.json-Save ist durchgelaufen (Absturz erst danach) —
             // der neue Zustand ist konsistent, nur Arbeitsordner + Marker aufraeumen.
+            // Erst pruefen, dann anfassen - auch hier.
+            var committedStagingObstacle = _inspectStaging(marker.StagingRoot, projectRoot);
+            if (!string.IsNullOrWhiteSpace(committedStagingObstacle))
+            {
+                return new ImportRecoveryResult(
+                    ImportRecoveryOutcome.Blocked,
+                    "Der Import ist gespeichert, aber der Arbeitsordner kann nicht sicher " +
+                    $"entfernt werden. {committedStagingObstacle} Im Projektordner wurde nichts " +
+                    "veraendert; der Marker bleibt fuer einen erneuten Lauf erhalten.",
+                    ProjectFolderModified: false);
+            }
+
             var committedCleanupWarning = _cleanupStaging(marker.StagingRoot, projectRoot);
             if (!string.IsNullOrWhiteSpace(committedCleanupWarning))
             {
+                // Das Aufraeumen ist bereits gelaufen und teilweise gescheitert: im
+                // Zweifel NICHT "unveraendert" melden.
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
                     "Der Import ist gespeichert, aber die Wiederherstellung konnte den " +
                     $"Arbeitsordner nicht vollstaendig aufraeumen. {committedCleanupWarning} " +
-                    "Der Marker bleibt fuer einen erneuten Lauf erhalten.");
+                    "Der Marker bleibt fuer einen erneuten Lauf erhalten.",
+                    ProjectFolderModified: true);
             }
 
             var clearWarning = ClearJournalAndVerify(projectRoot);
             if (!string.IsNullOrWhiteSpace(clearWarning))
             {
+                // Der Arbeitsordner IST weg - der Projektordner ist damit veraendert.
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
                     "Der Import ist gespeichert und der Arbeitsordner ist aufgeraeumt, " +
-                    $"aber der Wiederherstellungs-Marker konnte nicht entfernt werden. {clearWarning}");
+                    $"aber der Wiederherstellungs-Marker konnte nicht entfernt werden. {clearWarning}",
+                    ProjectFolderModified: true);
             }
 
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.CompletedCleanup,
-                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeraeumt.");
+                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeraeumt.",
+                ProjectFolderModified: true);
         }
 
         // Commit ist NICHT durchgelaufen: die veroeffentlichten Dateien zuruecknehmen,
@@ -119,6 +148,13 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             }
         }
 
+        // Der Arbeitsordner gehoert in denselben Preflight. Sonst waeren alle Ziele
+        // geloescht, bevor auffaellt, dass ".import-staging" eine Datei oder eine
+        // Junction ist - genau der Teilzustand, den der Preflight verhindern soll.
+        var stagingObstacle = _inspectStaging(marker.StagingRoot, projectRoot);
+        if (!string.IsNullOrWhiteSpace(stagingObstacle))
+            hindernisse.Add(stagingObstacle);
+
         if (hindernisse.Count > 0)
         {
             return new ImportRecoveryResult(
@@ -133,7 +169,8 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         var projektOrdnerVeraendert = false;
         foreach (var path in loeschbar)
         {
-            if (TryRollbackFile(path, out var deleted, out var warning))
+            if (TryRollbackFile(projectRoot, path, ShaFuerPfad(marker, projectRoot, path),
+                    out var deleted, out var warning))
             {
                 if (deleted)
                 {
@@ -316,8 +353,38 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
     /// Entfernt ein bereits geprueftes Ziel und bestaetigt die Entfernung. Ein Fehler
     /// hier ist ein echter Teilzustand und wird als solcher gemeldet.
     /// </summary>
+    /// <summary>Der im Marker hinterlegte Hash zu einem bereits aufgeloesten Zielpfad.</summary>
+    private static string ShaFuerPfad(
+        ImportTransactionMarker marker,
+        string projectRoot,
+        string path)
+    {
+        foreach (var target in marker.PublishedTargets)
+        {
+            if (string.Equals(
+                    Path.Combine(projectRoot, target.RelativePath),
+                    path,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return target.Sha256;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Entfernt ein bereits geprueftes Ziel - prueft Pfadgrenze und Hash unmittelbar
+    /// davor aber ERNEUT. Zwischen Preflight und Loeschung koennen Minuten liegen, und
+    /// im Projektordner arbeiten weitere Prozesse (Spiegelung, zweite Programminstanz).
+    /// Das schliesst das Zeitfenster nicht vollstaendig - dafuer braeuchte es ein
+    /// exklusives Handle -, macht es aber wieder so klein wie vor der Aufteilung in
+    /// Pruefen und Loeschen.
+    /// </summary>
     private static bool TryRollbackFile(
+        string projectRoot,
         string path,
+        string expectedSha,
         out bool deleted,
         out string? warning)
     {
@@ -325,6 +392,23 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         warning = null;
         try
         {
+            if (!IsSafeRollbackTarget(projectRoot, path))
+            {
+                warning =
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist seit der Pruefung nicht " +
+                    "mehr sicher erreichbar und wurde nicht angefasst.";
+                return false;
+            }
+
+            var erneut = InspectRollbackTarget(path, expectedSha);
+            if (erneut.Verdict == RollbackVerdict.AlreadyGone)
+                return true;
+            if (erneut.Verdict != RollbackVerdict.Deletable)
+            {
+                warning = erneut.Warning;
+                return false;
+            }
+
             File.Delete(path);
             if (!TryGetPathAttributes(path, out _, out var missing, out var accessError))
             {
@@ -360,12 +444,19 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
     /// (die Session arbeitet in GUID-Unterordnern davon) und keine Junction ist.
     /// </summary>
     /// <returns><c>null</c> bei Erfolg/nichts zu tun, sonst einen Warnhinweis.</returns>
-    private static string? CleanupStaging(string stagingRoot, string projectRoot)
+    /// <summary>
+    /// Prueft schreibfrei, ob der Arbeitsordner sicher entfernt werden koennte -
+    /// LOESCHT NICHTS. Gehoert in denselben Preflight wie die Zieldateien: sonst
+    /// waeren alle Ziele bereits geloescht, wenn hier ein Hindernis auffaellt.
+    /// </summary>
+    /// <returns><c>null</c>, wenn nichts im Weg steht, sonst den Hinderungsgrund.</returns>
+    private static string? InspectStaging(string stagingRoot, string projectRoot)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(stagingRoot))
                 return null;
+
             if (!TryGetPathAttributes(
                     stagingRoot,
                     out var stagingAttributes,
@@ -380,49 +471,62 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             if ((stagingAttributes & FileAttributes.Directory) == 0)
                 return $"Am erwarteten Arbeitsordnerpfad liegt eine Datei: {stagingRoot}";
 
-            // Alte Projekte speichern projekt.json direkt im Root. Neue Projekte
-            // speichern sie unter Projektdateien; beide festen Orte sind sicher.
-            var expectedRoots = new[]
-            {
-                Path.Combine(projectRoot, ".import-staging"),
-                Path.Combine(
-                    projectRoot,
-                    ProjectFileLocator.ProjektdateienDir,
-                    ".import-staging")
-            }
-            .Select(path => Path.GetFullPath(path)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-            .ToArray();
-            var fullStaging = Path.GetFullPath(stagingRoot)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            var isExpected = expectedRoots.Any(expectedRoot =>
-                string.Equals(fullStaging, expectedRoot, StringComparison.OrdinalIgnoreCase)
-                || IsDirectGuidSessionDirectory(expectedRoot, fullStaging));
-            if (!isExpected)
+            var fullStaging = ResolveStagingPath(stagingRoot);
+            if (!IsExpectedStagingLocation(projectRoot, fullStaging))
             {
                 return $"Der Arbeitsordner \"{fullStaging}\" liegt nicht an einem erlaubten " +
                        "Projektort und wurde nicht geloescht.";
             }
 
             // Eine Junction/ein Symlink im Arbeitsordner oder seiner Elternkette darf nie rekursiv
-            // geloescht werden — der Inhalt laege ausserhalb des Projekts.
+            // geloescht werden - der Inhalt laege ausserhalb des Projekts.
             try
             {
-                var pathGuard = new ImportFileStagingPathGuard(projectRoot);
-                pathGuard.EnsureNoNestedReparsePoint(fullStaging);
+                new ImportFileStagingPathGuard(projectRoot).EnsureNoNestedReparsePoint(fullStaging);
             }
             catch (IOException ex)
             {
                 return $"Arbeitsordner nicht geloescht ({ex.Message}).";
             }
 
+            return null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException
+            or PathTooLongException or IOException or UnauthorizedAccessException)
+        {
+            return $"Arbeitsordner nicht geloescht ({ex.Message}).";
+        }
+    }
+
+    /// <summary>
+    /// Loescht den Arbeitsordner einer beendeten Transaktion. Prueft unmittelbar davor
+    /// erneut ueber <see cref="InspectStaging"/> - zwischen Preflight und Loeschung
+    /// koennen andere Prozesse den Ordner ausgetauscht haben.
+    /// </summary>
+    /// <returns><c>null</c> bei Erfolg/nichts zu tun, sonst einen Warnhinweis.</returns>
+    private static string? CleanupStaging(string stagingRoot, string projectRoot)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(stagingRoot))
+                return null;
+
+            var obstacle = InspectStaging(stagingRoot, projectRoot);
+            if (!string.IsNullOrWhiteSpace(obstacle))
+                return obstacle;
+
+            var fullStaging = ResolveStagingPath(stagingRoot);
+            if (!TryGetPathAttributes(fullStaging, out _, out var missingBefore, out _))
+                return "Arbeitsordner konnte vor dem Entfernen nicht geprueft werden.";
+            if (missingBefore)
+                return null;
+
             Directory.Delete(fullStaging, recursive: true);
             if (!TryGetPathAttributes(
                     fullStaging,
                     out _,
-                    out stagingMissing,
-                    out stagingAccessError))
+                    out var stagingMissing,
+                    out var stagingAccessError))
             {
                 return $"Die Entfernung des Arbeitsordners konnte nicht sicher bestaetigt " +
                        $"werden ({stagingAccessError}).";
@@ -438,6 +542,33 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             return $"Arbeitsordner nicht geloescht ({ex.Message}).";
         }
+    }
+
+    private static string ResolveStagingPath(string stagingRoot)
+        => Path.GetFullPath(stagingRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    /// <summary>
+    /// Alte Projekte speichern projekt.json direkt im Root, neue unter Projektdateien;
+    /// beide festen Orte sind sicher. Die Session arbeitet in GUID-Unterordnern davon.
+    /// </summary>
+    private static bool IsExpectedStagingLocation(string projectRoot, string fullStaging)
+    {
+        var expectedRoots = new[]
+        {
+            Path.Combine(projectRoot, ".import-staging"),
+            Path.Combine(
+                projectRoot,
+                ProjectFileLocator.ProjektdateienDir,
+                ".import-staging")
+        }
+        .Select(path => Path.GetFullPath(path)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        .ToArray();
+
+        return expectedRoots.Any(expectedRoot =>
+            string.Equals(fullStaging, expectedRoot, StringComparison.OrdinalIgnoreCase)
+            || IsDirectGuidSessionDirectory(expectedRoot, fullStaging));
     }
 
     private static bool IsDirectGuidSessionDirectory(string expectedRoot, string candidate)
