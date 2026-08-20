@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AuswertungPro.Next.Application.Kostenanalyse;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Kostenanalyse;
@@ -8,6 +8,40 @@ using AuswertungPro.Next.Infrastructure.Kostenanalyse;
 if (args.Length >= 1 && args[0] == "--hilfe")
 {
     SchreibeHilfe();
+    return 0;
+}
+
+// Messbefehl: liest den Fallbestand und misst rueckblickend.
+if (args.Length >= 2 && args[0] == "--messen")
+{
+    var messWurzel = args[1];
+    var bestand = new KostenfallFileStore(messWurzel).Lade();
+
+    var messErgebnis = KostenanalyseMessung.Messe(bestand);
+    Console.WriteLine($"Faelle im Bestand: {bestand.Count}");
+    Console.WriteLine($"davon messbar    : {messErgebnis.Gesamt}");
+    Console.WriteLine($"mit Vorschlag    : {messErgebnis.MitVorschlag}");
+    Console.WriteLine($"Enthaltungen     : {messErgebnis.Enthalten}");
+    Console.WriteLine($"Abdeckung        : {messErgebnis.Abdeckung:P1}");
+    Console.WriteLine();
+    Console.WriteLine($"Alle Positionen  : {messErgebnis.PositionenRichtig} richtig / "
+        + $"{messErgebnis.PositionenZuviel} zuviel / {messErgebnis.PositionenFehlend} fehlend");
+    Console.WriteLine($"  davon Routine  : {messErgebnis.RoutinePositionen.Count} Positionen "
+        + "(in fast jeder Haltung - zu treffen keine Kunst)");
+    Console.WriteLine();
+    Console.WriteLine($"ENTSCHEIDENDE Positionen ({messErgebnis.EntscheidendePositionen.Count}):");
+    Console.WriteLine($"  Modell         : {messErgebnis.EntscheidendRichtig} richtig / "
+        + $"{messErgebnis.EntscheidendZuviel} zuviel / {messErgebnis.EntscheidendFehlend} fehlend"
+        + $"   Genauigkeit {messErgebnis.EntscheidendGenauigkeit:P1}"
+        + $"  Vollstaendigkeit {messErgebnis.EntscheidendVollstaendigkeit:P1}");
+    Console.WriteLine($"  Gegenprobe     : {messErgebnis.BasisRichtig} richtig / "
+        + $"{messErgebnis.BasisZuviel} zuviel / {messErgebnis.BasisFehlend} fehlend"
+        + $"   Genauigkeit {messErgebnis.BasisGenauigkeit:P1}"
+        + $"  Vollstaendigkeit {messErgebnis.BasisVollstaendigkeit:P1}");
+
+    var berichtPfad = KostenanalyseBerichtSchreiber.Schreibe(messWurzel, messErgebnis, DateTime.UtcNow);
+    Console.WriteLine();
+    Console.WriteLine($"Bericht: {berichtPfad}");
     return 0;
 }
 

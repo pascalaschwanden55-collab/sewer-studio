@@ -93,3 +93,68 @@ public sealed class KostenanalyseMessungTests
         Assert.Equal(4, ergebnis.Gesamt);
     }
 }
+
+/// <summary>
+/// Die meisten Positionen kommen in fast jeder Haltung vor (Reinigung, TV-Vorkontrolle,
+/// Abnahme). Sie zu treffen ist keine Kunst und schoenfaerbt jede Gesamtzahl. Gemessen
+/// wird deshalb getrennt — und immer gegen die stumpfe Gegenprobe "immer dasselbe
+/// Standardpaket".
+/// </summary>
+public sealed class KostenanalyseMessungTrennungTests
+{
+    private static Kostenfall Fall(string name, params string[] itemKeys) => new()
+    {
+        Haltung = name,
+        Merkmale = new KostenfallMerkmale
+        {
+            DnMm = 300,
+            LaengeM = 40,
+            Schaeden = [new SchadensMerkmal("BAF", 1, false)]
+        },
+        Positionen = [.. itemKeys.Select(k => new MassnahmePosition(k, 1m, "Stk"))]
+    };
+
+    [Fact]
+    public void Routinepositionen_und_entscheidende_werden_getrennt()
+    {
+        // REINIGUNG in allen 5, LINER nur in 2 -> Routine bzw. entscheidend.
+        var faelle = new List<Kostenfall>
+        {
+            Fall("H1", "REINIGUNG", "LINER"),
+            Fall("H2", "REINIGUNG", "LINER"),
+            Fall("H3", "REINIGUNG"),
+            Fall("H4", "REINIGUNG"),
+            Fall("H5", "REINIGUNG")
+        };
+
+        var ergebnis = KostenanalyseMessung.Messe(faelle);
+
+        Assert.Contains("REINIGUNG", ergebnis.RoutinePositionen);
+        Assert.Contains("LINER", ergebnis.EntscheidendePositionen);
+    }
+
+    [Fact]
+    public void Die_Gegenprobe_wird_mitgemessen()
+    {
+        var faelle = Enumerable.Range(0, 5)
+            .Select(i => Fall($"H{i}", "REINIGUNG", "LINER"))
+            .ToList();
+
+        var ergebnis = KostenanalyseMessung.Messe(faelle);
+
+        // Bei voellig gleichen Faellen sind Modell und Gegenprobe gleich gut.
+        Assert.Equal(ergebnis.EntscheidendRichtig, ergebnis.BasisRichtig);
+    }
+
+    [Fact]
+    public void Bei_einheitlichem_Bestand_gibt_es_keine_entscheidenden_Positionen()
+    {
+        var faelle = Enumerable.Range(0, 5)
+            .Select(i => Fall($"H{i}", "REINIGUNG"))
+            .ToList();
+
+        var ergebnis = KostenanalyseMessung.Messe(faelle);
+
+        Assert.Empty(ergebnis.EntscheidendePositionen);
+    }
+}
