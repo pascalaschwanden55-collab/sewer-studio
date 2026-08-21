@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -40,7 +41,8 @@ public sealed record KanalExportDetection(
     string?           VsaKekXtfPath,  // IKAS/KINS: VSA_KEK-XTF
     string?           Sia405XtfPath,  // IKAS: SIA405-XTF (optional)
     string?           Reason,
-    string?           KinsDataTxtPath = null); // KINS: kiDVDaten.txt
+    string?           KinsDataTxtPath = null, // KINS: kiDVDaten.txt
+    string?           ViewerMdbPath = null);  // WinCan v8: DB\*_Viewer.mdb (kein .db3)
 
 /// <summary>
 /// Erkennt das Format eines Kanal-TV-Exportordners (WinCan vs. IKAS)
@@ -88,6 +90,11 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
 
         // --- WinCan-Suche ---
         var db3Path = FindWinCanDb3(sourceFolder);
+        // Alte WinCan-v8-Exporte fuehren die Daten als Access-Datei unter DB\.
+        // Ohne diesen Zweig meldete die Erkennung "Unknown" und der Ein-Knopf-Import
+        // brach ab - obwohl der vorhandene MDB-Rueckfall die Datei lesen kann.
+        var viewerMdbPath = db3Path is null ? FindWinCanViewerMdb(sourceFolder) : null;
+        var hatWinCanQuelle = db3Path is not null || viewerMdbPath is not null;
 
         // --- IKAS-Suche ---
         var (vsaKekPath, sia405Path, vsaKekAnyPath) = FindXtfFiles(sourceFolder);
@@ -102,12 +109,13 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
         // KINS gewinnt vor IKAS: KINS-Exporte enthalten oft ein VSAKEK-XTF,
         // dessen Header auch die SIA405-Modelle listet — ohne diesen Vorrang
         // liefe der Ordner faelschlich als IKAS/Unknown.
-        if (kinsTxtPath is not null && db3Path is not null)
+        if (kinsTxtPath is not null && hatWinCanQuelle)
         {
             return new KanalExportDetection(
                 KanalExportFormat.Ambiguous, db3Path, vsaKekPath ?? vsaKekAnyPath, sia405Path,
-                "Sowohl KINS (kiDVDaten.txt) als auch WinCan (.db3 in DB/) vorhanden",
-                kinsTxtPath);
+                "Sowohl KINS (kiDVDaten.txt) als auch WinCan (Datenbank in DB/) vorhanden",
+                kinsTxtPath,
+                viewerMdbPath);
         }
 
         if (kinsTxtPath is not null)
@@ -120,18 +128,24 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
                 kinsXtf is not null
                     ? $"KINS erkannt: kiDVDaten.txt + VSA_KEK-XTF {Path.GetFileName(kinsXtf)}"
                     : "KINS erkannt: kiDVDaten.txt (kein VSAKEK-XTF)",
-                kinsTxtPath);
+                kinsTxtPath,
+                viewerMdbPath);
         }
 
-        if (db3Path is not null && isIkasOrIbak)
+        if (hatWinCanQuelle && isIkasOrIbak)
         {
             format = KanalExportFormat.Ambiguous;
-            reason = "Sowohl WinCan (.db3 in DB/) als auch IKAS/IBAK-Signale vorhanden";
+            reason = "Sowohl WinCan (Datenbank in DB/) als auch IKAS/IBAK-Signale vorhanden";
         }
         else if (db3Path is not null)
         {
             format = KanalExportFormat.WinCan;
             reason = $"WinCan erkannt: {Path.GetFileName(db3Path)}";
+        }
+        else if (viewerMdbPath is not null)
+        {
+            format = KanalExportFormat.WinCan;
+            reason = $"WinCan erkannt: Viewer-Datenbank {Path.GetFileName(viewerMdbPath)} (mdb, kein .db3)";
         }
         else if (isIkasByXtf)
         {
@@ -146,10 +160,11 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
         else
         {
             format = KanalExportFormat.Unknown;
-            reason = "Kein WinCan (.db3 in DB/) und kein IKAS/IBAK-Signal gefunden";
+            reason = "Kein WinCan (.db3/.mdb in DB/) und kein IKAS/IBAK-Signal gefunden";
         }
 
-        return new KanalExportDetection(format, db3Path, vsaKekPath, sia405Path, reason);
+        return new KanalExportDetection(
+            format, db3Path, vsaKekPath, sia405Path, reason, null, viewerMdbPath);
     }
 
     // -------------------------------------------------------------------------
@@ -158,39 +173,64 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
 
     private static string? FindWinCanDb3(string root)
     {
+        string? best = null;
+        long bestSize = -1;
+
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true))
+        {
+            if (!Path.GetExtension(path).Equals(".db3", StringComparison.OrdinalIgnoreCase)
+                || !IsUnderDbFolder(path))
+            {
+                continue;
+            }
+
+            var name = Path.GetFileNameWithoutExtension(path);
+            if (name.EndsWith("_Meta", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                var size = new FileInfo(path).Length;
+                if (size > bestSize)
+                {
+                    bestSize = size;
+                    best = path;
+                }
+            }
+            catch
+            {
+                // Eine unlesbare Datei verhindert die Erkennung der restlichen Dateien nicht.
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Sucht die groesste Access-Datei unter einem Ordner "DB". Die Einschraenkung auf
+    /// DB\ ist wichtig: sonst wuerde irgendeine Access-Datei im Kundenordner den Import
+    /// auf WinCan umlenken.
+    /// </summary>
+    private static string? FindWinCanViewerMdb(string root)
+    {
         try
         {
-            // Rekursiv alle .db3 suchen (case-insensitiv)
             var opts = new EnumerationOptions
             {
                 RecurseSubdirectories = true,
                 IgnoreInaccessible    = true,
-                // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-                // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-                // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-                // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-                // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-                // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-                // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-                AttributesToSkip = FileAttributes.None,
+                AttributesToSkip      = FileAttributes.None,
                 MatchCasing           = MatchCasing.CaseInsensitive
             };
 
-            string? best      = null;
-            long    bestSize  = -1;
+            string? best     = null;
+            long    bestSize = -1;
 
-            foreach (var path in Directory.EnumerateFiles(root, "*.db3", opts))
+            foreach (var path in Directory.EnumerateFiles(root, "*.mdb", opts))
             {
-                // Nur .db3 unter einem Verzeichnis namens "DB" akzeptieren
                 if (!IsUnderDbFolder(path))
                     continue;
 
-                // *_Meta.db3 ausschliessen
-                var name = Path.GetFileNameWithoutExtension(path);
-                if (name.EndsWith("_Meta", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Groesste Datei nehmen
                 try
                 {
                     var size = new FileInfo(path).Length;
@@ -200,7 +240,7 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
                         best     = path;
                     }
                 }
-                catch { /* nicht zugreifbar → ueberspringen */ }
+                catch { /* nicht zugreifbar -> ueberspringen */ }
             }
 
             return best;
@@ -235,46 +275,28 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
         string? sia405Path = null;
         string? vsaKekAnyPath = null; // VSA_KEK-Modell vorhanden, egal ob auch SIA405 im Header (KINS-Fall)
 
-        try
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true))
         {
-            var opts = new EnumerationOptions
+            if (!Path.GetExtension(path).Equals(".xtf", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var content = ReadXtfHeader(path);
+            if (content is null) continue;
+
+            if (content.Contains("VSA_KEK_2020_LV95", StringComparison.OrdinalIgnoreCase))
+                vsaKekAnyPath ??= path;
+
+            // SIA405-XTF: Inhalt enthaelt "SIA405"
+            if (content.Contains("SIA405", StringComparison.OrdinalIgnoreCase))
             {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible    = true,
-                // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-                // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-                // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-                // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-                // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-                // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-                // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-                AttributesToSkip = FileAttributes.None,
-                MatchCasing           = MatchCasing.CaseInsensitive
-            };
-
-            foreach (var path in Directory.EnumerateFiles(root, "*.xtf", opts))
-            {
-                var content = ReadXtfHeader(path);
-                if (content is null) continue;
-
-                if (content.Contains("VSA_KEK_2020_LV95", StringComparison.OrdinalIgnoreCase))
-                    vsaKekAnyPath ??= path;
-
-                // SIA405-XTF: Inhalt enthaelt "SIA405"
-                if (content.Contains("SIA405", StringComparison.OrdinalIgnoreCase))
-                {
-                    sia405Path ??= path;
-                    continue; // SIA405-Dateien koennen auch VSA_KEK enthalten → bevorzuge reines VSA_KEK
-                }
-
-                // VSA_KEK-XTF: Inhalt enthaelt "VSA_KEK_2020_LV95" und kein SIA405-Dateiname
-                if (content.Contains("VSA_KEK_2020_LV95", StringComparison.OrdinalIgnoreCase))
-                {
-                    vsaKekPath ??= path;
-                }
+                sia405Path ??= path;
+                continue; // SIA405-Dateien koennen auch VSA_KEK enthalten → bevorzuge reines VSA_KEK
             }
+
+            // VSA_KEK-XTF: Inhalt enthaelt "VSA_KEK_2020_LV95" und kein SIA405-Dateiname
+            if (content.Contains("VSA_KEK_2020_LV95", StringComparison.OrdinalIgnoreCase))
+                vsaKekPath ??= path;
         }
-        catch { /* ignore */ }
 
         return (vsaKekPath, sia405Path, vsaKekAnyPath);
     }
@@ -285,27 +307,11 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
 
     private static string? FindKinsDataTxt(string root)
     {
-        try
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true))
         {
-            var opts = new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible    = true,
-                // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-                // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-                // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-                // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-                // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-                // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-                // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-                AttributesToSkip = FileAttributes.None,
-                MatchCasing           = MatchCasing.CaseInsensitive
-            };
-
-            foreach (var path in Directory.EnumerateFiles(root, "kiDVDaten.txt", opts))
+            if (Path.GetFileName(path).Equals("kiDVDaten.txt", StringComparison.OrdinalIgnoreCase))
                 return path;
         }
-        catch { /* ignore */ }
 
         return null;
     }

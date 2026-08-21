@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Xml.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -30,7 +30,7 @@ internal static class WinCanObservationAttacher
         var observations = rows
             .Where(row => TableName(row).Equals("SO_T", StringComparison.OrdinalIgnoreCase))
             .Select(row => Observation(
-                Value(row, "SO_Inspection_ID"),
+                ErsterWert(row, "SO_Inspection_ID", "SO_Inspecs_ID"),
                 Value(row, "SO_OpCode"),
                 Value(row, "SO_Remark"),
                 Value(row, "SO_Distance"),
@@ -62,13 +62,44 @@ internal static class WinCanObservationAttacher
         var observations = root.Elements()
             .Where(node => node.Name.LocalName.Equals("SO_T", StringComparison.OrdinalIgnoreCase))
             .Select(node => Observation(
-                Value(node, "SO_Inspection_ID"),
+                ErsterWert(node, "SO_Inspection_ID", "SO_Inspecs_ID"),
                 Value(node, "SO_OpCode"),
                 Value(node, "SO_Remark"),
                 Value(node, "SO_Distance"),
                 Value(node, "SO_Counter")));
 
         Attach(observations, inspectionToHolding, records, warnings, "WinCan Viewer XML", "Import (WinCan Viewer XML)");
+    }
+
+    /// <summary>
+    /// Der Fremdschluessel auf die Inspektion heisst je nach WinCan-Generation anders:
+    /// neuere Exporte schreiben "SO_Inspection_ID", die Viewer-MDB von 2017
+    /// "SO_Inspecs_ID". Im Projekt Seelisberg blieben dadurch alle 192 Beobachtungen
+    /// unzugeordnet - 30 Haltungen ohne einen einzigen Befund.
+    /// </summary>
+    private static string ErsterWert(Dictionary<string, string> row, params string[] spalten)
+    {
+        foreach (var spalte in spalten)
+        {
+            var wert = Value(row, spalte);
+            if (!string.IsNullOrWhiteSpace(wert))
+                return wert;
+        }
+
+        return string.Empty;
+    }
+
+    /// <inheritdoc cref="ErsterWert(Dictionary{string,string}, string[])"/>
+    private static string ErsterWert(XElement node, params string[] spalten)
+    {
+        foreach (var spalte in spalten)
+        {
+            var wert = Value(node, spalte);
+            if (!string.IsNullOrWhiteSpace(wert))
+                return wert;
+        }
+
+        return string.Empty;
     }
 
     private static Dictionary<string, string> BuildInspectionMap(
